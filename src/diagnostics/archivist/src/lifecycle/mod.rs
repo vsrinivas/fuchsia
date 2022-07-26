@@ -103,7 +103,7 @@ mod tests {
 
         let data = inspector.copy_vmo_data().unwrap();
         vmo.write(&data, 0).unwrap();
-        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo);
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();

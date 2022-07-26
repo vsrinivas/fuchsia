@@ -265,10 +265,8 @@ const zx::vmo& State::GetVmo() const {
 
 bool State::DuplicateVmo(zx::vmo* vmo) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  // TODO(https://fxbug.dev/104159): s/S_PROPERTY/_GET_PROPERTY/ when SET_PROPERTY is no longer
-  // required by Rust VFS' GetBackingMemory implementation.
   return ZX_OK == heap_->GetVmo().duplicate(
-                      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY, vmo);
+                      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY, vmo);
 }
 
 cpp17::optional<zx::vmo> State::FrozenVmoCopy() const {

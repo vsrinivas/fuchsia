@@ -71,9 +71,7 @@ impl Inspector {
     pub fn duplicate_vmo(&self) -> Option<zx::Vmo> {
         self.vmo.as_ref().and_then(|vmo| {
             vmo.duplicate_handle(
-                // TODO(https://fxbug.dev/104159): s/PROPERTY/GET_PROPERTY/ when SET_PROPERTY is no
-                // longer required by Rust VFS' GetBackingMemory implementation.
-                zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP | zx::Rights::PROPERTY,
+                zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP | zx::Rights::GET_PROPERTY,
             )
             .ok()
         })

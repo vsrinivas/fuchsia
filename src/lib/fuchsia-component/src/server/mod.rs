@@ -484,16 +484,11 @@ macro_rules! add_functions {
 
         /// Adds a VMO file to the directory at the given path.
         ///
-        /// The path must be a single component containing no `/` characters.
+        /// The path must be a single component containing no `/` characters. The vmo should have
+        /// content size set as required.
         ///
         /// Panics if any node has already been added at the given path.
-        pub fn add_vmo_file_at(
-            &mut self,
-            path: impl Into<String>,
-            vmo: zx::Vmo,
-            length: u64,
-        ) -> &mut Self {
-            vmo.set_content_size(&length).unwrap();
+        pub fn add_vmo_file_at(&mut self, path: impl Into<String>, vmo: zx::Vmo) -> &mut Self {
             self.add_entry_at(path.into(), Arc::new(ReadOnlyVmoFile::new(vmo)))
         }
 

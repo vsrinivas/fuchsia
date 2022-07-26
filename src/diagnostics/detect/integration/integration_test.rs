@@ -209,10 +209,9 @@ fn create_mock_component(
             let mut data_dir = config_dir.dir("data");
 
             for ConfigFile { name, contents } in test_data.config_files.iter() {
-                let size = contents.len() as u64;
-                let vmo = zx::Vmo::create(size).unwrap();
+                let vmo = zx::Vmo::create(contents.len() as u64).unwrap();
                 vmo.write(contents.as_bytes(), 0).unwrap();
-                data_dir.add_vmo_file_at(name, vmo, size);
+                data_dir.add_vmo_file_at(name, vmo);
             }
 
             // Serve crash reporter, crash reporting product register, and archive accessor
