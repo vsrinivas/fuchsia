@@ -28,6 +28,27 @@ class TargetServer : public fidl::serversuite::Target {
     callback();
   }
 
+  void TwoWayStructPayload(int8_t v, TwoWayStructPayloadCallback callback) override {
+    std::cout << "Target.TwoWayStructPayload()" << std::endl;
+    callback(v);
+  }
+
+  void TwoWayTablePayload(::fidl::serversuite::TargetTwoWayTablePayloadRequest request,
+                          TwoWayTablePayloadCallback callback) override {
+    std::cout << "Target.TwoWayTablePayload()" << std::endl;
+    fidl::serversuite::TargetTwoWayTablePayloadResponse response;
+    response.set_v(request.v());
+    callback(std::move(response));
+  }
+
+  void TwoWayUnionPayload(::fidl::serversuite::TargetTwoWayUnionPayloadRequest request,
+                          TwoWayUnionPayloadCallback callback) override {
+    std::cout << "Target.TwoWayUnionPayload()" << std::endl;
+    fidl::serversuite::TargetTwoWayUnionPayloadResponse response;
+    response.set_v(request.v());
+    callback(std::move(response));
+  }
+
   void TwoWayResult(::fidl::serversuite::TargetTwoWayResultRequest request,
                     TwoWayResultCallback callback) override {
     std::cout << "Target.TwoWayResult()" << std::endl;

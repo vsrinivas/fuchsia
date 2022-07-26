@@ -22,6 +22,9 @@ namespace server_suite {
 // binding definitions to ensure they are unchanged by changes in the bindings.
 static const uint64_t kOrdinalOneWayNoPayload = 5311082811961759320lu;
 static const uint64_t kOrdinalTwoWayNoPayload = 6235614372471446922lu;
+static const uint64_t kOrdinalTwoWayStructPayload = 3102081843793342568lu;
+static const uint64_t kOrdinalTwoWayTablePayload = 7227173894832335597lu;
+static const uint64_t kOrdinalTwoWayUnionPayload = 4769605746696017857lu;
 static const uint64_t kOrdinalTwoWayResult = 4276344194462732275lu;
 static const uint64_t kOrdinalGetHandleRights = 3148800032398744921lu;
 static const uint64_t kOrdinalGetSignalableEventRights = 3631219818281166758lu;

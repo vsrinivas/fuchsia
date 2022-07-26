@@ -27,6 +27,26 @@ class TargetServer : public fidl::Server<fidl_serversuite::Target> {
     completer.Reply();
   }
 
+  void TwoWayStructPayload(TwoWayStructPayloadRequest& request,
+                           TwoWayStructPayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayStructPayload()" << std::endl;
+    completer.Reply(request.v());
+  }
+
+  void TwoWayTablePayload(TwoWayTablePayloadRequest& request,
+                          TwoWayTablePayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayTablePayload()" << std::endl;
+    fidl_serversuite::TargetTwoWayTablePayloadResponse response({.v = request.v()});
+    completer.Reply(response);
+  }
+
+  void TwoWayUnionPayload(TwoWayUnionPayloadRequest& request,
+                          TwoWayUnionPayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayUnionPayload()" << std::endl;
+    ZX_ASSERT(request.v().has_value());
+    completer.Reply(fidl_serversuite::TargetTwoWayUnionPayloadResponse::WithV(request.v().value()));
+  }
+
   void TwoWayResult(TwoWayResultRequest& request, TwoWayResultCompleter::Sync& completer) override {
     std::cout << "Target.TwoWayResult()" << std::endl;
     switch (request.Which()) {

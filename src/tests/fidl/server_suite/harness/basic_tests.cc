@@ -31,6 +31,59 @@ SERVER_TEST(TwoWayNoPayload) {
       header(kTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 }
 
+SERVER_TEST(TwoWayStructPayload) {
+  constexpr zx_txid_t kTxid = 123u;
+
+  Bytes bytes = {
+      header(kTxid, kOrdinalTwoWayStructPayload, fidl::MessageDynamicFlags::kStrictMethod),
+      u8(123),
+      padding(7),
+  };
+  ASSERT_OK(client_end().write(bytes));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  ASSERT_OK(client_end().read_and_check(bytes));
+}
+
+SERVER_TEST(TwoWayTablePayload) {
+  constexpr zx_txid_t kTxid = 123u;
+
+  Bytes bytes = {
+      // clang-format off
+    header(kTxid, kOrdinalTwoWayTablePayload, fidl::MessageDynamicFlags::kStrictMethod),
+
+    table_max_ordinal(1),
+    pointer_present(),
+
+    inline_envelope(u8(123), false),
+      // clang-format on
+  };
+  ASSERT_OK(client_end().write(bytes));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  ASSERT_OK(client_end().read_and_check(bytes));
+}
+
+SERVER_TEST(TwoWayUnionPayload) {
+  constexpr zx_txid_t kTxid = 123u;
+
+  Bytes bytes = {
+      // clang-format off
+    header(kTxid, kOrdinalTwoWayUnionPayload, fidl::MessageDynamicFlags::kStrictMethod),
+
+    union_ordinal(1),
+    inline_envelope(u8(123), false),
+      // clang-format on
+  };
+  ASSERT_OK(client_end().write(bytes));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  ASSERT_OK(client_end().read_and_check(bytes));
+}
+
 // Check that Target replies to a two-way call with a result (for a method using error syntax).
 SERVER_TEST(TwoWayResultWithPayload) {
   constexpr zx_txid_t kTxid = 123u;

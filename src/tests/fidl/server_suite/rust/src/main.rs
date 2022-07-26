@@ -8,7 +8,8 @@ use {
     fidl::AsHandleRef,
     fidl_fidl_serversuite::{
         ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
-        TargetTwoWayResultRequest, Test,
+        TargetTwoWayResultRequest, TargetTwoWayTablePayloadResponse,
+        TargetTwoWayUnionPayloadRequest, TargetTwoWayUnionPayloadResponse, Test,
     },
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -32,6 +33,31 @@ async fn run_target_server(
                 TargetRequest::TwoWayNoPayload { responder } => {
                     println!("TwoWayNoPayload");
                     responder.send().expect("failed to send two way payload response");
+                }
+                TargetRequest::TwoWayStructPayload { v, responder } => {
+                    println!("TwoWayStructPayload");
+                    responder.send(v).expect("failed to send two way payload response");
+                }
+                TargetRequest::TwoWayTablePayload { payload, responder } => {
+                    println!("TwoWayTablePayload");
+                    responder
+                        .send(TargetTwoWayTablePayloadResponse {
+                            v: payload.v,
+                            ..TargetTwoWayTablePayloadResponse::EMPTY
+                        })
+                        .expect("failed to send two way payload response");
+                }
+                TargetRequest::TwoWayUnionPayload { payload, responder } => {
+                    println!("TwoWayUnionPayload");
+                    let v = match payload {
+                        TargetTwoWayUnionPayloadRequest::V(v) => v,
+                        _ => {
+                            panic!("unexpected union value");
+                        }
+                    };
+                    responder
+                        .send(&mut TargetTwoWayUnionPayloadResponse::V(v))
+                        .expect("failed to send two way payload response");
                 }
                 TargetRequest::TwoWayResult { payload, responder } => {
                     println!("TwoWayResult");

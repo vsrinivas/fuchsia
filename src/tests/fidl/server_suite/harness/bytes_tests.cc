@@ -97,6 +97,11 @@ TEST(Bytes, UnionOrdinal) {
   ASSERT_EQ(expected, union_ordinal(3));
 }
 
+TEST(Bytes, TableMaxOrdinal) {
+  Bytes expected = {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  ASSERT_EQ(expected, table_max_ordinal(3));
+}
+
 TEST(Bytes, StringLength) {
   Bytes expected = {0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   ASSERT_EQ(expected, string_length(3));
@@ -128,6 +133,9 @@ TEST(Bytes, OutOfLineEnvelope) {
 TEST(Bytes, InlineEnvelope) {
   Bytes expected = {0xfe, 0xdc, 0xba, 0x98, 0x01, 0x00, 0x01, 0x00};
   ASSERT_EQ(expected, inline_envelope({0xfe, 0xdc, 0xba, 0x98}, true));
+
+  Bytes expected2 = {0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00};
+  ASSERT_EQ(expected2, inline_envelope(u8(0x55), false));
 }
 
 }  // namespace server_suite

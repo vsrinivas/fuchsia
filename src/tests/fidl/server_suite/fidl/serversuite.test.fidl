@@ -33,6 +33,24 @@ protocol Target {
 
     TwoWayNoPayload() -> ();
 
+    TwoWayStructPayload(struct {
+        v int8;
+    }) -> (struct {
+        v int8;
+    });
+
+    TwoWayTablePayload(table {
+        1: v int8;
+    }) -> (table {
+        1: v int8;
+    });
+
+    TwoWayUnionPayload(union {
+        1: v int8;
+    }) -> (union {
+        1: v int8;
+    });
+
     TwoWayResult(strict union {
         1: payload string:MAX;
         2: error uint32;
@@ -77,6 +95,9 @@ type Test = flexible enum : uint32 {
     TWO_WAY_NO_PAYLOAD = 1003;
     TWO_WAY_RESULT_WITH_PAYLOAD = 1004;
     TWO_WAY_RESULT_WITH_ERROR = 1005;
+    TWO_WAY_STRUCT_PAYLOAD = 1006;
+    TWO_WAY_TABLE_PAYLOAD = 1007;
+    TWO_WAY_UNION_PAYLOAD = 1008;
 
     // message_header_tests.cc
     ONE_WAY_WITH_NON_ZERO_TXID = 2001;

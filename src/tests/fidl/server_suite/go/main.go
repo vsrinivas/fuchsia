@@ -36,6 +36,25 @@ func (t *targetImpl) TwoWayNoPayload(_ fidl.Context) error {
 	return nil
 }
 
+func (t *targetImpl) TwoWayStructPayload(_ fidl.Context, v int8) (int8, error) {
+	log.Println("serversuite.Target TwoWayStructPayload() called")
+	return v, nil
+}
+
+func (t *targetImpl) TwoWayTablePayload(_ fidl.Context, request serversuite.TargetTwoWayTablePayloadRequest) (serversuite.TargetTwoWayTablePayloadResponse, error) {
+	log.Println("serversuite.Target TwoWayTablePayload() called")
+	var response serversuite.TargetTwoWayTablePayloadResponse
+	response.SetV(request.V)
+	return response, nil
+}
+
+func (t *targetImpl) TwoWayUnionPayload(_ fidl.Context, request serversuite.TargetTwoWayUnionPayloadRequest) (serversuite.TargetTwoWayUnionPayloadResponse, error) {
+	log.Println("serversuite.Target TwoWayUnionPayload() called")
+	var response serversuite.TargetTwoWayUnionPayloadResponse
+	response.SetV(request.V)
+	return response, nil
+}
+
 func (t *targetImpl) TwoWayResult(_ fidl.Context, request serversuite.TargetTwoWayResultRequest) (serversuite.TargetTwoWayResultResult, error) {
 	log.Println("serversuite.Target TwoWayResult() called")
 	var result serversuite.TargetTwoWayResultResult
@@ -77,6 +96,10 @@ var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
 func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, error) {
 	isEnabled := func(test serversuite.Test) bool {
 		switch test {
+		case serversuite.TestTwoWayTablePayload:
+			return false
+		case serversuite.TestTwoWayUnionPayload:
+			return false
 		case serversuite.TestOneWayWithNonZeroTxid:
 			return false
 		case serversuite.TestTwoWayNoPayloadWithZeroTxid:

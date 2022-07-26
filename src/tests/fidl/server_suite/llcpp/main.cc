@@ -27,6 +27,27 @@ class TargetServer : public fidl::WireServer<fidl_serversuite::Target> {
     completer.Reply();
   }
 
+  void TwoWayStructPayload(TwoWayStructPayloadRequestView request,
+                           TwoWayStructPayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayStructPayload()" << std::endl;
+    completer.Reply(request->v);
+  }
+
+  void TwoWayTablePayload(TwoWayTablePayloadRequestView request,
+                          TwoWayTablePayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayTablePayload()" << std::endl;
+    fidl::Arena arena;
+    completer.Reply(fidl_serversuite::wire::TargetTwoWayTablePayloadResponse::Builder(arena)
+                        .v(request->v())
+                        .Build());
+  }
+
+  void TwoWayUnionPayload(TwoWayUnionPayloadRequestView request,
+                          TwoWayUnionPayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayUnionPayload()" << std::endl;
+    completer.Reply(fidl_serversuite::wire::TargetTwoWayUnionPayloadResponse::WithV(request->v()));
+  }
+
   void TwoWayResult(TwoWayResultRequestView request,
                     TwoWayResultCompleter::Sync& completer) override {
     std::cout << "Target.TwoWayResult()" << std::endl;

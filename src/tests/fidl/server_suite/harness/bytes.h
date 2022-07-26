@@ -104,15 +104,15 @@ inline Bytes header(zx_txid_t txid, uint64_t ordinal, fidl::MessageDynamicFlags 
 }
 
 inline Bytes union_ordinal(uint64_t ordinal) { return u64(ordinal); }
-
+inline Bytes table_max_ordinal(uint64_t ordinal) { return u64(ordinal); }
 inline Bytes string_length(uint64_t length) { return u64(length); }
 
 inline Bytes out_of_line_envelope(uint16_t num_bytes, uint8_t num_handles) {
   return {u32(num_bytes), u16(num_handles), u16(0)};
 }
 inline Bytes inline_envelope(const Bytes& value, bool has_handles) {
-  ZX_ASSERT_MSG(value.size() == 4, "inline envelope values are 4 bytes");
-  return {value, u16(has_handles), u16(1)};
+  ZX_ASSERT_MSG(value.size() <= 4, "inline envelope values are <= 4 bytes in size");
+  return {value, padding(4 - value.size()), u16(has_handles), u16(1)};
 }
 
 inline Bytes handle_present() { return repeat(0xff).times(4); }
