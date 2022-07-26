@@ -23,6 +23,6 @@ for best results, copy the exact address from ffx target list."
 
 pub struct RemoveCommand {
     #[argh(positional)]
-    /// name or IP of the target.
-    pub id: String,
+    /// name or IP address of the target.
+    pub name_or_addr: String,
 }

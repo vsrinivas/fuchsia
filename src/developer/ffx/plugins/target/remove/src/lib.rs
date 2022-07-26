@@ -17,8 +17,8 @@ pub async fn remove_impl<W: std::io::Write>(
     cmd: RemoveCommand,
     err_writer: &mut W,
 ) -> Result<()> {
-    let RemoveCommand { mut id, .. } = cmd;
-    if target_collection.remove_target(&mut id).await? {
+    let RemoveCommand { mut name_or_addr, .. } = cmd;
+    if target_collection.remove_target(&mut name_or_addr).await? {
         writeln!(err_writer, "Removed.")?;
     } else {
         writeln!(err_writer, "No matching target found.")?;
@@ -55,7 +55,7 @@ mod test {
         let mut buf = Vec::new();
         remove_impl(
             server,
-            RemoveCommand { id: "correct-horse-battery-staple".to_owned() },
+            RemoveCommand { name_or_addr: "correct-horse-battery-staple".to_owned() },
             &mut buf,
         )
         .await
@@ -71,7 +71,7 @@ mod test {
         let mut buf = Vec::new();
         remove_impl(
             server,
-            RemoveCommand { id: "incorrect-donkey-battery-jazz".to_owned() },
+            RemoveCommand { name_or_addr: "incorrect-donkey-battery-jazz".to_owned() },
             &mut buf,
         )
         .await
