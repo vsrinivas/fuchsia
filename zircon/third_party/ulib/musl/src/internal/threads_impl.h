@@ -66,6 +66,10 @@ struct pthread {
   struct pthread* next;
   struct pthread** prevp;
 
+  // The process handle that is used to create new threads in
+  // pthread_create.
+  zx_handle_t process_handle;
+
   // The *_region fields describe whole memory regions reserved,
   // including guard pages (for deallocation).  safe_stack and
   // unsafe_stack describe just the actual stack block between the

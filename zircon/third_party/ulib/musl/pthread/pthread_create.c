@@ -88,7 +88,7 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
 
   const char* name = attr.__name != NULL ? attr.__name : thread_name;
   zx_status_t status =
-      zxr_thread_create(_zx_process_self(), name, attr._a_detach, &new->zxr_thread);
+      zxr_thread_create(__pthread_self()->process_handle, name, attr._a_detach, &new->zxr_thread);
   if (status != ZX_OK)
     goto fail_after_alloc;
 

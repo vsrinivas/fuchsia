@@ -267,6 +267,11 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
   }
 
   thrd_t td = copy_tls(tcb.iov_base, tcb.iov_len);
+  if (initial_thread) {
+    td->process_handle = _zx_process_self();
+  } else {
+    td->process_handle = __pthread_self()->process_handle;
+  }
 
   // At this point all our access to global TLS state is done, so we
   // can allow dlopen again.
