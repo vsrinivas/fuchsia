@@ -277,7 +277,6 @@
             from: "#network",
             to: [
                 "#cobalt",
-                "#feedback",
                 "#mdns",
                 "#pkg-resolver",
                 "#session-manager",

@@ -36,8 +36,6 @@
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.http.Loader",
-                "fuchsia.net.name.Lookup",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.ui.activity.Provider",
