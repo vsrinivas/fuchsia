@@ -20,6 +20,11 @@ declare_args() {
   #   go_vet_enabled
   #     [bool] if false, go vet invocations are disabled for all builds.
   go_vet_enabled = false
+
+  #   prebuilt_go_dir
+  #     [string] points to the directory containing the prebuilt host go
+  #     binary. By default, this points to the //prebuilts directory.
+  prebuilt_go_dir = "//prebuilt/third_party/go/${host_platform}"
 }
 
 # A template for an action that builds a Go binary. Users should instead use the
@@ -132,8 +137,7 @@ template("go_build") {
   }
   goroot_deps = []
   if (use_prebuilt_go) {
-    goroot = rebase_path("//prebuilt/third_party/go/${host_platform}",
-                         root_build_dir)
+    goroot = rebase_path(prebuilt_go_dir, root_build_dir)
   } else {
     goroot = rebase_path("$host_tools_dir/goroot", root_build_dir)
     goroot_deps = [ "//third_party/go:go_runtime" ]
