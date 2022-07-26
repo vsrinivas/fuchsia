@@ -11,6 +11,8 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/compiler.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include "src/lib/fxl/macros.h"
@@ -45,6 +47,9 @@ class ComponentContext final {
   static std::unique_ptr<ComponentContext> CreateWithExecutor(ExecutorPtr executor);
 
   const ExecutorPtr& executor() const { return executor_; }
+
+  // Takes the |PA_HND(PA_USER0, arg)| startup handle.
+  zx::channel TakeChannel(uint32_t arg);
 
   // Adds an interface request handler for a protocol capability provided by this component.
   template <typename Interface>

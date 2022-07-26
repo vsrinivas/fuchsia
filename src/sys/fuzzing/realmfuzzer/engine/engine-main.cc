@@ -2,39 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-
-#include "src/sys/fuzzing/common/component-context.h"
-#include "src/sys/fuzzing/common/controller-provider.h"
+#include "src/sys/fuzzing/common/engine.h"
 #include "src/sys/fuzzing/realmfuzzer/engine/runner.h"
 
 namespace fuzzing {
 
-zx_status_t RunRealmFuzzer() {
-  // Take start up handles.
-  auto context = ComponentContext::Create();
-  zx::channel fuzz_registry_channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
-  zx::channel fuzz_coverage_channel{zx_take_startup_handle(PA_HND(PA_USER0, 1))};
-
-  // Create the runner.
-  auto runner = RealmFuzzerRunner::MakePtr(context->executor());
+ZxResult<RunnerPtr> MakeRealmFuzzerRunnerPtr(int argc, char** argv, ComponentContext& context) {
+  auto runner = RealmFuzzerRunner::MakePtr(context.executor());
   auto runner_impl = std::static_pointer_cast<RealmFuzzerRunner>(runner);
-  runner_impl->SetTargetAdapterHandler(context->MakeRequestHandler<TargetAdapter>());
-  if (auto status = runner_impl->BindCoverageDataProvider(std::move(fuzz_coverage_channel));
+  runner_impl->SetTargetAdapterHandler(context.MakeRequestHandler<TargetAdapter>());
+  if (auto status = runner_impl->BindCoverageDataProvider(context.TakeChannel(1));
       status != ZX_OK) {
-    return status;
+    FX_LOGS(FATAL) << "Failed to bind fuchsia.fuzzer.CoverageDataProvider: "
+                   << zx_status_get_string(status);
   }
-
-  // Serve |fuchsia.fuzzer.ControllerProvider| to the registry.
-  ControllerProviderImpl provider(context->executor());
-  provider.SetRunner(std::move(runner));
-  auto task = provider.Serve(std::move(fuzz_registry_channel));
-  context->ScheduleTask(std::move(task));
-
-  return context->Run();
+  return fpromise::ok(std::move(runner));
 }
 
 }  // namespace fuzzing
 
-int main() { return fuzzing::RunRealmFuzzer(); }
+int main(int argc, char** argv) {
+  return fuzzing::RunEngine(argc, argv, fuzzing::MakeRealmFuzzerRunnerPtr);
+}

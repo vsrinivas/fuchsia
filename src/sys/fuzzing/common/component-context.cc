@@ -55,6 +55,10 @@ ComponentContext::~ComponentContext() {
   }
 }
 
+zx::channel ComponentContext::TakeChannel(uint32_t arg) {
+  return zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, arg)));
+}
+
 // Runs the message loop on the current thread. This method should only be called at most once.
 zx_status_t ComponentContext::Run() {
   FX_CHECK(loop_);
