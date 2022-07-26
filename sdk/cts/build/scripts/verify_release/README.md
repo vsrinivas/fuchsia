@@ -58,7 +58,7 @@ The verify_release.py script does the following:
 
 ```
 # Build the CTS.
-fx set core.x64 --with //sdk:cts --args cts_version=\"test\"
+fx set core.x64 --with //sdk/cts --args cts_version=\"test\"
 fx build
 
 # Copy the CTS archive to your prebuilt directory
@@ -75,6 +75,3 @@ cp sdk/cts/build/scripts/verify_release/_BUILD.gn prebuilt/cts/test/BUILD.gn
 fx set core.x64 --with //prebuilt/cts/test:tests
 fx test
 ```
-
-
-

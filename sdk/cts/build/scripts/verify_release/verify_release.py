@@ -17,10 +17,10 @@ import json
 
 class CTS:
     """
-    Generate a CTS SDK and release it into the fuchsia //prebuilt directory.
+    Generate a CTS and release it into the fuchsia //prebuilt directory.
 
     This script can be used to validate that the current git workspace is capable
-    of successfully generating a CTS SDK with passing tests.
+    of successfully generating a CTS with passing tests.
     """
 
     def __init__(
@@ -60,13 +60,13 @@ class CTS:
 
     def _build_cts_from_workspace(self):
         """
-        Build the CTS SDK from your current workspace: //sdk:cts
+        Build the CTS from your current workspace: //sdk/cts
 
         Throws an exception on build failure.
         """
-        self._print("Building the CTS SDK in your workspace....", end='')
+        self._print("Building the CTS in your workspace....", end='')
 
-        cmd = "fx set {}.{} --with //sdk:cts --args 'cts_version=\"{}\"' && fx build".format(
+        cmd = "fx set {}.{} --with //sdk/cts --args 'cts_version=\"{}\"' && fx build".format(
             self.product, self.board, self.cts_version)
 
         self._check_output(cmd)
@@ -74,11 +74,11 @@ class CTS:
 
     def _release_cts_to_prebuilt_directory(self):
         """
-        Copy the built CTS SDK to the release directory: //prebuilt/cts/<cts_version>
+        Copy the built CTS to the release directory: //prebuilt/cts/<cts_version>
 
         Throws an exception if any file listed in cts_artifacts.json does not exist.
         """
-        self._print("Releasing the CTS SDK....", end='')
+        self._print("Releasing the CTS....", end='')
 
         # Remove previous releases if they exist.
         if os.path.isdir(self.release_dir):
@@ -102,15 +102,16 @@ class CTS:
 
     def _build_cts_release(self):
         """
-        Build the released CTS SDK: //prebuilt/cts/<cts_version>:tests
+        Build the released CTS : //prebuilt/cts/<cts_version>:tests
 
         Throws an exception if the CTS fails to build.
         """
-        self._print("Building the released CTS SDK....", end='')
+        self._print("Building the released CTS....", end='')
 
         # Modify the BUILD.gn file template for the current CTS version.
         build_file_template = os.path.join(
-            self.fuchsia_dir, 'sdk', 'cts', 'build', 'scripts', 'verify_release', '_BUILD.gn')
+            self.fuchsia_dir, 'sdk', 'cts', 'build', 'scripts',
+            'verify_release', '_BUILD.gn')
         with open(build_file_template, 'r') as f:
             build_file = f.read()
         build_file = build_file.replace("{cts_version}", self.cts_version)
@@ -130,7 +131,7 @@ class CTS:
 
     def _run_tests(self):
         """
-        Run the tests in the released CTS SDK: //prebuilt/cts/<cts_version>:tests
+        Run the tests in the released CTS: //prebuilt/cts/<cts_version>:tests
 
         Throws an exception if any CTS test fails.
         """
@@ -151,7 +152,7 @@ class CTS:
         self._build_cts_release()
 
         self._print(
-            "The CTS SDK has been successfully released to {}.".format(
+            "The CTS has been successfully released to {}.".format(
                 self.release_dir))
 
         if self.run_tests:
