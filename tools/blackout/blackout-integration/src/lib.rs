@@ -10,7 +10,7 @@ use {
     std::time::Duration,
 };
 
-async fn failure() -> Result<()> {
+async fn failure(reboot: bool, bootserver: bool) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         block_device: String::from("fail"),
         seed: None,
@@ -22,7 +22,11 @@ async fn failure() -> Result<()> {
         TestEnv::new("blackout-integration-target", "blackout-integration-target-component", opts)
             .await;
 
-    test.setup_step().load_step(Duration::from_secs(1)).verify_step(20, Duration::from_secs(15));
+    test.setup_step().load_step(Duration::from_secs(1));
+    if reboot {
+        test.reboot_step(bootserver);
+    }
+    test.verify_step(20, Duration::from_secs(15));
 
     match test.run().await {
         Err(BlackoutError::Verification(_)) => Ok(()),
@@ -31,7 +35,7 @@ async fn failure() -> Result<()> {
     }
 }
 
-async fn success(iterations: Option<u64>) -> Result<()> {
+async fn success(iterations: Option<u64>, reboot: bool, bootserver: bool) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         block_device: String::from("/nothing"),
         seed: None,
@@ -43,7 +47,11 @@ async fn success(iterations: Option<u64>) -> Result<()> {
         TestEnv::new("blackout-integration-target", "blackout-integration-target-component", opts)
             .await;
 
-    test.setup_step().load_step(Duration::from_secs(1)).verify_step(20, Duration::from_secs(15));
+    test.setup_step().load_step(Duration::from_secs(1));
+    if reboot {
+        test.reboot_step(bootserver);
+    }
+    test.verify_step(20, Duration::from_secs(15));
     test.run().await?;
 
     Ok(())
@@ -53,11 +61,11 @@ async fn success(iterations: Option<u64>) -> Result<()> {
 async fn integration(cmd: BlackoutIntegrationCommand) -> Result<()> {
     // make sure verification failure detection works
     println!("testing a verification failure...");
-    failure().await?;
+    failure(cmd.reboot, cmd.bootserver).await?;
 
     // make sure a successful test run works
     println!("testing a successful run...");
-    success(cmd.iterations).await?;
+    success(cmd.iterations, cmd.reboot, cmd.bootserver).await?;
 
     Ok(())
 }

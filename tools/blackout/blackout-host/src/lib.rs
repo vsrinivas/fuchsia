@@ -398,9 +398,12 @@ impl TestEnv {
     }
 
     /// Add a reboot step. This reboots the target machine using the configured reboot mechanism.
-    pub fn reboot_step(&mut self) -> &mut Self {
-        self.test
-            .add_step(Box::new(RebootStep::new(self.isolated_ffx.clone(), &self.test.reboot_type)));
+    pub fn reboot_step(&mut self, bootserver: bool) -> &mut Self {
+        self.test.add_step(Box::new(RebootStep::new(
+            self.isolated_ffx.clone(),
+            &self.test.reboot_type,
+            bootserver,
+        )));
         self
     }
 

@@ -34,4 +34,7 @@ pub struct BlobfsCheckerboardCommand {
     /// run the test until a verification failure is detected, then exit.
     #[argh(switch, short = 'f', long = "run-until-failure")]
     pub run_until_failure: bool,
+    /// run a bootserver to serve netboot images to a device. This will only work in infra!
+    #[argh(switch)]
+    pub bootserver: bool,
 }

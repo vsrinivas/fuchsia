@@ -21,7 +21,7 @@ pub async fn minfs_tree(cmd: MinfsTreeCommand) -> Result<()> {
             .await;
     test.setup_step()
         .load_step(Duration::from_secs(30))
-        .reboot_step()
+        .reboot_step(false)
         .verify_step(20, Duration::from_secs(10));
     test.run().await?;
     Ok(())

@@ -258,12 +258,17 @@ impl TestStep for LoadStep {
 pub struct RebootStep {
     ffx: Arc<ffx_isolate::Isolate>,
     reboot_type: RebootType,
+    bootserver: bool,
 }
 
 impl RebootStep {
     /// Create a new reboot step.
-    pub(crate) fn new(ffx: Arc<ffx_isolate::Isolate>, reboot_type: &RebootType) -> Self {
-        Self { ffx, reboot_type: reboot_type.clone() }
+    pub(crate) fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
+        reboot_type: &RebootType,
+        bootserver: bool,
+    ) -> Self {
+        Self { ffx, reboot_type: reboot_type.clone(), bootserver }
     }
 }
 
@@ -277,6 +282,10 @@ impl TestStep for RebootStep {
                 let _ = self.ffx.ffx(&["--target", &target, "target", "reboot"]).await?;
             }
             RebootType::Hardware(relay) => hard_reboot(&relay)?,
+        }
+        if self.bootserver {
+            println!("launching infra bootserver...");
+            let _ = crate::integration::run_bootserver()?;
         }
         Ok(())
     }

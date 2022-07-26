@@ -49,7 +49,9 @@ fuchsia_package("blackout-integration-target") {
 }
 
 if (is_host) {
-  host_test("blackout-integration") {
+  # This target runs a basic connectivity integration test for the blackout library, with no
+  # reboots. It tests verification failure and success cases.
+  host_test("blackout-integration-host") {
     binary_path = "$root_out_dir/ffx"
     args = [
       "--config",
@@ -63,12 +65,49 @@ if (is_host) {
 
     environments = [ nuc_env ]
   }
+
+  # This target runs a basic connectivity integration test for the blackout library, with a reboot
+  # part way through. It tests verification failure and success cases.
+  host_test("blackout-integration-reboot-host") {
+    binary_path = "$root_out_dir/ffx"
+    args = [
+      "--config",
+      "storage_dev=true",
+      "storage",
+      "blackout",
+      "integration",
+      "--reboot",
+      "--bootserver",
+    ]
+
+    deps = [ "//src/developer/ffx:ffx_bin" ]
+
+    environments = [
+      {
+        dimensions = {
+          testbed = "pwr_sherlock"
+          pool = "fuchsia.tests.power-failure"
+          device_type = "Sherlock"
+        }
+        tags = [ "power-failure-sherlock" ]
+        netboot = true
+      },
+    ]
+  }
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":blackout-integration($host_toolchain)",
+  deps = [
+    ":blackout-integration-host($host_toolchain)",
+    ":blackout-integration-target",
+  ]
+}
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":blackout-integration-reboot-host($host_toolchain)",
     ":blackout-integration-target",
   ]
 }

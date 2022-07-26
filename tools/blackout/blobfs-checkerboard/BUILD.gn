@@ -16,7 +16,6 @@ ffx_plugin("ffx_storage_blackout_blobfs_checkerboard") {
 
 rustc_binary("blackout-blobfs-checkerboard-target-bin") {
   output_name = "blackout_blobfs_checkerboard_target_bin"
-  with_unit_tests = true
   testonly = true
   edition = "2021"
   deps = [
@@ -49,11 +48,6 @@ fuchsia_package("blackout-blobfs-checkerboard-target") {
 }
 
 group("blobfs-checkerboard") {
-  testonly = true
-  public_deps = [ ":blackout-blobfs-checkerboard-target" ]
-}
-
-group("integration") {
   testonly = true
   public_deps = [ ":blackout-blobfs-checkerboard-target" ]
 }
