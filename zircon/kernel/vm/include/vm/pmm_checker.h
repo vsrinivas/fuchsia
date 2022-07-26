@@ -76,17 +76,17 @@ class PmmChecker {
   //
   // It is an error to call this method with a page that is not free.  In other words,
   // page->is_page() must be true.
-  void FillPattern(vm_page_t* page);
+  void FillPattern(vm_page_t* page) const;
 
   // Returns true if |page| contains the expected fill pattern or |IsArmed| is false.
   //
   // Otherwise, returns false.
-  __WARN_UNUSED_RESULT bool ValidatePattern(vm_page_t* page);
+  __WARN_UNUSED_RESULT bool ValidatePattern(vm_page_t* page) const;
 
   // Panics the kernel if |page| does not contain the expected fill pattern and |IsArmed| is true.
   //
   // Otherwise, does nothing.
-  void AssertPattern(vm_page_t* page);
+  void AssertPattern(vm_page_t* page) const;
 
   static int64_t get_validation_failed_count();
 

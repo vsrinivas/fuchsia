@@ -87,14 +87,14 @@ void PmmChecker::Arm() { armed_ = true; }
 
 void PmmChecker::Disarm() { armed_ = false; }
 
-void PmmChecker::FillPattern(vm_page_t* page) {
+void PmmChecker::FillPattern(vm_page_t* page) const {
   DEBUG_ASSERT(page->is_free());
   void* kvaddr = paddr_to_physmap(page->paddr());
   DEBUG_ASSERT(is_kernel_address(reinterpret_cast<vaddr_t>(kvaddr)));
   __unsanitized_memset(kvaddr, kPatternOneByte, fill_size_);
 }
 
-NO_ASAN bool PmmChecker::ValidatePattern(vm_page_t* page) {
+NO_ASAN bool PmmChecker::ValidatePattern(vm_page_t* page) const {
   if (!armed_) {
     return true;
   }
@@ -110,7 +110,7 @@ NO_ASAN bool PmmChecker::ValidatePattern(vm_page_t* page) {
   return true;
 }
 
-void PmmChecker::AssertPattern(vm_page_t* page) {
+void PmmChecker::AssertPattern(vm_page_t* page) const {
   if (!ValidatePattern(page)) {
     kcounter_add(counter_pattern_validation_failed, 1);
     auto kvaddr = static_cast<void*>(paddr_to_physmap(page->paddr()));
