@@ -58,6 +58,13 @@ class PhysicalPageBorrowingConfig {
   }
   bool is_loaning_enabled() { return loaning_enabled_.load(ktl::memory_order_relaxed); }
 
+  // true - loaned pages will be replaced with new page with copied contents.
+  // false - loaned pages will be evicted.
+  void set_replace_on_unloan_enabled(bool enabled) {
+    replace_on_unloan_.store(enabled, ktl::memory_order_relaxed);
+  }
+  bool is_replace_on_unloan_enabled() { return replace_on_unloan_.load(ktl::memory_order_relaxed); }
+
  private:
   void OnBorrowingSettingsChanged() {
     bool enabled = is_borrowing_in_supplypages_enabled() || is_borrowing_on_mru_enabled();
@@ -81,6 +88,10 @@ class PhysicalPageBorrowingConfig {
   // contiguous VMO will loan the pages.  This can be dynamically changed, but changes will only
   // apply to subsequent decommit of contiguous VMO pages.
   ktl::atomic<bool> loaning_enabled_ = false;
+
+  // Enables copy of page contents, instead of eviction, when a loaned page is committed back to its
+  // contiguous owner.
+  ktl::atomic<bool> replace_on_unloan_ = false;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PHYSICAL_PAGE_BORROWING_CONFIG_H_

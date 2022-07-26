@@ -1125,6 +1125,13 @@ class VmCowPages final
                  supply_zero_offset_ < awaiting_clean_zero_range_end_);
   }
 
+  // Unlocked wrapper around ReplacePageLocked intended to be called via the VmCowPagesContainer.
+  zx_status_t ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned,
+                          vm_page_t** after_page, LazyPageRequest* page_request) TA_EXCL(lock_) {
+    Guard<Mutex> guard{&lock_};
+    return ReplacePageLocked(before_page, offset, with_loaned, after_page, page_request);
+  }
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
@@ -1359,7 +1366,8 @@ class VmCowPagesContainer : public fbl::RefCountedUpgradeable<VmCowPagesContaine
   bool RemovePageForEviction(vm_page_t* page, uint64_t offset,
                              VmCowPages::EvictionHintAction hint_action);
 
-  zx_status_t ReplacePageWithLoaned(vm_page_t* page, uint64_t offset);
+  zx_status_t ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned,
+                          vm_page_t** after_page, LazyPageRequest* page_request);
 
  private:
   friend class VmCowPages;

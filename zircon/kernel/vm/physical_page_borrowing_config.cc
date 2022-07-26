@@ -20,6 +20,9 @@ static void ppb_init_func(uint level) {
 
   // One option for whether decommit on contiguous VMO can work or returns ZX_ERR_NOT_SUPPORTED.
   pmm_physical_page_borrowing_config()->set_loaning_enabled(gBootOptions->ppb_loan);
+
+  pmm_physical_page_borrowing_config()->set_replace_on_unloan_enabled(
+      gBootOptions->ppb_replace_on_unloan);
 }
 
 LK_INIT_HOOK(ppb_init, &ppb_init_func, LK_INIT_LEVEL_VM)

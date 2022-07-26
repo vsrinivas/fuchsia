@@ -339,6 +339,13 @@ loaned to the rest of the system for potential borrowing.  If false, decommit
 will return ZX_ERR_NOT_SUPPORTED.
 )""")
 
+DEFINE_OPTION("kernel.ppb.replace-on-unloan", bool, ppb_replace_on_unloan, {false}, R"""(
+This controls what happens when a loaned page is re-committed to its original
+contiguous VMO. If false, the page is evicted from where it is loaned from,
+requiring that content to be faulted back in. If true, the contents are copied
+to a new page that is swapped in to replace the loaned page.
+)""")
+
 DEFINE_OPTION("kernel.render-dlog-to-crashlog", bool, render_dlog_to_crashlog, {false}, R"""(
 When set to true, as much of the recent kernel debuglog as will fit will be
 appended to the generated crashlog during a kernel panic to assist in debugging.

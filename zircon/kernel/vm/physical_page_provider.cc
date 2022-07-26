@@ -228,18 +228,32 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
           // We stack-own loaned pages from RemovePageForEviction() to pmm_free_page().  This
           // interval is for the benefit of asserts in vm_page_t, not for any functional purpose.
           __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
-
-          // We specify EvictionHintAction::Follow, but a page will never be both borrowed and
-          // ALWAYS_NEED, so Follow doesn't actually matter here.
           DEBUG_ASSERT(!page->object.always_need);
-          bool evict_result = cow_container->RemovePageForEviction(
-              page, vmo_backlink.offset, VmCowPages::EvictionHintAction::Follow);
-          if (!evict_result) {
-            // The page is at least on the way toward FREE, but we need to know it has reached FREE
-            // before calling pmm_end_loan.
-            StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(page);
-          } else {
-            pmm_free_page(page);
+          bool needs_evict = true;
+
+          // Check if we should attempt to replace the page to avoid eviction.
+          if (pmm_physical_page_borrowing_config()->is_replace_on_unloan_enabled()) {
+            __UNINITIALIZED LazyPageRequest page_request;
+            zx_status_t replace_result = cow_container->ReplacePage(page, vmo_backlink.offset,
+                                                                    false, nullptr, &page_request);
+            // If replacement failed for any reason, fall back to eviction.
+            needs_evict = replace_result != ZX_OK;
+          }
+
+          if (needs_evict) {
+            // We specify EvictionHintAction::Follow, but a page will never be both borrowed and
+            // ALWAYS_NEED, so Follow doesn't actually matter here.
+            bool evict_result = cow_container->RemovePageForEviction(
+                page, vmo_backlink.offset, VmCowPages::EvictionHintAction::Follow);
+            if (!evict_result) {
+              // We must have raced and this page has already become free, or is currently in a
+              // stack ownership somewhere else on the way to becoming free. For the second case we
+              // wait until it's not stack owned, ensuring that the only possible state is that the
+              // page is FREE.
+              StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(page);
+            } else {
+              pmm_free_page(page);
+            }
           }
           // Either this thread made it FREE, or this thread waited for it to be FREE.
           DEBUG_ASSERT(page->is_free());
