@@ -101,15 +101,31 @@ impl VsockDevice {
         self.config.borrow().guest_cid.get() as u32
     }
 
+    // Handles the TX queue stream, pulling chains off of the stream sequentially and forwarding
+    // them to the correct connection. This should only be invoked once, and will return when the
+    // stream is closed.
+    pub async fn handle_tx_stream<'a, 'b, N: DriverNotify>(
+        self: &Rc<Self>,
+        mut tx_stream: WrappedDescChainStream<'a, 'b, N>,
+        guest_mem: &'a GuestMem,
+    ) -> Result<(), Error> {
+        while let Some(chain) = tx_stream.next().await {
+            let readable_chain = ReadableChain::new(chain, guest_mem);
+            self.handle_tx_queue(readable_chain).await?;
+        }
+
+        Ok(())
+    }
+
     // Handles a TX readable chain. The device is responsible for extracting the header and then
     // 1) Creating new connections
     // 2) Resetting failed connections
-    // 3) Delegating sending TX data from the guest to the client to an existing connection
+    // 3) Delegating sending TX data from the guest to the client via an existing connection
     //
     // Note that if there is an error that is recoverable, we log it, reset the offending
     // connection, and return Ok to avoid stopping the device.
-    pub async fn handle_tx_queue<'a, 'b, N: DriverNotify, M: DriverMem>(
-        &self,
+    async fn handle_tx_queue<'a, 'b, N: DriverNotify, M: DriverMem>(
+        self: &Rc<Self>,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), anyhow::Error> {
         let header = match VsockDevice::read_header(&mut chain) {
@@ -135,7 +151,17 @@ impl VsockDevice {
         } else {
             match OpType::try_from(header.op.get())? {
                 OpType::Request => match chain.return_complete() {
-                    Ok(()) => self.guest_initiated_connect(key).await,
+                    Ok(()) => match self.guest_initiated_connect(key) {
+                        Ok(connection) => {
+                            let device = self.clone();
+                            fuchsia_async::Task::local(async move {
+                                device.poll_connection_for_actions(connection).await
+                            })
+                            .detach();
+                            Ok(())
+                        }
+                        Err(err) => Err(anyhow!("Failed guest initiated connect: {}", err)),
+                    },
                     Err(err) => Err(anyhow!("Failed to complete chain: {}", err)),
                 },
                 op => {
@@ -148,7 +174,7 @@ impl VsockDevice {
                             Ok(())
                         } else {
                             Err(anyhow!(
-                                "Received {:?} packet for non-existent connection: {:?}",
+                                "Received spurious {:?} packet for non-existent connection: {:?}",
                                 op,
                                 key
                             ))
@@ -390,40 +416,36 @@ impl VsockDevice {
 
     // Creates a guest initiated connection, which is done via the guest TX queue. This requires
     // that a client is already listening on the specified host port.
-    async fn guest_initiated_connect(&self, key: VsockConnectionKey) -> Result<(), Error> {
-        let connection = {
-            let listeners = self.listeners.borrow();
-            let acceptor = match listeners.get(&key.host_port) {
-                Some(acceptor) => acceptor,
-                None => {
-                    return Err(anyhow!("No client listening on host port: {}", key.host_port));
-                }
-            };
-
-            if self.register_connection_ports(key).is_err() {
-                return Err(anyhow!("Connection already exists: {:?}", key));
+    fn guest_initiated_connect(
+        &self,
+        key: VsockConnectionKey,
+    ) -> Result<Rc<VsockConnection>, Error> {
+        let listeners = self.listeners.borrow();
+        let acceptor = match listeners.get(&key.host_port) {
+            Some(acceptor) => acceptor,
+            None => {
+                return Err(anyhow!("No client listening on host port: {}", key.host_port));
             }
-
-            let response = acceptor.accept(self.guest_cid(), key.guest_port, key.host_port);
-            let connection = Rc::new(VsockConnection::new_guest_initiated(
-                key,
-                response,
-                self.control_packet_tx.clone(),
-            ));
-            self.connections.borrow_mut().insert(key, connection.clone());
-
-            self.new_connection_tx
-                .clone()
-                .unbounded_send(connection.clone())
-                .expect("New connection tx end should never be closed");
-
-            connection
         };
 
-        // This will not return until it removes the connection from the active connection set.
-        self.poll_connection_for_actions(connection).await;
+        if self.register_connection_ports(key).is_err() {
+            return Err(anyhow!("Connection already exists: {:?}", key));
+        }
 
-        Ok(())
+        let response = acceptor.accept(self.guest_cid(), key.guest_port, key.host_port);
+        let connection = Rc::new(VsockConnection::new_guest_initiated(
+            key,
+            response,
+            self.control_packet_tx.clone(),
+        ));
+        self.connections.borrow_mut().insert(key, connection.clone());
+
+        self.new_connection_tx
+            .clone()
+            .unbounded_send(connection.clone())
+            .expect("New connection tx end should never be closed");
+
+        Ok(connection)
     }
 
     async fn poll_connection_for_actions(&self, connection: Rc<VsockConnection>) {
@@ -995,18 +1017,13 @@ mod tests {
         };
 
         // Attempt and fail to connect on a port without a listener.
-        let connect_fut = device.guest_initiated_connect(VsockConnectionKey::new(
+        let result = device.guest_initiated_connect(VsockConnectionKey::new(
             HOST_CID,
             invalid_host_port,
             DEFAULT_GUEST_CID,
             guest_port,
         ));
-        futures::pin_mut!(connect_fut);
-        if let Poll::Ready(val) = executor.run_until_stalled(&mut connect_fut) {
-            assert!(val.is_err());
-        } else {
-            panic!("Expected future to be ready");
-        };
+        assert!(result.is_err());
 
         let mut control_packets =
             device.control_packet_rx.take().expect("No control packet rx channel");
@@ -1018,12 +1035,16 @@ mod tests {
         assert!(device.connections.borrow().is_empty());
 
         // Successfully connect on a port with a listener.
-        let connect_fut = device.guest_initiated_connect(VsockConnectionKey::new(
-            HOST_CID,
-            host_port,
-            DEFAULT_GUEST_CID,
-            guest_port,
-        ));
+        let guest_connection = device
+            .guest_initiated_connect(VsockConnectionKey::new(
+                HOST_CID,
+                host_port,
+                DEFAULT_GUEST_CID,
+                guest_port,
+            ))
+            .expect("expected connection");
+
+        let connect_fut = device.poll_connection_for_actions(guest_connection);
         futures::pin_mut!(connect_fut);
         assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
 

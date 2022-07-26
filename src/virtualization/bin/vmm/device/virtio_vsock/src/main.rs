@@ -18,7 +18,6 @@ use {
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     std::rc::Rc,
-    virtio_device::chain::ReadableChain,
 };
 
 // Services exposed by the Virtio Vsock device.
@@ -74,12 +73,7 @@ async fn run_virtio_vsock(
         device
             .run_device_notify(virtio_device_fidl)
             .map_err(|e| anyhow!("run_device_notify: {}", e)),
-        tx_stream.map(|chain| Ok((chain, vsock_device.clone()))).try_for_each_concurrent(None, {
-            let guest_mem = &guest_mem;
-            move |(chain, device)| async move {
-                device.handle_tx_queue(ReadableChain::new(chain, guest_mem)).await
-            }
-        }),
+        vsock_device.handle_tx_stream(tx_stream, &guest_mem),
         vsock_device.handle_rx_stream(rx_stream, &guest_mem),
     )?;
 
