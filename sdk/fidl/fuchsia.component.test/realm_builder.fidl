@@ -166,11 +166,11 @@ type Protocol = table {
     /// The name of the capability. This is usually the name of the FIDL
     /// protocol, e.g. `fuchsia.logger.LogSink`. If path is not set, the
     /// protocol will be installed in a target component's namespace at
-    // `/svc/{name}`.
+    /// `/svc/{name}`.
     1: name fuchsia.component.name;
 
     /// A rename of the capability, which can be set when routing to another
-    // component. This field is optional.
+    /// component. This field is optional.
     2: as fuchsia.component.name;
 
     /// For information on this type, see
@@ -192,7 +192,7 @@ type Directory = table {
     1: name fuchsia.component.name;
 
     /// A rename of the capability, which can be set when routing to another
-    // component. This field is optional.
+    /// component. This field is optional.
     2: as fuchsia.component.name;
 
     /// For information on this type, see
@@ -223,7 +223,7 @@ type Storage = table {
     1: name fuchsia.component.name;
 
     /// A rename of the capability, which can be set when routing to another
-    // component. This field is optional.
+    /// component. This field is optional.
     2: as fuchsia.component.name;
 
     /// The path in which to install the directory. The path should have a
@@ -237,11 +237,11 @@ type Service = table {
     /// The name of the capability. This is usually the name of the FIDL
     /// service, e.g. `fuchsia.echo.EchoService`. If path is not set, the
     /// service will be installed in a target component's namespace at
-    // `/svc/{name}`.
+    /// `/svc/{name}`.
     1: name fuchsia.component.name;
 
     /// A rename of the capability, which can be set when routing to another
-    // component. This field is optional.
+    /// component. This field is optional.
     2: as fuchsia.component.name;
 
     /// Override the path in which the service is installed. Instead of
@@ -257,7 +257,7 @@ type Event = table {
     1: name fuchsia.component.name;
 
     /// A rename of the capability, which can be set when routing to another
-    // component. This field is optional.
+    /// component. This field is optional.
     2: as fuchsia.component.name;
 
     /// A filter to apply on the event.
