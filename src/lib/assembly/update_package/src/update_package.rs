@@ -474,9 +474,9 @@ mod tests {
         builder.build().unwrap();
 
         // Ensure the blobfs tool was invoked correctly.
-        let blob_blk_path = outdir.path().join("update.blob.blk").path_to_string().unwrap();
-        let blobs_json_path = outdir.path().join("blobs.json").path_to_string().unwrap();
-        let blob_manifest_path = outdir.path().join("blob.manifest").path_to_string().unwrap();
+        let blob_blk_path = outdir.path().join("update.blob.blk");
+        let blobs_json_path = outdir.path().join("blobs.json");
+        let blob_manifest_path = outdir.path().join("blob.manifest");
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {
@@ -651,9 +651,9 @@ mod tests {
         builder.build().unwrap();
 
         // Ensure the blobfs tool was invoked correctly.
-        let blob_blk_path = outdir.path().join("update.blob.blk").path_to_string().unwrap();
-        let blobs_json_path = outdir.path().join("blobs.json").path_to_string().unwrap();
-        let blob_manifest_path = outdir.path().join("blob.manifest").path_to_string().unwrap();
+        let blob_blk_path = outdir.path().join("update.blob.blk");
+        let blobs_json_path = outdir.path().join("blobs.json");
+        let blob_manifest_path = outdir.path().join("blob.manifest");
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {

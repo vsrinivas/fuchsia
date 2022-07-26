@@ -7,6 +7,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
 use std::{
+    env::current_dir,
     hash::Hash,
     marker::PhantomData,
     path::{Component, Path, PathBuf},
@@ -217,6 +218,11 @@ pub fn path_relative_from(path: impl AsRef<Path>, base: impl AsRef<Path>) -> Res
     diff_paths(&path, &base).ok_or_else(|| {
         anyhow!("unable to compute relative path to {} from {}", path.display(), base.display())
     })
+}
+
+/// Helper to convert an absolute path into a path relative to the current directory
+pub fn path_relative_from_current_dir(path: impl AsRef<Path>) -> Result<PathBuf> {
+    path_relative_from(path, current_dir()?)
 }
 
 /// Helper to make a path relative to the path to a file.  This is the same as
@@ -597,5 +603,16 @@ mod tests {
 
         let relative_path = path_relative_from_file(path, file);
         assert!(relative_path.is_err());
+    }
+
+    #[test]
+    fn test_relative_from_current_dir() {
+        let cwd = std::env::current_dir().unwrap();
+
+        let base = "some/relative/path";
+        let path = cwd.join(base);
+
+        let relative_path = path_relative_from_current_dir(path).unwrap();
+        assert_eq!(relative_path, PathBuf::from(base));
     }
 }

@@ -265,8 +265,8 @@ mod tests {
         drop(builder);
 
         // Ensure the command was run correctly.
-        let blobs_json_path = dir.path().join("blobs.json").path_to_string().unwrap();
-        let blob_manifest_path = dir.path().join("blob.manifest").path_to_string().unwrap();
+        let blobs_json_path = dir.path().join("blobs.json");
+        let blob_manifest_path = dir.path().join("blob.manifest");
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {

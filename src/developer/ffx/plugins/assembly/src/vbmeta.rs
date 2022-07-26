@@ -7,6 +7,7 @@ use crate::vfs::{FilesystemProvider, RealFilesystemProvider};
 use anyhow::Result;
 use assembly_images_config::{VBMeta, VBMetaDescriptor};
 use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_util::path_relative_from_current_dir;
 use std::path::{Path, PathBuf};
 use vbmeta::VBMeta as VBMetaImage;
 use vbmeta::{HashDescriptor, Key, Salt};
@@ -34,8 +35,9 @@ pub fn construct_vbmeta(
     // Write VBMeta to a file and return the path.
     let vbmeta_path = outdir.as_ref().join(format!("{}.vbmeta", vbmeta_config.name));
     std::fs::write(&vbmeta_path, vbmeta.as_bytes())?;
-    images_manifest.images.push(Image::VBMeta(vbmeta_path.clone()));
-    Ok(vbmeta_path)
+    let vbmeta_path_relative = path_relative_from_current_dir(vbmeta_path)?;
+    images_manifest.images.push(Image::VBMeta(vbmeta_path_relative.clone()));
+    Ok(vbmeta_path_relative)
 }
 
 pub fn sign<FSP: FilesystemProvider>(
@@ -87,6 +89,7 @@ mod tests {
 
     use assembly_images_config::VBMeta;
     use assembly_images_manifest::ImagesManifest;
+    use assembly_util::path_relative_from_current_dir;
     use std::convert::TryFrom;
     use tempfile::tempdir;
     use vbmeta::{Key, Salt};
@@ -114,7 +117,10 @@ mod tests {
         let mut images_manifest = ImagesManifest::default();
         let vbmeta_path =
             construct_vbmeta(&mut images_manifest, dir.path(), &vbmeta_config, zbi_path).unwrap();
-        assert_eq!(vbmeta_path, dir.path().join("fuchsia.vbmeta"));
+        assert_eq!(
+            vbmeta_path,
+            path_relative_from_current_dir(dir.path().join("fuchsia.vbmeta")).unwrap()
+        );
     }
 
     #[test]

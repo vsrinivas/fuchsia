@@ -10,7 +10,7 @@ use assembly_images_config::{Zbi, ZbiCompression};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_package_list::{PackageList, WritablePackageList};
 use assembly_tool::Tool;
-use assembly_util::PathToStringExt;
+use assembly_util::{path_relative_from_current_dir, PathToStringExt};
 use fuchsia_pkg::PackageManifest;
 use std::path::{Path, PathBuf};
 use zbi::ZbiBuilder;
@@ -118,11 +118,12 @@ pub fn construct_zbi(
     zbi_builder.build(gendir, zbi_path.as_path())?;
 
     // Only add the unsigned ZBI to the images manifest if we will not be signing the ZBI.
+    let zbi_path_relative = path_relative_from_current_dir(zbi_path)?;
     if let None = zbi_config.postprocessing_script {
-        images_manifest.images.push(Image::ZBI { path: zbi_path.clone(), signed: false });
+        images_manifest.images.push(Image::ZBI { path: zbi_path_relative.clone(), signed: false });
     }
 
-    Ok(zbi_path)
+    Ok(zbi_path_relative)
 }
 
 /// If the board requires the zbi to be post-processed to make it bootable by

@@ -12,6 +12,7 @@ use assembly_images_config::{Fvm, FvmFilesystem, FvmOutput, SparseFvm};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
+use assembly_util::path_relative_from_current_dir;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -167,11 +168,12 @@ impl<'a> MultiFvmBuilder<'a> {
                 }
                 builder.build()?;
                 if add_to_manifest {
+                    let path_relative = path_relative_from_current_dir(path)?;
                     let image = match config.name.as_str() {
                         // Even though this is a standard FVM, people expect it to find it using
                         // the fvm.fastboot key in the ImagesManifest.
-                        "fvm.fastboot" => Image::FVMFastboot(path),
-                        _ => Image::FVM(path),
+                        "fvm.fastboot" => Image::FVMFastboot(path_relative),
+                        _ => Image::FVM(path_relative),
                     };
                     self.images_manifest.images.push(image);
                 }
@@ -196,10 +198,11 @@ impl<'a> MultiFvmBuilder<'a> {
 
                 builder.build()?;
                 if add_to_manifest {
+                    let path_relative = path_relative_from_current_dir(path)?;
                     if has_minfs {
-                        self.images_manifest.images.push(Image::FVMSparse(path));
+                        self.images_manifest.images.push(Image::FVMSparse(path_relative));
                     } else {
-                        self.images_manifest.images.push(Image::FVMSparseBlob(path));
+                        self.images_manifest.images.push(Image::FVMSparseBlob(path_relative));
                     }
                 }
             }
@@ -233,7 +236,8 @@ impl<'a> MultiFvmBuilder<'a> {
                 builder.build()?;
 
                 if add_to_manifest {
-                    self.images_manifest.images.push(Image::FVMFastboot(output));
+                    let path_relative = path_relative_from_current_dir(output)?;
+                    self.images_manifest.images.push(Image::FVMFastboot(path_relative));
                 }
             }
         }
@@ -287,7 +291,10 @@ impl<'a> MultiFvmBuilder<'a> {
                 )
                 .context("Constructing blobfs")?;
                 (
-                    Some(Image::BlobFS { path: path.clone(), contents }),
+                    Some(Image::BlobFS {
+                        path: path_relative_from_current_dir(path.clone())?,
+                        contents,
+                    }),
                     Filesystem::BlobFS {
                         path,
                         attributes: FilesystemAttributes {
@@ -339,7 +346,6 @@ mod tests {
     use assembly_images_manifest::ImagesManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
-    use assembly_util::PathToStringExt;
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::fs::File;
@@ -435,7 +441,7 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let output_path = dir.path().join("fvm.blk").path_to_string().unwrap();
+        let output_path = dir.path().join("fvm.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {
@@ -512,10 +518,10 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let standard_path = dir.path().join("fvm.blk").path_to_string().unwrap();
-        let sparse_path = dir.path().join("fvm.sparse.blk").path_to_string().unwrap();
-        let nand_tmp_path = dir.path().join("fvm.nand.tmp.blk").path_to_string().unwrap();
-        let nand_path = dir.path().join("fvm.nand.blk").path_to_string().unwrap();
+        let standard_path = dir.path().join("fvm.blk");
+        let sparse_path = dir.path().join("fvm.sparse.blk");
+        let nand_tmp_path = dir.path().join("fvm.nand.tmp.blk");
+        let nand_path = dir.path().join("fvm.nand.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {
@@ -658,11 +664,11 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let blobfs_path = dir.path().join("blob.blk").path_to_string().unwrap();
-        let blobs_json_path = dir.path().join("blobs.json").path_to_string().unwrap();
-        let blob_manifest_path = dir.path().join("blob.manifest").path_to_string().unwrap();
-        let minfs_path = dir.path().join("data.blk").path_to_string().unwrap();
-        let standard_path = dir.path().join("fvm.blk").path_to_string().unwrap();
+        let blobfs_path = dir.path().join("blob.blk");
+        let blobs_json_path = dir.path().join("blobs.json");
+        let blob_manifest_path = dir.path().join("blob.manifest");
+        let minfs_path = dir.path().join("data.blk");
+        let standard_path = dir.path().join("fvm.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {
@@ -797,14 +803,14 @@ mod tests {
         let tools = FakeToolProvider::default();
         builder.build(&tools).unwrap();
 
-        let blobfs_path = dir.path().join("blob.blk").path_to_string().unwrap();
-        let blobs_json_path = dir.path().join("blobs.json").path_to_string().unwrap();
-        let blob_manifest_path = dir.path().join("blob.manifest").path_to_string().unwrap();
-        let minfs_path = dir.path().join("data.blk").path_to_string().unwrap();
-        let standard_path = dir.path().join("fvm.blk").path_to_string().unwrap();
-        let sparse_path = dir.path().join("fvm.sparse.blk").path_to_string().unwrap();
-        let nand_tmp_path = dir.path().join("fvm.nand.tmp.blk").path_to_string().unwrap();
-        let nand_path = dir.path().join("fvm.nand.blk").path_to_string().unwrap();
+        let blobfs_path = dir.path().join("blob.blk");
+        let blobs_json_path = dir.path().join("blobs.json");
+        let blob_manifest_path = dir.path().join("blob.manifest");
+        let minfs_path = dir.path().join("data.blk");
+        let standard_path = dir.path().join("fvm.blk");
+        let sparse_path = dir.path().join("fvm.sparse.blk");
+        let nand_tmp_path = dir.path().join("fvm.nand.tmp.blk");
+        let nand_path = dir.path().join("fvm.nand.blk");
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
             {

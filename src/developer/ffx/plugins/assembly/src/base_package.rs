@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_util::path_relative_from_current_dir;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::PackageManifest;
@@ -68,11 +69,12 @@ pub fn construct_base_package(
     let merkle_path = outdir.join("base.merkle");
     std::fs::write(merkle_path, hex::encode(base_merkle.as_bytes()))?;
 
-    images_manifest.images.push(Image::BasePackage(base_package_path.clone()));
+    let base_package_path_relative = path_relative_from_current_dir(base_package_path.clone())?;
+    images_manifest.images.push(Image::BasePackage(base_package_path_relative.clone()));
     Ok(BasePackage {
         merkle: base_merkle,
         contents: build_results.contents,
-        path: base_package_path,
+        path: base_package_path_relative,
         manifest_path: build_results.manifest_path,
     })
 }
@@ -81,6 +83,7 @@ pub fn construct_base_package(
 mod tests {
     use super::*;
 
+    use assembly_util::path_relative_from_current_dir;
     use fuchsia_archive::Utf8Reader;
     use serde_json::json;
     use std::fs::File;
@@ -110,7 +113,10 @@ mod tests {
             &product_config,
         )
         .unwrap();
-        assert_eq!(base_package.path, dir.path().join("base/meta.far"));
+        assert_eq!(
+            base_package.path,
+            path_relative_from_current_dir(dir.path().join("base/meta.far")).unwrap()
+        );
 
         // Read the base package, and assert the contents are correct.
         let base_package_file = File::open(base_package.path).unwrap();
@@ -149,7 +155,10 @@ mod tests {
             &product_config,
         )
         .unwrap();
-        assert_eq!(base_package.path, dir.path().join("base/meta.far"));
+        assert_eq!(
+            base_package.path,
+            path_relative_from_current_dir(dir.path().join("base/meta.far")).unwrap()
+        );
 
         // Read the base package, and assert the contents are correct.
         let base_package_file = File::open(base_package.path).unwrap();
