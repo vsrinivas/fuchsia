@@ -557,7 +557,6 @@ group("cmx_allowlist") {
     "//src/sys/time/timekeeper_integration:timekeeper_for_integration_manifest_compile",
     "//src/sys/time/timekeeper_integration:timekeeper_with_fake_time_manifest_compile",
     "//src/sys/time/timekeeper_integration/dev_time_source:dev_time_source_manifest_compile",
-    "//src/sys/tools/activity-ctl:activity-ctl-component_manifest_compile",
     "//src/sys/tools/run/test:run_return_value_test_manifest_compile",
     "//src/sys/tools/run/test:run_test_exiter_manifest_compile",
     "//src/sys/tools/run/test:run_tests_manifest_compile",

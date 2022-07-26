@@ -25,12 +25,6 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("activity-ctl-component") {
-  component_name = "activity-ctl"
-  manifest = "meta/activity-ctl.cmx"
+fuchsia_shell_package("activity-ctl") {
   deps = [ ":bin" ]
-}
-
-fuchsia_package("activity-ctl") {
-  deps = [ ":activity-ctl-component" ]
 }
