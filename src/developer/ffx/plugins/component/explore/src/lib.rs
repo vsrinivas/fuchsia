@@ -3,17 +3,66 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
-    errors::ffx_error,
+    anyhow::{Error, Result},
+    atty::Stream,
+    errors::{ffx_bail, ffx_error},
     ffx_component_explore_args::ExploreComponentCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_dash::{LauncherError, LauncherProxy},
     fidl_fuchsia_io as fio,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-    std::io::{Read, Write},
-    termion::raw::IntoRawMode,
+    std::io::{Read, StdoutLock, Write},
+    termion::raw::{IntoRawMode, RawTerminal},
 };
+
+enum Terminal<'a> {
+    Raw(RawTerminal<StdoutLock<'a>>),
+    Std,
+}
+
+impl std::io::Write for Terminal<'_> {
+    fn flush(&mut self) -> Result<(), std::io::Error> {
+        match self {
+            Terminal::Raw(r) => r.flush(),
+            Terminal::Std => std::io::stdout().flush(),
+        }
+    }
+    fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
+        match self {
+            Terminal::Raw(r) => r.write(buf),
+            Terminal::Std => std::io::stdout().write(buf),
+        }
+    }
+}
+
+impl Terminal<'_> {
+    // Create a terminal either in raw or standard mode. Use raw for interactivity, indicated by the
+    // given command being None. Return an error if the terminal can't be created for the required
+    // combination of interactivity and input/output pipes: Only output pipes are allowed and only
+    // when not in interactive mode.
+    fn new(cmd: &Option<String>) -> Result<Self> {
+        if !atty::is(Stream::Stdin) {
+            ffx_bail!("ffx component explore does not support input pipes");
+        }
+        let piping = !atty::is(Stream::Stdout);
+        if piping && cmd.is_none() {
+            ffx_bail!("ffx component explore does not support pipes in interactive mode");
+        }
+
+        if cmd.is_none() && !piping {
+            // Put the host terminal into raw mode, so input characters are not echoed, streams are
+            // not buffered and newlines are not changed.
+            let term_out = std::io::stdout()
+                .lock()
+                .into_raw_mode()
+                .map_err(|e| ffx_error!("could not set raw mode on terminal: {}", e))?;
+            Ok(Terminal::Raw(term_out))
+        } else {
+            Ok(Terminal::Std)
+        }
+    }
+}
 
 // TODO(https://fxbug.dev/102835): This plugin needs E2E tests.
 #[ffx_plugin(LauncherProxy = "core/debug-dash-launcher:expose:fuchsia.dash.Launcher")]
@@ -26,7 +75,9 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
     let tools_url = cmd.tools.as_deref();
 
     // Launch dash with the given moniker and stdio handles.
-    let (pty, pty_server) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+    let (pty, pty_server) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
+    let mut terminal = Terminal::new(&cmd.command)?;
+
     launcher_proxy
         .launch_with_socket(&relative_moniker, pty_server, tools_url, cmd.command.as_deref())
         .await
@@ -37,49 +88,43 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
             e => ffx_error!("Unexpected error launching dash: {:?}", e),
         })?;
 
-    // Put the host terminal into raw mode, so input characters are not echoed, streams
-    // are not buffered and newlines are not changed.
-    let mut term_out = std::io::stdout()
-        .lock()
-        .into_raw_mode()
-        .map_err(|e| ffx_error!("could not set raw mode on terminal: {}", e))?;
-
-    let pty = fuchsia_async::Socket::from_socket(pty).unwrap();
+    let pty = fuchsia_async::Socket::from_socket(pty)?;
     let (mut read_from_pty, mut write_to_pty) = pty.split();
 
-    // Setup a thread for forwarding stdin. Reading from stdin is a blocking operation which
-    // will halt the executor if it were to run on the same thread.
+    // Setup a thread for forwarding stdin. Reading from stdin is a blocking operation which will
+    // halt the executor if it were to run on the same thread.
     std::thread::spawn(move || {
-        let mut executor = fuchsia_async::LocalExecutor::new().unwrap();
+        let mut executor = fuchsia_async::LocalExecutor::new()?;
         executor.run_singlethreaded(async move {
             let mut term_in = std::io::stdin().lock();
             let mut buf = [0u8; fio::MAX_BUF as usize];
             loop {
-                let bytes_read = term_in.read(&mut buf).unwrap();
-                if bytes_read > 0 {
-                    let _ = write_to_pty.write_all(&buf[..bytes_read]).await;
-                    let _ = write_to_pty.flush().await;
+                let bytes_read = term_in.read(&mut buf)?;
+                if bytes_read == 0 {
+                    return Ok::<(), Error>(());
                 }
+                write_to_pty.write_all(&buf[..bytes_read]).await?;
+                write_to_pty.flush().await?;
             }
-        });
+        })?;
+        Ok::<(), Error>(())
     });
 
     // In a loop, wait for the TTY to be readable and print out the bytes.
     loop {
         let mut buf = [0u8; fio::MAX_BUF as usize];
-        let bytes_read = read_from_pty.read(&mut buf).await.unwrap();
+        let bytes_read = read_from_pty.read(&mut buf).await?;
         if bytes_read == 0 {
-            // There are no more bytes to read. This means that the socket has been
-            // closed. This is probably because the dash process has terminated.
+            // There are no more bytes to read. This means that the socket has been closed. This is
+            // probably because the dash process has terminated.
             break;
         }
-
-        term_out.write_all(&buf[..bytes_read]).unwrap();
-        term_out.flush().unwrap();
+        terminal.write_all(&buf[..bytes_read])?;
+        terminal.flush()?;
     }
 
-    drop(term_out);
-    if cmd.command.is_none() {
+    if matches!(terminal, Terminal::Raw(_)) {
+        drop(terminal);
         eprintln!("Connection to terminal closed");
     }
     Ok(())
