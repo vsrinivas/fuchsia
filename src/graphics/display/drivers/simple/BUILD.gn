@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
+import("//src/graphics/display/drivers/args.gni")
 
 source_set("shared") {
   visibility = [ ":*" ]
@@ -52,9 +53,22 @@ source_set("shared") {
 template("simple_fuchsia_driver") {
   driver_name = target_name
   driver_bind_rules("simple-${driver_name}-bind") {
-    rules = "simple-${driver_name}.bind"
+    # TODO(fxbug.dev/104963): Remove the Intel-specific logic once the Tiger
+    # Lake display driver is stable enough.
+    if (driver_name == "intel") {
+      if (enable_tiger_lake_display_driver) {
+        rules = "simple-intel.bind"
+        tests = "intel_bind_tests.json"
+      } else {
+        rules = "simple-intel-tgl-optout.bind"
+        tests = "intel_bind_tgl_optout_tests.json"
+      }
+    } else {
+      rules = "simple-${driver_name}.bind"
+      tests = "${driver_name}_bind_tests.json"
+    }
+
     header_output = "simple-${driver_name}-bind.h"
-    tests = "${driver_name}_bind_tests.json"
     deps = [
       "//src/devices/bind/fuchsia.pci",
       "//src/devices/bind/fuchsia.sysmem",

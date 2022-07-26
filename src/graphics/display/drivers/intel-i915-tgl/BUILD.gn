@@ -6,11 +6,20 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/drivers.gni")
 import("//build/test.gni")
+import("//src/graphics/display/drivers/args.gni")
 
 driver_bind_rules("intel-i915-tgl-bind") {
-  rules = "intel-i915-tgl.bind"
+  # TODO(fxbug.dev/104963): Remove the check and the else branch once the Tiger
+  # Lake display driver is stable enough.
+  if (enable_tiger_lake_display_driver) {
+    rules = "intel-i915-tgl.bind"
+    tests = "bind_tests.json"
+  } else {
+    rules = "intel-i915-tgl-optout.bind"
+    tests = "bind_optout_tests.json"
+  }
+
   header_output = "intel-i915-tgl-bind.h"
-  tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.pci",

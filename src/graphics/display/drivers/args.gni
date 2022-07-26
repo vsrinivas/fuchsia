@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Set to false to opt out of the Tiger Lake display driver. This driver is not
+  # yet fully stable, and some teams may have a better experience by using the
+  # simple VGA driver.
+  #
+  # TODO(fxbug.dev/104963): Remove the opt-out once the Tiger Lake display
+  # driver is stable enough.
+  enable_tiger_lake_display_driver = false
+}

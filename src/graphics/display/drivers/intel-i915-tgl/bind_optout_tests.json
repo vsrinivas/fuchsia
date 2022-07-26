@@ -1,6 +1,6 @@
 [
     {
-        "name": "Protocol",
+        "name": "Protocol (with GN opt-out)",
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
@@ -8,7 +8,7 @@
         }
     },
     {
-        "name": "Skylake",
+        "name": "Skylake (with GN opt-out)",
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
@@ -18,8 +18,8 @@
         }
     },
     {
-      "name": "Tiger Lake on NUC11",
-      "expected": "match",
+      "name": "Tiger Lake on NUC11 (with GN opt-out)",
+      "expected": "abort",
       "device": {
         "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
         "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
