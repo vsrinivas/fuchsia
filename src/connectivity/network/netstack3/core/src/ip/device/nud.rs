@@ -345,8 +345,9 @@ mod tests {
     use alloc::{vec, vec::Vec};
     use core::{convert::TryInto as _, num::NonZeroU64};
 
+    use net_declare::{net_ip_v4, net_ip_v6};
     use net_types::{
-        ip::{Ipv6, Ipv6Addr},
+        ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
         UnicastAddr, Witness as _,
     };
     use packet::{Buf, InnerPacketBuilder as _, Serializer as _};
@@ -362,6 +363,7 @@ mod tests {
         ipv6::Ipv6PacketBuilder,
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{
@@ -451,14 +453,26 @@ mod tests {
         assert_eq!(sync_ctx.take_frames(), []);
     }
 
-    // Safe because the address is non-zero.
-    const LOOKUP_ADDR: SpecifiedAddr<Ipv6Addr> =
-        unsafe { SpecifiedAddr::new_unchecked(Ipv6Addr::new([0xfe80, 0, 0, 0, 0, 0, 0, 1])) };
+    trait TestIpExt: Ip {
+        const LOOKUP_ADDR: SpecifiedAddr<Self::Addr>;
+    }
 
-    #[test]
-    fn comfirmation_should_not_create_entry() {
+    impl TestIpExt for Ipv4 {
+        // Safe because the address is non-zero.
+        const LOOKUP_ADDR: SpecifiedAddr<Ipv4Addr> =
+            unsafe { SpecifiedAddr::new_unchecked(net_ip_v4!("192.168.0.1")) };
+    }
+
+    impl TestIpExt for Ipv6 {
+        // Safe because the address is non-zero.
+        const LOOKUP_ADDR: SpecifiedAddr<Ipv6Addr> =
+            unsafe { SpecifiedAddr::new_unchecked(net_ip_v6!("fe80::1")) };
+    }
+
+    #[ip_test]
+    fn comfirmation_should_not_create_entry<I: Ip + TestIpExt>() {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::with_state(MockNudContext {
+            DummyCtx::with_sync_ctx(MockCtx::<I>::with_state(MockNudContext {
                 retrans_timer: ONE_SECOND,
                 nud: Default::default(),
                 resolved: Default::default(),
@@ -470,7 +484,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             link_addr,
             DynamicNeighborUpdateSource::Confirmation,
         );
@@ -481,10 +495,10 @@ mod tests {
     const LINK_ADDR2: DummyLinkAddress = DummyLinkAddress([2]);
     const LINK_ADDR3: DummyLinkAddress = DummyLinkAddress([3]);
 
-    #[test]
-    fn static_neighbor() {
+    #[ip_test]
+    fn static_neighbor<I: Ip + TestIpExt>() {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::with_state(MockNudContext {
+            DummyCtx::with_sync_ctx(MockCtx::<I>::with_state(MockNudContext {
                 retrans_timer: ONE_SECOND,
                 nud: Default::default(),
                 resolved: Default::default(),
@@ -495,29 +509,29 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             LINK_ADDR1,
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_eq!(sync_ctx.take_frames(), []);
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
 
         // Dynamic entries should not overwrite static entries.
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
     }
 
-    #[test]
-    fn dynamic_neighbor() {
+    #[ip_test]
+    fn dynamic_neighbor<I: Ip + TestIpExt>() {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::with_state(MockNudContext {
+            DummyCtx::with_sync_ctx(MockCtx::<I>::with_state(MockNudContext {
                 retrans_timer: ONE_SECOND,
                 nud: Default::default(),
                 resolved: Default::default(),
@@ -528,40 +542,40 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             LINK_ADDR1,
             DynamicNeighborUpdateSource::Probe,
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_eq!(sync_ctx.take_frames(), []);
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
 
         // Dynamic entries may be overwritten by new dynamic entries.
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, LOOKUP_ADDR, LINK_ADDR2);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR2);
 
         // A static entry may overwrite a dynamic entry.
         NudHandler::set_static_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             LINK_ADDR3,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, LOOKUP_ADDR, LINK_ADDR3);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR3);
     }
 
-    #[test]
-    fn send_solicitation_on_lookup() {
+    #[ip_test]
+    fn send_solicitation_on_lookup<I: Ip + TestIpExt>() {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::with_state(MockNudContext {
+            DummyCtx::with_sync_ctx(MockCtx::<I>::with_state(MockNudContext {
                 retrans_timer: ONE_SECOND,
                 nud: Default::default(),
                 resolved: Default::default(),
@@ -571,14 +585,14 @@ mod tests {
         assert_eq!(sync_ctx.take_frames(), []);
 
         assert_matches!(
-            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, LOOKUP_ADDR),
+            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, I::LOOKUP_ADDR),
             None
         );
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
             HashMap::from([(
-                LOOKUP_ADDR,
+                I::LOOKUP_ADDR,
                 NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
                     MAX_MULTICAST_SOLICIT - 1
                 )),
@@ -589,26 +603,26 @@ mod tests {
         non_sync_ctx.timer_ctx().assert_timers_installed([(
             NudTimerId {
                 device_id: DummyLinkDeviceId,
-                lookup_addr: LOOKUP_ADDR,
+                lookup_addr: I::LOOKUP_ADDR,
                 _marker: PhantomData,
             },
             non_sync_ctx.now() + ONE_SECOND.get(),
         )]);
         assert_eq!(
             sync_ctx.take_frames(),
-            [(MockNudMessageMeta { lookup_addr: LOOKUP_ADDR }, Vec::new())]
+            [(MockNudMessageMeta { lookup_addr: I::LOOKUP_ADDR }, Vec::new())]
         );
 
         // Calling lookup immediately again does not trigger a new NUD message.
         assert_matches!(
-            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, LOOKUP_ADDR),
+            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, I::LOOKUP_ADDR),
             None
         );
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
             HashMap::from([(
-                LOOKUP_ADDR,
+                I::LOOKUP_ADDR,
                 NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
                     MAX_MULTICAST_SOLICIT - 1
                 )),
@@ -619,7 +633,7 @@ mod tests {
         non_sync_ctx.timer_ctx().assert_timers_installed([(
             NudTimerId {
                 device_id: DummyLinkDeviceId,
-                lookup_addr: LOOKUP_ADDR,
+                lookup_addr: I::LOOKUP_ADDR,
                 _marker: PhantomData,
             },
             non_sync_ctx.now() + ONE_SECOND.get(),
@@ -631,28 +645,28 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            LOOKUP_ADDR,
+            I::LOOKUP_ADDR,
             LINK_ADDR1,
             DynamicNeighborUpdateSource::Confirmation,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
 
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
             HashMap::from([(
-                LOOKUP_ADDR,
+                I::LOOKUP_ADDR,
                 NeighborState::Dynamic(DynamicNeighborState::Complete { link_address: LINK_ADDR1 }),
             )])
         );
-        assert_eq!(resolved, &[(LOOKUP_ADDR, LINK_ADDR1)]);
+        assert_eq!(resolved, &[(I::LOOKUP_ADDR, LINK_ADDR1)]);
         assert_eq!(failed, &[]);
     }
 
-    #[test]
-    fn solicitation_failure() {
+    #[ip_test]
+    fn solicitation_failure<I: Ip + TestIpExt>() {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::<Ipv6>::with_state(MockNudContext {
+            DummyCtx::with_sync_ctx(MockCtx::<I>::with_state(MockNudContext {
                 retrans_timer: ONE_SECOND,
                 nud: Default::default(),
                 resolved: Default::default(),
@@ -662,13 +676,13 @@ mod tests {
         assert_eq!(sync_ctx.take_frames(), []);
 
         assert_matches!(
-            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, LOOKUP_ADDR),
+            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, I::LOOKUP_ADDR),
             None
         );
 
         let timer_id = NudTimerId {
             device_id: DummyLinkDeviceId,
-            lookup_addr: LOOKUP_ADDR,
+            lookup_addr: I::LOOKUP_ADDR,
             _marker: PhantomData,
         };
         for i in 1..=MAX_MULTICAST_SOLICIT {
@@ -678,7 +692,7 @@ mod tests {
             assert_eq!(
                 nud.neighbors,
                 HashMap::from([(
-                    LOOKUP_ADDR,
+                    I::LOOKUP_ADDR,
                     NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
                         MAX_MULTICAST_SOLICIT - i
                     )),
@@ -692,7 +706,7 @@ mod tests {
                 .assert_timers_installed([(timer_id, non_sync_ctx.now() + ONE_SECOND.get())]);
             assert_eq!(
                 sync_ctx.take_frames(),
-                [(MockNudMessageMeta { lookup_addr: LOOKUP_ADDR }, Vec::new())]
+                [(MockNudMessageMeta { lookup_addr: I::LOOKUP_ADDR }, Vec::new())]
             );
 
             assert_eq!(
@@ -708,7 +722,7 @@ mod tests {
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(nud.neighbors, HashMap::new());
         assert_eq!(resolved, &[]);
-        assert_eq!(failed, &[LOOKUP_ADDR]);
+        assert_eq!(failed, &[I::LOOKUP_ADDR]);
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_eq!(sync_ctx.take_frames(), []);
     }
@@ -799,7 +813,7 @@ mod tests {
     }
 
     #[test]
-    fn integration() {
+    fn ipv6_integration() {
         let DummyEventDispatcherConfig {
             local_mac,
             remote_mac,
