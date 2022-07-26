@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     futures::future::Either,
     std::time::Duration,
+    thiserror::Error,
     timeout::timeout,
 };
 
@@ -23,13 +24,14 @@ pub async fn wait_for_device(
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let knock_fut = async {
         loop {
-            if knock_target(&ffx, &target_collection)
-                .await
-                .map_err(|e| tracing::debug!("failed to knock target: {:?}", e))
-                .is_ok()
-            {
-                return;
-            }
+            break match knock_target(&ffx, &target_collection).await {
+                Err(KnockError::CriticalError(e)) => Err(e),
+                Err(KnockError::NonCriticalError(e)) => {
+                    tracing::debug!("unable to knock target: {:?}", e);
+                    continue;
+                }
+                Ok(()) => Ok(()),
+            };
         }
     };
     futures_lite::pin!(knock_fut);
@@ -41,20 +43,30 @@ pub async fn wait_for_device(
         is_default_target,
     };
     match futures::future::select(knock_fut, timeout_fut).await {
-        Either::Left(_) => Ok(()),
+        Either::Left((left, _)) => left,
         Either::Right(_) => Err(timeout_err.into()),
     }
 }
 
 const RCS_TIMEOUT: Duration = Duration::from_secs(3);
 
+#[derive(Debug, Error)]
+enum KnockError {
+    #[error("critical error encountered: {0:?}")]
+    CriticalError(anyhow::Error),
+    #[error("non-critical error encountered: {0:?}")]
+    NonCriticalError(#[from] anyhow::Error),
+}
+
 async fn knock_target(
     ffx: &ffx_lib_args::Ffx,
     target_collection_proxy: &TargetCollectionProxy,
-) -> Result<()> {
+) -> Result<(), KnockError> {
     let default_target = ffx.target().await?;
-    let (target_proxy, target_remote) = create_proxy::<TargetMarker>()?;
-    let (rcs_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+    let (target_proxy, target_remote) =
+        create_proxy::<TargetMarker>().map_err(|e| KnockError::NonCriticalError(e.into()))?;
+    let (rcs_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()
+        .map_err(|e| KnockError::NonCriticalError(e.into()))?;
     // If you are reading this plugin for example code, this is an example of what you
     // should generally not be doing to connect to a daemon protocol. This is maintained
     // by the FFX team directly.
@@ -64,20 +76,30 @@ async fn knock_target(
             target_remote,
         )
         .await
-        .context("opening target")?
-        .map_err(|e| anyhow!("open target err: {:?}", e))?;
+        .map_err(|e| {
+            KnockError::CriticalError(
+                errors::ffx_error!("Lost connection to the Daemon. Full context:\n{}", e).into(),
+            )
+        })?
+        .map_err(|e| {
+            KnockError::CriticalError(errors::ffx_error!("Error opening target: {:?}", e).into())
+        })?;
+
     timeout(RCS_TIMEOUT, target_proxy.open_remote_control(remote_server_end))
-        .await?
+        .await
+        .context("timing out")?
         .context("opening remote_control")?
         .map_err(|e| anyhow!("open remote control err: {:?}", e))?;
     rcs::knock_rcs(&rcs_proxy).await.map_err(|e| {
-        FfxError::TargetConnectionError {
-            err: e,
-            target: default_target.clone(),
-            is_default_target: default_target.is_some(),
-            logs: None,
-        }
-        .into()
+        KnockError::NonCriticalError(
+            FfxError::TargetConnectionError {
+                err: e,
+                target: default_target.clone(),
+                is_default_target: default_target.is_some(),
+                logs: None,
+            }
+            .into(),
+        )
     })
 }
 
@@ -154,6 +176,48 @@ mod tests {
         })
         .detach();
         proxy
+    }
+
+    /// Sets up a target collection that will automatically close out creating a PEER_CLOSED error.
+    fn setup_fake_target_collection_server_auto_close() -> TargetCollectionProxy {
+        let (proxy, mut stream) = create_proxy_and_stream::<TargetCollectionMarker>().unwrap();
+        fuchsia_async::Task::local(async move {
+            while let Ok(Some(req)) = stream.try_next().await {
+                match req {
+                    TargetCollectionRequest::OpenTarget { .. } => {
+                        // Do nothing. This will immediately drop the responder struct causing a
+                        // PEER_CLOSED error.
+                    }
+                    e => panic!("unexpected request: {:?}", e),
+                }
+            }
+        })
+        .detach();
+        proxy
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn peer_closed_to_target_collection_causes_top_level_error() {
+        let _env = ffx_config::test_init().await.unwrap();
+        assert!(wait_for_device(
+            setup_fake_target_collection_server_auto_close(),
+            WaitCommand { timeout: 1000 }
+        )
+        .await
+        .is_err())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn peer_closed_to_target_collection_causes_knock_error() {
+        let _env = ffx_config::test_init().await.unwrap();
+        let ffx: ffx_lib_args::Ffx = argh::from_env();
+        let tc_proxy = setup_fake_target_collection_server_auto_close();
+        match knock_target(&ffx, &tc_proxy).await.unwrap_err() {
+            KnockError::CriticalError(_) => {}
+            KnockError::NonCriticalError(e) => {
+                panic!("should not have received non-critical error, but did: {:?}", e)
+            }
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
