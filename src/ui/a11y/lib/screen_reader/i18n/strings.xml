@@ -81,6 +81,8 @@
     <string name="element_not_checked">Not checked</string>
     <!-- Spoken message that describes an element where the checked state is mixed or indeterminate. -->
     <string name="element_partially_checked">Partially checked</string>
+    <!-- Spoken message that describes an element that is selected. For example, a tab may be selected. -->
+    <string name="element_selected">Selected</string>
     <!-- Spoken message that describes an element that is disabled. For example, an element with the ARIA attribute aria-disabled=true. -->
     <string name="element_disabled">Disabled</string>
     <!-- Spoken message that describes an element that is expanded. For example, an element with the ARIA attribute aria-expanded=true. -->
