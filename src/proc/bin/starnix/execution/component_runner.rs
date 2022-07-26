@@ -170,7 +170,7 @@ fn mount_component_pkg_data(
     };
 
     // Create the filesystem and mount it.
-    let fs = create_remotefs_filesystem(pkg, ".")?;
+    let fs = create_remotefs_filesystem(&galaxy.kernel, pkg, ".")?;
     mount_point.mount(WhatToMount::Fs(fs), MountFlags::empty())?;
     Ok(pkg_path.to_owned())
 }

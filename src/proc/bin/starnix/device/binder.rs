@@ -2606,7 +2606,7 @@ const BINDERS: &[&'static FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 impl BinderFs {
     pub fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
-        let fs = FileSystem::new_with_permanent_entries(BinderFs(()));
+        let fs = FileSystem::new_with_permanent_entries(kernel, BinderFs(()));
         let mut builder = StaticDirectoryBuilder::new(&fs);
 
         for (name, node) in Self::get_binder_nodes(kernel, &fs)?.into_iter() {
@@ -3987,10 +3987,13 @@ mod tests {
         // Open a file in the sender process that we won't be using. It is there to occupy a file
         // descriptor so that the translation doesn't happen to use the same FDs for receiver and
         // sender, potentially hiding a bug.
-        test.sender_task.files.add_with_flags(create_panicking_file(), FdFlags::empty()).unwrap();
+        test.sender_task
+            .files
+            .add_with_flags(PanickingFile::new(&test.sender_task), FdFlags::empty())
+            .unwrap();
 
         // Open two files in the sender process. These will be sent in the transaction.
-        let files = [create_panicking_file(), create_panicking_file()];
+        let files = [PanickingFile::new(&test.sender_task), PanickingFile::new(&test.sender_task)];
         let sender_fds = files
             .iter()
             .map(|file| {
@@ -4259,7 +4262,7 @@ mod tests {
     fn process_state_cleaned_up_after_binder_fd_closed() {
         let (_kernel, current_task) = create_kernel_and_task();
         let binder_dev = BinderDev::new();
-        let node = FsNode::new_root(PlaceholderFsNodeOps);
+        let node = FsNode::new_root(PanickingFsNode);
 
         // Open the binder device, which creates an instance of the binder device associated with
         // the process.
@@ -4489,7 +4492,7 @@ mod tests {
             receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         // Open a file in the sender process.
-        let file = create_panicking_file();
+        let file = PanickingFile::new(&test.sender_task);
         let sender_fd = test
             .sender_task
             .files
@@ -4568,7 +4571,7 @@ mod tests {
         let sender_fd = test
             .sender_task
             .files
-            .add_with_flags(create_panicking_file(), FdFlags::CLOEXEC)
+            .add_with_flags(PanickingFile::new(&test.sender_task), FdFlags::CLOEXEC)
             .expect("add file");
 
         // Send the fd in a transaction.
@@ -5019,7 +5022,7 @@ mod tests {
                 zx::VmarFlags::PERM_READ,
                 MappingOptions::empty(),
                 NamespaceNode::new_anonymous(DirEntry::new_unrooted(Arc::new(FsNode::new_root(
-                    PlaceholderFsNodeOps,
+                    PanickingFsNode,
                 )))),
             )
             .expect("mmap");

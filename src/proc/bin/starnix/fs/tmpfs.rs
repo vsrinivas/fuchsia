@@ -9,7 +9,7 @@ use super::*;
 use crate::auth::FsCred;
 use crate::lock::{Mutex, MutexGuard};
 use crate::logging::not_implemented;
-use crate::task::CurrentTask;
+use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -62,12 +62,12 @@ impl FileSystemOps for Arc<TmpFs> {
 }
 
 impl TmpFs {
-    pub fn new() -> FileSystemHandle {
-        Self::new_with_data(b"")
+    pub fn new(kernel: &Kernel) -> FileSystemHandle {
+        Self::new_with_data(kernel, b"")
     }
 
-    pub fn new_with_data(data: &FsStr) -> FileSystemHandle {
-        let fs = FileSystem::new_with_permanent_entries(Arc::new(TmpFs(())));
+    pub fn new_with_data(kernel: &Kernel, data: &FsStr) -> FileSystemHandle {
+        let fs = FileSystem::new_with_permanent_entries(kernel, Arc::new(TmpFs(())));
         fs.set_root(TmpfsDirectory::new());
         let root_node = &fs.root().node;
         if data.len() > 0 {
@@ -246,8 +246,8 @@ mod test {
 
     #[::fuchsia::test]
     fn test_tmpfs() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let fs = TmpFs::new();
+        let (kernel, current_task) = create_kernel_and_task();
+        let fs = TmpFs::new(&kernel);
         let root = fs.root();
         let usr = root.create_dir(&current_task, b"usr").unwrap();
         let _etc = root.create_dir(&current_task, b"etc").unwrap();
@@ -435,7 +435,8 @@ mod test {
 
     #[::fuchsia::test]
     fn test_data() {
-        let fs = TmpFs::new_with_data(b"mode=0123,uid=42,gid=84");
+        let (kernel, _current_task) = create_kernel_and_task();
+        let fs = TmpFs::new_with_data(&kernel, b"mode=0123,uid=42,gid=84");
         let info = fs.root().node.info();
         assert_eq!(info.mode, mode!(IFDIR, 0o123));
         assert_eq!(info.uid, 42);

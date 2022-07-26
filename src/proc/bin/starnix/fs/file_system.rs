@@ -11,6 +11,7 @@ use std::sync::{Arc, Weak};
 use super::*;
 use crate::auth::FsCred;
 use crate::lock::Mutex;
+use crate::task::Kernel;
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
@@ -18,6 +19,10 @@ pub struct FileSystem {
     root: OnceCell<DirEntryHandle>,
     next_inode: AtomicU64,
     ops: Box<dyn FileSystemOps>,
+
+    /// The device ID of this filesystem. Returned in the st_dev field when stating an inode in
+    /// this filesystem.
+    pub dev_id: DeviceType,
 
     /// Whether DirEntries added to this filesystem should be considered permanent, instead of a
     /// cache of the backing storage. An example is tmpfs: the DirEntry tree *is* the backing
@@ -58,18 +63,25 @@ pub struct FileSystem {
 
 impl FileSystem {
     /// Create a new filesystem.
-    pub fn new(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
-        Self::new_internal(ops, false)
+    pub fn new(kernel: &Kernel, ops: impl FileSystemOps + 'static) -> FileSystemHandle {
+        Self::new_internal(kernel, ops, false)
     }
 
     /// Create a new filesystem with the permanent_entries flag set.
-    pub fn new_with_permanent_entries(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
-        Self::new_internal(ops, true)
+    pub fn new_with_permanent_entries(
+        kernel: &Kernel,
+        ops: impl FileSystemOps + 'static,
+    ) -> FileSystemHandle {
+        Self::new_internal(kernel, ops, true)
     }
 
     /// Create a new filesystem and call set_root in one step.
-    pub fn new_with_root(ops: impl FileSystemOps + 'static, root_node: FsNode) -> FileSystemHandle {
-        let fs = Self::new_with_permanent_entries(ops);
+    pub fn new_with_root(
+        kernel: &Kernel,
+        ops: impl FileSystemOps + 'static,
+        root_node: FsNode,
+    ) -> FileSystemHandle {
+        let fs = Self::new_with_permanent_entries(kernel, ops);
         fs.set_root_node(root_node);
         fs
     }
@@ -91,6 +103,7 @@ impl FileSystem {
     }
 
     fn new_internal(
+        kernel: &Kernel,
         ops: impl FileSystemOps + 'static,
         permanent_entries: bool,
     ) -> FileSystemHandle {
@@ -98,6 +111,7 @@ impl FileSystem {
             root: OnceCell::new(),
             next_inode: AtomicU64::new(1),
             ops: Box::new(ops),
+            dev_id: kernel.device_registry.write().next_anonymous_dev_id(),
             permanent_entries,
             rename_mutex: Mutex::new(()),
             nodes: Mutex::new(HashMap::new()),

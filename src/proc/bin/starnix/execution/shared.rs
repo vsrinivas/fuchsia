@@ -195,13 +195,14 @@ pub fn handle_info_from_socket(
 /// Create a filesystem to access the content of the fuchsia directory available at `fs_src` inside
 /// `pkg`.
 pub fn create_remotefs_filesystem(
+    kernel: &Kernel,
     root: &fio::DirectorySynchronousProxy,
     fs_src: &str,
 ) -> Result<FileSystemHandle, Error> {
     let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let root = syncio::directory_open_directory_async(root, fs_src, rights)
         .map_err(|e| anyhow!("Failed to open root: {}", e))?;
-    Ok(RemoteFs::new(root.into_channel(), rights)?)
+    Ok(RemoteFs::new(kernel, root.into_channel(), rights)?)
 }
 
 /// Returns a hash representing the fuchsia package `pkg`.
@@ -230,12 +231,12 @@ pub fn create_filesystem_from_spec<'a>(
     // common code that also handles the mount() system call.
     let fs = match fs_type {
         "bind" => Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry),
-        "remotefs" => Fs(create_remotefs_filesystem(pkg, &fs_src)?),
+        "remotefs" => Fs(create_remotefs_filesystem(task.kernel(), pkg, &fs_src)?),
         "ext4" => {
             let vmo =
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)
                     .context("failed to open EXT4 image file")?;
-            Fs(ExtFilesystem::new(vmo)?)
+            Fs(ExtFilesystem::new(task.kernel(), vmo)?)
         }
         _ => create_filesystem(task, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };

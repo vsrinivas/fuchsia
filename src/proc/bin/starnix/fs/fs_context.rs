@@ -124,7 +124,8 @@ mod test {
 
     #[::fuchsia::test]
     fn test_umask() {
-        let fs = FsContext::new(TmpFs::new());
+        let (kernel, _task) = create_kernel_and_task();
+        let fs = FsContext::new(TmpFs::new(&kernel));
 
         assert_eq!(FileMode::from_bits(0o22), fs.set_umask(FileMode::from_bits(0o3020)));
         assert_eq!(FileMode::from_bits(0o646), fs.apply_umask(FileMode::from_bits(0o666)));

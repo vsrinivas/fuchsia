@@ -13,7 +13,7 @@ pub fn dev_tmp_fs(task: &CurrentTask) -> &FileSystemHandle {
 }
 
 fn init_devtmpfs(current_task: &CurrentTask) -> FileSystemHandle {
-    let fs = TmpFs::new();
+    let fs = TmpFs::new(current_task.kernel());
     let root = fs.root();
 
     let mkchr = |name, device_type| {
@@ -40,6 +40,5 @@ fn init_devtmpfs(current_task: &CurrentTask) -> FileSystemHandle {
     root.create_symlink(current_task, b"ptmx", b"pts/ptmx", FsCred::root()).unwrap();
 
     mkchr(b"fb0", DeviceType::FB0);
-
     fs
 }

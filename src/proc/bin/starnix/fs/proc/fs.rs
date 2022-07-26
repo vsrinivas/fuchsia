@@ -7,23 +7,21 @@ use crate::fs::*;
 use crate::task::*;
 
 use std::sync::Arc;
-use std::sync::Weak;
 
 /// Returns `kernel`'s procfs instance, initializing it if needed.
 pub fn proc_fs(kernel: Arc<Kernel>) -> FileSystemHandle {
-    kernel.proc_fs.get_or_init(|| ProcFs::new(Arc::downgrade(&kernel))).clone()
+    kernel.proc_fs.get_or_init(|| ProcFs::new(&kernel)).clone()
 }
 
 /// `ProcFs` is a filesystem that exposes runtime information about a `Kernel` instance.
-pub struct ProcFs {}
-
+pub struct ProcFs;
 impl FileSystemOps for Arc<ProcFs> {}
 
 impl ProcFs {
     /// Creates a new instance of `ProcFs` for the given `kernel`.
-    pub fn new(kernel: Weak<Kernel>) -> FileSystemHandle {
-        let fs = FileSystem::new(Arc::new(ProcFs {}));
-        fs.set_root(ProcDirectory::new(&fs, kernel));
+    pub fn new(kernel: &Arc<Kernel>) -> FileSystemHandle {
+        let fs = FileSystem::new(&kernel, Arc::new(ProcFs));
+        fs.set_root(ProcDirectory::new(&fs, Arc::downgrade(kernel)));
         fs
     }
 }

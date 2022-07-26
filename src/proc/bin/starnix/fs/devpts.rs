@@ -47,12 +47,12 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
     }
     let root_directory = root_dynamic_directory(DevPtsDirectoryDelegate::new(state));
     assert!(root_directory.inode_num == ROOT_INODE);
-    let fs = FileSystem::new(DevPtsFs {});
+    let fs = FileSystem::new(kernel, DevPtsFs);
     fs.set_root_node(root_directory);
     fs
 }
 
-struct DevPtsFs {}
+struct DevPtsFs;
 impl FileSystemOps for DevPtsFs {
     fn generate_node_ids(&self) -> bool {
         true
@@ -619,7 +619,7 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         // Initialize pts devices
         dev_pts_fs(&kernel);
-        let fs = TmpFs::new();
+        let fs = TmpFs::new(&kernel);
         let pts = fs
             .root()
             .create_node(

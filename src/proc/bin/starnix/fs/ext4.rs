@@ -17,7 +17,7 @@ use super::*;
 use crate::auth::*;
 use crate::fs::{fileops_impl_directory, fs_node_impl_symlink};
 use crate::logging::impossible_error;
-use crate::task::CurrentTask;
+use crate::task::*;
 use crate::types::*;
 
 pub struct ExtFilesystem {
@@ -33,7 +33,7 @@ struct ExtNode {
 }
 
 impl ExtFilesystem {
-    pub fn new(vmo: zx::Vmo) -> Result<FileSystemHandle, Errno> {
+    pub fn new(kernel: &Kernel, vmo: zx::Vmo) -> Result<FileSystemHandle, Errno> {
         let size = vmo.get_size().map_err(|_| errno!(EIO))?;
         let vmo_reader = ExtVmoReader::new(Arc::new(fidl_fuchsia_mem::Buffer { vmo, size }));
         let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| errno!(EIO))?);
@@ -41,7 +41,7 @@ impl ExtFilesystem {
         let ops = ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? };
         let mut root = FsNode::new_root(ops);
         root.inode_num = ext_structs::ROOT_INODE_NUM as ino_t;
-        let fs = FileSystem::new(fs);
+        let fs = FileSystem::new(kernel, fs);
         fs.set_root_node(root);
         Ok(fs)
     }

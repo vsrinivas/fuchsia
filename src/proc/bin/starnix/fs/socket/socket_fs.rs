@@ -9,7 +9,7 @@ use crate::types::{statfs, Errno, NAME_MAX, SOCKFS_MAGIC};
 
 /// `SocketFs` is the file system where anonymous socket nodes are created, for example in
 /// `sys_socket`.
-pub struct SocketFs {}
+pub struct SocketFs;
 impl FileSystemOps for SocketFs {
     fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
         let mut stat = statfs::default();
@@ -22,5 +22,5 @@ impl FileSystemOps for SocketFs {
 
 /// Returns a handle to the `SocketFs` instance in `kernel`, initializing it if needed.
 pub fn socket_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.socket_fs.get_or_init(|| FileSystem::new(SocketFs {}))
+    kernel.socket_fs.get_or_init(|| FileSystem::new(kernel, SocketFs))
 }

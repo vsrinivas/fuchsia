@@ -76,7 +76,6 @@ pub struct FsNodeInfo {
     pub time_create: zx::Time,
     pub time_access: zx::Time,
     pub time_modify: zx::Time,
-    pub dev: DeviceType,
     pub rdev: DeviceType,
 }
 
@@ -715,7 +714,7 @@ impl FsNode {
             st_ctim: timespec_from_time(info.time_create),
             st_mtim: timespec_from_time(info.time_modify),
             st_atim: timespec_from_time(info.time_access),
-            st_dev: info.dev.bits(),
+            st_dev: self.fs().dev_id.bits(),
             st_rdev: info.rdev.bits(),
             st_blksize: info.blksize,
             ..Default::default()
@@ -823,7 +822,6 @@ mod tests {
             info.time_create = zx::Time::from_nanos(1);
             info.time_access = zx::Time::from_nanos(2);
             info.time_modify = zx::Time::from_nanos(3);
-            info.dev = DeviceType::new(12, 12);
             info.rdev = DeviceType::new(13, 13);
         }
         let stat = node.stat().expect("stat");
@@ -838,7 +836,6 @@ mod tests {
         assert_eq!(time_from_timespec(stat.st_ctim).expect("ctim"), zx::Time::from_nanos(1));
         assert_eq!(time_from_timespec(stat.st_atim).expect("atim"), zx::Time::from_nanos(2));
         assert_eq!(time_from_timespec(stat.st_mtim).expect("mtim"), zx::Time::from_nanos(3));
-        assert_eq!(stat.st_dev, DeviceType::new(12, 12).bits());
         assert_eq!(stat.st_rdev, DeviceType::new(13, 13).bits());
     }
 

@@ -8,7 +8,6 @@ use std::ffi::CString;
 use std::sync::Arc;
 use zerocopy::AsBytes;
 
-use crate::auth::FsCred;
 use crate::fs::fuchsia::RemoteFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
@@ -20,43 +19,43 @@ use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
-/// Create an FsContext for use in testing.
+/// Create a FileSystemHandle for use in testing.
 ///
 /// Open "/pkg" and returns an FsContext rooted in that directory.
-fn create_pkgfs() -> Arc<FsContext> {
+fn create_pkgfs(kernel: &Kernel) -> FileSystemHandle {
     let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let (server, client) = zx::Channel::create().expect("failed to create channel");
     fdio::open("/pkg", rights, server).expect("failed to open /pkg");
-    return FsContext::new(RemoteFs::new(client, rights).unwrap());
+    RemoteFs::new(kernel, client, rights).unwrap()
 }
 
 /// Creates a `Kernel` and `Task` with the package file system for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, CurrentTask) {
-    create_kernel_and_task_with_fs(Some(create_pkgfs()))
+    create_kernel_and_task_with_fs(create_pkgfs)
 }
 
 pub fn create_kernel_and_task() -> (Arc<Kernel>, CurrentTask) {
-    create_kernel_and_task_with_fs(None)
+    create_kernel_and_task_with_fs(TmpFs::new)
 }
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_kernel_and_task_with_fs(
-    mut fs: Option<Arc<FsContext>>,
+fn create_kernel_and_task_with_fs(
+    create_fs: impl FnOnce(&Kernel) -> FileSystemHandle,
 ) -> (Arc<Kernel>, CurrentTask) {
     let kernel = Arc::new(
         Kernel::new(&CString::new("test-kernel").unwrap(), &Vec::new())
             .expect("failed to create kernel"),
     );
 
-    if fs.is_none() {
-        fs = Some(FsContext::new(TmpFs::new()));
-    }
-
-    let task = Task::create_process_without_parent(&kernel, CString::new("test-task").unwrap(), fs)
-        .expect("failed to create first task");
+    let task = Task::create_process_without_parent(
+        &kernel,
+        CString::new("test-task").unwrap(),
+        Some(FsContext::new(create_fs(&kernel))),
+    )
+    .expect("failed to create first task");
 
     // Take the lock on thread group and task in the correct order to ensure any wrong ordering
     // will trigger the tracing-mutex at the right call site.
@@ -75,7 +74,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
     let task = Task::create_process_without_parent(
         kernel,
         CString::new(task_name).unwrap(),
-        Some(create_pkgfs()),
+        Some(FsContext::new(create_pkgfs(kernel))),
     )
     .expect("failed to create second task");
 
@@ -191,9 +190,9 @@ pub fn check_unmapped(current_task: &CurrentTask, addr: UserAddress) {
 
 /// An FsNodeOps implementation that panics if you try to open it. Useful as a stand-in for testing
 /// APIs that require a FsNodeOps implementation but don't actually use it.
-pub struct PlaceholderFsNodeOps;
+pub struct PanickingFsNode;
 
-impl FsNodeOps for PlaceholderFsNodeOps {
+impl FsNodeOps for PanickingFsNode {
     fn create_file_ops(
         &self,
         _node: &FsNode,
@@ -203,24 +202,17 @@ impl FsNodeOps for PlaceholderFsNodeOps {
     }
 }
 
-/// Creates a [`FileObject`] whose implementation panics on reads, writes, and ioctls.
-pub fn create_panicking_file() -> FileHandle {
-    let fs = FileSystem::new(TestFs);
-    FileObject::new_anonymous(
-        Box::new(PanicFileOps),
-        fs.create_node(Box::new(PlaceholderFsNodeOps), mode!(IFREG, 0o600), FsCred::root()),
-        OpenFlags::RDWR,
-    )
+/// An implementation of [`FileOps`] that panics on any read, write, or ioctl operation.
+pub struct PanickingFile;
+
+impl PanickingFile {
+    /// Creates a [`FileObject`] whose implementation panics on reads, writes, and ioctls.
+    pub fn new(current_task: &CurrentTask) -> FileHandle {
+        Anon::new_file(current_task, Box::new(PanickingFile), OpenFlags::RDWR)
+    }
 }
 
-/// The most basic implementation of [`FileSystemOps`] suitable for testing.
-pub struct TestFs;
-impl FileSystemOps for TestFs {}
-
-/// An implementation of [`FileOps`] that panics on any read, write, or ioctl operation.
-pub struct PanicFileOps;
-
-impl FileOps for PanicFileOps {
+impl FileOps for PanickingFile {
     fileops_impl_nonseekable!();
     fileops_impl_nonblocking!();
 

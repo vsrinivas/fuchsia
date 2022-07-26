@@ -25,8 +25,8 @@ impl FileSystemOps for SeLinuxFs {
 }
 
 impl SeLinuxFs {
-    fn new() -> Result<FileSystemHandle, Errno> {
-        let fs = FileSystem::new_with_permanent_entries(SeLinuxFs);
+    fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
+        let fs = FileSystem::new_with_permanent_entries(kernel, SeLinuxFs);
         StaticDirectoryBuilder::new(&fs)
             .add_entry(b"load", SeLinuxNode::new(|| Ok(SeLoad)), mode!(IFREG, 0o600))
             .add_entry(b"enforce", SeLinuxNode::new(|| Ok(SeEnforce)), mode!(IFREG, 0o644))
@@ -300,5 +300,5 @@ fn parse_int(buf: &[u8]) -> Result<u32, Errno> {
 }
 
 pub fn selinux_fs(kern: &Kernel) -> &FileSystemHandle {
-    kern.selinux_fs.get_or_init(|| SeLinuxFs::new().expect("failed to construct selinuxfs"))
+    kern.selinux_fs.get_or_init(|| SeLinuxFs::new(kern).expect("failed to construct selinuxfs"))
 }

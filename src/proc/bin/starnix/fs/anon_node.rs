@@ -36,5 +36,5 @@ impl Anon {
 struct AnonFs;
 impl FileSystemOps for AnonFs {}
 pub fn anon_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.anon_fs.get_or_init(|| FileSystem::new(AnonFs))
+    kernel.anon_fs.get_or_init(|| FileSystem::new(kernel, AnonFs))
 }

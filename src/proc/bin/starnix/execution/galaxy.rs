@@ -157,13 +157,16 @@ fn create_fs_context(
     // /galaxy will mount the galaxy pkg
     // /galaxy/pkg will be a tmpfs where component using the starnix runner will have their package
     // mounted.
+    let kernel = task.kernel();
     let galaxy_fs = LayeredFs::new(
-        create_remotefs_filesystem(&pkg_dir_proxy, "data")?,
-        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new())]),
+        kernel,
+        create_remotefs_filesystem(kernel, &pkg_dir_proxy, "data")?,
+        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new(kernel))]),
     );
     let root_fs = LayeredFs::new(
+        kernel,
         root_fs,
-        BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new())]),
+        BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new(kernel))]),
     );
 
     Ok(FsContext::new(root_fs))
@@ -173,7 +176,7 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
     if !CONFIG.apex_hack.is_empty() {
         init_task
             .lookup_path_from_root(b"apex")?
-            .mount(WhatToMount::Fs(TmpFs::new()), MountFlags::empty())?;
+            .mount(WhatToMount::Fs(TmpFs::new(init_task.kernel())), MountFlags::empty())?;
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
         for apex in &CONFIG.apex_hack {
             let apex = apex.as_bytes();

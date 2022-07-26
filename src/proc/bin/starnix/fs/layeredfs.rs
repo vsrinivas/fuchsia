@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use super::*;
-use crate::task::CurrentTask;
+use crate::task::*;
 use crate::types::*;
 
 /// A filesystem that will delegate most operation to a base one, but have a number of top level
@@ -23,12 +23,13 @@ impl LayeredFs {
     /// `mappings`: The map of top level directory to filesystems that will be layered on top of
     /// `base_fs`.
     pub fn new(
+        kernel: &Kernel,
         base_fs: FileSystemHandle,
         mappings: BTreeMap<FsString, FileSystemHandle>,
     ) -> FileSystemHandle {
         let layered_fs = Arc::new(LayeredFs { base_fs, mappings });
         let root_node = FsNode::new_root(layered_fs.clone());
-        FileSystem::new_with_root(layered_fs.clone(), root_node)
+        FileSystem::new_with_root(kernel, layered_fs.clone(), root_node)
     }
 }
 
@@ -174,8 +175,8 @@ mod test {
 
     #[::fuchsia::test]
     fn test_remove_duplicates() {
-        let (_kernel, current_task) = create_kernel_and_task();
-        let base = TmpFs::new();
+        let (kernel, current_task) = create_kernel_and_task();
+        let base = TmpFs::new(&kernel);
         base.root().create_dir(&current_task, b"d1").expect("create_dir");
         base.root().create_dir(&current_task, b"d2").expect("create_dir");
         let base_entries = get_root_entry_names(&current_task, &base);
@@ -186,8 +187,12 @@ mod test {
         assert!(base_entries.contains(&b"d2".to_vec()));
 
         let layered_fs = LayeredFs::new(
+            &kernel,
             base,
-            BTreeMap::from([(b"d1".to_vec(), TmpFs::new()), (b"d3".to_vec(), TmpFs::new())]),
+            BTreeMap::from([
+                (b"d1".to_vec(), TmpFs::new(&kernel)),
+                (b"d3".to_vec(), TmpFs::new(&kernel)),
+            ]),
         );
         let layered_fs_entries = get_root_entry_names(&current_task, &layered_fs);
         assert_eq!(layered_fs_entries.len(), 5);

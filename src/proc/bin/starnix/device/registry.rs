@@ -53,6 +53,7 @@ pub struct DeviceRegistry {
     /// Maps device identifier to character device implementation.
     char_devices: BTreeMap<u32, Box<dyn DeviceOps>>,
     misc_devices: Arc<RwLock<MiscRegistry>>,
+    next_anon_minor: u32,
 }
 
 impl DeviceRegistry {
@@ -60,6 +61,7 @@ impl DeviceRegistry {
         let mut registry = Self {
             char_devices: BTreeMap::new(),
             misc_devices: Arc::new(RwLock::new(MiscRegistry::new())),
+            next_anon_minor: 1,
         };
         registry.char_devices.insert(MISC_MAJOR, Box::new(Arc::clone(&registry.misc_devices)));
         registry
@@ -93,6 +95,12 @@ impl DeviceRegistry {
         D: DeviceOps + 'static,
     {
         self.misc_devices.write().register(device)
+    }
+
+    pub fn next_anonymous_dev_id(&mut self) -> DeviceType {
+        let id = DeviceType::new(0, self.next_anon_minor);
+        self.next_anon_minor += 1;
+        id
     }
 
     /// Opens a device file corresponding to the device identifier `dev`.
@@ -173,7 +181,7 @@ mod tests {
         let mut registry = DeviceRegistry::new();
         registry.register_chrdev_major(MemDevice, MEM_MAJOR).unwrap();
 
-        let node = FsNode::new_root(PlaceholderFsNodeOps);
+        let node = FsNode::new_root(PanickingFsNode);
 
         // Fail to open non-existent device.
         assert!(registry
@@ -222,7 +230,7 @@ mod tests {
                 _node: &FsNode,
                 _flags: OpenFlags,
             ) -> Result<Box<dyn FileOps>, Errno> {
-                Ok(Box::new(PanicFileOps))
+                Ok(Box::new(PanickingFile))
             }
         }
 
@@ -230,7 +238,7 @@ mod tests {
         let device_type = registry.register_misc_chrdev(TestDevice).unwrap();
         assert_eq!(device_type.major(), MISC_MAJOR);
 
-        let node = FsNode::new_root(PlaceholderFsNodeOps);
+        let node = FsNode::new_root(PanickingFsNode);
         let _ = registry
             .open_device(&current_task, &node, OpenFlags::RDONLY, device_type, DeviceMode::Char)
             .expect("opens device");

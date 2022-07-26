@@ -27,12 +27,16 @@ impl FileSystemOps for RemoteFs {
 }
 
 impl RemoteFs {
-    pub fn new(root: zx::Channel, rights: fio::OpenFlags) -> Result<FileSystemHandle, Errno> {
+    pub fn new(
+        kernel: &Kernel,
+        root: zx::Channel,
+        rights: fio::OpenFlags,
+    ) -> Result<FileSystemHandle, Errno> {
         let remote_node = RemoteNode::new(root.into_handle(), rights)?;
         let attrs = remote_node.zxio.attr_get().map_err(|_| errno!(EIO))?;
         let mut root_node = FsNode::new_root(remote_node);
         root_node.inode_num = attrs.id;
-        Ok(FileSystem::new_with_root(RemoteFs, root_node))
+        Ok(FileSystem::new_with_root(kernel, RemoteFs, root_node))
     }
 }
 
@@ -561,11 +565,11 @@ mod test {
 
     #[::fuchsia::test]
     fn test_tree() -> Result<(), anyhow::Error> {
-        let (_kernel, current_task) = create_kernel_and_task();
+        let (kernel, current_task) = create_kernel_and_task();
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
         let (server, client) = zx::Channel::create().expect("failed to create channel pair");
         fdio::open("/pkg", rights, server).expect("failed to open /pkg");
-        let fs = RemoteFs::new(client, rights)?;
+        let fs = RemoteFs::new(&kernel, client, rights)?;
         let ns = Namespace::new(fs.clone());
         let root = ns.root();
         let mut context = LookupContext::default();

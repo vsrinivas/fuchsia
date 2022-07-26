@@ -240,7 +240,7 @@ pub fn new_pipe(current_task: &CurrentTask) -> Result<(FileHandle, FileHandle), 
 struct PipeFs;
 impl FileSystemOps for PipeFs {}
 fn pipe_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.pipe_fs.get_or_init(|| FileSystem::new(PipeFs))
+    kernel.pipe_fs.get_or_init(|| FileSystem::new(kernel, PipeFs))
 }
 
 struct PipeFileObject {

@@ -16,8 +16,8 @@ impl FileSystemOps for SysFs {
 }
 
 impl SysFs {
-    fn new() -> Result<FileSystemHandle, Errno> {
-        let fs = FileSystem::new_with_permanent_entries(SysFs);
+    fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
+        let fs = FileSystem::new_with_permanent_entries(kernel, SysFs);
         StaticDirectoryBuilder::new(&fs)
             .add_node_entry(
                 b"fs",
@@ -55,5 +55,5 @@ impl SysFs {
 }
 
 pub fn sys_fs(kern: &Kernel) -> &FileSystemHandle {
-    kern.sys_fs.get_or_init(|| SysFs::new().expect("failed to construct sysfs!"))
+    kern.sys_fs.get_or_init(|| SysFs::new(kern).expect("failed to construct sysfs!"))
 }
