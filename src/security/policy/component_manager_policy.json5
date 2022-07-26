@@ -29,6 +29,7 @@
                 // VmexResource protocol on eng builds.
                 "/core/test_manager/dart_aot_runner/runners:**",
                 "/core/test_manager/dart_jit_runner/runners:**",
+                "/core/test_manager/g3_dart_jit_product_runner",
                 "/core/test_manager/system-tests:**",
             ],
             main_process_critical: [
