@@ -250,10 +250,10 @@ mod tests {
             match parsed_url.name().as_ref() {
                 "hello-world" => {
                     let path = Path::new("/pkg");
-                    fuchsia_fs::connect_in_namespace(
+                    fuchsia_fs::directory::open_channel_in_namespace(
                         path.to_str().unwrap(),
-                        dir_s,
                         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        ServerEnd::new(dir_s),
                     )
                     .expect("could not connect to /pkg");
                     return Some(Package {

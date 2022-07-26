@@ -53,6 +53,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/developer/ffx/lib/selector-maps",
     "//src/lib/diagnostics/selectors",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

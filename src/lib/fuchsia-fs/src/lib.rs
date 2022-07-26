@@ -21,9 +21,6 @@ use {
     std::path::{Component, Path},
 };
 
-#[cfg(target_os = "fuchsia")]
-use {fuchsia_zircon as zx, fuchsia_zircon_status as zx_status};
-
 pub mod directory;
 pub mod file;
 pub mod node;
@@ -104,19 +101,6 @@ pub fn create_sub_directories(
         }
     }
     Ok(dir.unwrap())
-}
-
-// TODO: this function will block on the FDIO calls. This should be rewritten/wrapped/whatever to
-// be asynchronous.
-
-/// Connect a zx::Channel to a path in the namespace.
-#[cfg(target_os = "fuchsia")]
-pub fn connect_in_namespace(
-    path: &str,
-    server_chan: zx::Channel,
-    flags: fio::OpenFlags,
-) -> Result<(), zx_status::Status> {
-    node::connect_in_namespace(path, flags, server_chan)
 }
 
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace

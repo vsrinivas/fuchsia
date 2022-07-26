@@ -777,11 +777,7 @@ impl FrameBuffer {
         };
 
         let (client_end, server_end) = zx::Channel::create()?;
-        let () = fuchsia_fs::connect_in_namespace(
-            &device_path,
-            server_end,
-            fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
-        )?;
+        fuchsia_component::client::connect_channel_to_protocol_at_path(server_end, &device_path)?;
         let provider = ProviderSynchronousProxy::new(client_end);
 
         let (device_client, device_server) = zx::Channel::create()?;

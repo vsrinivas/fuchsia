@@ -82,7 +82,7 @@ async fn test_pkg_dir() -> Result<()> {
     let pkg_flags = fuchsia_fs::OpenFlags::RIGHT_READABLE
         | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE
         | fio::OpenFlags::DIRECTORY;
-    fuchsia_fs::connect_in_namespace("/pkg", pkg_server.into_channel(), pkg_flags).unwrap();
+    fuchsia_fs::directory::open_channel_in_namespace("/pkg", pkg_flags, pkg_server).unwrap();
     let args = fdt::RealmArgs { boot: Some(pkg), ..fdt::RealmArgs::EMPTY };
 
     instance.driver_test_realm_start(args).await?;

@@ -101,24 +101,27 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::OpenHub { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut fuchsia_fs::directory::open_channel_in_namespace(
                         HUB_ROOT,
-                        server.into_channel(),
                         io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
+                        server,
                     )
-                    .map_err(|i| i.into_raw()),
+                    .map_err(|e| match e {
+                        fuchsia_fs::node::OpenError::Namespace(s) => s.into_raw(),
+                        fuchsia_fs::node::OpenError::OpenError(s) => s.into_raw(),
+                        _ => fuchsia_zircon::Status::INTERNAL.into_raw(),
+                    }),
                 )?;
                 Ok(())
             }
             rcs::RemoteControlRequest::RootRealmExplorer { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut fdio::service_connect(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::RealmExplorerMarker::PROTOCOL_NAME
                         ),
                         server.into_channel(),
-                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
                     )
                     .map_err(|i| i.into_raw()),
                 )?;
@@ -126,13 +129,12 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::RootRealmQuery { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut fdio::service_connect(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::RealmQueryMarker::PROTOCOL_NAME
                         ),
                         server.into_channel(),
-                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
                     )
                     .map_err(|i| i.into_raw()),
                 )?;
@@ -140,13 +142,12 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::RootLifecycleController { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut fdio::service_connect(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::LifecycleControllerMarker::PROTOCOL_NAME
                         ),
                         server.into_channel(),
-                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
                     )
                     .map_err(|i| i.into_raw()),
                 )?;
@@ -154,13 +155,12 @@ impl RemoteControlService {
             }
             rcs::RemoteControlRequest::RootRouteValidator { server, responder } => {
                 responder.send(
-                    &mut fuchsia_fs::connect_in_namespace(
+                    &mut fdio::service_connect(
                         &format!(
                             "/svc/{}.root",
                             fidl_fuchsia_sys2::RouteValidatorMarker::PROTOCOL_NAME
                         ),
                         server.into_channel(),
-                        io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
                     )
                     .map_err(|i| i.into_raw()),
                 )?;
@@ -328,15 +328,11 @@ impl RemoteControlService {
         let svc_match = paths.get(0).unwrap();
         let hub_path = svc_match.hub_path.to_str().unwrap();
         info!(hub_path, "attempting to connect");
-        fuchsia_fs::connect_in_namespace(
-            hub_path,
-            service_chan,
-            io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
-        )
-        .map_err(|err| {
-            error!(?selector, %err, "error connecting to selector");
-            rcs::ConnectError::ServiceConnectFailed
-        })?;
+        fuchsia_component::client::connect_channel_to_protocol_at_path(service_chan, hub_path)
+            .map_err(|err| {
+                error!(?selector, %err, "error connecting to selector");
+                rcs::ConnectError::ServiceConnectFailed
+            })?;
 
         Ok(svc_match.into())
     }

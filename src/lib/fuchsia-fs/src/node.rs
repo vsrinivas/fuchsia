@@ -9,9 +9,6 @@ use {
     thiserror::Error,
 };
 
-#[cfg(target_os = "fuchsia")]
-use fuchsia_zircon as zx;
-
 /// An error encountered while opening a node
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
@@ -162,20 +159,6 @@ impl Kind {
             other => Err(Kind::kind_of2(other)),
         }
     }
-}
-
-// TODO namespace.connect is synchronous and may involve fdio making synchronous fidl calls to
-// remote directories.  If/when fdio exposes the root namespace mapping or an API to connect to
-// nodes asynchronously, this function should be updated to use that.
-/// Connect a zx::Channel to a path in the current namespace.
-#[cfg(target_os = "fuchsia")]
-pub fn connect_in_namespace(
-    path: &str,
-    flags: fio::OpenFlags,
-    chan: zx::Channel,
-) -> Result<(), zx_status::Status> {
-    let namespace = fdio::Namespace::installed()?;
-    namespace.open(path, flags, chan)
 }
 
 /// Opens the given `path` from the current namespace as a [`NodeProxy`].

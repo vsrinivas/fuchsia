@@ -495,10 +495,10 @@ mod tests {
 
         let root = root.display().to_string();
         let (client, server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
-        fuchsia_fs::node::connect_in_namespace(
+        fuchsia_fs::directory::open_channel_in_namespace(
             &root,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
-            server.into_channel(),
+            server,
         )
         .unwrap();
         (temp_dir, client)

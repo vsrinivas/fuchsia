@@ -161,7 +161,6 @@ async fn open_storage_root(
 ) -> Result<fio::DirectoryProxy, ModelError> {
     let (mut dir_proxy, local_server_end) =
         endpoints::create_proxy::<fio::DirectoryMarker>().expect("failed to create proxy");
-    let mut local_server_end = local_server_end.into_channel();
     let full_backing_directory_path = match storage_source_info.backing_directory_subdir.as_ref() {
         Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
         None => storage_source_info.backing_directory_path.to_path_buf(),
@@ -175,7 +174,7 @@ async fn open_storage_root(
                 FLAGS,
                 fio::MODE_TYPE_DIRECTORY,
                 full_backing_directory_path.clone(),
-                &mut local_server_end,
+                &mut local_server_end.into_channel(),
             )
             .await?;
     } else {
@@ -183,13 +182,15 @@ async fn open_storage_root(
         let path = full_backing_directory_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(full_backing_directory_path.clone()))?;
-        fuchsia_fs::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
-            ModelError::from(StorageError::open_root(
-                None,
-                storage_source_info.backing_directory_path.clone(),
-                e,
-            ))
-        })?;
+        fuchsia_fs::directory::open_channel_in_namespace(path, FLAGS, local_server_end).map_err(
+            |e| {
+                ModelError::from(StorageError::open_root(
+                    None,
+                    storage_source_info.backing_directory_path.clone(),
+                    e,
+                ))
+            },
+        )?;
     }
     if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
         dir_proxy =

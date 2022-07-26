@@ -122,10 +122,10 @@ impl FakePkgfs {
             // artificially elevate rights (i.e. the resolver needs to ask for the appropriate rights).
             let mut open_path = PathBuf::from("/pkg");
             open_path.extend(path_iter);
-            fuchsia_fs::connect_in_namespace(
+            fuchsia_fs::node::open_channel_in_namespace(
                 open_path.to_str().unwrap(),
-                server_end.into_channel(),
                 flags,
+                server_end,
             )
             .expect("failed to open path in namespace");
         } else {

@@ -50,7 +50,7 @@ pub async fn serve(stream: fpkg::PackageResolverRequestStream) -> Result<()> {
                 fpkg::PackageResolverRequest::Resolve { package_url, dir, responder } => {
                     let package_url = UnpinnedAbsolutePackageUrl::parse(&package_url)?;
                     let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
-                    fuchsia_fs::node::connect_in_namespace(
+                    fuchsia_fs::directory::open_channel_in_namespace(
                         &format!(
                             "/pkgfs/packages/{}/{}",
                             package_url.name(),
@@ -60,7 +60,7 @@ pub async fn serve(stream: fpkg::PackageResolverRequestStream) -> Result<()> {
                                 .unwrap_or_else(|| PackageVariant::zero())
                         ),
                         flags,
-                        dir.into_channel(),
+                        dir,
                     )?;
                     responder
                         .send(&mut Ok(fpkg::ResolutionContext { bytes: vec![] }))

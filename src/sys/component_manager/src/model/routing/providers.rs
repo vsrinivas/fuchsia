@@ -104,7 +104,12 @@ impl CapabilityProvider for NamespaceCapabilityProvider {
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(namespace_path.clone()))?;
         let server_end = channel::take_channel(server_end);
-        fuchsia_fs::connect_in_namespace(namespace_path, server_end, flags).map_err(|e| {
+        fuchsia_fs::node::open_channel_in_namespace(
+            namespace_path,
+            flags,
+            ServerEnd::new(server_end),
+        )
+        .map_err(|e| {
             OpenResourceError::open_component_manager_namespace_failed(namespace_path, e).into()
         })
     }

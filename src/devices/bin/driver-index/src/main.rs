@@ -735,7 +735,7 @@ mod tests {
                         responder,
                     } => {
                         let flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY;
-                        fuchsia_fs::node::connect_in_namespace("/pkg", flags, dir.into_channel())
+                        fuchsia_fs::directory::open_channel_in_namespace("/pkg", flags, dir)
                             .unwrap();
                         responder
                             .send(&mut Ok(fidl_fuchsia_pkg::ResolutionContext { bytes: vec![] }))
