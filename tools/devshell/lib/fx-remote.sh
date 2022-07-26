@@ -61,19 +61,21 @@ function fetch_remote_artifacts {
   local remote_build_dir="$(get_remote_build_dir "${host}" "${remote_checkout}")" || exit $?
   mkdir -p "${local_dir}"
 
-  local -a full_paths_array
-  for artifact in "${artifacts[@]}"
+  # Artifacts are fetched in a loop since brace expansion occurs after variable
+  # expansion on some setups, causing a combined rsync command to fail for some
+  # users. Additionally, we cannot use multiple source arguments since this is
+  # supported for rsync protocol version 30 onwards, which MacOS devices do not
+  # ship with.
+  for value in "${artifacts[@]}"
   do
-    full_paths_array+=("${host}:${remote_build_dir}/./${artifact}")
+    # --relative ensures that the artifacts are copied to out/fetched relative to
+    # the '/./' (i.e., the build directory).
+    # --times preserves the modification timestamp, which rsync uses in conjunction
+    # with filesize to determine if the file changed (unless the --checksum
+    # parameter is used). Without one of either --times or --checksum, identical
+    # files will be re-transfered on each rsync invocation.
+    rsync --compress --partial --progress --relative --times "${host}:${remote_build_dir}/./${value}" "${local_dir}" || exit $?
   done
-
-  # --relative ensures that the artifacts are copied to out/fetched relative to
-  # the '/./' (i.e., the build directory).
-  # --times preserves the modification timestamp, which rsync uses in conjunction
-  # with filesize to determine if the file changed (unless the --checksum
-  # parameter is used). Without one of either --times or --checksum, identical
-  # files will be re-transfered on each rsync invocation.
-  rsync --compress --partial --progress --relative --times "${full_paths_array[@]}" "${local_dir}" || exit $?
 }
 
 # Fetch all build artifacts for a given mode, optionally building them first
