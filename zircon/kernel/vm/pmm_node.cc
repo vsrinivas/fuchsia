@@ -262,7 +262,7 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
   // in the ALLOC state, indicate ownership by the PmmNode.
   page->set_state(vm_page_state::ALLOC);
 
-  if (unlikely(free_fill_enabled_)) {
+  if (free_fill_enabled_) {
     checker_.AssertPattern(page);
   }
 }
@@ -593,7 +593,7 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
     page->object.clear_stack_owner();
   }
 
-  if (unlikely(free_fill_enabled_)) {
+  if (free_fill_enabled_) {
     checker_.FillPattern(page);
   }
 
