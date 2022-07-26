@@ -45,9 +45,6 @@ func DecodeJSONIr(r io.Reader) (Root, error) {
 	if err := d.Decode(&root); err != nil {
 		return Root{}, fmt.Errorf("Error parsing JSON IR: %w", err)
 	}
-
-	root.initializeDeclarationsMap()
-
 	return root, nil
 }
 
@@ -1341,38 +1338,6 @@ type Root struct {
 	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls           DeclMap                     `json:"declarations,omitempty"`
 	Libraries       []Library                   `json:"library_dependencies,omitempty"`
-	declarations    map[EncodedCompoundIdentifier]Declaration
-}
-
-func (r *Root) initializeDeclarationsMap() {
-	r.declarations = make(map[EncodedCompoundIdentifier]Declaration)
-	for i, d := range r.Consts {
-		r.declarations[d.Name] = &r.Consts[i]
-	}
-	for i, d := range r.Bits {
-		r.declarations[d.Name] = &r.Bits[i]
-	}
-	for i, d := range r.Enums {
-		r.declarations[d.Name] = &r.Enums[i]
-	}
-	for i, d := range r.Protocols {
-		r.declarations[d.Name] = &r.Protocols[i]
-	}
-	for i, d := range r.Services {
-		r.declarations[d.Name] = &r.Services[i]
-	}
-	for i, d := range r.Structs {
-		r.declarations[d.Name] = &r.Structs[i]
-	}
-	for i, d := range r.Tables {
-		r.declarations[d.Name] = &r.Tables[i]
-	}
-	for i, d := range r.Unions {
-		r.declarations[d.Name] = &r.Unions[i]
-	}
-	for i, d := range r.ExternalStructs {
-		r.declarations[d.Name] = &r.ExternalStructs[i]
-	}
 }
 
 // DeclsWithDependencies returns a single DeclInfoMap containing the FIDL
@@ -1702,13 +1667,7 @@ func (r *Root) ForBindings(language string) Root {
 		}
 	}
 
-	r.initializeDeclarationsMap()
-
 	return res
-}
-
-func (r *Root) LookupDecl(i EncodedCompoundIdentifier) Declaration {
-	return r.declarations[i]
 }
 
 type int64OrUint64 struct {
