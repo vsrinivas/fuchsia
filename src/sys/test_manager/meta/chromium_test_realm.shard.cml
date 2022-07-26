@@ -34,10 +34,15 @@
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
-                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.settings.Display",
+
+                // Tests of the media system change their behavior based on
+                // board.
+                // TODO(fxbug.dev/83512): Remove when specialized test realms
+                // are ready.
+                "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.scenic.Scenic",
@@ -75,6 +80,21 @@
             directory: "build-info",
             from: "parent",
             to: "#chromium-tests",
+        },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#chromium-tests",
+            rights: [ "rw*" ],
+        },
+
+        // Tests of the media system want to test against the real hardware
+        // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
+        {
+            directory: "dev-mediacodec",
+            from: "parent",
+            to: "#chromium-tests",
+            rights: [ "rw*" ],
         },
         {
             directory: "root-ssl-certificates",
