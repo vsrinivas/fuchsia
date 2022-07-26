@@ -8,13 +8,34 @@ import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 import("//src/recovery/system/system_recovery_args.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+# TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
+config_data("config") {
+  for_pkg = "sysmgr"
+  sources = [ "config/recovery.config" ]
+  outputs = [ "recovery.config" ]
+}
+
+# TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
+config_data("config_fdr") {
+  for_pkg = "sysmgr"
+  sources = [ "config/recovery_fdr.config" ]
+  outputs = [ "recovery_fdr.config" ]
+}
+
+# TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
+config_data("config_installer") {
+  for_pkg = "sysmgr"
+  sources = [ "config/recovery-installer.config" ]
+  outputs = [ "recovery_installer.config" ]
+}
 
 group("system") {
   testonly = true
   deps = [
-    # Directory aggregates should not modify the product behavior: ":config",
     ":system_recovery",
-    ":tests",
+    ":system_recovery_tests",
   ]
 }
 
@@ -22,7 +43,8 @@ group("fdr") {
   testonly = true
   deps = [
     ":system_recovery_fdr",
-    ":tests",
+    # TODO (fxbug.dev/103089): Handle FDR via integration tests.
+    # ":system_recovery_fdr_test",
   ]
 }
 
@@ -30,24 +52,32 @@ group("installer") {
   testonly = true
   deps = [
     ":system_recovery_installer",
-    ":tests",
+    # TODO (fxbug.dev/102239): This directive does not pick up any tests.
+    # ":system_recovery_installer_tests",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":system_installer_tests",
-    ":system_recovery",
-    ":system_recovery_installer",
+    ":installer",
+    ":system",
 
-    # TODO(fxbug.dev/96719): This test is flaky because it is not hermetic.
-    # Re-enable after fixing the hermeticity issue.
-    # ":system_recovery_tests",
-
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
-    "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
+    # TODO (fxbug.dev/103089): Handle FDR via integration tests.
+    # ":fdr",
   ]
+}
+
+core_shard("system_recovery_core_shard") {
+  shard_file = "meta/core_shards/system_recovery.core_shard.cml"
+}
+
+core_shard("system_recovery_fdr_core_shard") {
+  shard_file = "meta/core_shards/system_recovery_fdr.core_shard.cml"
+}
+
+core_shard("system_recovery_installer_core_shard") {
+  shard_file = "meta/core_shards/system_recovery_installer.core_shard.cml"
 }
 
 resource("recovery_logo") {
@@ -97,6 +127,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
   ]
   test_deps = [
+    "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
@@ -122,12 +153,6 @@ rustc_binary("bin") {
   ]
 }
 
-config_data("config") {
-  for_pkg = "sysmgr"
-  sources = [ "config/recovery.config" ]
-  outputs = [ "recovery.config" ]
-}
-
 fuchsia_package_with_single_component("system_recovery") {
   deps = [
     ":bin",
@@ -136,7 +161,7 @@ fuchsia_package_with_single_component("system_recovery") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  manifest = "meta/system_recovery.cmx"
+  manifest = "meta/system_recovery.cml"
 }
 
 rustc_binary("bin_fdr") {
@@ -166,12 +191,6 @@ rustc_binary("bin_fdr") {
   ]
 }
 
-config_data("config_fdr") {
-  for_pkg = "sysmgr"
-  sources = [ "config/recovery_fdr.config" ]
-  outputs = [ "recovery_fdr.config" ]
-}
-
 fuchsia_package_with_single_component("system_recovery_fdr") {
   deps = [
     ":bin_fdr",
@@ -180,13 +199,13 @@ fuchsia_package_with_single_component("system_recovery_fdr") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  manifest = "meta/system_recovery_fdr.cmx"
+  manifest = "meta/system_recovery_fdr.cml"
 }
 
 fuchsia_component("system_recovery_bin_test") {
   testonly = true
   deps = [ ":bin_test" ]
-  manifest = "meta/system_recovery_bin_test.cmx"
+  manifest = "meta/tests/system_recovery_bin_test.cml"
 }
 
 fuchsia_test_package("system_recovery_tests") {
@@ -240,20 +259,16 @@ rustc_binary("bin_installer") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:regex",
   ]
-  test_deps =
-      [ "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//src/storage/testing:storage_driver_test_realm",
+  ]
   sources = [
     "installer/installer.rs",
     "installer/main.rs",
     "installer/menu.rs",
     "installer/partition.rs",
   ]
-}
-
-config_data("config_installer") {
-  for_pkg = "sysmgr"
-  sources = [ "config/recovery-installer.config" ]
-  outputs = [ "recovery_installer.config" ]
 }
 
 fuchsia_package_with_single_component("system_recovery_installer") {
@@ -264,17 +279,17 @@ fuchsia_package_with_single_component("system_recovery_installer") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  manifest = "meta/system_recovery_installer.cmx"
+  manifest = "meta/system_recovery_installer.cml"
 }
 
-fuchsia_component("system_installer_bin_test") {
+fuchsia_component("system_recovery_installer_bin_test") {
   testonly = true
   deps = [ ":bin_installer_test" ]
-  manifest = "meta/system_installer_bin_test.cmx"
+  manifest = "meta/tests/system_recovery_installer_bin_test.cml"
 }
 
-fuchsia_test_package("system_installer_tests") {
-  test_components = [ ":system_installer_bin_test" ]
+fuchsia_test_package("system_recovery_installer_tests") {
+  test_components = [ ":system_recovery_installer_bin_test" ]
   deps = [
     ":recovery_logo",
     ":roboto_regular",

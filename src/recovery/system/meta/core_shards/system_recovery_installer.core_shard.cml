@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/recovery/system/meta/core_shards/base.shard.cml",
+        "//src/recovery/system/meta/core_shards/ui.shard.cml",
+    ],
+    children: [
+        {
+            name: "system_recovery",
+            url: "fuchsia-pkg://fuchsia.com/system_recovery_installer#meta/system_recovery_installer.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.fshost.BlockWatcher",
+                "fuchsia.paver.Paver",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: "#system_recovery",
+        },
+        {
+            directory: "tmp",
+            from: "parent",
+            to: "#system_recovery",
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.net.routes.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: "#system_recovery",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#system_recovery",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-block",
+            to: "#system_recovery",
+            subdir: "class/block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sys-platform",
+            to: "#system_recovery",
+            subdir: "sys/platform",
+        },
+    ],
+}

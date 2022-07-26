@@ -106,13 +106,24 @@ if (is_fuchsia) {
   core_realm("core") {
     package_name = core_name
     restrict_persistent_storage = false
-    deps = _core_realm_deps
+    deps = _core_realm_deps +
+           [ "//src/recovery/system:system_recovery_fdr_core_shard" ]
   }
 
   core_realm("core-eng") {
     package_name = core_name
     restrict_persistent_storage = false
-    deps = _core_realm_deps + [ "//src/developer/sshd-host:core_shard" ]
+    deps = _core_realm_deps + [
+             "//src/developer/sshd-host:core_shard",
+             "//src/recovery/system:system_recovery_core_shard",
+           ]
+  }
+
+  core_realm("core-installer") {
+    package_name = core_name
+    restrict_persistent_storage = false
+    deps = _core_realm_deps +
+           [ "//src/recovery/system:system_recovery_installer_core_shard" ]
   }
 
   root_realm("root") {
@@ -130,7 +141,6 @@ if (is_fuchsia) {
     "//src/devices/sysmem/bin/sysmem_connector",
     "//src/recovery/factory_reset",
     "//src/recovery/system:system_recovery",
-    "//src/recovery/system:config",
     "//src/security/root_ssl_certificates",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
@@ -182,14 +192,8 @@ if (is_fuchsia) {
       ]
 
   recovery_installer_packages =
-      recovery_eng_packages - [
-        "//src/recovery/system:system_recovery",
-        "//src/recovery/system:config",
-      ] +
-      [
-        "//src/recovery/system:system_recovery_installer",
-        "//src/recovery/system:config_installer",
-      ]
+      recovery_eng_packages - [ "//src/recovery/system:system_recovery" ] +
+      [ "//src/recovery/system:system_recovery_installer" ]
 
   assembled_system("recovery-eng") {
     forward_variables_from(recovery_base, "*")
@@ -268,7 +272,7 @@ if (is_fuchsia) {
 
   assembled_system("recovery-installer") {
     forward_variables_from(recovery_base, "*")
-    base_packages = recovery_installer_packages + [ ":core-eng" ]
+    base_packages = recovery_installer_packages + [ ":core-installer" ]
     system_image_deps = recovery_system_image_deps
 
     # The installer needs to see all partitions on the system so that it can

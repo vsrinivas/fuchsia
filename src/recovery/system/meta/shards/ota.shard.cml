@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard provides WIFI network functionality and handling OTA related features.
+{
+    include: [ "//src/lib/fuchsia-hyper/hyper.shard.cml" ],
+    use: [
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+        {
+            protocol: [
+                "fuchsia.wlan.policy.ClientListener",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+        },
+    ],
+}

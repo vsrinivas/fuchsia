@@ -43,7 +43,7 @@ Load the system you've just built onto your device.
 The installer has a separate set of unit tests which can be run with:
 
 ```sh
-$ fx test -s 5 system_installer_tests
+$ fx test -s 5 system_recovery_installer_tests
 ```
 
 Note that test_ui requires display access, so using a product other than "core"

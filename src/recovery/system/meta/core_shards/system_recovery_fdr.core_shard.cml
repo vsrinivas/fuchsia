@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/recovery/system/meta/core_shards/base.shard.cml",
+        "//src/recovery/system/meta/core_shards/ui.shard.cml",
+    ],
+    children: [
+        {
+            name: "system_recovery",
+            url: "fuchsia-pkg://fuchsia.com/system_recovery_fdr#meta/system_recovery_fdr.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sys-platform",
+            to: "#system_recovery",
+            subdir: "sys/platform",
+        },
+    ],
+}

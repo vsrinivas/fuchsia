@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_paver::{
         BootManagerMarker, Configuration, DynamicDataSinkProxy, PaverMarker, PaverProxy,
     },
-    fidl_fuchsia_sysinfo as fsysinfo,
+    fidl_fuchsia_sysinfo::SysInfoMarker,
     fuchsia_component::client,
     fuchsia_zircon as zx,
     recovery_util::block::BlockDevice,
@@ -59,12 +59,10 @@ pub fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), E
 }
 
 pub async fn get_bootloader_type() -> Result<BootloaderType, Error> {
-    let (sysinfo_chan, remote) = zx::Channel::create()?;
-    fdio::service_connect(&"/dev/sys/platform", remote).context("Connect to sysinfo")?;
-    let sysinfo =
-        fsysinfo::SysInfoProxy::from_channel(fidl::AsyncChannel::from_channel(sysinfo_chan)?);
+    let proxy = fuchsia_component::client::connect_to_protocol::<SysInfoMarker>()
+        .context("Could not connect to 'fuchsia.sysinfo.SysInfo' service")?;
     let (status, bootloader) =
-        sysinfo.get_bootloader_vendor().await.context("Getting bootloader vendor")?;
+        proxy.get_bootloader_vendor().await.context("Getting bootloader vendor")?;
     if let Some(bootloader) = bootloader {
         println!("Bootloader vendor = {}", bootloader);
         if bootloader == "coreboot" {

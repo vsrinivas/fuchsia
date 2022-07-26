@@ -12,7 +12,8 @@ group("tests") {
 
   if (host_os == "linux") {
     deps += [
-      ":recovery_simulator_boot_test($host_toolchain)",
+      # TODO(b/239237351) Disabled for CFv2 migration
+      # ":recovery_simulator_boot_test($host_toolchain)",
       ":recovery_simulator_serial_test($host_toolchain)",
     ]
   }
