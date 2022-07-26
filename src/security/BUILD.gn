@@ -4,10 +4,7 @@
 
 group("security") {
   testonly = true
-  deps = [
-    ":tests",
-    "kms",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {
