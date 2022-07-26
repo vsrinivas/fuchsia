@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 group("bin") {
+  testonly = true
   deps = [
     "brightness_manager",
+    "clipboard",
     "input-pipeline",
     "root_presenter",
     "scene_manager",
@@ -18,6 +20,7 @@ group("tests") {
 
   deps = [
     "brightness_manager:tests",
+    "clipboard:tests",
     "hardware_display_controller_provider:tests",
     "input-pipeline:tests",
     "root_presenter:tests",

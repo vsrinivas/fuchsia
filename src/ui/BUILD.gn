@@ -7,6 +7,7 @@ import("//src/sys/core/build/core_shard.gni")
 import("build_args.gni")
 
 group("ui") {
+  testonly = true
   deps = [
     "a11y",
     "bin",
