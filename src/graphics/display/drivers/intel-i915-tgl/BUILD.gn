@@ -42,6 +42,7 @@ source_set("common_srcs") {
     "igd.cc",
     "intel-i915-tgl.cc",
     "interrupts.cc",
+    "pipe-manager.cc",
     "pipe.cc",
     "power.cc",
   ]
@@ -104,6 +105,7 @@ test("intel-i915-tgl-test") {
     "gtt-unittest.cc",
     "intel-i915-tgl-test.cc",
     "interrupts-unittest.cc",
+    "pipe-manager-unittest.cc",
     "pipe-unittest.cc",
     "power-unittest.cc",
   ]

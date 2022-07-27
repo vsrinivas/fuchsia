@@ -49,7 +49,6 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, Type type);
   ~DisplayDevice() override;
 
-  bool AttachPipe(Pipe* pipe);
   void ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp);
 
   // TODO(fxbug.dev/86038): Initialization-related interactions between the Controller class and
@@ -72,7 +71,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   // Initialize the display based on existing hardware state. This method should be used instead of
   // Init() when a display PLL has already been powered up and configured (e.g. by the bootlader)
   // when the driver discovers the display. DDI initialization will not be performed in this case.
-  virtual void InitWithDpllState(const DpllState* dpll_state) {}
+  virtual bool InitWithDpllState(const DpllState* dpll_state);
   // Initializes the display backlight for an already initialized display.
   void InitBacklight();
   // Resumes the ddi after suspend.
@@ -90,6 +89,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
 
   virtual uint32_t i2c_bus_id() const = 0;
 
+  void set_pipe(Pipe* pipe) { pipe_ = pipe; }
   Pipe* pipe() const { return pipe_; }
 
   Type type() const { return type_; }
@@ -129,8 +129,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   virtual bool InitBacklightHw() { return false; }
 
   // Configures the hardware to display content at the given resolution.
-  virtual bool DdiModeset(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                          tgl_registers::Trans trans) = 0;
+  virtual bool DdiModeset(const display_mode_t& mode) = 0;
   virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) = 0;
   // Load the clock rate from hardware if it's necessary when changing the transcoder.
   virtual uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) = 0;

@@ -13,7 +13,7 @@ using i915_tgl::testing::kMaxLinkRateTableEntries;
 
 namespace {
 
-TEST(DpCapabilitiesTest, NoSupportedLinkRates) {
+TEST(TglDpCapabilitiesTest, NoSupportedLinkRates) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
 
@@ -22,7 +22,7 @@ TEST(DpCapabilitiesTest, NoSupportedLinkRates) {
 }
 
 // Tests that invalid lane counts are rejected.
-TEST(DpCapabilitiesTest, InvalidMaxLaneCount) {
+TEST(TglDpCapabilitiesTest, InvalidMaxLaneCount) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k1620Mbps);
@@ -38,7 +38,7 @@ TEST(DpCapabilitiesTest, InvalidMaxLaneCount) {
 }
 
 // Tests that the basic set of getters work for non-EDP.
-TEST(DpCapabilitiesTest, BasicFields) {
+TEST(TglDpCapabilitiesTest, BasicFields) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
 
@@ -61,7 +61,7 @@ TEST(DpCapabilitiesTest, BasicFields) {
 }
 
 // Tests that eDP registers are processed when supported.
-TEST(DpCapabilitiesTest, EdpRegisters) {
+TEST(TglDpCapabilitiesTest, EdpRegisters) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -74,7 +74,7 @@ TEST(DpCapabilitiesTest, EdpRegisters) {
   EXPECT_FALSE(cap.value().backlight_aux_brightness());
 }
 
-TEST(DpCapabilitiesTest, EdpBacklight) {
+TEST(TglDpCapabilitiesTest, EdpBacklight) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -97,7 +97,7 @@ TEST(DpCapabilitiesTest, EdpBacklight) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(DpCapabilitiesTest, MaxLinkRate1620NoEdp) {
+TEST(TglDpCapabilitiesTest, MaxLinkRate1620NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -112,7 +112,7 @@ TEST(DpCapabilitiesTest, MaxLinkRate1620NoEdp) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(DpCapabilitiesTest, MaxLinkRate2700NoEdp) {
+TEST(TglDpCapabilitiesTest, MaxLinkRate2700NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -128,7 +128,7 @@ TEST(DpCapabilitiesTest, MaxLinkRate2700NoEdp) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(DpCapabilitiesTest, MaxLinkRate5400NoEdp) {
+TEST(TglDpCapabilitiesTest, MaxLinkRate5400NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -145,7 +145,7 @@ TEST(DpCapabilitiesTest, MaxLinkRate5400NoEdp) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(DpCapabilitiesTest, MaxLinkRate8100NoEdp) {
+TEST(TglDpCapabilitiesTest, MaxLinkRate8100NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -163,7 +163,7 @@ TEST(DpCapabilitiesTest, MaxLinkRate8100NoEdp) {
 
 // Tests that link rate discovery falls back to MAX_LINK_RATE if eDP v1.4 is supported but the
 // link rate table is empty.
-TEST(DpCapabilitiesTest, FallbackToMaxLinkRateWhenLinkRateTableIsEmpty) {
+TEST(TglDpCapabilitiesTest, FallbackToMaxLinkRateWhenLinkRateTableIsEmpty) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -178,7 +178,7 @@ TEST(DpCapabilitiesTest, FallbackToMaxLinkRateWhenLinkRateTableIsEmpty) {
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate
 // Table" method.
-TEST(DpCapabilitiesTest, LinkRateTableOneEntry) {
+TEST(TglDpCapabilitiesTest, LinkRateTableOneEntry) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -196,7 +196,7 @@ TEST(DpCapabilitiesTest, LinkRateTableOneEntry) {
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate
 // Table" method.
-TEST(DpCapabilitiesTest, LinkRateTableSomeEntries) {
+TEST(TglDpCapabilitiesTest, LinkRateTableSomeEntries) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -217,7 +217,7 @@ TEST(DpCapabilitiesTest, LinkRateTableSomeEntries) {
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate
 // Table" method.
-TEST(DpCapabilitiesTest, LinkRateTableMaxEntries) {
+TEST(TglDpCapabilitiesTest, LinkRateTableMaxEntries) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -245,7 +245,7 @@ TEST(DpCapabilitiesTest, LinkRateTableMaxEntries) {
 // Tests that the list of supported link rates is populated based on the "Link Rate Table" method
 // when both the table and the MAX_LINK_RATE register hold valid values (which is optional but
 // allowed by the eDP specification).
-TEST(DpCapabilitiesTest, LinkRateTableUsedWhenMaxLinkRateIsAlsoPresent) {
+TEST(TglDpCapabilitiesTest, LinkRateTableUsedWhenMaxLinkRateIsAlsoPresent) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();

@@ -37,8 +37,7 @@ class HdmiDisplay : public DisplayDevice {
  private:
   bool InitDdi() final;
   bool Query() final;
-  bool DdiModeset(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                  tgl_registers::Trans trans) final;
+  bool DdiModeset(const display_mode_t& mode) final;
   bool PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
                           tgl_registers::Trans trans) final;
   bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,

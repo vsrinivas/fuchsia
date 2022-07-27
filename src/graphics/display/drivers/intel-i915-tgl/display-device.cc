@@ -53,8 +53,8 @@ DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, tgl_registers:
 
 DisplayDevice::~DisplayDevice() {
   if (pipe_) {
-    pipe_->Reset(controller_);
-    pipe_->Detach();
+    controller_->pipe_manager()->ReturnPipe(pipe_);
+    controller_->ResetPipePlaneBuffers(pipe_->pipe());
   }
   if (inited_) {
     controller_->ResetDdi(ddi());
@@ -71,6 +71,13 @@ fdf::MmioBuffer* DisplayDevice::mmio_space() const { return controller_->mmio_sp
 bool DisplayDevice::Init() {
   ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
 
+  Pipe* pipe = controller_->pipe_manager()->RequestPipe(*this);
+  if (!pipe) {
+    zxlogf(ERROR, "Cannot request a new pipe!");
+    return false;
+  }
+  set_pipe(pipe);
+
   if (!InitDdi()) {
     return false;
   }
@@ -79,6 +86,16 @@ bool DisplayDevice::Init() {
 
   InitBacklight();
 
+  return true;
+}
+
+bool DisplayDevice::InitWithDpllState(const DpllState* dpll_state) {
+  Pipe* pipe = controller_->pipe_manager()->RequestPipeFromHardwareState(*this, mmio_space());
+  if (!pipe) {
+    zxlogf(ERROR, "Failed loading pipe from register!");
+    return false;
+  }
+  set_pipe(pipe);
   return true;
 }
 
@@ -117,7 +134,7 @@ void DisplayDevice::InitBacklight() {
 
 bool DisplayDevice::Resume() {
   if (pipe_) {
-    if (!DdiModeset(info_, pipe_->pipe(), pipe_->transcoder())) {
+    if (!DdiModeset(info_)) {
       return false;
     }
     controller_->interrupts()->EnablePipeVsync(pipe_->pipe(), true);
@@ -129,28 +146,6 @@ void DisplayDevice::LoadActiveMode() {
   pipe_->LoadActiveMode(&info_);
   info_.pixel_clock_10khz = LoadClockRateForTranscoder(pipe_->transcoder());
   zxlogf(INFO, "Active pixel clock: %u0 kHz", info_.pixel_clock_10khz);
-}
-
-bool DisplayDevice::AttachPipe(Pipe* pipe) {
-  if (pipe == pipe_) {
-    return false;
-  }
-
-  if (pipe_) {
-    pipe_->Reset(controller_);
-    pipe_->Detach();
-  }
-  if (pipe) {
-    pipe->AttachToDisplay(id_, type() == Type::kEdp);
-
-    if (info_.h_addressable) {
-      PipeConfigPreamble(info_, pipe->pipe(), pipe->transcoder());
-      pipe->ApplyModeConfig(info_);
-      PipeConfigEpilogue(info_, pipe->pipe(), pipe->transcoder());
-    }
-  }
-  pipe_ = pipe;
-  return true;
 }
 
 bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
@@ -197,7 +192,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
     info_ = config->mode;
 
     if (pipe_) {
-      DdiModeset(info_, pipe_->pipe(), pipe_->transcoder());
+      DdiModeset(info_);
 
       PipeConfigPreamble(info_, pipe_->pipe(), pipe_->transcoder());
       pipe_->ApplyModeConfig(info_);

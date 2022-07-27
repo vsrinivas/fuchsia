@@ -244,9 +244,14 @@ class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t
 };
 
 // DE_PIPE_INTERRUPT
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 361-364
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 448-450
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 444-446
 class PipeDeInterrupt : public hwreg::RegisterBase<PipeDeInterrupt, uint32_t> {
  public:
   DEF_BIT(1, vsync);
+  DEF_BIT(0, vblank);
 };
 
 // CUR_BASE

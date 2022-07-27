@@ -15,6 +15,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/tiling.h"
@@ -76,12 +77,88 @@ namespace i915_tgl {
 Pipe::Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
     : mmio_space_(mmio_space), pipe_(pipe), pipe_power_(std::move(pipe_power)) {}
 
-void Pipe::Reset(Controller* controller) {
-  controller->ResetPipe(pipe_);
-  controller->ResetTrans(transcoder());
+// static
+void Pipe::ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space) {
+  tgl_registers::PipeRegs pipe_regs(pipe);
+
+  // Disable planes, bottom color, and cursor
+  for (int i = 0; i < 3; i++) {
+    pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space);
+    pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space);
+  }
+  auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space);
+  cursor_ctrl.set_mode_select(tgl_registers::CursorCtrl::kDisabled);
+  cursor_ctrl.WriteTo(mmio_space);
+  pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space);
+  pipe_regs.PipeBottomColor().FromValue(0).WriteTo(mmio_space);
 }
 
-void Pipe::Detach() { attached_display_ = INVALID_DISPLAY_ID; }
+// static
+void Pipe::ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space) {
+  tgl_registers::TranscoderRegs trans_regs(trans);
+
+  // Disable transcoder and wait for it to stop. These are the "Disable
+  // Transcoder" steps from:
+  //
+  // Tiger Lake - IHD-OS-TGL-Vol 12-12.21
+  // * "DSI Transcoder Disable Sequence" pages 128-129 (Incomplete)
+  // * "Sequences for DisplayPort" > "Disable Sequence" pages 147-148 (Incomplete)
+  // * "Sequences for HDMI and DVI" > "Disable Sequence" pages 150-151
+  // * "Sequences for WD" > "Disable Sequence" pages 151-152 (Incomplete)
+  // Kaby Lake - IHD-OS-KBL-Vol 12-1.17
+  // * "Sequences for DisplayPort" > "Disable Sequence" pages 115-116 (Incomplete)
+  // * "Sequences for HDMI" > "Disable Sequence" page 118
+  // Skylake - IHD-OS-SKL-Vol 12-05.16
+  // * "Sequences for DisplayPort" > "Disable Sequence" pages 115-116 (Incomplete)
+  // * "Sequences for HDMI and DVI" > "Disable Sequence" page 118
+  //
+  // The transcoder should be turned off only after the associated backlight,
+  // audio, and image planes are disabled.
+  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space);
+  trans_conf.set_transcoder_enable(0);
+  trans_conf.WriteTo(mmio_space);
+
+  // Wait for off status in TRANS_CONF, timeout after two frames.
+  // Here we wait for 60 msecs, which is enough to guarantee to include two
+  // whole frames in ~50 fps.
+  constexpr size_t kTransConfStatusWaitTimeoutMs = 60;
+  if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space).transcoder_state(),
+                  kTransConfStatusWaitTimeoutMs)) {
+    // Because this is a logical "reset", we only log failures rather than
+    // crashing the driver.
+    zxlogf(WARNING, "Failed to reset transcoder");
+    return;
+  }
+
+  // Disable transcoder ddi select and clock select
+  auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space);
+  trans_ddi_ctl.set_trans_ddi_function_enable(0);
+  trans_ddi_ctl.set_ddi_select(0);
+  trans_ddi_ctl.WriteTo(mmio_space);
+
+  if (trans != tgl_registers::TRANS_EDP) {
+    auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space);
+    trans_clk_sel.set_trans_clock_select(0);
+    trans_clk_sel.WriteTo(mmio_space);
+  }
+}
+
+void Pipe::Reset() {
+  ResetPipe(pipe_, mmio_space_);
+  zxlogf(DEBUG, "Reset pipe %d", pipe());
+}
+
+void Pipe::ResetActiveTranscoder() {
+  if (in_use()) {
+    ResetTrans(transcoder(), mmio_space_);
+    zxlogf(DEBUG, "Reset active transcoder %d for pipe %d", transcoder(), pipe());
+  }
+}
+
+void Pipe::Detach() {
+  attached_display_ = INVALID_DISPLAY_ID;
+  attached_edp_ = false;
+}
 
 void Pipe::AttachToDisplay(uint64_t id, bool is_edp) {
   attached_display_ = id;

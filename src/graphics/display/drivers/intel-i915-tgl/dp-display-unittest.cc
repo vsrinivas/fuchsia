@@ -12,6 +12,9 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/fake-dpcd-channel.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/power.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 
 namespace {
 
@@ -72,6 +75,28 @@ class TestDpllManager : public i915_tgl::DisplayPllManager {
   }
 };
 
+class TestPipeManager : public i915_tgl::PipeManager {
+ public:
+  explicit TestPipeManager(i915_tgl::Controller* controller)
+      : i915_tgl::PipeManager(DefaultPipes(controller)) {}
+
+  static std::vector<std::unique_ptr<i915_tgl::Pipe>> DefaultPipes(
+      i915_tgl::Controller* controller) {
+    std::vector<std::unique_ptr<i915_tgl::Pipe>> pipes;
+    pipes.push_back(std::make_unique<i915_tgl::SklPipe>(
+        controller->mmio_space(), tgl_registers::PIPE_A, i915_tgl::PowerWellRef{}));
+    return pipes;
+  }
+
+  void ResetInactiveTranscoders() override {}
+
+ private:
+  i915_tgl::Pipe* GetAvailablePipe() override { return At(tgl_registers::PIPE_A); }
+  i915_tgl::Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override {
+    return At(tgl_registers::PIPE_A);
+  }
+};
+
 class DpDisplayTest : public ::testing::Test {
  protected:
   DpDisplayTest()
@@ -88,6 +113,7 @@ class DpDisplayTest : public ::testing::Test {
   void SetUp() override {
     controller_.SetMmioForTesting(mmio_buffer_.View(0));
     controller_.SetDpllManagerForTesting(std::make_unique<TestDpllManager>());
+    controller_.SetPipeManagerForTesting(std::make_unique<TestPipeManager>(controller()));
     controller_.SetPowerWellForTesting(
         i915_tgl::Power::New(controller_.mmio_space(), i915_tgl::kTestDeviceDid));
     fake_dpcd_.SetDefaults();

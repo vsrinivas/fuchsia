@@ -19,6 +19,7 @@
 #include <region-alloc/region-alloc.h>
 
 #include "gtt.h"
+#include "lib/mmio/mmio-buffer.h"
 #include "power.h"
 #include "registers-ddi.h"
 #include "registers-pipe.h"
@@ -31,10 +32,11 @@ class DisplayDevice;
 
 class Pipe {
  public:
-  Pipe(i915_tgl::Pipe&& other)
-      : Pipe(other.mmio_space_, other.pipe_, std::move(other.pipe_power_)) {}
-
   Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power);
+  virtual ~Pipe() = default;
+
+  Pipe(i915_tgl::Pipe&&) = delete;
+  Pipe(const i915_tgl::Pipe&) = delete;
 
   void AttachToDisplay(uint64_t display_id, bool is_edp);
   void Detach();
@@ -45,17 +47,21 @@ class Pipe {
   void ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp,
                           const SetupGttImageFunc& setup_gtt_image);
 
-  // The controller will reset pipe registers and pipe transcoder registers.
-  // TODO(fxbug.dev/83998): Remove the circular dependency between Controller
-  // and Pipe.
-  void Reset(Controller* controller);
+  // Reset pipe registers.
+  void Reset();
+
+  // Reset pipe transcoder registers associated with the transcoder.
+  void ResetActiveTranscoder();
+
+  // A helper method to reset |pipe| given its pipe number.
+  static void ResetPipe(tgl_registers::Pipe pipe, fdf::MmioBuffer* mmio_space);
+  // A helper method to reset |transcoder| given its transcoder number.
+  static void ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space);
 
   void LoadActiveMode(display_mode_t* mode);
 
   tgl_registers::Pipe pipe() const { return pipe_; }
-  tgl_registers::Trans transcoder() const {
-    return attached_edp_ ? tgl_registers::TRANS_EDP : static_cast<tgl_registers::Trans>(pipe_);
-  }
+  virtual tgl_registers::Trans transcoder() const = 0;
 
   uint64_t attached_display_id() const { return attached_display_; }
   bool in_use() const { return attached_display_ != INVALID_DISPLAY_ID; }
@@ -64,6 +70,9 @@ class Pipe {
   // convert the handles to corresponding config stamps using the existing
   // mapping updated in |ApplyConfig()|.
   std::optional<config_stamp_t> GetVsyncConfigStamp(const std::vector<uint64_t>& image_handles);
+
+ protected:
+  bool attached_edp() const { return attached_edp_; }
 
  private:
   // Borrowed reference to Controller instance
@@ -118,6 +127,17 @@ class Pipe {
   // *seqno of the configuration* so that we can know which layer has the oldest
   // configuration.
   std::unordered_map<uintptr_t, uint64_t> latest_config_seqno_of_image_;
+};
+
+class SklPipe : public Pipe {
+ public:
+  SklPipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
+      : Pipe(mmio_space, pipe, std::move(pipe_power)) {}
+  ~SklPipe() override = default;
+
+  tgl_registers::Trans transcoder() const override {
+    return attached_edp() ? tgl_registers::TRANS_EDP : static_cast<tgl_registers::Trans>(pipe());
+  }
 };
 
 }  // namespace i915_tgl

@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -33,6 +34,7 @@
 
 #include <fbl/vector.h>
 
+#include "fbl/auto_lock.h"
 #include "fuchsia/hardware/display/controller/c/banjo.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/clock/cdclk.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/ddi.h"
@@ -42,6 +44,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl-bind.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
@@ -210,7 +213,7 @@ void Controller::HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse) {
   }
 }
 
-void Controller::HandlePipeVsync(tgl_registers::Pipe pipe, zx_time_t timestamp) {
+void Controller::HandlePipeVsync(tgl_registers::Pipe pipe_num, zx_time_t timestamp) {
   fbl::AutoLock lock(&display_lock_);
 
   if (!dc_intf_.is_valid()) {
@@ -221,10 +224,11 @@ void Controller::HandlePipeVsync(tgl_registers::Pipe pipe, zx_time_t timestamp) 
 
   std::optional<config_stamp_t> vsync_config_stamp = std::nullopt;
 
-  if (pipes_[pipe].in_use()) {
-    id = pipes_[pipe].attached_display_id();
+  Pipe* pipe = (*pipe_manager_)[pipe_num];
+  if (pipe && pipe->in_use()) {
+    id = pipe->attached_display_id();
 
-    tgl_registers::PipeRegs regs(pipe);
+    tgl_registers::PipeRegs regs(pipe_num);
     std::vector<uint64_t> handles;
     for (int i = 0; i < 3; i++) {
       auto live_surface = regs.PlaneSurfaceLive(i).ReadFrom(mmio_space());
@@ -242,7 +246,7 @@ void Controller::HandlePipeVsync(tgl_registers::Pipe pipe, zx_time_t timestamp) 
       handles.push_back(handle);
     }
 
-    vsync_config_stamp = pipes_[pipe].GetVsyncConfigStamp(handles);
+    vsync_config_stamp = pipe->GetVsyncConfigStamp(handles);
   }
 
   if (id != INVALID_DISPLAY_ID) {
@@ -346,16 +350,18 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     vga_ctl.WriteTo(mmio_space());
   }
 
-  for (unsigned i = 0; i < tgl_registers::kPipeCount; i++) {
-    ResetPipe(tgl_registers::kPipes[i]);
+  for (Pipe* pipe : *pipe_manager_) {
+    pipe->Reset();
+    pipe->ResetActiveTranscoder();
+    ResetPipePlaneBuffers(pipe->pipe());
 
-    tgl_registers::PipeRegs pipe_regs(tgl_registers::kPipes[i]);
+    tgl_registers::PipeRegs pipe_regs(pipe->pipe());
 
     // Disable the scalers (double buffered on PipeScalerWinSize), since
     // we don't know what state they are in at boot.
     pipe_regs.PipeScalerCtrl(0).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
     pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
-    if (i != tgl_registers::PIPE_C) {
+    if (pipe->pipe() != tgl_registers::PIPE_C) {
       pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
       pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
     }
@@ -378,57 +384,11 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   return true;
 }
 
-void Controller::ResetPipe(tgl_registers::Pipe pipe) {
-  tgl_registers::PipeRegs pipe_regs(pipe);
-
-  // Disable planes, bottom color, and cursor
-  for (int i = 0; i < 3; i++) {
-    pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space());
-    pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space());
-  }
-  auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space());
-  cursor_ctrl.set_mode_select(cursor_ctrl.kDisabled);
-  cursor_ctrl.WriteTo(mmio_space());
-  pipe_regs.CursorBase().FromValue(0).WriteTo(mmio_space());
-  pipe_regs.PipeBottomColor().FromValue(0).WriteTo(mmio_space());
-
-  ZX_DEBUG_ASSERT(mtx_trylock(&display_lock_) == thrd_busy);
+void Controller::ResetPipePlaneBuffers(tgl_registers::Pipe pipe) {
+  fbl::AutoLock lock(&plane_buffers_lock_);
   for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
     plane_buffers_[pipe][plane_num].start = tgl_registers::PlaneBufCfg::kBufferCount;
   }
-}
-
-bool Controller::ResetTrans(tgl_registers::Trans trans) {
-  tgl_registers::TranscoderRegs trans_regs(trans);
-
-  // Disable transcoder and wait for it to stop.
-  //
-  // Per
-  // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-icllp-vol12-displayengine_0.pdf,
-  // page 131, "DSI Transcoder Disable Sequence", we should only be turning off the transcoder once
-  // the associated backlight, audio, and image planes are disabled. Because this is a logical
-  // "reset", we only log failures rather than crashing the driver.
-  auto trans_conf = trans_regs.Conf().ReadFrom(mmio_space());
-  trans_conf.set_transcoder_enable(0);
-  trans_conf.WriteTo(mmio_space());
-  if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state(), 60)) {
-    zxlogf(WARNING, "Failed to reset transcoder");
-    return false;
-  }
-
-  // Disable transcoder ddi select and clock select
-  auto trans_ddi_ctl = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
-  trans_ddi_ctl.set_trans_ddi_function_enable(0);
-  trans_ddi_ctl.set_ddi_select(0);
-  trans_ddi_ctl.WriteTo(mmio_space());
-
-  if (trans != tgl_registers::TRANS_EDP) {
-    auto trans_clk_sel = trans_regs.ClockSelect().ReadFrom(mmio_space());
-    trans_clk_sel.set_trans_clock_select(0);
-    trans_clk_sel.WriteTo(mmio_space());
-  }
-
-  return true;
 }
 
 bool Controller::ResetDdi(tgl_registers::Ddi ddi) {
@@ -499,44 +459,19 @@ bool Controller::LoadHardwareState(tgl_registers::Ddi ddi, DisplayDevice* device
     return false;
   }
 
-  auto pipe = tgl_registers::PIPE_INVALID;
-  if (ddi == tgl_registers::DDI_A) {
-    tgl_registers::TranscoderRegs regs(tgl_registers::TRANS_EDP);
-    auto ddi_func_ctrl = regs.DdiFuncControl().ReadFrom(mmio_space());
-
-    if (ddi_func_ctrl.edp_input_select() == ddi_func_ctrl.kPipeA) {
-      pipe = tgl_registers::PIPE_A;
-    } else if (ddi_func_ctrl.edp_input_select() == ddi_func_ctrl.kPipeB) {
-      pipe = tgl_registers::PIPE_B;
-    } else if (ddi_func_ctrl.edp_input_select() == ddi_func_ctrl.kPipeC) {
-      pipe = tgl_registers::PIPE_C;
-    }
-  } else {
-    for (unsigned j = 0; j < tgl_registers::kPipeCount; j++) {
-      auto transcoder = tgl_registers::kTrans[j];
-      tgl_registers::TranscoderRegs regs(transcoder);
-      if (regs.ClockSelect().ReadFrom(mmio_space()).trans_clock_select() == ddi + 1u &&
-          regs.DdiFuncControl().ReadFrom(mmio_space()).ddi_select() == ddi) {
-        pipe = tgl_registers::kPipes[j];
-        break;
-      }
-    }
-  }
-
-  if (pipe == tgl_registers::PIPE_INVALID) {
-    return false;
-  }
-
   auto dpll_state = dpll_manager()->LoadState(ddi);
   if (!dpll_state.has_value()) {
-    zxlogf(DEBUG, "Cannot load DPLL state for DDI %d", ddi);
+    zxlogf(ERROR, "Cannot load DPLL state for DDI %d", ddi);
     return false;
   }
 
-  device->InitWithDpllState(&*dpll_state);
-  device->AttachPipe(&pipes_[pipe]);
-  device->LoadActiveMode();
+  bool init_result = device->InitWithDpllState(&*dpll_state);
+  if (!init_result) {
+    zxlogf(ERROR, "Cannot initialize the display with DPLL state for DDI %d", ddi);
+    return false;
+  }
 
+  device->LoadActiveMode();
   return true;
 }
 
@@ -582,20 +517,7 @@ void Controller::InitDisplays() {
   }
 
   // Reset any transcoders which aren't in use
-  for (unsigned i = 0; i < tgl_registers::kTransCount; i++) {
-    auto transcoder = tgl_registers::kTrans[i];
-    auto pipe = tgl_registers::PIPE_INVALID;
-    for (auto& p : pipes_) {
-      if (p.in_use() && p.transcoder() == transcoder) {
-        pipe = p.pipe();
-        break;
-      }
-    }
-
-    if (pipe == tgl_registers::PIPE_INVALID) {
-      ResetTrans(transcoder);
-    }
-  }
+  pipe_manager_->ResetInactiveTranscoders();
 
   // Reset any ddis which don't have a restored display. If we failed to restore a
   // display, try to initialize it here.
@@ -604,7 +526,8 @@ void Controller::InitDisplays() {
   }
 
   for (auto* device : device_needs_init) {
-    if (device && !device->Init()) {
+    ZX_ASSERT_MSG(device, "device_needs_init incorrectly populated above");
+    if (!device->Init()) {
       for (unsigned i = 0; i < display_devices_.size(); i++) {
         if (display_devices_[i].get() == device) {
           display_devices_.erase(i);
@@ -862,13 +785,13 @@ const std::unique_ptr<GttRegion>& Controller::GetGttRegion(uint64_t handle) {
   ZX_ASSERT(false);
 }
 
-bool Controller::GetPlaneLayer(tgl_registers::Pipe pipe, uint32_t plane,
+bool Controller::GetPlaneLayer(Pipe* pipe, uint32_t plane,
                                cpp20::span<const display_config_t*> configs,
                                const layer_t** layer_out) {
-  if (!pipes_[pipe].in_use()) {
+  if (!pipe->in_use()) {
     return false;
   }
-  uint64_t disp_id = pipes_[pipe].attached_display_id();
+  uint64_t disp_id = pipe->attached_display_id();
 
   for (const display_config_t* config : configs) {
     if (config->display_id != disp_id) {
@@ -899,9 +822,9 @@ bool Controller::GetPlaneLayer(tgl_registers::Pipe pipe, uint32_t plane,
   return false;
 }
 
-uint16_t Controller::CalculateBuffersPerPipe(size_t display_count) {
-  ZX_ASSERT(display_count < tgl_registers::kPipeCount);
-  return static_cast<uint16_t>(tgl_registers::PlaneBufCfg::kBufferCount / display_count);
+uint16_t Controller::CalculateBuffersPerPipe(size_t active_pipe_count) {
+  ZX_ASSERT(active_pipe_count < tgl_registers::kPipeCount);
+  return static_cast<uint16_t>(tgl_registers::PlaneBufCfg::kBufferCount / active_pipe_count);
 }
 
 bool Controller::CalculateMinimumAllocations(
@@ -910,8 +833,8 @@ bool Controller::CalculateMinimumAllocations(
   // This fn ignores layers after kImagePlaneCount. Displays with too many layers already
   // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
   bool success = true;
-  for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
-    tgl_registers::Pipe pipe = tgl_registers::kPipes[pipe_num];
+  for (Pipe* pipe : *pipe_manager_) {
+    tgl_registers::Pipe pipe_num = pipe->pipe();
     uint32_t total = 0;
 
     for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
@@ -1012,48 +935,51 @@ void Controller::UpdateAllocations(
   }
 
   // Do the actual allocation, using the buffers that are assigned to each pipe.
-  for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
-    uint16_t start = pipe_buffers_[pipe_num].start;
-    for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
-      auto cur = &plane_buffers_[pipe_num][plane_num];
+  {
+    fbl::AutoLock lock(&plane_buffers_lock_);
+    for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
+      uint16_t start = pipe_buffers_[pipe_num].start;
+      for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
+        auto cur = &plane_buffers_[pipe_num][plane_num];
 
-      if (allocs[pipe_num][plane_num] == 0) {
-        cur->start = tgl_registers::PlaneBufCfg::kBufferCount;
-        cur->end = static_cast<uint16_t>(cur->start + 1);
-      } else {
-        cur->start = start;
-        cur->end = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
-      }
-      start = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
+        if (allocs[pipe_num][plane_num] == 0) {
+          cur->start = tgl_registers::PlaneBufCfg::kBufferCount;
+          cur->end = static_cast<uint16_t>(cur->start + 1);
+        } else {
+          cur->start = start;
+          cur->end = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
+        }
+        start = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
 
-      tgl_registers::Pipe pipe = tgl_registers::kPipes[pipe_num];
-      tgl_registers::PipeRegs pipe_regs(pipe);
+        tgl_registers::Pipe pipe = tgl_registers::kPipes[pipe_num];
+        tgl_registers::PipeRegs pipe_regs(pipe);
 
-      // These are latched on the surface address register, so we don't yet need to
-      // worry about overlaps when updating planes during a pipe allocation.
-      auto buf_cfg = pipe_regs.PlaneBufCfg(plane_num + 1).FromValue(0);
-      buf_cfg.set_buffer_start(cur->start);
-      buf_cfg.set_buffer_end(cur->end - 1);
-      buf_cfg.WriteTo(mmio_space());
-
-      // TODO(stevensd): Real watermark programming
-      auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
-      wm0.set_enable(cur->start != tgl_registers::PlaneBufCfg::kBufferCount);
-      wm0.set_blocks(cur->end - cur->start);
-      wm0.WriteTo(mmio_space());
-
-      // Give the buffers to both the cursor plane and plane 2, since
-      // only one will actually be active.
-      if (plane_num == tgl_registers::kCursorPlane) {
-        auto buf_cfg = pipe_regs.PlaneBufCfg(0).FromValue(0);
+        // These are latched on the surface address register, so we don't yet need to
+        // worry about overlaps when updating planes during a pipe allocation.
+        auto buf_cfg = pipe_regs.PlaneBufCfg(plane_num + 1).FromValue(0);
         buf_cfg.set_buffer_start(cur->start);
         buf_cfg.set_buffer_end(cur->end - 1);
         buf_cfg.WriteTo(mmio_space());
 
-        auto wm0 = pipe_regs.PlaneWatermark(0, 0).FromValue(0);
+        // TODO(stevensd): Real watermark programming
+        auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
         wm0.set_enable(cur->start != tgl_registers::PlaneBufCfg::kBufferCount);
         wm0.set_blocks(cur->end - cur->start);
         wm0.WriteTo(mmio_space());
+
+        // Give the buffers to both the cursor plane and plane 2, since
+        // only one will actually be active.
+        if (plane_num == tgl_registers::kCursorPlane) {
+          auto buf_cfg = pipe_regs.PlaneBufCfg(0).FromValue(0);
+          buf_cfg.set_buffer_start(cur->start);
+          buf_cfg.set_buffer_end(cur->end - 1);
+          buf_cfg.WriteTo(mmio_space());
+
+          auto wm0 = pipe_regs.PlaneWatermark(0, 0).FromValue(0);
+          wm0.set_enable(cur->start != tgl_registers::PlaneBufCfg::kBufferCount);
+          wm0.set_blocks(cur->end - cur->start);
+          wm0.WriteTo(mmio_space());
+        }
       }
     }
   }
@@ -1074,8 +1000,8 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
 
   // Calculate the data rates and store the minimum allocations
   uint64_t data_rate[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount];
-  for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
-    tgl_registers::Pipe pipe = tgl_registers::kPipes[pipe_num];
+  for (Pipe* pipe : *pipe_manager_) {
+    tgl_registers::Pipe pipe_num = pipe->pipe();
     for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
       const layer_t* layer;
       if (!GetPlaneLayer(pipe, plane_num, display_configs, &layer)) {
@@ -1110,18 +1036,23 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
     // when progressively updating the allocation.
     memcpy(active_allocation, pipe_buffers_, sizeof(active_allocation));
 
-    uint16_t buffers_per_pipe = CalculateBuffersPerPipe(display_configs.size());
-    int active_pipes = 0;
-    for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
-      if (pipes_[pipe_num].in_use()) {
-        pipe_buffers_[pipe_num].start = static_cast<uint16_t>(buffers_per_pipe * active_pipes);
+    size_t active_pipes = std::count_if(pipe_manager_->begin(), pipe_manager_->end(),
+                                        [](const Pipe* pipe) { return pipe->in_use(); });
+    uint16_t buffers_per_pipe = CalculateBuffersPerPipe(active_pipes);
+
+    int current_active_pipe = 0;
+    for (Pipe* pipe : *pipe_manager_) {
+      tgl_registers::Pipe pipe_num = pipe->pipe();
+      if (pipe->in_use()) {
+        pipe_buffers_[pipe_num].start =
+            static_cast<uint16_t>(buffers_per_pipe * current_active_pipe);
         pipe_buffers_[pipe_num].end =
             static_cast<uint16_t>(pipe_buffers_[pipe_num].start + buffers_per_pipe);
-        active_pipes++;
+        current_active_pipe++;
       } else {
         pipe_buffers_[pipe_num].start = pipe_buffers_[pipe_num].end = 0;
       }
-      zxlogf(DEBUG, "Pipe %d buffers: [%d, %d)", pipe_num, pipe_buffers_[pipe_num].start,
+      zxlogf(INFO, "Pipe %d buffers: [%d, %d)", pipe_num, pipe_buffers_[pipe_num].start,
              pipe_buffers_[pipe_num].end);
     }
   }
@@ -1456,12 +1387,13 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
   if (!CalculateMinimumAllocations(display_configs, arr)) {
     // Find any displays whose allocation fails and set the return code. Overwrite
     // any previous errors, since they get solved by the merge.
-    for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
+    for (Pipe* pipe : *pipe_manager_) {
+      tgl_registers::Pipe pipe_num = pipe->pipe();
       if (arr[pipe_num][0] != UINT16_MAX) {
         continue;
       }
-      ZX_ASSERT(pipes_[pipe_num].in_use());  // If the allocation failed, it should be in use
-      uint64_t display_id = pipes_[pipe_num].attached_display_id();
+      ZX_ASSERT(pipe->in_use());  // If the allocation failed, it should be in use
+      uint64_t display_id = pipe->attached_display_id();
       for (unsigned i = 0; i < display_config_count; i++) {
         if (display_config[i]->display_id != display_id) {
           continue;
@@ -1506,47 +1438,6 @@ bool Controller::CalculatePipeAllocation(cpp20::span<const display_config_t*> di
   return true;
 }
 
-bool Controller::ReallocatePipes(cpp20::span<const display_config_t*> display_configs) {
-  if (display_configs.empty()) {
-    // If we were given an empty config, just wait until there's
-    // a real config before doing anything.
-    return false;
-  }
-
-  uint64_t pipe_alloc[tgl_registers::kPipeCount];
-  if (!CalculatePipeAllocation(display_configs, pipe_alloc)) {
-    // Reallocations should only happen for validated configurations, so the
-    // pipe allocation should always succeed.
-    ZX_ASSERT(false);
-    return false;
-  }
-
-  bool pipe_change = false;
-  for (unsigned i = 0; i < display_devices_.size(); i++) {
-    auto& display = display_devices_[i];
-    const display_config_t* config = find_config(display->id(), display_configs);
-
-    Pipe* pipe = nullptr;
-    if (config) {
-      pipe = display->pipe();
-      if (pipe == nullptr) {
-        for (unsigned i = 0; i < tgl_registers::kPipeCount; i++) {
-          if (pipe_alloc[i] == display->id()) {
-            pipe = &pipes_[i];
-            break;
-          }
-        }
-      }
-    }
-
-    if (display->AttachPipe(pipe)) {
-      pipe_change = true;
-    }
-  }
-
-  return pipe_change;
-}
-
 void Controller::DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,
                                              size_t raw_eld_count) {
   // We use the first "a" of the 3 ELD slots in the datasheet.
@@ -1584,18 +1475,17 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
   size_t fake_vsync_size = 0;
 
   cpp20::span display_configs(display_config, display_config_count);
-  bool pipe_change = ReallocatePipes(display_configs);
-  ReallocatePlaneBuffers(display_configs, pipe_change);
+  ReallocatePlaneBuffers(display_configs, /* reallocate_pipes */ pipe_manager_->PipeReallocated());
 
-  for (unsigned i = 0; i < display_devices_.size(); i++) {
-    auto& display = display_devices_[i];
+  for (auto& display : display_devices_) {
     const display_config_t* config = find_config(display->id(), display_configs);
 
     if (config != nullptr) {
       display->ApplyConfiguration(config, config_stamp);
     } else {
       if (display->pipe()) {
-        ResetPipe(display->pipe()->pipe());
+        display->pipe()->Reset();
+        ResetPipePlaneBuffers(display->pipe()->pipe());
       }
     }
 
@@ -1905,8 +1795,8 @@ void Controller::DdkInit(ddk::InitTxn txn) {
 
     {
       fbl::AutoLock lock(&display_lock_);
-      for (auto& pipe : pipes_) {
-        interrupts()->EnablePipeVsync(pipe.pipe(), true);
+      for (Pipe* pipe : *pipe_manager_) {
+        interrupts()->EnablePipeVsync(pipe->pipe(), true);
       }
     }
 
@@ -2160,9 +2050,7 @@ zx_status_t Controller::Init() {
 
   {
     fbl::AutoLock lock(&display_lock_);
-    for (const auto pipe : {tgl_registers::PIPE_A, tgl_registers::PIPE_B, tgl_registers::PIPE_C}) {
-      pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
-    }
+    pipe_manager_ = std::make_unique<SklPipeManager>(this);
   }
 
   dpll_manager_ = std::make_unique<SklDpllManager>(mmio_space());
@@ -2217,14 +2105,15 @@ Controller::Controller(zx_device_t* parent) : DeviceType(parent) {
   mtx_init(&display_lock_, mtx_plain);
   mtx_init(&gtt_lock_, mtx_plain);
   mtx_init(&bar_lock_, mtx_plain);
+  mtx_init(&plane_buffers_lock_, mtx_plain);
 }
 
 Controller::~Controller() {
   interrupts_.Destroy();
-  if (mmio_space()) {
-    for (unsigned i = 0; i < tgl_registers::kPipeCount; i++) {
+  if (mmio_space() && pipe_manager_.get()) {
+    for (Pipe* pipe : *pipe_manager_) {
       fbl::AutoLock lock(&display_lock_);
-      interrupts()->EnablePipeVsync(pipes_[i].pipe(), true);
+      interrupts()->EnablePipeVsync(pipe->pipe(), true);
     }
   }
   // Release anything leaked by the gpu-core client.
@@ -2268,7 +2157,7 @@ zx_status_t Controller::Create(zx_device_t* parent) {
 
 }  // namespace i915_tgl
 
-static constexpr zx_driver_ops_t intel_i915_tgl_driver_ops = []() {
+static constexpr zx_driver_ops_t intel_i915_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = [](void* ctx, zx_device_t* parent) { return i915_tgl::Controller::Create(parent); };
@@ -2276,4 +2165,4 @@ static constexpr zx_driver_ops_t intel_i915_tgl_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER(intel_i915_tgl, intel_i915_tgl_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(intel_i915, intel_i915_driver_ops, "zircon", "0.1");

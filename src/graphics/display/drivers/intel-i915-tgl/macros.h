@@ -9,10 +9,10 @@
 
 #define WAIT_ON(COND, N, UNITS)                            \
   ({                                                       \
-    int count = 0;                                         \
-    while (!(COND) && ++count <= N)                        \
+    size_t count = 0;                                      \
+    while (!(COND) && ++count <= static_cast<size_t>(N))   \
       zx_nanosleep(zx_deadline_after(ZX_##UNITS##SEC(1))); \
-    count <= N;                                            \
+    count <= static_cast<size_t>(N);                       \
   })
 
 #define WAIT_ON_US(COND, N) WAIT_ON(COND, N, U)

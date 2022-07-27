@@ -30,6 +30,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/igd.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/interrupts.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
@@ -134,6 +135,7 @@ class Controller : public DeviceType,
   uint16_t device_id() const { return device_id_; }
   const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
   Power* power() { return power_.get(); }
+  PipeManager* pipe_manager() { return pipe_manager_.get(); }
   DisplayPllManager* dpll_manager() { return dpll_manager_.get(); }
 
   // Non-const getter to allow unit tests to modify the IGD.
@@ -144,14 +146,16 @@ class Controller : public DeviceType,
   IgdOpRegion* igd_opregion_for_testing() { return &igd_opregion_; }
 
   void HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse);
-  void HandlePipeVsync(tgl_registers::Pipe pipe, zx_time_t timestamp);
+  void HandlePipeVsync(tgl_registers::Pipe pipe_num, zx_time_t timestamp);
 
-  void ResetPipe(tgl_registers::Pipe pipe) __TA_NO_THREAD_SAFETY_ANALYSIS;
-  bool ResetTrans(tgl_registers::Trans trans);
+  void ResetPipePlaneBuffers(tgl_registers::Pipe pipe);
   bool ResetDdi(tgl_registers::Ddi ddi);
 
   void SetDpllManagerForTesting(std::unique_ptr<DisplayPllManager> dpll_manager) {
     dpll_manager_ = std::move(dpll_manager);
+  }
+  void SetPipeManagerForTesting(std::unique_ptr<PipeManager> pipe_manager) {
+    pipe_manager_ = std::move(pipe_manager);
   }
   void SetPowerWellForTesting(std::unique_ptr<Power> power_well) { power_ = std::move(power_well); }
   void SetMmioForTesting(fdf::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
@@ -186,11 +190,9 @@ class Controller : public DeviceType,
                              size_t removed_count) __TA_REQUIRES(display_lock_);
 
   // Gets the layer_t* config for the given pipe/plane. Return false if there is no layer.
-  bool GetPlaneLayer(tgl_registers::Pipe pipe, uint32_t plane,
-                     cpp20::span<const display_config_t*> configs, const layer_t** layer_out)
-      __TA_REQUIRES(display_lock_);
-
-  uint16_t CalculateBuffersPerPipe(size_t display_count);
+  bool GetPlaneLayer(Pipe* pipe, uint32_t plane, cpp20::span<const display_config_t*> configs,
+                     const layer_t** layer_out) __TA_REQUIRES(display_lock_);
+  uint16_t CalculateBuffersPerPipe(size_t active_pipe_count);
   // Returns false if no allocation is possible. When that happens,
   // plane 0 of the failing displays will be set to UINT16_MAX.
   bool CalculateMinimumAllocations(
@@ -218,8 +220,6 @@ class Controller : public DeviceType,
 
   bool CalculatePipeAllocation(cpp20::span<const display_config_t*> display_configs,
                                uint64_t alloc[tgl_registers::kPipeCount])
-      __TA_REQUIRES(display_lock_);
-  bool ReallocatePipes(cpp20::span<const display_config_t*> display_configs)
       __TA_REQUIRES(display_lock_);
 
   zx_device_t* zx_gpu_dev_ = nullptr;
@@ -260,7 +260,7 @@ class Controller : public DeviceType,
   uint64_t next_id_ __TA_GUARDED(display_lock_) = 1;  // id can't be INVALID_DISPLAY_ID == 0
   mtx_t display_lock_;
 
-  fbl::Vector<Pipe> pipes_ __TA_GUARDED(display_lock_);
+  std::unique_ptr<PipeManager> pipe_manager_;
 
   PowerWellRef cd_clk_power_well_;
   std::unique_ptr<CoreDisplayClock> cd_clk_;
@@ -274,7 +274,9 @@ class Controller : public DeviceType,
   // Plane buffer allocation. If no alloc, start == end == tgl_registers::PlaneBufCfg::kBufferCount.
   buffer_allocation_t plane_buffers_[tgl_registers::kPipeCount]
                                     [tgl_registers::kImagePlaneCount] __TA_GUARDED(
-                                        display_lock_) = {};
+                                        plane_buffers_lock_) = {};
+  mtx_t plane_buffers_lock_;
+
   // Buffer allocations for pipes
   buffer_allocation_t pipe_buffers_[tgl_registers::kPipeCount] __TA_GUARDED(display_lock_) = {};
   bool initial_alloc_ = true;

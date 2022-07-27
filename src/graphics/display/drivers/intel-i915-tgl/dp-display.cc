@@ -21,6 +21,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
@@ -1184,16 +1185,23 @@ bool DpDisplay::InitDdi() {
   return true;
 }
 
-void DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
+bool DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
   if (dpll_state == nullptr) {
-    return;
+    return false;
   }
 
   ZX_DEBUG_ASSERT(std::holds_alternative<DpDpllState>(*dpll_state));
   if (!std::holds_alternative<DpDpllState>(*dpll_state)) {
     zxlogf(ERROR, "Non DP dpll_state is given to DpDisplay!");
-    return;
+    return false;
   }
+
+  Pipe* pipe = controller()->pipe_manager()->RequestPipeFromHardwareState(*this, mmio_space());
+  if (pipe == nullptr) {
+    zxlogf(ERROR, "Failed loading pipe from register!");
+    return false;
+  }
+  set_pipe(pipe);
 
   auto dp_state = std::get_if<DpDpllState>(dpll_state);
   // Some display (e.g. eDP) may have already been configured by the bootloader with a
@@ -1205,6 +1213,7 @@ void DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
            dp_state->dp_bit_rate_mhz);
     SetLinkRate(dp_state->dp_bit_rate_mhz);
   }
+  return true;
 }
 
 bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
@@ -1214,10 +1223,7 @@ bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) 
   return true;
 }
 
-bool DpDisplay::DdiModeset(const display_mode_t& mode, tgl_registers::Pipe pipe,
-                           tgl_registers::Trans trans) {
-  return true;
-}
+bool DpDisplay::DdiModeset(const display_mode_t& mode) { return true; }
 
 bool DpDisplay::PipeConfigPreamble(const display_mode_t& mode, tgl_registers::Pipe pipe,
                                    tgl_registers::Trans trans) {
