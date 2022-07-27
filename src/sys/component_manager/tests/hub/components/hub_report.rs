@@ -6,7 +6,7 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path},
     fuchsia_fs::directory::readdir,
-    fuchsia_fs::{open_directory_in_namespace, open_file_in_namespace},
+    fuchsia_fs::open_directory_in_namespace,
     tracing::info,
 };
 
@@ -60,8 +60,7 @@ pub async fn expect_dir_listing_with_optionals(
 
 pub async fn expect_file_content(path: &str, expected_file_content: &str) {
     info!("{} should contain \"{}\"", path, expected_file_content);
-    let file_proxy = open_file_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE).unwrap();
-    let actual_file_content = fuchsia_fs::read_file(&file_proxy).await.unwrap();
+    let actual_file_content = fuchsia_fs::file::read_in_namespace_to_string(path).await.unwrap();
     assert_eq!(expected_file_content, actual_file_content);
 }
 

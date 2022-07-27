@@ -1634,7 +1634,7 @@ async fn read_only_directory() -> Result<(), Error> {
 async fn from_relative_url() -> Result<(), Error> {
     let builder = RealmBuilder::from_relative_url(ECHO_REALM_RELATIVE_URL).await?;
 
-    let echo_client_decl_file = fuchsia_fs::open_file_in_namespace(
+    let echo_client_decl_file = fuchsia_fs::file::open_in_namespace(
         "/pkg/meta/echo_client.cm",
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
@@ -1646,7 +1646,7 @@ async fn from_relative_url() -> Result<(), Error> {
         echo_client_decl.fidl_into_native()
     );
 
-    let echo_server_decl_file = fuchsia_fs::open_file_in_namespace(
+    let echo_server_decl_file = fuchsia_fs::file::open_in_namespace(
         "/pkg/meta/echo_server.cm",
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
@@ -1658,7 +1658,7 @@ async fn from_relative_url() -> Result<(), Error> {
         echo_server_decl.fidl_into_native()
     );
 
-    let echo_realm_decl_file = fuchsia_fs::open_file_in_namespace(
+    let echo_realm_decl_file = fuchsia_fs::file::open_in_namespace(
         "/pkg/meta/echo_realm.cm",
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;

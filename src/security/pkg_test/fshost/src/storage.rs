@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{Blobfs, Filesystem},
     fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_fs::{file::read, open_directory_in_namespace, open_file_in_namespace},
+    fuchsia_fs::open_directory_in_namespace,
     fuchsia_zircon::{AsHandleRef, Rights, Vmo},
     ramdevice_client::{wait_for_device, RamdiskClient, VmoRamdiskClientBuilder},
     std::{convert::TryInto, fs::OpenOptions, path::PathBuf, time::Duration},
@@ -38,9 +38,7 @@ impl BlobfsInstance {
     /// Instantiate blobfs using fvm block file store at `fvm_resource_path`.
     pub async fn new_from_resource(fvm_resource_path: &str) -> Self {
         // Create a VMO filled with the FVM image stored at `fvm_resource_path`.
-        let fvm_file =
-            open_file_in_namespace(fvm_resource_path, fio::OpenFlags::RIGHT_READABLE).unwrap();
-        let fvm_buf = read(&fvm_file).await.unwrap();
+        let fvm_buf = fuchsia_fs::file::read_in_namespace(fvm_resource_path).await.unwrap();
         let fvm_size = fvm_buf.len();
         let fvm_vmo = Vmo::create(fvm_size.try_into().unwrap()).unwrap();
         fvm_vmo.write(&fvm_buf, 0).unwrap();

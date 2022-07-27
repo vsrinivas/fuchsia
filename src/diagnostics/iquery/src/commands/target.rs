@@ -76,8 +76,8 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
         if let Ok(path) = path_result {
             let path_str = path.to_string_lossy().to_string();
             let node =
-                fuchsia_fs::open_node_in_namespace(&path_str, fio::OpenFlags::NODE_REFERENCE)
-                    .map_err(|e| Error::io_error("open node in namespace", e))?;
+                fuchsia_fs::node::open_in_namespace(&path_str, fio::OpenFlags::NODE_REFERENCE)
+                    .map_err(|e| Error::io_error("open node in namespace", e.into()))?;
             if let Ok(node_info) = node.describe().await {
                 match node_info {
                     fio::NodeInfo::Service(_) => {

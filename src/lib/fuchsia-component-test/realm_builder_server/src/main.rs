@@ -2578,7 +2578,7 @@ mod tests {
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
 
-        let a_decl_file = fuchsia_fs::open_file_in_namespace(
+        let a_decl_file = fuchsia_fs::file::open_in_namespace(
             "/pkg/meta/realm_builder_server_unit_tests.cm",
             fio::OpenFlags::RIGHT_READABLE,
         )
@@ -2618,7 +2618,7 @@ mod tests {
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
 
-        let realm_with_child_decl_file = fuchsia_fs::open_file_in_namespace(
+        let realm_with_child_decl_file = fuchsia_fs::file::open_in_namespace(
             "/pkg/meta/realm_with_child.cm",
             fio::OpenFlags::RIGHT_READABLE,
         )
@@ -2634,7 +2634,7 @@ mod tests {
             realm_with_child_decl.children.into_iter().filter(|c| &c.name != "a").collect();
 
         let a_decl_file =
-            fuchsia_fs::open_file_in_namespace("/pkg/meta/a.cm", fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::file::open_in_namespace("/pkg/meta/a.cm", fio::OpenFlags::RIGHT_READABLE)
                 .expect("failed to open manifest");
         let a_decl = fuchsia_fs::read_file_fidl::<fcdecl::Component>(&a_decl_file)
             .await

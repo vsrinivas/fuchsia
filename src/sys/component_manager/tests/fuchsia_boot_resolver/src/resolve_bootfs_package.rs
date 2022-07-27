@@ -23,7 +23,7 @@ const ZBI_PATH: &str = "/pkg/data/tests/uncompressed_bootfs";
 const HELLO_WORLD_URL: &str = "fuchsia-boot:///hello_world#meta/hello_world.cm";
 #[fasync::run(2, test)]
 async fn package_resolution() {
-    let bootfs_image = fuchsia_fs::open_file_in_namespace(
+    let bootfs_image = fuchsia_fs::file::open_in_namespace(
         ZBI_PATH,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )

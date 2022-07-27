@@ -121,7 +121,7 @@ mod tests {
             .context("failed to add loader service handle")?;
 
         // Load the executable into a vmo
-        let executable_file_proxy = fuchsia_fs::open_file_in_namespace(
+        let executable_file_proxy = fuchsia_fs::file::open_in_namespace(
             "/pkg/bin/panic_on_start",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;

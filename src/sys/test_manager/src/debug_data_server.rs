@@ -178,7 +178,7 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
             let name = entry.name;
             let path = prefix.join(&name).to_string_lossy().to_string();
             let file =
-                fuchsia_fs::open_file_in_namespace(&path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+                fuchsia_fs::file::open_in_namespace(&path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
             let content = fuchsia_fs::read_file_bytes(&file).await;
 
             // Store the file in a directory prefixed with the last part of the file path (i.e.

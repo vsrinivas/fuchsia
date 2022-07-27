@@ -31,7 +31,7 @@ pub struct RemoteControlService {
 
 impl RemoteControlService {
     pub async fn new() -> Self {
-        let f = match fuchsia_fs::open_file_in_namespace(
+        let f = match fuchsia_fs::file::open_in_namespace(
             "/config/data/selector-maps.json",
             io::OpenFlags::RIGHT_READABLE,
         ) {

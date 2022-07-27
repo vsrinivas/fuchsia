@@ -517,7 +517,7 @@ mod tests {
         launcher: &fproc::LauncherProxy,
     ) -> Result<(fproc::LaunchInfo, UtilProxy), Error> {
         const TEST_UTIL_BIN: &'static str = "/pkg/bin/process_builder_test_util";
-        let file_proxy = fuchsia_fs::open_file_in_namespace(
+        let file_proxy = fuchsia_fs::file::open_in_namespace(
             TEST_UTIL_BIN,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;

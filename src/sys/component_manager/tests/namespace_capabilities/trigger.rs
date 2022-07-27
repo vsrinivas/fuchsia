@@ -37,7 +37,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         let out = out.expect("empty echo result");
 
         // Attempt to open test-pkg (a component manager namespace capability)
-        let file = fuchsia_fs::open_file_in_namespace(
+        let file = fuchsia_fs::file::open_in_namespace(
             "/test-pkg/data/testdata",
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )

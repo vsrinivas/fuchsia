@@ -10,7 +10,7 @@ use {
     fidl_test_security_pkg::{PackageServer_Request, PackageServer_RequestStream},
     fuchsia_async::{net::TcpListener, Task},
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs::{open_directory_in_namespace, open_file, open_file_in_namespace, read_file_bytes},
+    fuchsia_fs::{open_directory_in_namespace, open_file, read_file_bytes},
     fuchsia_hyper::{Executor, TcpStream},
     fuchsia_syslog::{fx_log_info, fx_log_warn, init},
     futures::{
@@ -156,14 +156,10 @@ async fn main() {
     let (url_send, url_recv) = channel();
     serve_package_server_protocol(url_recv);
 
-    let root_ssl_certificates_file =
-        open_file_in_namespace(tls_certificate_chain_path, fio::OpenFlags::RIGHT_READABLE).unwrap();
     let root_ssl_certificates_contents =
-        read_file_bytes(&root_ssl_certificates_file).await.unwrap();
-
-    let tls_private_key_file =
-        open_file_in_namespace(tls_private_key_path, fio::OpenFlags::RIGHT_READABLE).unwrap();
-    let tls_private_key_contents = read_file_bytes(&tls_private_key_file).await.unwrap();
+        fuchsia_fs::file::read_in_namespace(tls_certificate_chain_path).await.unwrap();
+    let tls_private_key_contents =
+        fuchsia_fs::file::read_in_namespace(tls_private_key_path).await.unwrap();
 
     let certs = parse_cert_chain(root_ssl_certificates_contents.as_slice());
     let key = parse_private_key(tls_private_key_contents.as_slice());

@@ -178,7 +178,7 @@ impl InspectObject {
     }
 
     async fn load_from_vmo(&mut self) -> Result<(), Error> {
-        let proxy = fuchsia_fs::open_file_in_namespace(
+        let proxy = fuchsia_fs::file::open_in_namespace(
             &self.location.absolute_path()?,
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;

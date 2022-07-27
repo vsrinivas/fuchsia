@@ -103,14 +103,6 @@ pub fn create_sub_directories(
     Ok(dir.unwrap())
 }
 
-/// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
-/// stored in fdio. The path argument must be an absolute path.
-#[cfg(target_os = "fuchsia")]
-pub fn open_node_in_namespace(path: &str, flags: fio::OpenFlags) -> Result<fio::NodeProxy, Error> {
-    let node = node::open_in_namespace(path, flags)?;
-    Ok(node)
-}
-
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
 #[cfg(target_os = "fuchsia")]
@@ -119,14 +111,6 @@ pub fn open_directory_in_namespace(
     flags: fio::OpenFlags,
 ) -> Result<fio::DirectoryProxy, Error> {
     let node = directory::open_in_namespace(path, flags)?;
-    Ok(node)
-}
-
-/// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
-/// The path argument must be an absolute path.
-#[cfg(target_os = "fuchsia")]
-pub fn open_file_in_namespace(path: &str, flags: fio::OpenFlags) -> Result<fio::FileProxy, Error> {
-    let node = file::open_in_namespace(path, flags)?;
     Ok(node)
 }
 
