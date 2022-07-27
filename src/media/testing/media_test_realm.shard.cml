@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    collections: [
+        {
+            name: "media-tests",
+            environment: "#legacy-test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic protocols are offered to be used by tests.
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+
+                // Tests can produce traces.
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#media-tests" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#media-tests" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#media-tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#media-tests" ],
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#media-tests",
+        },
+
+        // These system capabilities are offered for use by the media tests.
+        {
+            protocol: [
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.ui.scenic.Scenic",
+
+                // TODO: add any other required capabilities
+            ],
+            from: "parent",
+            to: "#media-tests",
+        },
+    ],
+}

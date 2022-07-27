@@ -55,6 +55,7 @@
         {
             protocol: [
                 "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
             ],

@@ -7,6 +7,7 @@
         "//src/devices/testing/devices_test_realm.shard.cml",
         "//src/lib/vulkan/vulkan_test_realm.shard.cml",
         "//src/media/testing/drm_test_realm.shard.cml",
+        "//src/media/testing/media_test_realm.shard.cml",
         "//src/sys/component_manager/tests/capability_provider_vfs_compliance/vfs_compliance_test_realm.shard.cml",
         "//src/sys/test_manager/meta/chromium_test_realm.shard.cml",
         "//src/sys/test_manager/meta/google_test_realm.shard.cml",
