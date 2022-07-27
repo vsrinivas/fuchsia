@@ -10,6 +10,7 @@ executable("vkext_bin") {
   output_name = "vkext"
 
   sources = [
+    "vk_ext_buffer_collection.cc",
     "vk_ext_buffer_collection_x.cc",
     "vk_fuchsia_external_memory.cc",
     "vk_fuchsia_external_semaphore.cc",
@@ -69,43 +70,6 @@ fuchsia_test_package("vkext-unprotected-pkg") {
   }
 }
 
-# TODO(fxbug.dev/91062): Currently the test is separated from other vkext
-# tests since they can only run on platforms with graphics driver that supports
-# the new upstream FUCHSIA_buffer_collection extension. Once we have completed
-# the driver coverage, we should merge the test binary and package into vkext.
-executable("vkext_buffer_collection_bin") {
-  testonly = true
-  output_name = "vkext_buffer_collection"
-
-  sources = [ "vk_ext_buffer_collection.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/lib/fdio",
-    "//src/graphics/tests/common",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/vulkan",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-fuchsia_unittest_package("vkext_buffer_collection") {
-  manifest = "meta/vkext_buffer_collection.cml"
-  deps = [
-    ":vkext_buffer_collection_bin",
-    "//src/lib/vulkan/validation_layers",
-  ]
-  test_specs = {
-    # TODO(fxbug.dev/91062): Add other environments once their driver supports
-    # the new upstream FUCHSIA_buffer_collection extension.
-    environments = magma_libvulkan_hardware_envs
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
 protected_libvulkan_envs = []
 
 # Filter out everything that's not astro or sherlock.
@@ -141,6 +105,5 @@ group("vkext") {
   deps = [
     ":vkext-protected-pkg",
     ":vkext-unprotected-pkg",
-    ":vkext_buffer_collection",
   ]
 }

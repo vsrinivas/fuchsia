@@ -743,18 +743,14 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionMultipleFormats) {
 TEST_P(VulkanImageExtensionTest, BufferCollectionProtectedRGBA) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
-  if (!device_supports_protected_memory()) {
-    GTEST_SKIP();
-  }
+  ASSERT_TRUE(device_supports_protected_memory());
   ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, ProtectedAndNonprotectedConstraints) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
-  if (!device_supports_protected_memory()) {
-    GTEST_SKIP();
-  }
+  ASSERT_TRUE(device_supports_protected_memory());
   ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), true));
 }
 
@@ -973,9 +969,7 @@ TEST_P(VulkanImageExtensionTest, ImageCpuAccessible) {
 
 TEST_P(VulkanImageExtensionTest, ProtectedCpuAccessible) {
   ASSERT_TRUE(Initialize());
-  if (!device_supports_protected_memory()) {
-    GTEST_SKIP();
-  }
+  ASSERT_TRUE(device_supports_protected_memory());
   auto [vulkan_token] = MakeSharedCollection<1>();
 
   bool linear = GetParam();
@@ -1003,9 +997,7 @@ TEST_P(VulkanImageExtensionTest, ProtectedCpuAccessible) {
 
 TEST_P(VulkanImageExtensionTest, ProtectedOptionalCompatible) {
   ASSERT_TRUE(Initialize());
-  if (!device_supports_protected_memory()) {
-    GTEST_SKIP();
-  }
+  ASSERT_TRUE(device_supports_protected_memory());
   for (uint32_t i = 0; i < 2; i++) {
     auto tokens = MakeSharedCollection(2u);
 
@@ -1060,9 +1052,7 @@ TEST_P(VulkanImageExtensionTest, ProtectedOptionalCompatible) {
 
 TEST_P(VulkanImageExtensionTest, ProtectedUnprotectedIncompatible) {
   ASSERT_TRUE(Initialize());
-  if (!device_supports_protected_memory()) {
-    GTEST_SKIP();
-  }
+  ASSERT_TRUE(device_supports_protected_memory());
   auto tokens = MakeSharedCollection(2u);
 
   bool linear = GetParam();
@@ -1660,9 +1650,7 @@ TEST_F(VulkanExtensionTest, BufferCollectionBuffer16384) {
 TEST_F(VulkanExtensionTest, BufferCollectionProtectedBuffer) {
   set_use_protected_memory(true);
   ASSERT_TRUE(Initialize());
-  if (!device_supports_protected_memory()) {
-    GTEST_SKIP();
-  }
+  ASSERT_TRUE(device_supports_protected_memory());
   ASSERT_TRUE(ExecBuffer(16384));
 }
 
