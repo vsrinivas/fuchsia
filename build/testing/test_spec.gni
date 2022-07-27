@@ -332,6 +332,22 @@ template("test_spec") {
   }
 
   _environments = []
+
+  # Also adds NUC11s if "nuc" environment was specified.
+  # TODO(b/237703450): Remove this logic when NUC11 is a
+  # standard environment.
+  foreach(env, target_envs) {
+    dims = []
+    dims = env.dimensions
+
+    if (defined(dims.device_type) &&
+        dims.device_type == "Intel NUC Kit NUC7i5DNHE") {
+      target_envs += [ nuc11_env ]
+      target_envs -= [ nuc11_env ]
+      target_envs += [ nuc11_env ]
+    }
+  }
+
   foreach(env, target_envs) {
     dims = []  # Clear from previous iteration.
     dims = env.dimensions
