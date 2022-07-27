@@ -156,6 +156,18 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
     std::copy(std::make_move_iterator(button_description.begin()),
               std::make_move_iterator(button_description.end()), std::back_inserter(description));
     return description;
+  } else if (node->has_role() && node->role() == Role::UNKNOWN) {
+    // In order to be focusable, and UNKNOWN node must have a non-empty label.
+    // See a11y::NodeIsDescribable() in
+    // src/ui/a11y/lib/screen_reader/util/util.h.
+    FX_DCHECK(node->has_attributes());
+    FX_DCHECK(node->attributes().has_label());
+    FX_DCHECK(!node->attributes().label().empty());
+
+    auto unknown_description = DescribeUnknown(node);
+    std::copy(std::make_move_iterator(unknown_description.begin()),
+              std::make_move_iterator(unknown_description.end()), std::back_inserter(description));
+    return description;
   }
 
   {
@@ -242,29 +254,52 @@ ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
   return utterance;
 }
 
+void ScreenReaderMessageGenerator::MaybeAddLabelDescriptor(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description) {
+  FX_DCHECK(node);
+  FX_DCHECK(description);
+
+  if (node->has_attributes() && node->attributes().has_label() &&
+      !node->attributes().label().empty()) {
+    Utterance utterance;
+    utterance.set_message(node->attributes().label());
+    description->emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+  }
+}
+
+void ScreenReaderMessageGenerator::MaybeAddGenericSelectedDescriptor(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description) {
+  FX_DCHECK(node);
+  FX_DCHECK(description);
+
+  if (node->has_states() && node->states().has_selected() && node->states().selected()) {
+    description->emplace_back(
+        GenerateUtteranceByMessageId(MessageIds::ELEMENT_SELECTED, zx::duration(zx::msec(0))));
+  }
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeUnknown(const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::UNKNOWN);
+
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+
+  MaybeAddGenericSelectedDescriptor(node, &description);
+  MaybeAddLabelDescriptor(node, &description);
+
+  return description;
+}
+
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::semantics::Node* node) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON);
 
   std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
 
-  // Describe the node as "selected", if the node is selected.
-  //
-  // We do NOT describe unselected buttons as "unselected", because some
-  // runtimes may set the "selected" state to false by default, as opposed to
-  // leaving it unset.
-  if (node->has_states() && node->states().has_selected() && node->states().selected()) {
-    description.emplace_back(
-        GenerateUtteranceByMessageId(MessageIds::ELEMENT_SELECTED, zx::duration(zx::msec(0))));
-  }
-
-  // Add the label to the description, if present.
-  if (node->has_attributes() && node->attributes().has_label() &&
-      !node->attributes().label().empty()) {
-    Utterance utterance;
-    utterance.set_message(node->attributes().label());
-    description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
-  }
+  MaybeAddGenericSelectedDescriptor(node, &description);
+  MaybeAddLabelDescriptor(node, &description);
 
   // Announce that the element is a button.
   description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_BUTTON));
