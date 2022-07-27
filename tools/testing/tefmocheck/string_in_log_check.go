@@ -395,6 +395,18 @@ func infraToolLogChecks() []FailureModeCheck {
 			// during device setup which will cause a task failure.
 			SkipPassedTask: true,
 		},
+		// This error is emitted by `fastboot` when it fails to write an image
+		// to the disk. It is generally caused by ECC errors.
+		&stringInLogCheck{
+			String: "FAILED (remote: 'error writing the image')",
+			Type:   swarmingOutputType,
+		},
+		// For https://fxbug.dev/96079.
+		// This error usually means some kind of USB flakiness/instability when fastboot flashing.
+		&stringInLogCheck{
+			String: "FAILED (Status read failed (Protocol error))",
+			Type:   swarmingOutputType,
+		},
 		// For fxbug.dev/53101.
 		&stringInLogCheck{
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg),
@@ -455,18 +467,6 @@ func infraToolLogChecks() []FailureModeCheck {
 		// because many tests are taking too long.
 		&stringInLogCheck{
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.CommandExceededTimeoutMsg),
-			Type:   swarmingOutputType,
-		},
-		// This error is emitted by `fastboot` when it fails to write an image
-		// to the disk. It is generally caused by ECC errors.
-		&stringInLogCheck{
-			String: "FAILED (remote: 'error writing the image')",
-			Type:   swarmingOutputType,
-		},
-		// For https://fxbug.dev/96079.
-		// This error usually means some kind of USB flakiness/instability when fastboot flashing.
-		&stringInLogCheck{
-			String: "FAILED (Status read failed (Protocol error))",
 			Type:   swarmingOutputType,
 		},
 	}
