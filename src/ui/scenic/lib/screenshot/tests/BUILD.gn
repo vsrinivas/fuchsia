@@ -13,7 +13,10 @@ executable("unittests") {
 
   testonly = true
 
-  sources = [ "flatland_screenshot_unittest.cc" ]
+  sources = [
+    "flatland_screenshot_unittest.cc",
+    "gfx_screenshot_unittest.cc",
+  ]
 
   deps = [
     "//sdk/fidl/fuchsia.sysmem",

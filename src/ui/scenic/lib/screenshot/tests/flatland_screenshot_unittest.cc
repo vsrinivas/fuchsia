@@ -63,8 +63,6 @@ class FlatlandScreenshotTest : public gtest::RealLoopFixture {
 
   void TearDown() override {}
 
-  void DestroyInstanceFunction() {}
-
   std::unique_ptr<screenshot::FlatlandScreenshot> flatland_screenshotter_;
 
  private:

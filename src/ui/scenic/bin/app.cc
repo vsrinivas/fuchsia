@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
+#include "src/ui/scenic/lib/gfx/screenshotter.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture.h"
@@ -578,6 +579,9 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
         [this]() {
           auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
           return flatland_engine_->GetRenderables(*display);
+        },
+        [this](fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
+          gfx::Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
         },
         std::move(screen_capture_importers), display_info_delegate_->GetDisplayDimensions());
 

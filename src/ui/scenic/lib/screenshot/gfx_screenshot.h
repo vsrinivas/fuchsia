@@ -7,15 +7,31 @@
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
 
+#include "screenshot_manager.h"
+
+using TakeGfxScreenshot =
+    std::function<void(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback)>;
+
 namespace screenshot {
 
 class GfxScreenshot : public fuchsia::ui::composition::Screenshot {
  public:
-  GfxScreenshot();
+  GfxScreenshot(TakeGfxScreenshot take_gfx_screenshot,
+                fit::function<void(GfxScreenshot*)> destroy_instance_function);
   ~GfxScreenshot() override;
 
-  // fuchsia::ui::composition::Screenshot
+  // |fuchsia::ui::composition::Screenshot|
   void Take(fuchsia::ui::composition::ScreenshotTakeRequest format, TakeCallback callback) override;
+
+ private:
+  TakeGfxScreenshot take_gfx_screenshot_;
+
+  fit::function<void(GfxScreenshot*)> destroy_instance_function_;
+
+  TakeCallback callback_ = nullptr;
+
+  // Should be last.
+  fxl::WeakPtrFactory<GfxScreenshot> weak_factory_;
 };
 
 }  // namespace screenshot
