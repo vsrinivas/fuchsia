@@ -315,7 +315,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
     DEBUG_ASSERT(futex_ref != nullptr);
 
     // Now that we have a hold of the FutexState, enter the futex specific lock
-    // and validate the user-mote futex state.
+    // and validate the user-mode futex state.
     //
     // FutexWait() checks that the address value_ptr still contains
     // current_value, and if so it sleeps awaiting a FutexWake() on value_ptr.
