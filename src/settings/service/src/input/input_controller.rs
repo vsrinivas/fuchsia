@@ -471,91 +471,96 @@ impl controller::Handle for InputController {
     }
 }
 
-#[test]
-fn test_input_migration_v1_to_current() {
-    const MUTED_MIC: Microphone = Microphone { muted: true };
-    let mut v1 = InputInfoSourcesV1::default_value();
-    v1.sw_microphone = MUTED_MIC;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let serialized_v1 = v1.serialize_to();
-    let current = InputInfoSources::deserialize_from(&serialized_v1);
-    let mut expected_input_state = InputState::new();
-    expected_input_state.set_source_state(
-        InputDeviceType::MICROPHONE,
-        DEFAULT_MIC_NAME.to_string(),
-        DeviceStateSource::SOFTWARE,
-        DeviceState::MUTED,
-    );
-    expected_input_state.set_source_state(
-        InputDeviceType::MICROPHONE,
-        DEFAULT_MIC_NAME.to_string(),
-        DeviceStateSource::HARDWARE,
-        DeviceState::AVAILABLE,
-    );
-    assert_eq!(current.input_device_state, expected_input_state);
-}
+    #[test]
+    fn test_input_migration_v1_to_current() {
+        const MUTED_MIC: Microphone = Microphone { muted: true };
+        let mut v1 = InputInfoSourcesV1::default_value();
+        v1.sw_microphone = MUTED_MIC;
 
-#[test]
-fn test_input_migration_v1_to_v2() {
-    const MUTED_MIC: Microphone = Microphone { muted: true };
-    let mut v1 = InputInfoSourcesV1::default_value();
-    v1.sw_microphone = MUTED_MIC;
+        let serialized_v1 = v1.serialize_to();
+        let current = InputInfoSources::deserialize_from(&serialized_v1);
+        let mut expected_input_state = InputState::new();
+        expected_input_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::SOFTWARE,
+            DeviceState::MUTED,
+        );
+        expected_input_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::HARDWARE,
+            DeviceState::AVAILABLE,
+        );
+        assert_eq!(current.input_device_state, expected_input_state);
+    }
 
-    let serialized_v1 = v1.serialize_to();
-    let v2 = InputInfoSourcesV2::deserialize_from(&serialized_v1);
+    #[test]
+    fn test_input_migration_v1_to_v2() {
+        const MUTED_MIC: Microphone = Microphone { muted: true };
+        let mut v1 = InputInfoSourcesV1::default_value();
+        v1.sw_microphone = MUTED_MIC;
 
-    assert_eq!(v2.hw_microphone, Microphone { muted: false });
-    assert_eq!(v2.sw_microphone, MUTED_MIC);
-    assert_eq!(v2.input_device_state, InputState::new());
-}
+        let serialized_v1 = v1.serialize_to();
+        let v2 = InputInfoSourcesV2::deserialize_from(&serialized_v1);
 
-#[test]
-fn test_input_migration_v2_to_current() {
-    const DEFAULT_CAMERA_NAME: &str = "camera";
-    const MUTED_MIC: Microphone = Microphone { muted: true };
-    let mut v2 = InputInfoSourcesV2::default_value();
-    v2.input_device_state.set_source_state(
-        InputDeviceType::CAMERA,
-        DEFAULT_CAMERA_NAME.to_string(),
-        DeviceStateSource::SOFTWARE,
-        DeviceState::AVAILABLE,
-    );
-    v2.input_device_state.set_source_state(
-        InputDeviceType::CAMERA,
-        DEFAULT_CAMERA_NAME.to_string(),
-        DeviceStateSource::HARDWARE,
-        DeviceState::MUTED,
-    );
-    v2.sw_microphone = MUTED_MIC;
+        assert_eq!(v2.hw_microphone, Microphone { muted: false });
+        assert_eq!(v2.sw_microphone, MUTED_MIC);
+        assert_eq!(v2.input_device_state, InputState::new());
+    }
 
-    let serialized_v2 = v2.serialize_to();
-    let current = InputInfoSources::deserialize_from(&serialized_v2);
-    let mut expected_input_state = InputState::new();
+    #[test]
+    fn test_input_migration_v2_to_current() {
+        const DEFAULT_CAMERA_NAME: &str = "camera";
+        const MUTED_MIC: Microphone = Microphone { muted: true };
+        let mut v2 = InputInfoSourcesV2::default_value();
+        v2.input_device_state.set_source_state(
+            InputDeviceType::CAMERA,
+            DEFAULT_CAMERA_NAME.to_string(),
+            DeviceStateSource::SOFTWARE,
+            DeviceState::AVAILABLE,
+        );
+        v2.input_device_state.set_source_state(
+            InputDeviceType::CAMERA,
+            DEFAULT_CAMERA_NAME.to_string(),
+            DeviceStateSource::HARDWARE,
+            DeviceState::MUTED,
+        );
+        v2.sw_microphone = MUTED_MIC;
 
-    expected_input_state.set_source_state(
-        InputDeviceType::MICROPHONE,
-        DEFAULT_MIC_NAME.to_string(),
-        DeviceStateSource::SOFTWARE,
-        DeviceState::MUTED,
-    );
-    expected_input_state.set_source_state(
-        InputDeviceType::MICROPHONE,
-        DEFAULT_MIC_NAME.to_string(),
-        DeviceStateSource::HARDWARE,
-        DeviceState::AVAILABLE,
-    );
-    expected_input_state.set_source_state(
-        InputDeviceType::CAMERA,
-        DEFAULT_CAMERA_NAME.to_string(),
-        DeviceStateSource::SOFTWARE,
-        DeviceState::AVAILABLE,
-    );
-    expected_input_state.set_source_state(
-        InputDeviceType::CAMERA,
-        DEFAULT_CAMERA_NAME.to_string(),
-        DeviceStateSource::HARDWARE,
-        DeviceState::MUTED,
-    );
+        let serialized_v2 = v2.serialize_to();
+        let current = InputInfoSources::deserialize_from(&serialized_v2);
+        let mut expected_input_state = InputState::new();
 
-    assert_eq!(current.input_device_state, expected_input_state);
+        expected_input_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::SOFTWARE,
+            DeviceState::MUTED,
+        );
+        expected_input_state.set_source_state(
+            InputDeviceType::MICROPHONE,
+            DEFAULT_MIC_NAME.to_string(),
+            DeviceStateSource::HARDWARE,
+            DeviceState::AVAILABLE,
+        );
+        expected_input_state.set_source_state(
+            InputDeviceType::CAMERA,
+            DEFAULT_CAMERA_NAME.to_string(),
+            DeviceStateSource::SOFTWARE,
+            DeviceState::AVAILABLE,
+        );
+        expected_input_state.set_source_state(
+            InputDeviceType::CAMERA,
+            DEFAULT_CAMERA_NAME.to_string(),
+            DeviceStateSource::HARDWARE,
+            DeviceState::MUTED,
+        );
+
+        assert_eq!(current.input_device_state, expected_input_state);
+    }
 }
