@@ -7,23 +7,35 @@ import("//build/components.gni")
 
 # [END imports]
 
+# [START bin]
 executable("bin") {
   output_name = "fidl_echo_cpp_client_sync"
   sources = [ "main.cc" ]
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-    "//sdk/lib/fdio",
+
+    # This library is used to log messages.
+    "//sdk/lib/syslog/cpp",
+
+    # This library is used to consume capabilities, e.g. protocols,
+    # from the component's incoming directory.
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
+# [END bin]
+
+# [START component]
 fuchsia_component("echo-client") {
   component_name = "echo_client"
   manifest = "meta/client.cml"
   deps = [ ":bin" ]
 }
 
+# [END component]
+
+# [START package]
 # C++ sync client and server example package
 fuchsia_package("echo-cpp-client-sync") {
   deps = [
@@ -32,6 +44,8 @@ fuchsia_package("echo-cpp-client-sync") {
     "//examples/fidl/echo-realm:echo_realm",
   ]
 }
+
+# [END package]
 
 group("client_sync") {
   testonly = true

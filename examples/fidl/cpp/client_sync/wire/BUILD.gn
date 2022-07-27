@@ -13,8 +13,13 @@ executable("bin") {
 
   # [START deps]
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
-    "//sdk/lib/fdio",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp_wire",
+
+    # This library is used to log messages.
+    "//sdk/lib/syslog/cpp",
+
+    # This library is used to consume capabilities, e.g. protocols,
+    # from the component's incoming directory.
     "//zircon/system/ulib/service:service-llcpp",
   ]
 

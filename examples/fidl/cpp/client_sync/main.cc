@@ -2,66 +2,136 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ============================================================================
+// This is an accompanying example code for the C++ client tutorial. Head over
+// there for the full walk-through:
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/cpp/basics/sync-client
+// ============================================================================
+
 // [START includes]
 #include <fidl/fuchsia.examples/cpp/fidl.h>
 #include <lib/service/llcpp/service.h>
-#include <zircon/assert.h>
-
-#include <iostream>
+#include <lib/syslog/cpp/macros.h>
 // [END includes]
 
 // [START main]
 int main(int argc, const char** argv) {
-  // |service::OpenServiceRoot| returns a channel connected to the /svc directory.
-  // The remote end of the channel implements the |fuchsia.io/Directory| protocol
-  // and contains the capabilities provided to this component.
-  zx::status svc = service::OpenServiceRoot();
-  ZX_ASSERT(svc.is_ok());
+  // [START connect]
+  // Connect to the |fuchsia.examples/Echo| protocol inside the component's
+  // namespace. This can fail so it's wrapped in a |zx::status| and it must be
+  // checked for errors.
+  zx::status client_end = service::Connect<fuchsia_examples::Echo>();
+  if (!client_end.is_ok()) {
+    FX_LOGS(ERROR) << "Synchronous error when connecting to the |Echo| protocol: "
+                   << client_end.status_string();
+    return -1;
+  }
+  // [END connect]
 
-  // Connect to the fuchsia.examples/Echo protocol.
-  zx::status client_end = service::ConnectAt<fuchsia_examples::Echo>(*svc);
-  ZX_ASSERT(client_end.is_ok());
-
-  // Create a synchronous client to the Echo protocol.
+  // [START init-client]
   fidl::SyncClient client{std::move(*client_end)};
+  // [END init-client]
 
   {
-    // Make an EchoString call, then print out the response.
+    // Make an EchoString call.
+    // [START echo-string]
     fidl::Result result = client->EchoString({"hello"});
-    ZX_ASSERT(result.is_ok());
+    // Check if the FIDL call succeeded or not.
+    if (!result.is_ok()) {
+      // If the call failed, log the error, and quit the program.
+      // Production code should do more graceful error handling depending
+      // on the situation.
+      FX_LOGS(ERROR) << "EchoString failed: " << result.error_value();
+      return -1;
+    }
     const std::string& reply_string = result->response();
-    std::cout << "Got response: " << reply_string << std::endl;
+    FX_LOGS(INFO) << "Got response: " << reply_string;
+    // [END echo-string]
   }
 
   {
-    // Make the same call using wire types.
-    fidl::WireResult result = client.wire()->EchoString("hello");
-    ZX_ASSERT(result.ok());
-    std::string reply_string{result.value().response.get()};
-    std::cout << "Got response: " << reply_string << std::endl;
+    // [START echo-string-designated]
+    // [START echo-string-designated-first-line]
+    fidl::Result result = client->EchoString({{.value = "hello"}});
+    // [END echo-string-designated-first-line]
+    if (!result.is_ok()) {
+      FX_LOGS(ERROR) << "EchoString failed: " << result.error_value();
+      return -1;
+    }
+    const std::string& reply_string = result->response();
+    FX_LOGS(INFO) << "Got response: " << reply_string;
+    // [END echo-string-designated]
   }
 
   {
-    // Make a SendString one-way call, then wait for the server to respond
-    // with an event.
+    // Make a SendString call.
+    // [START send-string]
+    // [START send-string-first-line]
     fitx::result<fidl::Error> result = client->SendString({"hi"});
-    // Check that the request was sent successfully.
-    ZX_ASSERT(result.is_ok());
+    // [END send-string-first-line]
+    if (!result.is_ok()) {
+      FX_LOGS(ERROR) << "SendString failed: " << result.error_value();
+      return -1;
+    }
+    // [END send-string]
 
+    // [START event-handler]
+    // Define the event handler implementation for the client.
+    //
+    // The event handler should be an object that implements
+    // |fidl::SyncEventHandler<Echo>|, and override all pure virtual methods
+    // in that class corresponding to the events offered by the protocol.
     class EventHandler : public fidl::SyncEventHandler<fuchsia_examples::Echo> {
      public:
       EventHandler() = default;
 
       void OnString(fidl::Event<fuchsia_examples::Echo::OnString>& event) override {
         const std::string& reply_string = event.response();
-        std::cout << "Got event: " << reply_string << std::endl;
+        FX_LOGS(INFO) << "Got event: " << reply_string;
       }
     };
+    // [END event-handler]
 
+    // [START handle-one-event]
     // Block to receive exactly one event from the server, which is handled using
-    // the event handlers defined above.
+    // the event handler defined above.
     EventHandler event_handler;
-    ZX_ASSERT(client.HandleOneEvent(event_handler).ok());
+    fidl::Status status = client.HandleOneEvent(event_handler);
+    if (!status.ok()) {
+      FX_LOGS(ERROR) << "HandleOneEvent failed: " << status.error();
+      return -1;
+    }
+    // [END handle-one-event]
+
+    // Make a SendString call using wire types.
+    // [START send-string-wire]
+    // [START send-string-wire-first-line]
+    fidl::WireResult wire_result = client.wire()->SendString("hi");
+    // [END send-string-wire-first-line]
+    if (!wire_result.ok()) {
+      FX_LOGS(ERROR) << "SendString failed: " << wire_result.error();
+      return -1;
+    }
+    // [END send-string-wire]
+    status = client.HandleOneEvent(event_handler);
+    if (!status.ok()) {
+      FX_LOGS(ERROR) << "HandleOneEvent failed: " << status.error();
+      return -1;
+    }
+  }
+
+  {
+    // Make an EchoString call using wire types.
+    // [START echo-string-wire]
+    // [START echo-string-wire-first-line]
+    fidl::WireResult result = client.wire()->EchoString("hello");
+    // [END echo-string-wire-first-line]
+    if (!result.ok()) {
+      FX_LOGS(ERROR) << "EchoString failed: " << result.error();
+      return -1;
+    }
+    FX_LOGS(INFO) << "Got response: " << result->response.get();
+    // [END echo-string-wire]
   }
 
   return 0;

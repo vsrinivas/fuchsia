@@ -1,6 +1,5 @@
-# Implement a sync LLCPP FIDL client
+# Implement a synchronous C++ FIDL client
 
-<!-- TODO(fxbug.dev/103483): Update to use natural types -->
 <!-- <<../../common/client/overview.md>> -->
 
 ## Prerequisites
@@ -15,154 +14,223 @@ against the server created in the [previous tutorial][server-tut]. The client in
 this tutorial is synchronous. There is an [alternate tutorial][async-client] for
 asynchronous clients.
 
-If you want to write the code yourself, delete the following directories:
+## Structure of the client example
 
-```posix-terminal
-rm -r examples/fidl/llcpp/client_sync/*
-```
+The example code accompanying this tutorial is located in your Fuchsia checkout
+at [`//examples/fidl/cpp/client_sync`][cpp-client-src]. It consists of a client
+component and its containing package. For more information about building
+components, see [Build components][build-components].
 
-## Create the component
+To get the client component up and running, there are three targets that are
+defined in `//examples/fidl/cpp/client_sync/BUILD.gn`:
 
-Create a new component project at `examples/fidl/llcpp/client_sync`:
+1. The raw executable file for the client. This produces a binary with the
+   specified output name that can run on Fuchsia:
 
-1. Add a `main()` function to `examples/fidl/llcpp/client_sync/main.cc`:
+    ```gn
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/BUILD.gn" region_tag="bin" %}
+    ```
 
-   ```cpp
-   int main(int argc, const char** argv) {
-     std::cout << "Hello, world!" << std::endl;
-   }
-   ```
+1. A component that is set up to run the client executable.
+   Components are the units of software execution on Fuchsia. A component is
+   described by its manifest file. In this case `meta/client.cml`
+   configures `echo-client` as an executable component which runs
+   `fidl_echo_cpp_client_sync` in `:bin`.
 
-1. Declare a target for the client in `examples/fidl/llcpp/client_sync/BUILD.gn`:
+    ```gn
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/BUILD.gn" region_tag="component" %}
+    ```
 
-   ```gn
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/BUILD.gn" region_tag="imports" %}
+    The server component manifest is located at
+    `//examples/fidl/cpp/client_sync/meta/client.cml`. The binary name in the
+    manifest must match the output name of the `executable` defined in
+    `BUILD.gn`.
 
-   # Declare an executable for the client.
-   executable("bin") {
-     output_name = "fidl_echo_llcpp_client_sync"
-     sources = [ "main.cc" ]
-   }
+    ```json5
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/meta/client.cml" region_tag="example_snippet" %}
+    ```
 
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/BUILD.gn" region_tag="rest" %}
-   ```
+1. The component is then put into a package, which is the unit of software
+   distribution on Fuchsia. In this case, the package contains a client and
+   a server component, and [realm][glossary.realm] component to to declare the
+   appropriate capabilities and routes.
 
-1. Add a component manifest in `examples/fidl/llcpp/client_sync/meta/client.cml`:
+    ```gn
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/BUILD.gn" region_tag="package" %}
+    ```
 
-   Note: The binary name in the manifest must match the output name of the
-   `executable` defined in the previous step.
+### Building the client {#build}
 
-   ```json5
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/meta/client.cml" region_tag="example_snippet" %}
-   ```
+1. Add the client to your build configuration. This only needs to be done once:
 
-1. Once you have created your component, ensure that you can add it to the
-   build configuration:
+    ```posix-terminal
+    fx set core.qemu-x64 --with //examples/fidl/cpp/client_sync
+    ```
 
-   ```posix-terminal
-   fx set core.qemu-x64 --with //examples/fidl/llcpp/client_sync:echo-client
-   ```
+1. Build the client:
 
-1. Build the Fuchsia image:
+    ```posix-terminal
+    fx build examples/fidl/cpp/client_sync
+    ```
 
-   ```posix-terminal
-   fx build
-   ```
+Note: This build configuration assumes your device target is the emulator.
+To run the example on a physical device, select the appropriate
+[product configuration][products] for your hardware.
 
-## Edit GN dependencies
+## Connect to the protocol {#connect}
 
-1. Add the following dependencies:
-
-   ```gn
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/BUILD.gn" region_tag="deps" %}
-   ```
-
-1. Then, include them in `main.cc`:
-
-   ```cpp
-   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/main.cc" region_tag="includes" %}
-   ```
-
-These dependencies are explained in the [server tutorial][server-tut]. The
-client requires far fewer dependencies because it does not need to run any
-asynchronous code.
-
-## Connect to the server {#main}
-
-The steps in this section explain how to add code to the `main()` function
-that connects the client to the server and makes requests to it.
-
-### Connect to the server
-
-The client then connects to the service directory `/svc`, and uses it to connect
-to the server.
+In its main function, the client component connects to the
+`fuchsia.examples/Echo` protocol in its [namespace][glossary.namespace].
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/main.cc" region_tag="main" highlight="2,3,4,5,6,8,9,10" %}
+int main(int argc, const char** argv) {
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="connect" %}
+
+  // ...
 ```
 
-The `service::OpenServiceRoot` function initializes a channel, then passes the
-server end to `fdio_service_connect` to connect to the `/svc` directory,
-returning the client end wrapped in a `zx::status` result type. We should check
-for the `is_ok()` value on the result to determine if any synchronous error
-occurred.
-
-Connecting to a protocol relative to the service directory is done by calling
-`fdio_service_connect_at`, passing it the service directory, the name of the
-service to connect to, as well as the channel that should get passed to the
-server. The `service::ConnectAt` function wraps the low level `fdio` call,
-providing the user with a typed client channel endpoint to the requested
-protocol.
-
-In parallel, the component manager will route the requested service name and
-channel to the server component, where the [`connect` function][server-handler]
-implemented in the server tutorial is called with these arguments, binding the
-channel to the server implementation.
-
-An important point to note here is that this code assumes that `/svc` already
-contains an instance of the `Echo` protocol. This is not the case by default
-because of the sandboxing provided by the component framework. A workaround will
-be when [running the example](#run) at the end of the tutorial.
-
-Note: This pattern of making a request to connect the server end of the channel
-to a service, then immediately using the client end to communicate with the
-service is known as request pipelining. This topic is covered further in a
+Note: There may still be asynchronous errors that causes peer of `client_end` to
+be closed, because the [open][open] operation uses
+[protocol request pipelining][pipelining]: a pattern of making a request to
+connect the server end of the channel to an implementation, then immediately
+beginning to use the client endpoint. This topic is covered further in a
 separate [tutorial][pipelining-tut].
 
-### Send requests to the server
+In parallel, the component manager will route the request to the server
+component. The [server handler][server-handler] implemented in the server
+tutorial will be called with the server endpoint, binding the channel to the
+server implementation.
 
-The code makes two requests to the server:
+An important point to note here is that this code assumes that the component's
+namespace already contains an instance of the `Echo` protocol. When
+[running the example](#run) at the end of the tutorial, a
+[realm][glossary.realm] component is used to route the protocol from the server
+and offer it to the client component.
 
-* An `EchoString` request
-* A `SendString` request
+## Initialize the client {#client}
+
+In order to make `Echo` requests to the server, initialize a client using the
+client endpoint from the previous step.
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/main.cc" region_tag="main" highlight="12,13,16,17,18,19,20,24,25,26,27" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="init-client" adjust_indentation="auto" %}
 ```
 
-The protocol methods on the client object (`EchoString` and `SendString`) return
-a [result object][resultof], which will contain either an error or the contents
-of the response (if any). When a response is expected, the client will block
-until the response is received.
+## Make FIDL calls {#call}
 
-A client object is generated for each protocol, which is described further in
-the [LLCPP bindings reference][sync-client].
+The methods to make FIDL calls are exposed behind a dereference operator, such
+that FIDL calls look like `client->EchoString(...)`.
 
-### Handle events
+A two way call such as `EchoString` takes a request object, and returns a result
+object indicating success or failure:
 
-The client object allows handling events by specifying an
-[event delegate][event-handlers], where each method corresponds to one of the
-events of the protocol, plus a `Unknown` handler for when an unknown event
-is received.
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string" adjust_indentation="auto" %}
+```
 
-The code defines a handler, which prints the contents of an `OnString` event,
-then calls `client.HandleOneEvent()` to block until an event is received. If a
-recognized event was received and successfully decoded, `HandleOneEvent` returns
+You may also use the designated initialization style double braces syntax
+supported by [natural structs][natural-structs] and [tables][natural-tables]:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string-designated-first-line" adjust_indentation="auto" %}
+```
+
+A one way `SendString` call doesn't have a reply. The returned result represents
+any errors that occurred when sending the request.
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="send-string" adjust_indentation="auto" %}
+```
+
+## Handle events {#events}
+
+Define an [event handler][event-handlers]:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="event-handler" adjust_indentation="auto" %}
+```
+
+Call `client.HandleOneEvent` to block until an event is received. If the event
+was recognized and successfully decoded, `HandleOneEvent` returns
 `fidl::Status::Ok()`. Otherwise, it returns an appropriate error:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/main.cc" region_tag="main" highlight="29,30,31,32,33,34,35,36,37,38,39,41,42,43,44" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="handle-one-event" adjust_indentation="auto" %}
 ```
+
+## Make calls using wire domain objects {#using-wire}
+
+The above tutorial makes client calls with
+[natural domain objects][natural-types]: each call consumes request messages
+represented using natural domain objects, and returns back replies also in
+natural domain objects. When optimizing for performance and heap allocation, one
+may make calls using [wire domain objects][wire-types]. To do that, insert a
+`.wire()` before the dereference operator used when making calls, i.e.
+`client.wire()->EchoString(...)`.
+
+Make a `EchoString` two way call with wire types:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string-wire" adjust_indentation="auto" %}
+```
+
+Make a `SendString` one way call with wire types:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="send-string-wire" adjust_indentation="auto" %}
+```
+
+The relevant classes and functions used in a wire client call have similar
+shapes to those used in a natural client call. When a different class or
+function is called for, the wire counterpart is usually prefixed with `Wire`.
+There are also differences in pointers vs references and argument structure:
+
+* The `EchoString` method taking natural domain objects accepts a single
+  argument that is the request domain object:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string-designated-first-line" adjust_indentation="auto" %}
+  ```
+
+  When the request payload is a struct, the `EchoString` method taking wire
+  domain objects flattens the list of struct fields in the request body into
+  separate arguments (here, a single `fidl::StringView` argument):
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string-wire-first-line" adjust_indentation="auto" %}
+  ```
+
+* The two way natural calls return a `fidl::Result<Method>`:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string-designated" adjust_indentation="auto" %}
+  ```
+
+  * To check for success or error, use the `is_ok()` or `is_error()` method.
+  * To access the response payload afterwards, use `value()` or `->`.
+  * You may move out the result or the payload since these types all implement
+    hierarchical object ownership.
+
+  The two way wire calls return a `fidl::WireResult<Method>`:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="echo-string-wire" adjust_indentation="auto" %}
+  ```
+
+  * To check for success, use the `ok()` method.
+  * To access the response payload afterwards, use `value()` or `->`.
+  * You cannot move the result object.
+
+* One way calls also take the whole request domain object in the natural case,
+  and flatten request struct fields into separate arguments in the wire case:
+
+  ```cpp
+  // Make a SendString call using natural types.
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="send-string-first-line" adjust_indentation="auto" %}
+
+  // Make a SendString call using wire types.
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="send-string-wire-first-line" adjust_indentation="auto" %}
+  ```
 
 ## Run the client
 
@@ -178,7 +246,7 @@ Note: You can explore the full source for the realm component at
    echo realm, server, and client:
 
     ```posix-terminal
-    fx set core.qemu-x64 --with //examples/fidl/llcpp:echo-llcpp-client-sync
+    fx set core.qemu-x64 --with //examples/fidl/cpp/client_sync
     ```
 
 1. Build the Fuchsia image:
@@ -191,7 +259,7 @@ Note: You can explore the full source for the realm component at
    instances and routes the capabilities:
 
     ```posix-terminal
-    ffx component run fuchsia-pkg://fuchsia.com/echo-llcpp-client-sync#meta/echo_realm.cm
+    ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-client-sync#meta/echo_realm.cm
     ```
 
 1. Start the `echo_client` instance:
@@ -206,9 +274,10 @@ protocol. You should see output similar to the following in the device logs
 
 ```none {:.devsite-disable-click-to-copy}
 [echo_server][][I] Running echo server
-[echo_server][][I] Incoming connection for fuchsia.examples.Echo
-[echo_client][][I] Got response: hello
-[echo_client][][I] Got event: hi
+[echo_client][I] Got response: hello
+[echo_client][I] Got event: hi
+[echo_client][I] Got response: hello
+[echo_server][I] Client disconnected
 ```
 
 Terminate the realm component to stop execution and clean up the component
@@ -218,14 +287,59 @@ instances:
 ffx component destroy /core/ffx-laboratory:echo_realm
 ```
 
+## Wire domain objects only client {#wire-client}
+
+`fidl::SyncClient` supports making calls with both
+[natural domain objects][natural-types] and [wire domain objects][wire-types].
+If you only need to use wire domain objects, you may create a `WireSyncClient`
+that exposes the equivalent method call interface as the subset obtained from
+calling `client.wire()` on a `fidl::SyncClient`.
+
+A `WireSyncClient` is created the same way as a `SyncClient`:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/main.cc" region_tag="init-client" adjust_indentation="auto" %}
+```
+
+`fidl::SyncClient` always exposes received events to the user in the form of
+natural domain objects. On the other hand, `fidl::WireSyncClient` will expose
+received events in the form of wire domain objects. To do that, the event
+handler passed to a `WireSyncClient` needs to implement
+`fidl::WireSyncEventHandler<Protocol>`.
+
+* Implementing a natural event handler:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/main.cc" region_tag="event-handler" adjust_indentation="auto" %}
+  ```
+
+* Implementing a wire event handler:
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/client_sync/wire/main.cc" region_tag="event-handler" adjust_indentation="auto" %}
+  ```
+
+The full example code for using a wire client is located in your Fuchsia
+checkout at [`//examples/fidl/cpp/client_sync/wire`][cpp-wire-client-src].
+
 <!-- xrefs -->
 [glossary.realm]: /docs/glossary/README.md#realm
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[build-components]: /docs/development/components/build.md
+[cpp-client-src]: /examples/fidl/cpp/client_sync
+[cpp-wire-client-src]: /examples/fidl/cpp/client_sync/wire
 [server-tut]: /docs/development/languages/fidl/tutorials/cpp/basics/server.md
 [server-handler]: /docs/development/languages/fidl/tutorials/cpp/basics/server.md#server-handler
 [async-client]: /docs/development/languages/fidl/tutorials/cpp/basics/client.md
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
-[environment]: /docs/concepts/components/v2/environments.md
+[open]: https://fuchsia.dev/reference/fidl/fuchsia.io#Directory.Open
+[pipelining]: /docs/development/api/fidl.md#request-pipelining
 [pipelining-tut]: /docs/development/languages/fidl/tutorials/cpp/topics/request-pipelining.md
+[products]: /docs/development/build/build_system/boards_and_products.md
 [resultof]: /docs/reference/fidl/bindings/cpp-bindings.md#resultof
 [sync-client]: /docs/reference/fidl/bindings/cpp-bindings.md#sync-client
 [event-handlers]: /docs/reference/fidl/bindings/cpp-bindings.md#events
+[natural-types]: /docs/development/languages/fidl/tutorials/cpp/basics/domain-objects.md#using-natural
+[natural-structs]: /docs/development/languages/fidl/tutorials/cpp/basics/domain-objects.md#natural_structs
+[natural-tables]: /docs/development/languages/fidl/tutorials/cpp/basics/domain-objects.md#natural_tables
+[wire-types]: /docs/development/languages/fidl/tutorials/cpp/basics/domain-objects.md#using-wire
