@@ -58,8 +58,14 @@ where
             // without having previous called sys_exit(), and that will swallow the actual error.
             match run_exception_loop(&mut current_task, exceptions) {
                 Err(error) => {
-                    tracing::error!("{:?}'s runloop failed {:?},", current_task, error);
-                    Err(error)
+                    tracing::warn!(
+                        "process {:?} died unexpectedly from {:?}! treating as SIGKILL",
+                        current_task,
+                        error
+                    );
+                    let exit_status = ExitStatus::Kill(SignalInfo::default(SIGKILL));
+                    current_task.write().exit_status = Some(exit_status.clone());
+                    Ok(exit_status)
                 }
                 ok => ok,
             }
@@ -134,17 +140,7 @@ fn run_exception_loop(
     let mut error_context = None;
 
     loop {
-        match read_channel_sync(&exceptions, &mut buffer) {
-            Err(zx::Status::PEER_CLOSED) => {
-                // PEER_CLOSED means the process exited without first sending an exception we can
-                // handle.
-                tracing::warn!("process {:?} died unexpectedly! treating as SIGKILL", current_task);
-                let exit_status = ExitStatus::Kill(SignalInfo::default(SIGKILL));
-                current_task.write().exit_status = Some(exit_status.clone());
-                return Ok(exit_status);
-            }
-            res => res?,
-        }
+        read_channel_sync(&exceptions, &mut buffer)?;
 
         let info = as_exception_info(&buffer);
         assert!(buffer.n_handles() == 1);
