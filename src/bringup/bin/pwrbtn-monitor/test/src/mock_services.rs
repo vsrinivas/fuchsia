@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_test_pwrbtn as test_pwrbtn, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
-    futures::{channel::oneshot, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{channel::mpsc, StreamExt, TryFutureExt, TryStreamExt},
     tracing::{info, warn},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path as pfsPath,
@@ -27,9 +27,8 @@ fn event_handle_rights() -> zx::Rights {
 #[fuchsia::main(logging_tags = ["pwrbtn-monitor-mock-services"])]
 async fn main() -> Result<(), Error> {
     info!("started");
-    let (send_test_result, recv_test_result) = oneshot::channel();
+    let (send_test_result, recv_test_result) = mpsc::channel(10);
     let mut recv_test_result = Some(recv_test_result);
-    let mut send_test_result = Some(send_test_result);
 
     let event = zx::Event::create()?;
     let event_for_test_protocol = event.duplicate_handle(event_handle_rights())?;
@@ -42,8 +41,8 @@ async fn main() -> Result<(), Error> {
                 info!("new connection to {}", test_pwrbtn::TestsMarker::DEBUG_NAME);
                 match stream.try_next().await? {
                     Some(test_pwrbtn::TestsRequest::Run { responder }) => {
-                        if let Some(recv_test_result) = recv_test_result {
-                            let _ = recv_test_result.await;
+                        if let Some(mut recv_test_result) = recv_test_result {
+                            let _ = recv_test_result.next().await;
                             responder.send()?;
                         } else {
                             panic!("Get already called");
@@ -60,7 +59,7 @@ async fn main() -> Result<(), Error> {
         .detach();
     });
     fs.dir("svc").add_fidl_service(move |mut stream: statecontrol::AdminRequestStream| {
-        let send_test_result = send_test_result.take();
+        let mut send_test_result = send_test_result.clone();
         let event_for_test_protocol = event_for_test_protocol
             .duplicate_handle(event_handle_rights())
             .expect("failed to clone event");
@@ -83,9 +82,7 @@ async fn main() -> Result<(), Error> {
                         // channel by the time we try to send the reply.
                         let _ = responder.send(&mut Ok(()));
 
-                        if let Some(send_test_result) = send_test_result {
-                            send_test_result.send(()).expect("failed to send test completion");
-                        }
+                        send_test_result.try_send(()).expect("failed to send test completion");
                     }
 
                     Some(other) => {
