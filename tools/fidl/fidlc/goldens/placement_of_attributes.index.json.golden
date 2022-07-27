@@ -105,10 +105,10 @@
             "type_identifier": "test.exampleusing/Empty",
             "type_referenced_at": {
               "is_virtual": false,
-              "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/exampleusing.test.fidl",
-              "data": "Empty",
-              "start_offset": 33,
-              "end_offset": 38
+              "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+              "data": "test.exampleusing.Empty",
+              "start_offset": 410,
+              "end_offset": 433
             }
           }
         }

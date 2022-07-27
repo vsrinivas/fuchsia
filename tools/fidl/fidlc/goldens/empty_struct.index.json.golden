@@ -48,8 +48,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
               "data": "Empty",
-              "start_offset": 32,
-              "end_offset": 37
+              "start_offset": 154,
+              "end_offset": 159
             }
           }
         }
@@ -76,8 +76,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
               "data": "Empty",
-              "start_offset": 32,
-              "end_offset": 37
+              "start_offset": 207,
+              "end_offset": 212
             }
           }
         }
@@ -104,8 +104,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
               "data": "Empty",
-              "start_offset": 32,
-              "end_offset": 37
+              "start_offset": 244,
+              "end_offset": 249
             }
           }
         }
@@ -132,8 +132,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
               "data": "Empty",
-              "start_offset": 32,
-              "end_offset": 37
+              "start_offset": 105,
+              "end_offset": 110
             }
           }
         }

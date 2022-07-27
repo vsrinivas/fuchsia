@@ -55,8 +55,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
               "data": "Union",
-              "start_offset": 505,
-              "end_offset": 510
+              "start_offset": 1299,
+              "end_offset": 1304
             }
           }
         }
@@ -142,8 +142,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
               "data": "OlderSimpleUnion",
-              "start_offset": 1650,
-              "end_offset": 1666
+              "start_offset": 2685,
+              "end_offset": 2701
             }
           }
         }
@@ -170,8 +170,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
               "data": "OlderSimpleUnion",
-              "start_offset": 1650,
-              "end_offset": 1666
+              "start_offset": 2607,
+              "end_offset": 2623
             }
           }
         }
@@ -198,8 +198,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
               "data": "StrictBoundedXUnion",
-              "start_offset": 2334,
-              "end_offset": 2353
+              "start_offset": 2501,
+              "end_offset": 2520
             }
           }
         }
@@ -246,8 +246,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
               "data": "ExplicitXUnion",
-              "start_offset": 2721,
-              "end_offset": 2735
+              "start_offset": 2877,
+              "end_offset": 2891
             }
           }
         },

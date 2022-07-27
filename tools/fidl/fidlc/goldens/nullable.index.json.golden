@@ -673,8 +673,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
               "data": "SimpleUnion",
-              "start_offset": 729,
-              "end_offset": 740
+              "start_offset": 844,
+              "end_offset": 855
             }
           }
         }

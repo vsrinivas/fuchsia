@@ -36,8 +36,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
               "data": "FlexibleFoo",
-              "start_offset": 44,
-              "end_offset": 55
+              "start_offset": 369,
+              "end_offset": 380
             }
           }
         }
@@ -64,8 +64,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
               "data": "StrictFoo",
-              "start_offset": 117,
-              "end_offset": 126
+              "start_offset": 412,
+              "end_offset": 421
             }
           }
         }
@@ -92,8 +92,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
               "data": "StrictFoo",
-              "start_offset": 117,
-              "end_offset": 126
+              "start_offset": 254,
+              "end_offset": 263
             }
           }
         }
@@ -120,8 +120,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
               "data": "FlexibleFoo",
-              "start_offset": 44,
-              "end_offset": 55
+              "start_offset": 295,
+              "end_offset": 306
             }
           }
         }

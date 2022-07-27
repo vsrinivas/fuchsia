@@ -113,8 +113,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
               "data": "Expression",
-              "start_offset": 45,
-              "end_offset": 55
+              "start_offset": 265,
+              "end_offset": 275
             }
           }
         },
@@ -135,8 +135,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
               "data": "Expression",
-              "start_offset": 45,
-              "end_offset": 55
+              "start_offset": 300,
+              "end_offset": 310
             }
           }
         }

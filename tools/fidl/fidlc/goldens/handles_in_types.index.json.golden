@@ -129,8 +129,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
               "data": "TableWithHandle",
-              "start_offset": 364,
-              "end_offset": 379
+              "start_offset": 732,
+              "end_offset": 747
             }
           }
         },
@@ -151,8 +151,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
               "data": "UnionWithHandle",
-              "start_offset": 429,
-              "end_offset": 444
+              "start_offset": 771,
+              "end_offset": 786
             }
           }
         }

@@ -184,7 +184,7 @@ void IndexJSONGenerator::Generate(const flat::TypeConstructor* value) {
       const auto* identifier = static_cast<const flat::IdentifierType*>(type);
       if (!type->name.as_anonymous()) {
         GenerateObjectMember("type_identifier", identifier->name);
-        GenerateObjectMember("type_referenced_at", identifier->name.span().value());
+        GenerateObjectMember("type_referenced_at", value->layout.span());
       }
     }
   });

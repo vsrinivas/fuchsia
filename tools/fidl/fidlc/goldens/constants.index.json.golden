@@ -464,8 +464,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
               "data": "Enum",
-              "start_offset": 925,
-              "end_offset": 929
+              "start_offset": 1323,
+              "end_offset": 1327
             }
           }
         },
@@ -486,8 +486,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
               "data": "Bits",
-              "start_offset": 975,
-              "end_offset": 979
+              "start_offset": 1398,
+              "end_offset": 1402
             }
           }
         }

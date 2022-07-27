@@ -56,8 +56,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
               "data": "UnionSize12Alignment4",
-              "start_offset": 581,
-              "end_offset": 602
+              "start_offset": 731,
+              "end_offset": 752
             }
           }
         },
@@ -117,8 +117,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
               "data": "UnionSize24Alignment8",
-              "start_offset": 853,
-              "end_offset": 874
+              "start_offset": 1010,
+              "end_offset": 1031
             }
           }
         },
@@ -178,8 +178,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
               "data": "UnionSize36Alignment4",
-              "start_offset": 1060,
-              "end_offset": 1081
+              "start_offset": 1211,
+              "end_offset": 1232
             }
           }
         },
@@ -239,8 +239,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
               "data": "UnionSize8Alignment4",
-              "start_offset": 393,
-              "end_offset": 413
+              "start_offset": 532,
+              "end_offset": 552
             }
           }
         },

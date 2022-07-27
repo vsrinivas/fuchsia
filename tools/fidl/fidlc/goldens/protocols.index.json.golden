@@ -942,8 +942,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
               "data": "TheUnion",
-              "start_offset": 3595,
-              "end_offset": 3603
+              "start_offset": 3706,
+              "end_offset": 3714
             }
           }
         }
@@ -970,8 +970,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
               "data": "TheUnion",
-              "start_offset": 3595,
-              "end_offset": 3603
+              "start_offset": 3746,
+              "end_offset": 3754
             }
           }
         }
@@ -1499,8 +1499,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
               "data": "ProtocolEnds",
-              "start_offset": 2408,
-              "end_offset": 2420
+              "start_offset": 3077,
+              "end_offset": 3089
             }
           }
         }
@@ -1527,8 +1527,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
               "data": "ProtocolEnds",
-              "start_offset": 2408,
-              "end_offset": 2420
+              "start_offset": 3132,
+              "end_offset": 3144
             }
           }
         }

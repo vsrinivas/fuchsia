@@ -609,8 +609,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
               "data": "Int16Int8",
-              "start_offset": 133,
-              "end_offset": 142
+              "start_offset": 380,
+              "end_offset": 389
             }
           }
         },
@@ -631,8 +631,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
               "data": "Int8Int32",
-              "start_offset": 51,
-              "end_offset": 60
+              "start_offset": 574,
+              "end_offset": 583
             }
           }
         },
@@ -653,8 +653,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
               "data": "ArrayInt16Int8",
-              "start_offset": 214,
-              "end_offset": 228
+              "start_offset": 595,
+              "end_offset": 609
             }
           }
         }
@@ -688,8 +688,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
               "data": "StructPaddingTestStruct",
-              "start_offset": 332,
-              "end_offset": 355
+              "start_offset": 910,
+              "end_offset": 933
             }
           }
         },
@@ -710,8 +710,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
               "data": "NonInlineStructTestStruct",
-              "start_offset": 713,
-              "end_offset": 738
+              "start_offset": 941,
+              "end_offset": 966
             }
           }
         }

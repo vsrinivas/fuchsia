@@ -74,10 +74,10 @@
             "type_identifier": "test.middle/Bar",
             "type_referenced_at": {
               "is_virtual": false,
-              "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/middle.test.fidl",
-              "data": "Bar",
-              "start_offset": 184,
-              "end_offset": 187
+              "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
+              "data": "test.middle.Bar",
+              "start_offset": 221,
+              "end_offset": 236
             }
           }
         }

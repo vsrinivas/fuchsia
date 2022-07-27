@@ -36,8 +36,8 @@
               "is_virtual": false,
               "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
               "data": "Payload",
-              "start_offset": 198,
-              "end_offset": 205
+              "start_offset": 312,
+              "end_offset": 319
             }
           }
         }

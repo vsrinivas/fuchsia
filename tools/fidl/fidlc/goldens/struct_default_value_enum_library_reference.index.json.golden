@@ -84,10 +84,10 @@
             "type_identifier": "test.dependent/MyEnum",
             "type_referenced_at": {
               "is_virtual": false,
-              "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
-              "data": "MyEnum",
-              "start_offset": 30,
-              "end_offset": 36
+              "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+              "data": "test.dependent.MyEnum",
+              "start_offset": 145,
+              "end_offset": 166
             }
           }
         }
