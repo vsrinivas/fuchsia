@@ -7,8 +7,9 @@ For more information on other FIDL tutorials, see the [overview][overview].
 
 ## Overview
 
-This tutorial details how to use the natural and wire domain objects by creating
-a unit test exercising those data types.
+This tutorial details how to use the natural and wire
+[domain objects][glossary.domain-object] by creating a unit test exercising
+those data types.
 
 This document covers how to complete the following tasks:
 
@@ -16,6 +17,7 @@ This document covers how to complete the following tasks:
 * [Include the bindings header into your code](#include-cpp-bindings).
 * [Using natural domain objects](#using-natural).
 * [Using wire domain objects](#using-wire).
+* [Convert between natural and wire domain objects](#convert-natural-wire).
 
 ## Using the domain objects example code
 
@@ -45,7 +47,7 @@ For each FIDL library declaration, such as the one in
 generated under the original target name suffixed with `_cpp`:
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="binding-dep" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="binding-dep" adjust_indentation="auto" exclude_regexp="^$" %}
 ```
 
 The `test` target looks like:
@@ -61,7 +63,7 @@ Note the line which adds the dependency on the C++ bindings by referencing that
 
 1. Build using `fx build`.
 2. Change to the generated files directory:
-   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia/examples`,
+   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia.examples/llcpp/fidl/fuchsia.examples/cpp`,
    where the generated files are located. You may need to change `out/default`
    if you have set a different build output directory. You can check your build
    output directory with `cat .fx-build-dir`.
@@ -83,28 +85,73 @@ the bindings and makes the generated APIs available to the source code:
 
 ## Using natural domain objects {#using-natural}
 
-At a high level the natural types embrace `std::` containers and concepts. For
-example, a table is represented as a collection of `std::optional<Field>`s. A
-vector is `std::vector<T>`, etc. They also implement idiomatic C++ moves and
-copies and equality. For example, a non-resource type will be copyable, while a
-resource type is only movable. Moving a table doesn't make it empty (it just
-recursively moves the fields), similar to `std::optional`.
+Natural types are the ergonomics and safety focused flavor of C++ domain
+objects. A tree of FIDL values is represented as a tree of C++ objects with
+hierarchical ownership. That means if a function receives some object of natural
+type, it can assume unique ownership of all child objects in the entire tree.
+The tree is torn down when the root object goes out of scope.
 
-<!-- TODO(fxbug.dev/103483): Complete the domain object tutorials -->
+At a high level the natural types embrace `std::` containers and concepts. For
+example, a [table][table] is represented as a collection of
+`std::optional<Field>`s. A [vector][vector] is `std::vector<T>`, etc. They also
+implement idiomatic C++ moves, copies, and equality. For example, a
+[resource][resource] type is move-only, while a value type will implement both
+copy and moves, where moves are designed to optimize the transfer of objects.
+Moving a table doesn't make it empty (it just recursively moves the fields),
+similar to `std::optional`.
+
+### Natural bits
+
+Using the strict [`fuchsia.examples/FileMode`][fidl-file] FIDL type and the
+flexible [`fuchsia.examples/FlexibleFileMode`][fidl-file] FIDL type as example:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-bits" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
 
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-enums" %}
+### Natural enums
 
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-structs" %}
+Using the strict [`fuchsia.examples/LocationType`][fidl-file] FIDL type and the
+flexible [`fuchsia.examples/FlexibleLocationType`][fidl-file] FIDL type as
+example:
 
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-unions" %}
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
 
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-tables" %}
+### Natural structs
+
+Natural structs are straightforward record objects that expose const and mutable
+accessors. Using the [`fuchsia.examples/Color`][fidl-file] FIDL type as example:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-structs" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
+
+### Natural unions
+
+Natural unions are sum types similar to `std::variant`. Using the strict
+[`fuchsia.examples/JsonValue`][fidl-file] FIDL type and the flexible
+[`fuchsia.examples/FlexibleJsonValue`][fidl-file] FIDL type as example:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-unions" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
+
+### Natural tables
+
+Natural tables are record types where every field is optional. Using the
+[`fuchsia.examples/User`][fidl-file] FIDL type as example:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ## Using wire domain objects {#using-wire}
+
+<!-- TODO(fxbug.dev/103483): Write more about the domain objects -->
+
+### Wire bits and enums
 
 Because bits and enums have a very simple memory layout and do not have any
 out-of-line children, the wire types for FIDL bits and enums are the same as
@@ -117,28 +164,47 @@ Using the `fuchsia.examples/FileMode` FIDL bits as example,
 `fuchsia_examples::FileMode`.
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-bits" %}
-
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-enums" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-<!-- TODO(fxbug.dev/103483): Write more about the domain objects -->
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
+
+### Wire structs
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-structs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-structs" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
 
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-unions" %}
+### Wire unions
 
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-tables" %}
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-unions" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
+
+### Wire tables
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 For more information on the bindings, see the
 [bindings reference][bindings-ref].
 
+## Convert between natural and wire domain objects {#convert-natural-wire}
+
+<!-- TODO(fxbug.dev/103483): Write the conversion tutorials -->
+
 <!-- xrefs -->
 [build-components]: /docs/development/components/build.md#unit-tests
-[generated-code]: /docs/development/languages/fidl/guides/generated-code.md#rust
+[generated-code]: /docs/development/languages/fidl/guides/generated-code.md#c-family
 [bindings-ref]: /docs/reference/fidl/bindings/cpp-bindings.md
 [fidl-intro]: /docs/development/languages/fidl/tutorials/fidl.md
+[fidl-file]: /examples/fidl/fuchsia.examples/types.test.fidl
+[glossary.domain-object]: /docs/glossary#domain-object
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
+[resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [server-tut]: /docs/development/languages/fidl/tutorials/cpp/basics/server.md
+[table]: /docs/reference/fidl/language/language.md#tables
+[vector]: /docs/reference/fidl/language/language.md#vectors
