@@ -2,10 +2,65 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//src/diagnostics/archivist/build/archivist.gni")
+
+archivist_optimized_binary("logging-bin") {
+  output_name = "archivist_logging_benchmarks"
+  edition = "2018"
+
+  source_root = "src/logging.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/developer/fuchsia-criterion",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/logging.rs" ]
+}
+
+archivist_optimized_binary("formatter-bin") {
+  output_name = "archivist_formatter_benchmarks"
+  edition = "2018"
+
+  source_root = "src/formatter.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/developer/fuchsia-criterion",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/diagnostics/data/rust",
+    "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/formatter.rs" ]
+}
+
+fuchsia_component("formatter-benchmarks-component") {
+  component_name = "formatter"
+  deps = [ ":formatter-bin" ]
+  manifest = "meta/formatter.cml"
+}
+
+fuchsia_component("logging-benchmarks-component") {
+  component_name = "logging"
+  deps = [ ":logging-bin" ]
+  manifest = "meta/logging.cml"
+}
+
+fuchsia_package("archivist-benchmarks") {
+  deps = [
+    ":formatter-benchmarks-component",
+    ":logging-benchmarks-component",
+  ]
+}
+
 group("bench") {
   testonly = true
-  deps = [
-    "formatter:archivist-formatter-benchmarks",
-    "logging:archivist-logging-benchmarks",
-  ]
+  deps = [ ":archivist-benchmarks" ]
 }

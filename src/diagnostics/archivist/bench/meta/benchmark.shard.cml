@@ -7,9 +7,6 @@
         "sys/testing/elf_test_runner.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "bin/archivist_logging_benchmarks",
-    },
     use: [
         {
             storage: "custom_artifacts",
