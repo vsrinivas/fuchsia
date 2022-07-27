@@ -6,6 +6,7 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
@@ -19,11 +20,16 @@
 #include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/component_utils.h"
+#include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/message_loop.h"
 
 namespace debug_agent {
 
 namespace {
+
+// Maximum time we wait for reading "elf/job_id" in the runtime directory.
+constexpr uint64_t kMaxWaitMsForJobId = 200;
 
 uint64_t next_component_id = 1;
 
@@ -55,31 +61,44 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
 }
 
 // Read the content of "elf/job_id" in the runtime directory of an ELF component.
-// Return ZX_KOID_INVALID if no such file.
-zx_koid_t ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle) {
-  fuchsia::io::DirectorySyncPtr runtime_dir = runtime_dir_handle.BindSync();
-  fuchsia::io::FileSyncPtr job_id_file;
-  zx_status_t status = runtime_dir->Open(
+//
+// |callback| will be issued with ZX_KOID_INVALID if there's any error.
+// |moniker| is only used for error logging.
+void ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle, const std::string& moniker,
+                  fit::callback<void(zx_koid_t)> cb) {
+  fuchsia::io::DirectoryPtr runtime_dir = runtime_dir_handle.Bind();
+  fuchsia::io::FilePtr job_id_file;
+  runtime_dir->Open(
       fuchsia::io::OpenFlags::RIGHT_READABLE, 0, "elf/job_id",
       fidl::InterfaceRequest<fuchsia::io::Node>(job_id_file.NewRequest().TakeChannel()));
-  if (status != ZX_OK) {
-    return ZX_KOID_INVALID;
-  }
-  fuchsia::io::File2_Read_Result job_id_res;
-  status = job_id_file->Read(fuchsia::io::MAX_TRANSFER_SIZE, &job_id_res);
-  if (status != ZX_OK || !job_id_res.is_response()) {
-    return ZX_KOID_INVALID;
-  }
-  std::string job_id_str(reinterpret_cast<const char*>(job_id_res.response().data.data()),
-                         job_id_res.response().data.size());
-  // We use std::strtoull here because std::stoull is not exception-safe.
-  char* end;
-  zx_koid_t job_id = std::strtoull(job_id_str.c_str(), &end, 10);
-  if (end != job_id_str.c_str() + job_id_str.size()) {
-    FX_LOGS(ERROR) << "Invalid elf/job_id: " << job_id_str;
-    return ZX_KOID_INVALID;
-  }
-  return job_id;
+  job_id_file.set_error_handler(
+      [cb = cb.share()](zx_status_t err) mutable { cb(ZX_KOID_INVALID); });
+  job_id_file->Read(
+      fuchsia::io::MAX_TRANSFER_SIZE,
+      [cb = cb.share(), moniker](fuchsia::io::File2_Read_Result res) mutable {
+        if (!res.is_response()) {
+          return cb(ZX_KOID_INVALID);
+        }
+        std::string job_id_str(reinterpret_cast<const char*>(res.response().data.data()),
+                               res.response().data.size());
+        // We use std::strtoull here because std::stoull is not exception-safe.
+        char* end;
+        zx_koid_t job_id = std::strtoull(job_id_str.c_str(), &end, 10);
+        if (end != job_id_str.c_str() + job_id_str.size()) {
+          FX_LOGS(ERROR) << "Invalid elf/job_id for " << moniker << ": " << job_id_str;
+          return cb(ZX_KOID_INVALID);
+        }
+        cb(job_id);
+      });
+  debug::MessageLoop::Current()->PostTimer(
+      FROM_HERE, kMaxWaitMsForJobId,
+      [cb = std::move(cb), file = std::move(job_id_file), moniker]() mutable {
+        if (cb) {
+          FX_LOGS(ERROR) << "Timeout reading elf/job_id for " << moniker;
+          file.Unbind();
+          cb(ZX_KOID_INVALID);
+        }
+      });
 }
 
 // Class designed to help setup a component and then launch it. These setups are necessary because
@@ -190,6 +209,11 @@ ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirec
   fuchsia::sys2::InstanceInfoIteratorSyncPtr instance_it =
       all_instance_infos_res.response().iterator.BindSync();
 
+  auto deferred_ready =
+      std::make_shared<fit::deferred_callback>([weak_this = weak_factory_.GetWeakPtr()] {
+        if (weak_this && weak_this->ready_callback_)
+          weak_this->ready_callback_();
+      });
   while (true) {
     std::vector<fuchsia::sys2::InstanceInfo> infos;
     instance_it->Next(&infos);
@@ -207,13 +231,26 @@ ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirec
           !instace_info_res.response().resolved->started->runtime_dir) {
         continue;
       }
-      zx_koid_t job_id =
-          ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir));
-      if (job_id != ZX_KOID_INVALID) {
-        // Remove the "." at the beginning of the moniker. It's safe because moniker is not empty.
-        running_component_info_[job_id] = {.moniker = info.moniker.substr(1), .url = info.url};
-      }
+      // Remove the "." at the beginning of the moniker. It's safe because moniker is not empty.
+      std::string moniker = info.moniker.substr(1);
+      ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir), moniker,
+                   [weak_this = weak_factory_.GetWeakPtr(), moniker, url = std::move(info.url),
+                    deferred_ready](zx_koid_t job_id) {
+                     if (weak_this) {
+                       weak_this->running_component_info_[job_id] = {.moniker = moniker,
+                                                                     .url = url};
+                     }
+                   });
     }
+  }
+}
+
+void ZirconComponentManager::SetReadyCallback(fit::callback<void()> callback) {
+  if (ready_callback_) {
+    ready_callback_ = std::move(callback);
+  } else {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                            [cb = std::move(callback)]() mutable { cb(); });
   }
 }
 
@@ -222,23 +259,29 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
       !event.has_event_result() || !event.event_result().is_payload()) {
     return;
   }
+  // Remove the "." at the beginning of the moniker. It's safe because moniker is not empty.
+  std::string moniker = event.header().moniker().substr(1);
   switch (event.header().event_type()) {
     case fuchsia::sys2::EventType::DEBUG_STARTED:
       if (event.event_result().payload().is_debug_started() &&
           event.event_result().payload().debug_started().has_runtime_dir()) {
-        zx_koid_t job_id = ReadElfJobId(std::move(
-            *event.mutable_event_result()->payload().debug_started().mutable_runtime_dir()));
-        if (job_id != ZX_KOID_INVALID) {
-          running_component_info_[job_id] = {.moniker = event.header().moniker().substr(1),
-                                             .url = event.header().component_url()};
-          DEBUG_LOG(Process) << "Component started job_id=" << job_id
-                             << " moniker=" << running_component_info_[job_id].moniker
-                             << " url=" << running_component_info_[job_id].url;
-        }
+        ReadElfJobId(
+            std::move(
+                *event.mutable_event_result()->payload().debug_started().mutable_runtime_dir()),
+            moniker,
+            [weak_this = weak_factory_.GetWeakPtr(), moniker,
+             url = event.header().component_url()](zx_koid_t job_id) {
+              if (weak_this) {
+                weak_this->running_component_info_[job_id] = {.moniker = moniker, .url = url};
+                DEBUG_LOG(Process)
+                    << "Component started job_id=" << job_id
+                    << " moniker=" << weak_this->running_component_info_[job_id].moniker
+                    << " url=" << weak_this->running_component_info_[job_id].url;
+              }
+            });
       }
       break;
     case fuchsia::sys2::EventType::STOPPED: {
-      std::string moniker = event.header().moniker().substr(1);
       for (auto it = running_component_info_.begin(); it != running_component_info_.end(); it++) {
         if (it->second.moniker == moniker) {
           DEBUG_LOG(Process) << "Component stopped job_id=" << it->first

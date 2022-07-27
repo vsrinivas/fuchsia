@@ -45,6 +45,9 @@ class ZirconSystemInterfaceTest : public debug::TestWithLoop {};
 TEST_F(ZirconSystemInterfaceTest, GetProcessTree) {
   ZirconSystemInterface system_interface;
 
+  system_interface.zircon_component_manager().SetReadyCallback([&]() { loop().QuitNow(); });
+  loop().Run();
+
   debug_ipc::ProcessTreeRecord root = system_interface.GetProcessTree();
 
   // The root node should be a job with some children.
@@ -78,6 +81,9 @@ TEST_F(ZirconSystemInterfaceTest, GetProcessTree) {
 TEST_F(ZirconSystemInterfaceTest, FindComponentInfo) {
   ZirconSystemInterface system_interface;
 
+  system_interface.zircon_component_manager().SetReadyCallback([&]() { loop().QuitNow(); });
+  loop().Run();
+
   zx::process handle;
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
   ZirconProcessHandle self(std::move(handle));
@@ -99,6 +105,9 @@ TEST_F(ZirconSystemInterfaceTest, FindComponentInfo) {
 
 TEST_F(ZirconSystemInterfaceTest, FilterMatchProcess) {
   ZirconSystemInterface system_interface;
+
+  system_interface.zircon_component_manager().SetReadyCallback([&]() { loop().QuitNow(); });
+  loop().Run();
 
   zx::process handle;
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);

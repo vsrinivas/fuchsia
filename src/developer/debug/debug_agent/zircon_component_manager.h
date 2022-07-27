@@ -37,9 +37,15 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   // fuchsia::sys2::EventStream implementation.
   void OnEvent(fuchsia::sys2::Event event) override;
 
+  // (For test only) Set the callback that will be invoked when the initialization is ready.
+  // If the initialization is already done, callback will still be invoked in the message loop.
+  void SetReadyCallback(fit::callback<void()> callback);
+
  private:
   void OnV1ComponentTerminated(int64_t return_code, const ComponentDescription& description,
                                fuchsia::sys::TerminationReason reason);
+
+  fit::callback<void()> ready_callback_ = []() {};
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 

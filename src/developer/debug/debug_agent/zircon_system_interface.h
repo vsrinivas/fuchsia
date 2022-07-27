@@ -5,9 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_SYSTEM_INTERFACE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_SYSTEM_INTERFACE_H_
 
+#include <lib/sys/cpp/service_directory.h>
+
 #include <memory>
 
-#include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/zircon_component_manager.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
@@ -29,6 +30,8 @@ class ZirconSystemInterface final : public SystemInterface {
   ComponentManager& GetComponentManager() override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
   std::string GetSystemVersion() override;
+
+  ZirconComponentManager& zircon_component_manager() { return component_manager_; }
 
  private:
   std::unique_ptr<ZirconJobHandle> root_job_;  // May be null.
