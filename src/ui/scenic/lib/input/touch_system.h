@@ -27,13 +27,8 @@
 namespace scenic_impl::input {
 
 // Tracks input APIs.
-class TouchSystem : public fuchsia::ui::input::PointerCaptureListenerRegistry {
+class TouchSystem {
  public:
-  struct PointerCaptureListener {
-    fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
-    fuchsia::ui::views::ViewRef view_ref;
-  };
-
   explicit TouchSystem(sys::ComponentContext* context,
                        std::shared_ptr<const view_tree::Snapshot>& view_tree_snapshot,
                        HitTester& hit_tester, inspect::Node& parent_node,
@@ -48,11 +43,6 @@ class TouchSystem : public fuchsia::ui::input::PointerCaptureListenerRegistry {
   void RegisterTouchSource(
       fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source_request,
       zx_koid_t client_view_ref_koid);
-
-  // |fuchsia.ui.pointercapture.ListenerRegistry|
-  void RegisterListener(
-      fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
-      fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) override;
 
   // For tests.
   // TODO(fxbug.dev/72919): Remove when integration tests are properly separated out.
@@ -74,10 +64,6 @@ class TouchSystem : public fuchsia::ui::input::PointerCaptureListenerRegistry {
   void LegacyInjectMouseEventHitTested(const InternalTouchEvent& event);
 
  private:
-  // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
-  // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
-  void ReportPointerEventToPointerCaptureListener(const InternalTouchEvent& event) const;
-
   // Enqueue the pointer event into the EventReporter of a View.
   void ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event, zx_koid_t view_ref_koid,
                                          fuchsia::ui::input::PointerEventType type);
@@ -120,11 +106,6 @@ class TouchSystem : public fuchsia::ui::input::PointerCaptureListenerRegistry {
 
   /// FIDL server implementations.
   std::optional<A11yPointerEventRegistry> a11y_pointer_event_registry_;
-  fidl::BindingSet<fuchsia::ui::input::PointerCaptureListenerRegistry> pointer_capture_registry_;
-  // A singleton listener who wants to be notified when pointer events happen.
-  // We honor the first pointer capture listener to register. A call to RegisterListener()
-  // above will fail if there is already a registered listener.
-  std::optional<PointerCaptureListener> pointer_capture_listener_;
 
   // Legacy mouse.
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.

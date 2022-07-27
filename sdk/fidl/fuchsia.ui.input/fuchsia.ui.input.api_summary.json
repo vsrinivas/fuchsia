@@ -595,24 +595,6 @@
         "name": "fuchsia.ui.input/MouseReport"
     },
     {
-        "declaration": "(fuchsia.ui.input/PointerEvent event) -> ()",
-        "kind": "protocol/member",
-        "name": "fuchsia.ui.input/PointerCaptureListener.OnPointerEvent"
-    },
-    {
-        "kind": "protocol",
-        "name": "fuchsia.ui.input/PointerCaptureListener"
-    },
-    {
-        "declaration": "(client_end:fuchsia.ui.input/PointerCaptureListener listener,fuchsia.ui.views/ViewRef view_ref) -> (bool success)",
-        "kind": "protocol/member",
-        "name": "fuchsia.ui.input/PointerCaptureListenerRegistry.RegisterListener"
-    },
-    {
-        "kind": "protocol",
-        "name": "fuchsia.ui.input/PointerCaptureListenerRegistry"
-    },
-    {
         "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.ui.input/PointerEvent.buttons"

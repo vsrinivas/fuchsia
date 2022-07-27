@@ -71,13 +71,6 @@ void ChattyGfxLog(const fuchsia::ui::input::InputEvent& event) {
   }
 }
 
-void ChattyCaptureLog(const fuchsia::ui::input::PointerEvent& event) {
-  static uint32_t chatty = 0;
-  if (chatty++ < ChattyMax()) {
-    FX_LOGS(INFO) << "Ptr-Capture[" << chatty << "/" << ChattyMax() << "]: " << event;
-  }
-}
-
 void ChattyA11yLog(const fuchsia::ui::input::accessibility::PointerEvent& event) {
   static uint32_t chatty = 0;
   if (chatty++ < ChattyMax()) {
@@ -135,7 +128,6 @@ TouchSystem::TouchSystem(sys::ComponentContext* context,
         a11y_legacy_contender_.reset();
         FX_LOGS(INFO) << "A11yLegacyContender destroyed";
       });
-  context->outgoing()->AddPublicService(pointer_capture_registry_.GetHandler(this));
 }
 
 fuchsia::ui::input::accessibility::PointerEvent TouchSystem::CreateAccessibilityEvent(
@@ -175,7 +167,6 @@ ContenderId TouchSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
       /*deliver_events_to_client*/
       [this, view_ref_koid](const std::vector<InternalTouchEvent>& events) {
         for (const auto& event : events) {
-          ReportPointerEventToPointerCaptureListener(event);
           ReportPointerEventToGfxLegacyView(event, view_ref_koid,
                                             fuchsia::ui::input::PointerEventType::TOUCH);
 
@@ -228,31 +219,6 @@ void TouchSystem::RegisterTouchSource(
   FX_DCHECK(success1);
   const auto [_, success2] = contenders_.emplace(contender_id, &it->second.touch_source);
   FX_DCHECK(success2);
-}
-
-void TouchSystem::RegisterListener(
-    fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
-    fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) {
-  if (pointer_capture_listener_) {
-    // Already have a listener, decline registration.
-    success_callback(false);
-    return;
-  }
-
-  fuchsia::ui::input::PointerCaptureListenerPtr new_listener;
-  new_listener.Bind(std::move(listener_handle));
-
-  // Remove listener if the interface closes.
-  new_listener.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(INFO) << "Pointer capture listener interface closed with error: "
-                  << zx_status_get_string(status);
-    pointer_capture_listener_ = std::nullopt;
-  });
-
-  pointer_capture_listener_ = PointerCaptureListener{.listener_ptr = std::move(new_listener),
-                                                     .view_ref = std::move(view_ref)};
-
-  success_callback(true);
 }
 
 void TouchSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
@@ -711,33 +677,6 @@ void TouchSystem::LegacyInjectMouseEventHitTested(const InternalTouchEvent& even
                                         fuchsia::ui::input::PointerEventType::MOUSE);
     }
   }
-
-  // Send pointer event to capture listeners.
-  ReportPointerEventToPointerCaptureListener(event);
-}
-
-// TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
-void TouchSystem::ReportPointerEventToPointerCaptureListener(
-    const InternalTouchEvent& event) const {
-  if (!pointer_capture_listener_)
-    return;
-
-  const PointerCaptureListener& listener = pointer_capture_listener_.value();
-  const zx_koid_t view_ref_koid = utils::ExtractKoid(listener.view_ref);
-  std::optional<glm::mat4> view_from_context_transform =
-      view_tree_snapshot_->GetDestinationViewFromSourceViewTransform(
-          /*source*/ event.context, /*destination*/ view_ref_koid);
-  if (!view_from_context_transform)
-    return;
-
-  fuchsia::ui::input::PointerEvent gfx_event = InternalPointerEventToGfxPointerEvent(
-      event, view_from_context_transform.value(), fuchsia::ui::input::PointerEventType::TOUCH,
-      /*trace_id*/ 0);
-
-  ChattyCaptureLog(gfx_event);
-
-  // TODO(fxbug.dev/42145): Implement flow control.
-  listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
 }
 
 void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event,

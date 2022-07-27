@@ -7,6 +7,7 @@ using fuchsia.ui.views;
 
 /// A method of obtaining global pointer events, regardless of view focus.
 /// DEPRECATED: Do not add new uses of this protocol.
+@available(removed=9)
 protocol PointerCaptureListener {
     OnPointerEvent(struct {
         event PointerEvent;
@@ -17,9 +18,8 @@ protocol PointerCaptureListener {
 /// captured pointer events.
 /// DEPRECATED: Do not add new uses of this protocol.
 @discoverable
+@available(removed=9)
 protocol PointerCaptureListenerRegistry {
-    /// This protocol will be subsumed by gesture disambiguation.
-    @transitional
     RegisterListener(resource struct {
         listener client_end:PointerCaptureListener;
         view_ref fuchsia.ui.views.ViewRef;
