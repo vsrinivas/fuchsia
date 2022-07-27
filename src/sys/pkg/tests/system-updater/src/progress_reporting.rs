@@ -45,18 +45,12 @@ async fn progress_reporting_fetch_multiple_packages() {
 
     let info = UpdateInfo::builder().download_size(0).build();
     handle_update_pkg.resolve(&update_pkg).await;
+    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Stage);
+    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Stage);
+
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
-        State::Stage(
-            UpdateInfoAndProgress::builder()
-                .info(info.clone())
-                .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
-                .build()
-        )
-    );
-    assert_eq!(
-        attempt.next().await.unwrap().unwrap(),
-        State::Stage(
+        State::Fetch(
             UpdateInfoAndProgress::builder()
                 .info(info.clone())
                 .progress(Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build())
@@ -70,7 +64,7 @@ async fn progress_reporting_fetch_multiple_packages() {
         State::Fetch(
             UpdateInfoAndProgress::builder()
                 .info(info.clone())
-                .progress(Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build())
+                .progress(Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build())
                 .build()
         )
     );
@@ -81,21 +75,12 @@ async fn progress_reporting_fetch_multiple_packages() {
         State::Fetch(
             UpdateInfoAndProgress::builder()
                 .info(info.clone())
-                .progress(Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build())
+                .progress(Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build())
                 .build()
         )
     );
 
     handle_pkg3.resolve(&pkg3).await;
-    assert_eq!(
-        attempt.next().await.unwrap().unwrap(),
-        State::Fetch(
-            UpdateInfoAndProgress::builder()
-                .info(info.clone())
-                .progress(Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build())
-                .build()
-        )
-    );
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
         State::Fetch(
