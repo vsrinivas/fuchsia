@@ -653,15 +653,19 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     }
 
     fn get_requested_options(&self, client_opts: &[DhcpOption]) -> Vec<DhcpOption> {
-        if let Some(requested_opts) = client_opts
-            .iter()
-            .filter_map(|opt| match opt {
-                DhcpOption::ParameterRequestList(v) => Some(v),
-                _ => None,
-            })
-            .next()
-        {
-            let offered_opts: Vec<DhcpOption> = requested_opts
+        // TODO(https://fxbug.dev/104860): We should consider always supplying the
+        // SubnetMask for all DHCPDISCOVER and DHCPREQUEST requests. ISC
+        // does this, and we may desire to for increased compatibility with
+        // non-compliant clients.
+        //
+        // See: https://github.com/isc-projects/dhcp/commit/e9c5964
+
+        let prl = client_opts.iter().find_map(|opt| match opt {
+            DhcpOption::ParameterRequestList(v) => Some(v),
+            _ => None,
+        });
+        prl.map_or(Vec::new(), |requested_opts| {
+            let mut offered_opts: Vec<DhcpOption> = requested_opts
                 .iter()
                 .filter_map(|code| match self.options_repo.get(code) {
                     Some(opt) => Some(opt.clone()),
@@ -673,10 +677,29 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
                     },
                 })
                 .collect();
+
+            //  Enforce ordering SUBNET_MASK by moving it before ROUTER.
+            //  See: https://datatracker.ietf.org/doc/html/rfc2132#section-3.3
+            //
+            //      If both the subnet mask and the router option are specified
+            //      in a DHCP reply, the subnet mask option MUST be first.
+            let mut router_position = None;
+            for (i, option) in offered_opts.iter().enumerate() {
+                match option {
+                    DhcpOption::Router(_) => router_position = Some(i),
+                    DhcpOption::SubnetMask(_) => {
+                        if let Some(router_index) = router_position {
+                            offered_opts[router_index..(i + 1)].rotate_right(1)
+                        }
+                        // Once we find the subnet mask, we can bail on the for loop.
+                        break;
+                    }
+                    _ => continue,
+                }
+            }
+
             offered_opts
-        } else {
-            Vec::new()
-        }
+        })
     }
 
     fn build_ack(&self, req: Message, requested_ip: Ipv4Addr) -> Result<Message, ServerError> {
@@ -874,7 +897,7 @@ impl<DS: DataStore, TS: SystemTimeSource> ServerDispatcher for Server<DS, TS> {
             return Err(Status::INVALID_ARGS);
         }
 
-        // TODO(fxbug.dev/62558): rethink this check and this function.
+        // TODO(https://fxbug.dev/62558): rethink this check and this function.
         if self.pool.universe.is_empty() {
             error!("Server validation failed: Address pool is empty");
             return Err(Status::INVALID_ARGS);
@@ -1363,7 +1386,7 @@ fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
     // 'server identifier' MUST NOT be filled in, 'requested IP address' option MUST NOT be filled
     // in, 'ciaddr' MUST be filled in with client's IP address.
     //
-    // TODO(fxbug.dev/64978): Distinguish between clients in RENEWING and REBINDING states
+    // TODO(https://fxbug.dev/64978): Distinguish between clients in RENEWING and REBINDING states
     if server_id.is_some() && msg.ciaddr.is_unspecified() && requested_ip.is_some() {
         Ok(ClientState::Selecting)
     } else if server_id.is_none() && requested_ip.is_some() && msg.ciaddr.is_unspecified() {
@@ -1437,6 +1460,7 @@ pub mod tests {
     use std::net::Ipv4Addr;
     use std::rc::Rc;
     use std::time::{Duration, SystemTime};
+    use test_case::test_case;
 
     mod datastore {
         use crate::protocol::{DhcpOption, OptionCode};
@@ -1656,13 +1680,28 @@ pub mod tests {
     }
 
     fn new_client_message(message_type: MessageType) -> Message {
-        new_client_message_with_options(message_type, std::iter::empty())
+        new_client_message_with_preset_options(message_type, std::iter::empty())
     }
 
-    fn new_client_message_with_options(
+    fn new_client_message_with_preset_options(
         message_type: MessageType,
         options: impl Iterator<Item = DhcpOption>,
     ) -> Message {
+        new_client_message_with_options(
+            [
+                DhcpOption::DhcpMessageType(message_type),
+                DhcpOption::ParameterRequestList(vec![
+                    OptionCode::SubnetMask,
+                    OptionCode::Router,
+                    OptionCode::DomainNameServer,
+                ]),
+            ]
+            .into_iter()
+            .chain(options),
+        )
+    }
+
+    fn new_client_message_with_options<T: IntoIterator<Item = DhcpOption>>(options: T) -> Message {
         Message {
             op: OpCode::BOOTREQUEST,
             xid: rand::thread_rng().gen(),
@@ -1675,14 +1714,7 @@ pub mod tests {
             chaddr: random_mac_generator(),
             sname: String::new(),
             file: String::new(),
-            options: std::iter::once(DhcpOption::DhcpMessageType(message_type))
-                .chain(std::iter::once(DhcpOption::ParameterRequestList(vec![
-                    OptionCode::SubnetMask,
-                    OptionCode::Router,
-                    OptionCode::DomainNameServer,
-                ])))
-                .chain(options)
-                .collect(),
+            options: options.into_iter().collect(),
         }
     }
 
@@ -1691,7 +1723,7 @@ pub mod tests {
     }
 
     fn new_test_discover_with_options(options: impl Iterator<Item = DhcpOption>) -> Message {
-        new_client_message_with_options(MessageType::DHCPDISCOVER, options)
+        new_client_message_with_preset_options(MessageType::DHCPDISCOVER, options)
     }
 
     fn new_server_message<DS: DataStore>(
@@ -1749,8 +1781,10 @@ pub mod tests {
         msg
     }
 
+    const DEFAULT_SUBNET_MASK: Ipv4Addr = std_ip_v4!("255.255.255.0");
+
     fn add_server_options<DS: DataStore>(msg: &mut Message, server: &Server<DS>) {
-        msg.options.push(DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")));
+        msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
         if let Some(routers) = match server.options_repo.get(&OptionCode::Router) {
             Some(DhcpOption::Router(v)) => Some(v),
             _ => None,
@@ -1985,7 +2019,7 @@ pub mod tests {
                 DhcpOption::RebindingTimeValue(
                     (server.params.lease_length.default_seconds * 3) / 4,
                 ),
-                DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK),
                 DhcpOption::Router(router),
                 DhcpOption::DomainNameServer(dns_server),
             ],
@@ -2427,7 +2461,7 @@ pub mod tests {
                         DhcpOption::RebindingTimeValue(
                             (server.params.lease_length.default_seconds * 3) / 4,
                         ),
-                        DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                        DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK),
                         DhcpOption::Router(router),
                         DhcpOption::DomainNameServer(dns_server),
                     ],
@@ -2647,7 +2681,7 @@ pub mod tests {
                         DhcpOption::RebindingTimeValue(
                             (server.params.lease_length.default_seconds * 3) / 4,
                         ),
-                        DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                        DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK),
                         DhcpOption::Router(router),
                         DhcpOption::DomainNameServer(dns_server),
                     ],
@@ -2860,7 +2894,7 @@ pub mod tests {
                         DhcpOption::RebindingTimeValue(
                             (server.params.lease_length.default_seconds * 3) / 4,
                         ),
-                        DhcpOption::SubnetMask(std_ip_v4!("255.255.255.0")),
+                        DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK),
                         DhcpOption::Router(router),
                         DhcpOption::DomainNameServer(dns_server),
                     ],
@@ -3341,6 +3375,45 @@ pub mod tests {
                 ResponseTarget::Unicast(expected_dest, None)
             ))
         );
+    }
+
+    #[test_case(
+        vec![OptionCode::DomainNameServer, OptionCode::SubnetMask, OptionCode::Router],
+        vec![OptionCode::DomainNameServer, OptionCode::SubnetMask, OptionCode::Router];
+        "Valid order should be unmodified"
+    )]
+    #[test_case(
+        vec![OptionCode::Router, OptionCode::SubnetMask],
+        vec![OptionCode::SubnetMask, OptionCode::Router];
+        "SubnetMask should be moved to before Router"
+    )]
+    #[test_case(
+        vec![OptionCode::Router, OptionCode::DomainNameServer, OptionCode::SubnetMask],
+        vec![OptionCode::SubnetMask, OptionCode::Router, OptionCode::DomainNameServer];
+        "When SubnetMask is moved, Router should maintain its relative position"
+    )]
+    fn enforce_subnet_option_order(req_order: Vec<OptionCode>, expected_order: Vec<OptionCode>) {
+        // According to spec, subnet mask must be provided before the Router.
+        // This test creates various PRLs and expects the server to move the
+        // subnet mask when necessary.
+        let mut server = new_test_minimal_server();
+        let inform = new_client_message_with_options([
+            DhcpOption::DhcpMessageType(MessageType::DHCPINFORM),
+            DhcpOption::ParameterRequestList(req_order),
+        ]);
+
+        let server_action = server.dispatch(inform);
+        let ack = assert_matches::assert_matches!(
+            server_action, Ok(ServerAction::SendResponse(ack,_)) => ack
+        );
+        let ack_order: Vec<_> = ack.options.iter().map(|option| option.code()).collect();
+        // First two options are always MessageType and ServerIdentifier.
+        // Both of which don't correspond with the ParameterRequestList.
+        let expected_order: Vec<_> = [OptionCode::DhcpMessageType, OptionCode::ServerIdentifier]
+            .into_iter()
+            .chain(expected_order)
+            .collect();
+        assert_eq!(ack_order, expected_order)
     }
 
     #[test]
