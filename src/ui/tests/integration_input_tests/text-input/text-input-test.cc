@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
@@ -141,6 +142,13 @@ class TextInputTest : public gtest::RealLoopFixture {
     realm_->AddLocalChild(kResponseListener, test_response_listener_.get());
     realm_->AddChild(kTextInputFlutter, kTextInputFlutterUrl);
     realm_->AddChild(kMemoryPressureProvider, kMemoryPressureProviderUrl);
+    realm_->AddRoute(Route{.capabilities =
+                               {
+                                   Protocol{fuchsia::logger::LogSink::Name_},
+                                   Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                               },
+                           .source = ParentRef(),
+                           .targets = {ChildRef{kMemoryPressureProvider}}});
     realm_->AddChild(kNetstack, kNetstackUrl);
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kTextInputFlutter},
@@ -159,6 +167,7 @@ class TextInputTest : public gtest::RealLoopFixture {
                                    Protocol{fuchsia::sysmem::Allocator::Name_},
                                    Protocol{fuchsia::tracing::provider::Registry::Name_},
                                    Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                                   Protocol{fuchsia::feedback::CrashReporter::Name_},
                                },
                            .source = ParentRef(),
                            .targets = {ChildRef{kTextInputFlutter}}});

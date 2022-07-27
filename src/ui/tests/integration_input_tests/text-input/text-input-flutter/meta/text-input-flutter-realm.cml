@@ -8,6 +8,10 @@
             url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
         },
         {
+            name: "flutter_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+        },
+        {
             name: "text_input_flutter",
             url: "#meta/text-input-flutter.cm",
             environment: "#text_input_flutter_env",
@@ -31,6 +35,7 @@
             from: "parent",
             to: [
                 "#flutter_aot_runner",
+                "#flutter_jit_runner",
                 "#text_input_flutter",
             ],
         },
@@ -55,6 +60,10 @@
                 {
                     runner: "flutter_aot_runner",
                     from: "#flutter_aot_runner",
+                },
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
                 },
             ],
         },

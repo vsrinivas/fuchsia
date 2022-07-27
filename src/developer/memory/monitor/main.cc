@@ -69,10 +69,10 @@ int main(int argc, const char** argv) {
   zx::profile profile;
   auto status =
       profile_provider->GetProfile(8 /* LOW_PRIORITY */, "memory_monitor", &fidl_status, &profile);
-  FX_CHECK(status == ZX_OK);
-  FX_CHECK(fidl_status == ZX_OK);
+  FX_CHECK(status == ZX_OK) << "status: " << zx_status_get_string(status);
+  FX_CHECK(fidl_status == ZX_OK) << "fidl_status: " << zx_status_get_string(fidl_status);
   auto set_status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
-  FX_CHECK(set_status == ZX_OK);
+  FX_CHECK(set_status == ZX_OK) << "set_status: " << zx_status_get_string(set_status);
 
   monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
                        true /* send_metrics */, true /* watch_memory_pressure */,

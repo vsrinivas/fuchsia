@@ -46,6 +46,7 @@ executable("text-input-test-bin") {
   output_name = "text-input-test"
   deps = [
     ":test.text",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.memorypressure",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
