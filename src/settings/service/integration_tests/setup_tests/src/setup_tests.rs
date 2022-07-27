@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::{Mocks, SetupTest};
+use crate::common::{Action, Mocks, SetupTest};
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, AdminRequestStream, RebootReason};
@@ -15,8 +15,6 @@ use std::sync::Arc;
 use test_case::test_case;
 
 mod common;
-
-type Action = common::Action;
 
 #[async_trait]
 impl Mocks for SetupTest {
@@ -59,8 +57,7 @@ pub(crate) async fn verify_action_sequence(
     actions: Vec<Action>,
 ) -> bool {
     let expected_actions = expected_actions.lock().await;
-    actions.len() == expected_actions.len()
-        && expected_actions.iter().zip(actions.iter()).all(|(action1, action2)| action1 == action2)
+    actions.eq(&*expected_actions)
 }
 
 const REBOOT_ACTION: [Action; 1] = [Action::Reboot];
