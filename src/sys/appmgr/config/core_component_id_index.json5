@@ -12,6 +12,10 @@
 {
     instances: [
         {
+            instance_id: "2bd6cc2bd10243354b873a4ddb8a188b1d29171e26eebac06567bcdc36614af6",
+            moniker: "/core/account/credential_manager",
+        },
+        {
             instance_id: "7db7e88479772e241229682b47f1794e12ac5d692f8d67421acd9d7ff318a975",
             moniker: "/core/account/password_authenticator",
         },
