@@ -374,3 +374,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0178_multiple_debug_job_exception_channel.md
   - title: "RFC-0179: Basic clipboard service"
     path: /docs/contribute/governance/rfcs/0179_basic_clipboard_service.md
+  - title: "RFC-0180: Test UI Stack"
+    path: /docs/contribute/governance/rfcs/0180_test_ui_stack.md

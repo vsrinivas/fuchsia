@@ -2339,3 +2339,16 @@
   reviewers: ['enoharemaien@google.com', 'jmccandless@google.com', 'neelsa@google.com', 'palmer@google.com', 'quiche@google.com', 'wez@google.com']
   submitted: '2022-05-16'
   reviewed: '2020-07-18'
+
+- name: 'RFC-0180'
+  title: 'Test UI Stack'
+  short_description: 'This RFC is a design proposal for the Test UI Stack component, which will provide ui-specific testing capabilities to test clients both in- and out-of-tree.'
+  authors: ['abrusher@google.com']
+  file: '0180_test_ui_stack.md'
+  area: ['UI']
+  issue: ['102730']
+  gerrit_change_id: ['691540']
+  status: 'Accepted'
+  reviewers: ['crjohns@google.com', 'dworsham@google.com', 'jaeheon@google.com', 'neelsa@google.com']
+  submitted: '2022-06-16'
+  reviewed: '2022-07-26'
