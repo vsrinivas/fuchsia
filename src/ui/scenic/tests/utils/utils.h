@@ -34,29 +34,6 @@ Vec3& operator/(Vec3& vec, float num);
 // |glm::angleAxis|.
 Vec4 angleAxis(float angle, const Vec3& vec);
 
-// Creates pointer event commands for one finger, where the pointer "device" is
-// tied to one compositor. Helps remove boilerplate clutter.
-//
-// NOTE: It's easy to create an event stream with inconsistent state, e.g.,
-// sending ADD ADD.  Client is responsible for ensuring desired usage.
-class PointerCommandGenerator {
- public:
-  PointerCommandGenerator(uint32_t compositor_id, uint32_t device_id, uint32_t pointer_id,
-                          fuchsia::ui::input::PointerEventType type, uint32_t buttons = 0);
-
-  fuchsia::ui::input::Command Add(float x, float y);
-  fuchsia::ui::input::Command Down(float x, float y);
-  fuchsia::ui::input::Command Move(float x, float y);
-  fuchsia::ui::input::Command Up(float x, float y);
-  fuchsia::ui::input::Command Remove(float x, float y);
-
- private:
-  fuchsia::ui::input::Command MakeInputCommand(fuchsia::ui::input::PointerEvent event);
-
-  uint32_t compositor_id_;
-  fuchsia::ui::input::PointerEvent blank_;
-};
-
 }  // namespace integration_tests
 
 #endif  // SRC_UI_SCENIC_TESTS_UTILS_UTILS_H_

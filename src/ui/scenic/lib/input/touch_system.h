@@ -5,9 +5,6 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_TOUCH_SYSTEM_H_
 #define SRC_UI_SCENIC_LIB_INPUT_TOUCH_SYSTEM_H_
 
-#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <map>
@@ -52,16 +49,10 @@ class TouchSystem {
     a11y_pointer_event_registry_->Register(std::move(listener), std::move(callback));
   }
 
-  void DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
-                              scheduling::SessionId session_id);
-
   // Injects a touch event directly to the View with koid |event.target|.
   void InjectTouchEventExclusive(const InternalTouchEvent& event, StreamId stream_id);
   // Injects a touch event by hit testing for appropriate targets.
   void InjectTouchEventHitTested(const InternalTouchEvent& event, StreamId stream_id);
-
-  // Injects a mouse event using the GFX legacy API. Deprecated.
-  void LegacyInjectMouseEventHitTested(const InternalTouchEvent& event);
 
  private:
   // Enqueue the pointer event into the EventReporter of a View.
@@ -106,13 +97,6 @@ class TouchSystem {
 
   /// FIDL server implementations.
   std::optional<A11yPointerEventRegistry> a11y_pointer_event_registry_;
-
-  // Legacy mouse.
-  // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
-  // Tracks the View each mouse pointer is delivered to; a map from device ID to a ViewRef KOID.
-  // This is used to ensure consistent delivery of mouse events for a given device. A focus change
-  // triggered by other pointer events should *not* affect delivery of events to existing mice.
-  std::unordered_map<uint32_t, std::vector</*view_ref_koids*/ zx_koid_t>> mouse_targets_;
 
   //// Gesture disambiguation state
   // Whenever a new touch event stream is started (by the injection of an ADD event) we create a

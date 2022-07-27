@@ -10,24 +10,16 @@
 #include "src/ui/scenic/lib/input/mouse_system.h"
 #include "src/ui/scenic/lib/input/pointerinjector_registry.h"
 #include "src/ui/scenic/lib/input/touch_system.h"
-#include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
 
 // Tracks and coordinates input APIs.
-class InputSystem : public System {
+class InputSystem {
  public:
-  static constexpr TypeId kTypeId = kInput;
-  static const char* kName;
-
-  explicit InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
-                       RequestFocusFunc request_focus);
-  ~InputSystem() override = default;
-
-  CommandDispatcherUniquePtr CreateCommandDispatcher(
-      scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
-      std::shared_ptr<ErrorReporter> error_reporter) override;
+  explicit InputSystem(sys::ComponentContext* context, inspect::Node& inspect_node,
+                       fxl::WeakPtr<gfx::SceneGraph> scene_graph, RequestFocusFunc request_focus);
+  ~InputSystem() = default;
 
   void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
     pointerinjector_registry_.OnNewViewTreeSnapshot(snapshot);
@@ -44,11 +36,6 @@ class InputSystem : public System {
       fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source_request,
       zx_koid_t client_view_ref_koid) {
     mouse_system_.RegisterMouseSource(std::move(mouse_source_request), client_view_ref_koid);
-  }
-
-  void DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
-                              scheduling::SessionId session_id) {
-    touch_system_.DispatchPointerCommand(command, session_id);
   }
 
   // For tests.

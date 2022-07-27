@@ -4,25 +4,19 @@
 
 #include "src/ui/scenic/lib/input/input_system.h"
 
-#include "src/ui/scenic/lib/input/input_command_dispatcher.h"
-
 namespace scenic_impl::input {
 
-const char* InputSystem::kName = "InputSystem";
-
-InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
-                         fit::function<void(zx_koid_t)> request_focus)
-    : System(std::move(context)),
-      request_focus_(std::move(request_focus)),
-      hit_tester_(view_tree_snapshot_, *System::context()->inspect_node()),
-      mouse_system_(System::context()->app_context(), view_tree_snapshot_, hit_tester_,
+InputSystem::InputSystem(sys::ComponentContext* context, inspect::Node& inspect_node,
+                         fxl::WeakPtr<gfx::SceneGraph> scene_graph, RequestFocusFunc request_focus)
+    : request_focus_(std::move(request_focus)),
+      hit_tester_(view_tree_snapshot_, inspect_node),
+      mouse_system_(context, view_tree_snapshot_, hit_tester_,
                     [this](zx_koid_t koid) { request_focus_(koid); }),
       touch_system_(
-          System::context()->app_context(), view_tree_snapshot_, hit_tester_,
-          *System::context()->inspect_node(), [this](zx_koid_t koid) { request_focus_(koid); },
-          std::move(scene_graph)),
+          context, view_tree_snapshot_, hit_tester_, inspect_node,
+          [this](zx_koid_t koid) { request_focus_(koid); }, std::move(scene_graph)),
       pointerinjector_registry_(
-          this->context()->app_context(),
+          context,
           /*inject_touch_exclusive=*/
           [&touch_system = touch_system_](const InternalTouchEvent& event, StreamId stream_id) {
             touch_system.InjectTouchEventExclusive(event, stream_id);
@@ -45,19 +39,6 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
           [&mouse_system = mouse_system_](StreamId stream_id) {
             mouse_system.CancelMouseStream(stream_id);
           },
-          System::context()->inspect_node()->CreateChild("PointerinjectorRegistry")) {}
-
-CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
-    scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
-    std::shared_ptr<ErrorReporter> error_reporter) {
-  return CommandDispatcherUniquePtr(
-      new InputCommandDispatcher(session_id,
-                                 [&touch_system = touch_system_](auto command, auto session_id) {
-                                   touch_system.DispatchPointerCommand(std::move(command),
-                                                                       session_id);
-                                 }),
-      // Custom deleter.
-      [](CommandDispatcher* cd) { delete cd; });
-}
+          inspect_node.CreateChild("PointerinjectorRegistry")) {}
 
 }  // namespace scenic_impl::input

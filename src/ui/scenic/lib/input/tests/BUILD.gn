@@ -8,7 +8,6 @@ executable("unittests") {
   sources = [
     "a11y_legacy_contender_test.cc",
     "accessibility_pointer_events_test.cc",
-    "delivery_interruption_test.cc",
     "dispatch_policy_test.cc",
     "gesture_arena_test.cc",
     "gesture_contender_inspector_unittest.cc",
@@ -16,7 +15,6 @@ executable("unittests") {
     "gfx_legacy_contender_test.cc",
     "gfx_touch_focus_integration_test.cc",
     "injector_unittest.cc",
-    "mouse_delivery_test.cc",
     "mouse_source_test.cc",
     "mouse_test.cc",
     "pointerinjector_registry_unittest.cc",

@@ -12,8 +12,6 @@
 #include <src/lib/fostr/fidl/fuchsia/ui/input/accessibility/formatting.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/constants.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
@@ -83,8 +81,7 @@ void ChattyA11yLog(const fuchsia::ui::input::accessibility::PointerEvent& event)
 TouchSystem::TouchSystem(sys::ComponentContext* context,
                          std::shared_ptr<const view_tree::Snapshot>& view_tree_snapshot,
                          HitTester& hit_tester, inspect::Node& parent_node,
-                         fit::function<void(zx_koid_t)> request_focus,
-                         fxl::WeakPtr<gfx::SceneGraph> scene_graph)
+                         RequestFocusFunc request_focus, fxl::WeakPtr<gfx::SceneGraph> scene_graph)
     : view_tree_snapshot_(view_tree_snapshot),
       hit_tester_(hit_tester),
       request_focus_(std::move(request_focus)),
@@ -169,7 +166,6 @@ ContenderId TouchSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
         for (const auto& event : events) {
           ReportPointerEventToGfxLegacyView(event, view_ref_koid,
                                             fuchsia::ui::input::PointerEventType::TOUCH);
-
           // Update focus if necessary.
           // TODO(fxbug.dev/59858): Figure out how to handle focus with real GD clients.
           if (event.phase == Phase::kAdd) {
@@ -219,118 +215,6 @@ void TouchSystem::RegisterTouchSource(
   FX_DCHECK(success1);
   const auto [_, success2] = contenders_.emplace(contender_id, &it->second.touch_source);
   FX_DCHECK(success2);
-}
-
-void TouchSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
-                                         scheduling::SessionId session_id) {
-  TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
-  if (command.pointer_event.phase == fuchsia::ui::input::PointerEventPhase::HOVER) {
-    FX_LOGS(WARNING) << "Injected pointer event had unexpected HOVER event.";
-    return;
-  }
-
-  if (!scene_graph_) {
-    FX_LOGS(INFO) << "SceneGraph wasn't set up before injecting legacy input. Dropping event.";
-    return;
-  }
-
-  // Compositor and layer stack required for dispatch.
-  const GlobalId compositor_id(session_id, command.compositor_id);
-  gfx::CompositorWeakPtr compositor = scene_graph_->GetCompositor(compositor_id);
-  if (!compositor) {
-    FX_LOGS(INFO) << "Compositor wasn't set up before injecting legacy input. Dropping event.";
-    return;  // It's legal to race against GFX's compositor setup.
-  }
-
-  gfx::LayerStackPtr layer_stack = compositor->layer_stack();
-  if (!layer_stack) {
-    FX_LOGS(INFO) << "Layer stack wasn't set up before injecting legacy input. Dropping event.";
-    return;  // It's legal to race against GFX's layer stack setup.
-  }
-
-  const auto layers = layer_stack->layers();
-  if (layers.empty()) {
-    FX_LOGS(INFO) << "Layer wasn't set up before injecting legacy input. Dropping event.";
-    return;
-  }
-
-  // Assume we only have one layer.
-  const gfx::LayerPtr first_layer = *layers.begin();
-  const std::optional<glm::mat4> world_from_screen_transform =
-      first_layer->GetWorldFromScreenTransform();
-  if (!world_from_screen_transform) {
-    FX_LOGS(INFO) << "Wasn't able to get a WorldFromScreenTransform when injecting legacy input. "
-                     "Dropping event. Is the camera or renderer uninitialized?";
-    return;
-  }
-
-  const zx_koid_t root_koid = view_tree_snapshot_->root;
-  if (root_koid == ZX_KOID_INVALID) {
-    FX_LOGS(WARNING) << "Attempted to inject legacy input before scene setup";
-    return;
-  }
-
-  const std::optional<glm::mat4> context_from_world_transform =
-      view_tree_snapshot_->GetViewFromWorldTransform(root_koid);
-  FX_DCHECK(context_from_world_transform);
-
-  const uint32_t screen_width = first_layer->width();
-  const uint32_t screen_height = first_layer->height();
-  if (screen_width == 0 || screen_height == 0) {
-    FX_LOGS(WARNING) << "Attempted to inject legacy input while Layer had 0 area";
-    return;
-  }
-  const glm::mat4 context_from_screen_transform =
-      context_from_world_transform.value() * world_from_screen_transform.value();
-
-  InternalTouchEvent internal_event = GfxPointerEventToInternalEvent(
-      command.pointer_event, root_koid, static_cast<float>(screen_width),
-      static_cast<float>(screen_height), context_from_screen_transform);
-
-  switch (command.pointer_event.type) {
-    case PointerEventType::TOUCH: {
-      // Get stream id. Create one if this is a new stream.
-      const std::pair<uint32_t, uint32_t> stream_key{internal_event.device_id,
-                                                     internal_event.pointer_id};
-      if (!gfx_legacy_streams_.count(stream_key)) {
-        if (internal_event.phase != Phase::kAdd) {
-          FX_LOGS(WARNING) << "Attempted to start a stream without an initial ADD.";
-          return;
-        }
-
-        gfx_legacy_streams_.emplace(stream_key, NewStreamId());
-      } else if (internal_event.phase == Phase::kAdd) {
-        FX_LOGS(WARNING) << "Attempted to ADD twice for the same stream.";
-        return;
-      }
-      const auto stream_id = gfx_legacy_streams_[stream_key];
-
-      // Remove from ongoing streams on stream end.
-      if (internal_event.phase == Phase::kRemove || internal_event.phase == Phase::kCancel) {
-        gfx_legacy_streams_.erase(stream_key);
-      }
-
-      TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
-      TRACE_FLOW_END(
-          "input", "dispatch_event_to_scenic",
-          PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor));
-      InjectTouchEventHitTested(internal_event, stream_id);
-      break;
-    }
-    case PointerEventType::MOUSE: {
-      TRACE_DURATION("input", "dispatch_command", "command", "MouseCmd");
-      if (internal_event.phase == Phase::kAdd || internal_event.phase == Phase::kRemove) {
-        FX_LOGS(WARNING) << "Oops, mouse device (id=" << internal_event.device_id
-                         << ") had an unexpected event: " << internal_event.phase;
-        return;
-      }
-      LegacyInjectMouseEventHitTested(internal_event);
-      break;
-    }
-    default:
-      FX_LOGS(INFO) << "Stylus not supported by legacy input injection API.";
-      break;
-  }
 }
 
 void TouchSystem::InjectTouchEventExclusive(const InternalTouchEvent& event, StreamId stream_id) {
@@ -610,72 +494,6 @@ void TouchSystem::DestroyArenaIfComplete(StreamId stream_id) {
   } else if (arena.contest_has_ended() && arena.stream_has_ended()) {
     // If both the contest and the stream is over, destroy the arena.
     gesture_arenas_.erase(stream_id);
-  }
-}
-
-// The mouse state machine is simpler, comprising MOVE*-DOWN/MOVE*/UP-MOVE*. Its
-// behavior is similar to touch events, but with some differences.
-//  - There can be multiple mouse devices, so we track each device individually.
-//  - Mouse DOWN associates the following DOWN/MOVE*/UP event sequence with one
-//    particular client: the top-hit View. Mouse events aren't associated with
-//    gestures, so there is no parallel dispatch.
-//  - Mouse DOWN triggers a focus change, honoring the "may receive focus" property.
-//  - Mouse UP drops the association between event stream and client.
-//  - For an unlatched MOVE event, we perform a hit test, and send the
-//    top-most client this MOVE event. Focus does not change for unlatched
-//    MOVEs.
-//  - The hit test must account for the mouse cursor itself, which today is
-//    owned by the root presenter. The nodes associated with visible mouse
-//    cursors(!) do not roll up to any View (as expected), but may appear in the
-//    hit test; our dispatch needs to account for such behavior.
-// TODO(fxbug.dev/24288): Enhance trackpad support.
-void TouchSystem::LegacyInjectMouseEventHitTested(const InternalTouchEvent& event) {
-  const uint32_t device_id = event.device_id;
-  const Phase pointer_phase = event.phase;
-
-  if (pointer_phase == Phase::kDown) {
-    // Find top-hit target and associated properties.
-    const std::vector<zx_koid_t> hit_views =
-        hit_tester_.HitTest(event, /*semantic_hit_test*/ false);
-
-    FX_VLOGS(1) << "View hits: ";
-    for (auto view_ref_koid : hit_views) {
-      FX_VLOGS(1) << "[ViewRefKoid=" << view_ref_koid << "]";
-    }
-
-    if (!hit_views.empty()) {
-      // Request that focus be transferred to the top view.
-      request_focus_(hit_views.front());
-    } else {
-      // The mouse event stream has no designated receiver.
-      // Request that focus be transferred to the root view, so that (1) the currently focused
-      // view becomes unfocused, and (2) the focus chain remains under control of the root view.
-      request_focus_(ZX_KOID_INVALID);
-    }
-
-    // Save target for consistent delivery of mouse events.
-    mouse_targets_[device_id] = hit_views;
-  }
-
-  if (mouse_targets_.count(device_id) > 0 &&   // Tracking this device, and
-      mouse_targets_[device_id].size() > 0) {  // target view exists.
-    const zx_koid_t top_view_koid = mouse_targets_[device_id].front();
-    ReportPointerEventToGfxLegacyView(event, top_view_koid,
-                                      fuchsia::ui::input::PointerEventType::MOUSE);
-  }
-
-  if (pointer_phase == Phase::kUp || pointer_phase == Phase::kCancel) {
-    mouse_targets_.erase(device_id);
-  }
-
-  // Deal with unlatched MOVE events.
-  if (pointer_phase == Phase::kChange && mouse_targets_.count(device_id) == 0) {
-    // Find top-hit target and send it this move event.
-    const zx_koid_t top_view_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ false);
-    if (top_view_koid != ZX_KOID_INVALID) {
-      ReportPointerEventToGfxLegacyView(event, top_view_koid,
-                                        fuchsia::ui::input::PointerEventType::MOUSE);
-    }
   }
 }
 

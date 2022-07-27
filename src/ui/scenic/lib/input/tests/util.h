@@ -176,33 +176,8 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
-  std::shared_ptr<scenic_impl::input::InputSystem> input_system_;
+  std::unique_ptr<scenic_impl::input::InputSystem> input_system_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;
-};
-
-// Creates pointer event commands for one finger, where the pointer "device" is
-// tied to one compositor. Helps remove boilerplate clutter.
-//
-// NOTE: It's easy to create an event stream with inconsistent state, e.g.,
-// sending ADD ADD.  Client is responsible for ensuring desired usage.
-class PointerCommandGenerator {
- public:
-  PointerCommandGenerator(scenic_impl::ResourceId compositor_id, uint32_t device_id,
-                          uint32_t pointer_id, fuchsia::ui::input::PointerEventType type,
-                          uint32_t buttons = 0);
-  ~PointerCommandGenerator() = default;
-
-  fuchsia::ui::input::Command Add(float x, float y);
-  fuchsia::ui::input::Command Down(float x, float y);
-  fuchsia::ui::input::Command Move(float x, float y);
-  fuchsia::ui::input::Command Up(float x, float y);
-  fuchsia::ui::input::Command Remove(float x, float y);
-
- private:
-  fuchsia::ui::input::Command MakeInputCommand(fuchsia::ui::input::PointerEvent event);
-
-  scenic_impl::ResourceId compositor_id_;
-  fuchsia::ui::input::PointerEvent blank_;
 };
 
 bool PointerMatches(

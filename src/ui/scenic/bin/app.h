@@ -129,7 +129,7 @@ class App {
 
   std::shared_ptr<TemporaryFrameRendererDelegator> frame_renderer_;
 
-  std::shared_ptr<input::InputSystem> input_;
+  std::unique_ptr<input::InputSystem> input_;
   std::unique_ptr<focus::FocusManager> focus_manager_;
 
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;

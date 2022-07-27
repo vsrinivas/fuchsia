@@ -231,16 +231,16 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
     }
   };
 
-  auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(),
-                                               /* sysmem */ nullptr,
-                                               /* display_manager */ nullptr,
-                                               /*image_pipe_updater*/ nullptr);
+  scenic->RegisterSystem<GfxSystem>(engine_.get(),
+                                    /* sysmem */ nullptr,
+                                    /* display_manager */ nullptr,
+                                    /*image_pipe_updater*/ nullptr);
   scenic->SetFrameScheduler(frame_scheduler_);
 
   // TODO(fxbug.dev/72919): There's a bunch of logic copied from app.cc here. This will be removed
   // when moving out the integration tests from this folder.
-  input_system_ =
-      scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), /*request_focus*/ request_focus);
+  input_system_ = std::make_unique<InputSystem>(context_.get(), *scenic_->inspect_node(),
+                                                engine_->scene_graph(), request_focus);
 
   {
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
@@ -340,72 +340,6 @@ void InputSystemTest::TearDown() {
   engine_.reset();
   display_.reset();
   injector_ = {};
-}
-
-PointerCommandGenerator::PointerCommandGenerator(ResourceId compositor_id, uint32_t device_id,
-                                                 uint32_t pointer_id, PointerEventType type,
-                                                 uint32_t buttons)
-    : compositor_id_(compositor_id) {
-  blank_.device_id = device_id;
-  blank_.pointer_id = pointer_id;
-  blank_.type = type;
-  blank_.buttons = buttons;
-}
-
-InputCommand PointerCommandGenerator::Add(float x, float y) {
-  PointerEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = PointerEventPhase::ADD;
-  event.x = x;
-  event.y = y;
-  return MakeInputCommand(event);
-}
-
-InputCommand PointerCommandGenerator::Down(float x, float y) {
-  PointerEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = PointerEventPhase::DOWN;
-  event.x = x;
-  event.y = y;
-  return MakeInputCommand(event);
-}
-
-InputCommand PointerCommandGenerator::Move(float x, float y) {
-  PointerEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = PointerEventPhase::MOVE;
-  event.x = x;
-  event.y = y;
-  return MakeInputCommand(event);
-}
-
-InputCommand PointerCommandGenerator::Up(float x, float y) {
-  PointerEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = PointerEventPhase::UP;
-  event.x = x;
-  event.y = y;
-  return MakeInputCommand(event);
-}
-
-InputCommand PointerCommandGenerator::Remove(float x, float y) {
-  PointerEvent event;
-  fidl::Clone(blank_, &event);
-  event.phase = PointerEventPhase::REMOVE;
-  event.x = x;
-  event.y = y;
-  return MakeInputCommand(event);
-}
-
-InputCommand PointerCommandGenerator::MakeInputCommand(PointerEvent event) {
-  SendPointerInputCmd pointer_cmd;
-  pointer_cmd.compositor_id = compositor_id_;
-  pointer_cmd.pointer_event = std::move(event);
-
-  InputCommand input_cmd;
-  input_cmd.set_send_pointer_input(std::move(pointer_cmd));
-
-  return input_cmd;
 }
 
 bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEventPhase phase,

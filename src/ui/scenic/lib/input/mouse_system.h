@@ -44,9 +44,6 @@ class MouseSystem : public fuchsia::ui::pointer::augment::GlobalMouse {
   // the tracking state for the mouse stream.
   void CancelMouseStream(StreamId stream_id);
 
-  // Injects a mouse event using the GFX legacy API. Deprecated.
-  void LegacyInjectMouseEventHitTested(const InternalTouchEvent& event);
-
  private:
   // Finds the ViewRef koid registered with the other side of the |original| channel and returns it.
   // Returns ZX_KOID_INVALID if the related channel isn't found.

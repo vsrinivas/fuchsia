@@ -84,8 +84,6 @@ source_set("legacy") {
     "a11y_registry.h",
     "gfx_legacy_contender.cc",
     "gfx_legacy_contender.h",
-    "input_command_dispatcher.cc",
-    "input_command_dispatcher.h",
   ]
 
   deps = [

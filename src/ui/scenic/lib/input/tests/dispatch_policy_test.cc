@@ -40,9 +40,9 @@ constexpr float kDisplayHeight = 9.f;
 class DispatchPolicyTest : public gtest::TestLoopFixture {
  public:
   DispatchPolicyTest()
-      : input_system_(
-            scenic_impl::SystemContext(context_provider_.context(), inspect::Node(), [] {}),
-            fxl::WeakPtr<scenic_impl::gfx::SceneGraph>(), /*request_focus*/ [](auto...) {}) {}
+      : input_system_(context_provider_.context(), inspect_node_,
+                      fxl::WeakPtr<scenic_impl::gfx::SceneGraph>(),
+                      /*request_focus*/ [](auto...) {}) {}
 
   void SetUp() override {
     root_vrp_ = scenic::ViewRefPair::New();
@@ -172,6 +172,7 @@ class DispatchPolicyTest : public gtest::TestLoopFixture {
  private:
   // Must be initialized before |input_system_|.
   sys::testing::ComponentContextProvider context_provider_;
+  inspect::Node inspect_node_;
 
  protected:
   scenic_impl::input::InputSystem input_system_;
