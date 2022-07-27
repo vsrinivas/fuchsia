@@ -20,7 +20,6 @@ ffx_plugin("ffx_assembly") {
     "src/fvm.rs",
     "src/lib.rs",
     "src/operations.rs",
-    "src/operations/config_data.rs",
     "src/operations/create_flash_manifest.rs",
     "src/operations/create_system.rs",
     "src/operations/create_update.rs",
@@ -37,8 +36,6 @@ ffx_plugin("ffx_assembly") {
   args_deps = [
     "//src/lib/assembly/images_config",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
   ]
   deps = [
     "//src/developer/ffx/lib/fastboot",

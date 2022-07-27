@@ -34,9 +34,6 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
             operations::create_flash_manifest::create_flash_manifest(args)
                 .context("Create Flash Manifest")
         }
-        OperationClass::ConfigData(args) => {
-            operations::config_data::create_config_data(args).context("Create Config Data")
-        }
         OperationClass::Product(args) => {
             operations::product::assemble(args).context("Product Assembly")
         }

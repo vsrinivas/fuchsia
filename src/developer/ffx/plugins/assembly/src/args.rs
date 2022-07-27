@@ -5,7 +5,6 @@
 use anyhow::{anyhow, Result};
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use serde::Deserialize;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -27,7 +26,6 @@ pub enum OperationClass {
     CreateSystem(CreateSystemArgs),
     CreateUpdate(CreateUpdateArgs),
     CreateFlashManifest(CreateFlashManifestArgs),
-    ConfigData(ConfigDataArgs),
     Product(ProductArgs),
     SizeCheck(SizeCheckArgs),
 }
@@ -168,24 +166,6 @@ pub struct CreateFlashManifestArgs {
     pub outdir: PathBuf,
 }
 
-/// Arguments for creating a new config data package based off an existing one.
-#[derive(Debug, FromArgs, PartialEq)]
-#[argh(subcommand, name = "config_data")]
-pub struct ConfigDataArgs {
-    /// the filename to write the new config data meta.far to.
-    /// if it is a directory, meta.far will be written to the directory.
-    #[argh(option)]
-    pub out_path: PathBuf,
-
-    /// the input config data package, in the form of a meta.far.
-    #[argh(option)]
-    pub meta_far: PathBuf,
-
-    /// changes to the config data package, in JSON format.
-    #[argh(positional, from_str_fn(config_data_change))]
-    pub changes: Vec<ConfigDataChange>,
-}
-
 /// Perform size checks (on packages or product based on the sub-command).
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "size-check")]
@@ -255,28 +235,6 @@ fn default_blobfs_layout() -> BlobFSLayout {
     BlobFSLayout::Compact
 }
 
-/// Represents a single addition or modification of a config-data file.
-#[derive(Debug, Deserialize, PartialEq)]
-pub struct ConfigDataChange {
-    /// package for which the addition or modification should be added.
-    pub package: String,
-
-    /// path to the file to be included in the config-data package
-    pub file: PathBuf,
-
-    /// path relative to the package to put the config-data file
-    pub destination: PathBuf,
-}
-
-fn config_data_change(value: &str) -> Result<ConfigDataChange, String> {
-    let deserialized: Result<ConfigDataChange, serde_json::Error> = serde_json::from_str(&value);
-
-    match deserialized {
-        Ok(change) => Ok(change),
-        Err(e) => Err(e.to_string()),
-    }
-}
-
 /// Arguments for performing a high-level product assembly operation.
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "product")]
@@ -305,25 +263,4 @@ pub struct ProductArgs {
     /// to include which are not in the assembly input bundle
     #[argh(option)]
     pub additional_packages_path: Option<PathBuf>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_config_data_change() {
-        let correct_change =
-            "{\"package\":\"package_name\",\"file\":\"src/path\",\"destination\":\"dest/file\"}";
-        let incorrect_change = "adasfasdfsa";
-
-        let success = config_data_change(&correct_change).unwrap();
-
-        assert_eq!(success.package, "package_name");
-        assert_eq!(success.file, PathBuf::from("src/path"));
-        assert_eq!(success.destination, PathBuf::from("dest/file"));
-
-        let fail = config_data_change(incorrect_change);
-        assert!(fail.is_err());
-    }
 }
