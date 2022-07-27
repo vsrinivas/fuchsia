@@ -18,7 +18,7 @@ use crate::{
     },
     execution_scope::ExecutionScope,
     path::Path,
-    registry::token_registry::{TokenInterface, TokenRegistry, Tokenizable},
+    token_registry::{TokenInterface, TokenRegistry, Tokenizable},
 };
 
 use {

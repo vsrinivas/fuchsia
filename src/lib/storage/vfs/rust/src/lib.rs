@@ -15,13 +15,12 @@ pub mod common;
 
 pub mod execution_scope;
 pub mod path;
-pub mod registry;
 
 pub mod directory;
 pub mod file;
 pub mod remote;
 pub mod service;
-
+pub mod token_registry;
 pub mod tree_builder;
 
 // --- pseudo_directory ---

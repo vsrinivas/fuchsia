@@ -79,9 +79,6 @@ rustc_library("vfs") {
     "src/lib.rs",
     "src/path.rs",
     "src/pseudo_directory.rs",
-    "src/registry.rs",
-    "src/registry/inode_registry.rs",
-    "src/registry/token_registry.rs",
     "src/remote.rs",
     "src/remote/tests.rs",
     "src/service.rs",
@@ -95,6 +92,7 @@ rustc_library("vfs") {
     "src/test_utils/assertions.rs",
     "src/test_utils/node.rs",
     "src/test_utils/run.rs",
+    "src/token_registry.rs",
     "src/tree_builder.rs",
   ]
 

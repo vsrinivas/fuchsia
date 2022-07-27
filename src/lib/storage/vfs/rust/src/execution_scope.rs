@@ -17,8 +17,7 @@
 //! executor, provided as an instance of a [`futures::task::Spawn`] trait.
 
 use crate::{
-    directory::mutable::entry_constructor::EntryConstructor,
-    registry::{token_registry::TokenRegistry, InodeRegistry},
+    directory::mutable::entry_constructor::EntryConstructor, token_registry::TokenRegistry,
 };
 
 use {
@@ -51,8 +50,6 @@ pub type SpawnError = task::SpawnError;
 pub struct ExecutionScope {
     executor: Arc<Executor>,
 
-    inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
-
     entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
 }
 
@@ -76,7 +73,7 @@ struct Inner {
 }
 
 impl ExecutionScope {
-    /// Constructs an execution scope that has no `inode_registry`, nor `entry_constructor`.  Use
+    /// Constructs an execution scope that has no `entry_constructor`.  Use
     /// [`ExecutionScope::build()`] if you want to specify other parameters.
     pub fn new() -> Self {
         Self::build().new()
@@ -86,7 +83,7 @@ impl ExecutionScope {
     /// accepting additional parameters.  Run [`ExecutionScopeParams::new()`] to get an actual
     /// [`ExecutionScope`] object.
     pub fn build() -> ExecutionScopeParams {
-        ExecutionScopeParams { inode_registry: None, entry_constructor: None }
+        ExecutionScopeParams { entry_constructor: None }
     }
 
     /// Sends a `task` to be executed in this execution scope.  This is very similar to
@@ -135,10 +132,6 @@ impl ExecutionScope {
         &self.executor.token_registry
     }
 
-    pub fn inode_registry(&self) -> Option<Arc<dyn InodeRegistry + Send + Sync>> {
-        self.inode_registry.as_ref().map(Arc::clone)
-    }
-
     pub fn entry_constructor(&self) -> Option<Arc<dyn EntryConstructor + Send + Sync>> {
         self.entry_constructor.as_ref().map(Arc::clone)
     }
@@ -169,7 +162,6 @@ impl Clone for ExecutionScope {
     fn clone(&self) -> Self {
         ExecutionScope {
             executor: self.executor.clone(),
-            inode_registry: self.inode_registry.as_ref().map(Arc::clone),
             entry_constructor: self.entry_constructor.as_ref().map(Arc::clone),
         }
     }
@@ -184,17 +176,10 @@ impl PartialEq for ExecutionScope {
 impl Eq for ExecutionScope {}
 
 pub struct ExecutionScopeParams {
-    inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
     entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
 }
 
 impl ExecutionScopeParams {
-    pub fn inode_registry(mut self, value: Arc<dyn InodeRegistry + Send + Sync>) -> Self {
-        assert!(self.inode_registry.is_none(), "`inode_registry` is already set");
-        self.inode_registry = Some(value);
-        self
-    }
-
     pub fn entry_constructor(mut self, value: Arc<dyn EntryConstructor + Send + Sync>) -> Self {
         assert!(self.entry_constructor.is_none(), "`entry_constructor` is already set");
         self.entry_constructor = Some(value);
@@ -211,7 +196,6 @@ impl ExecutionScopeParams {
                     is_shutdown: false,
                 }),
             }),
-            inode_registry: self.inode_registry,
             entry_constructor: self.entry_constructor,
         }
     }
@@ -323,10 +307,7 @@ impl Drop for Executor {
 mod tests {
     use super::ExecutionScope;
 
-    use crate::{
-        directory::mutable::entry_constructor::EntryConstructor,
-        registry::{inode_registry, InodeRegistry},
-    };
+    use crate::directory::mutable::entry_constructor::EntryConstructor;
 
     use {
         fuchsia_async::{TestExecutor, Time, Timer},
@@ -518,23 +499,6 @@ mod tests {
             shutdown_complete_receiver.await.unwrap();
             assert_eq!(tick_count.load(Ordering::Relaxed), 2);
         });
-    }
-
-    #[test]
-    fn with_inode_registry() {
-        let registry = inode_registry::Simple::new();
-
-        let scope = ExecutionScope::build().inode_registry(registry.clone()).new();
-
-        let registry2 = scope.inode_registry().unwrap();
-        assert!(
-            // Note this ugly cast in place of `Arc::ptr_eq(&registry, &registry2)` here is
-            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
-            // the same across casts done in different code generation units at compilation time.
-            registry.as_ref() as *const dyn InodeRegistry as *const u8
-                == registry2.as_ref() as *const dyn InodeRegistry as *const u8,
-            "`scope` returned `Arc` to an inode registry is different from the one initially set."
-        );
     }
 
     #[test]

@@ -4,13 +4,11 @@
 
 //! Implementation of [`TokenRegistry`].
 
-use super::DEFAULT_TOKEN_RIGHTS;
-
 use {
     crate::directory::entry_container::MutableDirectory,
     fidl::Handle,
     fidl_fuchsia_io as fio,
-    fuchsia_zircon::{AsHandleRef, Event, HandleBased, Koid, Status},
+    fuchsia_zircon::{AsHandleRef, Event, HandleBased, Koid, Rights, Status},
     pin_project::{pin_project, pinned_drop},
     std::{
         collections::hash_map::{Entry, HashMap},
@@ -19,6 +17,8 @@ use {
         sync::{Arc, Mutex},
     },
 };
+
+const DEFAULT_TOKEN_RIGHTS: Rights = Rights::BASIC;
 
 pub struct TokenRegistry {
     inner: Mutex<Inner>,
@@ -154,8 +154,7 @@ impl<T: TokenInterface> PinnedDrop for Tokenizable<T> {
 mod tests {
     use {
         self::mocks::{MockChannel, MockDirectory},
-        super::{TokenRegistry, Tokenizable},
-        crate::registry::DEFAULT_TOKEN_RIGHTS,
+        super::{TokenRegistry, Tokenizable, DEFAULT_TOKEN_RIGHTS},
         fuchsia_zircon::{AsHandleRef, HandleBased, Rights},
         futures::pin_mut,
         std::sync::Arc,
@@ -259,7 +258,7 @@ mod tests {
             },
             execution_scope::ExecutionScope,
             path::Path,
-            registry::token_registry::{TokenInterface, TokenRegistry},
+            token_registry::{TokenInterface, TokenRegistry},
         };
 
         use {

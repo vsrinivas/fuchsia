@@ -407,7 +407,6 @@ mod tests {
     use vfs::file::vmo::asynchronous::test_utils::simple_init_vmo_with_capacity;
     use vfs::file::vmo::read_write;
     use vfs::mut_pseudo_directory;
-    use vfs::registry::inode_registry;
 
     const VALUE0: i32 = 3;
     const VALUE1: i32 = 33;
@@ -458,7 +457,6 @@ mod tests {
     ) -> (DirectoryProxy, Arc<Mutex<HashMap<String, Vmo>>>) {
         let vmo_map = Arc::new(Mutex::new(HashMap::new()));
         let fs_scope = ExecutionScope::build()
-            .inode_registry(inode_registry::Simple::new())
             .entry_constructor(tree_constructor(move |_, _| {
                 Ok(read_write(simple_init_vmo_with_capacity(b"", 100)))
             }))
@@ -927,7 +925,6 @@ mod tests {
         let attempts = std::sync::Mutex::new(0);
         let vmo_map = Arc::new(Mutex::new(HashMap::new()));
         let fs_scope = ExecutionScope::build()
-            .inode_registry(inode_registry::Simple::new())
             .entry_constructor(tree_constructor(move |_, file_name| {
                 let mut attempts_guard = attempts.lock().unwrap();
                 if file_name == "abc_tmp.pfidl" && *attempts_guard < recovers_after {
