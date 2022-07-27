@@ -9,7 +9,7 @@ use std::{
     convert::TryInto as _,
     fmt::Debug,
     marker::PhantomData,
-    num::{NonZeroU16, ParseIntError},
+    num::{NonZeroU16, ParseIntError, TryFromIntError},
     ops::{Deref as _, DerefMut as _},
 };
 
@@ -18,7 +18,6 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 
-use anyhow::{format_err, Error};
 use explicit::ResultExt as _;
 use fidl::{
     endpoints::{RequestStream as _, ServerEnd},
@@ -66,12 +65,20 @@ use super::{
     ZXSIO_SIGNAL_OUTGOING,
 };
 
-/// Limits the number of messages that can be queued for an application to be
-/// read before we start dropping packets.
-// TODO(brunodalbo) move this to a buffer pool instead.
-const MAX_OUTSTANDING_APPLICATION_MESSAGES: usize = 50;
+// These values were picked to match Linux behavior.
+
+/// Limits the total size of messages that can be queued for an application
+/// socket to be read before we start dropping packets.
+const MAX_OUTSTANDING_APPLICATION_MESSAGES_SIZE: usize = 4 * 1024 * 1024;
+/// The default value for the amount of data that can be queued for an
+/// application socket to be read before packets are dropped.
+const DEFAULT_OUTSTANDING_APPLICATION_MESSAGES_SIZE: usize = 208 * 1024;
+/// The minimum value for the amount of data that can be queued for an
+/// application socket to be read before packets are dropped.
+const MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE: usize = 256;
 
 /// The types of supported datagram protocols.
+#[derive(Debug)]
 pub(crate) enum DatagramProtocol {
     Udp,
     IcmpEcho,
@@ -529,10 +536,7 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp>
         let Self { binding_data, conns, listeners: _ } = self;
         let binding_data =
             conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-        match binding_data.receive_datagram(src_ip, src_port.get(), body.as_ref()) {
-            Ok(()) => (),
-            Err(e) => error!("receive_udp_from_conn failed: {:?}", e),
-        }
+        binding_data.receive_datagram(src_ip, src_port.get(), body.as_ref())
     }
 
     fn receive_udp_from_listen(
@@ -546,14 +550,7 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp>
         let Self { binding_data, conns: _, listeners } = self;
         let binding_data =
             listeners.get(&listener).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-        match binding_data.receive_datagram(
-            src_ip,
-            src_port.map_or(0, NonZeroU16::get),
-            body.as_ref(),
-        ) {
-            Ok(()) => (),
-            Err(e) => error!("receive_udp_from_conn failed: {:?}", e),
-        }
+        binding_data.receive_datagram(src_ip, src_port.map_or(0, NonZeroU16::get), body.as_ref())
     }
 }
 
@@ -1011,10 +1008,7 @@ where
                 let Self { binding_data, conns, listeners: _ } = self;
                 let binding_data =
                     conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-                match binding_data.receive_datagram(src_ip, id, body.as_ref()) {
-                    Ok(()) => (),
-                    Err(e) => error!("receive_udp_from_conn failed: {:?}", e),
-                }
+                binding_data.receive_datagram(src_ip, id, body.as_ref())
             }
             Err((err, serializer)) => {
                 let _: packet::serialize::Nested<B, IcmpPacketBuilder<_, _, _>> = serializer;
@@ -1035,11 +1029,71 @@ struct AvailableMessage<A> {
 }
 
 #[derive(Debug)]
+struct AvailableMessageQueue<A> {
+    available_messages: VecDeque<AvailableMessage<A>>,
+    /// The total size of the contents of `available_messages`.
+    available_messages_size: usize,
+    /// The maximum allowed value for `available_messages_size`.
+    max_available_messages_size: usize,
+}
+
+impl<A> AvailableMessageQueue<A> {
+    fn new() -> Self {
+        Self {
+            available_messages: Default::default(),
+            available_messages_size: 0,
+            max_available_messages_size: DEFAULT_OUTSTANDING_APPLICATION_MESSAGES_SIZE,
+        }
+    }
+
+    fn push(&mut self, source_addr: A, source_port: u16, body: &[u8]) -> Result<(), NoSpace> {
+        let Self { available_messages, available_messages_size, max_available_messages_size } =
+            self;
+
+        // Respect the configured limit except if this would be the only message
+        // in the buffer. This is compatible with Linux behavior.
+        if *available_messages_size + body.len() > *max_available_messages_size
+            && !available_messages.is_empty()
+        {
+            return Err(NoSpace);
+        }
+
+        available_messages.push_back(AvailableMessage {
+            source_addr,
+            source_port,
+            data: body.to_owned(),
+        });
+        *available_messages_size += body.len();
+        Ok(())
+    }
+
+    fn pop(&mut self) -> Option<AvailableMessage<A>> {
+        let Self { available_messages, available_messages_size, max_available_messages_size: _ } =
+            self;
+
+        available_messages.pop_front().map(|msg| {
+            *available_messages_size -= msg.data.len();
+            msg
+        })
+    }
+
+    fn is_empty(&self) -> bool {
+        let Self { available_messages, available_messages_size: _, max_available_messages_size: _ } =
+            self;
+        available_messages.is_empty()
+    }
+}
+
+#[derive(Copy, Clone, Debug, Error, Eq, PartialEq)]
+#[error("application buffers are full")]
+struct NoSpace;
+
+#[derive(Debug)]
 struct BindingData<I: Ip, T: Transport<I>> {
     local_event: zx::EventPair,
     peer_event: zx::EventPair,
     info: SocketControlInfo<I, T>,
-    available_data: VecDeque<AvailableMessage<I::Addr>>,
+    available_data: AvailableMessageQueue<I::Addr>,
     ref_count: usize,
 }
 
@@ -1059,25 +1113,24 @@ impl<I: Ip, T: Transport<I>> BindingData<I, T> {
                 _properties: properties,
                 state: SocketState::Unbound { unbound_id },
             },
-            available_data: VecDeque::new(),
+            available_data: AvailableMessageQueue::new(),
             ref_count: 1,
         }
     }
 
-    fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) -> Result<(), Error> {
-        if self.available_data.len() >= MAX_OUTSTANDING_APPLICATION_MESSAGES {
-            return Err(format_err!("application buffers are full"));
+    fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) {
+        match self.available_data.push(addr, port, body) {
+            Err(NoSpace) => trace!(
+                "dropping {:?} packet from {:?}:{:?} because the receive queue is full",
+                T::PROTOCOL,
+                addr,
+                port
+            ),
+            Ok(()) => self
+                .local_event
+                .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
+                .unwrap_or_else(|e| error!("receive_udp_from_conn failed: {:?}", e)),
         }
-
-        self.available_data.push_back(AvailableMessage {
-            source_addr: addr,
-            source_port: port,
-            data: body.to_owned(),
-        });
-
-        self.local_event.signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)?;
-
-        Ok(())
     }
 }
 
@@ -1539,13 +1592,19 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetReceiveBuffer {
-                            value_bytes: _,
+                            value_bytes,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, &mut {
+                                self.make_handler().await.set_max_receive_buffer_size(value_bytes);
+                                Ok(())
+                            });
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetReceiveBuffer { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(
+                                responder,
+                                &mut Ok(self.make_handler().await.get_max_receive_buffer_size())
+                            );
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetReuseAddress {
                             value: _,
@@ -1952,6 +2011,27 @@ where
         let Ctx { sync_ctx: _, non_sync_ctx } = self.ctx.deref_mut();
         I::get_collection_mut(non_sync_ctx).binding_data.get_mut(self.binding_id).unwrap()
     }
+
+    fn get_max_receive_buffer_size(&self) -> u64 {
+        let BindingData { available_data, info: _, local_event: _, peer_event: _, ref_count: _ } =
+            self.get_state();
+        available_data.max_available_messages_size.try_into().unwrap_or(u64::MAX)
+    }
+
+    fn set_max_receive_buffer_size(&mut self, max_bytes: u64) {
+        let BindingData { available_data, info: _, local_event: _, peer_event: _, ref_count: _ } =
+            self.get_state_mut();
+
+        let max_bytes = max_bytes
+            .try_into()
+            .ok_checked::<TryFromIntError>()
+            .unwrap_or(MAX_OUTSTANDING_APPLICATION_MESSAGES_SIZE);
+        let max_bytes = std::cmp::min(
+            std::cmp::max(max_bytes, MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE),
+            MAX_OUTSTANDING_APPLICATION_MESSAGES_SIZE,
+        );
+        available_data.max_available_messages_size = max_bytes
+    }
 }
 
 impl<'a, I, T, SC> RequestHandler<'a, I, T, SC>
@@ -2250,7 +2330,7 @@ where
     > {
         let () = self.need_rights(fio::OpenFlags::RIGHT_READABLE)?;
         let state = self.get_state_mut();
-        let available = if let Some(front) = state.available_data.pop_front() {
+        let available = if let Some(front) = state.available_data.pop() {
             front
         } else {
             if let SocketState::BoundConnect { shutdown_read, .. } = state.info.state {
@@ -2499,6 +2579,7 @@ where
 mod tests {
     use super::*;
 
+    use anyhow::Error;
     use fidl::{
         endpoints::{Proxy, ServerEnd},
         AsyncChannel,
