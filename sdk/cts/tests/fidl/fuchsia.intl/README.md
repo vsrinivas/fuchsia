@@ -1,7 +1,7 @@
 # intl-services-system-test
 
 This is a smoke test for the `fuchsia.intl.PropertyProvider` protocol
-implementer (usually `intl_services`). It also relies on `setui_service` and
+implementer (usually `intl`). It also relies on `setui_service` and
 that component's implementation of `fuchsia.settings.Intl`.
 
 This test modifies the user's internationalization preferences but attempts to

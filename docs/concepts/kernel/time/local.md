@@ -12,7 +12,7 @@ behavior of UTC for Fuchsia.
 Time zone is maintained as one component of the internationalization settings
 by [`setui_service`](/src/settings/service/meta/setui_service.cml) (for more information, see
 [`fuchsia.settings.Intl`](https://fuchsia.dev/reference/fidl/fuchsia.settings#Intl)).
-[`intl_services`](/src/intl/intl_services/meta/intl_services.cmx) exposes a more
+[`intl_services`](/src/intl/intl_services/meta/intl.cml) exposes a more
 convenient
 [`fuchsia.intl.PropertyProvider`](https://fuchsia.dev/reference/fidl/fuchsia.intl#PropertyProvider)
 FIDL interface that you may use to read the preferred time zone, read any

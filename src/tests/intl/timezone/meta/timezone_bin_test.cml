@@ -33,7 +33,7 @@
             url: "#meta/text_manager.cm",
         },
         {
-            name: "intl_services",
+            name: "intl",
             url: "#meta/intl_services_comp_v2.cm",
         },
         {
@@ -66,7 +66,7 @@
         },
         {
             protocol: [ "fuchsia.intl.PropertyProvider" ],
-            from: "#intl_services",
+            from: "#intl",
         },
         {
             protocol: [ "fuchsia.settings.Intl" ],
@@ -106,7 +106,7 @@
         },
         {
             protocol: [ "fuchsia.intl.PropertyProvider" ],
-            from: "#intl_services",
+            from: "#intl",
             to: [
                 "#dart_aot_runner",
                 "#dart_jit_runner",
@@ -126,7 +126,7 @@
         {
             protocol: [ "fuchsia.settings.Intl" ],
             from: "#setui_service",
-            to: [ "#intl_services" ],
+            to: [ "#intl" ],
         },
         {
             protocol: [ "fuchsia.stash.Store" ],
@@ -139,7 +139,7 @@
             to: [
                 "#dart_aot_runner",
                 "#dart_jit_runner",
-                "#intl_services",
+                "#intl",
                 "#setui_service",
                 "#stash",
                 "#text_manager",
@@ -157,7 +157,7 @@
             to: [
                 "#dart_aot_runner",
                 "#dart_jit_runner",
-                "#intl_services",
+                "#intl",
                 "#setui_service",
                 "#stash",
                 "#text_manager",

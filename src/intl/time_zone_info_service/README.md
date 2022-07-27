@@ -18,8 +18,8 @@ To integrate the service into a product target, add dependencies on
 `"//src/intl/time_zone_info_service:core-shard"`. The latter will route
 `fuchsia.intl.TimeZones` to `#session-manager` in `core.cml`.
 
-### Alternative: intl_services
+### Alternative: intl
 
-On space-constrained devices, consider using the `intl_services` component,
+On space-constrained devices, consider using the `intl` component,
 which exposes several different protocols from a single component containing a
 single executable. See [`//src/intl/intl_services`](../intl_services/).

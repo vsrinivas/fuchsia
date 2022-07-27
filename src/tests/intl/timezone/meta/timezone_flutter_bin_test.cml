@@ -44,7 +44,7 @@
             url: "#meta/text_manager.cm",
         },
         {
-            name: "intl_services",
+            name: "intl",
             url: "#meta/intl_services_comp_v2.cm",
         },
         {
@@ -109,7 +109,7 @@
         },
         {
             protocol: [ "fuchsia.intl.PropertyProvider" ],
-            from: "#intl_services",
+            from: "#intl",
         },
         {
             protocol: [ "fuchsia.settings.Intl" ],
@@ -268,7 +268,7 @@
         },
         {
             protocol: [ "fuchsia.intl.PropertyProvider" ],
-            from: "#intl_services",
+            from: "#intl",
             to: [
                 "#a11y",
                 "#flutter_aot_runner",
@@ -289,7 +289,7 @@
         {
             protocol: [ "fuchsia.settings.Intl" ],
             from: "#setui_service",
-            to: [ "#intl_services" ],
+            to: [ "#intl" ],
         },
         {
             protocol: [ "fuchsia.settings.Accessibility" ],
@@ -313,7 +313,7 @@
                 "#flutter_aot_runner",
                 "#flutter_jit_runner",
                 "#fonts",
-                "#intl_services",
+                "#intl",
                 "#mock_cobalt",
                 "#scene_manager",
                 "#scenic",
@@ -334,7 +334,7 @@
             to: [
                 "#flutter_aot_runner",
                 "#flutter_jit_runner",
-                "#intl_services",
+                "#intl",
                 "#scene_manager",
                 "#setui_service",
                 "#stash",

@@ -12,7 +12,7 @@ For information about the future work related to localization, see
     existing clients.
 
 -   Instead of having a single `fuchsia.intl.PropertyProvider` implemented by
-    `intl_services`, demonstrate best practices for embedding custom
+    the `intl` component, demonstrate best practices for embedding custom
     `PropertyProvider`s in [Session](/docs/concepts/session/introduction.md)
     implementations, ideally with multi-user use cases.
 

@@ -69,7 +69,7 @@ fuchsia_package_with_single_component("pkg") {
 }
 
 fuchsia_component("intl_services_comp_v2") {
-  manifest = "meta/intl_services.cml"
+  manifest = "meta/intl.cml"
   deps = [
     ":intl_services_bin",
     "//src/intl:icudtl",
@@ -95,13 +95,13 @@ fuchsia_package_with_single_component("pkg_small") {
 }
 
 core_shard("intl_services_shard") {
-  shard_file = "meta/intl_services.core_shard.cml"
+  shard_file = "meta/intl.core_shard.cml"
 }
 
 core_shard("intl_services_small_shard") {
-  shard_file = "meta/intl_services_small.core_shard.cml"
+  shard_file = "meta/intl_small.core_shard.cml"
 }
 
 core_shard("intl_services_small_timezones_shard") {
-  shard_file = "meta/intl_services_small_timezones.core_shard.cml"
+  shard_file = "meta/intl_small_timezones.core_shard.cml"
 }
