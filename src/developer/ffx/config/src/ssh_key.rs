@@ -134,8 +134,7 @@ fn get_public_key_data(pubkey: &[u8]) -> Result<Vec<u8>> {
 fn write_public_key(path: &PathBuf, public_key: &[u8]) -> Result<()> {
     eprintln!("Writing authorized_keys file: {}", path.display());
     let public_key_data = get_public_key_data(public_key)?;
-    let pubkey_b64 = Base64Display::with_config(&public_key_data, base64::STANDARD)
-        .map_err(|m| anyhow!("could not base64 encode: {:?}", m))?;
+    let pubkey_b64 = Base64Display::with_config(&public_key_data, base64::STANDARD);
 
     if let Some(parent) = path.parent() {
         DirBuilder::new().recursive(true).mode(0o700).create(parent)?;
@@ -222,12 +221,7 @@ fn write_private_key(
     let mut w =
         OpenOptions::new().write(true).read(true).create_new(true).mode(0o600).open(&path)?;
     writeln!(&mut w, "{}", begin)?;
-    writeln!(
-        &mut w,
-        "{}",
-        Base64Display::with_config(&priv_out_bytes, base64::STANDARD)
-            .map_err(|m| { anyhow!("could not base64 encode: {:?}", m) })?
-    )?;
+    writeln!(&mut w, "{}", Base64Display::with_config(&priv_out_bytes, base64::STANDARD))?;
     writeln!(&mut w, "{}", end)?;
     // File is closed when it goes out of scope.
     Ok(())

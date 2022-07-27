@@ -508,7 +508,7 @@ where
         match self {
             Property::String(_, v) => pair!("{}", v),
             Property::Bytes(_, v) => {
-                pair!("b64:{}", Base64Display::with_config(v, base64::STANDARD).unwrap())
+                pair!("b64:{}", Base64Display::with_config(v, base64::STANDARD))
             }
             Property::Int(_, v) => pair!("{}", v),
             Property::Uint(_, v) => pair!("{}", v),

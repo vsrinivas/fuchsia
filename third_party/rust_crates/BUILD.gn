@@ -95,7 +95,7 @@ group("atty") {
 }
 
 group("base64") {
-  public_deps = [ ":base64-v0_9_3" ]
+  public_deps = [ ":base64-v0_13_0" ]
 }
 
 group("bincode") {
@@ -1770,28 +1770,6 @@ rust_library("base64-v0_13_0") {
     "-Cextra-filename=-5335de7b20fd4c04",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("base64-v0_9_3") {
-  crate_name = "base64"
-  crate_root = "//third_party/rust_crates/vendor/base64-0.9.3/src/lib.rs"
-  output_name = "base64-4feaf160d10ad83f"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":byteorder-v1_3_1" ]
-  deps += [ ":safemem-v0_3_0" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=4feaf160d10ad83f",
-    "-Cextra-filename=-4feaf160d10ad83f",
   ]
 
   visibility = [ ":*" ]
@@ -8796,28 +8774,6 @@ rust_library("ryu-v1_0_3") {
     "--cfg=integer128",
     "--cfg=must_use_return",
     "--cfg=maybe_uninit",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("safemem-v0_3_0") {
-  crate_name = "safemem"
-  crate_root = "//third_party/rust_crates/vendor/safemem/src/lib.rs"
-  output_name = "safemem-aa454cc1e0ab7f9f"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=aa454cc1e0ab7f9f",
-    "-Cextra-filename=-aa454cc1e0ab7f9f",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"std\"",
   ]
 
   visibility = [ ":*" ]
