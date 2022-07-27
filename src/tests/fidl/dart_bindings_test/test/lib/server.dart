@@ -7,38 +7,44 @@
 
 import 'dart:async';
 
-import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
-import 'package:fuchsia_services/services.dart';
+import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart' as dbtest;
+import 'package:fidl_fuchsia_logger/fidl_async.dart' as flogger;
+import 'package:fuchsia_component_test/realm_builder.dart';
 
-const _kServerName =
-    'fuchsia-pkg://fuchsia.com/dart-bindings-test#meta/server.cmx';
+// Note, Dart components derive a default binary name from the component name
+// ("server") at build time, and the runner derives the component name from its
+// moniker (passed to `addChild()`), so they must match.
+const _kComponentName = 'server';
+const _kServerUrl = '#meta/${_kComponentName}.cm';
 
 class TestServerInstance {
-  final TestServerProxy proxy = TestServerProxy();
-  final ComponentControllerProxy controller = ComponentControllerProxy();
+  final dbtest.TestServerProxy proxy = dbtest.TestServerProxy();
+  RealmInstance realm;
 
   Future<void> start() async {
-    // Create and connect to a Launcher service
-    final launcherProxy = LauncherProxy();
-    final svc = Incoming.fromSvcPath()..connectToService(launcherProxy);
+    final builder = await RealmBuilder.create();
 
-    final incoming = Incoming();
-    final launchInfo = LaunchInfo(
-        url: _kServerName, directoryRequest: incoming.request().passChannel());
-    // Use the launcher services launch echo server via launchInfo
-    await launcherProxy.createComponent(launchInfo, controller.ctrl.request());
-    // Close connection to launcher service
-    launcherProxy.ctrl.close();
-    await svc.close();
+    final serverRef = await builder.addChild(_kComponentName, _kServerUrl);
 
-    incoming.connectToService(proxy);
+    await builder.addRoute(Route()
+      ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+      ..from(Ref.parent())
+      ..to(Ref.child(serverRef)));
+
+    await builder.addRoute(Route()
+      ..capability(ProtocolCapability(dbtest.TestServer.$serviceName))
+      ..from(Ref.child(serverRef))
+      ..to(Ref.parent()));
+
+    realm = await builder.build();
+
+    realm.root.connectToProtocolAtExposedDir(proxy);
   }
 
   Future<void> stop() async {
-    proxy.ctrl.close();
-    if (controller.ctrl.isBound) {
-      await controller.kill();
+    if (realm != null) {
+      realm.root.close();
+      realm = null;
     }
   }
 }

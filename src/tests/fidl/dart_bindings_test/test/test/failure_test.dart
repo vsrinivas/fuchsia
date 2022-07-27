@@ -55,7 +55,7 @@ void main() async {
 
     test('server killed during call', () async {
       expect(server.proxy.replySlowly('whoa dude', 1.0), throwsA(anything));
-      return server.controller.kill();
+      server.stop();
     });
 
     test('one-way call on closed proxy', () {

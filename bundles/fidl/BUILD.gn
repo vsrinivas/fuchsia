@@ -32,7 +32,7 @@ group("e2e_tests") {
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/fidl/compatibility",
     "//src/tests/fidl/dangerous_identifiers:tests",
-    "//src/tests/fidl/dart_bindings_test",
+    "//src/tests/fidl/dart_bindings_test:tests",
     "//src/tests/fidl/fidl_go_conformance:tests",
     "//src/tests/fidl/fuzzer:tests",
     "//src/tests/fidl/source_compatibility:tests",

@@ -26,7 +26,7 @@ dart_library("server_lib") {
 }
 
 dart_component("server") {
-  manifest = "meta/server.cmx"
+  manifest = "meta/server.cml"
   main_package = "server"
   deps = [ ":server_lib" ]
 }
@@ -47,7 +47,7 @@ gidl("conformance_suite") {
 
 dart_test_component("conformance-component") {
   component_name = "conformance"
-  manifest = "meta/conformance.cmx"
+  manifest = "meta/conformance.cml"
   package_root = conformance_dir
   sources = [ conformance_file ]
   deps = [
@@ -71,16 +71,15 @@ dart_library("server_test_lib") {
   package_root = "test"
   sources = [ "server.dart" ]
   deps = [
-    "//sdk/dart/fuchsia_services",
-    "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.sys",
+    "//sdk/dart/fuchsia_component_test",
+    "//sdk/fidl/fuchsia.logger",
     "//src/tests/fidl/dart_bindings_test/fidl:bindings_test",
   ]
 }
 
 dart_test_component("bindings-test-component") {
   component_name = "dart-bindings-test"
-  manifest = "meta/dart-bindings-test.cmx"
+  manifest = "meta/dart-bindings-test.cml"
   package_root = "test"
   sources = [
     "bits_test.dart",
@@ -123,10 +122,16 @@ fuchsia_test_package("dart_bindings_test_package") {
     ":bindings-test-component",
     ":conformance-component",
   ]
-  deps = [ ":server" ]
+  deps = [
+    ":server",
+    "//sdk/dart/fuchsia_component_test:dart_realm_builder_deps",
+  ]
 }
 
-group("dart_bindings_test") {
+group("tests") {
   testonly = true
-  deps = [ ":dart_bindings_test_package" ]
+  deps = [
+    ":dart_bindings_test_package",
+    dart_default_build_cfg.runner_dep,
+  ]
 }
