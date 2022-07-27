@@ -16,6 +16,7 @@ rustc_library("lib") {
   name = "driver_tools"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",

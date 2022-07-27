@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.driver.development;
 
+using fuchsia.component.decl;
 using fuchsia.device.manager;
 using fuchsia.driver.framework;
 using fuchsia.driver.index;
@@ -118,6 +119,9 @@ type DeviceInfo = table {
     /// (DFv2) Properties of the node.
    11: node_property_list
             vector<fuchsia.driver.framework.NodeProperty>:fuchsia.driver.framework.MAX_PROPERTY_COUNT;
+
+    /// (DFv2): Component offers to the node.
+   12: offer_list vector<fuchsia.component.decl.Offer>:MAX;
 };
 
 /// Information about a driver binding to a node.

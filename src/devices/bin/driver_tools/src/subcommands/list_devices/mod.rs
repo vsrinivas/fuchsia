@@ -8,8 +8,8 @@ use {
     crate::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::Result,
     args::ListDevicesCommand,
-    fidl_fuchsia_device_manager as fdm, fidl_fuchsia_driver_development as fdd,
-    fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_device_manager as fdm,
+    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
 };
 
 trait DevicePrinter {
@@ -133,6 +133,26 @@ impl DevicePrinter for DFv2Node {
             }
         } else {
             println!("0 Properties");
+        }
+
+        if let Some(ref offer_list) = self.0.offer_list {
+            println!("{} Offers", offer_list.len());
+            for i in 0..offer_list.len() {
+                if let fdecl::Offer::Service(service) = &offer_list[i] {
+                    println!(
+                        "Service: {}",
+                        service.target_name.as_ref().unwrap_or(&"<unknown>".to_string())
+                    );
+                    if let Some(fdecl::Ref::Child(ref source)) = service.source.as_ref() {
+                        println!("  Source: {}", source.name);
+                    }
+                    if let Some(filter) = &service.source_instance_filter {
+                        println!("  Instances: {}", filter.join(" "));
+                    }
+                }
+            }
+        } else {
+            println!("0 Offers");
         }
         println!("");
         Ok(())

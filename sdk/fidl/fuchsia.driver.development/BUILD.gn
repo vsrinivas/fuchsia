@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.driver.development") {
   sources = [ "development.fidl" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.driver.framework",
     "//sdk/fidl/fuchsia.driver.index",

@@ -125,6 +125,16 @@ zx::status<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
     device_info.set_driver_host_koid(allocator, result.value());
   }
 
+  // Copy over the offers.
+  auto offers = node->offers();
+  if (!offers.empty()) {
+    fidl::VectorView<fuchsia_component_decl::wire::Offer> node_offers(allocator, offers.count());
+    for (size_t i = 0; i < offers.count(); i++) {
+      node_offers[i] = fidl::ToWire(allocator, fidl::ToNatural(offers[i]));
+    }
+  }
+  device_info.set_offer_list(allocator, offers);
+
   return zx::ok(device_info);
 }
 
