@@ -132,9 +132,6 @@ type RunCommand struct {
 	// SshKey is the path to a private SSH user key.
 	sshKey string
 
-	// SerialLogFile, if nonempty, is the file where the system's serial logs will be written.
-	serialLogFile string
-
 	// serialLogDir, if nonempty, is the directory in which system serial logs will be written.
 	serialLogDir string
 
@@ -220,7 +217,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
 	f.StringVar(&r.syslogDir, "syslog-dir", "", "the directory to write all system logs to.")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
-	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 	f.StringVar(&r.serialLogDir, "serial-log-dir", "", "the directory to write all serial logs to.")
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
@@ -356,15 +352,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return nil
 			})
 		}
-	}
-	if r.serialLogFile != "" {
-		eg.Go(func() error {
-			logger.Debugf(ctx, "starting serial collection")
-			if err := t0.CaptureSerialLog(r.serialLogFile); err != nil && ctx.Err() == nil {
-				return err
-			}
-			return nil
-		})
 	}
 
 	for _, t := range targetSlice {
