@@ -35,7 +35,7 @@ InternalTouchEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::Poin
 
 // Turns an InternalTouchEvent into a gfx pointer event.
 // Does not support HOVER events.
-fuchsia::ui::input::PointerEvent InternalPointerEventToGfxPointerEvent(
+fuchsia::ui::input::PointerEvent InternalTouchEventToGfxPointerEvent(
     const InternalTouchEvent& event, const glm::mat4& view_from_context_transform,
     fuchsia::ui::input::PointerEventType type, uint64_t trace_id);
 

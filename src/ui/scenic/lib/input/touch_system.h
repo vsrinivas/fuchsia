@@ -18,7 +18,7 @@
 #include "src/ui/scenic/lib/input/gfx_legacy_contender.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/hit_tester.h"
-#include "src/ui/scenic/lib/input/touch_source.h"
+#include "src/ui/scenic/lib/input/touch_source_base.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
@@ -107,14 +107,7 @@ class TouchSystem {
   // Ties each TouchSource instance to its contender id.
   struct TouchContender {
     ContenderId contender_id;
-    TouchSource touch_source;
-    TouchContender(zx_koid_t view_ref_koid, ContenderId id,
-                   fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
-                   fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
-                   fit::function<void()> error_handler, GestureContenderInspector& inspector)
-        : contender_id(id),
-          touch_source(view_ref_koid, std::move(event_provider), std::move(respond),
-                       std::move(error_handler), inspector) {}
+    std::unique_ptr<TouchSourceBase> touch_source;
   };
 
   // Each gesture arena tracks one touch event stream and a set of contenders.

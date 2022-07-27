@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/input/touch_system.h"
 
 // These tests exercise the full gesture disambiguation implementation of InputSystem for

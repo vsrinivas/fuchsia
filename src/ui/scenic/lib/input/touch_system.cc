@@ -14,6 +14,7 @@
 
 #include "src/ui/scenic/lib/input/constants.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
+#include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
@@ -199,8 +200,8 @@ void TouchSystem::RegisterTouchSource(
 
   // Note: These closure must'nt be called in the constructor, since they depend on the
   // |contenders_| map, which isn't filled until after construction completes.
-  const auto [it, success1] = touch_contenders_.try_emplace(
-      client_view_ref_koid, client_view_ref_koid, contender_id, std::move(touch_source_request),
+  auto touch_source = std::make_unique<TouchSource>(
+      client_view_ref_koid, std::move(touch_source_request),
       /*respond*/
       [this, contender_id](StreamId stream_id, const std::vector<GestureResponse>& responses) {
         RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
@@ -212,8 +213,11 @@ void TouchSystem::RegisterTouchSource(
         touch_contenders_.erase(client_view_ref_koid);
       },
       contender_inspector_);
+  const auto [it, success1] = touch_contenders_.emplace(
+      client_view_ref_koid,
+      TouchContender{.contender_id = contender_id, .touch_source = std::move(touch_source)});
   FX_DCHECK(success1);
-  const auto [_, success2] = contenders_.emplace(contender_id, &it->second.touch_source);
+  const auto [_, success2] = contenders_.emplace(contender_id, it->second.touch_source.get());
   FX_DCHECK(success2);
 }
 
@@ -229,7 +233,7 @@ void TouchSystem::InjectTouchEventExclusive(const InternalTouchEvent& event, Str
 
   auto it = touch_contenders_.find(event.target);
   if (it != touch_contenders_.end()) {
-    auto& touch_source = it->second.touch_source;
+    auto& touch_source = *it->second.touch_source;
     // Calling EndContest() before the first event causes them to be combined in the first message
     // to the client.
     if (event.phase == Phase::kAdd) {
@@ -517,7 +521,7 @@ void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& ev
   const uint64_t trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
   InputEvent input_event;
-  input_event.set_pointer(InternalPointerEventToGfxPointerEvent(
+  input_event.set_pointer(InternalTouchEventToGfxPointerEvent(
       event, view_from_context_transform.value(), type, trace_id));
   FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
   ChattyGfxLog(input_event);

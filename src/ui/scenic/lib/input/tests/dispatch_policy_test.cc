@@ -12,6 +12,7 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/input/input_system.h"
+#include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 // These tests exercise input event delivery under different dispatch policies.

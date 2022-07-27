@@ -27,7 +27,7 @@ class TouchInjector : public Injector {
 
  private:
   // TODO(fxbug.dev/53316): Reduce to a single return event when legacy code goes away.
-  std::vector<InternalTouchEvent> PointerInjectorEventToInternalPointerEvents(
+  std::vector<InternalTouchEvent> PointerInjectorEventToInternalTouchEvents(
       const fuchsia::ui::pointerinjector::Event& event) const;
 
   // Used to inject the event into InputSystem for dispatch to clients.

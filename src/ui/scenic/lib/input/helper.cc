@@ -92,10 +92,10 @@ InternalTouchEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::Poin
   return internal_event;
 }
 
-GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalTouchEvent& internal_event,
-                                                      const glm::mat4& view_from_context_transform,
-                                                      fuchsia::ui::input::PointerEventType type,
-                                                      uint64_t trace_id) {
+GfxPointerEvent InternalTouchEventToGfxPointerEvent(const InternalTouchEvent& internal_event,
+                                                    const glm::mat4& view_from_context_transform,
+                                                    fuchsia::ui::input::PointerEventType type,
+                                                    uint64_t trace_id) {
   GfxPointerEvent event;
   event.event_time = internal_event.timestamp;
   event.device_id = internal_event.device_id;

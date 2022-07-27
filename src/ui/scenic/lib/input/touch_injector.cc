@@ -43,7 +43,7 @@ void TouchInjector::ForwardEvent(const fuchsia::ui::pointerinjector::Event& even
                                  StreamId stream_id) {
   // Translate events to internal representation and inject.
   std::vector<InternalTouchEvent> internal_events =
-      PointerInjectorEventToInternalPointerEvents(event);
+      PointerInjectorEventToInternalTouchEvents(event);
 
   FX_DCHECK(stream_id != kInvalidStreamId);
   for (auto& internal_event : internal_events) {
@@ -51,7 +51,7 @@ void TouchInjector::ForwardEvent(const fuchsia::ui::pointerinjector::Event& even
   }
 }
 
-std::vector<InternalTouchEvent> TouchInjector::PointerInjectorEventToInternalPointerEvents(
+std::vector<InternalTouchEvent> TouchInjector::PointerInjectorEventToInternalTouchEvents(
     const fuchsia::ui::pointerinjector::Event& event) const {
   const InjectorSettings& settings = Injector::settings();
   InternalTouchEvent internal_event;

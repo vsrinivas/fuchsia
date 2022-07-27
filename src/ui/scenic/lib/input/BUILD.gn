@@ -164,6 +164,8 @@ source_set("touch") {
     "gesture_arena.h",
     "touch_source.cc",
     "touch_source.h",
+    "touch_source_base.cc",
+    "touch_source_base.h",
     "touch_system.cc",
     "touch_system.h",
   ]
