@@ -46,6 +46,7 @@ pub struct ResponseAndMetadata {
     pub version: String,
     pub cohort_assertion: Option<String>,
     pub codebase: String,
+    pub package_path: String,
 }
 
 impl Default for ResponseAndMetadata {
@@ -60,6 +61,7 @@ impl Default for ResponseAndMetadata {
             version: "0.1.2.3".to_string(),
             cohort_assertion: None,
             codebase: "fuchsia-pkg://integration.test.fuchsia.com/".to_string(),
+            package_path: "update".to_string(),
         }
     }
 }
@@ -240,7 +242,7 @@ pub async fn handle_omaha_request(
             let version = app.get("version").unwrap();
             assert_eq!(version, &expected.version);
 
-            let package_name = format!("update?hash={}", expected.merkle);
+            let package_name = format!("{}?hash={}", expected.package_path, expected.merkle);
             let app = if let Some(expected_update_check) = app.get("updatecheck") {
                 let updatedisabled = expected_update_check
                     .get("updatedisabled")
