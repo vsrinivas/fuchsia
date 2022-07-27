@@ -19,7 +19,8 @@ use tracing::info;
 
 use crate::auth::{Credentials, FsCred};
 use crate::execution::{
-    create_remotefs_filesystem, execute_task, galaxy::Galaxy, get_pkg_hash, parse_numbered_handles,
+    create_filesystem_from_spec, create_remotefs_filesystem, execute_task, galaxy::Galaxy,
+    get_pkg_hash, parse_numbered_handles,
 };
 use crate::fs::*;
 use crate::task::*;
@@ -95,6 +96,15 @@ pub async fn start_component(
     let user_passwd = get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
     let credentials = Credentials::from_passwd(user_passwd)?;
     current_task.set_creds(credentials);
+
+    if let Some(local_mounts) = get_program_strvec(&start_info, "mounts") {
+        for mount in local_mounts.iter() {
+            let (mount_point, child_fs) = create_filesystem_from_spec(&current_task, &pkg, mount)?;
+            let mount_point = current_task.lookup_path_from_root(mount_point)?;
+            mount_point.mount(child_fs, MountFlags::empty())?;
+        }
+    }
+
     let startup_handles =
         parse_numbered_handles(&current_task, start_info.numbered_handles, &current_task.files)?;
     let shell_controller = startup_handles.shell_controller;

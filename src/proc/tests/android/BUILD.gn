@@ -57,9 +57,17 @@ fuchsia_test_component("libutils_test") {
   deps = [ "//src/proc/tests:starnix_test" ]
 }
 
+resource("starnix_testcases_image") {
+  sources = [ "//prebuilt/starnix/android-image-amd64/starnix_testcases.img" ]
+  outputs = [ "data/testcases.img" ]
+}
+
 fuchsia_test_component("java_hello_world") {
   manifest = "meta/java_hello_world.cml"
-  deps = [ "//src/proc/tests:starnix_test" ]
+  deps = [
+    ":starnix_testcases_image",
+    "//src/proc/tests:starnix_test",
+  ]
 }
 
 fuchsia_test_component("init_test") {
@@ -84,7 +92,6 @@ stardroid_test_package("android") {
   test_components = [
     ":adbd_test",
     ":boringssl_self_test64",
-    ":java_hello_world",
     ":sh_test",
     ":binder_smoke_test",
     ":libutils_test",
@@ -92,7 +99,10 @@ stardroid_test_package("android") {
 }
 
 starnix_test_package("android_with_init") {
-  test_components = [ ":init_test" ]
+  test_components = [
+    ":init_test",
+    ":java_hello_world",
+  ]
   galaxy = "//src/proc/bin/galaxies/stardroid"
 }
 

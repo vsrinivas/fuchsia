@@ -15,5 +15,5 @@
         "/:ext4:data/system.img",
     ],
     name: "stardroid",
-    startup_file_path: "/linkerconfig/ld.config.txt",
+    startup_file_path: "/dev/binderfs",
 }
