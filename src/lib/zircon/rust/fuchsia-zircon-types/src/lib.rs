@@ -883,6 +883,8 @@ pub enum zx_page_request_command_t {
 multiconst!(u32, [
     ZX_PAGER_OP_FAIL = 1;
     ZX_PAGER_OP_DIRTY = 2;
+    ZX_PAGER_OP_WRITEBACK_BEGIN = 3;
+    ZX_PAGER_OP_WRITEBACK_END = 4;
 ]);
 
 pub type zx_excp_type_t = u32;
