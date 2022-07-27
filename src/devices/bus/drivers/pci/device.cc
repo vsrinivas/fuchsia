@@ -334,6 +334,7 @@ zx::status<> Device::ProbeBar(uint8_t bar_id) {
   bar.is_mmio = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
   bar.is_64bit = bar.is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
   bar.is_prefetchable = bar.is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
+  uint32_t addr_mask = (bar.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
 
   // Check the read-only configuration of the BAR. If it's invalid then don't add it to our BAR
   // list.
@@ -357,16 +358,14 @@ zx::status<> Device::ProbeBar(uint8_t bar_id) {
   // until the probe operation has been completed. Hopefully these special
   // systems are quiescent at this point in time, otherwise they might see
   // some minor glitching while access is disabled.
-  bool enabled = MmioEnabled() || IoEnabled();
   uint16_t cmd_backup = ReadCmdLocked();
-  ModifyCmdLocked(/*clr_bits=*/PCI_CONFIG_COMMAND_MEM_EN | PCI_CONFIG_COMMAND_IO_EN,
-                  /*set_bits=*/cmd_backup);
-  uint32_t addr_mask = (bar.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
-
-  // For enabled devices save the original address in the BAR. If the device
-  // is enabled then we should assume the bios configured it and we should
-  // attempt to retain the BAR allocation.
+  bool enabled = !!(cmd_backup & (PCI_CONFIG_COMMAND_MEM_EN | PCI_CONFIG_COMMAND_IO_EN));
   if (enabled) {
+    ModifyCmdLocked(/*clr_bits=*/PCI_CONFIG_COMMAND_MEM_EN | PCI_CONFIG_COMMAND_IO_EN,
+                    /*set_bits=*/cmd_backup);
+    // For enabled devices save the original address in the BAR. If the device
+    // is enabled then we should assume the bios configured it and we should
+    // attempt to retain the BAR allocation.
     bar.address = bar_val & addr_mask;
   }
 
