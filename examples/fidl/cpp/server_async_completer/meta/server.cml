@@ -12,7 +12,7 @@
         runner: "elf",
 
         // The binary to run for this component.
-        binary: "bin/fidl_echo_cpp_wire_server_async",
+        binary: "bin/fidl_echo_cpp_server_async",
     },
 
     // Capabilities provided by this component.

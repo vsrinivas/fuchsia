@@ -17,6 +17,7 @@ group("all") {
     "request_pipelining",
     "server",
     "server/wire",
+    "server_async_completer",
     "services",
   ]
 }
@@ -28,9 +29,9 @@ group("tests") {
     "domain_objects",
 
     # Client and server tests are exercised in //examples/fidl/echo-realm.
+    "//examples/fidl/echo-realm:echo-cpp-async-test",
     "//examples/fidl/echo-realm:echo-cpp-client-sync-test",
     "//examples/fidl/echo-realm:echo-cpp-client-test",
-    "//examples/fidl/echo-realm:echo-cpp-wire-async-test",
     "//examples/fidl/echo-realm:echo-cpp-wire-client-shared-test",
     "//examples/fidl/echo-realm:echo-cpp-wire-client-sync-test",
     "//examples/fidl/echo-realm:echo-cpp-wire-client-test",

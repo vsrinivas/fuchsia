@@ -34,9 +34,9 @@ fuchsia_component("fidl_examples_test") {
 group("tests") {
   testonly = true
   deps = [
+    ":echo-cpp-async-test",
     ":echo-cpp-client-sync-test",
     ":echo-cpp-client-test",
-    ":echo-cpp-wire-async-test",
     ":echo-cpp-wire-client-shared-test",
     ":echo-cpp-wire-client-sync-test",
     ":echo-cpp-wire-client-test",
@@ -168,11 +168,11 @@ fuchsia_test_package("echo-cpp-wire-client-shared-test") {
   ]
 }
 
-fuchsia_test_package("echo-cpp-wire-async-test") {
+fuchsia_test_package("echo-cpp-async-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
-    "//examples/fidl/cpp/async_completer/client:echo-client",
-    "//examples/fidl/cpp/async_completer/server:echo-server",
+    "//examples/fidl/cpp/client:echo-client",
+    "//examples/fidl/cpp/server_async_completer:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
   ]
 }

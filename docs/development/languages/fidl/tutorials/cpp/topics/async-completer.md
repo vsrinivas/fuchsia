@@ -1,83 +1,86 @@
-# Responding to requests asynchronously in LLCPP
-
-<!-- TODO(fxbug.dev/103483): Update to use natural types -->
+# Responding to requests asynchronously
 
 ## Prerequisites
 
-This tutorial builds on the [LLCPP getting started tutorials][overview].
+This tutorial builds on the [getting started tutorials][overview].
 
 ## Overview
 
-In the `Echo` implementation from the [server tutorial][server-tut], the server code responded
-to `EchoString` requests using the completer.
-
-```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/server/main.cc" region_tag="impl-echo-string" %}
-```
-
-Notice that the type for the completer has `::Sync`. This indicates the default mode of operation:
-the server must synchronously make a reply before returning from the handler function. Enforcing
-this allows optimizations since the bookkeeping metadata for making a reply can be stack-allocated.
-
-This tutorial provides an example of how to respond to requests asynchronously, by converting the
-sync completer into an async completer.
-
 The full example code for this tutorial is located at
-[//examples/fidl/cpp/async_completer][src].
+[//examples/fidl/cpp/server_async_completer][src].
 
-### The Echo protocol
-
-This example uses the `Echo` protocol from the examples library:
-
-```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
-```
-
-As part of this tutorial, you will implement a client that makes multiple `EchoString` requests in
-succession. The server will respond to these requests asynchronously, emulating a scenario where
-the server must execute a long running task before sending a response. By using an
-async completer, these long running tasks can be completed asynchronously.
-
-## Implement the client
-
-The client code is mostly similar to the code from the [client tutorial][client-tut]. The differences
-are highlighted in this section.
-
-After connecting to the server, the client will make multiple `EchoString` requests inside of a
-for loop:
+In the `Echo` implementation from the initial [server tutorial][server-tut], the
+server code responded to `EchoString` requests using the completer:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/async_completer/client/main.cc" region_tag="main" highlight="14,15,16,17,18,19,20,21,22,23,24,25,26" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/server/main.cc" region_tag="impl-echo-string" adjust_indentation="auto" %}
 ```
 
-The loop is run `kNumEchoes` times (which is by default 3), and will print the time elapsed since
-the first request every time it receives a response. After it receives `kNumEchoes` responses, the
-code quits from the loop.
+Notice that the type of the completer ends with `::Sync`. Sync completers must
+be used before the handler returns. Enforcing this allows optimizations since
+the bookkeeping metadata for making a reply can be stack allocated.
 
-## Implement the server
+## Respond asynchronously
 
-The `main()` function from the server code is the same as in the [server tutorial][server-tut].
-The difference lies in the implementation of `Echo`:
+In many cases responding synchronously is infeasible. For example, the reply may
+need results from other asynchronous calls. To respond asynchronously, we must
+obtain an async completer from the sync completer, using `ToAsync`:
 
 ```cpp
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/async_completer/server/main.cc" region_tag="impl" %}
+EchoStringCompleter::Async async_completer = completer.ToAsync();
 ```
 
-When an `EchoString` request is received, the server calls `async::PostDelayedTask`. This function
-takes a dispatcher, a callback, and a duration, and will execute the callback at the end of the
-duration. This call emulates a long running task that returns its result through a callback when it
-is finished. The handler uses `PostDelayedTask` to wait 5 seconds before echoing the
-request value back to the client.
+The resulting `async_completer` exposes the same API as `completer`, but can be
+moved away to be used at a later time.
 
-A key point is that the completer being moved into the lambda capture is the async completer. A
-`::Sync` completer can be converted to the `::Async` counterpart by using the `ToAsync()` method.
-For further information on the completer API, refer to the [LLCPP bindings reference][bindings-ref].
+In the example code, the server makes the reply inside a delayed task, emulating
+a scenario where the server must execute a long running task before sending a
+response:
 
-Another noteworthy aspect is that the request views provided to method handlers
-do not own the request message. In order to use the request parameters after the
-`EchoString` method returns, we need to copy relevant fields to an owned type,
-here `value_owned` in the lambda captures. For further information on the memory
-ownership, refer to the [LLCPP Memory Management][memory-management].
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/server_async_completer/main.cc" region_tag="impl-echo-string" adjust_indentation="auto" %}
+```
+
+The server won't start handling any new requests until returning from the
+current handler method. After returning from `EchoString`, the server will
+monitor the endpoint for new FIDL messages, while the reply is scheduled one
+second into the future. This means if the client sent multiple `EchoString`
+requests in quick succession, we may have just as many concurrent async delayed
+tasks in flight.
+
+Note: if the async completer is captured by a lambda function, the lambda must
+be marked **mutable**, because making a reply using the completer mutates it
+such that duplicate replies will panic.
+
+### Respond asynchronously in servers speaking wire domain objects
+
+You would use the same `ToAsync` operation when the server speaks
+[wire domain objects][wire-types], but pay extra attention to object lifetimes.
+In particular, the request views provided to method handlers do not own the
+request message. If an asynchronous task needs to use the request parameters
+after the `EchoString` method returns, we need to copy relevant fields to an
+owned type:
+
+```cpp
+class EchoImpl : public fidl::WireServer<fuchsia_examples::Echo> {
+ public:
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
+    // Copy the contents of |request->value| (a fidl::StringView) to a string.
+    std::string value_owned{request->value.get()};
+    async::PostDelayedTask(
+        dispatcher_,
+        [value = value_owned, completer = completer.ToAsync()]() mutable {
+          completer.Reply(fidl::StringView::FromExternal(value));
+        },
+        zx::duration(ZX_SEC(1)));
+  }
+
+  // ...
+};
+```
+
+For further information on the memory ownership, refer to
+[Memory ownership of wire domain objects][memory-ownership].
 
 ## Run the example
 
@@ -93,7 +96,7 @@ Note: You can explore the full source for the realm component at
    echo realm, server, and client:
 
     ```posix-terminal
-    fx set core.qemu-x64 --with //examples/fidl/cpp/async_completer:echo-cpp-wire-async
+    fx set core.qemu-x64 --with //examples/fidl/cpp/server_async_completer:echo-cpp-async
     ```
 
 1. Build the Fuchsia image:
@@ -106,7 +109,7 @@ Note: You can explore the full source for the realm component at
    instances and routes the capabilities:
 
     ```posix-terminal
-    ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-wire-async#meta/echo_realm.cm
+    ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-async#meta/echo_realm.cm
     ```
 
 1. Start the `echo_client` instance:
@@ -117,19 +120,23 @@ Note: You can explore the full source for the realm component at
 
 The server component starts when the client attempts to connect to the `Echo`
 protocol. You should see output similar to the following in the device logs
-(`ffx log`):
+(`ffx log`). The leftmost column is the timestamp:
 
 ```none {:.devsite-disable-click-to-copy}
-[echo_server][][I] Running echo server
-[echo_server][][I] echo_server_llcpp: Incoming connection for fuchsia.examples.Echo
-...
-[echo_client][][I] Got response after 5 seconds
-[echo_client][][I] Got response after 5 seconds
-[echo_client][][I] Got response after 5 seconds
+[21611.962][echo_server][I] Running C++ echo server with natural types
+[21611.965][echo_server][I] Incoming connection for fuchsia.examples.Echo
+[21612.998][echo_client][I] (Natural types) got response: hello
+[21613.999][echo_client][I] (Natural types) got response: hello
+[21614.000][echo_client][I] (Natural types) got event: hello
+[21615.002][echo_client][I] (Wire types) got response: hello
+[21615.003][echo_client][I] (Natural types) got event: hello
+[21615.003][echo_server][I] Client disconnected
 ```
 
-By using the async completer, the client receives all 3 responses after 5 seconds,
-rather than individually at 5 second intervals.
+Note that it takes about one second between
+`Incoming connection for fuchsia.examples.Echo` and
+`(Natural types) got response: hello`, because the server is programmed to
+asynchronously delay the response by one second.
 
 Terminate the realm component to stop execution and clean up the component
 instances:
@@ -139,9 +146,8 @@ ffx component destroy /core/ffx-laboratory:echo_realm
 ```
 
 <!-- xrefs -->
-[src]: /examples/fidl/cpp/async_completer
+[src]: /examples/fidl/cpp/server_async_completer
 [server-tut]: /docs/development/languages/fidl/tutorials/cpp/basics/server.md
-[client-tut]: /docs/development/languages/fidl/tutorials/cpp/basics/client.md
 [overview]: /docs/development/languages/fidl/tutorials/cpp/README.md
-[bindings-ref]: /docs/reference/fidl/bindings/cpp-bindings.md#server-completers
-[memory-management]: /docs/development/languages/fidl/tutorials/cpp/topics/wire-memory-ownership.md
+[memory-ownership]: /docs/development/languages/fidl/tutorials/cpp/topics/wire-memory-ownership.md
+[wire-types]: /docs/development/languages/fidl/tutorials/cpp/basics/domain-objects.md#using-wire
