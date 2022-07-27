@@ -86,8 +86,15 @@ class TargetServer : public fidl::serversuite::Target {
     callback(zx::event(handle.release()));
   }
 
+  void CloseWithEpitaph(int32_t epitaph_status) override {
+    ZX_ASSERT(ZX_OK == binding_->Close(epitaph_status));
+  }
+
+  void set_binding(fidl::Binding<fidl::serversuite::Target>* binding) { binding_ = binding; }
+
  private:
   fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
+  fidl::Binding<fidl::serversuite::Target>* binding_ = nullptr;
 };
 
 class RunnerServer : public fidl::serversuite::Runner {
@@ -112,6 +119,7 @@ class RunnerServer : public fidl::serversuite::Runner {
     target_server_ = std::make_unique<TargetServer>(reporter.Bind());
     target_binding_ =
         std::make_unique<fidl::Binding<fidl::serversuite::Target>>(target_server_.get());
+    target_server_->set_binding(target_binding_.get());
 
     zx::channel client_end, server_end;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &client_end, &server_end));

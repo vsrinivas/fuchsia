@@ -21,6 +21,7 @@ import (
 
 type targetImpl struct {
 	reporter serversuite.ReporterWithCtxInterface
+	channel  zx.Channel
 }
 
 var _ serversuite.TargetWithCtx = (*targetImpl)(nil)
@@ -89,6 +90,10 @@ func (t *targetImpl) EchoAsTransferableSignalableEvent(_ fidl.Context, handle zx
 	return zx.Event(handle), nil
 }
 
+func (t *targetImpl) CloseWithEpitaph(_ fidl.Context, status int32) error {
+	panic("unimplemented")
+}
+
 type runnerImpl struct{}
 
 var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
@@ -107,6 +112,8 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 		case serversuite.TestBadAtRestFlagsCausesClose:
 			return false
 		case serversuite.TestBadDynamicFlagsCausesClose:
+			return false
+		case serversuite.TestServerSendsEpitaph:
 			return false
 		default:
 			return true
@@ -128,6 +135,7 @@ func (*runnerImpl) Start(
 		stub := serversuite.TargetWithCtxStub{
 			Impl: &targetImpl{
 				reporter: reporter,
+				channel:  serverEnd,
 			},
 		}
 		component.Serve(context.Background(), &stub, serverEnd, component.ServeOptions{

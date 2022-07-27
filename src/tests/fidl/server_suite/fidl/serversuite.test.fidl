@@ -81,6 +81,10 @@ protocol Target {
         // The response handle should be the same as the request handle.
         handle zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
     });
+
+    CloseWithEpitaph(struct {
+        epitaph_status int32;
+    });
 };
 
 // The Reporter sends results of the test to the test harness.
@@ -118,4 +122,8 @@ type Test = flexible enum : uint32 {
     SERVER_SENDS_WRONG_HANDLE_TYPE = 4005;
     SERVER_SENDS_TOO_MANY_RIGHTS = 4006;
     SERVER_SENDS_TOO_FEW_RIGHTS = 4007;
+
+    // epitaph_tests.cc
+    SERVER_SENDS_EPITAPH = 5001;
+    SERVER_RECEIVES_EPITAPH_INVALID = 5002;
 };

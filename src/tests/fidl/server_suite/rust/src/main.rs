@@ -4,8 +4,8 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{create_endpoints, ServerEnd},
-    fidl::AsHandleRef,
+    fidl::endpoints::{create_endpoints, ControlHandle, ServerEnd},
+    fidl::{AsHandleRef, Status},
     fidl_fidl_serversuite::{
         ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
         TargetTwoWayResultRequest, TargetTwoWayTablePayloadResponse,
@@ -87,6 +87,9 @@ async fn run_target_server(
                 }
                 TargetRequest::EchoAsTransferableSignalableEvent { handle, responder } => {
                     responder.send(fidl::Event::from(handle)).expect("failed to send response");
+                }
+                TargetRequest::CloseWithEpitaph { epitaph_status, control_handle } => {
+                    control_handle.shutdown_with_epitaph(Status::from_raw(epitaph_status));
                 }
             }
             Ok(())

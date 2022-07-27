@@ -43,6 +43,9 @@ SERVER_TEST(BadMagicNumberCausesClose) {
       .magic_number = 0xff,  // Chosen to be invalid
       .ordinal = kOrdinalTwoWayNoPayload,
   })));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_PEER_CLOSED));
+  ASSERT_FALSE(client_end().is_signal_present(ZX_CHANNEL_READABLE));
 }
 
 // Check that the server closes the channel when unknown at rest flags are received.

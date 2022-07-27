@@ -29,6 +29,9 @@ static const uint64_t kOrdinalTwoWayResult = 4276344194462732275lu;
 static const uint64_t kOrdinalGetHandleRights = 3148800032398744921lu;
 static const uint64_t kOrdinalGetSignalableEventRights = 3631219818281166758lu;
 static const uint64_t kOrdinalEchoAsTransferableSignalableEvent = 4125688742220565241lu;
+static const uint64_t kOrdinalCloseWithEpitaph = 1984795898489927722lu;
+
+static const uint64_t kOrdinalEpitaph = 0xffffffffffffffffu;
 
 }  // namespace server_suite
 

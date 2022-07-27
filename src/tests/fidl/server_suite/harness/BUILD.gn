@@ -13,6 +13,7 @@ executable("bin") {
     "bytes.h",
     "channel.h",
     "coding_tests.cc",
+    "epitaph_tests.cc",
     "handle_rights_tests.cc",
     "harness.cc",
     "harness.h",

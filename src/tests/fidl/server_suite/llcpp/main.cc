@@ -85,6 +85,11 @@ class TargetServer : public fidl::WireServer<fidl_serversuite::Target> {
     completer.Reply(zx::event(request->handle.release()));
   }
 
+  void CloseWithEpitaph(CloseWithEpitaphRequestView request,
+                        CloseWithEpitaphCompleter::Sync& completer) override {
+    completer.Close(request->epitaph_status);
+  }
+
  private:
   fidl::WireSyncClient<fidl_serversuite::Reporter> reporter_;
 };
