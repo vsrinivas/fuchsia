@@ -10,4 +10,8 @@ accept fuchsia.acpi.hid {
 	"GGL0001",
 }
 
-fuchsia.BIND_COMPOSITE == 1;
+if fuchsia.BIND_COMPOSITE == 1 {
+	true;
+} else {
+	fuchsia.driver.framework.dfv2 == true;
+}

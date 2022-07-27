@@ -8,15 +8,12 @@ using fuchsia.pci;
 
 primary node "a" {
     fuchsia.BIND_PCI_VID == 1;
-    fuchsia.BIND_PCI_DID == 0;
 }
 
 node "b" {
     fuchsia.BIND_PCI_VID == 2;
-    fuchsia.BIND_PCI_DID == 0;
 }
 
 node "c" {
     fuchsia.BIND_PCI_VID == 3;
-    fuchsia.BIND_PCI_DID == 0;
 }

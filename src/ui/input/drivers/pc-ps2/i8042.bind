@@ -5,9 +5,17 @@
 using fuchsia.acpi;
 using fuchsia.driver.framework;
 
-fuchsia.BIND_COMPOSITE == 1;
-if fuchsia.acpi.hid == "PNP0303" {
-    true;
+if fuchsia.driver.framework.dfv2 == true {
+    if fuchsia.acpi.hid == "PNP0303" {
+        true;
+    } else {
+        fuchsia.acpi.first_cid == "PNP0303";
+    }
 } else {
-    fuchsia.acpi.first_cid == "PNP0303";
+    fuchsia.BIND_COMPOSITE == 1;
+        if fuchsia.acpi.hid == "PNP0303" {
+            true;
+        } else {
+            fuchsia.acpi.first_cid == "PNP0303";
+        }
 }

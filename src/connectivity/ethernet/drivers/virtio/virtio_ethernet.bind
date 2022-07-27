@@ -11,4 +11,9 @@ accept fuchsia.BIND_PCI_DID {
   fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_NETWORK,
   fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_NETWORK,
 }
-fuchsia.BIND_COMPOSITE == 1;
+
+if fuchsia.driver.framework.dfv2 == true {
+  true;
+} else {
+  fuchsia.BIND_COMPOSITE == 1;
+}

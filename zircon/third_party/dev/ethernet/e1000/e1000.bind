@@ -170,4 +170,8 @@ accept fuchsia.BIND_PCI_DID {
   fuchsia.intel.e1000.BIND_PCI_DID.E1000_DH89XXCC_BACKPLANE,
   fuchsia.intel.e1000.BIND_PCI_DID.E1000_DH89XXCC_SFP,
 }
-fuchsia.BIND_COMPOSITE == 1;
+if fuchsia.BIND_COMPOSITE == 1 {
+  true;
+} else {
+  fuchsia.driver.framework.dfv2 == true;
+}

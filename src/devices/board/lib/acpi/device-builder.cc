@@ -356,16 +356,20 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
 
   zx_status_t status = ZX_OK;
 #if !defined(IS_TEST)
-  // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
-  auto composite_name = fbl::StringPrintf("%s-composite", name());
-  // Don't worry about any metadata, since it's present in the "acpi" parent.
-  DeviceArgs args(parent_->zx_device_, manager, handle_);
-  auto composite_device = std::make_unique<Device>(args);
-  status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
+  bool is_dfv2 = device_is_dfv2(parent_->zx_device_);
+  // TODO(fxbug.dev/93333): For DFv2, we don't add composite device fragments yet.
+  if (!is_dfv2) {
+    // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
+    auto composite_name = fbl::StringPrintf("%s-composite", name());
+    // Don't worry about any metadata, since it's present in the "acpi" parent.
+    DeviceArgs args(parent_->zx_device_, manager, handle_);
+    auto composite_device = std::make_unique<Device>(args);
+    status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
-  if (status == ZX_OK) {
-    // The DDK takes ownership of the device, but only if DdkAddComposite succeeded.
-    __UNUSED auto unused = composite_device.release();
+    if (status == ZX_OK) {
+      // The DDK takes ownership of the device, but only if DdkAddComposite succeeded.
+      __UNUSED auto unused = composite_device.release();
+    }
   }
 #endif
 

@@ -22,8 +22,6 @@ group("tests") {
 source_set("lib") {
   sources = [
     "api.cc",
-    "composite.cc",
-    "composite.h",
     "devfs_vnode.cc",
     "devfs_vnode.h",
     "device.cc",
@@ -40,7 +38,6 @@ source_set("lib") {
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.composite:fuchsia.device.composite_llcpp",
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",

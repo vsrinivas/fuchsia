@@ -71,7 +71,6 @@ class Device : public std::enable_shared_from_this<Device> {
   void InitReply(zx_status_t status);
   zx_status_t ConnectFragmentFidl(const char* fragment_name, const char* protocol_name,
                                   zx::channel request);
-  zx_status_t AddComposite(const char* name, const composite_device_desc_t* composite);
 
   // TODO(fxbug.dev/33822): Remove these when R/W are removed.
   zx_status_t ReadOp(void* data, size_t len, size_t off, size_t* out_actual);

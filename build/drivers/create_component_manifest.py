@@ -112,9 +112,6 @@ def main():
             }, {
                 'service': "fuchsia.driver.compat.Service"
             }, {
-                'protocol':
-                    "fuchsia.device.composite.DeprecatedCompositeCreator"
-            }, {
                 'protocol': "fuchsia.boot.Items"
             }
         ]

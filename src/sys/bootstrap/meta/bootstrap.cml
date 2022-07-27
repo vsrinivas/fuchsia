@@ -499,10 +499,7 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.device.composite.DeprecatedCompositeCreator",
-                "fuchsia.device.fs.Exporter",
-            ],
+            protocol: [ "fuchsia.device.fs.Exporter" ],
             from: "#driver_manager",
             to: [
                 "#boot-drivers",

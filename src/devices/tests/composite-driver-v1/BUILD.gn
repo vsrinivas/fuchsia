@@ -32,17 +32,12 @@ driver_bind_rules("bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
-driver_bind_rules("composite_device_bind") {
-  rules = "composite_device.bind"
-  bind_output = "composite_device.bindbc"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
-}
-
 fuchsia_driver("driver") {
   testonly = true
   output_name = "composite-driver-v1"
   sources = [ "composite_driver_v1.cc" ]
   deps = [
+    ":bind",
     ":fuchsia.composite.test_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
@@ -55,19 +50,7 @@ fuchsia_driver("driver") {
 fuchsia_driver_component("component") {
   testonly = true
   component_name = "composite-driver-v1"
-  deps = [
-    ":bind",
-    ":driver",
-  ]
-  info = "component-info.json"
-}
-
-fuchsia_driver_component("composite-device-component") {
-  testonly = true
-  deps = [
-    ":composite_device_bind",
-    ":driver",
-  ]
+  deps = [ ":driver" ]
   info = "component-info.json"
 }
 
@@ -91,7 +74,6 @@ fuchsia_unittest_package("pkg") {
   package_name = "composite-driver-v1-test"
   deps = [
     ":component",
-    ":composite-device-component",
     ":composite-driver-v1-test",
     "test-root:component",
     "//src/devices/internal/drivers/fragment",
