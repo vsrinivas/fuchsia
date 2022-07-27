@@ -11,9 +11,6 @@ sdk_component_manifests("syslog") {
   manifests = [
     "client.shard.cml",
     "client.shard.cmx",
-
-    # TODO(https://fxbug.dev/103974) delete this shard
-    "elf_stdio.shard.cml",
   ]
   category = "partner"
 }
