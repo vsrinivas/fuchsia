@@ -7,39 +7,45 @@ import("//build/components.gni")
 
 # [END imports]
 
-# Declare an executable for the server. This produces a binary with the
-# specified output name that can run on Fuchsia.
 # [START bin]
 executable("bin") {
   output_name = "fidl_echo_cpp_server"
   sources = [ "main.cc" ]
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-    "//sdk/lib/sys/component/cpp",
+
+    # This library is used to log messages.
     "//sdk/lib/syslog/cpp",
+
+    # This library is used to publish capabilities, e.g. protocols,
+    # to the component's outgoing directory.
+    "//sdk/lib/sys/component/cpp",
+
+    # This library provides an the asynchronous event loop implementation.
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
 # [END bin]
 
-# [START rest]
-# Declare a component for the server, which consists of the manifest and the
-# binary that the component will run.
+# [START component]
 fuchsia_component("echo-server") {
   component_name = "echo_server"
   manifest = "meta/server.cml"
   deps = [ ":bin" ]
 }
 
-# Declare a package that contains a single component, our server.
+# [END component]
+
+# [START package]
 fuchsia_package("echo-cpp-server") {
   package_name = "echo-cpp-server"
   deps = [ ":echo-server" ]
 }
 
+# [END package]
+
 group("server") {
   testonly = true
   deps = [ ":echo-cpp-server" ]
 }
-# [END rest]
