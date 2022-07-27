@@ -245,8 +245,6 @@ impl CreationManifest {
 // It's possible for the same host file to be discovered through multiple paths. This is allowed as
 // long as the files have the same file contents.
 fn same_file_contents(lhs: &Path, rhs: &Path) -> io::Result<bool> {
-    println!("same_file_contents: {} ? {}", lhs.display(), rhs.display());
-
     // First, check if the two paths are the same.
     if lhs == rhs {
         return Ok(true);
@@ -270,7 +268,6 @@ fn same_file_contents(lhs: &Path, rhs: &Path) -> io::Result<bool> {
     }
 
     if same_dev_inode(lhs, rhs)? {
-        println!("same inode");
         return Ok(true);
     }
 
@@ -279,20 +276,14 @@ fn same_file_contents(lhs: &Path, rhs: &Path) -> io::Result<bool> {
     let rhs = fs::canonicalize(rhs)?;
 
     if lhs == rhs {
-        println!("same absolute path");
         return Ok(true);
     }
-
-    println!("reading files");
-    println!("lhs {:?}", fs::read_to_string(&lhs).unwrap());
-    println!("rhs {:?}", fs::read_to_string(&rhs).unwrap());
 
     // Next, see if the files have different lengths.
     let lhs = fs::File::open(lhs)?;
     let rhs = fs::File::open(rhs)?;
 
     if lhs.metadata()?.len() != rhs.metadata()?.len() {
-        println!("diff length {:?} {:?}", lhs.metadata()?.len(), rhs.metadata()?.len());
         return Ok(false);
     }
 
