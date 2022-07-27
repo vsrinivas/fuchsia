@@ -12,6 +12,7 @@ use {
     },
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_stash::StoreMarker,
+    fidl_fuchsia_sys2 as fsys2,
     fidl_fuchsia_tracing_provider::RegistryMarker,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
@@ -30,6 +31,8 @@ const ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID: &str =
 
 const ACCOUNT_MANAGER_URL: &'static str = "#meta/account_manager.cm";
 const STASH_URL: &'static str = "#meta/stash.cm";
+
+const ACCOUNT_MANAGER_COMPONENT_NAME: &'static str = "account_manager";
 
 /// Maximum time between a lock request and when the account is locked
 const LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_seconds(5);
@@ -66,6 +69,24 @@ async fn get_account(
         .await
 }
 
+/// Utility function to stop a component using LifecycleController.
+async fn stop_component(realm_ref: &RealmInstance, child_name: &str) {
+    let lifecycle = realm_ref
+        .root
+        .connect_to_protocol_at_exposed_dir::<fsys2::LifecycleControllerMarker>()
+        .expect("Failed to connect to LifecycleController");
+    lifecycle.stop(&format!("./{}", child_name), true).await.unwrap().unwrap();
+}
+
+/// Utility function to start a component using LifecycleController.
+async fn start_component(realm_ref: &RealmInstance, child_name: &str) {
+    let lifecycle = realm_ref
+        .root
+        .connect_to_protocol_at_exposed_dir::<fsys2::LifecycleControllerMarker>()
+        .expect("Failed to connect to LifecycleController");
+    lifecycle.start(&format!("./{}", child_name)).await.unwrap().unwrap();
+}
+
 /// A proxy to an account manager running in a nested environment.
 struct NestedAccountManagerProxy {
     /// Proxy to account manager.
@@ -81,6 +102,21 @@ impl Deref for NestedAccountManagerProxy {
 
     fn deref(&self) -> &AccountManagerProxy {
         &self.account_manager_proxy
+    }
+}
+
+impl NestedAccountManagerProxy {
+    /// Stop and start the account_manager component and re-initialize
+    /// the nested account_manager_proxy.
+    pub async fn restart(&mut self) -> Result<(), Error> {
+        stop_component(&self._realm_instance, ACCOUNT_MANAGER_COMPONENT_NAME).await;
+        start_component(&self._realm_instance, ACCOUNT_MANAGER_COMPONENT_NAME).await;
+
+        self.account_manager_proxy = self
+            ._realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()?;
+        Ok(())
     }
 }
 
@@ -145,15 +181,11 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
         .await?;
     builder
         .add_route(
-            Route::new().capability(Capability::storage("data")).from(Ref::parent()).to(&stash),
-        )
-        .await?;
-    builder
-        .add_route(
             Route::new()
                 .capability(Capability::storage("data"))
                 .from(Ref::parent())
-                .to(&account_manager),
+                .to(&account_manager)
+                .to(&stash),
         )
         .await?;
     builder
@@ -169,6 +201,14 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
             Route::new()
                 .capability(Capability::protocol::<AccountManagerMarker>())
                 .from(&account_manager)
+                .to(Ref::parent()),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fsys2::LifecycleControllerMarker>())
+                .from(Ref::framework())
                 .to(Ref::parent()),
         )
         .await?;
@@ -253,9 +293,9 @@ async fn test_provision_then_lock_then_unlock_account() -> Result<(), Error> {
     Ok(())
 }
 
-// TODO(fxbug.dev/103639): Enable these tests after account manager migrates to CFv2
-async fn _test_unlock_account() -> Result<(), Error> {
-    let account_manager = create_account_manager().await?;
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_unlock_account() -> Result<(), Error> {
+    let mut account_manager = create_account_manager().await?;
 
     // Provision account with an auth mechanism that passes authentication
     let account_id = provision_new_account(
@@ -266,8 +306,7 @@ async fn _test_unlock_account() -> Result<(), Error> {
     .await?;
 
     // Restart the account manager, now the account should be locked
-    std::mem::drop(account_manager);
-    let account_manager = create_account_manager().await?;
+    account_manager.restart().await?;
 
     // Unlock the account and acquire a channel to it
     let (account_client_end, account_server_end) = create_endpoints()?;
@@ -304,9 +343,9 @@ async fn test_provision_then_lock_then_unlock_fail_authentication() -> Result<()
     Ok(())
 }
 
-// TODO(fxbug.dev/103639): Enable these tests after account manager migrates to CFv2
-async fn _test_unlock_account_fail_authentication() -> Result<(), Error> {
-    let account_manager = create_account_manager().await?;
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_unlock_account_fail_authentication() -> Result<(), Error> {
+    let mut account_manager = create_account_manager().await?;
 
     // Provision account with an auth mechanism that fails authentication
     let account_id = provision_new_account(
@@ -317,8 +356,7 @@ async fn _test_unlock_account_fail_authentication() -> Result<(), Error> {
     .await?;
 
     // Restart the account manager, now the account should be locked
-    std::mem::drop(account_manager);
-    let account_manager = create_account_manager().await?;
+    account_manager.restart().await?;
 
     // Attempting to unlock the account fails with an authentication error
     let (_, account_server_end) = create_endpoints()?;
@@ -397,9 +435,9 @@ async fn test_account_deletion() -> Result<(), Error> {
 /// Ensure that an account manager created in a specific environment picks up the state of
 /// previous instances that ran in that environment. Also check that some basic operations work on
 /// accounts created in that previous lifetime.
-// TODO(fxbug.dev/103639): Enable these tests after account manager migrates to CFv2
-async fn _test_lifecycle() -> Result<(), Error> {
-    let account_manager = create_account_manager().await?;
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_lifecycle() -> Result<(), Error> {
+    let mut account_manager = create_account_manager().await?;
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
@@ -410,9 +448,8 @@ async fn _test_lifecycle() -> Result<(), Error> {
     let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 3);
 
-    // Kill and restart account manager in the same environment
-    std::mem::drop(account_manager);
-    let account_manager = create_account_manager().await?;
+    // Restart account manager
+    account_manager.restart().await?;
 
     let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 2); // The ephemeral account was dropped

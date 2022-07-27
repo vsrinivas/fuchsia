@@ -10,6 +10,12 @@
     program: {
         binary: "bin/account_manager_integration_test",
     },
+    use: [
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
+            from: "framework",
+        },
+    ],
     offer: [
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],

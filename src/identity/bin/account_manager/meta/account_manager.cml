@@ -14,6 +14,7 @@
         {
             name: "account_handlers",
             durability: "transient",
+            persistent_storage: true,
         },
     ],
     capabilities: [
