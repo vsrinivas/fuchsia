@@ -45,6 +45,7 @@ pub struct ResponseAndMetadata {
     pub check_assertion: UpdateCheckAssertion,
     pub version: String,
     pub cohort_assertion: Option<String>,
+    pub codebase: String,
 }
 
 impl Default for ResponseAndMetadata {
@@ -58,6 +59,7 @@ impl Default for ResponseAndMetadata {
             check_assertion: UpdateCheckAssertion::UpdatesEnabled,
             version: "0.1.2.3".to_string(),
             cohort_assertion: None,
+            codebase: "fuchsia-pkg://integration.test.fuchsia.com/".to_string(),
         }
     }
 }
@@ -264,7 +266,7 @@ pub async fn handle_omaha_request(
                         "urls": {
                             "url": [
                                 {
-                                    "codebase": "fuchsia-pkg://integration.test.fuchsia.com/"
+                                    "codebase": expected.codebase,
                                 }
                             ]
                         },
