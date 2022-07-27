@@ -15,8 +15,23 @@ group("fuchsia-component-test") {
   public_deps = [ ":fuchsia-component-test-lib" ]
 }
 
+group("prod-fuchsia-component-test") {
+  deps = [
+    ":includes",
+    "realm_builder_server:realm_builder_server_component",
+  ]
+  public_deps = [ ":fuchsia-component-test-lib" ]
+  visibility = [
+    # fxbug.dev/104520 V2 Factory Runin needs RealmBuilder.
+    # Factory Runin is a non-test component that runs on
+    # userfacing builds to validate hardware. It does this
+    # by executing profiles of "plugin" components which
+    # are responsible for interacting with real hardware.
+    "//vendor/google/bin/factory:*",
+  ]
+}
+
 rustc_library("fuchsia-component-test-lib") {
-  testonly = true
   name = "fuchsia_component_test"
   with_unit_tests = true
   edition = "2021"
