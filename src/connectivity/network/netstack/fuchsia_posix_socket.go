@@ -2004,6 +2004,9 @@ func (s *datagramSocketImpl) loopRead(ch chan<- struct{}) {
 		case nil:
 		case *tcpip.ErrBadBuffer:
 			panic(fmt.Sprintf("unexpected short read from UDP endpoint"))
+		case *tcpip.ErrConnectionRefused:
+			// TODO(https://fxbug.dev/104640): Propagate ErrConnectionRefused to client.
+			_ = syslog.Warnf("UDP Endpoint.Read(): %s", err)
 		default:
 			if s.handleEndpointReadError(err, inCh, udp.ProtocolNumber) {
 				return
