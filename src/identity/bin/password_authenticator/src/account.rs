@@ -110,11 +110,7 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
                 Ok(())
             }
             State::Unlocked { encrypted_block, minfs, .. } => {
-                // Priority #1 is to seal the encrypted block.
-                // Tolerate any failures in shutting down minfs, but log them.
-                if let Err(err) = minfs.shutdown().await {
-                    warn!("failed to shutdown minfs cleanly: {}", err);
-                }
+                minfs.shutdown().await;
                 let seal_fut = encrypted_block.seal();
                 match seal_fut.await {
                     Ok(()) => Ok(()),

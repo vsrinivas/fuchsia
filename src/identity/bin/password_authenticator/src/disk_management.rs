@@ -59,8 +59,6 @@ pub enum DiskError {
     MinfsFormatError(#[source] anyhow::Error),
     #[error("Failed to serve minfs: {0}")]
     MinfsServeError(#[source] anyhow::Error),
-    #[error("Failed to shutdown minfs: {0}")]
-    MinfsShutdownError(#[from] fs::ShutdownError),
     #[error("Failed to kill the minfs process: {0}")]
     MinfsKillError(#[from] fs::KillError),
 }
@@ -250,7 +248,7 @@ pub trait Minfs: Send + 'static {
     fn root_dir(&self) -> &fio::DirectoryProxy;
 
     /// Shutdown the serving minfs instance.
-    async fn shutdown(self) -> Result<(), DiskError>;
+    async fn shutdown(self);
 }
 
 /// The production implementation of [`DiskManager`].
@@ -477,15 +475,9 @@ impl Minfs for DevMinfs {
         self.serving_fs.root()
     }
 
-    // TODO(fxbug.dev/101442): This can't fail in any way that the caller can recover from so we
-    // should probably change the return value.
-    async fn shutdown(self) -> Result<(), DiskError> {
-        match self.serving_fs.shutdown().await {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                error!("failed to shutdown minfs: {}", err);
-                Ok(())
-            }
+    async fn shutdown(self) {
+        if let Err(err) = self.serving_fs.shutdown().await {
+            error!("failed to shutdown minfs: {}", err);
         }
     }
 }
@@ -516,9 +508,7 @@ impl Minfs for MockMinfs {
         &self.0
     }
 
-    async fn shutdown(self) -> Result<(), DiskError> {
-        Ok(())
-    }
+    async fn shutdown(self) {}
 }
 
 #[cfg(test)]
