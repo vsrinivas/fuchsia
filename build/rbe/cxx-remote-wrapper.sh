@@ -289,8 +289,10 @@ cleanup_files+=( "$inputs_file_list" )
 # Outputs need to be adjusted relative to the exec_root.
 # rewrapper already knows:
 #   -o is followed by an output file.
+#      We declare this output explicitly in first position, so
+#      fuchsia-rbe-action.sh can write to a unique stderr file more easily.
 #   -MF is followed by a depfile (an output).
-remote_outputs=()
+extra_outputs=( "$output" "${extra_outputs[@]}" )
 remote_outputs_joined=
 test "${#extra_outputs[@]}" = 0 || {
   _remote_outputs_comma="$(printf "${build_subdir}/%s," "${extra_outputs[@]}")"

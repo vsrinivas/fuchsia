@@ -786,7 +786,6 @@ relative_outputs=( "$output" )
 test -z "$depfile" || relative_outputs+=( "$depfile" )
 relative_outputs+=( "${extra_outputs[@]}" )
 
-remote_outputs=()
 remote_outputs_joined=
 test "${#relative_outputs[@]}" = 0 || {
   _remote_outputs_comma="$(printf "${build_subdir}/%s," "${relative_outputs[@]}")"
@@ -798,7 +797,7 @@ dump_vars() {
   debug_var "clang dir" "${clang_dir[@]}"
   debug_var "target triple" "$target_triple"
   debug_var "clang lib triple" "$clang_lib_triple"
-  debug_var "outputs" "${remote_outputs[@]}"
+  debug_var "outputs" "${relative_outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
   debug_var "rust stdlibs" "${extra_rust_stdlibs[@]}"
