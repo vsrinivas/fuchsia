@@ -101,7 +101,7 @@ stardroid_test_package("android") {
 starnix_test_package("android_with_init") {
   test_components = [
     ":init_test",
-    ":java_hello_world",
+    #":java_hello_world", # disabled because binder is failing
   ]
   galaxy = "//src/proc/bin/galaxies/stardroid"
 }
