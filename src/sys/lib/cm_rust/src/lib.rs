@@ -935,6 +935,7 @@ pub struct EnvironmentDecl {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_table = "fdecl::ConfigSchema")]
 pub struct ConfigDecl {
     pub fields: Vec<ConfigField>,
@@ -943,18 +944,21 @@ pub struct ConfigDecl {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_union = "fdecl::ConfigChecksum")]
 pub enum ConfigChecksum {
     Sha256([u8; 32]),
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_union = "fdecl::ConfigValueSource")]
 pub enum ConfigValueSource {
     PackagePath(String),
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_table = "fdecl::ConfigField")]
 pub struct ConfigField {
     pub key: String,
@@ -1124,6 +1128,7 @@ impl NativeIntoFidl<fdecl::ConfigType> for ConfigValueType {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_table = "fconfig::ValuesData")]
 pub struct ValuesData {
     pub values: Vec<ValueSpec>,
@@ -1131,12 +1136,14 @@ pub struct ValuesData {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_table = "fconfig::ValueSpec")]
 pub struct ValueSpec {
     pub value: Value,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_union = "fconfig::Value")]
 pub enum Value {
     Single(SingleValue),
@@ -1153,6 +1160,7 @@ impl fmt::Display for Value {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_union = "fconfig::SingleValue")]
 pub enum SingleValue {
     Bool(bool),
@@ -1186,6 +1194,7 @@ impl fmt::Display for SingleValue {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[fidl_decl(fidl_union = "fconfig::VectorValue")]
 pub enum VectorValue {
     BoolVector(Vec<bool>),
