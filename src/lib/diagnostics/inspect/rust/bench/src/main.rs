@@ -6,24 +6,18 @@ use {
     anyhow::Error,
     argh::{FromArgValue, FromArgs},
     bench_utils::{generate_selectors_till_level, parse_selectors, InspectHierarchyGenerator},
-    fidl,
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fuchsia_inspect::{
-        hierarchy::filter_hierarchy,
-        reader::snapshot::{Snapshot, SnapshotTree},
-        reader::ReadableTree,
-        testing::DiagnosticsHierarchyGetter,
+        hierarchy::filter_hierarchy, reader::ReadableTree, testing::DiagnosticsHierarchyGetter,
         ArithmeticArrayProperty, ArrayProperty, ExponentialHistogramParams, Heap,
         HistogramProperty, Inspector, LinearHistogramParams, Node, NumericProperty, Property,
     },
     fuchsia_trace as ftrace,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
-    futures::FutureExt,
     inspect_runtime::service::{spawn_tree_server, TreeServerSettings},
     lazy_static::lazy_static,
     mapped_vmo::Mapping,
     num::{pow, traits::FromPrimitive, One},
-    parking_lot::Mutex,
     paste,
     rand::{rngs::StdRng, SeedableRng},
     std::{
@@ -46,12 +40,11 @@ struct Args {
     #[argh(option, description = "number of iterations", short = 'i', default = "500")]
     iterations: usize,
 
-    #[argh(option, description = "which benchmark to run (writer, reader, selector)")]
+    #[argh(option, description = "which benchmark to run (writer, selector)")]
     benchmark: BenchmarkOption,
 }
 
 enum BenchmarkOption {
-    Reader,
     Writer,
     Selector,
 }
@@ -59,7 +52,6 @@ enum BenchmarkOption {
 impl FromArgValue for BenchmarkOption {
     fn from_arg_value(value: &str) -> Result<Self, String> {
         match value {
-            "reader" => Ok(BenchmarkOption::Reader),
             "writer" => Ok(BenchmarkOption::Writer),
             "selector" => Ok(BenchmarkOption::Selector),
             _ => Err(format!("Unknown benchmark \"{}\"", value)),
@@ -495,300 +487,10 @@ macro_rules! single_iteration_fn {
 
 single_iteration_fn!(array_sizes: [32, 128, 240], property_sizes: [4, 8, 100, 2000, 2048, 10000]);
 
-enum InspectorState {
-    Running,
-    Done,
-}
-
-/// Start a worker thread that will continually update the given inspector at the given rate.
-///
-/// Returns a closure that when called cancels the thread, returning only when the thread has
-/// exited.
-fn start_inspector_update_thread(inspector: Inspector, changes_per_second: usize) -> impl FnOnce() {
-    let state = Arc::new(Mutex::new(InspectorState::Running));
-    let ret_state = state.clone();
-
-    let child = inspector.root().create_child("test");
-    let val = child.create_int("val", 0);
-
-    let thread = std::thread::spawn(move || {
-        ftrace::duration!("benchmark", "Thread operation");
-
-        loop {
-            {
-                ftrace::duration!("benchmark", "Sleep");
-                let sleep_time =
-                    std::time::Duration::from_nanos(1_000_000_000u64 / changes_per_second as u64);
-                std::thread::sleep(sleep_time);
-                match *state.lock() {
-                    InspectorState::Done => {
-                        break;
-                    }
-                    _ => {}
-                }
-            }
-            {
-                ftrace::duration!("benchmark", "Update");
-                val.add(1);
-            }
-        }
-    });
-
-    return move || {
-        {
-            *ret_state.lock() = InspectorState::Done;
-        }
-        thread.join().expect("join thread");
-    };
-}
-
-fn add_lazies(inspector: Inspector, num_nodes: usize) {
-    let node = inspector.root().create_child("node");
-
-    for i in 0..num_nodes {
-        ftrace::duration!("benchmark", "Update");
-        node.record_lazy_child(format!("child-{}", i), move || {
-            let insp = Inspector::new();
-            insp.root().record_int("int", 1);
-            async move { Ok(insp) }.boxed()
-        });
-    }
-}
-
 fn spawn_server(inspector: Inspector) -> Result<TreeProxy, Error> {
     let (tree, request_stream) = fidl::endpoints::create_proxy_and_stream::<TreeMarker>()?;
     spawn_tree_server(inspector, TreeServerSettings::default(), request_stream);
     Ok(tree)
-}
-
-// Generates a function for benchmarking uncontended reads of a TreeProxy.
-macro_rules! reader_tree_uncontended_bench_fn {
-    ($name:ident, $size:expr,  $label:expr) => {
-        async fn $name(iterations: usize) {
-            let inspector = Inspector::new_with_size($size);
-            // inspector clones all refer to same VMO
-            let proxy = spawn_server(inspector.clone()).unwrap();
-
-            for _ in 0..iterations {
-                ftrace::duration!("benchmark", $label);
-
-                loop {
-                    ftrace::duration!("benchmark", "TryFromTreeProxy");
-                    if let Ok(_) = SnapshotTree::try_from(&proxy).await {
-                        break;
-                    }
-                }
-            }
-        }
-    };
-}
-
-// Generates a function for benchmarking contended reads of a TreeProxy.
-macro_rules! reader_tree_bench_fn {
-    ($name:ident, $size:expr, $freq:expr, $label:expr) => {
-        async fn $name(iterations: usize) {
-            let inspector = Inspector::new_with_size($size);
-            // inspector clones all refer to same VMO
-            let proxy = spawn_server(inspector.clone()).unwrap();
-            let done_fn = start_inspector_update_thread(inspector.clone(), $freq);
-            add_lazies(inspector, 4);
-
-            for _ in 0..iterations {
-                ftrace::duration!("benchmark", $label);
-
-                loop {
-                    ftrace::duration!("benchmark", "TryFromTreeProxy");
-                    if let Ok(_) = SnapshotTree::try_from(&proxy).await {
-                        break;
-                    }
-                }
-            }
-
-            done_fn();
-        }
-    };
-}
-
-macro_rules! reader_bench_fn {
-    ($name:ident, $size:expr, $freq:expr, $label:expr) => {
-        fn $name(iterations: usize) {
-            let inspector = Inspector::new_with_size($size);
-            let vmo = inspector.duplicate_vmo().expect("failed to duplicate vmo");
-            let done_fn = start_inspector_update_thread(inspector, $freq);
-
-            for _ in 0..iterations {
-                ftrace::duration!("benchmark", $label);
-
-                loop {
-                    ftrace::duration!("benchmark", "TryOnce");
-                    if let Ok(_) = Snapshot::try_once_from_vmo(&vmo) {
-                        break;
-                    }
-                }
-            }
-
-            done_fn();
-        }
-    };
-}
-
-// Generates a function for benchmarking read of a VMO filled to a specified size.
-macro_rules! reader_tree_filled_vmo_bench_fn {
-    ($name:ident, $size:expr, $fill_until:expr, $label:expr) => {
-        async fn $name(iterations: usize) {
-            let inspector = Inspector::new_with_size($size);
-            // inspector clones all refer to same VMO
-            let proxy = spawn_server(inspector.clone()).unwrap();
-            let mut nodes = vec![];
-            if $fill_until > 0 {
-                let ints_for_filling: i64 = $fill_until / 64;
-                for i in 0..ints_for_filling {
-                    nodes.push(inspector.root().create_int("i", i));
-                }
-            }
-
-            for _ in 0..iterations {
-                ftrace::duration!("benchmark", $label);
-
-                loop {
-                    if let Ok(_) = SnapshotTree::try_from(&proxy).await {
-                        break;
-                    }
-                }
-            }
-        }
-    };
-}
-
-reader_tree_uncontended_bench_fn!(uncontended_snapshot_tree_4k, 4096, "UncontendedSnapshotTree/4K");
-reader_tree_uncontended_bench_fn!(
-    uncontended_snapshot_tree_16k,
-    4096 * 4,
-    "UncontendedSnapshotTree/16K"
-);
-reader_tree_uncontended_bench_fn!(
-    uncontended_snapshot_tree_256k,
-    4096 * 64,
-    "UncontendedSnapshotTree/256K"
-);
-reader_tree_uncontended_bench_fn!(
-    uncontended_snapshot_tree_1m,
-    4096 * 256,
-    "UncontendedSnapshotTree/1M"
-);
-
-reader_tree_bench_fn!(snapshot_tree_4k_1hz, 4096, 1, "SnapshotTree/4K/1hz");
-reader_tree_bench_fn!(snapshot_tree_4k_10hz, 4096, 10, "SnapshotTree/4K/10hz");
-reader_tree_bench_fn!(snapshot_tree_4k_100hz, 4096, 100, "SnapshotTree/4K/100hz");
-reader_tree_bench_fn!(snapshot_tree_4k_1khz, 4096, 1000, "SnapshotTree/4K/1khz");
-reader_tree_bench_fn!(snapshot_tree_4k_10khz, 4096, 10000, "SnapshotTree/4K/10khz");
-reader_tree_bench_fn!(snapshot_tree_4k_100khz, 4096, 100000, "SnapshotTree/4K/100khz");
-reader_tree_bench_fn!(snapshot_tree_4k_1mhz, 4096, 1000000, "SnapshotTree/4K/1mhz");
-reader_tree_bench_fn!(snapshot_tree_16k_1hz, 4096 * 4, 1, "SnapshotTree/16K/1hz");
-reader_tree_bench_fn!(snapshot_tree_16k_10hz, 4096 * 4, 10, "SnapshotTree/16K/10hz");
-reader_tree_bench_fn!(snapshot_tree_16k_100hz, 4096 * 4, 100, "SnapshotTree/16K/100hz");
-reader_tree_bench_fn!(snapshot_tree_16k_1khz, 4096 * 4, 1000, "SnapshotTree/16K/1khz");
-reader_tree_bench_fn!(snapshot_tree_256k_1hz, 4096 * 64, 1, "SnapshotTree/256K/1hz");
-reader_tree_bench_fn!(snapshot_tree_256k_10hz, 4096 * 64, 10, "SnapshotTree/256K/10hz");
-reader_tree_bench_fn!(snapshot_tree_256k_100hz, 4096 * 64, 100, "SnapshotTree/256K/100hz");
-reader_tree_bench_fn!(snapshot_tree_256k_1khz, 4096 * 64, 1000, "SnapshotTree/256K/1khz");
-reader_tree_bench_fn!(snapshot_tree_1m_1hz, 4096 * 256, 1, "SnapshotTree/1M/1hz");
-reader_tree_bench_fn!(snapshot_tree_1m_10hz, 4096 * 256, 10, "SnapshotTree/1M/10hz");
-reader_tree_bench_fn!(snapshot_tree_1m_100hz, 4096 * 256, 100, "SnapshotTree/1M/100hz");
-reader_tree_bench_fn!(snapshot_tree_1m_1khz, 4096 * 256, 1000, "SnapshotTree/1M/1khz");
-
-reader_bench_fn!(bench_4k_1hz, 4096, 1, "Snapshot/4K/1hz");
-reader_bench_fn!(bench_4k_10hz, 4096, 10, "Snapshot/4K/10hz");
-reader_bench_fn!(bench_4k_100hz, 4096, 100, "Snapshot/4K/100hz");
-reader_bench_fn!(bench_4k_1khz, 4096, 1000, "Snapshot/4K/1khz");
-reader_bench_fn!(bench_4k_10khz, 4096, 10000, "Snapshot/4K/10khz");
-reader_bench_fn!(bench_4k_100khz, 4096, 100000, "Snapshot/4K/100khz");
-reader_bench_fn!(bench_4k_1mhz, 4096, 1000000, "Snapshot/4K/1mhz");
-reader_bench_fn!(bench_256k_1hz, 4096 * 64, 1, "Snapshot/256K/1hz");
-reader_bench_fn!(bench_256k_10hz, 4096 * 64, 10, "Snapshot/256K/10hz");
-reader_bench_fn!(bench_256k_100hz, 4096 * 64, 100, "Snapshot/256K/100hz");
-reader_bench_fn!(bench_256k_1khz, 4096 * 64, 1000, "Snapshot/256K/1khz");
-reader_bench_fn!(bench_1m_1hz, 4096 * 256, 1, "Snapshot/1M/1hz");
-reader_bench_fn!(bench_1m_10hz, 4096 * 256, 10, "Snapshot/1M/10hz");
-reader_bench_fn!(bench_1m_100hz, 4096 * 256, 100, "Snapshot/1M/100hz");
-reader_bench_fn!(bench_1m_1khz, 4096 * 256, 1000, "Snapshot/1M/1khz");
-
-reader_tree_filled_vmo_bench_fn!(snapshot_tree_empty_vmo, 4096 * 256, 0, "SnapshotTree/EmptyVMO");
-reader_tree_filled_vmo_bench_fn!(
-    snapshot_tree_quarter_filled_vmo,
-    4096 * 256,
-    4096 * 64,
-    "SnapshotTree/QuarterFilledVMO"
-);
-reader_tree_filled_vmo_bench_fn!(
-    snapshot_tree_half_filled_vmo,
-    4096 * 256,
-    4096 * 128,
-    "SnapshotTree/HalfFilledVMO"
-);
-reader_tree_filled_vmo_bench_fn!(
-    snapshot_tree_three_quarter_filled_vmo,
-    4096 * 256,
-    4096 * 192,
-    "SnapshotTree/ThreeQuarterFilledVMO"
-);
-reader_tree_filled_vmo_bench_fn!(
-    snapshot_tree_full_vmo,
-    4096 * 256,
-    4096 * 256,
-    "SnapshotTree/FullVMO"
-);
-
-async fn reader_benchmark(iterations: usize) {
-    // TODO(fxbug.dev/43505): Implement benchmarks where the real size doesn't match the inspector size.
-    // TODO(fxbug.dev/43505): Enforce threads starting before benches run.
-
-    bench_4k_1hz(iterations);
-    bench_4k_10hz(iterations);
-    bench_4k_100hz(iterations);
-    bench_4k_1khz(iterations);
-    bench_4k_10khz(iterations);
-    bench_4k_100khz(iterations);
-    bench_4k_1mhz(iterations);
-    bench_256k_1hz(iterations);
-    bench_256k_10hz(iterations);
-    bench_256k_100hz(iterations);
-    bench_256k_1khz(iterations);
-    bench_1m_1hz(iterations);
-    bench_1m_10hz(iterations);
-    bench_1m_100hz(iterations);
-    bench_1m_1khz(iterations);
-
-    snapshot_tree_4k_1hz(iterations).await;
-    snapshot_tree_4k_10hz(iterations).await;
-    snapshot_tree_4k_100hz(iterations).await;
-    snapshot_tree_4k_1khz(iterations).await;
-    snapshot_tree_4k_10khz(iterations).await;
-    snapshot_tree_4k_100khz(iterations).await;
-    snapshot_tree_4k_1mhz(iterations).await;
-    snapshot_tree_16k_1hz(iterations).await;
-    snapshot_tree_16k_10hz(iterations).await;
-    snapshot_tree_16k_100hz(iterations).await;
-    snapshot_tree_16k_1khz(iterations).await;
-    snapshot_tree_256k_1hz(iterations).await;
-    snapshot_tree_256k_10hz(iterations).await;
-    snapshot_tree_256k_100hz(iterations).await;
-    snapshot_tree_256k_1khz(iterations).await;
-    snapshot_tree_1m_1hz(iterations).await;
-    snapshot_tree_1m_10hz(iterations).await;
-    snapshot_tree_1m_100hz(iterations).await;
-    snapshot_tree_1m_1khz(iterations).await;
-
-    uncontended_snapshot_tree_4k(iterations).await;
-    uncontended_snapshot_tree_16k(iterations).await;
-    uncontended_snapshot_tree_256k(iterations).await;
-    uncontended_snapshot_tree_1m(iterations).await;
-
-    snapshot_tree_empty_vmo(iterations).await;
-    snapshot_tree_quarter_filled_vmo(iterations).await;
-    snapshot_tree_half_filled_vmo(iterations).await;
-    snapshot_tree_three_quarter_filled_vmo(iterations).await;
-    snapshot_tree_full_vmo(iterations).await;
 }
 
 fn writer_benchmark(iterations: usize) {
@@ -806,9 +508,6 @@ async fn main() -> Result<(), Error> {
     match args.benchmark {
         BenchmarkOption::Writer => {
             writer_benchmark(args.iterations);
-        }
-        BenchmarkOption::Reader => {
-            reader_benchmark(args.iterations).await;
         }
         BenchmarkOption::Selector => {
             selector_benchmark(args.iterations);

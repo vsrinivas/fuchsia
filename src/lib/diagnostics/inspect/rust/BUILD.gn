@@ -100,5 +100,5 @@ group("tests") {
 
 group("benchmarks") {
   testonly = true
-  deps = [ "bench:rust-inspect-benchmarks" ]
+  deps = [ "bench" ]
 }

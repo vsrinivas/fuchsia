@@ -1,0 +1,20 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    use: [
+        {
+            storage: "custom_artifacts",
+            path: "/custom_artifacts",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}
