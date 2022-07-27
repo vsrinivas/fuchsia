@@ -187,18 +187,37 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     }
 
     fn validate_network_flags(&self, emu_config: &EmulatorConfiguration) -> Result<()> {
-        if emu_config.host.networking == NetworkingMode::Tap && std::env::consts::OS == "macos" {
-            eprintln!(
-                "Tun/Tap networking mode is not currently supported on MacOS. \
-                You may experience errors with your current configuration."
-            );
-        }
-        if emu_config.host.networking == NetworkingMode::Tap && !tap_available() {
-            eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
-            eprintln!(
-                "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
-            );
-            bail!("Configure Tun/Tap on your host or try --net user.")
+        match emu_config.host.networking {
+            NetworkingMode::None => {
+                // Check for console/monitor.
+                if emu_config.runtime.console == ConsoleType::None {
+                    bail!(
+                        "Running without networking enabled and no interactive console;\n\
+                        there will be no way to communicate with this emulator.\n\
+                        Restart with --console/--monitor or with networking enabled to proceed."
+                    );
+                }
+            }
+            NetworkingMode::Auto => {
+                // Shouldn't be possible to land here.
+                bail!("Networking mode is unresolved after configuration.");
+            }
+            NetworkingMode::Tap => {
+                // MacOS tun/tap is unsupported.
+                if std::env::consts::OS == "macos" {
+                    eprintln!(
+                        "Tun/Tap networking mode is not currently supported on MacOS. \
+                        You may experience errors with your current configuration."
+                    );
+                } else if !tap_available() {
+                    eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
+                    eprintln!(
+                        "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
+                    );
+                    bail!("Configure Tun/Tap on your host or try --net user.")
+                }
+            }
+            NetworkingMode::User => (),
         }
         Ok(())
     }
@@ -486,7 +505,7 @@ mod tests {
     use serde_json::json;
     use tempfile::{tempdir, TempDir};
 
-    #[derive(Serialize)]
+    #[derive(Default, Serialize)]
     struct TestEngine {}
     impl QemuBasedEngine for TestEngine {
         fn set_pid(&mut self, _pid: u32) {}
@@ -751,6 +770,42 @@ mod tests {
 
         assert_eq!(kernel_contents, ORIGINAL);
         assert_eq!(fvm_contents, ORIGINAL);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_net() -> Result<()> {
+        // User mode doesn't have specific requirements, so it should return OK.
+        let engine = TestEngine::default();
+        let mut emu_config = EmulatorConfiguration::default();
+        emu_config.host.networking = NetworkingMode::User;
+        let result = engine.validate_network_flags(&emu_config);
+        assert!(result.is_ok(), "{:?}", result.unwrap_err());
+
+        // No networking returns an error if no console is selected.
+        emu_config.host.networking = NetworkingMode::None;
+        emu_config.runtime.console = ConsoleType::None;
+        let result = engine.validate_network_flags(&emu_config);
+        assert!(result.is_err());
+
+        emu_config.runtime.console = ConsoleType::Console;
+        let result = engine.validate_network_flags(&emu_config);
+        assert!(result.is_ok(), "{:?}", result.unwrap_err());
+
+        emu_config.runtime.console = ConsoleType::Monitor;
+        let result = engine.validate_network_flags(&emu_config);
+        assert!(result.is_ok(), "{:?}", result.unwrap_err());
+
+        // Tap mode errors if host is Linux and there's no interface, but we can't mock the
+        // interface, so we can't test this case yet.
+        emu_config.host.networking = NetworkingMode::Tap;
+
+        // Validation runs after configuration is merged with values from PBMs and runtime, so Auto
+        // values should already be resolved. If not, that's a failure.
+        emu_config.host.networking = NetworkingMode::Auto;
+        let result = engine.validate_network_flags(&emu_config);
+        assert!(result.is_err());
 
         Ok(())
     }
