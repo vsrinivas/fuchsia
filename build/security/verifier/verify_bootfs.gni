@@ -95,10 +95,12 @@ template("verify_bootfs_filelist") {
     ]
 
     if (invoker.golden_packages != []) {
-      args += [
-        "--golden_packages",
-        rebase_path(invoker.golden_packages, root_build_dir),
-      ]
+      foreach(golden_package, invoker.golden_packages) {
+        args += [
+          "--golden-packages",
+          rebase_path(golden_package, root_build_dir),
+        ]
+      }
     }
 
     foreach(golden, invoker.goldens) {

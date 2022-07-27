@@ -128,6 +128,21 @@ declare_args() {
   fuchsia_verify_component_resolvers_allowlist =
       "//src/security/policy/component_resolvers_policy.json5"
 
+  # An optional list of golden files for recovery.zbi bootfs package index. If
+  # specified, they would be compared against recovery.zbi bootfs package index
+  # during build time.  At least one of the golden files must match.
+  # In normal case, there should only be golden file in this list.
+  # During a soft transition where changes are made in a different repo than
+  # the golden file repo, user need to
+  # 1. copy the old golden file before the change to '*.orig'
+  # 2. create a new golden file reflecting the changes
+  # 3. add both the old golden file and new golden file to this list. e.g. there
+  # would be 'product.txt' and 'product.txt.orig' in this list and check in the
+  # above changes.
+  # 4. check in the changes that is made in a different repo.
+  # 5. delete 'product.txt.orig' and remove it from this list.
+  recovery_zbi_bootfs_packages_goldens = []
+
   # An optional list of golden files for recovery.zbi static pkgs list. If
   # specified, they would be compared against recovery.zbi static pkgs list
   # during build time.  At least one of the golden files must match.
