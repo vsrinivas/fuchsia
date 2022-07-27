@@ -8,6 +8,12 @@ import("//build/config.gni")
 group("tests") {
   testonly = true
   deps = [ ":netstack-integration-tests" ]
+
+  if (!is_coverage) {
+    # TODO(fxbug.dev/104137): Re-enable this test when it passes with
+    # the coverage variant.
+    deps += [ ":netstack-long-integration-tests" ]
+  }
 }
 
 tests = [
@@ -21,13 +27,12 @@ tests = [
   "ipv4",
   "ipv6",
   "management",
-
-  # TODO(fxbug.dev/104137): Re-enable this test when it passes consistently.
-  # "multicast-forwarding",
   "reachability",
   "socket",
   "sys",
 ]
+
+long_tests = [ "multicast-forwarding" ]
 
 foreach(test, tests) {
   name = "netstack-${test}-integration-test"
@@ -37,52 +42,75 @@ foreach(test, tests) {
   }
 }
 
+foreach(test, long_tests) {
+  name = "netstack-${test}-integration-test"
+  fuchsia_test_component(name) {
+    manifest = "meta/${name}.cml"
+    deps = [ test ]
+  }
+}
+
+package_deps = [
+  # netemul-sandbox-v2 is used to create hermetic test realms.
+  "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
+
+  # netstack is under test.
+  "//src/connectivity/network/netstack:component",
+  "//src/connectivity/network/netstack:component-debug",
+  "//src/connectivity/network/netstack:component-with-fast-udp-debug",
+
+  # netstack3 is under test.
+  "//src/connectivity/network/netstack3:component",
+
+  # reachability monitor is under test.
+  "//src/connectivity/network/reachability:component",
+
+  # sampler config is tested as part of inspect integration tests.
+  ":sampler-config",
+
+  # stash_secure is used by dhcpd and netstack.
+  "//src/sys/stash:stash_secure_v2",
+
+  # dhcpd is used to test DHCP address acquisition.
+  "//src/connectivity/network/dhcp:component",
+
+  # DHCPv6 client is under test.
+  "//src/connectivity/network/dhcpv6/client:component",
+
+  # dns_resolver integration with netstack is tested.
+  "//src/connectivity/network/dns:component_with_fake_time",
+
+  # the DNS resolver under test uses the fake clock.
+  "//src/lib/fake-clock/svc",
+
+  # netcfg integration with netstack is tested.
+  ":netcfg-netemul-config",
+  ":netcfg-with-dhcpv6-netemul-config",
+  ":netcfg-with-forwarding-netemul-config",
+  "//src/connectivity/network/netcfg:component-advanced",
+  "//src/connectivity/network/netcfg:component-basic",
+]
+
 fuchsia_test_package("netstack-integration-tests") {
   test_components = []
   foreach(test, tests) {
     test_components += [ ":netstack-${test}-integration-test" ]
   }
 
-  deps = [
-    # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
+  deps = package_deps
+}
 
-    # netstack is under test.
-    "//src/connectivity/network/netstack:component",
-    "//src/connectivity/network/netstack:component-debug",
-    "//src/connectivity/network/netstack:component-with-fast-udp-debug",
+fuchsia_test_package("netstack-long-integration-tests") {
+  test_components = []
+  foreach(test, long_tests) {
+    test_components += [ ":netstack-${test}-integration-test" ]
+  }
 
-    # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component",
-
-    # reachability monitor is under test.
-    "//src/connectivity/network/reachability:component",
-
-    # sampler config is tested as part of inspect integration tests.
-    ":sampler-config",
-
-    # stash_secure is used by dhcpd and netstack.
-    "//src/sys/stash:stash_secure_v2",
-
-    # dhcpd is used to test DHCP address acquisition.
-    "//src/connectivity/network/dhcp:component",
-
-    # DHCPv6 client is under test.
-    "//src/connectivity/network/dhcpv6/client:component",
-
-    # dns_resolver integration with netstack is tested.
-    "//src/connectivity/network/dns:component_with_fake_time",
-
-    # the DNS resolver under test uses the fake clock.
-    "//src/lib/fake-clock/svc",
-
-    # netcfg integration with netstack is tested.
-    ":netcfg-netemul-config",
-    ":netcfg-with-dhcpv6-netemul-config",
-    ":netcfg-with-forwarding-netemul-config",
-    "//src/connectivity/network/netcfg:component-advanced",
-    "//src/connectivity/network/netcfg:component-basic",
-  ]
+  deps = package_deps
+  test_specs = {
+    # Longer timeout to reduce flake (fxbug.dev/104137)
+    timeout_secs = 720
+  }
 }
 
 resource("netcfg-netemul-config") {
