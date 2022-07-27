@@ -439,4 +439,45 @@ TEST(WireTypes, Tables) {
 }
 // [END wire-tables]
 
+//
+// Examples of converting between wire and natural types.
+//
+
+// [START natural-to-wire]
+TEST(Conversion, NaturalToWire) {
+  // Let's start with a natural table.
+  fuchsia_examples::User user{{.age = 100, .name = "foo"}};
+
+  // To convert it to its corresponding wire domain object, we need a
+  // |fidl::AnyArena| implementation to allocate the storage, here an |arena|.
+  fidl::Arena arena;
+
+  // Call |fidl::ToWire| with the arena and the natural domain object.
+  // All out-of-line fields will live on the |arena|.
+  fuchsia_examples::wire::User wire_user = fidl::ToWire(arena, user);
+  ASSERT_TRUE(wire_user.has_age());
+  ASSERT_EQ(wire_user.age(), 100);
+  ASSERT_TRUE(wire_user.has_name());
+  ASSERT_EQ(wire_user.name().get(), "foo");
+}
+// [END natural-to-wire]
+
+// [START wire-to-natural]
+TEST(Conversion, WireToNatural) {
+  fidl::Arena arena;
+
+  // Let's start with a wire table.
+  fuchsia_examples::wire::User wire_user =
+      fuchsia_examples::wire::User::Builder(arena).age(30).name("bob").Build();
+
+  // Call |fidl::ToNatural| with the wire domain object.
+  // All child fields will be owned by |user|.
+  fuchsia_examples::User user = fidl::ToNatural(wire_user);
+  ASSERT_TRUE(user.age().has_value());
+  ASSERT_EQ(user.age().value(), 30);
+  ASSERT_TRUE(user.name().has_value());
+  ASSERT_EQ(user.name().value(), "bob");
+}
+// [END wire-to-natural]
+
 }  // namespace

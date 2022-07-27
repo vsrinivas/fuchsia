@@ -237,7 +237,21 @@ For more information on the bindings, see the
 
 ## Convert between natural and wire domain objects {#convert-natural-wire}
 
-<!-- TODO(fxbug.dev/103483): Write the conversion tutorials -->
+To streamline interoperability, you may call `fidl::ToWire` and
+`fidl::ToNatural` functions to convert between wire and natural domain objects.
+Using the [`fuchsia.examples/User`][fidl-file] FIDL type as an example:
+
+### Convert from natural to wire: `fidl::ToWire`
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-to-wire" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
+
+### Convert from wire to natural: `fidl::ToNatural`
+
+```cpp
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-to-natural" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
 
 <!-- xrefs -->
 [build-components]: /docs/development/components/build.md#unit-tests
