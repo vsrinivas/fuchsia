@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 
-fuchsia_package("echo-launcher-cpp-wire") {
+fuchsia_package("echo-launcher-cpp") {
   deps = [
     "client:echo-client",
     "server:echo-server",
@@ -13,5 +13,5 @@ fuchsia_package("echo-launcher-cpp-wire") {
 }
 
 group("request_pipelining") {
-  deps = [ ":echo-launcher-cpp-wire" ]
+  deps = [ ":echo-launcher-cpp" ]
 }
