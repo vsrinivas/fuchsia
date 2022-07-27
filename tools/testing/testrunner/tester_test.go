@@ -219,11 +219,12 @@ func (*fakeDataSinkCopier) Close() error {
 
 func TestFFXTester(t *testing.T) {
 	cases := []struct {
-		name           string
-		runV2          bool
-		sshRunErrs     []error
-		expectedResult runtests.TestResult
-		testMulti      bool
+		name            string
+		runV2           bool
+		sshRunErrs      []error
+		expectedResult  runtests.TestResult
+		testMulti       bool
+		experimentLevel int
 	}{
 		{
 			name:           "run v1 tests with ssh",
@@ -251,10 +252,11 @@ func TestFFXTester(t *testing.T) {
 			expectedResult: runtests.TestSkipped,
 		},
 		{
-			name:           "run multiple tests",
-			runV2:          true,
-			expectedResult: runtests.TestSuccess,
-			testMulti:      true,
+			name:            "run multiple tests",
+			runV2:           true,
+			expectedResult:  runtests.TestSuccess,
+			testMulti:       true,
+			experimentLevel: 3,
 		},
 	}
 	for _, c := range cases {
@@ -281,7 +283,7 @@ func TestFFXTester(t *testing.T) {
 				outcome = ffxutil.TestNotStarted
 			}
 			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
-			tester := NewFFXTester(ffx, sshTester, t.TempDir())
+			tester := NewFFXTester(ffx, sshTester, t.TempDir(), c.experimentLevel)
 
 			defer func() {
 				if err := tester.Close(); err != nil {
@@ -325,7 +327,11 @@ func TestFFXTester(t *testing.T) {
 				}
 
 				if c.runV2 {
-					if !ffx.ContainsCmd("test") {
+					testArgs := []string{}
+					if c.experimentLevel == 3 {
+						testArgs = append(testArgs, "--experimental-parallel-execution", "8")
+					}
+					if !ffx.ContainsCmd("test", testArgs...) {
 						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
 					}
 					expectedCaseStatus := runtests.TestSuccess

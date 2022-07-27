@@ -77,6 +77,11 @@ type testrunnerFlags struct {
 	ffxPath string
 
 	// The level of experimental ffx features to enable.
+	//
+	// The following levels enable the following ffx features:
+	// 0 or greater: ffx test, ffx target snapshot
+	// 2 or greater: keeps ffx output dir for debugging
+	// 3: enables parallel test execution
 	ffxExperimentLevel int
 
 	// Whether to prefetch test packages. This is only useful when fetching
@@ -248,7 +253,15 @@ var (
 	serialTester = testrunner.NewFuchsiaSerialTester
 )
 
-var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, addr net.IPAddr, target, sshKey, outputDir string) (testrunner.FFXInstance, error) {
+var ffxInstance = func(
+	ctx context.Context,
+	ffxPath string,
+	ffxExperimentalLevel int,
+	dir string,
+	env []string,
+	addr net.IPAddr,
+	target, sshKey, outputDir string,
+) (testrunner.FFXInstance, error) {
 	ffx, err := func() (testrunner.FFXInstance, error) {
 		var ffx *ffxutil.FFXInstance
 		var err error
@@ -266,6 +279,11 @@ var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, a
 		}
 		if err != nil {
 			return ffx, err
+		}
+		if ffxExperimentalLevel == 3 {
+			if err := ffx.SetConfigJsonPointer("/test/enable_experimental_parallel_execution", true); err != nil {
+				return ffx, err
+			}
 		}
 		// Print the list of available targets for debugging purposes.
 		// TODO(ihuh): Remove when not needed.
@@ -333,8 +351,12 @@ func execute(
 		if !ok {
 			ffxPath = flags.ffxPath
 		}
+		ffxExperimentLevel, err := strconv.Atoi(os.Getenv(botanistconstants.FFXExperimentLevelEnvKey))
+		if err != nil {
+			ffxExperimentLevel = flags.ffxExperimentLevel
+		}
 		ffx, err := ffxInstance(
-			ctx, ffxPath, flags.localWD, localEnv, addr, os.Getenv(botanistconstants.NodenameEnvKey),
+			ctx, ffxPath, ffxExperimentLevel, flags.localWD, localEnv, addr, os.Getenv(botanistconstants.NodenameEnvKey),
 			sshKeyFile, outputs.OutDir)
 		if err != nil {
 			return err
@@ -346,16 +368,12 @@ func execute(
 			if err != nil {
 				return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 			}
-			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir)
+			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir, ffxExperimentLevel)
 			defer func() {
 				// outputs.Record() moves output files to paths within the output directory
 				// specified by test name.
 				// Remove the ffx test out dirs which would now only contain empty directories
 				// and summary.jsons that don't point to real paths anymore.
-				ffxExperimentLevel, err := strconv.Atoi(os.Getenv(botanistconstants.FFXExperimentLevelEnvKey))
-				if err != nil {
-					ffxExperimentLevel = flags.ffxExperimentLevel
-				}
 				if ffxExperimentLevel >= 2 {
 					// Leave the summary.jsons for debugging.
 					err = ffxTester.RemoveAllEmptyOutputDirs()

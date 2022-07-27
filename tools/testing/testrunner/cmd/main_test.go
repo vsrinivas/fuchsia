@@ -912,7 +912,7 @@ func TestExecute(t *testing.T) {
 				return fuchsiaTester, nil
 			}
 			ffx := &ffxutil.MockFFXInstance{}
-			ffxInstance = func(_ context.Context, _, _ string, _ []string, _ net.IPAddr, _, _, _ string) (testrunner.FFXInstance, error) {
+			ffxInstance = func(_ context.Context, _ string, _ int, _ string, _ []string, _ net.IPAddr, _, _, _ string) (testrunner.FFXInstance, error) {
 				if c.useFFX {
 					return ffx, nil
 				}

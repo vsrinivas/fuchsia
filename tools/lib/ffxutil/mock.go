@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
@@ -25,16 +26,16 @@ type MockFFXInstance struct {
 func (f *MockFFXInstance) SetStdoutStderr(_, _ io.Writer) {
 }
 
-func (f *MockFFXInstance) run(cmd string) error {
-	f.CmdsCalled = append(f.CmdsCalled, cmd)
+func (f *MockFFXInstance) run(cmd string, args ...string) error {
+	f.CmdsCalled = append(f.CmdsCalled, fmt.Sprintf("%s:%s", cmd, strings.Join(args, " ")))
 	return nil
 }
 
-func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDir string, _ ...string) (*TestRunResult, error) {
+func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDir string, args ...string) (*TestRunResult, error) {
 	if testList.SchemaID != build.TestListSchemaIDExperimental {
 		return nil, fmt.Errorf(`schema_id must be %q, found %q`, build.TestListSchemaIDExperimental, testList.SchemaID)
 	}
-	f.run("test")
+	f.run("test", args...)
 	outcome := TestPassed
 	if f.TestOutcome != "" {
 		outcome = f.TestOutcome
@@ -119,9 +120,15 @@ func (f *MockFFXInstance) Stop() error {
 	return f.run("stop")
 }
 
-func (f *MockFFXInstance) ContainsCmd(cmd string) bool {
+func (f *MockFFXInstance) ContainsCmd(cmd string, args ...string) bool {
 	for _, c := range f.CmdsCalled {
-		if c == cmd {
+		parts := strings.Split(c, ":")
+		if parts[0] == cmd {
+			for _, arg := range args {
+				if !strings.Contains(parts[1], arg) {
+					return false
+				}
+			}
 			return true
 		}
 	}

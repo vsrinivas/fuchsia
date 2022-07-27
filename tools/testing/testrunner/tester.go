@@ -392,7 +392,8 @@ type FFXInstance interface {
 
 // FFXTester uses ffx to run tests and other enabled features.
 type FFXTester struct {
-	ffx FFXInstance
+	ffx             FFXInstance
+	experimentLevel int
 	// It will temporarily use an sshTester for functions where ffx has not been
 	// enabled to run yet.
 	// TODO(ihuh): Remove once all v1 tests are migrated to v2 and data sinks are
@@ -405,11 +406,12 @@ type FFXTester struct {
 }
 
 // NewFFXTester returns an FFXTester.
-func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string) *FFXTester {
+func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string, experimentLevel int) *FFXTester {
 	return &FFXTester{
-		ffx:            ffx,
-		sshTester:      sshTester,
-		localOutputDir: localOutputDir,
+		ffx:             ffx,
+		sshTester:       sshTester,
+		localOutputDir:  localOutputDir,
+		experimentLevel: experimentLevel,
 	}
 }
 
@@ -471,7 +473,11 @@ func (t *FFXTester) TestMultiple(ctx context.Context, tests []testsharder.Test, 
 	t.ffx.SetStdoutStderr(stdout, stderr)
 	defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
 
-	runResult, err := t.ffx.Test(ctx, build.TestList{Data: testDefs, SchemaID: build.TestListSchemaIDExperimental}, outDir, "--filter-ansi")
+	extraArgs := []string{"--filter-ansi"}
+	if t.experimentLevel == 3 {
+		extraArgs = append(extraArgs, "--experimental-parallel-execution", "8")
+	}
+	runResult, err := t.ffx.Test(ctx, build.TestList{Data: testDefs, SchemaID: build.TestListSchemaIDExperimental}, outDir, extraArgs...)
 	if err != nil {
 		return []*TestResult{}, err
 	}
