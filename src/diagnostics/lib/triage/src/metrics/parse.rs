@@ -220,6 +220,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("UnhandledType", UnhandledType),
             function!("Problem", Problem),
             function!("Annotation", Annotation),
+            math!("Abs", Abs),
         )),
         alt((
             function!("Fn", Lambda),
@@ -979,5 +980,22 @@ mod test {
         assert_eq!(eval!("Option(Now(), Now(), [], Now(), [5])"), MetricValue::Vector(vec![i(5)]));
         assert_eq!(eval!("Option(Now(), Now(), 5, Now(), [5])"), i(5));
         assert_eq!(eval!("Option(Now(), Now(), [5], Now(), 5)"), MetricValue::Vector(vec![i(5)]));
+    }
+
+    #[fuchsia::test]
+    fn test_abs() {
+        assert_eq!(eval!("Abs(-10)"), i(10));
+        assert_eq!(eval!("Abs(10)"), i(10));
+        assert_eq!(eval!("Abs(-1.23)"), MetricValue::Float(1.23));
+        assert_eq!(eval!("Abs(1.23)"), MetricValue::Float(1.23));
+
+        assert_problem!(eval!("Abs(1,2)"), "SyntaxError: Abs requires exactly one operand.");
+        assert_problem!(eval!("Abs(1,2,3)"), "SyntaxError: Abs requires exactly one operand.");
+        assert_problem!(eval!("Abs()"), "SyntaxError: Abs requires exactly one operand.");
+        assert_problem!(
+            eval!(r#"Abs("quoted-string")"#),
+            "Missing: String(quoted-string) not numeric"
+        );
+        assert_problem!(eval!("Abs(True())"), "Missing: Bool(true) not numeric");
     }
 }

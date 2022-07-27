@@ -95,6 +95,7 @@ pub enum MathFunction {
     LessEq,
     Max,
     Min,
+    Abs,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]

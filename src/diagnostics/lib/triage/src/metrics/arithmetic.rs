@@ -19,6 +19,8 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
         MathFunction::Min | MathFunction::Max => {
             return super::syntax_error("No operands in math expression");
         }
+        MathFunction::Abs if operands.len() == 1 => {}
+        MathFunction::Abs => return super::syntax_error("Abs requires exactly one operand."),
         _ if operands.len() == 2 => {}
         _ => return super::internal_bug("Internal bug. Function needs 2 arguments."),
     }
@@ -47,6 +49,7 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::LessEq => return MetricValue::Bool(operands[0] <= operands[1]),
             MathFunction::Min => fold(operands, &f64::min),
             MathFunction::Max => fold(operands, &f64::max),
+            MathFunction::Abs => operands[0].abs(),
         }),
         PromotedOperands::Int(operands) => MetricValue::Int(match function {
             MathFunction::Add => operands[0] + operands[1],
@@ -65,6 +68,7 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::LessEq => return MetricValue::Bool(operands[0] <= operands[1]),
             MathFunction::Min => fold(operands, &i64::min),
             MathFunction::Max => fold(operands, &i64::max),
+            MathFunction::Abs => operands[0].abs(),
         }),
     }
 }
