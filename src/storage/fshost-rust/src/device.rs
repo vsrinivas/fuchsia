@@ -8,11 +8,12 @@ use {
     std::path::{Path, PathBuf},
 };
 
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum ContentFormat {
     #[cfg(test)]
     Unknown,
     Gpt,
+    Fvm,
 }
 
 #[async_trait]

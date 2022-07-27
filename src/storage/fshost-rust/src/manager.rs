@@ -19,11 +19,13 @@ struct Env();
 
 #[async_trait]
 impl Environment for Env {
+    async fn attach_driver(&self, _device: &dyn Device, _driver_path: &str) -> Result<(), Error> {
+        todo!();
+    }
     async fn mount_blobfs(&self, _device: &dyn Device) -> Result<(), Error> {
         todo!();
     }
-
-    async fn attach_driver(&self, _device: &dyn Device, _driver_path: &str) -> Result<(), Error> {
+    async fn mount_data(&self, _device: &dyn Device) -> Result<(), Error> {
         todo!();
     }
 }
