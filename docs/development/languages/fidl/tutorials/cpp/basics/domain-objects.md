@@ -53,7 +53,7 @@ generated under the original target name suffixed with `_cpp`:
 The `test` target looks like:
 
 ```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="test" adjust_indentation="auto" highlight="6" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="test" adjust_indentation="auto" highlight="9" %}
 ```
 
 Note the line which adds the dependency on the C++ bindings by referencing that
@@ -103,7 +103,7 @@ similar to `std::optional`.
 ### Natural bits
 
 Using the strict [`fuchsia.examples/FileMode`][fidl-file] FIDL type and the
-flexible [`fuchsia.examples/FlexibleFileMode`][fidl-file] FIDL type as example:
+flexible [`fuchsia.examples/FlexibleFileMode`][fidl-file] FIDL type as examples:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -113,7 +113,7 @@ flexible [`fuchsia.examples/FlexibleFileMode`][fidl-file] FIDL type as example:
 
 Using the strict [`fuchsia.examples/LocationType`][fidl-file] FIDL type and the
 flexible [`fuchsia.examples/FlexibleLocationType`][fidl-file] FIDL type as
-example:
+examples:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -122,7 +122,8 @@ example:
 ### Natural structs
 
 Natural structs are straightforward record objects that expose const and mutable
-accessors. Using the [`fuchsia.examples/Color`][fidl-file] FIDL type as example:
+accessors. Using the [`fuchsia.examples/Color`][fidl-file] FIDL type as an
+example:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-structs" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -132,7 +133,7 @@ accessors. Using the [`fuchsia.examples/Color`][fidl-file] FIDL type as example:
 
 Natural unions are sum types similar to `std::variant`. Using the strict
 [`fuchsia.examples/JsonValue`][fidl-file] FIDL type and the flexible
-[`fuchsia.examples/FlexibleJsonValue`][fidl-file] FIDL type as example:
+[`fuchsia.examples/FlexibleJsonValue`][fidl-file] FIDL type as examples:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-unions" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -141,7 +142,7 @@ Natural unions are sum types similar to `std::variant`. Using the strict
 ### Natural tables
 
 Natural tables are record types where every field is optional. Using the
-[`fuchsia.examples/User`][fidl-file] FIDL type as example:
+[`fuchsia.examples/User`][fidl-file] FIDL type as an example:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="natural-tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -149,7 +150,26 @@ Natural tables are record types where every field is optional. Using the
 
 ## Using wire domain objects {#using-wire}
 
-<!-- TODO(fxbug.dev/103483): Write more about the domain objects -->
+Wire types are the performance oriented flavor of C++ domain objects. Differing
+from natural types which maintain hierarchical object ownership, wire objects
+never own their out-of-line children. Whether a child object is stored inline or
+out-of-line is determined by the [FIDL wire format][fidl-wire-format].
+
+Natural types may implicitly heap allocate the necessary storage. Conversely,
+the user has complete control over memory allocation of wire types. For example,
+you may allocate the elements of a FIDL vector on the stack, from a memory pool,
+or as part of a larger object. The wire vector type, `fidl::VectorView<T>`, is
+an unowned view type consisting of a raw pointer and a length. One may send the
+vector as part of a FIDL request without extra heap allocations by borrowing the
+elements via this type.
+
+To distinguish from the natural types, wire types from a FIDL library are
+defined in the `...::wire` nested namespace, e.g. `fuchsia_my_library::wire`.
+
+The prevalence of unowned pointers in wire types makes them flexible but very
+unsafe. This tutorial will focus on the safer side of using wire types based on
+memory arenas. For more advanced usages involving unsafe memory borrows, refer
+to [Memory ownership of wire domain objects][wire-memory-ownership].
 
 ### Wire bits and enums
 
@@ -159,7 +179,7 @@ their natural type counterparts. To stay coherent with the overall namespace
 naming profiles, bits and enums are aliased into the `fuchsia_my_library::wire`
 nested namespace, appearing alongside wire structs, unions, and tables.
 
-Using the `fuchsia.examples/FileMode` FIDL bits as example,
+Using the [`fuchsia.examples/FileMode`][fidl-file] FIDL bits as an example,
 `fuchsia_examples::wire::FileMode` is a type alias of
 `fuchsia_examples::FileMode`.
 
@@ -167,11 +187,18 @@ Using the `fuchsia.examples/FileMode` FIDL bits as example,
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
+Similarly, using the [`fuchsia.examples/LocationType`][fidl-file] FIDL enum as
+an example, `fuchsia_examples::wire::LocationType` is a type alias of
+`fuchsia_examples::LocationType`.
+
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Wire structs
+
+Wire structs are simple C++ structs that hold public member variables. Using the
+[`fuchsia.examples/Color`][fidl-file] FIDL type as an example:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-structs" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -179,11 +206,27 @@ Using the `fuchsia.examples/FileMode` FIDL bits as example,
 
 ### Wire unions
 
+Wire unions are sum types with a memory layout akin to a discriminator tag
+followed by a reference to the active member. Using the strict
+[`fuchsia.examples/JsonValue`][fidl-file] FIDL type and the flexible
+[`fuchsia.examples/FlexibleJsonValue`][fidl-file] FIDL type as examples:
+
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-unions" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Wire tables
+
+Wire tables are record types where every field is optional. Differing from
+[natural tables](#natural-tables), wire tables do not own any member field.
+Copying a wire table is akin to aliasing (copying) a pointer. Similar to
+pointers, moving a wire table is an anti-pattern because that equates to a copy.
+
+Because of the memory layout constraints of wire tables, one always use an
+associated `Builder` type to create new instances. Once a table is built, one
+may not add new members or clear existing members.
+
+Using the [`fuchsia.examples/User`][fidl-file] FIDL type as an example:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/main.cc" region_tag="wire-tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
@@ -202,9 +245,11 @@ For more information on the bindings, see the
 [bindings-ref]: /docs/reference/fidl/bindings/cpp-bindings.md
 [fidl-intro]: /docs/development/languages/fidl/tutorials/fidl.md
 [fidl-file]: /examples/fidl/fuchsia.examples/types.test.fidl
+[fidl-wire-format]: /docs/reference/fidl/language/wire-format/README.md
 [glossary.domain-object]: /docs/glossary#domain-object
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
 [resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [server-tut]: /docs/development/languages/fidl/tutorials/cpp/basics/server.md
 [table]: /docs/reference/fidl/language/language.md#tables
 [vector]: /docs/reference/fidl/language/language.md#vectors
+[wire-memory-ownership]: /docs/development/languages/fidl/tutorials/cpp/topics/wire-memory-ownership.md

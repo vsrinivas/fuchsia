@@ -4,7 +4,7 @@
 // NOTE: This file contains the source for FIDL examples used in documentation.
 // Check that associated docs are kept in sync when modifying this file. You
 // can find usages by grepping for
-// `gerrit_path="examples/fidl/fuchsia.examples/types.fidl"`
+// `gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl"`
 
 // [START lib]
 library fuchsia.examples;

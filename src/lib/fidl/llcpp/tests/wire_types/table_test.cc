@@ -81,7 +81,7 @@ TEST(Table, TableVectorOfStruct) {
   structs[0].x = 30;
   structs[1].x = 42;
 
-  auto table = test::wire::SampleTable::Builder(arena).vector_of_struct(std::move(structs)).Build();
+  auto table = test::wire::SampleTable::Builder(arena).vector_of_struct(structs).Build();
 
   ASSERT_FALSE(table.has_x());
   ASSERT_FALSE(table.has_y());

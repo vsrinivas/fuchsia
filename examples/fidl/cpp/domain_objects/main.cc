@@ -286,109 +286,157 @@ TEST(WireTypes, Enums) {
 
 // [START wire-structs]
 TEST(WireTypes, Structs) {
+  // Wire structs are simple C++ structs with all their member fields declared
+  // public. One may invoke aggregate initialization:
+  fuchsia_examples::wire::Color blue = {1, "blue"};
+  ASSERT_EQ(blue.id, 1u);
+  ASSERT_EQ(blue.name.get(), "blue");
+
+  // ..or designated initialization.
+  fuchsia_examples::wire::Color blue_designated = {.id = 1, .name = "blue"};
+  ASSERT_EQ(blue_designated.id, 1u);
+  ASSERT_EQ(blue_designated.name.get(), "blue");
+
+  // A wire struct may be default constructed, but user-defined default values
+  // are not supported.
+  // Default-initializing a struct means all fields are zero-initialized.
   fuchsia_examples::wire::Color default_color;
   ASSERT_EQ(default_color.id, 0u);
-  // Default values are currently not supported.
   ASSERT_TRUE(default_color.name.is_null());
   ASSERT_TRUE(default_color.name.empty());
 
-  fuchsia_examples::wire::Color blue = {1, "blue"};
-  ASSERT_EQ(blue.id, 1u);
+  // There are no getters/setters. One simply reads or mutates the member field.
+  blue.id = 2;
+  ASSERT_EQ(blue.id, 2u);
+
+  // Here we demonstrate that wire structs do not own their out-of-line children.
+  // Copying a struct will not copy their out-of-line children. Pointers are
+  // simply aliased.
+  {
+    fuchsia_examples::wire::Color blue2 = blue;
+    ASSERT_EQ(blue2.name.data(), blue.name.data());
+  }
+  // Similarly, destroying a wire struct object does not destroy out-of-line
+  // children. Destroying |blue2| does not invalidate the string contents in |name|.
+  ASSERT_EQ(blue.name.get(), "blue");
 }
 // [END wire-structs]
 
 // [START wire-unions]
 TEST(WireTypes, Unions) {
+  // When the active member is larger than 4 bytes, it is stored out-of-line,
+  // and the union will borrow the out-of-line content. The lifetimes can be
+  // tricky to reason about, hence the FIDL runtime provides a |fidl::AnyArena|
+  // interface for arena-based allocation of members. The built-in
+  // implementation is |fidl::Arena|.
+  //
+  // Pass the arena as the first argument to |With...| factory functions, to
+  // construct the member content on the arena, and have the union reference it.
   fidl::Arena arena;
-  auto int_val = fuchsia_examples::wire::JsonValue::WithIntValue(1);
-  ASSERT_TRUE(int_val.is_int_value());
-  ASSERT_EQ(1, int_val.int_value());
+  fuchsia_examples::wire::JsonValue str_union =
+      fuchsia_examples::wire::JsonValue::WithStringValue(arena, "1");
 
-  auto str_val = fuchsia_examples::wire::JsonValue::WithStringValue(arena, "1");
-  ASSERT_TRUE(str_val.is_string_value());
-  ASSERT_EQ("1", str_val.string_value().get());
+  // |Which| obtains an enum corresponding to the active member, which may be
+  // used in switch cases.
+  ASSERT_EQ(str_union.Which(), fuchsia_examples::wire::JsonValue::Tag::kStringValue);
+
+  // Before accessing the |string_value| member, one should check if the union
+  // indeed currently holds this member, by querying |is_string_value|.
+  // Accessing the wrong member will cause a panic.
+  ASSERT_TRUE(str_union.is_string_value());
+  ASSERT_EQ("1", str_union.string_value().get());
+
+  // When the active member is smaller or equal to 4 bytes, such as an
+  // |int32_t| here, the entire member is inlined into the union object.
+  // In these cases, arena allocation is not necessary, and the union
+  // object wholly owns the member.
+  fuchsia_examples::wire::JsonValue int_union = fuchsia_examples::wire::JsonValue::WithIntValue(1);
+  ASSERT_TRUE(int_union.is_int_value());
+  ASSERT_EQ(1, int_union.int_value());
+
+  // A default constructed wire union is absent.
+  // It must be initialized with a valid member before use.
+  // One is not allowed to send absent unions through FIDL client/server APIs,
+  // unless those APIs take optional unions.
+  fuchsia_examples::wire::JsonValue default_union;
+  ASSERT_TRUE(default_union.has_invalid_tag());
+  default_union = fuchsia_examples::wire::JsonValue::WithStringValue(arena, "hello");
+  ASSERT_FALSE(default_union.has_invalid_tag());
+  ASSERT_TRUE(default_union.is_string_value());
+  ASSERT_EQ(default_union.string_value().get(), "hello");
+
+  // A flexible union additionally supports querying if the active member was
+  // not defined in the FIDL schema.
+  fuchsia_examples::wire::FlexibleJsonValue flexible_value =
+      fuchsia_examples::wire::FlexibleJsonValue::WithIntValue(1);
+  // If |flexible_value| was received from a peer with a different FIDL schema,
+  // |Which| may return |kUnknown| if that peer sent a union with a member that
+  // we do not understand. In this example |flexible_value| holds a known active
+  // member because we just created it ourselves.
+  ASSERT_NE(flexible_value.Which(), fuchsia_examples::wire::FlexibleJsonValue::Tag::kUnknown);
 }
 // [END wire-unions]
 
 // [START wire-tables]
 TEST(WireTypes, Tables) {
   fidl::Arena arena;
-  // Construct a table creating a builder with an arena.
+  // To construct a wire table, you need to first create a corresponding
+  // |Builder| object, which borrows an arena. The |arena| will be used to
+  // allocate the table frame, a bookkeeping structure for field presence.
   auto builder = fuchsia_examples::wire::User::Builder(arena);
-  // The |arena| passed to the builder will be used to allocate the table frame,
-  // the inline portions of any fields and passed to the constructor of field
-  // types.
+
+  // To set a table field, call the member function with the same name on the
+  // builder. The arguments will be forwarded to the field constructor, and the
+  // field is allocated on the initial |arena|.
+  builder.age(10);
+
+  // Note that only the inline portion of the field is automatically placed in
+  // the arena. The field itself may reference its own out-of-line content,
+  // such as in the case of |name| whose type is |fidl::StringView|. |name|
+  // will reference the "jdoe" literal, which lives in static program storage.
   builder.name("jdoe");
-  // The builder is turned into an actual instance by calling |Build()|.
-  auto user = builder.Build();
+
+  // Call |Build| to finalize the table builder into a |User| table.
+  // The builder is no longer needed after this point. |user| will continue to
+  // reference objects allocated in the |arena|.
+  fuchsia_examples::wire::User user = builder.Build();
   ASSERT_FALSE(user.IsEmpty());
+
+  // Before accessing a field, one should check if it is present, by querying
+  // |has_...|. Accessing an absent field will panic.
+  ASSERT_TRUE(user.has_name());
   ASSERT_EQ(user.name().get(), "jdoe");
-}
 
-TEST(WireTypes, TablesInlineSetter) {
-  fidl::Arena arena;
-  // Construct a table creating a builder with an arena.
-  auto builder = fuchsia_examples::wire::User::Builder(arena);
-  // Small values <= 4 bytes are inlined inside the frame of the table.
-  builder.age(30);
-  // The builder is turned into an actual instance by calling |Build()|.
-  auto user = builder.Build();
+  // Setters may be chained, leading to a fluent syntax.
+  user = fuchsia_examples::wire::User::Builder(arena).age(30).name("bob").Build();
   ASSERT_FALSE(user.IsEmpty());
+  ASSERT_TRUE(user.has_age());
   ASSERT_EQ(user.age(), 30);
-}
+  ASSERT_TRUE(user.has_name());
+  ASSERT_EQ(user.name().get(), "bob");
 
-TEST(WireTypes, TablesDefaultConstructor) {
-  fidl::Arena arena;
+  // A default constructed wire table is empty.
+  // This is mostly useful to make requests or replies with empty tables.
+  fuchsia_examples::wire::User defaulted_user;
+  ASSERT_TRUE(defaulted_user.IsEmpty());
+
   // In some situations it could be difficult to provide an arena when
   // constructing tables. For example, here it is hard to provide constructor
-  // arguments to 10 tables at once. When a table is default constructed, it
-  // does not have an associated |fidl::WireTableFrame<T>|. A new table
-  // instance should be built and assigned to the default constructed table.
+  // arguments to 10 tables at once. Because a default constructed wire table is
+  // empty, a new table instance should be built and assigned in its place.
   fidl::Array<fuchsia_examples::wire::User, 10> users;
   for (auto& user : users) {
     ASSERT_TRUE(user.IsEmpty());
-    user = fuchsia_examples::wire::User::Builder(arena).age(30).name("jdoe").Build();
+    user = fuchsia_examples::wire::User::Builder(arena).age(30).Build();
     ASSERT_FALSE(user.IsEmpty());
     ASSERT_EQ(user.age(), 30);
   }
   ASSERT_EQ(users[0].age(), 30);
+
+  // Finally, tables support checking if it was received with unknown fields.
+  // A table created by ourselves will never have unknown fields.
+  ASSERT_FALSE(user.HasUnknownData());
 }
 // [END wire-tables]
-
-// [START wire-external-object]
-TEST(WireTypes, BorrowExternalObject) {
-  fidl::StringView str("hello");
-  // |object_view| is a view to the string view.
-  fidl::ObjectView object_view = fidl::ObjectView<fidl::StringView>::FromExternal(&str);
-  fuchsia_examples::wire::JsonValue val =
-      fuchsia_examples::wire::JsonValue::WithStringValue(object_view);
-  ASSERT_TRUE(val.is_string_value());
-}
-// [END wire-external-object]
-
-// [START wire-external-vector]
-TEST(WireTypes, BorrowExternalVector) {
-  std::vector<uint32_t> vec = {1, 2, 3, 4};
-  fidl::VectorView<uint32_t> vv = fidl::VectorView<uint32_t>::FromExternal(vec);
-  ASSERT_EQ(vv.count(), 4UL);
-}
-// [END wire-external-vector]
-
-// [START wire-external-string]
-TEST(WireTypes, BorrowExternalString) {
-  const char* string = "hello";
-  fidl::StringView sv = fidl::StringView::FromExternal(string);
-  ASSERT_EQ(sv.size(), 5UL);
-}
-// [END wire-external-string]
-
-// [START wire-stringview-assign]
-TEST(WireTypes, BorrowStringViewLiteral) {
-  fidl::StringView sv1 = "hello world";
-  fidl::StringView sv2("Hello");
-  ASSERT_EQ(sv1.size(), 11UL);
-  ASSERT_EQ(sv2.size(), 5UL);
-}
-// [END wire-stringview-assign]
 
 }  // namespace
