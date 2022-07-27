@@ -1,6 +1,6 @@
-# Unified C++ bindings headers
+# New C++ bindings headers
 
-The headers in this directory are meant to support the unified C++ bindings
+The headers in this directory are meant to support the new C++ bindings
 (fxbug.dev/60240). The headers would be exposed to users via the same include
 pattern as those from the high-level C++ bindings at //sdk/lib/fidl/cpp,
 i.e. `#include <lib/fidl/cpp/foobar.h>`. The intention is that as the unified
@@ -16,4 +16,4 @@ migrate libraries in //sdk to use a dedicated "include" folder too.
 
 ## Design
 
-See [structure of unified C++ FIDL bindings](docs/structure-of-unified-cpp-fidl-bindings.md).
+See [structure of new C++ FIDL bindings](docs/structure-of-unified-cpp-fidl-bindings.md).

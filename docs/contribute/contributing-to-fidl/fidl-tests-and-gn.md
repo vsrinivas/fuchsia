@@ -56,8 +56,8 @@ Where _tool_ is one of:
 And the other parts are:
 
 *   _bindings_
-    *   One of **c**, **llcpp**, **hlcpp**, **rust**, **go**, **dart** (note:
-        **hlcpp**, _not_ **cpp**)
+    *   One of **c**, **cpp**, **cpp_wire**, **hlcpp**, **rust**, **go**,
+        **dart**
 *   _category_, _subcategory_
     *   Example categories: **conformance**, **types**, **parser**, **lib**
     *   Do _not_ use: **frontend**, **backend**, **bindings** (_tool_

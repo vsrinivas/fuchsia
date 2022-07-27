@@ -1,6 +1,6 @@
-# LLCPP FIDL Service library
+# New C++ FIDL Service library
 
-This library provides low-level C++ (LLCPP) APIs to connect to and serve FIDL Services.
+This library provides new C++ bindings APIs to connect to and serve FIDL Services.
 
 A FIDL Service is a logical grouping of FIDL protocols, exposed as members of a virtual
 directory.

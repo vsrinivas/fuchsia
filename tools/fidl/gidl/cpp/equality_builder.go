@@ -214,7 +214,7 @@ func (b *equalityCheckBuilder) visitTable(actualExpr string, expectedValue gidli
 	expectedFieldValues := map[string]gidlir.Value{}
 	for _, field := range expectedValue.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown fields not supported by unified C++ bindings")
+			panic("unknown fields not supported by the new C++ bindings")
 		}
 		expectedFieldValues[field.Key.Name] = field.Value
 	}
@@ -245,7 +245,7 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 	}
 	field := expectedValue.Fields[0]
 	if field.Key.IsUnknown() {
-		panic("unknown fields not supported by unified C++ bindings")
+		panic("unknown fields not supported by the new C++ bindings")
 	}
 	fieldDecl, ok := decl.Field(field.Key.Name)
 	if !ok {

@@ -1,7 +1,7 @@
 # FIDL Service tests
 
-This directory contains unit tests for FIDL Services, specifically the Low Level C++
-(LLCPP) client side and server side APIs.
+This directory contains unit tests for FIDL Services, specifically the new C++
+bindings client side and server side APIs.
 
 See `//sdk/lib/fidl/cpp/wire` and `//zircon/system/ulib/service`.
 

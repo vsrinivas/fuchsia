@@ -101,9 +101,8 @@ template("_fidl_cpp_codegen_impl") {
   }
 }
 
-# Generates C++ code for a given FIDL library: low-level C++ bindings,
-# high-level C++ bindings, natural domain objects, unified C++ bindings,
-# or the fuzzer header library.
+# Generates C++ code for a given FIDL library: new C++ bindings,
+# high-level C++ bindings, or the fuzzer header library.
 #
 # Parameters
 #
@@ -310,7 +309,7 @@ template("fidl_cpp_library") {
   }
 }
 
-# Generates various C++ FIDL bindings: HLCPP, LLCPP, Unified C++, and fuzzers.
+# Generates various C++ FIDL bindings: New C++ bindings, HLCPP, and fuzzers.
 #
 # Note:
 # - Under the FIDL toolchain, we would create action targets that

@@ -121,7 +121,7 @@ fuchsia_test_package("echo-service-hlcpp-test") {
   ]
 }
 
-# Unified C++ bindings natural types example integration test packages
+# New C++ bindings natural types example integration test packages
 fuchsia_test_package("echo-cpp-client-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [

@@ -12,7 +12,7 @@
 
 namespace {
 
-// Verify that the wire bindings is available.
+// Verify that the wire types are available.
 using WireFileMode = fuchsia_examples::wire::FileMode;
 using ProtocolMarker = fuchsia_examples::Echo;
 

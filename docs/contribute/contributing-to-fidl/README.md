@@ -30,9 +30,8 @@ Target | Codegen | Runtime Libraries | Tests
 -------|---------|-------------------|-------
 C | [/tools/fidl/fidlc/lib/c_generator.cc] | [/sdk/lib/fidl_base] | [/src/lib/fidl/c]
 Coding Tables | [/tools/fidl/fidlc/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
-HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
-LLCPP | [/tools/fidl/fidlgen_cpp] | [/sdk/lib/fidl/cpp/wire] | [/src/lib/fidl/llcpp]
-Unified C++ | [/tools/fidl/fidlgen_cpp] | [/src/lib/fidl/cpp] | *(located alongside runtime libraries)*
+HLCPP (Old) | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
+New C++ | [/tools/fidl/fidlgen_cpp] | [/sdk/lib/fidl/cpp] | [/src/lib/fidl/llcpp] and [/src/lib/fidl/cpp]
 Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl](https://fuchsia.googlesource.com/third_party/go/+/main/src/syscall/zx/fidl) | *(located alongside runtime libraries)*
 Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
 Dart | [/tools/fidl/fidlgen_dart] | [/sdk/dart/fidl] | [/src/tests/fidl/dart_bindings_test]
@@ -58,7 +57,7 @@ Path | Description
 [/tools/fidl/gidl] | Source code and build templates for the GIDL tool itself.
 [/src/tests/fidl/conformance_suite] | Test definitions (`.fidl` and `.gidl` files) for conformance tests.
 [/sdk/cts/tests/pkg/fidl/cpp/test/{test,handle}_util.h](/sdk/cts/tests/pkg/fidl/cpp/test) | Runtime support for HLCPP conformance tests.
-[/src/lib/fidl/llcpp/tests/conformance/conformance_utils.h] | Runtime support for LLCPP conformance tests.
+[/src/lib/fidl/llcpp/tests/conformance/conformance_utils.h] | Runtime support for C++ wire types conformance tests.
 [/src/lib/fidl/rust/gidl_util] | Runtime support for Rust conformance tests.
 [/third_party/go/src/syscall/zx/fidl/fidl_test] | Runtime support for Go conformance tests.
 [/src/lib/fidl/dart/gidl] | Runtime support for Dart conformance tests.
@@ -347,7 +346,7 @@ These "golden" files are examples of what kind of JSON IR `fidlc` produces and
 are used to track changes. It is required to regenerate the golden files each
 time the JSON IR is changed in any way, otherwise the `json_generator_tests` fails.
 
-### fidlgen (LLCPP, HLCPP, Rust, Go, Dart)
+### fidlgen (New C++, HLCPP, Rust, Go, Dart)
 
 Build:
 
@@ -358,7 +357,7 @@ fx build tools/fidl
 Run:
 
 ```sh
-$FUCHSIA_DIR/out/default/host_x64/fidlgen_{llcpp,hlcpp,rust,go,dart}
+$FUCHSIA_DIR/out/default/host_x64/fidlgen_{cpp,hlcpp,rust,go,dart}
 ```
 
 Some example tests you can run:
@@ -482,8 +481,8 @@ useful for debugging issues that prevent boot of the device.
 | walker, misc             | `fx test fidl-walker-tests`         |  //sdk/lib/fidl_base
 | walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //sdk/lib/fidl_base
 | hlcpp bindings tests including conformance tests     | `fx test fidl_hlcpp_unit_test_package fidl_hlcpp_conformance_test_package`         | //sdk/lib/fidl                                                             |
-| llcpp bindings tests     | `fx test //src/lib/fidl/llcpp`      | //sdk/lib/fidl/cpp/wire
-| unified C++ bindings tests | `fx test //src/lib/fidl/cpp`      | //src/lib/fidl/cpp
+| New C++ wire tests       | `fx test //src/lib/fidl/llcpp`      | //sdk/lib/fidl/cpp/wire
+| New C++ tests            | `fx test //src/lib/fidl/cpp`        | //src/lib/fidl/cpp
 | go bindings tests        | `fx test go-fidl-tests`             | //third_party/go/syscall/zx/fidl //third_party/go/syscall/zx/fidl/fidl_test //src/tests/fidl/go_bindings_test |
 | dart bindings tests      | `fx test dart-bindings-test`<br>(_see note below_) | //sdk/dart/fidl                                                  |
 | rust bindings tests      | `fx test //src/lib/fidl/rust`           | //src/lib/fidl/rust |
@@ -499,7 +498,8 @@ for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 | walker, misc             | `fx test --host fidl-walker-host-tests`         | //sdk/lib/fidl_base
 | hlcpp unittests          | `fx test --host fidl_hlcpp_unit_tests`          | //sdk/lib/fidl
 | hlcpp conformance tests  | `fx test --host fidl_hlcpp_conformance_tests`   | //sdk/lib/fidl
-| llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_tests`   | //sdk/lib/fidl/cpp/wire
+| C++ wire types conformance tests  | `fx test --host fidl_llcpp_conformance_tests`    | //sdk/lib/fidl/cpp/wire
+| C++ natural types conformance tests  | `fx test --host fidl_cpp_conformance_tests`   | //src/lib/fidl/cpp
 | rust conformance tests   | `fx test --host fidl_rust_conformance_tests`    | //src/lib/fidl/rust
 | rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`            | //src/lib/fidl/rust
 | go conformance tests     | `fx test --host fidl_go_conformance_tests`      | //third_party/go/syscall/zx/fidl
@@ -513,7 +513,7 @@ for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 | fidlgen type definitions   | `fx test fidlgen_lib_test`                         | //tools/fidl/lib/fidlgen
 | fidlgen C++ specific IR    | `fx test fidlgen_cpp_ir_test`                      | //tools/fidl/lib/fidlgen_cpp
 | fidlgen hlcpp              | `fx test fidlgen_hlcpp_golden_tests`               | //tools/fidl/fidlgen_hlcpp
-| fidlgen llcpp              | `fx test fidlgen_cpp_golden_tests`               | //tools/fidl/fidlgen_cpp
+| fidlgen new C++        | `fx test fidlgen_cpp_golden_tests`                 | //tools/fidl/fidlgen_cpp
 | fidlgen golang             | `fx test fidlgen_go_{lib,golden}_tests`            | //tools/fidl/fidlgen_golang
 | fidlgen rust               | `fx test fidlgen_rust_{lib,golden}_tests`          | //tools/fidl/fidlgen_rust
 | fidlgen syzkaller          | `fx test fidlgen_syzkaller_golden_tests`           | //tools/fidl/fidlgen_syzkaller
@@ -554,7 +554,7 @@ Available benchmarks:
 |------|-------------------|-------|
 | Go Benchmarks |  `fx shell /bin/go_fidl_microbenchmarks` | |
 | Rust Benchmarks | `fx shell /bin/rust_fidl_microbenchmarks /tmp/myresultsfile` | Results can be viewed with `fx shell cat /tmp/myresultsfile/` |
-| LLCPP benchmarks |  `fx shell /bin/llcpp_fidl_microbenchmarks` | |
+| C++ wire types benchmarks |  `fx shell /bin/llcpp_fidl_microbenchmarks` | |
 | lib/fidl Benchmarks | `fx shell /bin/lib_fidl_microbenchmarks` | |
 | Roundtrip Benchmarks | `fx shell /bin/roundtrip_fidl_benchmarks` | |
 

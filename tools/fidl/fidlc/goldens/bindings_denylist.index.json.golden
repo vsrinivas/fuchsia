@@ -142,8 +142,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_4",
-            "start_offset": 3425,
-            "end_offset": 3461
+            "start_offset": 3468,
+            "end_offset": 3504
           },
           "type": {
             "kind": "identifier",
@@ -156,8 +156,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_5",
-            "start_offset": 3510,
-            "end_offset": 3546
+            "start_offset": 3553,
+            "end_offset": 3589
           },
           "type": {
             "kind": "identifier",
@@ -170,8 +170,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_6",
-            "start_offset": 3597,
-            "end_offset": 3633
+            "start_offset": 3640,
+            "end_offset": 3676
           },
           "type": {
             "kind": "identifier",
@@ -187,8 +187,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "DeniedAnonymous",
-        "start_offset": 3793,
-        "end_offset": 3808
+        "start_offset": 3836,
+        "end_offset": 3851
       },
       "members": [
         {
@@ -197,8 +197,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_7",
-            "start_offset": 3824,
-            "end_offset": 3860
+            "start_offset": 3867,
+            "end_offset": 3903
           },
           "type": {
             "kind": "identifier",
@@ -211,8 +211,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_8",
-            "start_offset": 3897,
-            "end_offset": 3933
+            "start_offset": 3940,
+            "end_offset": 3976
           },
           "type": {
             "kind": "identifier",
@@ -225,8 +225,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_9",
-            "start_offset": 3972,
-            "end_offset": 4008
+            "start_offset": 4015,
+            "end_offset": 4051
           },
           "type": {
             "kind": "identifier",
@@ -245,8 +245,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_1",
-            "start_offset": 3018,
-            "end_offset": 3054
+            "start_offset": 3061,
+            "end_offset": 3097
           },
           "type": {
             "kind": "identifier",
@@ -259,8 +259,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_2",
-            "start_offset": 3103,
-            "end_offset": 3139
+            "start_offset": 3146,
+            "end_offset": 3182
           },
           "type": {
             "kind": "identifier",
@@ -273,8 +273,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "should_never_appear_in_any_binding_3",
-            "start_offset": 3190,
-            "end_offset": 3226
+            "start_offset": 3233,
+            "end_offset": 3269
           },
           "type": {
             "kind": "identifier",
@@ -293,8 +293,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 1974,
-            "end_offset": 1975
+            "start_offset": 2017,
+            "end_offset": 2018
           },
           "type": {
             "kind": "primitive"
@@ -328,8 +328,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 2106,
-            "end_offset": 2107
+            "start_offset": 2149,
+            "end_offset": 2150
           },
           "type": {
             "kind": "primitive"
@@ -363,8 +363,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 2234,
-            "end_offset": 2235
+            "start_offset": 2277,
+            "end_offset": 2278
           },
           "type": {
             "kind": "primitive"
@@ -398,8 +398,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 2376,
-            "end_offset": 2377
+            "start_offset": 2419,
+            "end_offset": 2420
           },
           "type": {
             "kind": "primitive"
@@ -433,8 +433,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 2508,
-            "end_offset": 2509
+            "start_offset": 2551,
+            "end_offset": 2552
           },
           "type": {
             "kind": "primitive"
@@ -468,8 +468,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 2650,
-            "end_offset": 2651
+            "start_offset": 2693,
+            "end_offset": 2694
           },
           "type": {
             "kind": "primitive"
@@ -503,8 +503,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "b",
-            "start_offset": 2010,
-            "end_offset": 2011
+            "start_offset": 2053,
+            "end_offset": 2054
           },
           "type": {
             "kind": "primitive"
@@ -522,8 +522,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "b",
-            "start_offset": 2142,
-            "end_offset": 2143
+            "start_offset": 2185,
+            "end_offset": 2186
           },
           "type": {
             "kind": "primitive"
@@ -541,8 +541,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "b",
-            "start_offset": 2270,
-            "end_offset": 2271
+            "start_offset": 2313,
+            "end_offset": 2314
           },
           "type": {
             "kind": "primitive"
@@ -560,8 +560,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "b",
-            "start_offset": 2412,
-            "end_offset": 2413
+            "start_offset": 2455,
+            "end_offset": 2456
           },
           "type": {
             "kind": "primitive"
@@ -579,8 +579,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "b",
-            "start_offset": 2544,
-            "end_offset": 2545
+            "start_offset": 2587,
+            "end_offset": 2588
           },
           "type": {
             "kind": "primitive"
@@ -598,8 +598,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "b",
-            "start_offset": 2686,
-            "end_offset": 2687
+            "start_offset": 2729,
+            "end_offset": 2730
           },
           "type": {
             "kind": "primitive"
@@ -617,8 +617,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 4789,
-            "end_offset": 4790
+            "start_offset": 4832,
+            "end_offset": 4833
           },
           "type": {
             "kind": "primitive"
@@ -633,8 +633,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "OnlyAppearsInImportingLibrary",
-        "start_offset": 4686,
-        "end_offset": 4715
+        "start_offset": 4729,
+        "end_offset": 4758
       },
       "members": [
         {
@@ -643,8 +643,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "member_only_appears_in_importing_library",
-            "start_offset": 4731,
-            "end_offset": 4771
+            "start_offset": 4774,
+            "end_offset": 4814
           },
           "type": {
             "kind": "identifier",
@@ -675,8 +675,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 3076,
-            "end_offset": 3077
+            "start_offset": 3119,
+            "end_offset": 3120
           },
           "type": {
             "kind": "primitive"
@@ -694,8 +694,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 3483,
-            "end_offset": 3484
+            "start_offset": 3526,
+            "end_offset": 3527
           },
           "type": {
             "kind": "primitive"
@@ -713,8 +713,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "a",
-            "start_offset": 3878,
-            "end_offset": 3879
+            "start_offset": 3921,
+            "end_offset": 3922
           },
           "type": {
             "kind": "primitive"
@@ -730,8 +730,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "Allowed",
-        "start_offset": 3299,
-        "end_offset": 3306
+        "start_offset": 3342,
+        "end_offset": 3349
       },
       "methods": [
         {
@@ -740,8 +740,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "Denied",
-            "start_offset": 3395,
-            "end_offset": 3401
+            "start_offset": 3438,
+            "end_offset": 3444
           },
           "response_type": {
             "kind": "identifier",
@@ -757,8 +757,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "ContainsAllowed",
-        "start_offset": 4442,
-        "end_offset": 4457
+        "start_offset": 4485,
+        "end_offset": 4500
       },
       "methods": [],
       "composed_protocols": []
@@ -769,8 +769,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "Denied",
-        "start_offset": 2958,
-        "end_offset": 2964
+        "start_offset": 3001,
+        "end_offset": 3007
       },
       "methods": [
         {
@@ -779,8 +779,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "ShouldNeverAppearInAnyBinding",
-            "start_offset": 2971,
-            "end_offset": 3000
+            "start_offset": 3014,
+            "end_offset": 3043
           },
           "request_type": {
             "kind": "identifier",
@@ -796,8 +796,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "DenyEachBinding",
-        "start_offset": 1868,
-        "end_offset": 1883
+        "start_offset": 1911,
+        "end_offset": 1926
       },
       "methods": [
         {
@@ -806,8 +806,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "OnlyDenyCpp",
-            "start_offset": 1945,
-            "end_offset": 1956
+            "start_offset": 1988,
+            "end_offset": 1999
           },
           "request_type": {
             "kind": "identifier",
@@ -824,8 +824,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "OnlyDenyDart",
-            "start_offset": 2076,
-            "end_offset": 2088
+            "start_offset": 2119,
+            "end_offset": 2131
           },
           "request_type": {
             "kind": "identifier",
@@ -842,8 +842,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "OnlyDenyGo",
-            "start_offset": 2206,
-            "end_offset": 2216
+            "start_offset": 2249,
+            "end_offset": 2259
           },
           "request_type": {
             "kind": "identifier",
@@ -860,8 +860,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "OnlyDenyLibfuzzer",
-            "start_offset": 2341,
-            "end_offset": 2358
+            "start_offset": 2384,
+            "end_offset": 2401
           },
           "request_type": {
             "kind": "identifier",
@@ -878,8 +878,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "OnlyDenyRust",
-            "start_offset": 2478,
-            "end_offset": 2490
+            "start_offset": 2521,
+            "end_offset": 2533
           },
           "request_type": {
             "kind": "identifier",
@@ -896,8 +896,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "OnlyDenySyzkaller",
-            "start_offset": 2615,
-            "end_offset": 2632
+            "start_offset": 2658,
+            "end_offset": 2675
           },
           "request_type": {
             "kind": "identifier",
@@ -917,8 +917,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "ImportsSameNameContext",
-        "start_offset": 4817,
-        "end_offset": 4839
+        "start_offset": 4860,
+        "end_offset": 4882
       },
       "methods": [
         {
@@ -963,8 +963,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "test.dependent.ContainsDenied",
-            "start_offset": 4854,
-            "end_offset": 4883
+            "start_offset": 4897,
+            "end_offset": 4926
           }
         },
         {
@@ -973,8 +973,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "data": "test.dependent.ContainsAllowed",
-            "start_offset": 4897,
-            "end_offset": 4927
+            "start_offset": 4940,
+            "end_offset": 4970
           }
         }
       ]
@@ -985,8 +985,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "OnlyCppAndDeps",
-        "start_offset": 1611,
-        "end_offset": 1625
+        "start_offset": 1654,
+        "end_offset": 1668
       },
       "methods": [],
       "composed_protocols": []
@@ -997,8 +997,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "OnlyLibfuzzerAndDeps",
-        "start_offset": 1319,
-        "end_offset": 1339
+        "start_offset": 1322,
+        "end_offset": 1342
       },
       "methods": [],
       "composed_protocols": []

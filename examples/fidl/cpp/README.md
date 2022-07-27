@@ -1,6 +1,6 @@
-# Unified C++ FIDL bindings examples
+# New C++ FIDL bindings examples
 
-This directory contains example code for using natural types in the unified C++
+This directory contains example code for using natural types in the new C++
 bindings (fxbug.dev/60240).
 
 To use the unified bindings for a library `//examples/fidl/fuchsia.examples`,

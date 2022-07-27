@@ -94,19 +94,35 @@ The Go bindings are generated in the root directory as
 
 #### C++ {#c-family}
 
-C++ bindings use a source layout in subdirectories of the root
+New C++ bindings use a source layout in subdirectories of the root
 directory follow the pattern: `${target_name}/${binding_flavor}/fuchsia.io/cpp`.
 
-From there LLCPP outputs `wire.cc`, `wire.h` and `wire_test_base.h`.
-As the unified C++ bindings take shape more bindings will follow this pattern.
-See below for how the not-yet unified bindings are generated.
+From there C++ outputs `wire_types.h`, `wire_types.cc`, `wire_messaging.h`,
+`wire_messaging.cc`, `wire.h` and `wire_test_base.h` for using wire types, and
+`natural_types.h`, `natural_types.cc`, `natural_messaging.h`,
+`natural_messaging.cc`, `fidl.h` for using natural types alongside wire types.
 
-For example, using `fuchsia.io` with the LLCPP bindings creates the following
+`common_types.h` and `markers.h` are shared between wire and natural types.
+
+For example, using `fuchsia.io` with the C++ bindings creates the following
 files:
 
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/markers.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/common_types.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_types.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_types.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_messaging.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_messaging.h
     out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire.h
     out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_test_base.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_types.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_types.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_messaging.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_messaging.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/fidl.h
+
+As the new C++ bindings take shape more bindings will follow this pattern.
+See below for how the not-yet unified bindings are generated.
 
 #### HLCPP, and C {#hlcpp-c}
 

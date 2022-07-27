@@ -1,10 +1,10 @@
-# Structure of unified C++ FIDL Bindings
+# Structure of new C++ FIDL Bindings
 
 **Author**: yifeit@google.com
 
 **Date proposed**: Dec 3, 2021
 
-This document describes a structural overview of the unified C++ bindings: how
+This document describes a structural overview of the new C++ bindings: how
 we can build it from parts of the existing C++ bindings, and how the API looks
 like down the road for the collection of C++ bindings.
 
@@ -26,7 +26,7 @@ domain objects and the messaging layer.
 Over time, gradually move away from the "LLCPP" name, and call it "wire", e.g.
 wire C++ bindings, wire types, wire messaging layer.
 
-The unified C++ bindings is an extension on top of the wire bindings, supporting
+The new C++ bindings is an extension on top of the wire bindings, supporting
 the domain types similar to those from HLCPP, henceforth termed "natural types",
 over a messaging layer API that has the same shape as the wire messaging layer,
 and the same thread-safety properties.
@@ -116,7 +116,7 @@ Naming-wise, we'll adopt the following:
   that focus on ergonomics and have recursive ownership semantics.
 * **wire bindings**: the subset of C++ FIDL bindings API that work with wire
   domain objects.
-* **unified C++ bindings**: the full set of C++ FIDL bindings API that support
+* **new C++ bindings**: the full set of C++ FIDL bindings API that support
   both wire domain objects and natural domain objects.
 * **HLCPP domain objects**: the existing domain objects generated from
   `fidlgen_hlcpp`.
@@ -193,7 +193,7 @@ protocol Speak {
 };
 ```
 
-We propose the following generated C++ unified bindings API.
+We propose the following generated New C++ bindings API.
 
 ### Client
 

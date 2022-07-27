@@ -269,7 +269,7 @@
       "name": "test.bindingsdenylist/Allowed",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 110,
+        "line": 112,
         "column": 10,
         "length": 7
       },
@@ -280,7 +280,7 @@
           "name": "Denied",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 112,
+            "line": 114,
             "column": 5,
             "length": 6
           },
@@ -304,7 +304,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 111,
+                    "line": 113,
                     "column": 24,
                     "length": 57
                   }
@@ -312,7 +312,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 111,
+                "line": 113,
                 "column": 5,
                 "length": 77
               }
@@ -427,7 +427,7 @@
       "name": "test.bindingsdenylist/ContainsAllowed",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 142,
+        "line": 144,
         "column": 10,
         "length": 15
       },
@@ -450,7 +450,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 141,
+                "line": 143,
                 "column": 20,
                 "length": 57
               }
@@ -458,7 +458,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 141,
+            "line": 143,
             "column": 1,
             "length": 77
           }
@@ -471,7 +471,7 @@
       "name": "test.bindingsdenylist/Denied",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 96,
+        "line": 98,
         "column": 10,
         "length": 6
       },
@@ -494,7 +494,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 95,
+                "line": 97,
                 "column": 20,
                 "length": 57
               }
@@ -502,7 +502,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 95,
+            "line": 97,
             "column": 1,
             "length": 77
           }
@@ -515,7 +515,7 @@
           "name": "ShouldNeverAppearInAnyBinding",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 97,
+            "line": 99,
             "column": 5,
             "length": 29
           },
@@ -555,7 +555,7 @@
       "name": "test.bindingsdenylist/DenyEachBinding",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 49,
+        "line": 51,
         "column": 10,
         "length": 15
       },
@@ -566,7 +566,7 @@
           "name": "OnlyDenyCpp",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 51,
+            "line": 53,
             "column": 5,
             "length": 11
           },
@@ -590,7 +590,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 50,
+                    "line": 52,
                     "column": 24,
                     "length": 30
                   }
@@ -598,7 +598,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 50,
+                "line": 52,
                 "column": 5,
                 "length": 50
               }
@@ -737,7 +737,7 @@
           "name": "OnlyDenyDart",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 58,
+            "line": 60,
             "column": 5,
             "length": 12
           },
@@ -761,7 +761,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 57,
+                    "line": 59,
                     "column": 24,
                     "length": 6
                   }
@@ -769,7 +769,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 57,
+                "line": 59,
                 "column": 5,
                 "length": 26
               }
@@ -908,7 +908,7 @@
           "name": "OnlyDenyGo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 65,
+            "line": 67,
             "column": 5,
             "length": 10
           },
@@ -932,7 +932,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 64,
+                    "line": 66,
                     "column": 24,
                     "length": 4
                   }
@@ -940,7 +940,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 64,
+                "line": 66,
                 "column": 5,
                 "length": 24
               }
@@ -1079,7 +1079,7 @@
           "name": "OnlyDenyLibfuzzer",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 72,
+            "line": 74,
             "column": 5,
             "length": 17
           },
@@ -1103,7 +1103,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 71,
+                    "line": 73,
                     "column": 24,
                     "length": 11
                   }
@@ -1111,7 +1111,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 71,
+                "line": 73,
                 "column": 5,
                 "length": 31
               }
@@ -1250,7 +1250,7 @@
           "name": "OnlyDenyRust",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 79,
+            "line": 81,
             "column": 5,
             "length": 12
           },
@@ -1274,7 +1274,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 78,
+                    "line": 80,
                     "column": 24,
                     "length": 6
                   }
@@ -1282,7 +1282,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 78,
+                "line": 80,
                 "column": 5,
                 "length": 26
               }
@@ -1421,7 +1421,7 @@
           "name": "OnlyDenySyzkaller",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 86,
+            "line": 88,
             "column": 5,
             "length": 17
           },
@@ -1445,7 +1445,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                    "line": 85,
+                    "line": 87,
                     "column": 24,
                     "length": 11
                   }
@@ -1453,7 +1453,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 85,
+                "line": 87,
                 "column": 5,
                 "length": 31
               }
@@ -1593,7 +1593,7 @@
       "name": "test.bindingsdenylist/ImportsSameNameContext",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 153,
+        "line": 155,
         "column": 10,
         "length": 22
       },
@@ -1602,7 +1602,7 @@
           "name": "test.dependent/ContainsDenied",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 154,
+            "line": 156,
             "column": 13,
             "length": 29
           }
@@ -1611,7 +1611,7 @@
           "name": "test.dependent/ContainsAllowed",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 155,
+            "line": 157,
             "column": 13,
             "length": 30
           }
@@ -1724,7 +1724,7 @@
       "name": "test.bindingsdenylist/OnlyCppAndDeps",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 42,
+        "line": 44,
         "column": 10,
         "length": 14
       },
@@ -1747,7 +1747,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 41,
+                "line": 43,
                 "column": 20,
                 "length": 38
               }
@@ -1755,7 +1755,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 41,
+            "line": 43,
             "column": 1,
             "length": 58
           }
@@ -1768,7 +1768,7 @@
       "name": "test.bindingsdenylist/OnlyLibfuzzerAndDeps",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 37,
+        "line": 38,
         "column": 10,
         "length": 20
       },
@@ -1791,7 +1791,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 36,
+                "line": 37,
                 "column": 20,
                 "length": 32
               }
@@ -1799,7 +1799,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 36,
+            "line": 37,
             "column": 1,
             "length": 52
           }
@@ -1814,7 +1814,7 @@
       "name": "test.bindingsdenylist/OnlyHlcpp",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 45,
+        "line": 47,
         "column": 9,
         "length": 9
       },
@@ -1837,7 +1837,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 44,
+                "line": 46,
                 "column": 20,
                 "length": 50
               }
@@ -1845,7 +1845,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 44,
+            "line": 46,
             "column": 1,
             "length": 70
           }
@@ -1864,7 +1864,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 112,
+        "line": 114,
         "column": 17,
         "length": 284
       },
@@ -1945,7 +1945,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 112,
+        "line": 114,
         "column": 18,
         "length": 282
       },
@@ -1979,7 +1979,7 @@
           "name": "should_never_appear_in_any_binding_4",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 113,
+            "line": 115,
             "column": 9,
             "length": 36
           },
@@ -2021,7 +2021,7 @@
           "name": "should_never_appear_in_any_binding_5",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 116,
+            "line": 118,
             "column": 9,
             "length": 36
           },
@@ -2063,7 +2063,7 @@
           "name": "should_never_appear_in_any_binding_6",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 119,
+            "line": 121,
             "column": 9,
             "length": 36
           },
@@ -2106,7 +2106,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 126,
+        "line": 128,
         "column": 6,
         "length": 15
       },
@@ -2129,7 +2129,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-                "line": 125,
+                "line": 127,
                 "column": 20,
                 "length": 57
               }
@@ -2137,7 +2137,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 125,
+            "line": 127,
             "column": 1,
             "length": 77
           }
@@ -2173,7 +2173,7 @@
           "name": "should_never_appear_in_any_binding_7",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 127,
+            "line": 129,
             "column": 5,
             "length": 36
           },
@@ -2215,7 +2215,7 @@
           "name": "should_never_appear_in_any_binding_8",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 130,
+            "line": 132,
             "column": 5,
             "length": 36
           },
@@ -2257,7 +2257,7 @@
           "name": "should_never_appear_in_any_binding_9",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 133,
+            "line": 135,
             "column": 5,
             "length": 36
           },
@@ -2302,7 +2302,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 97,
+        "line": 99,
         "column": 35,
         "length": 282
       },
@@ -2336,7 +2336,7 @@
           "name": "should_never_appear_in_any_binding_1",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 98,
+            "line": 100,
             "column": 9,
             "length": 36
           },
@@ -2378,7 +2378,7 @@
           "name": "should_never_appear_in_any_binding_2",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 101,
+            "line": 103,
             "column": 9,
             "length": 36
           },
@@ -2420,7 +2420,7 @@
           "name": "should_never_appear_in_any_binding_3",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 104,
+            "line": 106,
             "column": 9,
             "length": 36
           },
@@ -2465,7 +2465,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 51,
+        "line": 53,
         "column": 17,
         "length": 30
       },
@@ -2498,7 +2498,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 52,
+            "line": 54,
             "column": 9,
             "length": 1
           },
@@ -2543,7 +2543,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 53,
+        "line": 55,
         "column": 11,
         "length": 33
       },
@@ -2622,7 +2622,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 58,
+        "line": 60,
         "column": 18,
         "length": 30
       },
@@ -2655,7 +2655,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 59,
+            "line": 61,
             "column": 9,
             "length": 1
           },
@@ -2700,7 +2700,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 60,
+        "line": 62,
         "column": 11,
         "length": 33
       },
@@ -2779,7 +2779,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 65,
+        "line": 67,
         "column": 16,
         "length": 30
       },
@@ -2812,7 +2812,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 66,
+            "line": 68,
             "column": 9,
             "length": 1
           },
@@ -2857,7 +2857,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 67,
+        "line": 69,
         "column": 11,
         "length": 33
       },
@@ -2936,7 +2936,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 72,
+        "line": 74,
         "column": 23,
         "length": 30
       },
@@ -2969,7 +2969,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 73,
+            "line": 75,
             "column": 9,
             "length": 1
           },
@@ -3014,7 +3014,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 74,
+        "line": 76,
         "column": 11,
         "length": 33
       },
@@ -3093,7 +3093,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 79,
+        "line": 81,
         "column": 18,
         "length": 30
       },
@@ -3126,7 +3126,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 80,
+            "line": 82,
             "column": 9,
             "length": 1
           },
@@ -3171,7 +3171,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 81,
+        "line": 83,
         "column": 11,
         "length": 33
       },
@@ -3250,7 +3250,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 86,
+        "line": 88,
         "column": 23,
         "length": 30
       },
@@ -3283,7 +3283,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 87,
+            "line": 89,
             "column": 9,
             "length": 1
           },
@@ -3328,7 +3328,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 88,
+        "line": 90,
         "column": 11,
         "length": 33
       },
@@ -3409,7 +3409,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 53,
+        "line": 55,
         "column": 12,
         "length": 31
       },
@@ -3442,7 +3442,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 54,
+            "line": 56,
             "column": 9,
             "length": 1
           },
@@ -3489,7 +3489,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 60,
+        "line": 62,
         "column": 12,
         "length": 31
       },
@@ -3522,7 +3522,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 61,
+            "line": 63,
             "column": 9,
             "length": 1
           },
@@ -3569,7 +3569,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 67,
+        "line": 69,
         "column": 12,
         "length": 31
       },
@@ -3602,7 +3602,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 68,
+            "line": 70,
             "column": 9,
             "length": 1
           },
@@ -3649,7 +3649,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 74,
+        "line": 76,
         "column": 12,
         "length": 31
       },
@@ -3682,7 +3682,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 75,
+            "line": 77,
             "column": 9,
             "length": 1
           },
@@ -3729,7 +3729,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 81,
+        "line": 83,
         "column": 12,
         "length": 31
       },
@@ -3762,7 +3762,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 82,
+            "line": 84,
             "column": 9,
             "length": 1
           },
@@ -3809,7 +3809,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 88,
+        "line": 90,
         "column": 12,
         "length": 31
       },
@@ -3842,7 +3842,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 89,
+            "line": 91,
             "column": 9,
             "length": 1
           },
@@ -3886,7 +3886,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 148,
+        "line": 150,
         "column": 46,
         "length": 30
       },
@@ -3919,7 +3919,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 149,
+            "line": 151,
             "column": 9,
             "length": 1
           },
@@ -3962,7 +3962,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 147,
+        "line": 149,
         "column": 6,
         "length": 29
       },
@@ -3996,7 +3996,7 @@
           "name": "member_only_appears_in_importing_library",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 148,
+            "line": 150,
             "column": 5,
             "length": 40
           },
@@ -4109,7 +4109,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 98,
+        "line": 100,
         "column": 46,
         "length": 38
       },
@@ -4142,7 +4142,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 99,
+            "line": 101,
             "column": 13,
             "length": 1
           },
@@ -4190,7 +4190,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 113,
+        "line": 115,
         "column": 46,
         "length": 38
       },
@@ -4223,7 +4223,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 114,
+            "line": 116,
             "column": 13,
             "length": 1
           },
@@ -4267,7 +4267,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 127,
+        "line": 129,
         "column": 42,
         "length": 30
       },
@@ -4300,7 +4300,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 128,
+            "line": 130,
             "column": 9,
             "length": 1
           },
@@ -4497,7 +4497,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 101,
+        "line": 103,
         "column": 46,
         "length": 40
       },
@@ -4532,7 +4532,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 102,
+            "line": 104,
             "column": 16,
             "length": 1
           }
@@ -4573,7 +4573,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 116,
+        "line": 118,
         "column": 46,
         "length": 40
       },
@@ -4608,7 +4608,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 117,
+            "line": 119,
             "column": 16,
             "length": 1
           }
@@ -4645,7 +4645,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 130,
+        "line": 132,
         "column": 42,
         "length": 32
       },
@@ -4680,7 +4680,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 131,
+            "line": 133,
             "column": 12,
             "length": 1
           }
@@ -4721,7 +4721,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 112,
+        "line": 114,
         "column": 17,
         "length": 284
       },
@@ -4837,7 +4837,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 53,
+        "line": 55,
         "column": 11,
         "length": 33
       },
@@ -4953,7 +4953,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 60,
+        "line": 62,
         "column": 11,
         "length": 33
       },
@@ -5069,7 +5069,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 67,
+        "line": 69,
         "column": 11,
         "length": 33
       },
@@ -5185,7 +5185,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 74,
+        "line": 76,
         "column": 11,
         "length": 33
       },
@@ -5301,7 +5301,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 81,
+        "line": 83,
         "column": 11,
         "length": 33
       },
@@ -5417,7 +5417,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 88,
+        "line": 90,
         "column": 11,
         "length": 33
       },
@@ -5637,7 +5637,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 104,
+        "line": 106,
         "column": 46,
         "length": 49
       },
@@ -5672,7 +5672,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 105,
+            "line": 107,
             "column": 16,
             "length": 1
           }
@@ -5713,7 +5713,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 119,
+        "line": 121,
         "column": 46,
         "length": 49
       },
@@ -5748,7 +5748,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 120,
+            "line": 122,
             "column": 16,
             "length": 1
           }
@@ -5785,7 +5785,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-        "line": 133,
+        "line": 135,
         "column": 42,
         "length": 41
       },
@@ -5820,7 +5820,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
-            "line": 134,
+            "line": 136,
             "column": 12,
             "length": 1
           }

@@ -136,14 +136,15 @@ see [Bind libraries][bind-libraries].)
 
 ### fuchsia_fidl_llcpp_library
 
-The `fuchsia_fidl_llcpp_library` rule describes the specifics of the `llcpp`
-(Low-Level C++) FIDL library.
+The `fuchsia_fidl_llcpp_library` rule describes the specifics of the wire types
+part of the new C++ FIDL bindings corresponding to a FIDL library.
 
-This Low-Level C++ FIDL library provides a collection of low-level C++ FIDL
-calls used by drivers in a Fuchsia system. The library is optimized to meet the
-needs of low-level systems programming and multi-thread environments for
-increased security. (For more information, see
-[Comparing C, Low-Level C++, and High-Level C++ Language Bindings][c-family-comparison].)
+This new C++ FIDL bindings provides a collection of C++ FIDL calls used by
+drivers in a Fuchsia system and supports two families of data types: wire types
+and natural types. The bindings properly support multi-threaded environments for
+increased security and the wire types are optimized to meet the needs of
+low-level systems programming. (For more information, see
+[Comparing C, new C++, and high-level C++ language bindings][c-family-comparison].)
 
 Notice there are two FIDL library build rules in this `BUILD.bazel` file:
 
@@ -177,7 +178,7 @@ fuchsia_fidl_llcpp_library(
 The generic `fuchsia_fidl_library` rule defines a Fuchsia component’s FIDL
 capabilities, which are specified in [`qemu_edu.fidl`](#qemu_edufidl) for the
 `qemu_edu` driver. The `fuchsia_fidl_llcpp_library` rule describes additional
-dependencies for generating the FIDL code that is based on the Low-Level C++
+dependencies for generating the FIDL code that is based on the new C++
 FIDL library.
 
 ### cc_binary

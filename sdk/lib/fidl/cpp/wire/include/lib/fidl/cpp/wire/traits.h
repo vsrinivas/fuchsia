@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <type_traits>
 
-// Defines type traits used in the low-level C++ binding.
+// Defines type traits used by both wire and natural types.
 //
 // The contracts of a FIDL type |T| are as follows:
 //
@@ -123,7 +123,7 @@ struct IsResource : public std::false_type {
 // Additionally, if |T| is a transactional message:
 //
 // |kHasFlexibleEnvelope| is a bool specifying if this message contains a
-//                        flexible xunion or a flexible table.
+//                        flexible union or a flexible table.
 // |kMessageKind|         identifies if this message is a request or a response.
 //                        If undefined, the type may be used either as a request
 //                        or a response.
@@ -169,7 +169,7 @@ struct IsVectorView<
     T, typename std::enable_if<IsVectorView<typename std::remove_const<T>::type>::value>::type>
     : std::true_type {};
 
-// Code-gen is responsible for emiting specializations for these traits
+// Code-gen is responsible for emitting specializations for these traits
 template <typename T, typename Enable = void>
 struct IsTable : std::false_type {};
 template <typename MaybeConstTable>

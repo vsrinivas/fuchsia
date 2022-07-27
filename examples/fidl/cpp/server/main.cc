@@ -83,7 +83,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  FX_LOGS(INFO) << "Running unified C++ echo server";
+  FX_LOGS(INFO) << "Running C++ echo server";
   loop.Run();
   return 0;
 }

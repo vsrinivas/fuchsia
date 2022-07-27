@@ -549,7 +549,7 @@ particular, the design of FIDL aims to satisfy the following goals:
 #### Ergonomics
 
 *   Programming language bindings maintained by Fuchsia team:
-    *   C, Low-Level C++, High-Level C++, Dart, Go, Rust
+    *   C, New C++, High-Level C++ (Old), Dart, Go, Rust
 *   Keeping in mind we might want to support other languages in the future, such
     as:
     *   Java, JavaScript, etc.

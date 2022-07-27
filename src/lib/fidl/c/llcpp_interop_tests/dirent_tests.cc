@@ -210,8 +210,8 @@ class Server {
 
 }  // namespace manual_server
 
-// Server implemented with low-level C++ FIDL bindings
-namespace llcpp_server {
+// Server implemented with new C++ FIDL bindings and wire types
+namespace cpp_server {
 
 class ServerBase : public fidl::WireServer<gen::DirEntTestInterface> {
  public:
@@ -360,7 +360,7 @@ class AsyncReplyServer : public ServerBase {
   }
 };
 
-}  // namespace llcpp_server
+}  // namespace cpp_server
 
 // Parametric tests allowing choosing a custom server implementation
 namespace {
@@ -662,25 +662,25 @@ TEST(DirentClientTest, CallerAllocateOneWayDirents) {
 }
 
 TEST(DirentServerTest, SimpleCountNumDirectoriesWithCFlavorServer) {
-  SimpleCountNumDirectories<llcpp_server::CFlavorServer>();
+  SimpleCountNumDirectories<cpp_server::CFlavorServer>();
 }
 
 TEST(DirentServerTest, SimpleCountNumDirectoriesWithCallerAllocateServer) {
-  SimpleCountNumDirectories<llcpp_server::CallerAllocateServer>();
+  SimpleCountNumDirectories<cpp_server::CallerAllocateServer>();
 }
 
 TEST(DirentServerTest, SimpleCountNumDirectoriesWithAsyncReplyServer) {
-  SimpleCountNumDirectories<llcpp_server::AsyncReplyServer>();
+  SimpleCountNumDirectories<cpp_server::AsyncReplyServer>();
 }
 
 TEST(DirentServerTest, SimpleConsumeDirectoriesWithCFlavorServer) {
-  SimpleConsumeDirectories<llcpp_server::CFlavorServer>();
+  SimpleConsumeDirectories<cpp_server::CFlavorServer>();
 }
 
 TEST(DirentServerTest, SimpleConsumeDirectoriesWithAsyncReplyServer) {
-  SimpleConsumeDirectories<llcpp_server::AsyncReplyServer>();
+  SimpleConsumeDirectories<cpp_server::AsyncReplyServer>();
 }
 
 TEST(DirentServerTest, SimpleOneWayDirentsWithCFlavorServer) {
-  SimpleOneWayDirents<llcpp_server::CFlavorServer>();
+  SimpleOneWayDirents<cpp_server::CFlavorServer>();
 }

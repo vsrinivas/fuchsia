@@ -43,7 +43,7 @@ config("cpp_base.headers") {
   include_dirs = [ "include" ]
 }
 
-# The unified C++ library that adds messaging APIs on top of domain objects.
+# The IPC library that adds messaging APIs on top of domain objects.
 #
 # It is Fuchsia-only.
 sdk_source_set("cpp") {
