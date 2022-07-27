@@ -4,7 +4,7 @@
 // This is a v2 component manifest.
 {
     include: [
-        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/connectivity/network/meta/isolated-network.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
 
@@ -15,16 +15,6 @@
     program: {
         binary: "bin/http_sse_lib_test",
     },
-    children: [
-        {
-            name: "netstack",
-            url: "#meta/netstack.cm",
-        },
-        {
-            name: "dns_resolver",
-            url: "#meta/dns_resolver.cm",
-        },
-    ],
     use: [
         {
             protocol: [ "fuchsia.net.name.Lookup" ],

@@ -5,7 +5,7 @@
     include: [
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/connectivity/network/meta/isolated-network-offers.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "sys/testing/system-test.shard.cml", // For fuchsia.kernel.VmexResource.
     ],

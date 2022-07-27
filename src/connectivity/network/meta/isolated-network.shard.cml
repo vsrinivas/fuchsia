@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // This manifest shard provides the minimal set of ambient capabilities for isolated testing
+    // with Netstack and DNS resolver. It provides the common rules for services that Netstack and
+    // DNS resolver need and their interdependencies.
+    //
+    // It assumes the package it is included in also contains the netstack and dns_resolver
+    // components. You can add these as deps in your `fuchsia_package` or `fuchsia_test_package`
+    // declarations in the build file.
+    include: [ "//src/connectivity/network/meta/isolated-network-offers.shard.cml" ],
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+    ],
+}

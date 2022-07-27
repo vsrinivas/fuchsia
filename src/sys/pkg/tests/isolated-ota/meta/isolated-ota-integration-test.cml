@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/connectivity/network/meta/isolated-network.shard.cml",
         "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
@@ -16,16 +16,6 @@
     program: {
         binary: "bin/isolated_ota_integration_test",
     },
-    children: [
-        {
-            name: "netstack",
-            url: "#meta/netstack.cm",
-        },
-        {
-            name: "dns_resolver",
-            url: "#meta/dns_resolver.cm",
-        },
-    ],
     use: [
         {
             protocol: [

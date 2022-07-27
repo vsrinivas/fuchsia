@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/connectivity/network/meta/isolated-network.shard.cml",
 
         // Depends on config_data which is a system capability.
         "sys/testing/system-test.shard.cml",
@@ -12,14 +12,6 @@
         {
             name: "test_driver",
             url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/test-driver.cm",
-        },
-        {
-            name: "netstack",
-            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/netstack.cm",
-        },
-        {
-            name: "dns_resolver",
-            url: "fuchsia-pkg://fuchsia.com/omaha-client-service-bin-tests#meta/dns_resolver.cm",
         },
         {
             name: "stash2",
