@@ -126,7 +126,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:151
+From //build/security.gni:166
 
 ### avb_algorithm
 
@@ -223,7 +223,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:156
+From //build/security.gni:171
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -1882,7 +1882,7 @@ on the assembled fuchsia system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:85
+From //build/security.gni:100
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1914,13 +1914,13 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:81
+From //build/security.gni:96
 
 ### fuchsia_verify_component_resolvers_allowlist
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:114
+From //build/security.gni:129
 
 ### fuchsia_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -1931,20 +1931,20 @@ tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:107
+From //build/security.gni:122
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
 
-From //build/security.gni:93
+From //build/security.gni:108
 
 ### fuchsia_verify_routes_exceptions_allowlist_bootfs
 Same as above, except this allowlist gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:96
+From //build/security.gni:111
 
 ### fuchsia_verify_routes_exceptions_allowlist_product
 Same as above, except these allowlists get added according to
@@ -1952,7 +1952,7 @@ product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:100
+From //build/security.gni:115
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional list of golden files for fuchsia.zbi bootFS file list. If
@@ -1972,6 +1972,25 @@ above changes.
 **Current value (from the default):** `[]`
 
 From //build/security.gni:51
+
+### fuchsia_zbi_bootfs_packages_goldens
+An optional list of golden files for fuchsia.zbi bootFS package index. If
+specified, they would be compared against fuchsia.zbi bootFS package index
+during build time. At least one of the golden files must match.
+In normal case, there should only be one golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:66
 
 ### fuchsia_zbi_kernel_cmdline_goldens
 An optional list of golden files for fuchsia.zbi kernel cmdline args. If
@@ -3884,7 +3903,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:129
+From //build/security.gni:144
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -3903,7 +3922,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:66
+From //build/security.gni:81
 
 ### recovery_zbi_kernel_cmdline_goldens
 An optional list of golden files for recovery.zbi kernel cmdline args. If
@@ -4539,7 +4558,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:142
+From //build/security.gni:157
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -4659,7 +4678,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:161
+From //build/security.gni:176
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
