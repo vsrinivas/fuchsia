@@ -1665,12 +1665,14 @@ impl Into<fidl_fuchsia_net_dhcp::Parameter> for IpAddrs {
     }
 }
 
+use crate::opts::parse_netmask_or_prefix_length;
+
 /// The pool of addresses which the DHCP server manages.
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "address-pool")]
 pub struct AddressPool {
     /// the prefix length of the network's subnet mask
-    #[argh(option)]
+    #[argh(option, from_str_fn(parse_netmask_or_prefix_length))]
     prefix_length: Option<u8>,
     /// the starting address, inclusive, of the range of addresses which the DHCP server
     /// will lease to clients
