@@ -90,8 +90,12 @@ class ScreenReaderMessageGenerator {
  private:
   // Gives any appropriate entered/exited container hints. Also describes the
   // current container, if it's changed.
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> DescribeContainerChanges(
+  std::vector<UtteranceAndContext> DescribeContainerChanges(
       const ScreenReaderMessageContext& message_context);
+
+  // Helper method to describe a node that has role == UNKNOWN.
+  std::vector<UtteranceAndContext> DescribeUnknown(
+      const fuchsia::accessibility::semantics::Node* node);
 
   // Helper method to describe button nodes. The description will be:
   // <seleccted*> <label> button <toggled*> <actionable>
@@ -146,6 +150,22 @@ class ScreenReaderMessageGenerator {
   // *If present.
   std::vector<UtteranceAndContext> DescribeEnteredList(
       const fuchsia::accessibility::semantics::Node* node);
+
+  // Add the node's label to its description, if present.
+  void MaybeAddLabelDescriptor(
+      const fuchsia::accessibility::semantics::Node* node,
+      std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description);
+
+  // Describe the node as "selected", if the node is selected.
+  //
+  // We do NOT describe unselected buttons as "unselected", because some
+  // runtimes may set the "selected" state to false by default, as opposed to
+  //
+  // Only use this method for "generically selectable" node types: UNKNOWN and
+  // BUTTON.
+  void MaybeAddGenericSelectedDescriptor(
+      const fuchsia::accessibility::semantics::Node* node,
+      std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description);
 
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
 
