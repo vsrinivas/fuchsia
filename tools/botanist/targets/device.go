@@ -112,11 +112,6 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 			if err != nil {
 				return nil, fmt.Errorf("unable to open: %s: %w", config.SerialMux, err)
 			}
-			// Dump the existing serial debug log buffer.
-			// This is useful for getting early boot logs from Zedboot.
-			if _, err := io.WriteString(s, dlogCmd); err != nil {
-				return nil, fmt.Errorf("failed to tail serial logs: %w", err)
-			}
 		} else {
 			// We don't want to wait for the console to be ready if the device
 			// is idling in Fastboot, as Fastboot does not have an interactive
@@ -135,12 +130,6 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 		s, err = serial.Open(config.Serial)
 		if err != nil {
 			return nil, fmt.Errorf("unable to open %s: %w", config.Serial, err)
-		}
-		// Dump the existing serial debug log buffer.
-		// This is only useful for getting early boot logs from Zedboot, and
-		// will no longer be useful after switching to fastboot flows.
-		if _, err := io.WriteString(s, dlogCmd); err != nil {
-			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
 		}
 	}
 	base, err := newTarget(ctx, config.Network.Nodename, config.SerialMux, config.SSHKeys, s)

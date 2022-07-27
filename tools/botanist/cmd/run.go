@@ -238,43 +238,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}()
 	defer cancel()
 
-	// Run any preflights to prepare the testbed.
-	if err := r.runPreflights(ctx); err != nil {
-		return err
-	}
-
-	// Start up a local package server if one was requested.
-	if r.localRepo != "" {
-		var port int
-		pkgSrvPort := os.Getenv(constants.PkgSrvPortKey)
-		if pkgSrvPort == "" {
-			logger.Warningf(ctx, "%s is empty, using default port %d", constants.PkgSrvPortKey, botanist.DefaultPkgSrvPort)
-			port = botanist.DefaultPkgSrvPort
-		} else {
-			var err error
-			port, err = strconv.Atoi(pkgSrvPort)
-			if err != nil {
-				return err
-			}
-		}
-		pkgSrv, err := botanist.NewPackageServer(ctx, r.localRepo, r.repoURL, r.blobURL, r.downloadManifest, port)
-		if err != nil {
-			return err
-		}
-		defer pkgSrv.Close()
-		// TODO(rudymathu): Once gcsproxy and remote package serving are deprecated, remove
-		// the repoURL and blobURL from the command line flags.
-		r.repoURL = pkgSrv.RepoURL
-		r.blobURL = pkgSrv.BlobURL
-	}
-	// Disable usb mass storage to determine if it affects NUC stability.
-	// TODO(rudymathu): Remove this once stability is achieved.
-	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")
-
-	// TODO(https://fxbug.dev/88370#c74): Remove this once CDC-ether flakiness
-	// has been resolved.
-	r.zirconArgs = append(r.zirconArgs, "driver.usb_cdc.log=debug")
-
 	// Parse targets out from the target configuration file.
 	targetSlice, err := r.deriveTargetsFromFile(ctx)
 	if err != nil {
@@ -341,9 +304,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					serialLogName = "serial_log.txt"
 				}
 				serialLogPath := filepath.Join(r.serialLogDir, serialLogName)
-				if _, err := os.Create(serialLogPath); err != nil {
+				sl, err := os.Create(serialLogPath)
+				if err != nil {
 					return err
 				}
+				sl.Close()
 
 				// Start capturing the serial log for this target.
 				if err := t.CaptureSerialLog(serialLogPath); err != nil && ctx.Err() == nil {
@@ -353,6 +318,43 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			})
 		}
 	}
+
+	// Run any preflights to prepare the testbed.
+	if err := r.runPreflights(ctx); err != nil {
+		return err
+	}
+
+	// Start up a local package server if one was requested.
+	if r.localRepo != "" {
+		var port int
+		pkgSrvPort := os.Getenv(constants.PkgSrvPortKey)
+		if pkgSrvPort == "" {
+			logger.Warningf(ctx, "%s is empty, using default port %d", constants.PkgSrvPortKey, botanist.DefaultPkgSrvPort)
+			port = botanist.DefaultPkgSrvPort
+		} else {
+			var err error
+			port, err = strconv.Atoi(pkgSrvPort)
+			if err != nil {
+				return err
+			}
+		}
+		pkgSrv, err := botanist.NewPackageServer(ctx, r.localRepo, r.repoURL, r.blobURL, r.downloadManifest, port)
+		if err != nil {
+			return err
+		}
+		defer pkgSrv.Close()
+		// TODO(rudymathu): Once gcsproxy and remote package serving are deprecated, remove
+		// the repoURL and blobURL from the command line flags.
+		r.repoURL = pkgSrv.RepoURL
+		r.blobURL = pkgSrv.BlobURL
+	}
+	// Disable usb mass storage to determine if it affects NUC stability.
+	// TODO(rudymathu): Remove this once stability is achieved.
+	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")
+
+	// TODO(https://fxbug.dev/88370#c74): Remove this once CDC-ether flakiness
+	// has been resolved.
+	r.zirconArgs = append(r.zirconArgs, "driver.usb_cdc.log=debug")
 
 	for _, t := range targetSlice {
 		t := t
