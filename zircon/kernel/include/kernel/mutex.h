@@ -39,9 +39,8 @@ class TA_CAP("mutex") Mutex {
   static constexpr zx_duration_t SPIN_MAX_DURATION = ZX_USEC(150);
 
   // Acquire the mutex.
-  void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ() TA_EXCL(thread_lock) {
-    AcquireCommon<false>(spin_max_duration, /*timeslice_extension=*/0);
-  }
+  inline void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ()
+      TA_EXCL(thread_lock);
 
   // Release the mutex. Must be held by the current thread.
   void Release() TA_REL() TA_EXCL(thread_lock);
@@ -60,13 +59,19 @@ class TA_CAP("mutex") Mutex {
   void AssertHeld() const TA_ASSERT() { DEBUG_ASSERT(IsHeld()); }
 
  protected:
+  // TimesliceExtension is used to control whether a timeslice extension will be
+  // set and if so, what value will be used.
+  template <bool Enabled>
+  struct TimesliceExtension;
+
   // Used by both Mutex and CriticalMutex.
   //
-  // If WithTimesliceExtension is true and timeslice_extension > 0, attempt to
-  // set the timeslice extension after acquiring the mutex and return true if
-  // the extension was set.  Otherwise, return false.
-  template <bool WithTimesliceExtension>
-  bool AcquireCommon(zx_duration_t spin_max_duration, zx_duration_t timeslice_extension) TA_ACQ()
+  // If TimesliceExtensionEnabled is true, attempt to set the timeslice
+  // extension after acquiring the mutex and return true if the extension was
+  // set.  Otherwise, return false.
+  template <bool TimesliceExtensionEnabled>
+  bool AcquireCommon(zx_duration_t spin_max_duration,
+                     TimesliceExtension<TimesliceExtensionEnabled> timeslice_extension) TA_ACQ()
       TA_EXCL(thread_lock);
 
  private:
@@ -80,10 +85,16 @@ class TA_CAP("mutex") Mutex {
   // This is a slowpath taken by |Acquire| if the mutex is found to already be held
   // by another thread.
   //
+  // If TimesliceExtensionEnabled is true, attempt to set the timeslice
+  // extension after acquiring the mutex and return true if the extension was
+  // set.  Otherwise, return false.
+  //
   // This function is deliberately moved out of line from |Acquire| to keep the stack
   // set up, tear down in the |Acquire| fastpath small.
-  void AcquireContendedMutex(zx_duration_t spin_max_duration, Thread* current_thread) TA_ACQ()
-      TA_EXCL(thread_lock);
+  template <bool TimesliceExtensionEnabled>
+  bool AcquireContendedMutex(zx_duration_t spin_max_duration, Thread* current_thread,
+                             TimesliceExtension<TimesliceExtensionEnabled> timeslic_extension)
+      TA_ACQ() TA_EXCL(thread_lock);
 
   // Release a lock contended by another thread.
   //
@@ -126,6 +137,22 @@ class TA_CAP("mutex") Mutex {
   OwnedWaitQueue wait_;
 };
 
+// TimeslicExtension specializations for Mutex::Acquire and
+// Mutex::AcquireContendedMutex.
+//
+// No timeslice extension.
+template <>
+struct Mutex::TimesliceExtension<false> {};
+// A timeslice extension of |value| nanoseconds.
+template <>
+struct Mutex::TimesliceExtension<true> {
+  zx_duration_t value;
+};
+
+inline void Mutex::Acquire(zx_duration_t spin_max_duration) TA_ACQ() TA_EXCL(thread_lock) {
+  AcquireCommon(spin_max_duration, TimesliceExtension<false>{});
+}
+
 // CriticalMutex is a mutex variant that uses a thread timeslice extension to
 // disable preemption for a limited time during the critical section.
 //
@@ -167,8 +194,8 @@ class TA_CAP("mutex") CriticalMutex : private Mutex {
       TA_EXCL(thread_lock) {
     // TODO(maniscalco): What's the right duration here?  Is it a function of
     // spin_max_duration?
-    const zx_duration_t timeslice_extension = spin_max_duration;
-    should_clear_ = Mutex::AcquireCommon<true>(spin_max_duration, timeslice_extension);
+    const TimesliceExtension<true> timeslice_extension{spin_max_duration};
+    should_clear_ = Mutex::AcquireCommon(spin_max_duration, timeslice_extension);
   }
 
   // Release the mutex. Must be held by the current thread.
