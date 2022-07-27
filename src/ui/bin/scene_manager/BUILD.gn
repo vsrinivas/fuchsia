@@ -48,18 +48,9 @@ rustc_binary("scene_manager_bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-    "//src/lib/async-utils",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component-test",
-    "//src/lib/ui/fuchsia-scenic",
     "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:tracing",
   ]
 
   sources = [
@@ -86,4 +77,8 @@ fuchsia_package("scene_manager") {
     ":cursor",
     ":scene_manager_component",
   ]
+}
+
+fuchsia_unittest_package("scene_manager_tests") {
+  deps = [ ":scene_manager_bin_test" ]
 }
