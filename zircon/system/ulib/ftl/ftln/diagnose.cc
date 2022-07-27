@@ -64,7 +64,7 @@ bool PrematureBlockRecycle(FTLN ftl) {
     }
     if (ndmReadSpare(ppn, ftl->spare_buf, static_cast<NDM>(ftl->ndm)) < 0) {
       fprintf(stderr, "Failed to read spare for ppn %u\n", ppn);
-      break;
+      continue;
     }
     if (GET_SA_VPN(ftl->spare_buf) != vpn) {
       overlap = true;

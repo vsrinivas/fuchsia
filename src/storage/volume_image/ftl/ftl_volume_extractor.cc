@@ -122,6 +122,7 @@ zx::status<std::unique_ptr<NdmRamDriver>> LoadData(const ftl::VolumeOptions& opt
       }
       case BlockStatus::kReadFailure: {
         fprintf(stderr, "ERROR: Page %u read failed, likely ECC Failure\n", page_count);
+        ndm->SetFailEcc(page_count, true);
         break;
       }
     }
