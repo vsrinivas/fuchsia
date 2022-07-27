@@ -179,8 +179,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   [[nodiscard]] zx_status_t MarkReadable() __TA_REQUIRES(mutex_);
 
   // Puts a blob into an error state and removes it from the cache so that a client may immediately
-  // have another attempt if required.
-  void MarkError() __TA_REQUIRES(mutex_);
+  // have another write attempt if required.
+  void LatchWriteError(zx_status_t write_error) __TA_REQUIRES(mutex_);
 
   // Returns a handle to an event which will be signalled when the blob is readable.
   //
@@ -209,9 +209,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // kBlobStateEmpty --> kBlobStateDataWrite
   zx_status_t SpaceAllocate(uint32_t block_count) __TA_REQUIRES(mutex_);
 
-  // Writes to either the Merkle Tree or the Data section, depending on the state.
-  zx_status_t WriteInternal(const void* data, size_t len, std::optional<size_t> offset,
-                            size_t* actual) __TA_REQUIRES(mutex_);
+  // Write blob data into memory (or stream to disk) and update Merkle tree.
+  zx_status_t WriteInternal(const void* data, size_t len, size_t* actual) __TA_REQUIRES(mutex_);
 
   // Reads from a blob. Requires: kBlobStateReadable
   zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual)

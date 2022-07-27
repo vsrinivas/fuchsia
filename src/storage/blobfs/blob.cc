@@ -79,7 +79,7 @@ struct Blob::WriteInfo {
 
   // The fused write error.  Once writing has failed, we return the same error on subsequent
   // writes in case a higher layer dropped the error and returned a short write instead.
-  zx_status_t write_error = ZX_OK;
+  zx_status_t write_error = ZX_ERR_BAD_STATE;
 
   // As data is written, we build the merkle tree using this.
   digest::MerkleTreeCreator merkle_tree_creator;
@@ -314,32 +314,20 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction,
   return ZX_OK;
 }
 
-zx_status_t Blob::WriteInternal(const void* data, size_t len,
-                                std::optional<size_t> requested_offset, size_t* actual) {
+zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::WriteInternal", "data", data, "len", len);
 
-  *actual = 0;
+  if (state() == BlobState::kError) {
+    return write_info_ ? write_info_->write_error : ZX_ERR_BAD_STATE;
+  }
   if (len == 0) {
     return ZX_OK;
   }
-
   if (state() != BlobState::kDataWrite) {
-    if (state() == BlobState::kError && write_info_ && write_info_->write_error != ZX_OK) {
-      return write_info_->write_error;
-    }
     return ZX_ERR_BAD_STATE;
   }
 
   const size_t to_write = std::min(len, blob_size_ - write_info_->bytes_written);
-  const size_t offset = write_info_->bytes_written;
-  if (requested_offset && *requested_offset != offset) {
-    FX_LOGS(ERROR) << "only append is currently supported (requested_offset: " << *requested_offset
-                   << ", expected: " << offset << ")";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  *actual = to_write;
-  write_info_->bytes_written += to_write;
 
   if (write_info_->compressor) {
     if (zx_status_t status = write_info_->compressor->Update(data, to_write); status != ZX_OK) {
@@ -348,7 +336,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len,
   } else {
     // In the uncompressed case, the backing vmo should have been set up to write into already.
     ZX_ASSERT(write_info_->buffer.is_valid());
-    if (zx_status_t status = write_info_->buffer.write(data, offset, to_write); status != ZX_OK) {
+    if (zx_status_t status = write_info_->buffer.write(data, write_info_->bytes_written, to_write);
+        status != ZX_OK) {
       FX_LOGS(ERROR) << "VMO write failed: " << zx_status_get_string(status);
       return status;
     }
@@ -360,23 +349,15 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len,
     return status;
   }
 
+  *actual = to_write;
+  write_info_->bytes_written += to_write;
+
   // More data to write.
   if (write_info_->bytes_written < blob_size_) {
     return ZX_OK;
   }
 
-  if (zx_status_t status = Commit(); status != ZX_OK) {
-    // Record the status so that if called again, we return the same status again.  This is done
-    // because it's possible that the end-user managed to partially write some data to this blob in
-    // which case the error could be dropped (by zxio or some other layer) and a short write
-    // returned instead.  If this happens, the end-user will retry at which point it's helpful if we
-    // return the same error rather than ZX_ERR_BAD_STATE (see above).
-    write_info_->write_error = status;
-    MarkError();
-    return status;
-  }
-
-  return ZX_OK;
+  return Commit();
 }
 
 zx_status_t Blob::Commit() {
@@ -585,7 +566,7 @@ zx_status_t Blob::MarkReadable() {
   if (readable_event_.is_valid()) {
     zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
-      MarkError();
+      LatchWriteError(status);
       return status;
     }
   }
@@ -595,13 +576,15 @@ zx_status_t Blob::MarkReadable() {
   return ZX_OK;
 }
 
-void Blob::MarkError() {
-  if (state_ != BlobState::kError) {
-    if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to evict blob from cache";
-    }
-    set_state(BlobState::kError);
+void Blob::LatchWriteError(zx_status_t write_error) {
+  if (state_ != BlobState::kDataWrite) {
+    return;
   }
+  if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to evict blob from cache: " << zx_status_get_string(status);
+  }
+  set_state(BlobState::kError);
+  write_info_->write_error = write_error;
 }
 
 zx_status_t Blob::GetReadableEvent(zx::event* out) {
@@ -927,7 +910,19 @@ zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
   return blobfs_->node_operations().write.Track([&] {
     std::lock_guard lock(mutex_);
-    return WriteInternal(data, len, {offset}, out_actual);
+    *out_actual = 0;
+    if (state() == BlobState::kDataWrite && offset != write_info_->bytes_written) {
+      FX_LOGS(ERROR) << "only append is currently supported (requested_offset: " << offset
+                     << ", expected: " << write_info_->bytes_written << ")";
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    zx_status_t status = WriteInternal(data, len, out_actual);
+    // Fuse any write errors for the next call as higher layers (e.g. zxio) may treat write errors
+    // as short writes.
+    if (status != ZX_OK) {
+      LatchWriteError(status);
+    }
+    return status;
   });
 }
 
@@ -935,9 +930,13 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
   TRACE_DURATION("blobfs", "Blob::Append", "len", len);
   return blobfs_->node_operations().append.Track([&] {
     std::lock_guard lock(mutex_);
-
-    zx_status_t status = WriteInternal(data, len, std::nullopt, out_actual);
-    if (state() == BlobState::kDataWrite) {
+    *out_actual = 0;
+    zx_status_t status = WriteInternal(data, len, out_actual);
+    // Fuse any write errors for the next call as higher layers (e.g. zxio) may treat write errors
+    // as short writes.
+    if (status != ZX_OK) {
+      LatchWriteError(status);
+    } else if (state() == BlobState::kDataWrite) {
       ZX_DEBUG_ASSERT(write_info_ != nullptr);
       *out_end = write_info_->bytes_written;
     } else {
@@ -1188,7 +1187,7 @@ zx_status_t Blob::Purge() {
   }
 
   // If the blob is in the error state, it should have already been evicted from
-  // the cache (see MarkError).
+  // the cache (see LatchWriteError).
   if (state_ != BlobState::kError) {
     if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK)
       return status;
