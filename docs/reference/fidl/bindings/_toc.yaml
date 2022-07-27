@@ -8,8 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/reference/fidl/bindings/overview.md
-- title: "LLCPP bindings"
-  path: /docs/reference/fidl/bindings/llcpp-bindings.md
+- title: "New C++ bindings"
+  path: /docs/reference/fidl/bindings/cpp-bindings.md
 - title: "HLCPP bindings"
   path: /docs/reference/fidl/bindings/hlcpp-bindings.md
 - title: "Dart bindings"

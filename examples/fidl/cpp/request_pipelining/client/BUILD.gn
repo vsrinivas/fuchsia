@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "fidl_echo_launcher_cpp_wire_client"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("echo-client") {
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
+  deps = [ ":bin" ]
+}

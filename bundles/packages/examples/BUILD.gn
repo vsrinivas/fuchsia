@@ -31,18 +31,7 @@ group("all") {
 
 group("fidl") {
   testonly = true
-  public_deps = [
-    "//examples/fidl/c/server:echo-c-server",
-    "//examples/fidl/go:echo-go-client",
-    "//examples/fidl/hlcpp:echo-hlcpp-client",
-    "//examples/fidl/hlcpp:echo-hlcpp-client-sync",
-    "//examples/fidl/hlcpp/server:echo-hlcpp-server",
-    "//examples/fidl/llcpp:echo-llcpp-client",
-    "//examples/fidl/llcpp/server:echo-llcpp-server",
-    "//examples/fidl/rust:echo-rust-client",
-    "//examples/fidl/rust:echo-rust-client-sync",
-    "//examples/fidl/rust/server:echo-rust-server",
-  ]
+  public_deps = [ "//examples/fidl" ]
 }
 
 group("bluetooth") {

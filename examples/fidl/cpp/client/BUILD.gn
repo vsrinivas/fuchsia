@@ -23,7 +23,7 @@ fuchsia_component("echo-client") {
   deps = [ ":bin" ]
 }
 
-# Unified C++ async client and server example package
+# C++ async client and server example package
 fuchsia_package("echo-cpp-client") {
   deps = [
     ":echo-client",

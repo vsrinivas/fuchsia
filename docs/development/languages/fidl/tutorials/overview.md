@@ -24,19 +24,19 @@ directory. Feel free to follow along by reading the code, or by deleting the
 example code and rewriting it yourself based on the tutorials.
 
 If you're using C++ and wondering which tutorial to follow, take a look
-at the [HLCPP and LLCPP comparison doc][c-family].
+at the [C++ bindings comparison][c-family].
 
-  * [High Level C++ (HLCPP) Tutorial][hlcpp]
-  * [Low Level C++ (LLCPP) Tutorial][llcpp]
-  * [Rust Tutorial][rust]
-  * [Dart Tutorial][dart]
+  * [New C++ bindings][cpp]
+  * [High Level C++ (HLCPP)][hlcpp]
+  * [Rust][rust]
+  * [Dart][dart]
 
 <!-- xrefs -->
 [getting-started]: /docs/get-started/README.md
 [fidl-concepts]: /docs/concepts/fidl/overview.md
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
+[cpp]: cpp/README.md
 [hlcpp]: hlcpp/README.md
-[llcpp]: llcpp/README.md
 [rust]: rust/README.md
 [dart]: dart/README.md
 [c]: /docs/development/languages/fidl/tutorials/tutorial-c.md

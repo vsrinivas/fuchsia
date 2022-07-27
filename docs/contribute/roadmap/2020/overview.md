@@ -13,7 +13,7 @@ The FIDL team is actively exploring the following projects:
 Currently, there are two FIDL binding implementations,
 [high-level C++ bindings (HLCPP)](/docs/reference/fidl/bindings/hlcpp-bindings.md)
 and
-[low-level C++ bindings (LLCPP)](/docs/reference/fidl/bindings/llcpp-bindings.md).
+[low-level C++ bindings (LLCPP)](/docs/reference/fidl/bindings/cpp-bindings.md).
 The FIDL team is exploring a solution that augments the LLCPP API surface to
 allow the use of high-level domain objects wherever low-level domain objects are
 currently used.

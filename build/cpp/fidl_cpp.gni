@@ -542,7 +542,7 @@ template("fidl_cpp_family") {
 
   not_needed([ "llcpp_layers" ])
 
-  # Define LLCPP targets, if requested.
+  # Define new C++ binding targets.
   layer_target_prefix = target_name + "_"
   foreach(layer, llcpp_layers) {
     layer_target_name = layer_target_prefix + layer.layer

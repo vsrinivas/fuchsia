@@ -24,7 +24,7 @@ fuchsia_component("echo-client") {
   deps = [ ":bin" ]
 }
 
-# Unified C++ sync client and server example package
+# C++ sync client and server example package
 fuchsia_package("echo-cpp-client-sync") {
   deps = [
     ":echo-client",

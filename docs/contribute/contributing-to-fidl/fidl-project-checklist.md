@@ -109,7 +109,7 @@ Add coverage to:
 [gidl]: /tools/fidl/gidl
 [kazoo]: /zircon/tools/kazoo
 [lexicon]: /docs/reference/fidl/language/lexicon.md
-[llcpp-allocators]: /docs/development/languages/fidl/tutorials/llcpp/topics/memory-ownership.md
+[llcpp-allocators]: /docs/development/languages/fidl/tutorials/cpp/topics/wire-memory-ownership.md
 [measure-tape]: /tools/fidl/measure-tape
 [source compatibility suite]: /src/tests/fidl/source_compatibility/
 [span-tests]: /tools/fidl/fidlc/tests/span_tests.cc

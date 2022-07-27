@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+# Caution: parts of this file, including relative offsets, are referenced by
+# /docs/development/languages/fidl/tutorials/cpp/basics/domain-objects.md
+# Make sure to update the line numbers there when editing.
+
+# [START imports]
+import("//build/components.gni")
+
+# [END imports]
+
+# [START test]
+test("test") {
+  testonly = true
+  output_name = "fidl_examples_domain_objects_cpp_test"
+  sources = [ "main.cc" ]
+  deps = [
+    # [START binding-dep]
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
+
+    # [END binding-dep]
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+# [END test]
+
+# [START package]
+fuchsia_unittest_package("fidl-examples-domain-objects-cpp-test") {
+  deps = [ ":test" ]
+  deprecated_legacy_test_execution = true
+}
+
+# [END package]
+
+group("domain_objects") {
+  testonly = true
+  deps = [ ":fidl-examples-domain-objects-cpp-test" ]
+}

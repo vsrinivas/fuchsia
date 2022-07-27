@@ -328,7 +328,7 @@ Reach out for questions or for status updates:
 https://fuchsia-review.googlesource.com/c/fuchsia/+/478491/28/src/storage/lib/paver/partition-client.h#b46
 [bind-server]:
 https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/server.h?q=fidl::BindServer&ss=fuchsia%2Ffuchsia
-[typed-channel]: /docs/reference/fidl/bindings/llcpp-bindings.md#typed-channels
+[typed-channel]: /docs/reference/fidl/bindings/cpp-bindings.md#typed-channels
 [raw-channel-interface]:
 https://cs.opensource.google/search?q=RawChannelInterface&sq=&ss=fuchsia%2Ffuchsia
 [create-endpoints]:

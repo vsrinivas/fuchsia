@@ -12,7 +12,6 @@ group("fidl") {
     "dart:all",
     "go:all",
     "hlcpp:all",
-    "llcpp:all",
     "rust:all",
   ]
 }
@@ -26,6 +25,5 @@ group("tests") {
     "echo-realm:tests",
     "go:tests",
     "hlcpp:tests",
-    "llcpp:tests",
   ]
 }

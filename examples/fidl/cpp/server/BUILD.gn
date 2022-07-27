@@ -37,4 +37,9 @@ fuchsia_package("echo-cpp-server") {
   package_name = "echo-cpp-server"
   deps = [ ":echo-server" ]
 }
+
+group("server") {
+  testonly = true
+  deps = [ ":echo-cpp-server" ]
+}
 # [END rest]

@@ -36,22 +36,22 @@ group("tests") {
   deps = [
     ":echo-cpp-client-sync-test",
     ":echo-cpp-client-test",
+    ":echo-cpp-wire-async-test",
+    ":echo-cpp-wire-client-shared-test",
+    ":echo-cpp-wire-client-sync-test",
+    ":echo-cpp-wire-client-test",
     ":echo-go-client-test",
     ":echo-hlcpp-client-sync-test",
     ":echo-hlcpp-client-test",
     ":echo-hlcpp-multi-client-test",
+    ":echo-launcher-cpp-wire-test",
     ":echo-launcher-go-test",
     ":echo-launcher-hlcpp-test",
-    ":echo-launcher-llcpp-test",
     ":echo-launcher-rust-test",
-    ":echo-llcpp-async-test",
-    ":echo-llcpp-client-shared-test",
-    ":echo-llcpp-client-sync-test",
-    ":echo-llcpp-client-test",
     ":echo-rust-client-sync-test",
     ":echo-rust-client-test",
+    ":echo-service-cpp-wire-test",
     ":echo-service-hlcpp-test",
-    ":echo-service-llcpp-test",
     ":echo-service-rust-test",
   ]
 }
@@ -141,57 +141,57 @@ fuchsia_test_package("echo-cpp-client-sync-test") {
 }
 
 # LLCPP example integration test packages
-fuchsia_test_package("echo-llcpp-client-test") {
+fuchsia_test_package("echo-cpp-wire-client-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
+    "//examples/fidl/cpp/client/wire:echo-client",
+    "//examples/fidl/cpp/server/wire:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/llcpp/client:echo-client",
-    "//examples/fidl/llcpp/server:echo-server",
   ]
 }
 
-fuchsia_test_package("echo-llcpp-client-sync-test") {
+fuchsia_test_package("echo-cpp-wire-client-sync-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
+    "//examples/fidl/cpp/client_sync/wire:echo-client",
+    "//examples/fidl/cpp/server/wire:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/llcpp/client_sync:echo-client",
-    "//examples/fidl/llcpp/server:echo-server",
   ]
 }
 
-fuchsia_test_package("echo-llcpp-client-shared-test") {
+fuchsia_test_package("echo-cpp-wire-client-shared-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
+    "//examples/fidl/cpp/client_thread_safety:echo-client",
+    "//examples/fidl/cpp/server:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/llcpp/client_shared:echo-client",
-    "//examples/fidl/llcpp/server:echo-server",
   ]
 }
 
-fuchsia_test_package("echo-llcpp-async-test") {
+fuchsia_test_package("echo-cpp-wire-async-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
+    "//examples/fidl/cpp/async_completer/client:echo-client",
+    "//examples/fidl/cpp/async_completer/server:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/llcpp/async_completer/client:echo-client",
-    "//examples/fidl/llcpp/async_completer/server:echo-server",
   ]
 }
 
-fuchsia_test_package("echo-launcher-llcpp-test") {
+fuchsia_test_package("echo-launcher-cpp-wire-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
+    "//examples/fidl/cpp/request_pipelining/client:echo-client",
+    "//examples/fidl/cpp/request_pipelining/server:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/llcpp/request_pipelining/client:echo-client",
-    "//examples/fidl/llcpp/request_pipelining/server:echo-server",
   ]
 }
 
-fuchsia_test_package("echo-service-llcpp-test") {
+fuchsia_test_package("echo-service-cpp-wire-test") {
   test_components = [ ":fidl_examples_test" ]
   deps = [
+    "//examples/fidl/cpp/services/client:echo-client",
+    "//examples/fidl/cpp/services/server:echo-server",
     "//examples/fidl/echo-realm:echo_realm",
-    "//examples/fidl/llcpp/services/client:echo-client",
-    "//examples/fidl/llcpp/services/server:echo-server",
   ]
 }
 

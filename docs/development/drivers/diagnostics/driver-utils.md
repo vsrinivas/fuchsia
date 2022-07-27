@@ -89,13 +89,14 @@ To implement the Fuchsia application that would communicate with the device,
 call into the FIDL API. For this utilize the FIDL bindings for your language of
 choice, for C++:
 
-* [LLCPP](/docs/reference/fidl/bindings/llcpp-bindings.md)
+* [New C++ bindings](/docs/reference/fidl/bindings/cpp-bindings.md)
 * [HLCPP](/docs/reference/fidl/bindings/hlcpp-bindings.md)
 
-For example for I2C using LLCPP we have:
+For example for I2C in [i2cutil](/src/devices/i2c/bin) using the new C++ bindings
+we have:
 
 ```
-fuchsia_hardware_i2c::Device2::SyncClient client((zx::channel(channel)));
+fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client(zx::channel(channel));
 auto read = client.Transfer(...);
 ```
 

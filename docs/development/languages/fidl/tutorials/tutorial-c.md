@@ -650,5 +650,5 @@ arrive.
 [echo-fidl]: /examples/fidl/fuchsia.examples/echo.test.fidl
 [echo-server]: /examples/fidl/c/server/echo_server.c
 [fidl-intro]: /docs/development/languages/fidl/tutorials/fidl.md
-[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
+[llcpp-tutorial]: /docs/development/languages/fidl/tutorials/cpp
 [wire-format]: /docs/reference/fidl/language/wire-format

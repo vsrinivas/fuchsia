@@ -10,7 +10,7 @@ following concepts:
 *   [FIDL](/docs/development/languages/fidl/README.md)
 *   [Driver Binding](/docs/development/drivers/concepts/device_driver_model/driver-binding.md)
 *   [DDKTL](/docs/development/drivers/concepts/driver_development/using-ddktl.md)
-*   [LLCPP FIDL Bindings](/docs/development/languages/fidl/tutorials/llcpp/README.md)
+*   [New C++ FIDL Bindings](/docs/development/languages/fidl/tutorials/cpp/README.md)
 
 ## FIDL Protocol Definition
 
@@ -42,7 +42,7 @@ utilizing the DDKTL.
 
 ```
 // This class implement the fuchsia.examples.echo/Echo FIDL protocol using the
-// LLCPP FIDL bindings
+// new C++ FIDL bindings
 class Device : public fidl::WireServer<fidl_examples_echo::Echo> {
 
   // This is the main entry point for the driver.

@@ -141,5 +141,5 @@ TODO
 
 <!-- xrefs -->
 [layout-attribute]: /docs/reference/fidl/language/attributes.md#layout
-[cpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
+[cpp-tutorial]: /docs/development/languages/fidl/tutorials/cpp
 [hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/hlcpp

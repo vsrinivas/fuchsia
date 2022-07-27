@@ -40,7 +40,7 @@ zx_library("svc") {
   # To regenerate:
   #   scripts/gn/trim_visibility.py --target="//zircon/system/ulib/svc"
   visibility = [
-    "//examples/fidl/llcpp/services/server/*",
+    "//examples/fidl/cpp/services/server/*",
     "//sdk/lib/driver_test_realm/*",
     "//src/bringup/bin/console/*",
     "//src/bringup/bin/device-name-provider/*",

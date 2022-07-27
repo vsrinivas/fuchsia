@@ -1,7 +1,6 @@
 # New C++ FIDL bindings examples
 
-This directory contains example code for using natural types in the new C++
-bindings (fxbug.dev/60240).
+This directory contains example code for using the new C++ bindings.
 
 To use the unified bindings for a library `//examples/fidl/fuchsia.examples`,
 declare the following dependency:
@@ -20,9 +19,8 @@ and include the following header:
 
 ## Client example
 
-Note: the instruction here is adapted from the [LLCPP tutorials][llcpp-tut].
-We should write a similar full-fledged tutorial for the unified bindings as it
-matures.
+<!-- TODO(fxbug.dev/103483): write full-fledged tutorial for the
+bindings as it matures. -->
 
 To run the client example, run the `echo_realm` component.
 This creates the client and server component instances and routes the
@@ -49,5 +47,3 @@ protocol. You should see the following output using `fx log`:
 [echo_client][I] (Wire types) got response: hello
 [echo_server][W] server error: FIDL endpoint was unbound due to peer closed, status: ZX_ERR_PEER_CLOSED (-24)
 ```
-
-[llcpp-tut]: https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/llcpp/basics/client?hl=en#run_the_client

@@ -555,8 +555,8 @@ of APIs in this alternative together.
 [go-fidl-wire-format-for-wires]: http://go/fidl-wire-format-for-wires
 [go-i2i-persistent-fidl]: http://go/i2i-persistent-fidl-messages
 [go-phickle]: http://go/phickle
-[llcpp-bindings-reference]: /docs/reference/fidl/bindings/llcpp-bindings.md#encoding-decoding
-[llcpp-encoding-decoding]: /docs/reference/fidl/bindings/llcpp-bindings.md#encoding-decoding
+[llcpp-bindings-reference]: /docs/reference/fidl/bindings/cpp-bindings.md
+[llcpp-encoding-decoding]: /docs/reference/fidl/bindings/cpp-bindings.md#encoding-decoding
 [unknown-interactions-rfc]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
 [rust-encoding-decoding]: /docs/reference/fidl/bindings/rust-bindings.md#encoding-decoding
 [rust-persistence-impl]: https://cs.opensource.google/fuchsia/fuchsia/+/b9b8d7aae9cff4398182a0e125055950556178e1:src/lib/fidl/rust/fidl/src/encoding.rs;l=3662
