@@ -67,7 +67,6 @@ pub(crate) mod scaffold;
 mod service_configuration_tests;
 mod setting_handler_tests;
 mod setting_proxy_tests;
-mod setup_tests;
 mod storage_agent_tests;
 mod stream_volume_tests;
 mod test_failure_utils;
