@@ -56,11 +56,16 @@ class AudioCoreHardwareTest : public TestFixture {
 
   std::ostringstream AllZeroesWarning();
 
-  fuchsia::media::AudioDeviceEnumeratorPtr audio_device_enumerator_;
-  fuchsia::media::AudioCorePtr audio_core_;
-  fuchsia::media::AudioCapturerPtr audio_capturer_;
-
-  fuchsia::media::audio::GainControlPtr stream_gain_control_;
+  void set_audio_device_enumerator(fuchsia::media::AudioDeviceEnumeratorPtr audio_device_enum) {
+    audio_device_enumerator_ = std::move(audio_device_enum);
+  }
+  fuchsia::media::AudioDeviceEnumeratorPtr& audio_device_enumerator() {
+    return audio_device_enumerator_;
+  }
+  void set_audio(fuchsia::media::AudioPtr audio) { audio_ = std::move(audio); }
+  fuchsia::media::AudioPtr& audio() { return audio_; }
+  fuchsia::media::AudioCapturerPtr& audio_capturer() { return audio_capturer_; }
+  fuchsia::media::audio::GainControlPtr& stream_gain_control() { return stream_gain_control_; }
 
   std::unordered_set<uint64_t> capture_device_tokens_;
   std::optional<uint64_t> default_capture_device_token() { return default_capture_device_token_; }
@@ -78,6 +83,11 @@ class AudioCoreHardwareTest : public TestFixture {
   int64_t received_payload_frames_ = 0;
 
  private:
+  fuchsia::media::AudioDeviceEnumeratorPtr audio_device_enumerator_;
+  fuchsia::media::AudioPtr audio_;
+  fuchsia::media::AudioCapturerPtr audio_capturer_;
+  fuchsia::media::audio::GainControlPtr stream_gain_control_;
+
   std::optional<uint64_t> default_capture_device_token_ = std::nullopt;
 };
 

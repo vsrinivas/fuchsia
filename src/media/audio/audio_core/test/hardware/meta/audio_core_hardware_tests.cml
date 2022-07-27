@@ -13,9 +13,8 @@
     use: [
         {
             protocol: [
-                "fuchsia.media.AudioCore",
+                "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
-                "fuchsia.scheduler.ProfileProvider",
             ],
         },
     ],
