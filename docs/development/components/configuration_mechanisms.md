@@ -3,7 +3,7 @@
 The [component configuration](/docs/concepts/components/configuration.md) page
 introduces how components can be configured on Fuchsia, and describes different
 situations that require
-[component configuration][glossary.component_configuration].
+[component configuration][glossary.component-configuration].
 
 This page introduces the different configuration mechanisms that Fuchsia
 provides, talks about their strengths and weaknesses and provides guidance on
@@ -188,7 +188,7 @@ Service-based configuration does not work well for the following problems:
   solution when working with large configuration.
 
 
-[glossary.component_configuration]: /docs/glossary/README.md#component-configuration
+[glossary.component-configuration]: /docs/glossary/README.md#component-configuration
 [glossary.package]: /docs/glossary/README.md#package
 
 [bug.96260]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=96260

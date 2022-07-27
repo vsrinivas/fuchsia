@@ -1,7 +1,7 @@
 # Component configuration
 
 It is often useful to tailor the behavior of a
-[component instance][glossary.component_instance] to the context it's running
+[component instance][glossary.component-instance] to the context it's running
 in. In Fuchsia this is known as "component configuration". This page defines
 component configuration and discusses some of the characteristics of different
 situations that require configuration.
@@ -163,7 +163,7 @@ types but runtime modifiable in others.
   parameters for a large ML model.
 
 
-[glossary.component_instance]: /docs/glossary/README.md#component-instance
+[glossary.component-instance]: /docs/glossary/README.md#component-instance
 <!-- TODO(fxbug.dev/104819): Update link once better documentation exists -->
 [rfc0115]: /docs/contribute/governance/rfcs/0115_build_types.md
 
