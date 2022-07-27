@@ -2,27 +2,43 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
 
+# [END imports]
+
+# [START bin]
 executable("bin") {
   output_name = "fidl_echo_cpp_client"
   sources = [ "main.cc" ]
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-    "//sdk/lib/sys/cpp",
+
+    # This library is used to log messages.
+    "//sdk/lib/syslog/cpp",
+
+    # This library provides an asynchronous event loop implementation.
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
+
+    # This library is used to consume capabilities, e.g. protocols,
+    # from the component's incoming directory.
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
+# [END bin]
+
+# [START component]
 fuchsia_component("echo-client") {
   component_name = "echo_client"
   manifest = "meta/client.cml"
   deps = [ ":bin" ]
 }
 
+# [END component]
+
+# [START package]
 # C++ async client and server example package
 fuchsia_package("echo-cpp-client") {
   deps = [
@@ -31,6 +47,8 @@ fuchsia_package("echo-cpp-client") {
     "//examples/fidl/echo-realm:echo_realm",
   ]
 }
+
+# [END package]
 
 group("client") {
   testonly = true

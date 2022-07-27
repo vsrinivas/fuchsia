@@ -13,11 +13,16 @@ executable("bin") {
 
   # [START deps]
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fidl",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp_wire",
+
+    # This library is used to log messages.
+    "//sdk/lib/syslog/cpp",
+
+    # This library provides an the asynchronous event loop implementation.
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
+
+    # This library is used to consume capabilities, e.g. protocols,
+    # from the component's incoming directory.
     "//zircon/system/ulib/service:service-llcpp",
   ]
 
