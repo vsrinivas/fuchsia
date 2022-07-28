@@ -1,0 +1,369 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio.device;
+
+using fuchsia.hardware.audio;
+using fuchsia.hardware.audio.signalprocessing;
+using fuchsia.mediastreams;
+using zx;
+
+alias clock_domain = fuchsia.hardware.audio.clock_domain;
+alias token_id = uint64;
+
+/// Maximum number of audio devices in the system at any time.
+const MAX_COUNT_DEVICES uint32 = 256;
+
+/// Maximum number of `PcmFormatSet`s that a device can report as supported.
+const MAX_COUNT_FORMATS uint32 = fuchsia.hardware.audio.MAX_COUNT_FORMATS;
+
+/// Maximum number of `ChannelSet`s that a device can report in a single PcmFormatSet.
+const MAX_COUNT_CHANNEL_SETS uint32 = fuchsia.hardware.audio.MAX_COUNT_CHANNEL_SETS;
+
+/// Maximum number of distinct sample formats that a single PcmFormatSet can contain.
+const MAX_COUNT_SAMPLE_FORMATS uint32 = 32;
+
+/// Maximum number of frame rates that a device can report in a PcmFormatSet.
+const MAX_COUNT_RATES uint32 = fuchsia.hardware.audio.MAX_COUNT_SUPPORTED_RATES;
+
+/// Maximum number of channels that a device can report as supported.
+const MAX_COUNT_CHANNELS uint32 = fuchsia.hardware.audio.MAX_COUNT_CHANNELS_IN_RING_BUFFER;
+
+/// The length of the device's unique ID, in bytes.
+const UNIQUE_ID_SIZE uint32 = fuchsia.hardware.audio.UNIQUE_ID_SIZE;
+
+/// Maximum length of the strings for device, manufacturer and product names.
+const MAX_STRING_SIZE uint32 = fuchsia.hardware.audio.MAX_UI_STRING_SIZE;
+
+/// The device's type (e.g. directionality).
+type DeviceType = flexible enum {
+    /// The device is a source of audio streams.
+    INPUT = 1;
+
+    /// The device is a destination for audio streams.
+    OUTPUT = 2;
+};
+
+/// When a device is detected (or added via `Provider/AddDevice`), it is
+/// queried for its properties and capabilities. Once this enumeration process
+/// completes, it is announced to clients that are watching for device arrivals
+/// via `Registry/WatchDevicesAdded`.
+///
+/// An `Info` table is returned for each audio device that has been added.
+type Info = table {
+    /// A device identifier that is guaranteed unique for this boot session, but
+    /// may change across reboots.
+    ///
+    /// Required.
+    1: id token_id;
+
+    /// Whether the device is an input (a source of audio) or an output
+    /// (a destination for audio).
+    ///
+    /// Required.
+    2: device_type DeviceType;
+
+    /// The device's high-level name (if present), as received from devfs or
+    /// provided by the `Provider/AddDevice` caller.
+    ///
+    /// Optional.
+    3: device_name string:MAX_STRING_SIZE;
+
+    /// A 16-character ID that (if present) differentiates instances of the same
+    /// device. This value should not change across system reboots.
+    ///
+    /// Optional.
+    4: unique_id array<uint8, UNIQUE_ID_SIZE>;
+
+    /// The name of the device's manufacturer.
+    ///
+    /// Optional.
+    5: manufacturer string:MAX_STRING_SIZE;
+
+    /// The device's high-level product name.
+    ///
+    /// Optional.
+    6: product string:MAX_STRING_SIZE;
+
+    /// The union of all formats the device can support, across all combinations
+    /// of device configuration settings. Must contain at least one entry.
+    ///
+    /// Required.
+    7: supported_formats vector<PcmFormatSet>:MAX_COUNT_FORMATS;
+
+    /// The device's gain/mute capabilities.
+    ///
+    /// Required.
+    //
+    // TODO(fxbug.dev/102027): Remove legacy gain aspects once driver API does.
+    // Going forward, gain will be handled by `SignalProcessing`.
+    8: gain_caps GainCapabilities;
+
+    /// The device's hot-plug capabilities.
+    ///
+    /// Required.
+    9: plug_detect_caps PlugDetectCapabilities;
+
+    /// An identifier for the clock domain in which the device's clock hardware
+    /// operates. Devices in the same clock domain remain perfectly
+    /// synchronized. They may drift relative to some other clock domain, but
+    /// all clocks in that domain will do so perfectly  _together_. Although
+    /// their clocks have the same rate, their positions may be offset by an
+    /// arbitrary, fixed amount.
+    ///
+    /// There are two special values for clock domain:
+    ///
+    /// *  CLOCK_DOMAIN_MONOTONIC means the hardware is driven by the system
+    ///    montonic clock and will always be synchronized with that timeline.
+    ///
+    /// *  CLOCK_DOMAIN_EXTERNAL means the hardware is not synchronized with any
+    ///    other known clocks (even any other clocks in CLOCK_DOMAIN_EXTERNAL).
+    ///
+    /// Required.
+   10: clock_domain clock_domain;
+};
+
+/// This table contains vectors representing three dimensions of device
+/// configuration (channelization, sample format, frame rate). The device should
+/// support all combinations of the items in these vectors.
+type PcmFormatSet = table {
+    /// The number of channel sets that the device supports. This must contain
+    /// at least one `ChannelSet` entry.
+    ///
+    /// Required.
+    1: channel_sets vector<ChannelSet>:MAX_COUNT_CHANNEL_SETS;
+
+    /// The number of sample formats that the device supports. This must
+    /// must contain least one `AudioSampleFormat` entry.
+    ///
+    /// Required.
+    2: sample_formats vector<fuchsia.mediastreams.AudioSampleFormat>:MAX_COUNT_SAMPLE_FORMATS;
+
+    /// The number of frame rates that the device supports. This must contain at
+    /// least one frame rate entry.
+    ///
+    /// Required.
+    3: frame_rates vector<uint32>:MAX_COUNT_RATES;
+};
+
+/// One possible channel configuration for the device.
+type ChannelSet = table {
+    /// Each item in this vector describes the attributes (e.g. frequency range)
+    /// of that channel. The length of this vector defines the number of
+    /// channels supported by this ChannelSet. Must contain at least one entry.
+    ///
+    /// Required.
+    1: attributes vector<ChannelAttributes>:MAX_COUNT_CHANNELS;
+
+    // TODO(fxbug.dev/105130): Incorporate this, once it lands.
+    //   2: config AudioChannelConfig;
+};
+
+/// The attributes (e.g. frequency range) of a single channel.
+type ChannelAttributes = table {
+    /// Minimum frequency that this channel guarantees to emit/capture, in Hz.
+    /// If absent, this channel extends to the bottom of the device range.
+    ///
+    /// Optional.
+    1: min_frequency uint32;
+
+    /// Maximum frequency that this channel guarantees to emit/capture, in Hz.
+    /// If absent, this channel extends to the top of the device range.
+    ///
+    /// Optional.
+    2: max_frequency uint32;
+};
+
+/// The device's overall gain capabilities.
+//
+// TODO(fxbug.dev/102027): Remove legacy gain aspects once driver API does.
+// Going forward, gain will be handled by `SignalProcessing`.
+type GainCapabilities = table {
+    /// The device's minimum gain, in decibels.
+    ///
+    /// Required.
+    1: min_gain_db float32;
+
+    /// The device's maximum gain, in decibels.
+    ///
+    /// Required.
+    2: max_gain_db float32;
+
+    /// The precision of each gain-change step, in decibels.
+    ///
+    /// Required.
+    3: gain_step_db float32;
+
+    /// If true, the device contains a distinct MUTE control. If false or
+    /// absent, it does not.
+    ///
+    /// Optional.
+    4: can_mute bool;
+
+    /// Automatic Gain Control. If absent, this hardware does not support AGC.
+    ///
+    /// Optional.
+    5: can_agc bool;
+};
+
+/// The device's current state of gain.
+//
+// TODO(fxbug.dev/102027): Remove legacy gain aspects once driver API does.
+// Going forward, gain will be handled by `SignalProcessing`.
+type GainState = table {
+    /// Device-wide gain, in decibels.
+    ///
+    /// Required.
+    1: gain_db float32;
+
+    /// Mute state for all channels. If absent, all channels are unmuted.
+    ///
+    /// Optional.
+    2: muted bool;
+
+    /// Automatic Gain Control. If absent, disabled.
+    ///
+    /// Optional.
+    3: agc_enabled bool;
+};
+
+/// The device's hot-plug capabilities.
+type PlugDetectCapabilities = flexible enum {
+    /// Device is always plugged in. Plug state cannot change.
+    HARDWIRED = 0;
+
+    /// Device can be un/plugged and can asynchronously notify of changes.
+    PLUGGABLE = 1;
+};
+
+/// The current plugged-in state for the device.
+type PlugState = flexible enum {
+    /// Connected and available for audio streaming.
+    PLUGGED = 1;
+
+    /// Not connected; unavailable for audio streaming.
+    UNPLUGGED = 2;
+};
+
+/// `Registry` instances notify clients as devices arrive and depart, and they
+/// create observers (see `Observer`) that notify of more detailed state changes.
+@discoverable
+protocol Registry {
+    /// Register for notification when one or more devices are added.
+    /// The `devices` vector will always contain at least one `Info` entry.
+    WatchDevicesAdded() -> (table {
+        /// Devices added since `WatchDevicesAdded` was last called. This method
+        /// returns all audio devices when called for the first time.
+        1: devices vector<Info>:MAX_COUNT_DEVICES;
+    }) error RegistryWatchDevicesAddedError;
+
+    /// Register for notification when an (active, added) device is removed.
+    /// Because the method only notifies of one removal, upon completion it
+    /// should immediately be re-called, in case other removals have occurred.
+    WatchDeviceRemoved() -> (table {
+        /// The token of the device least-recently removed. 
+        1: id token_id;
+    }) error RegistrWatchDeviceRemovedyError;
+
+    /// Request an `Observer` for the specified device.
+    CreateObserver(resource table {
+        /// The token `id` for the device to be observed.
+        ///
+        /// Required.
+        1: id token_id;
+
+        /// The server end of the `Observer` that will be created.
+        ///
+        /// Required.
+        2: observer_server server_end:Observer;
+    }) -> (table {}) error RegistryCreateObserverError;
+};
+
+/// Errors returned by `Registry/WatchDevicesAdded`.
+//
+// TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
+// conditions have been identified and no error codes have been added.
+type RegistryWatchDevicesAddedError = flexible enum {};
+
+/// Errors returned by `Registry/WatchDeviceRemoved`.
+//
+// TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
+// conditions have been identified and no error codes have been added.
+type RegistrWatchDeviceRemovedyError = flexible enum {};
+
+/// Errors returned by `Registry/CreateObserver`.
+type RegistryCreateObserverError = flexible enum {
+    /// The required `id` is missing.
+    INVALID_TOKEN = 1;
+
+    /// No device with token `id` was found. Either this token has never been
+    /// used, or the device with this token `id` has been removed.
+    DEVICE_NOT_FOUND = 2;
+
+    /// The required `observer_server` is missing or invalid.
+    INVALID_OBSERVER = 3;
+};
+
+/// `Observer` instances are used to learn the capabilities and state of an
+/// audio device, and to stay informed as its state changes over time. Each
+/// `Observer` is associated with an initialized audio device. An audio device
+/// may be observed by multiple `Observer` instances.
+protocol Observer {
+    /// Query current driver/device health with `Observer/GetHealthState`.
+    compose fuchsia.hardware.audio.Health;
+
+    /// Query the device's available processing topologies and individual
+    /// elements, and watch for changes to those elements.
+    compose fuchsia.hardware.audio.signalprocessing.Reader;
+
+    /// Request notification of any change to the device's gain state.
+    ///
+    /// Note: this only notifies of changes to controls described in the
+    /// device's`Info` table (`GainCapabilities` specifically). Use
+    /// `WatchElementState` for gain processing exposed as `SignalProcessing`
+    /// (`GetTopologies`, `GetElements`).
+    //
+    // TODO(fxbug.dev/102027): Remove legacy gain aspects once driver API does.
+    // Going forward, gain will be handled by `SignalProcessing`.
+    WatchGainState() -> (table {
+        /// The device's most recent gain state.
+        1: state GainState;
+    }) error ObserverWatchGainStateError;
+
+    /// Request notification of any change to the device's plug state. When
+    /// called for the first time, it will return immediately.
+    WatchPlugState() -> (table {
+        /// The device's current plug state.
+        1: state PlugState;
+
+        /// The time (in CLOCK_MONOTONIC) of the most-recent change in plug state.
+        2: plug_time zx.time;
+    }) error ObserverWatchPlugStateError;
+
+    /// Retrieve the device's reference clock.
+    ///
+    /// This clock will be in the domain specified in the device's `Info` table.
+    GetReferenceClock() -> (resource table {
+        /// The device's reference clock.
+        1: reference_clock zx.handle:CLOCK;
+    }) error ObserverGetReferenceClockError;
+};
+
+/// Errors returned by `Observer/WatchGainState`.
+//
+// TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
+// conditions have been identified and no error codes have been added.
+type ObserverWatchGainStateError = flexible enum {};
+
+/// Errors returned by `Observer/WatchPlugState`.
+//
+// TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
+// conditions have been identified and no error codes have been added.
+type ObserverWatchPlugStateError = flexible enum {};
+
+/// Errors returned by `Observer/GetReferenceClock`.
+//
+// TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
+// conditions have been identified and no error codes have been added.
+type ObserverGetReferenceClockError = flexible enum {};

@@ -13,6 +13,7 @@ group("audio") {
     "drivers",
     "examples",
     "lib",
+    "services",
   ]
 }
 

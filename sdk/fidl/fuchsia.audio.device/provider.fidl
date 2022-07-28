@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio.device;
+
+using fuchsia.hardware.audio;
+
+/// Use the `Provider` interface to manually add devices that do not use the
+/// devfs mechanism. Devices that do are automatically added, upon detection.
+@discoverable
+protocol Provider {
+    AddDevice(resource table {
+        /// The device's high-level name. Must not be an empty string.
+        ///
+        /// Required.
+        1: device_name string:MAX_STRING_SIZE;
+
+        /// The device's type (directionality, such as input or output).
+        ///
+        /// Required.
+        2: device_type DeviceType;
+
+        /// The `StreamConfig` channel used to configure/observe the device.
+        ///
+        /// Required.
+        3: stream_config_client client_end:fuchsia.hardware.audio.StreamConfig;
+    }) -> (table {}) error ProviderAddDeviceError;
+};
+
+/// Errors returned by the `Provider` protocol.
+type ProviderAddDeviceError = flexible enum {
+    /// The required `device_name` is incorrectly formed, empty or missing.
+    INVALID_NAME = 2;
+
+    /// The required `device_type` is missing.
+    INVALID_TYPE = 3;
+
+    /// The required `stream_config_client` is invalid or missing.
+    INVALID_STREAM_CONFIG = 5;
+};

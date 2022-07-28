@@ -130,6 +130,8 @@ type RingBuffer = resource table {
 
     /// Encoding of audio data in the buffer.
     /// Required.
+    //
+    // TODO(fxbug.dev/105130): Adopt `fuchsia.mediastreams.AudioEncoding` once that lands.
     2: format fuchsia.mediastreams.AudioFormat;
 
     /// The number of bytes allocated to the producer.

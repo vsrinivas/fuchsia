@@ -1,0 +1,259 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio.device;
+
+using fuchsia.mediastreams;
+using fuchsia.audio;
+using fuchsia.hardware.audio.signalprocessing;
+using zx;
+
+/// Parameters specified by a caller when creating a ring buffer.
+type RingBufferOptions = table {
+    /// The format (sample format, channelization, frame rate) of the ring
+    /// buffer to be created.
+    ///
+    /// Required.
+    //
+    // TODO(fxbug.dev/105130): Adopt `AudioEncoding` once it lands:
+    // 1: encoding fuchsia.mediastreams.AudioEncoding;
+    1: format fuchsia.mediastreams.AudioFormat;
+
+    /// The minimum number of bytes required in the ring buffer. The actual
+    /// buffer may be larger, as required by the encoding, driver, device or OS.
+    ///
+    /// Required.
+    2: ring_buffer_min_bytes uint32;
+};
+
+/// Information about the ring buffer or associated audio stream.
+type RingBufferProperties = table {
+    /// The number of bits (starting with the most significant) that are valid,
+    /// within each individual sample. This may be be smaller than the actual
+    /// sample size, in the case of an input ring buffer fed by an 18-bit ADC
+    /// for example. Any additional bits of precision should be ignored. 
+    ///
+    /// Required.
+    //
+    // TODO(fxbug.dev/105130): Adopt `fuchsia.mediastreams.AudioEncoding`, and
+    // change to the following comment:
+    //   Optional (Required for PCM encodings, including 'packed' formats).
+    1: valid_bits_per_sample uint8;
+
+    /// The amount of pipeline delay beyond the interconnect (subsequent to the
+    /// DMA "read" position for output devices, or prior to the DMA "write"
+    /// position for input devices). This duration must be non-negative.
+    ///
+    /// Required.
+    2: external_delay zx.duration;
+
+    /// The amount of temporary buffering needed for the ring-buffer DMA
+    /// process. This duration usually corresponds to the size of a hardware
+    /// FIFO block, since that FIFO determines the specifics of data transfers
+    /// into and out of ring-buffer memory.
+    ///
+    /// For output devices this represents the amount of read-ahead buffering
+    /// needed (important when calculating minimum lead-time); for input devices
+    /// this is the amount of hold-back data (important when calculating maximum
+    /// capture delay). Compared to the interconnect (where we measure audio
+    /// position), FIFO delay lies on the _near_ side (unlike external delay,
+    /// which is on the _far_ side). This duration must be non-negative.
+    ///
+    /// Required.
+    3: fifo_delay zx.duration;
+
+    /// The maximum delay until disabled channels become fully operational,
+    /// after calling `SetActiveChannels`. This is the worst-case duration when
+    /// reenabling all channels. The value must be non-negative.
+    ///
+    /// Required.
+    4: turn_on_delay zx.duration;
+};
+
+/// A `Controller` interface creates `Control` instances. Each `Control` binds
+/// to a single device. A device can only be bound to one `Control` at any time.
+@discoverable
+protocol Controller {
+    // Create a `Control` for the specified device.
+    Create(resource table {
+        /// The token `id` for the device to be controlled.
+        ///
+        /// Required.
+        1: id token_id;
+
+        /// The server_end of the `Control` to be created.
+        ///
+        /// Required.
+        2: control_server server_end:Control;
+    }) -> (table {}) error ControllerCreateError;
+};
+
+/// Errors returned by `Controller/Create`.
+type ControllerCreateError = flexible enum {
+    /// The required `id` is missing.
+    INVALID_TOKEN = 1;
+
+    /// No device with token `id` was found. Either this token has never been
+    /// used, or the device with this token `id` has been removed.
+    DEVICE_NOT_FOUND = 2;
+
+    /// A `Control` associated with `id` already exists. This device is already
+    /// being actively controlled.
+    DEVICE_ALREADY_ALLOCATED = 3;
+
+    /// The required `control_server` is missing or invalid.
+    INVALID_CONTROL = 4;
+};
+
+/// A `Control` instance is used to change the settings or state of an audio
+/// device. It also creates the ring buffer used to pass audio data between
+/// client and device. Each `Control` is associated with an initialized audio
+/// device; conversely each device is associated with either zero or one
+/// `Control` at any time. 
+protocol Control {
+    /// Change the processing topology (via `SetTopology`) or the state of a
+    /// single processing node (via `SetElementState`).
+    compose fuchsia.hardware.audio.signalprocessing.SignalProcessing;
+
+    /// Change the device's overall gain state.
+    //
+    // TODO(fxbug.dev/102027): Remove legacy gain aspects once driver API does.
+    // Going forward, gain will be handled by `SignalProcessing`.
+    SetGain(table {
+        /// The gain state to be set.
+        ///
+        /// Required.
+        1: target_state GainState;
+    }) -> (table {}) error ControlSetGainError;
+
+    /// Retrieve the subset of formats that are possible, as the device is
+    /// currently configured.
+    GetCurrentlyPermittedFormats() -> (table {
+        /// Possible formats, as configured. Must contain at least one entry.
+        1: permitted_formats vector<PcmFormatSet>:MAX_COUNT_FORMATS;
+    }) error ControlGetCurrentlyPermittedFormatsError;
+
+    /// Create the ring buffer used to pass audio to/from this device.
+    CreateRingBuffer(resource table {
+        /// Additional requirements about the actual ring buffer being created.
+        ///
+        /// Required.
+        1: options RingBufferOptions;
+
+        /// The server_end of the `RingBuffer` to be created.
+        ///
+        /// Required.
+        2: ring_buffer_server server_end:RingBuffer;
+    }) -> (resource table {
+        /// Properties about the ring buffer and active audio stream as created.
+        1: properties RingBufferProperties;
+
+        /// An object that represents the audio stream and ring memory itself.
+        /// Note: ring-buffer VMO memory ranges must be cache-invalidated before
+        /// each read, and cache-flushed after each write.
+        2: ring_buffer fuchsia.audio.RingBuffer;
+    }) error ControlCreateRingBufferError;
+};
+
+/// Errors returned by `Control/SetGain`.
+type ControlSetGainError = flexible enum {
+    /// The required `target_state` is missing.
+    INVALID_GAIN_STATE = 1;
+
+    /// The specified gain is outside the device's allowed range.
+    GAIN_OUT_OF_RANGE = 2;
+
+    /// MUTE is requested, but the device has no MUTE control.
+    MUTE_UNAVAILABLE = 3;
+
+    /// Enabling AGC is requested, but the device has no AGC.
+    AGC_UNAVAILABLE = 4;
+};
+
+/// Errors returned by `Control/GetCurrentlyPermittedFormats`.
+//
+// TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
+// conditions have been identified and no error codes have been added.
+type ControlGetCurrentlyPermittedFormatsError = flexible enum {};
+
+/// Errors returned by `Control/CreateRingBuffer`.
+type ControlCreateRingBufferError = flexible enum {
+    /// The driver or device is unresponsive.
+    DEVICE_FAILURE = 1;
+
+    /// The required `options` is missing.
+    INVALID_OPTIONS = 2;
+
+    /// The device cannot create a ring buffer with the specified options.
+    BAD_RING_BUFFER_OPTION = 3;
+
+    /// The required `ring_buffer_server` is invalid or missing.
+    INVALID_RING_BUFFER = 4;
+};
+
+/// A `RingBuffer` instance controls data flow for the associated audio stream.
+protocol RingBuffer {
+    /// Request that specific individual channels be powered down/up, if the
+    /// device supports this. This is intended for idle power conservation.
+    ///
+    /// Channels are specified by bitmask; the least significant bit corresponds
+    /// to channel 0. Each bit not set indicates that the channel can be
+    /// deactivated. `SetActiveChannels` does not change how a ring buffer
+    /// responds to `Start`/`Stop`, specifically with regards to position.
+    ///
+    /// Devices are not required to obey `SetActiveChannels`. For example, they
+    /// are not required to zero-out an input stream's inactive channels, and
+    /// data written to inactive channels of an output stream's ring buffer may
+    /// still be played.
+    ///
+    /// If not called, then by default all channels will be active.
+    SetActiveChannels(table {
+        /// The channels to be activated (all others should be deactivated). No
+        /// bit should be set above the `channel_count` specified in the ring
+        /// buffer format (e.g. for a four-channel stream, `channel_bitmask`
+        /// must be in the [0x00, 0x0F] range).
+        ///
+        /// Required.
+        1: channel_bitmask uint64;
+    }) -> (table {
+        /// The CLOCK_MONOTONIC time when the hardware was configured. Note:
+        /// this does not include the effects of `turn_on_delay` on streams.
+        1: set_time zx.time;
+    }) error RingBufferSetActiveChannelsError;
+
+    /// Start the ring buffer, beginning at the first frame of the ring buffer.
+    Start(table {}) -> (table {
+        /// The CLOCK_MONOTONIC time when the stream was started.
+        1: start_time zx.time;
+    }) error RingBufferStartError;
+
+    /// Stop the ring buffer.
+    Stop(table {}) -> (table {}) error RingBufferStopError;
+};
+
+/// Errors returned by `RingBuffer/SetActiveChannels`.
+type RingBufferSetActiveChannelsError = flexible enum {
+    /// The device does not support `SetActiveChannels`. Individual channels
+    /// cannot be deactivated (all channels are always active).
+    METHOD_NOT_SUPPORTED = 1;
+
+    /// The required `channel_bitmask` is missing.
+    INVALID_CHANNEL_BITMASK = 2;
+
+    /// The passed `channel_bitmask` specifies channels that are beyond the
+    /// range of channels currently configured for this ring buffer.
+    CHANNEL_OUT_OF_RANGE = 3;
+};
+
+/// Errors returned by `RingBuffer/Start`.
+type RingBufferStartError = flexible enum {
+    /// `Start` was called on a ring buffer that is already started.
+    ALREADY_STARTED = 1;
+};
+
+/// Errors returned by `RingBuffer/Stop`.
+type RingBufferStopError = flexible enum {
+    /// `Stop` was called on a ring buffer that is already stopped.
+    ALREADY_STOPPED = 1;
+};
