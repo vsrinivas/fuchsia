@@ -9,6 +9,7 @@
 #include <lib/elfldltl/dynamic.h>
 #include <lib/elfldltl/layout.h>
 #include <lib/elfldltl/link.h>
+#include <lib/elfldltl/load.h>
 #include <lib/elfldltl/memory.h>
 #include <lib/elfldltl/phdr.h>
 #include <lib/memalloc/range.h>
@@ -39,7 +40,6 @@ using BootfsView = zbitl::BootfsView<ktl::span<const ktl::byte>>;
 
 using Elf = elfldltl::Elf<elfldltl::ElfClass::kNative>;
 using Dyn = typename Elf::Dyn;
-using Ehdr = typename Elf::Ehdr;
 using Phdr = typename Elf::Phdr;
 
 // The name of ELF module to be loaded.
@@ -75,30 +75,18 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   }
 
   // Now that we've found the module, we can load it.
+  auto diag = elfldltl::PanicDiagnostics("FAILED: ");
 
   ktl::span<ktl::byte> elf_bytes = {const_cast<ktl::byte*>(it->data.data()), it->data.size()};
 
   // We are just reading from the file and so don't worry about the base address.
   elfldltl::DirectMemory file{elf_bytes};
 
-  auto ehdr_result = file.ReadFromFile<Ehdr>(0);
-  if (!ehdr_result) {
-    printf("FAILED: to read ELF header\n");
-    return 1;
-  }
-  const Ehdr& ehdr = *ehdr_result;
-  ZX_ASSERT(ehdr.Loadable());
-
-  auto diag = elfldltl::PanicDiagnostics("FAILED: ");
-
+  // Decode the basic ELF headers.
   auto phdr_allocator = elfldltl::NoArrayFromFile<Phdr>();
-  ktl::span<const Phdr> phdrs;
-  if (auto result = elfldltl::ReadPhdrsFromFile(diag, file, phdr_allocator, ehdr)) {
-    phdrs = *result;
-  } else {
-    printf("FAILED: to read phdrs\n");
-    return 1;
-  }
+  auto [ehdr_owner, phdrs_owner] = *elfldltl::LoadHeadersFromFile<Elf>(diag, file, phdr_allocator);
+  const Elf::Ehdr& ehdr = ehdr_owner;
+  ktl::span<const Phdr> phdrs = phdrs_owner;
 
   // Since `bootfs`'s underlying buffer is ZBI_BOOTFS_PAGE_SIZE-aligned (a
   // KernelStorage guarantee), so too will the ELF payload (a BOOTFS
