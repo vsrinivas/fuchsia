@@ -27,9 +27,9 @@ group("tests") {
 executable("fuzzer-bin") {
   testonly = true
   output_name = "realmfuzzer_test_fuzzer"
-  sources = [ "fuzzer.cc" ]
   deps = [
     "//src/sys/fuzzing/common/testing:sanitizer",
+    "//src/sys/fuzzing/common/tests:fuzzer-lib",
     "//src/sys/fuzzing/realmfuzzer/adapters:llvm",
     "//src/sys/fuzzing/realmfuzzer/target",
   ]
@@ -40,7 +40,7 @@ fuchsia_test_component("fuzzer") {
   manifest = "meta/fuzzer.cml"
   deps = [
     ":fuzzer-bin",
-    "//src/sys/fuzzing/realmfuzzer/testing/data:corpus",
+    "//src/sys/fuzzing/common/testing/data:corpus",
   ]
 }
 
@@ -48,15 +48,9 @@ test("integration-test-bin") {
   output_name = "realmfuzzer_integration_tests"
   sources = [ "integration-tests.cc" ]
   deps = [
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/common/testing",
+    "//src/sys/fuzzing/common/tests:integration-tests-lib",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
-    "//src/sys/fuzzing/realmfuzzer/engine:engine-lib",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -92,8 +86,10 @@ if (!is_coverage) {
 executable("fuzzer-uninstrumented-bin") {
   testonly = true
   output_name = "realmfuzzer_test_fuzzer_uninstrumented"
-  sources = [ "fuzzer.cc" ]
-  deps = [ "../adapters:llvm" ]
+  deps = [
+    "../adapters:llvm",
+    "//src/sys/fuzzing/common/tests:fuzzer-lib",
+  ]
   exclude_toolchain_tags = [ "instrumented" ]
 }
 
@@ -109,7 +105,7 @@ fuchsia_test_component("fuzzer-uninstrumented") {
   manifest = "meta/fuzzer-uninstrumented.cml"
   deps = [
     ":fuzzer-uninstrumented-renamed",
-    "//src/sys/fuzzing/realmfuzzer/testing/data:corpus",
+    "//src/sys/fuzzing/common/testing/data:corpus",
   ]
 }
 

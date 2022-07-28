@@ -32,7 +32,7 @@ fuchsia_test_component("unittests") {
   manifest = "meta/unittests.cml"
   deps = [
     ":unittests-bin",
-    "testing/data:corpus",
+    "//src/sys/fuzzing/common/testing/data:corpus",
   ]
 }
 
