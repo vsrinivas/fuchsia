@@ -343,7 +343,7 @@ zx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
 
   const auto& uid = uid_resp.unique_id.data;
   static_assert(sizeof(uid) == 16, "Unique ID is not 16 bytes long!\n");
-  printf("  Unique ID    : %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+  printf("  Unique ID    : %02x%02x%02x%02x%02x%02x%02x%02x-%02x%02x%02x%02x%02x%02x%02x%02x\n",
          uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6], uid[7], uid[8], uid[9], uid[10],
          uid[11], uid[12], uid[13], uid[14], uid[15]);
 

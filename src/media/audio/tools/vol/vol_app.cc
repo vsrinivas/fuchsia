@@ -321,7 +321,8 @@ class VolApp {
       std::cout << "Audio " << (dev.is_input ? "Input" : "Output") << " (id " << dev.token_id << ")"
                 << std::endl;
       std::cout << "Name    : " << dev.name << std::endl;
-      std::cout << "UID     : " << dev.unique_id << std::endl;
+      std::cout << "UID     : " + dev.unique_id.substr(0, 16) + "-" + dev.unique_id.substr(16, 16)
+                << std::endl;
       std::cout << "Default : " << (dev.is_default ? "yes" : "no") << std::endl;
       std::cout << "Gain    : " << dev.gain_info.gain_db << " dB" << std::endl;
       std::cout << "Mute    : " << (muted ? "yes" : "no") << std::endl;
