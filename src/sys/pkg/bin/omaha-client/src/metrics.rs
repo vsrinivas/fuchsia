@@ -7,12 +7,12 @@ use anyhow::Error;
 use fidl_fuchsia_cobalt::CobaltEvent;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use futures::prelude::*;
-use log::{info, warn};
 use omaha_client::{
     metrics::{ClockType, Metrics, MetricsReporter},
     protocol::request::{EventResult, EventType, InstallSource},
 };
 use std::{convert::TryFrom, time::Duration};
+use tracing::{info, warn};
 
 /// A MetricsReporter trait implementation that send metrics to Cobalt.
 #[derive(Debug, Clone)]

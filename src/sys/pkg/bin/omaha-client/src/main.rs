@@ -6,13 +6,13 @@ use anyhow::{anyhow, Context as _, Error};
 use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
-use log::info;
 use omaha_client::{
     app_set::AppSet as _, cup_ecdsa::StandardCupv2Handler, state_machine::StateMachineBuilder,
     time::StandardTimeSource,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::info;
 
 mod api_metrics;
 mod app_set;

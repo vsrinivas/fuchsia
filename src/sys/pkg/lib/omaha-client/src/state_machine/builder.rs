@@ -286,7 +286,7 @@ where
             let mut app_set = app_set.lock().await;
             let ((), context) =
                 futures::join!(app_set.load(&*storage), update_check::Context::load(&*storage));
-            log::info!("Omaha app set: {:?}", app_set.get_apps());
+            tracing::info!("Omaha app set: {:?}", app_set.get_apps());
             context
         };
 

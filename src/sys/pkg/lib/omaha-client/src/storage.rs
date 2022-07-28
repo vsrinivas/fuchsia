@@ -6,8 +6,8 @@ use crate::time::system_time_conversion::{
     checked_system_time_to_micros_from_epoch, micros_from_epoch_to_system_time,
 };
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
-use log::error;
 use std::time::SystemTime;
+use tracing::error;
 
 mod memory;
 pub use memory::MemStorage;

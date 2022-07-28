@@ -30,7 +30,6 @@ use futures::{
     select,
 };
 use http::{response::Parts, Response as HttpResponse};
-use log::{error, info, warn};
 use p256::ecdsa::DerSignature;
 use std::{
     cmp::min,
@@ -41,6 +40,7 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 use thiserror::Error;
+use tracing::{error, info, warn};
 
 pub mod update_check;
 
@@ -1203,7 +1203,8 @@ where
             match self.do_omaha_request_and_update_context(&request_builder, co).await {
                 Ok(res) => res,
                 Err(e) => {
-                    error!("Ping Omaha failed: {:#}", anyhow!(e));
+                    let e = anyhow!(e);
+                    error!("Ping Omaha failed: {:#}", e);
                     self.context.state.consecutive_failed_update_checks += 1;
                     self.persist_data().await;
                     return;
@@ -1213,7 +1214,8 @@ where
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
             Err(e) => {
-                error!("Unable to parse Omaha response: {:#}", anyhow!(e));
+                let e = anyhow!(e);
+                error!("Unable to parse Omaha response: {:#}", e);
                 self.context.state.consecutive_failed_update_checks += 1;
                 self.persist_data().await;
                 return;
@@ -1488,11 +1490,11 @@ mod tests {
     use futures::executor::{block_on, LocalPool};
     use futures::future::LocalBoxFuture;
     use futures::task::LocalSpawnExt;
-    use log::info;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::cell::RefCell;
     use std::time::Duration;
+    use tracing::info;
     use version::Version;
 
     fn make_test_app_set() -> Rc<Mutex<VecAppSet>> {

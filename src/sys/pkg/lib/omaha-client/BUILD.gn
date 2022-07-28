@@ -22,7 +22,6 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:p256",
     "//third_party/rust_crates:pkcs8",
     "//third_party/rust_crates:pretty_assertions",
@@ -33,6 +32,7 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:signature",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:typed-builder",
     "//third_party/rust_crates:uuid",
   ]

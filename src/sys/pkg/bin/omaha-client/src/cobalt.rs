@@ -8,9 +8,9 @@ use fidl_fuchsia_cobalt::{
 };
 use fuchsia_component::client::connect_to_protocol;
 use futures::lock::Mutex;
-use log::{error, info};
 use omaha_client::app_set::AppSet as _;
 use std::rc::Rc;
+use tracing::{error, info};
 
 pub async fn notify_cobalt_current_software_distribution(app_set: Rc<Mutex<FuchsiaAppSet>>) {
     info!("Notifying Cobalt about the current channel and app id.");

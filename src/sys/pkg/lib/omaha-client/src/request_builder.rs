@@ -18,10 +18,10 @@ use crate::{
     },
 };
 use http;
-use log::*;
 use std::fmt::Display;
 use std::result;
 use thiserror::Error;
+use tracing::*;
 
 type ProtocolApp = crate::protocol::request::App;
 

@@ -8,7 +8,6 @@ use channel_config::{ChannelConfig, ChannelConfigs};
 use eager_package_config::omaha_client::{EagerPackageConfig, EagerPackageConfigs};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use fidl_fuchsia_pkg::{self as fpkg, CupMarker, CupProxy, GetInfoError};
-use log::{error, info, warn};
 use omaha_client::{
     common::App,
     configuration::{Config, Updater},
@@ -18,6 +17,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::iter::FromIterator;
+use tracing::{error, info, warn};
 use version::Version;
 
 // TODO: This is not 0.0.0.0 because that would cause state machine to not start. We should find a
@@ -131,7 +131,7 @@ impl ClientConfiguration {
         match EagerPackageConfigs::from_namespace() {
             Ok(eager_package_configs) => {
                 let proxy = fuchsia_component::client::connect_to_protocol::<CupMarker>()
-                    .map_err(|e| error!("Failed to connect to Cup protocol {:#}", anyhow!(e)))
+                    .map_err(|e: Error| error!("Failed to connect to Cup protocol {:#}", e))
                     .ok();
                 Self::add_eager_packages(
                     &mut app_set,
@@ -144,12 +144,13 @@ impl ClientConfiguration {
             Err(e) => {
                 match e.downcast_ref::<std::io::Error>() {
                     Some(io_err) if io_err.kind() == std::io::ErrorKind::NotFound => {
-                        warn!("eager package config not found: {:#}", anyhow!(e))
+                        let e = anyhow!(e);
+                        warn!("eager package config not found: {:#}", e);
                     }
-                    _ => error!(
-                        "Failed to load eager package config from namespace: {:#}",
-                        anyhow!(e)
-                    ),
+                    _ => {
+                        let e = anyhow!(e);
+                        error!("Failed to load eager package config from namespace: {:#}", e)
+                    }
                 };
             }
         }
@@ -241,7 +242,8 @@ impl ClientConfiguration {
                     );
                 }
                 Err(e) => {
-                    error!("Failed to send request to fuchsia.pkg.Cup: {:#}", anyhow!(e));
+                    let e = anyhow!(e);
+                    error!("Failed to send request to fuchsia.pkg.Cup: {:#}", e);
                 }
             }
         }

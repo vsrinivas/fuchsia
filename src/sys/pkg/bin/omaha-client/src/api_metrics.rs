@@ -6,8 +6,8 @@
 use fidl_fuchsia_cobalt::CobaltEvent;
 use fidl_fuchsia_update::CheckNotStartedReason;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
-use log::info;
 use std::future::Future;
+use tracing::info;
 
 #[derive(Debug)]
 pub enum ApiEvent {

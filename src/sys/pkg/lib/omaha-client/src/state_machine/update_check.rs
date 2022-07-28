@@ -10,9 +10,9 @@ use crate::{
     storage::{Storage, StorageExt},
     time::PartialComplexTime,
 };
-use log::error;
 use std::convert::{TryFrom, TryInto};
 use std::time::Duration;
+use tracing::error;
 
 // These are the keys used to persist data to storage.
 pub const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";

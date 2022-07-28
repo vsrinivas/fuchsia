@@ -4,7 +4,7 @@
 
 use crate::metrics::{Metrics, MetricsReporter};
 use anyhow::Error;
-use log::info;
+use tracing::info;
 
 /// A stub implementation of MetricsReporter which only log metrics.
 #[derive(Debug)]

@@ -24,7 +24,6 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_url::PinnedAbsolutePackageUrl;
 use fuchsia_zircon as zx;
 use futures::{future::LocalBoxFuture, lock::Mutex as AsyncMutex, prelude::*};
-use log::{info, warn};
 use omaha_client::{
     app_set::AppSet as _,
     cup_ecdsa::RequestMetadata,
@@ -37,6 +36,7 @@ use omaha_client::{
 };
 use std::{rc::Rc, time::Duration};
 use thiserror::Error;
+use tracing::{info, warn};
 
 /// Represents possible reasons the installer could have ended in a failure state. Not exhaustive.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

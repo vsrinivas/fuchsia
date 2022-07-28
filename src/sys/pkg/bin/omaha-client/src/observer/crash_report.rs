@@ -8,9 +8,9 @@ use anyhow::anyhow;
 use fidl_fuchsia_feedback::{CrashReport, CrashReporterProxy};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, future::LocalBoxFuture, prelude::*};
-use log::{error, warn};
 use omaha_client::time::TimeSource;
 use std::time::Duration;
+use tracing::{error, warn};
 
 const TWENTY_FOUR_HOURS: Duration = Duration::from_secs(60 * 60 * 24);
 const MAX_PENDING_CRASH_REPORTS: usize = 10;
@@ -111,7 +111,8 @@ async fn file_report(proxy: &CrashReporterProxy, signature: &str) {
         })
         .await
     {
-        error!("Error filing crash report: {:#}", anyhow!(e));
+        let e = anyhow!(e);
+        error!("Error filing crash report: {:#}", e);
     };
 }
 

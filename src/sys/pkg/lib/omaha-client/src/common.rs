@@ -10,11 +10,11 @@ use crate::{
     storage::Storage,
     time::PartialComplexTime,
 };
-use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
+use tracing::error;
 use typed_builder::TypedBuilder;
 use version::Version;
 

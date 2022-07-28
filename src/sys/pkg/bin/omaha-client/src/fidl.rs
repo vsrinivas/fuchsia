@@ -30,7 +30,6 @@ use fuchsia_component::{
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, lock::Mutex, prelude::*};
-use log::{error, info, warn};
 use omaha_client::{
     app_set::{AppSet as _, AppSetExt as _},
     common::CheckOptions,
@@ -39,6 +38,7 @@ use omaha_client::{
     storage::{Storage, StorageExt},
 };
 use std::{cell::RefCell, rc::Rc, time::Duration};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct State {
@@ -618,11 +618,13 @@ where
                     match single_monitor_queue.try_flush(Duration::from_secs(5)).await {
                         Ok(flush_future) => {
                             if let Err(e) = flush_future.await {
-                                warn!("Timed out flushing single_monitor_queue: {:#}", anyhow!(e));
+                                let e = anyhow!(e);
+                                warn!("Timed out flushing single_monitor_queue: {:#}", e);
                             }
                         }
                         Err(e) => {
-                            warn!("error trying to flush single_monitor_queue: {:#}", anyhow!(e));
+                            let e = anyhow!(e);
+                            warn!("error trying to flush single_monitor_queue: {:#}", e);
                         }
                     }
                 }

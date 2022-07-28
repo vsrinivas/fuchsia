@@ -8,9 +8,9 @@ use {
         Annotation, ComponentData, ComponentDataRegisterMarker, ComponentDataRegisterProxy,
     },
     futures::lock::Mutex,
-    log::error,
     omaha_client::app_set::AppSet as _,
     std::rc::Rc,
+    tracing::error,
 };
 
 pub async fn publish_ids_to_feedback(app_set: Rc<Mutex<FuchsiaAppSet>>) {

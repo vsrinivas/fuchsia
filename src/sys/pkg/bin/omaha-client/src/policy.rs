@@ -16,7 +16,6 @@ use fidl_fuchsia_update_ext::{query_commit_status, CommitStatus};
 use fuchsia_async::TimeoutExt;
 use fuchsia_component::client::connect_to_protocol;
 use futures::{future::BoxFuture, future::FutureExt, lock::Mutex, prelude::*};
-use log::{error, info, warn};
 use omaha_client::{
     common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
     policy::{CheckDecision, Policy, PolicyEngine, UpdateDecision},
@@ -30,6 +29,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use tracing::{error, info, warn};
 
 mod rate_limiter;
 use rate_limiter::UpdateCheckRateLimiter;
@@ -248,7 +248,7 @@ fn fuzz_interval(
     // Percentage range must be clamped as the subtraction in the numerator can result
     // in integer overflow.
     if fuzz_percentage_range > MAX_FUZZ_PERCENTAGE_RANGE {
-        log::warn!("Supplied fuzz range too wide: {:?}", interval);
+        warn!("Supplied fuzz range too wide: {:?}", interval);
         return interval;
     }
 
@@ -602,7 +602,8 @@ impl FuchsiaUpdateCanStartPolicyData {
             {
                 Ok(status) => Some(status),
                 Err(e) => {
-                    error!("got error with query_commit_status: {:#}", anyhow!(e));
+                    let e = anyhow!(e);
+                    error!("got error with query_commit_status: {:#}", e);
                     None
                 }
             };

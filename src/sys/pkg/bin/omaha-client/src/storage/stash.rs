@@ -8,8 +8,8 @@ use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{Store2Marker, StoreAccessorMarker, StoreAccessorProxy, Value};
 use futures::future::BoxFuture;
 use futures::prelude::*;
-use log::{error, warn};
 use thiserror::Error;
+use tracing::{error, warn};
 
 /// This is an implementation of the [`omaha_client::storage::Storage`] trait that uses the Stash
 /// service on Fuchsia to store its data.

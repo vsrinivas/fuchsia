@@ -13,7 +13,6 @@ use anyhow::anyhow;
 use fidl_fuchsia_feedback::{CrashReporterMarker, CrashReporterProxy};
 use fuchsia_inspect::Node;
 use futures::{future::LocalBoxFuture, lock::Mutex, prelude::*};
-use log::{error, warn};
 use omaha_client::{
     clock,
     common::{ProtocolState, UpdateCheckSchedule},
@@ -25,6 +24,7 @@ use omaha_client::{
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::SystemTime;
+use tracing::{error, warn};
 
 mod crash_report;
 mod platform;
@@ -92,7 +92,8 @@ where
         let proxy = match proxy_fn() {
             Ok(p) => p,
             Err(e) => {
-                error!("Failed to connect to fuchsia.feedback/CrashReporter: {:#}", anyhow!(e));
+                let e = anyhow!(e);
+                error!("Failed to connect to fuchsia.feedback/CrashReporter: {:#}", e);
                 return futures::future::ready(()).boxed_local();
             }
         };
@@ -127,10 +128,11 @@ where
                     // We got an OUT_OF_SPACE error from system updater, inform the FIDL server so
                     // that it can later trigger a reboot and hopefully clear the error.
                     FuchsiaInstallError::InstallerFailureState(installer_failure) => {
+                        let e = anyhow!(fuchsia_install_error);
                         warn!(
                             "Got installer error in state {}: {:#}",
                             installer_failure.state_name(),
-                            anyhow!(fuchsia_install_error)
+                            e
                         );
                         if installer_failure.reason() == InstallerFailureReason::OutOfSpace {
                             FidlServer::set_previous_out_of_space_failure(Rc::clone(
@@ -139,7 +141,8 @@ where
                         }
                     }
                     other_error => {
-                        warn!("Got installer error: {:#}", anyhow!(other_error));
+                        let e = anyhow!(other_error);
+                        warn!("Got installer error: {:#}", e);
                     }
                 }
             } else {
@@ -152,7 +155,8 @@ where
 
         if let Some(crash_reporter) = self.crash_reporter.as_mut() {
             if let Err(e) = crash_reporter.installation_error() {
-                warn!("Failed to request installation error crash report: {:#}", anyhow!(e));
+                let e = anyhow!(e);
+                warn!("Failed to request installation error crash report: {:#}", e);
             }
         }
     }
@@ -207,10 +211,8 @@ where
             if let Err(e) = crash_reporter
                 .consecutive_failed_update_checks(protocol_state.consecutive_failed_update_checks)
             {
-                warn!(
-                    "Failed to request consecutive failed update checks crash report: {:#}",
-                    anyhow!(e)
-                );
+                let e = anyhow!(e);
+                warn!("Failed to request consecutive failed update checks crash report: {:#}", e);
             }
         }
     }
