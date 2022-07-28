@@ -149,6 +149,14 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // snapshot received from scenic.
   bool ViewIsRendering(zx_koid_t view_ref_koid);
 
+  // Attempts to find the `ViewDescriptor` for a view with `view_ref_koid` in the most recent
+  // `ViewTreeSnapshot`.
+  //
+  // Returns the descriptor if it is found, or `std::nullopt` if no view with the given
+  // `view_ref_koid` could be found.
+  std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> FindViewFromSnapshotByKoid(
+      zx_koid_t view_ref_koid);
+
  private:
   // Helper method to monitor the state of the view tree continuously.
   void WatchViewTree();

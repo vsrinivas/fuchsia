@@ -154,7 +154,12 @@ bool UITestManager::ViewIsRendering(zx_koid_t view_ref_koid) {
     return false;
   }
 
-  return ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, view_ref_koid) != std::nullopt;
+  return FindViewFromSnapshotByKoid(view_ref_koid) != std::nullopt;
+}
+
+std::optional<fuchsia::ui::observation::geometry::ViewDescriptor>
+UITestManager::FindViewFromSnapshotByKoid(zx_koid_t view_ref_koid) {
+  return ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, view_ref_koid);
 }
 
 bool UITestManager::ClientViewIsRendering() {
@@ -187,8 +192,7 @@ float UITestManager::ClientViewScaleFactor() {
     return kDefaultScale;
   }
 
-  const auto client_view_descriptor =
-      ViewDescriptorFromSnapshot(*last_view_tree_snapshot_, *client_view_ref_koid_);
+  const auto client_view_descriptor = FindViewFromSnapshotByKoid(*client_view_ref_koid_);
 
   if (!client_view_descriptor || !client_view_descriptor->has_layout()) {
     return kDefaultScale;

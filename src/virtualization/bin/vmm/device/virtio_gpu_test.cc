@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
+#include <lib/zx/status.h>
 
 #include <virtio/gpu.h>
 
 #include "fuchsia/logger/cpp/fidl.h"
 #include "fuchsia/virtualization/hardware/cpp/fidl.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/virtualization/bin/vmm/device/gpu.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
@@ -35,32 +38,7 @@ constexpr uint32_t kScanoutId = 0;
 
 constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
 constexpr auto kRustComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu_rs#meta/virtio_gpu_rs.cm";
-
-class ScenicFake : public fuchsia::ui::scenic::testing::Scenic_TestBase,
-                   public component_testing::LocalComponent {
- public:
-  explicit ScenicFake(async::Loop& loop) : loop_(loop) {}
-
-  void NotImplemented_(const std::string& name) override {
-    printf("Not implemented: Scenic::%s\n", name.data());
-  }
-
-  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override {
-    // This class contains handles to the component's incoming and outgoing capabilities.
-    handles_ = std::move(handles);
-
-    ASSERT_EQ(
-        handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, loop_.dispatcher())),
-        ZX_OK);
-  }
-
-  bool HasStarted() const { return handles_ != nullptr; }
-
- private:
-  async::Loop& loop_;
-  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
-};
+constexpr auto kGraphicalPresenterUrl = "#meta/test_graphical_presenter.cm";
 
 struct VirtioGpuTestParam {
   std::string test_name;
@@ -72,8 +50,7 @@ class VirtioGpuTest : public TestWithDevice,
  protected:
   VirtioGpuTest()
       : control_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
-        cursor_queue_(phys_mem_, control_queue_.end(), kQueueSize),
-        scenic_fake_(loop()) {}
+        cursor_queue_(phys_mem_, control_queue_.end(), kQueueSize) {}
 
   void SetUp() override {
     using component_testing::ChildRef;
@@ -83,43 +60,77 @@ class VirtioGpuTest : public TestWithDevice,
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentName = "virtio_gpu";
-    constexpr auto kFakeScenic = "fake_scenic";
+    ui_testing::UITestRealm::Config ui_config;
+    ui_config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    // The c++ component is still using the scenic API, but the rust component is implemented on top
+    // of Flatland.
+    if (IsRustComponent()) {
+      ui_config.use_flatland = true;
+      ui_config.ui_to_client_services = {fuchsia::ui::composition::Flatland::Name_,
+                                         fuchsia::ui::composition::Allocator::Name_};
+    } else {
+      ui_config.use_flatland = false;
+      ui_config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    }
+    ui_config.exposed_client_services = {fuchsia::virtualization::hardware::VirtioGpu::Name_};
 
-    auto realm_builder = RealmBuilder::Create();
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(ui_config));
+
+    constexpr auto kComponentName = "virtio_gpu";
+    constexpr auto kGraphicalPresenterComponentName = "graphical_presenter";
+
+    auto realm_builder = ui_test_manager_->AddSubrealm();
     realm_builder.AddChild(kComponentName, GetParam().component_url);
-    realm_builder.AddLocalChild(kFakeScenic, &scenic_fake_);
+    realm_builder.AddChild(kGraphicalPresenterComponentName, kGraphicalPresenterUrl);
 
     realm_builder
+        .AddRoute(Route{
+            .capabilities =
+                {
+                    Protocol{fuchsia::logger::LogSink::Name_},
+                    Protocol{fuchsia::ui::composition::Flatland::Name_},
+                },
+            .source = ParentRef(),
+            .targets = {ChildRef{kComponentName}, ChildRef{kGraphicalPresenterComponentName}}})
         .AddRoute(Route{.capabilities =
                             {
-                                Protocol{fuchsia::logger::LogSink::Name_},
                                 Protocol{fuchsia::sysmem::Allocator::Name_},
                                 Protocol{fuchsia::tracing::provider::Registry::Name_},
                                 Protocol{fuchsia::ui::composition::Allocator::Name_},
-                            },
-                        .source = ParentRef(),
-                        .targets = {ChildRef{kComponentName}}})
-        .AddRoute(Route{.capabilities =
-                            {
                                 Protocol{fuchsia::ui::scenic::Scenic::Name_},
                             },
-                        .source = {ChildRef{kFakeScenic}},
+                        .source = ParentRef(),
                         .targets = {ChildRef{kComponentName}}})
         .AddRoute(Route{.capabilities =
                             {
                                 Protocol{fuchsia::virtualization::hardware::VirtioGpu::Name_},
                             },
                         .source = ChildRef{kComponentName},
-                        .targets = {ParentRef()}});
+                        .targets = {ParentRef()}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::ui::app::ViewProvider::Name_},
+                            },
+                        .source = ChildRef{kGraphicalPresenterComponentName},
+                        .targets = {ParentRef()}})
+        .AddRoute(Route{.capabilities =
+                            {
+                                Protocol{fuchsia::element::GraphicalPresenter::Name_},
+                            },
+                        .source = ChildRef{kGraphicalPresenterComponentName},
+                        .targets = {ChildRef{kComponentName}}});
 
-    realm_ = std::make_unique<RealmRoot>(realm_builder.Build(dispatcher()));
+    ui_test_manager_->BuildRealm();
+    exposed_client_services_ = ui_test_manager_->CloneExposedServicesDirectory();
+
+    ui_test_manager_->InitializeScene();
 
     fuchsia::virtualization::hardware::StartInfo start_info;
     zx_status_t status = MakeStartInfo(cursor_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
-    gpu_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioGpu>();
+    status = exposed_client_services_->Connect(gpu_.NewRequest());
+    ASSERT_EQ(ZX_OK, status);
 
     status = gpu_->Start(std::move(start_info), nullptr, nullptr);
     ASSERT_EQ(ZX_OK, status);
@@ -136,15 +147,37 @@ class VirtioGpuTest : public TestWithDevice,
     // Finish negotiating features.
     status = gpu_->Ready(0);
     ASSERT_EQ(ZX_OK, status);
+  }
 
-    // The rust component doesn't yet attempt to connect to Scenic, so we don't wait for the
-    // connection to happen.
-    if (!IsRustComponent()) {
-      RunLoopUntil([&] { return scenic_fake_.HasStarted(); });
+  std::optional<fuchsia::ui::observation::geometry::ViewDescriptor> FindGpuView() {
+    auto presenter_koid = ui_test_manager_->ClientViewRefKoid();
+    if (!presenter_koid) {
+      return {};
     }
+    auto presenter = ui_test_manager_->FindViewFromSnapshotByKoid(*presenter_koid);
+    if (!presenter || !presenter->has_children() || presenter->children().empty()) {
+      return {};
+    }
+    return ui_test_manager_->FindViewFromSnapshotByKoid(presenter->children()[0]);
   }
 
   bool IsRustComponent() { return GetParam().component_url == kRustComponentUrl; }
+
+  zx::status<std::pair<uint32_t, uint32_t>> WaitForScanout() {
+    if (IsRustComponent()) {
+      bool view_created =
+          RunLoopWithTimeoutOrUntil([this] { return FindGpuView().has_value(); }, zx::sec(20));
+      if (!view_created) {
+        return zx::error(ZX_ERR_TIMED_OUT);
+      }
+      auto gpu_view = *FindGpuView();
+      const auto& extent = gpu_view.layout().extent;
+      return zx::ok(std::make_pair(std::round(extent.max.x - extent.min.x),
+                                   std::round(extent.max.y - extent.min.y)));
+    } else {
+      return zx::ok(std::make_pair(kGpuStartupWidth, kGpuStartupHeight));
+    }
+  }
 
   template <typename T>
   zx_status_t SendRequest(const T& request, virtio_gpu_ctrl_hdr_t** response) {
@@ -206,20 +239,20 @@ class VirtioGpuTest : public TestWithDevice,
     EXPECT_EQ(response_type, response->type);
   }
 
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
   VirtioQueueFake control_queue_;
   VirtioQueueFake cursor_queue_;
-  ScenicFake scenic_fake_;
-  std::unique_ptr<component_testing::RealmRoot> realm_;
+  std::unique_ptr<sys::ServiceDirectory> exposed_client_services_;
 };
 
 TEST_P(VirtioGpuTest, GetDisplayInfo) {
-  // TODO(fxbug.dev/102870): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
+  auto geometry = WaitForScanout();
+  ASSERT_TRUE(geometry.is_ok());
+  auto [gpu_width, gpu_height] = *geometry;
 
   virtio_gpu_ctrl_hdr_t request = {
       .type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO,
@@ -239,27 +272,19 @@ TEST_P(VirtioGpuTest, GetDisplayInfo) {
   EXPECT_EQ(response->hdr.type, VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
   EXPECT_EQ(response->pmodes[0].r.x, 0u);
   EXPECT_EQ(response->pmodes[0].r.y, 0u);
-  EXPECT_EQ(response->pmodes[0].r.width, kGpuStartupWidth);
-  EXPECT_EQ(response->pmodes[0].r.height, kGpuStartupHeight);
+  EXPECT_EQ(response->pmodes[0].r.width, gpu_width);
+  EXPECT_EQ(response->pmodes[0].r.height, gpu_height);
 }
 
 TEST_P(VirtioGpuTest, SetScanout) {
-  // TODO(fxbug.dev/102870): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
+  ASSERT_TRUE(WaitForScanout().is_ok());
   ResourceCreate2d();
   ResourceAttachBacking();
   SetScanout(kResourceId, VIRTIO_GPU_RESP_OK_NODATA);
 }
 
 TEST_P(VirtioGpuTest, SetScanoutWithInvalidResourceId) {
-  // TODO(fxbug.dev/102870): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
+  ASSERT_TRUE(WaitForScanout().is_ok());
   ResourceCreate2d();
   ResourceAttachBacking();
   SetScanout(UINT32_MAX, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
