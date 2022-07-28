@@ -1837,6 +1837,62 @@ fn leave_all_joined_groups<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateC
     }
 }
 
+/// Connects an already existing UDP socket to a remote destination.
+///
+/// Replaces a previously created UDP socket indexed by the [`UdpListenerId`]
+/// `id`.  It returns the new connected socket ID on success. On failure, an
+/// error status is returned, along with a replacement `UdpListenerId` that
+/// should be used in place of `id` for future operations.
+///
+/// # Panics
+///
+/// `connect_udp_listener` panics if `id` is not a valid `UdpListenerId`.
+pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: UdpListenerId<I>,
+    remote_ip: SpecifiedAddr<I::Addr>,
+    remote_port: NonZeroU16,
+) -> Result<UdpConnId<I>, (IpSockCreationError, UdpListenerId<I>)> {
+    let (addr, multicast_memberships, sharing) = sync_ctx.with_sockets_mut(|state| {
+        let UdpSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+        let (state, sharing, addr) =
+            bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
+
+        let ListenerState { multicast_memberships } = state;
+        (addr, multicast_memberships, sharing)
+    });
+
+    let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
+        addr;
+
+    create_udp_conn(
+        sync_ctx,
+        ctx,
+        local_ip,
+        Some(local_port),
+        device,
+        remote_ip,
+        remote_port,
+        sharing,
+        multicast_memberships,
+    )
+    .map_err(|(e, multicast_memberships)| match e {
+        UdpSockCreationError::CouldNotAllocateLocalPort => {
+            unreachable!("local port is already provided")
+        }
+        UdpSockCreationError::SockAddrConflict => unreachable!("the socket was just vacated"),
+        UdpSockCreationError::Ip(ip) => sync_ctx.with_sockets_mut(|state| {
+            let UdpSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+            let listener = bound
+                .listeners_mut()
+                .try_insert(addr, ListenerState { multicast_memberships }, sharing)
+                .expect("reinserting just-removed listener failed");
+            (ip, listener)
+        }),
+    })
+}
+
 /// Removes a previously registered UDP connection.
 ///
 /// `remove_udp_conn` removes a previously registered UDP connection indexed by
@@ -2910,6 +2966,148 @@ mod tests {
 
         let _: UdpConnId<_> = connect_unbound(&mut sync_ctx, &mut non_sync_ctx, unbound)
             .expect("connect should succeed");
+    }
+
+    #[ip_test]
+    fn test_connect_udp_listener_success<I: Ip + TestIpExt>()
+    where
+        DummySyncCtx<I>: DummySyncCtxBound<I>,
+    {
+        set_logger_for_test();
+
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
+
+        let local_ip = local_ip::<I>();
+        let remote_ip = remote_ip::<I>();
+        let local_port = nonzero!(100u16);
+        let multicast_addr = I::get_multicast_addr(3);
+        let unbound = create_udp_unbound(&mut sync_ctx);
+
+        // Set some properties on the socket that should be preserved.
+        set_udp_posix_reuse_port(&mut sync_ctx, &mut non_sync_ctx, unbound.into(), true);
+        set_udp_multicast_membership(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound.into(),
+            multicast_addr,
+            Some(local_ip),
+            None,
+            true,
+        )
+        .expect("join multicast group should succeed");
+
+        let socket = listen_udp(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(local_port),
+        )
+        .expect("Initial call to listen_udp was expected to succeed");
+
+        let conn = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            socket,
+            remote_ip,
+            nonzero!(200u16),
+        )
+        .expect("connect should succeed");
+
+        // Check that socket options set on the listener are propagated to the
+        // connected socket.
+        assert!(get_udp_posix_reuse_port(&sync_ctx, &mut non_sync_ctx, conn.into()));
+        assert_eq!(
+            sync_ctx.get_ref().multicast_memberships,
+            HashMap::from([((DummyDeviceId, multicast_addr), nonzero!(1usize))])
+        );
+        assert_eq!(
+            set_udp_multicast_membership(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                conn.into(),
+                multicast_addr,
+                Some(local_ip),
+                None,
+                true
+            ),
+            Err(UdpSetMulticastMembershipError::NoMembershipChange)
+        );
+    }
+
+    #[ip_test]
+    fn test_connect_udp_listener_fails<I: Ip + TestIpExt>()
+    where
+        DummySyncCtx<I>: DummySyncCtxBound<I>,
+    {
+        set_logger_for_test();
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
+        let local_ip = local_ip::<I>();
+        let remote_ip = I::get_other_ip_address(127);
+        let multicast_addr = I::get_multicast_addr(3);
+        let unbound = create_udp_unbound(&mut sync_ctx);
+
+        // Set some properties on the socket that should be preserved.
+        set_udp_posix_reuse_port(&mut sync_ctx, &mut non_sync_ctx, unbound.into(), true);
+        set_udp_multicast_membership(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound.into(),
+            multicast_addr,
+            Some(local_ip),
+            None,
+            true,
+        )
+        .expect("join multicast group should succeed");
+
+        // Create a UDP connection with a specified local port and local IP.
+        let listener = listen_udp(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(nonzero!(100u16)),
+        )
+        .expect("Initial call to listen_udp was expected to succeed");
+
+        let listener = assert_matches!(
+            connect_udp_listener(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                listener,
+                remote_ip,
+                nonzero!(1234u16)
+            ),
+            Err((
+                IpSockCreationError::Route(IpSockRouteError::Unroutable(
+                    IpSockUnroutableError::NoRouteToRemoteAddr
+                )),
+                listener
+            )) => listener
+        );
+
+        // The listener that was returned is not necessarily the same one that
+        // was passed in to `connect_udp_listener`. Check that socket options
+        // that were set on it before attempting to connect were preserved.
+        assert!(get_udp_posix_reuse_port(&sync_ctx, &mut non_sync_ctx, listener.into()));
+        assert_eq!(
+            sync_ctx.get_ref().multicast_memberships,
+            HashMap::from([((DummyDeviceId, multicast_addr), nonzero!(1usize))])
+        );
+        assert_eq!(
+            set_udp_multicast_membership(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                listener.into(),
+                multicast_addr,
+                Some(local_ip),
+                None,
+                true
+            ),
+            Err(UdpSetMulticastMembershipError::NoMembershipChange)
+        );
     }
 
     #[ip_test]
