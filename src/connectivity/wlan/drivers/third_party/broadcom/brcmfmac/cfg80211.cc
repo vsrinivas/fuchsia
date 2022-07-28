@@ -5307,6 +5307,47 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   return ZX_OK;
 }
 
+// Prints extra information about auth events, based on information obtained from the vendor.
+static void brcmf_print_auth_event_details(const struct brcmf_event_msg* e) {
+  switch (e->status) {
+    case BRCMF_E_STATUS_SUCCESS:
+      // Nothing to see here
+      break;
+    case BRCMF_E_STATUS_NO_ACK:
+      // Vendor reported the timeout is 300ms within firmware and is not configurable.
+      // Typical acks happen in approx 1ms, so this timeout should be more than long enough.
+      BRCMF_WARN("No MAC-level ack received for auth request within 300ms firmware timeout");
+      break;
+    case BRCMF_E_STATUS_TIMEOUT:
+      // Vendor reported the timeout is 300ms within firmware and is not configurable. Note
+      // this timeout is separate from the timeout for BRCMF_E_STATUS_NO_ACK.
+      BRCMF_WARN("No auth response received from AP within 300ms firmware timeout");
+      break;
+    case BRCMF_E_STATUS_UNSOLICITED:
+      // Vendor reported this is an unexpected Ack response from AP, or an out-of-sequence auth
+      // response.
+      BRCMF_WARN("Received an unexpected or out-of-sequence auth response from AP");
+      break;
+    case BRCMF_E_STATUS_FAIL:
+      // Vendor informed us that when e->event_code is 16, the e->reason corresponds to 802.11
+      // deauth reason codes.
+      if (e->event_code == 16) {
+        BRCMF_WARN("AP rejected auth attempt, reference reason code against 802.11 deauth reasons");
+      } else {
+        BRCMF_ERR(
+            "Unexpected event code for BRCMF_E_STATUS_FAIL, follow up with vendor for more "
+            "information");
+      }
+      break;
+    case BRCMF_E_STATUS_ABORT:
+      // This status occurs very rarely and transiently. We haven't confirmed the meaning with
+      // the vendor, but it's not a cause for concern (see https://fxbug.dev/101906#c17).
+      break;
+    default:
+      BRCMF_ERR("Unexpected status, follow up with vendor for more information");
+  }
+}
+
 // Handler for AUTH event (client only)
 static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                             void* data) {
@@ -5315,9 +5356,12 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
 
   if (e->status != BRCMF_E_STATUS_SUCCESS) {
-    BRCMF_INFO("Auth Failure auth %s status %s reason %d flags 0x%x",
+    BRCMF_INFO("Auth Failure auth %s status %s reason %d flags 0x%x event %lu",
                brcmf_fweh_get_auth_type_str(e->auth_type),
-               brcmf_fweh_get_event_status_str(e->status), static_cast<int>(e->reason), e->flags);
+               brcmf_fweh_get_event_status_str(e->status), static_cast<int>(e->reason), e->flags,
+               static_cast<unsigned long>(e->event_code));
+    brcmf_print_auth_event_details(e);
+
     // It appears FW continues to be busy with authentication when this event is received
     // specifically with WEP. Attempt to shutdown the IF.
     brcmf_bss_reset(ifp);
