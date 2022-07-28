@@ -126,7 +126,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:166
+From //build/security.gni:181
 
 ### avb_algorithm
 
@@ -223,7 +223,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:171
+From //build/security.gni:186
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -1026,19 +1026,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/7569479252a8ffdce0109ed6b92c42d5c4b777d7/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/73a0209e9959338a3289e7f6dcba6f8456368033/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/7569479252a8ffdce0109ed6b92c42d5c4b777d7/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/73a0209e9959338a3289e7f6dcba6f8456368033/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/7569479252a8ffdce0109ed6b92c42d5c4b777d7/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/73a0209e9959338a3289e7f6dcba6f8456368033/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3903,7 +3903,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:144
+From //build/security.gni:159
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -3923,6 +3923,25 @@ above changes.
 **Current value (from the default):** `[]`
 
 From //build/security.gni:81
+
+### recovery_zbi_bootfs_packages_goldens
+An optional list of golden files for recovery.zbi bootfs package index. If
+specified, they would be compared against recovery.zbi bootfs package index
+during build time.  At least one of the golden files must match.
+In normal case, there should only be golden file in this list.
+During a soft transition where changes are made in a different repo than
+the golden file repo, user need to
+1. copy the old golden file before the change to '*.orig'
+2. create a new golden file reflecting the changes
+3. add both the old golden file and new golden file to this list. e.g. there
+would be 'product.txt' and 'product.txt.orig' in this list and check in the
+above changes.
+4. check in the changes that is made in a different repo.
+5. delete 'product.txt.orig' and remove it from this list.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:144
 
 ### recovery_zbi_kernel_cmdline_goldens
 An optional list of golden files for recovery.zbi kernel cmdline args. If
@@ -4558,7 +4577,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:157
+From //build/security.gni:172
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -4678,7 +4697,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:176
+From //build/security.gni:191
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
