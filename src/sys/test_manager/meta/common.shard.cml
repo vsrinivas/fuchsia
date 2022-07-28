@@ -435,6 +435,11 @@
             from: "parent",
             to: [ "#system-tests" ],
         },
+        {
+            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
+            from: "parent",
+            to: [ "#system-tests" ],
+        },
 
         // Test realms may offer subdirectories of config-data to test
         // components. See:

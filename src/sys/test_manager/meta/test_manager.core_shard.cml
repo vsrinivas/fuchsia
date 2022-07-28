@@ -82,6 +82,14 @@
             from: "#trace_manager",
             to: "#test_manager",
         },
+        {
+            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
+            from: "#factory_store_providers",
+            to: [ "#test_manager" ],
+
+            // the source component isn't available on all boards
+            source_availability: "unknown",
+        },
 
         // Test realms may offer subdirectories of config-data to test
         // components. See:
