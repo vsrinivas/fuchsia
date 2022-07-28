@@ -106,7 +106,7 @@ fn take_vdso_vmos() -> Result<HashMap<String, zx::Vmo>, Error> {
         let vmo = zx::Vmo::from(handle);
         let name = vmo.get_name()?.into_string()?;
         vmos.insert(name, vmo);
-        i = i + 1;
+        i += 1;
     }
     Ok(vmos)
 }
