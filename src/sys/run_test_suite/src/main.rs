@@ -104,7 +104,10 @@ async fn main() {
     let test_filters = if test_filter.len() == 0 { None } else { Some(test_filter) };
     let shell_reporter = run_test_suite_lib::output::ShellReporter::new(std::io::stdout());
     let dir_reporter = match deprecated_output_directory {
-        Some(path) => match run_test_suite_lib::output::DirectoryReporter::new(path.into()) {
+        Some(path) => match run_test_suite_lib::output::DirectoryReporter::new(
+            path.into(),
+            run_test_suite_lib::output::SchemaVersion::UnstablePrototype,
+        ) {
             Ok(reporter) => Some(reporter),
             Err(e) => {
                 println!("Failed to make directory reporter: {:?}", e);

@@ -18,6 +18,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use test_list::TestTag;
 use test_output_directory as directory;
 
+pub use directory::SchemaVersion;
+
 const STDOUT_FILE: &str = "stdout.txt";
 const STDERR_FILE: &str = "stderr.txt";
 const SYSLOG_FILE: &str = "syslog.txt";
@@ -67,11 +69,8 @@ enum MonotonicTimer {
 
 impl DirectoryReporter {
     /// Create a new `DirectoryReporter` that places results in the given `root` directory.
-    pub fn new(root: PathBuf) -> Result<Self, Error> {
-        let output_directory = directory::OutputDirectoryBuilder::new(
-            root,
-            directory::SchemaVersion::UnstablePrototype,
-        )?;
+    pub fn new(root: PathBuf, schema_version: SchemaVersion) -> Result<Self, Error> {
+        let output_directory = directory::OutputDirectoryBuilder::new(root, schema_version)?;
 
         let mut entries = HashMap::new();
         entries.insert(
@@ -383,6 +382,8 @@ fn into_serializable_outcome(outcome: ReportedOutcome) -> directory::Outcome {
 mod test {
     use super::*;
     use crate::output::{CaseId, RunReporter, SuiteId};
+    use fixture::fixture;
+    use futures::future::Future;
     use std::ops::Deref;
     use tempfile::tempdir;
     use test_output_directory::testing::{
@@ -390,8 +391,19 @@ mod test {
         ExpectedTestRun,
     };
 
+    async fn version_variants<F, Fut>(_name: &str, test_fn: F)
+    where
+        F: Fn(SchemaVersion) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        for schema in SchemaVersion::all_variants() {
+            test_fn(schema).await;
+        }
+    }
+
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn no_artifacts() {
+    async fn no_artifacts(version: SchemaVersion) {
         let dir = tempdir().expect("create temp directory");
         const CASE_TIMES: [(ZxTime, ZxTime); 3] = [
             (ZxTime::from_nanos(0x1100000), ZxTime::from_nanos(0x2100000)),
@@ -402,7 +414,7 @@ mod test {
             (ZxTime::from_nanos(0x1000000), ZxTime::from_nanos(0x2400000));
 
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
         for suite_no in 0..3 {
             let suite_reporter = run_reporter
@@ -460,11 +472,12 @@ mod test {
         );
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn artifacts_per_entity() {
+    async fn artifacts_per_entity(version: SchemaVersion) {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
         let suite_reporter =
             run_reporter.new_suite("suite-1", &SuiteId(0)).await.expect("create new suite");
@@ -552,12 +565,13 @@ mod test {
         );
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn empty_directory_artifacts() {
+    async fn empty_directory_artifacts(version: SchemaVersion) {
         let dir = tempdir().expect("create temp directory");
 
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
         run_reporter.started(Timestamp::Unknown).await.expect("start run");
         let _run_directory_artifact = run_reporter
@@ -628,12 +642,13 @@ mod test {
         );
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn directory_artifacts() {
+    async fn directory_artifacts(version: SchemaVersion) {
         let dir = tempdir().expect("create temp directory");
 
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
         run_reporter.started(Timestamp::Unknown).await.expect("start run");
         let run_directory_artifact = run_reporter
@@ -721,12 +736,13 @@ mod test {
         );
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn ensure_paths_cannot_escape_directory() {
+    async fn ensure_paths_cannot_escape_directory(version: SchemaVersion) {
         let dir = tempdir().expect("create temp directory");
 
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
 
         let directory = run_reporter
@@ -745,11 +761,12 @@ mod test {
         assert!(directory.new_file("fail/../../file.txt".as_ref()).is_err());
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn duplicate_suite_names_ok() {
+    async fn duplicate_suite_names_ok(version: SchemaVersion) {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
 
         let success_suite_reporter =
@@ -809,14 +826,15 @@ mod test {
         }
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn intermediate_results_persisted() {
+    async fn intermediate_results_persisted(version: SchemaVersion) {
         // This test verifies that the results of the test run are persisted after every
         // few suites complete. This ensures that at least some results will be saved even if
         // ffx test crashes.
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
 
         assert_run_result(dir.path(), &ExpectedTestRun::new(directory::Outcome::NotStarted));
@@ -871,13 +889,14 @@ mod test {
         assert_run_result(dir.path(), &final_run);
     }
 
+    #[fixture(version_variants)]
     #[fuchsia::test]
-    async fn early_finish_ok() {
+    async fn early_finish_ok(version: SchemaVersion) {
         // This test verifies that a suite is saved if finished() is called before an outcome is
         // reported. This could happen if some error causes test execution to terminate early.
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+            DirectoryReporter::new(dir.path().to_path_buf(), version).expect("create run reporter"),
         );
 
         run_reporter.started(Timestamp::Unknown).await.expect("start test run");

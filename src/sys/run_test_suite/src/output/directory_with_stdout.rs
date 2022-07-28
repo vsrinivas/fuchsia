@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::output::{
-    directory::DirectoryReporter,
+    directory::{DirectoryReporter, SchemaVersion},
     mux::{MultiplexedDirectoryWriter, MultiplexedWriter},
     shell::ShellReporter,
     ArtifactType, DirectoryArtifactType, DynArtifact, DynDirectoryArtifact, EntityId, EntityInfo,
@@ -28,9 +28,9 @@ pub struct DirectoryWithStdoutReporter {
 }
 
 impl DirectoryWithStdoutReporter {
-    pub fn new(root: PathBuf) -> Result<Self, Error> {
+    pub fn new(root: PathBuf, version: SchemaVersion) -> Result<Self, Error> {
         Ok(Self {
-            directory_reporter: DirectoryReporter::new(root)?,
+            directory_reporter: DirectoryReporter::new(root, version)?,
             shell_reporters: Mutex::new(HashMap::new()),
         })
     }
@@ -250,8 +250,9 @@ mod test {
     #[fuchsia::test]
     async fn directory_with_stdout() {
         let dir = tempdir().expect("create temp directory");
-        let run_reporter =
-            RunReporter::new(DirectoryWithStdoutReporter::new(dir.path().to_path_buf()).unwrap());
+        let run_reporter = RunReporter::new(
+            DirectoryWithStdoutReporter::new(dir.path().to_path_buf(), SchemaVersion::V1).unwrap(),
+        );
 
         for suite_no in 0..3 {
             let suite_reporter = run_reporter

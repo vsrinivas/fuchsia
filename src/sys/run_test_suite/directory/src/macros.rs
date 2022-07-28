@@ -15,8 +15,7 @@ macro_rules! enumerable_enum {
         }
 
         impl $name {
-            #[cfg(test)]
-            fn all_variants() -> Vec<Self> {
+            pub fn all_variants() -> Vec<Self> {
                 vec![
                     $($name::$variant),*
                 ]

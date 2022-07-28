@@ -94,8 +94,11 @@ fn create_shell_reporter() -> (TestShellReporter, TestOutputView) {
 
 fn create_dir_reporter() -> (run_test_suite_lib::output::DirectoryReporter, tempfile::TempDir) {
     let tmp_dir = tempfile::tempdir().unwrap();
-    let dir_reporter =
-        run_test_suite_lib::output::DirectoryReporter::new(tmp_dir.path().to_path_buf()).unwrap();
+    let dir_reporter = run_test_suite_lib::output::DirectoryReporter::new(
+        tmp_dir.path().to_path_buf(),
+        run_test_suite_lib::output::SchemaVersion::UnstablePrototype,
+    )
+    .unwrap();
     (dir_reporter, tmp_dir)
 }
 

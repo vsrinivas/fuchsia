@@ -761,7 +761,11 @@ pub fn create_reporter<W: 'static + Write + Send + Sync>(
     writer: W,
 ) -> Result<output::RunReporter, anyhow::Error> {
     let stdout_reporter = output::ShellReporter::new(writer);
-    let dir_reporter = dir.map(output::DirectoryWithStdoutReporter::new).transpose()?;
+    let dir_reporter = dir
+        .map(|dir| {
+            output::DirectoryWithStdoutReporter::new(dir, output::SchemaVersion::UnstablePrototype)
+        })
+        .transpose()?;
     let reporter = match (dir_reporter, filter_ansi) {
         (Some(dir_reporter), false) => output::RunReporter::new(output::MultiplexedReporter::new(
             stdout_reporter,

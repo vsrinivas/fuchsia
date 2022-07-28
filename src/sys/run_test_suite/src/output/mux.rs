@@ -147,7 +147,10 @@ impl DirectoryWrite for MultiplexedDirectoryWriter {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::output::{directory::DirectoryReporter, ArtifactType, RunReporter, SuiteId};
+    use crate::output::{
+        directory::{DirectoryReporter, SchemaVersion},
+        ArtifactType, RunReporter, SuiteId,
+    };
     use tempfile::tempdir;
     use test_output_directory as directory;
     use test_output_directory::testing::{
@@ -170,11 +173,11 @@ mod test {
     #[fuchsia::test]
     async fn multiplexed_reporter() {
         let tempdir_1 = tempdir().expect("create temp directory");
-        let reporter_1 =
-            DirectoryReporter::new(tempdir_1.path().to_path_buf()).expect("Create reporter");
+        let reporter_1 = DirectoryReporter::new(tempdir_1.path().to_path_buf(), SchemaVersion::V1)
+            .expect("Create reporter");
         let tempdir_2 = tempdir().expect("create temp directory");
-        let reporter_2 =
-            DirectoryReporter::new(tempdir_2.path().to_path_buf()).expect("Create reporter");
+        let reporter_2 = DirectoryReporter::new(tempdir_2.path().to_path_buf(), SchemaVersion::V1)
+            .expect("Create reporter");
         let multiplexed_reporter = MultiplexedReporter::new(reporter_1, reporter_2);
 
         let run_reporter = RunReporter::new_for_test(multiplexed_reporter);
