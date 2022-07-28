@@ -129,6 +129,43 @@ fuchsia_component("test-fshost-no-watcher-comp") {
   cm_label = ":test-fshost-no-watcher-manifest"
 }
 
+cmc_merge("test-fshost-fxfs-disk-migration.cml") {
+  sources = [
+    "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
+    "//src/storage/fshost/meta/core_fshost.cml",
+    "//src/storage/fshost/meta/cpp_fshost.cml",
+    "//src/storage/fshost/meta/fxfs_fshost.cml",
+    "//src/storage/fshost/meta/minfs_fshost.cml",
+  ]
+}
+
+fuchsia_component_manifest("test-fshost-fxfs-disk-migration-manifest") {
+  testonly = true
+  component_name = "test-fshost-fxfs-disk-migration"
+  manifest_outputs = get_target_outputs(":test-fshost-fxfs-disk-migration.cml")
+  manifest = manifest_outputs[0]
+  deps = [ ":test-fshost-fxfs-disk-migration.cml" ]
+}
+
+group("test-fshost-fxfs-disk-migration") {
+  testonly = true
+  deps = [
+    ":integration_test_config_fxfs_disk_migration",
+    ":test-fshost-fxfs-disk-migration-comp",
+  ]
+}
+
+fuchsia_component("test-fshost-fxfs-disk-migration-comp") {
+  testonly = true
+
+  deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/fshost",
+  ]
+  cm_label = ":test-fshost-fxfs-disk-migration-manifest"
+}
+
 group("test-fshost-no-watcher") {
   testonly = true
   deps = [
@@ -166,6 +203,19 @@ generated_fshost_config("integration_test_config_fxfs") {
   component_name = "test-fshost-fxfs"
   forward_variables_from(integration_test_config, "*")
   data_filesystem_format = "fxfs"
+}
+
+generated_fshost_config("integration_test_config_fxfs_disk_migration") {
+  component_name = "test-fshost-fxfs-disk-migration"
+  forward_variables_from(integration_test_config, "*")
+  data_filesystem_format = "fxfs"
+  use_disk_based_minfs_migration = true
+
+  # FVM doesn't persist a slice_limit. The limit is set in BlockDeviceManager:Add based on
+  # this value stored in fshost_config.data_max_bytes. This value has been specifically
+  # chosen for our success/fail tests to ensure that a small device (10MiB) won't have
+  # enough free space for a side-by-side migration but a larger device will.
+  minfs_maximum_runtime_bytes_override = 9437184  # 9MiB
 }
 
 generated_fshost_config("integration_test_config_no_watcher") {

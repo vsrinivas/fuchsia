@@ -39,6 +39,9 @@ class BlockDeviceInterface {
   // doesn't interact with the instance.
   virtual zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
       const char* topological_path) const = 0;
+  // Opens a block device given a file descriptor.
+  virtual zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
+      fbl::unique_fd fd) const = 0;
 
   // When the filesystem inside the device is mounted, this data will be inserted into the
   // filesystem.  If called repeatedly, only the most recent data is inserted.

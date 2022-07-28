@@ -4,24 +4,35 @@
 
 #include "src/storage/fshost/block-device-manager.h"
 
+#include <dirent.h>
+#include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/markers.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
+#include <sys/stat.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 
+#include <filesystem>
 #include <set>
 #include <utility>
 
+#include "fidl/fuchsia.hardware.block.volume/cpp/markers.h"
 #include "lib/fdio/directory.h"
 #include "lib/fidl/llcpp/channel.h"
 #include "lib/service/llcpp/service.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/copier.h"
+#include "src/storage/fshost/inspect-manager.h"
 #include "zircon/errors.h"
 
 namespace fshost {
@@ -215,12 +226,15 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
 
   FxfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
               const fuchsia_hardware_block_partition::wire::Guid& type_guid, PartitionLimit limit,
-              bool format_on_corruption)
+              bool format_on_corruption, bool use_disk_based_minfs_migration,
+              FshostInspectManager* inspect)
       : map_(map),
         partition_names_(std::move(partition_names)),
         type_guid_(type_guid),
         limit_(limit),
-        format_on_corruption_(format_on_corruption) {}
+        format_on_corruption_(format_on_corruption),
+        use_disk_based_minfs_migration_(use_disk_based_minfs_migration),
+        inspect_(inspect) {}
 
   fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     bool is_child =
@@ -233,8 +247,8 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
     }
     // We don't actually want to mount a zxcrypt-contained data partition, but we need to extract
     // any data stored therein (to support paving flows which currently only create zxcrypt+minfs
-    // partitions).  When we find a zxcrypt-formatted data partition, we will bind it, pull the data
-    // off, and then reformat to Fxfs (without zxcrypt).
+    // partitions).  When we find a zxcrypt-formatted data partition, we will bind it, pull the
+    // data off, and then reformat to Fxfs (without zxcrypt).
     if (device.content_format() == fs_management::kDiskFormatZxcrypt) {
       if (!zxcrypt_parent_path_.empty()) {
         FX_LOGS(WARNING) << "Unexpectedly found nested zxcrypt devices.  Not proceeding.";
@@ -243,6 +257,119 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
       return fs_management::kDiskFormatZxcrypt;
     }
     return fs_management::kDiskFormatFxfs;
+  }
+
+  zx_status_t TryDiskBasedMigration(Copier& copier, BlockDeviceInterface& device) const {
+    // TODO(fxbug.dev/105072): Migration may leave components running unnecessarily.
+
+    FX_LOGS(INFO) << "Migrating to fxfs via disk-based migration path.";
+    // Disk backed partition rewrite.
+    fbl::unique_fd fvm_fd(open(GetFvmPathForPartitionMap(map_).c_str(), O_RDONLY));
+    if (!fvm_fd) {
+      FX_LOGS(ERROR) << "Failed to open FVM for migration. Mounting as normal.";
+      return ZX_ERR_UNAVAILABLE;
+    }
+    fbl::unique_fd zxcrypt_fd(open(zxcrypt_parent_path_.c_str(), O_RDONLY));
+    if (!zxcrypt_fd) {
+      FX_LOGS(ERROR) << "Failed to open zxcrypt device for migration. Mounting as normal.";
+      return ZX_ERR_INTERNAL;
+    }
+
+    // Migration requires various FIDL protocols over these channels.
+    fdio_cpp::FdioCaller fvm_caller(std::move(fvm_fd));
+    fdio_cpp::FdioCaller zxcrypt_caller(std::move(zxcrypt_fd));
+
+    // Get the zxcrypt GUID so we can mark it inactive after the copy.
+    auto zxcrypt_guid_response =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
+                           zxcrypt_caller.borrow_channel()))
+            ->GetInstanceGuid();
+    if (zxcrypt_guid_response.status() != ZX_OK) {
+      FX_PLOGS(WARNING, zxcrypt_guid_response.status()) << "Failed to get zxcrypt GUID.";
+      return zxcrypt_guid_response.status();
+    }
+    if (zxcrypt_guid_response.value().status != ZX_OK) {
+      FX_PLOGS(WARNING, zxcrypt_guid_response.value().status) << "Failed to get zxcrypt GUID.";
+      return zxcrypt_guid_response.value().status;
+    }
+    auto zxcrypt_guid = *zxcrypt_guid_response.value().guid;
+
+    // Fetch the slice limit for this partition.
+    auto zxcrypt_info_response =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
+                           zxcrypt_caller.borrow_channel()))
+            ->GetVolumeInfo();
+    if (zxcrypt_info_response.status() != ZX_OK) {
+      FX_PLOGS(WARNING, zxcrypt_guid_response.status()) << "Failed to get zxcrypt info.";
+      return zxcrypt_info_response.status();
+    }
+    if (zxcrypt_info_response.value().status != ZX_OK) {
+      FX_PLOGS(WARNING, zxcrypt_info_response.value().status) << "Failed to get zxcrypt info.";
+      return zxcrypt_info_response.value().status;
+    }
+    // Fxfs doesn't support partition resizing so set size to the slice limit of the old
+    // partition.
+    const uint64_t slice_count = zxcrypt_info_response.value().volume->slice_limit;
+
+    if (slice_count == 0) {
+      FX_LOGS(WARNING) << "No slice limit for existing data partition. Refusing to migrate.";
+      return ZX_ERR_BAD_STATE;
+    }
+
+    // Generate a GUID for our new Fxfs filesystem.
+    fuchsia_hardware_block_partition::wire::Guid new_guid_fidl;
+    uuid::Uuid uuid = uuid::Uuid::Generate();
+    memcpy(new_guid_fidl.value.data(), uuid.bytes(), uuid::kUuidSize);
+
+    FX_LOGS(INFO) << "Allocating " << slice_count << " slices to Fxfs partition.";
+
+    // Create a new inactive partition.
+    alloc_req_t alloc_req;
+    memset(&alloc_req, 0, sizeof(alloc_req));
+    alloc_req.slice_count = slice_count;
+    memcpy(alloc_req.guid, new_guid_fidl.value.data(), BLOCK_GUID_LEN);
+    static_assert(kDataPartitionLabel.size() <= sizeof(alloc_req.name));
+    memcpy(alloc_req.name, kDataPartitionLabel.data(), kDataPartitionLabel.size());
+    const auto kGuidDataType = std::array<uint8_t, BLOCK_GUID_LEN>(GUID_DATA_VALUE);
+    memcpy(alloc_req.type, kGuidDataType.data(), kGuidDataType.size());
+    alloc_req.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
+    auto vp_fd = fs_management::FvmAllocatePartition(fvm_caller.fd().get(), &alloc_req);
+    if (vp_fd.status_value() != ZX_OK) {
+      FX_PLOGS(WARNING, vp_fd.status_value())
+          << "Failed to allocate Fxfs partition for data migration.";
+      return vp_fd.status_value();
+    }
+
+    auto fxfs = device.OpenBlockDeviceByFd(std::move(*vp_fd));
+    if (fxfs.is_error()) {
+      FX_LOGS(WARNING) << "Failed to open fxfs partition: " << fxfs.status_string();
+      return ZX_ERR_BAD_STATE;
+    }
+    fxfs->AddData(std::move(copier));
+    fxfs->SetFormat(fs_management::DiskFormat::kDiskFormatFxfs);
+    zx_status_t status = fxfs->Add();
+
+    if (status != ZX_OK) {
+      FX_PLOGS(WARNING, status) << "Failed to create fxfs partition.";
+      return status;
+    }
+
+    // Activate the new partition, deactivate zxcrypt.
+    if (auto res = fs_management::FvmActivate(fvm_caller.fd().get(), zxcrypt_guid, new_guid_fidl);
+        res != ZX_OK) {
+      return res;
+    }
+    // Destroy zxcrypt. We don't need it anymore.
+    // Failing to clean up is non-fatal because FVM will do it at next boot anyway.
+    if (auto response =
+            fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
+                               zxcrypt_caller.borrow_channel()))
+                ->Destroy();
+        response.status() != ZX_OK) {
+      FX_PLOGS(WARNING, response.status())
+          << "Failed to destroy old data partition after migration.";
+    }
+    return ZX_OK;
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
@@ -262,46 +389,64 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
       return device.Add(format_on_corruption_);
     }
     if (zxcrypt_parent_path_.empty()) {
+      // If not wrapped in zxcrypt, add as normal.
       return device.Add(format_on_corruption_);
     }
     // Copy the data out of the child device.
     FX_LOGS(INFO) << "Copying data out of " << device.topological_path();
-    auto copier_or = device.ExtractData();
+    auto copier = device.ExtractData();
     Copier copied_data;
-    if (copier_or.is_error()) {
-      FX_LOGS(WARNING) << "Failed to copy data out from old partition: "
-                       << copier_or.status_string() << ".  Reformatting.  Expect data loss!";
+    if (copier.is_error()) {
+      FX_LOGS(WARNING) << "Failed to copy data out from old partition: " << copier.status_string()
+                       << ".  Reformatting.  Expect data loss!";
     } else {
-      copied_data = std::move(*copier_or);
-    }
-    // Once we have done so, tear down the zxcrypt device so that we can use it for Fxfs.
-    FX_LOGS(INFO) << "Shutting down zxcrypt...";
-    auto controller_or = service::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
-    if (controller_or.is_error()) {
-      FX_LOGS(ERROR) << "Failed to connect to zcxrypt: " << controller_or.status_string();
-      return ZX_ERR_BAD_STATE;
-    }
-    auto resp = fidl::WireCall(*controller_or)->UnbindChildren();
-    zx_status_t status = resp.status();
-    if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to send UnbindChildren: " << zx_status_get_string(status);
-      return ZX_ERR_BAD_STATE;
-    }
-    if (resp->is_error()) {
-      FX_LOGS(WARNING) << "UnbindChildren failed: " << zx_status_get_string(resp->error_value());
-      return ZX_ERR_BAD_STATE;
+      copied_data = std::move(*copier);
     }
 
-    FX_LOGS(INFO) << "Shut down zxcrypt.  Re-adding device " << zxcrypt_parent_path_;
-    auto parent_or = device.OpenBlockDevice(zxcrypt_parent_path_.c_str());
-    if (parent_or.is_error()) {
-      FX_LOGS(WARNING) << "Failed to open parent: " << parent_or.status_string();
-      return ZX_ERR_BAD_STATE;
+    if (use_disk_based_minfs_migration_) {
+      if (auto ret = TryDiskBasedMigration(copied_data, device); ret != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed disk-based migration: " << ret;
+        if (inspect_) {
+          inspect_->LogMigrationStatus(ret);
+        }
+        // Attempt to mount as minfs.
+        device.SetFormat(fs_management::kDiskFormatMinfs);
+        return device.Add(format_on_corruption_);
+      }
+      return ZX_OK;
+    } else {
+      // RAM backed partition rewrite.
+      //
+      // Once we have copied the data, tear down the zxcrypt device so that we can use it for
+      // Fxfs.
+      FX_LOGS(INFO) << "Shutting down zxcrypt...";
+      auto controller = service::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
+      if (controller.is_error()) {
+        FX_LOGS(ERROR) << "Failed to connect to zcxrypt: " << controller.status_string();
+        return ZX_ERR_BAD_STATE;
+      }
+      auto resp = fidl::WireCall(*controller)->UnbindChildren();
+      zx_status_t status = resp.status();
+      if (status != ZX_OK) {
+        FX_LOGS(WARNING) << "Failed to send UnbindChildren: " << zx_status_get_string(status);
+        return ZX_ERR_BAD_STATE;
+      }
+      if (resp->is_error()) {
+        FX_LOGS(WARNING) << "UnbindChildren failed: " << zx_status_get_string(resp->error_value());
+        return ZX_ERR_BAD_STATE;
+      }
+
+      FX_LOGS(INFO) << "Shut down zxcrypt.  Re-adding device " << zxcrypt_parent_path_;
+      auto parent = device.OpenBlockDevice(zxcrypt_parent_path_.c_str());
+      if (parent.is_error()) {
+        FX_LOGS(WARNING) << "Failed to open parent: " << parent.status_string();
+        return ZX_ERR_BAD_STATE;
+      }
+      zxcrypt_parent_path_.clear();
+      parent->AddData(std::move(copied_data));
+      parent->SetFormat(fs_management::DiskFormat::kDiskFormatFxfs);
+      return parent->Add();
     }
-    zxcrypt_parent_path_.clear();
-    parent_or->AddData(std::move(copied_data));
-    parent_or->SetFormat(fs_management::DiskFormat::kDiskFormatFxfs);
-    return parent_or->Add();
   }
 
  private:
@@ -310,6 +455,8 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
   const fuchsia_hardware_block_partition::wire::Guid type_guid_;
   const PartitionLimit limit_;
   const bool format_on_corruption_;
+  const bool use_disk_based_minfs_migration_;
+  FshostInspectManager* inspect_;
 
   // Set to the topological path of the block device containing zxcrypt once it's been bound.
   std::string zxcrypt_parent_path_;
@@ -410,10 +557,10 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
       }
     }
 
-    // If the volume doesn't appear to be zxcrypt, assume that it's because it was never formatted
-    // as such, or the keys have been shredded, so skip straight to reformatting.  Strictly
-    // speaking, it's not necessary, because attempting to unseal should trigger the same
-    // behaviour, but the log messages in that case are scary.
+    // If the volume doesn't appear to be zxcrypt, assume that it's because it was never
+    // formatted as such, or the keys have been shredded, so skip straight to reformatting.
+    // Strictly speaking, it's not necessary, because attempting to unseal should trigger the
+    // same behaviour, but the log messages in that case are scary.
     if (device.GetFormat() == fs_management::kDiskFormatZxcrypt) {
       if (device.content_format() != fs_management::kDiskFormatZxcrypt) {
         FX_LOGS(INFO) << "Formatting as zxcrypt partition";
@@ -454,8 +601,8 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
   const Variant variant_;
   const PartitionLimit limit_;
 
-  // Once we have matched a zxcrypt partition, this field will be set to the expected topological
-  // path of the child device, which will then be matched against directly.
+  // Once we have matched a zxcrypt partition, this field will be set to the expected
+  // topological path of the child device, which will then be matched against directly.
   std::string expected_inner_path_;
   // If we reformat the zxcrypt device, this flag is set so that we know we should reformat the
   // minfs device when it appears.
@@ -524,7 +671,9 @@ DataPartitionMatcher::PartitionNames GetDataPartitionNames(bool include_legacy) 
 
 }  // namespace
 
-BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : config_(*config) {
+BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config,
+                                       FshostInspectManager* inspect)
+    : config_(*config), inspect_(inspect) {
   static constexpr fuchsia_hardware_block_partition::wire::Guid data_type_guid = GUID_DATA_VALUE;
 
   if (config_.bootpart()) {
@@ -579,7 +728,8 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config) : co
       if (config_.data_filesystem_format() == "fxfs") {
         matchers_.push_back(std::make_unique<FxfsMatcher>(
             *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
-            data_type_guid, data_limit, config_.format_data_on_corruption()));
+            data_type_guid, data_limit, config_.format_data_on_corruption(),
+            config_.use_disk_based_minfs_migration(), inspect_));
       } else {
         matchers_.push_back(std::make_unique<DataPartitionMatcher>(
             *fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),

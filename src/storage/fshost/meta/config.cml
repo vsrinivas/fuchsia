@@ -80,5 +80,10 @@
 
         // Disables everything except fvm, gpt and bootpart.
         netboot: { type: "bool" },
+
+        // If true, we will attempt to migrate to minfs by creating a second fxfs partition and
+        // copying data over to it. This removes the risk of power loss leading to factory reset
+        // but can only be done on devices with sufficient free space.
+        use_disk_based_minfs_migration: { type: "bool" },
     },
 }

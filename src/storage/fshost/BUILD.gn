@@ -255,9 +255,11 @@ test("copier_test") {
     "copier_test.cc",
   ]
   deps = [
+    ":headers",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/uuid:uuid",
     "//src/sys/test_runners:tmp_storage",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
@@ -278,6 +280,7 @@ fuchsia_unittest_component("copier-test") {
 #
 #   data_filesystem_format
 #     [string] One of "fxfs", "minfs", or "f2fs".
+#
 template("fshost_integration_test") {
   assert(defined(invoker.test_component_name) &&
              defined(invoker.test_component_target),
@@ -332,6 +335,7 @@ template("fshost_integration_test") {
 
     defines = [
       "DATA_FILESYSTEM_FORMAT=\"$data_filesystem_format\"",
+      "USE_DISK_BASED_MINFS_MIGRATION=$use_disk_based_minfs_migration",
       "TEST_COMPONENT_NAME=\"$test_component_name\"",
     ]
   }
@@ -392,6 +396,57 @@ fshost_integration_test("fshost-fxfs-integration-test") {
   data_filesystem_format = "fxfs"
 }
 
+test("disk-migration-test") {
+  # Note that these mirror the config variables set in
+  # "//src/storage/fshost/testing:test-fshost-fxfs-disk-migration" but we don't
+  # seem able to access those from the test, nor paramaterize this target
+  # per component, so they're hard coded here.
+  data_filesystem_format = "fxfs"
+  use_disk_based_minfs_migration = true
+  sources = [
+    "disk-migration-test.cc",
+    "testing/fshost_integration_test.cc",
+    "testing/fshost_integration_test.h",
+  ]
+  deps = [
+    ":block-watcher",
+    ":config",
+    ":fshost_config",
+    ":headers",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/lib/storage/ramdevice_client/cpp",
+    "//src/storage/bin/minfs:minfs-component",
+    "//src/storage/fxfs:fxfs_component",
+    "//src/storage/fxfs-crypt",
+    "//src/storage/lib/utils:topological_path",
+    "//src/storage/minfs",
+    "//src/storage/testing:storage_driver_test_support",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+  defines = [
+    "DATA_FILESYSTEM_FORMAT=\"$data_filesystem_format\"",
+    "USE_DISK_BASED_MINFS_MIGRATION=$use_disk_based_minfs_migration",
+    "TEST_COMPONENT_NAME=\"test-fshost-fxfs-disk-migration\"",
+  ]
+}
+
+fuchsia_component("fshost-disk-migration-test") {
+  testonly = true
+  manifest = "meta/disk_migration_test.cml"
+  deps = [
+    ":disk-migration-test",
+    "//src/storage/fshost/testing:test-fshost-fxfs-disk-migration",
+    "//src/storage/testing:storage_driver_test_realm",
+  ]
+}
+
 fuchsia_test_package("fshost-tests") {
   test_specs = {
     log_settings = {
@@ -404,6 +459,7 @@ fuchsia_test_package("fshost-tests") {
     ":fshost-test",
     ":fshost-inspect-test",
     ":copier-test",
+    ":fshost-disk-migration-test",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",

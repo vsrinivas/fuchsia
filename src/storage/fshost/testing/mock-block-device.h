@@ -13,6 +13,7 @@
 
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/constants.h"
+#include "zircon/errors.h"
 
 namespace fshost::testing {
 
@@ -62,6 +63,10 @@ class MockBlockDevice : public BlockDeviceInterface {
 
   zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
       const char* topological_path) const override {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
+      fbl::unique_fd fd) const override {
     return zx::error(ZX_ERR_INTERNAL);
   }
 

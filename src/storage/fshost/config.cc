@@ -16,6 +16,7 @@ fshost_config::Config DefaultConfig() {
   config.data() = true;
   config.format_data_on_corruption() = true;
   config.allow_legacy_data_partition_names() = false;
+  config.use_disk_based_minfs_migration() = false;
   return config;
 }
 
@@ -42,6 +43,7 @@ fshost_config::Config EmptyConfig() {
       .netboot = false,
       .no_zxcrypt = false,
       .sandbox_decompression = false,
+      .use_disk_based_minfs_migration = false,
       .zxcrypt_non_ramdisk = false,
   }};
   return config;

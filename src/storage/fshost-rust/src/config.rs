@@ -26,6 +26,7 @@ pub fn default_config() -> fshost_config::Config {
         netboot: false,
         no_zxcrypt: false,
         sandbox_decompression: false,
+        use_disk_based_minfs_migration: false,
         zxcrypt_non_ramdisk: false,
     }
 }

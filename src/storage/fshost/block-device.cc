@@ -265,6 +265,11 @@ zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDevice(
                      << strerror(errno);
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
+  return OpenBlockDeviceByFd(std::move(fd));
+}
+
+zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDeviceByFd(
+    fbl::unique_fd fd) const {
   return zx::ok(std::make_unique<BlockDevice>(mounter_, std::move(fd), device_config_));
 }
 

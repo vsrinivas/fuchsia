@@ -37,6 +37,9 @@ class FshostInspectManager {
 
   void LogCorruption(fs_management::DiskFormat format);
 
+  // Used to log the status of filesystem migrations (minfs to fxfs).
+  void LogMigrationStatus(zx_status_t status);
+
  private:
   inspect::Inspector inspector_;
 
@@ -45,6 +48,11 @@ class FshostInspectManager {
   std::optional<inspect::Node> corruption_node_;
   // Mapping of filesystem type to the Inspect properties keeping track of the corruption counts.
   std::map<fs_management::DiskFormat, inspect::UintProperty> corruption_events_;
+
+  // If minfs to fxfs migration fails at boot time, this node will hold the reason.
+  // This will only be set when a device boots with minfs and attempts to migrate to fxfs via the
+  // disk-based migration path.
+  std::optional<inspect::UintProperty> migration_status_;
 
   // Fills information about the size of files and directories under the given `root` under the
   // given `node` and emplaces it in the given `inspector`. Returns the total size of `root`.

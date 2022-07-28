@@ -12,7 +12,9 @@
 #include <vector>
 
 #include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost_config.h"
+#include "src/storage/fshost/inspect-manager.h"
 
 namespace fshost {
 
@@ -36,9 +38,11 @@ class BlockDeviceManager {
     virtual zx_status_t Add(BlockDeviceInterface& device) { return device.Add(); }
   };
 
-  // Does not take ownership of |config|, which must refer to a valid object that outlives this
-  // object.
-  explicit BlockDeviceManager(const fshost_config::Config* config);
+  // Does not take ownership of either argument.
+  // |config| must refer to a valid object that outlives this object.
+  // |inspect| is optional and will be used to publish migration metrics, if provided.
+  explicit BlockDeviceManager(const fshost_config::Config* config,
+                              FshostInspectManager* inspect = nullptr);
 
   // Attempts to match the device against configured matchers and proceeds to add the device if
   // it does.
@@ -48,6 +52,7 @@ class BlockDeviceManager {
 
  private:
   const fshost_config::Config& config_;
+  FshostInspectManager* inspect_;
 
   // A vector of configured matchers.  First-to-match wins.
   std::vector<std::unique_ptr<Matcher>> matchers_;

@@ -44,6 +44,8 @@ class BlockDevice : public BlockDeviceInterface {
 
   zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
       const char* topological_path) const override;
+  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
+      fbl::unique_fd fd) const override;
   void AddData(Copier) override;
   zx::status<Copier> ExtractData() override;
   fs_management::DiskFormat GetFormat() override;
