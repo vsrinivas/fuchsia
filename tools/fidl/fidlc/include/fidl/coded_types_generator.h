@@ -10,10 +10,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "coded_ast.h"
-#include "fidl/types.h"
-#include "flat/compiler.h"
-#include "flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/coded_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl {
 

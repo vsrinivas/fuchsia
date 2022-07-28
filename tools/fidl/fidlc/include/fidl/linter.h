@@ -5,18 +5,18 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTER_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTER_H_
 
-#include <fidl/check_def.h>
-#include <fidl/findings.h>
-#include <fidl/linting_tree_callbacks.h>
-#include <fidl/tree_visitor.h>
-#include <fidl/utils.h>
-
 #include <array>
 #include <set>
 #include <stack>
 #include <utility>
 
 #include <re2/re2.h>
+
+#include "tools/fidl/fidlc/include/fidl/check_def.h"
+#include "tools/fidl/fidlc/include/fidl/findings.h"
+#include "tools/fidl/fidlc/include/fidl/linting_tree_callbacks.h"
+#include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl::linter {
 

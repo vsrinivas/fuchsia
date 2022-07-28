@@ -5,9 +5,9 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VISITOR_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VISITOR_H_
 
-#include "fidl/flat/object.h"
-#include "fidl/flat/types.h"
-#include "fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat/object.h"
+#include "tools/fidl/fidlc/include/fidl/flat/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl::flat {
 

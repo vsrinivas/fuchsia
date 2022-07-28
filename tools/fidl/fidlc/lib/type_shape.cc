@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/type_shape.h"
+#include "tools/fidl/fidlc/include/fidl/type_shape.h"
 
 #include <zircon/assert.h>
 
@@ -10,9 +10,9 @@
 
 #include <safemath/clamped_math.h>
 
-#include "fidl/flat/visitor.h"
-#include "fidl/flat_ast.h"
-#include "fidl/recursion_detector.h"
+#include "tools/fidl/fidlc/include/fidl/flat/visitor.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/recursion_detector.h"
 
 namespace {
 

@@ -5,8 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VERIFY_STEPS_H_
 
-#include "fidl/flat/compiler.h"
-#include "fidl/flat/transport.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
+#include "tools/fidl/fidlc/include/fidl/flat/transport.h"
 
 namespace fidl::flat {
 

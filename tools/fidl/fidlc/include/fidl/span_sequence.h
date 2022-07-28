@@ -7,8 +7,8 @@
 
 #include <utility>
 
-#include "raw_ast.h"
-#include "token.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/token.h"
 
 namespace fidl::fmt {
 

@@ -5,21 +5,21 @@
 #ifndef TOOLS_FIDL_FIDLC_TESTS_TEST_LIBRARY_H_
 #define TOOLS_FIDL_FIDLC_TESTS_TEST_LIBRARY_H_
 
-#include <fidl/flat/compiler.h>
-#include <fidl/flat_ast.h>
-#include <fidl/json_generator.h>
-#include <fidl/lexer.h>
-#include <fidl/linter.h>
-#include <fidl/ordinals.h>
-#include <fidl/parser.h>
-#include <fidl/source_file.h>
-#include <fidl/tables_generator.h>
 #include <zircon/assert.h>
 
 #include <fstream>
 
-#include "fidl/experimental_flags.h"
-#include "fidl/versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/json_generator.h"
+#include "tools/fidl/fidlc/include/fidl/lexer.h"
+#include "tools/fidl/fidlc/include/fidl/linter.h"
+#include "tools/fidl/fidlc/include/fidl/ordinals.h"
+#include "tools/fidl/fidlc/include/fidl/parser.h"
+#include "tools/fidl/fidlc/include/fidl/source_file.h"
+#include "tools/fidl/fidlc/include/fidl/tables_generator.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
 // Behavior that applies to SharedAmongstLibraries, but that is also provided on
 // TestLibrary for convenience in single-library tests.

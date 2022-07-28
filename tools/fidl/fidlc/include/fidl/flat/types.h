@@ -10,10 +10,10 @@
 #include <any>
 #include <utility>
 
-#include "../types.h"
-#include "name.h"
-#include "object.h"
-#include "values.h"
+#include "tools/fidl/fidlc/include/fidl/flat/name.h"
+#include "tools/fidl/fidlc/include/fidl/flat/object.h"
+#include "tools/fidl/fidlc/include/fidl/flat/values.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl::flat {
 

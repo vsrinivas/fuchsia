@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/linting_tree_callbacks.h>
-#include <fidl/utils.h>
+#include "tools/fidl/fidlc/include/fidl/linting_tree_callbacks.h"
+
 #include <zircon/assert.h>
 
 #include <fstream>
 
 #include <re2/re2.h>
+
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl::linter {
 

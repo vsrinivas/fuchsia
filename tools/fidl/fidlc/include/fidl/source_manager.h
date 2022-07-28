@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-#include "fidl/source_file.h"
+#include "tools/fidl/fidlc/include/fidl/source_file.h"
 
 namespace fidl {
 

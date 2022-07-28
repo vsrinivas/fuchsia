@@ -6,11 +6,11 @@
 // nodes.  Generally, all they do is invoke the appropriate TreeVisitor method
 // for each field of the node.
 
-#include "fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 
 #include <map>
 
-#include "fidl/tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
 
 namespace fidl::raw {
 

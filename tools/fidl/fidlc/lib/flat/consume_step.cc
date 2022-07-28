@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/consume_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat/consume_step.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/experimental_flags.h"
-#include "fidl/flat/compile_step.h"
-#include "fidl/flat_ast.h"
-#include "fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 
 namespace fidl::flat {
 

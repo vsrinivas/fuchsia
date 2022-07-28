@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/findings.h>
-#include <fidl/template_string.h>
-#include <fidl/utils.h>
 #include <zircon/assert.h>
 
 #include <sstream>
 #include <utility>
 
-#include "test_library.h"
-#include "unittest_helpers.h"
+#include "tools/fidl/fidlc/include/fidl/findings.h"
+#include "tools/fidl/fidlc/include/fidl/template_string.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
+#include "tools/fidl/fidlc/tests/unittest_helpers.h"
 
 namespace fidl {
 

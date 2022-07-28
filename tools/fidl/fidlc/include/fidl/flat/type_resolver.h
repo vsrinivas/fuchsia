@@ -5,8 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPE_RESOLVER_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPE_RESOLVER_H_
 
-#include "fidl/flat/compile_step.h"
-#include "fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl::flat {
 

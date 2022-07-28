@@ -5,7 +5,7 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_COMPILE_STEP_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_COMPILE_STEP_H_
 
-#include "fidl/flat/compiler.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
 
 namespace fidl::flat {
 

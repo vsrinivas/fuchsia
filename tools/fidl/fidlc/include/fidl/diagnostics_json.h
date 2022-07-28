@@ -11,9 +11,9 @@
 #include <string_view>
 #include <vector>
 
-#include "fidl/diagnostic_types.h"
-#include "fidl/source_span.h"
-#include "json_writer.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
+#include "tools/fidl/fidlc/include/fidl/json_writer.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl {
 

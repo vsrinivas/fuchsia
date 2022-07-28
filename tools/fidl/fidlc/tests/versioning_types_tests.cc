@@ -7,7 +7,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "fidl/versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
 namespace {
 

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/types.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/diagnostics.h"
-#include "fidl/flat/type_resolver.h"
-#include "fidl/flat/visitor.h"
-#include "fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/flat/type_resolver.h"
+#include "tools/fidl/fidlc/include/fidl/flat/visitor.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl::flat {
 

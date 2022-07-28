@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/tables_generator.h>
 #include <zircon/assert.h>
 
 #include <zxtest/zxtest.h>
 
-#include "error_test.h"
-#include "fidl/coded_ast.h"
-#include "fidl/coded_types_generator.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/coded_ast.h"
+#include "tools/fidl/fidlc/include/fidl/coded_types_generator.h"
+#include "tools/fidl/fidlc/include/fidl/tables_generator.h"
+#include "tools/fidl/fidlc/tests/error_test.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
 

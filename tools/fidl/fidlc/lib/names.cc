@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
 
 #include <zircon/assert.h>
 

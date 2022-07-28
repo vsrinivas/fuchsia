@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/parser.h"
+#include "tools/fidl/fidlc/include/fidl/parser.h"
 
 #include <errno.h>
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
-#include "fidl/diagnostics.h"
-#include "fidl/experimental_flags.h"
-#include "fidl/types.h"
-#include "fidl/utils.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl {
 

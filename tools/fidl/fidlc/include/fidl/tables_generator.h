@@ -12,9 +12,9 @@
 #include <string_view>
 #include <vector>
 
-#include "coded_ast.h"
-#include "coded_types_generator.h"
-#include "flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/coded_ast.h"
+#include "tools/fidl/fidlc/include/fidl/coded_types_generator.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl {
 

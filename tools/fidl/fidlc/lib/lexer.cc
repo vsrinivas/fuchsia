@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/lexer.h"
+#include "tools/fidl/fidlc/include/fidl/lexer.h"
 
 #include <assert.h>
 #include <zircon/assert.h>
 
 #include <map>
 
-#include "fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
 
 namespace fidl {
 

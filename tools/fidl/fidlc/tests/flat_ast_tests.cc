@@ -6,13 +6,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/diagnostics.h>
-#include <fidl/flat_ast.h>
-
 #include <zxtest/zxtest.h>
 
-#include "error_test.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/tests/error_test.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
 

@@ -13,10 +13,10 @@
 #include <string_view>
 #include <vector>
 
-#include "experimental_flags.h"
-#include "flat/compiler.h"
-#include "flat_ast.h"
-#include "json_writer.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/json_writer.h"
 
 namespace fidl {
 

@@ -8,8 +8,8 @@
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
-#include "fidl/flat_ast.h"
-#include "fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
 
 namespace fidl::flat {
 

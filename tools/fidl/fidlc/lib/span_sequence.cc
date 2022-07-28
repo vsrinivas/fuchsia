@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/span_sequence.h"
+#include "tools/fidl/fidlc/include/fidl/span_sequence.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 
 namespace fidl::fmt {
 

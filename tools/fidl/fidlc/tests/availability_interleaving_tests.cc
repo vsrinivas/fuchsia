@@ -4,9 +4,9 @@
 
 #include <zxtest/zxtest.h>
 
-#include "error_test.h"
-#include "fidl/diagnostics.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/tests/error_test.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 // This file tests ways of interleaving the availability of a source element
 // with that of a target element that it references. See also

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/tables_generator.h"
+#include "tools/fidl/fidlc/include/fidl/tables_generator.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/coded_ast.h"
-#include "fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/coded_ast.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
 
 namespace fidl {
 

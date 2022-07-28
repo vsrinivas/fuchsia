@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/formatter.h"
+#include "tools/fidl/fidlc/include/fidl/formatter.h"
 
-#include "fidl/lexer.h"
-#include "fidl/parser.h"
-#include "fidl/span_sequence.h"
-#include "fidl/span_sequence_tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/lexer.h"
+#include "tools/fidl/fidlc/include/fidl/parser.h"
+#include "tools/fidl/fidlc/include/fidl/span_sequence.h"
+#include "tools/fidl/fidlc/include/fidl/span_sequence_tree_visitor.h"
 
 namespace fidl::fmt {
 

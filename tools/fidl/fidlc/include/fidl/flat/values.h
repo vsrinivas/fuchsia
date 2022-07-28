@@ -9,12 +9,12 @@
 #include <limits>
 #include <type_traits>
 
-#include "fidl/flat/name.h"
-#include "fidl/flat/reference.h"
-#include "fidl/flat/traits.h"
-#include "fidl/raw_ast.h"
-#include "fidl/source_span.h"
-#include "fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/name.h"
+#include "tools/fidl/fidlc/include/fidl/flat/reference.h"
+#include "tools/fidl/fidlc/include/fidl/flat/traits.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl::flat {
 

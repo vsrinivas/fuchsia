@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_TREE_VISITOR_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_TREE_VISITOR_H_

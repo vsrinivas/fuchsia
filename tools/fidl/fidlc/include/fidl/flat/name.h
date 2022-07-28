@@ -15,7 +15,7 @@
 #include <variant>
 #include <vector>
 
-#include "fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl::flat {
 

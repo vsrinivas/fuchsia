@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/ordinals.h"
+#include "tools/fidl/fidlc/include/fidl/ordinals.h"
 
 #include <zircon/assert.h>
 
 #include <optional>
 
-#include "fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>

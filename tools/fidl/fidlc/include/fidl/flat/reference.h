@@ -8,7 +8,7 @@
 #include <optional>
 #include <variant>
 
-#include "fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl::raw {
 class CompoundIdentifier;

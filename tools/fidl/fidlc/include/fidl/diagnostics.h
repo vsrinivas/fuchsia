@@ -5,9 +5,9 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_
 
-#include "diagnostic_types.h"
-#include "fidl/source_span.h"
-#include "versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
 namespace fidl {
 

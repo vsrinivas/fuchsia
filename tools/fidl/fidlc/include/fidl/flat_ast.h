@@ -21,16 +21,16 @@
 #include <utility>
 #include <vector>
 
-#include "flat/attributes.h"
-#include "flat/name.h"
-#include "flat/object.h"
-#include "flat/traits.h"
-#include "flat/types.h"
-#include "flat/values.h"
-#include "ordinals.h"
-#include "type_shape.h"
-#include "types.h"
-#include "versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/attributes.h"
+#include "tools/fidl/fidlc/include/fidl/flat/name.h"
+#include "tools/fidl/fidlc/include/fidl/flat/object.h"
+#include "tools/fidl/fidlc/include/fidl/flat/traits.h"
+#include "tools/fidl/fidlc/include/fidl/flat/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/values.h"
+#include "tools/fidl/fidlc/include/fidl/ordinals.h"
+#include "tools/fidl/fidlc/include/fidl/type_shape.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
 namespace fidl {
 

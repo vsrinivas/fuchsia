@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/c_generator.h"
+#include "tools/fidl/fidlc/include/fidl/c_generator.h"
 
 #include <zircon/assert.h>
 
 #include <unordered_set>
 
-#include "fidl/flat_ast.h"
-#include "fidl/names.h"
-#include "fidl/type_shape.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/type_shape.h"
 
 namespace fidl {
 

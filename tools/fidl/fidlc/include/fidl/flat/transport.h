@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl::flat {
 

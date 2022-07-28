@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/json_generator.h"
+#include "tools/fidl/fidlc/include/fidl/json_generator.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/diagnostic_types.h"
-#include "fidl/flat/name.h"
-#include "fidl/flat/types.h"
-#include "fidl/flat_ast.h"
-#include "fidl/names.h"
-#include "fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/name.h"
+#include "tools/fidl/fidlc/include/fidl/flat/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl {
 

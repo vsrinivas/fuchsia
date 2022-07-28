@@ -7,7 +7,7 @@
 
 #include <any>
 
-#include "fidl/type_shape.h"
+#include "tools/fidl/fidlc/include/fidl/type_shape.h"
 
 namespace fidl::flat {
 

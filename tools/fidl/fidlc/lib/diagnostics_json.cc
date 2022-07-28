@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/diagnostics_json.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics_json.h"
 
-#include "fidl/diagnostic_types.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
 
 namespace fidl {
 

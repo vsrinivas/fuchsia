@@ -14,8 +14,8 @@
 #include <variant>
 #include <vector>
 
-#include "check.h"
-#include "types.h"
+#include "tools/fidl/fidlc/include/fidl/check.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 // The types in this file define structures that much more closely map
 // the coding tables (i.e., fidl_type_t) for (de)serialization,

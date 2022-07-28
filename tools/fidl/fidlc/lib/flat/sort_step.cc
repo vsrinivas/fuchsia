@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/sort_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat/sort_step.h"
 
 #include <zircon/assert.h>
 
 #include <algorithm>
 
-#include "fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
 
 namespace fidl::flat {
 

@@ -13,10 +13,10 @@
 #include <variant>
 #include <vector>
 
-#include "source_span.h"
-#include "token.h"
-#include "types.h"
-#include "utils.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/token.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 // ASTs fresh out of the oven. This is a tree-shaped bunch of nodes
 // pretty much exactly corresponding to the grammar of a single fidl

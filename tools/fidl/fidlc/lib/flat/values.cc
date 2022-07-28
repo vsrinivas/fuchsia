@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/values.h"
+#include "tools/fidl/fidlc/include/fidl/flat/values.h"
 
 #include <zircon/assert.h>
 
 #include <safemath/checked_math.h>
 
-#include "fidl/raw_ast.h"
-#include "fidl/utils.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl::flat {
 

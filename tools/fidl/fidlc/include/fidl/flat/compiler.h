@@ -9,14 +9,14 @@
 
 #include <memory>
 
-#include "fidl/experimental_flags.h"
-#include "fidl/flat/attribute_schema.h"
-#include "fidl/flat/typespace.h"
-#include "fidl/flat_ast.h"
-#include "fidl/ordinals.h"
-#include "fidl/reporter.h"
-#include "fidl/versioning_types.h"
-#include "fidl/virtual_source_file.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/flat/attribute_schema.h"
+#include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/ordinals.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 namespace fidl::flat {
 

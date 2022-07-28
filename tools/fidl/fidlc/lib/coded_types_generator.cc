@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/coded_types_generator.h"
+#include "tools/fidl/fidlc/include/fidl/coded_types_generator.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/coded_ast.h"
-#include "fidl/flat/values.h"
-#include "fidl/names.h"
-#include "fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/coded_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat/values.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl {
 

@@ -4,11 +4,11 @@
 
 #include <fstream>
 
-#include "error_test.h"
-#include "fidl/diagnostics_json.h"
-#include "fidl/experimental_flags.h"
-#include "test_library.h"
-#include "unittest_helpers.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics_json.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/tests/error_test.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
+#include "tools/fidl/fidlc/tests/unittest_helpers.h"
 
 namespace fidl {
 

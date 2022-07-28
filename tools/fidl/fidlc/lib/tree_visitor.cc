@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
 
 #include <map>
 
-#include "fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
 
 namespace fidl::raw {
 

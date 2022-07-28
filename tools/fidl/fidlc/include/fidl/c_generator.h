@@ -10,8 +10,8 @@
 #include <string_view>
 #include <vector>
 
-#include "flat/compiler.h"
-#include "flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compiler.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 namespace fidl {
 

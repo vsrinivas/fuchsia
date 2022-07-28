@@ -10,9 +10,9 @@
 #include <memory>
 #include <optional>
 
-#include "fidl/flat/traits.h"
-#include "fidl/flat/values.h"
-#include "fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/flat/traits.h"
+#include "tools/fidl/fidlc/include/fidl/flat/values.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl::flat {
 

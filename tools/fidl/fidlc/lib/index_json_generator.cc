@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/index_json_generator.h"
+#include "tools/fidl/fidlc/include/fidl/index_json_generator.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/flat/name.h"
-#include "fidl/flat/types.h"
-#include "fidl/flat_ast.h"
-#include "fidl/names.h"
-#include "fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/name.h"
+#include "tools/fidl/fidlc/include/fidl/flat/types.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
 
 namespace fidl {
 
@@ -51,13 +51,13 @@ IndexJSONGenerator::GetDependencyIdentifiers() {
         identifiers.emplace_back(member_identifier);
       }
     }
-    for (auto& structdecl : dependency.declarations.structs){
-        auto identifier = IndexJSONGenerator::ReferencedIdentifier(structdecl->name);
-        identifiers.emplace_back(identifier);
+    for (auto& structdecl : dependency.declarations.structs) {
+      auto identifier = IndexJSONGenerator::ReferencedIdentifier(structdecl->name);
+      identifiers.emplace_back(identifier);
     }
-    for (auto& protocoldecl : dependency.declarations.protocols){
-        auto identifier = IndexJSONGenerator::ReferencedIdentifier(protocoldecl->name);
-        identifiers.emplace_back(identifier);
+    for (auto& protocoldecl : dependency.declarations.protocols) {
+      auto identifier = IndexJSONGenerator::ReferencedIdentifier(protocoldecl->name);
+      identifiers.emplace_back(identifier);
     }
   }
   return identifiers;

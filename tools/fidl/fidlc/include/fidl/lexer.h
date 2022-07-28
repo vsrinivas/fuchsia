@@ -10,9 +10,9 @@
 #include <map>
 #include <string_view>
 
-#include "reporter.h"
-#include "source_manager.h"
-#include "token.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/source_manager.h"
+#include "tools/fidl/fidlc/include/fidl/token.h"
 
 namespace fidl {
 

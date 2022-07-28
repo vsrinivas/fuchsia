@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/compile_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
 
 #include <zircon/assert.h>
 
 #include <algorithm>
 #include <optional>
 
-#include "fidl/diagnostics.h"
-#include "fidl/flat/attribute_schema.h"
-#include "fidl/flat/type_resolver.h"
-#include "fidl/flat_ast.h"
-#include "fidl/names.h"
-#include "fidl/ordinals.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/flat/attribute_schema.h"
+#include "tools/fidl/fidlc/include/fidl/flat/type_resolver.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/ordinals.h"
 
 namespace fidl::flat {
 

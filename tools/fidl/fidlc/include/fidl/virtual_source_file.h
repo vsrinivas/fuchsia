@@ -11,8 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "source_file.h"
-#include "source_span.h"
+#include "tools/fidl/fidlc/include/fidl/source_file.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl {
 

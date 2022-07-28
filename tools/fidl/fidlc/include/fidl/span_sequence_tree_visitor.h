@@ -9,9 +9,9 @@
 
 #include <stack>
 
-#include "raw_ast.h"
-#include "span_sequence.h"
-#include "tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/span_sequence.h"
+#include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
 
 namespace fidl::fmt {
 

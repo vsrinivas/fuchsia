@@ -9,7 +9,7 @@
 
 #include <string_view>
 
-#include "source_span.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl {
 

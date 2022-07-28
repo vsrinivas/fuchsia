@@ -12,12 +12,12 @@
 #include <sstream>
 #include <string_view>
 
-#include "flat_ast.h"
-#include "source_span.h"
-#include "token.h"
-#include "types.h"
-#include "utils.h"
-#include "versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/token.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
 namespace fidl {
 

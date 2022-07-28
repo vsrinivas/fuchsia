@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/span_sequence_tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/span_sequence_tree_visitor.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/raw_ast.h"
-#include "fidl/span_sequence.h"
-#include "fidl/tree_visitor.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/span_sequence.h"
+#include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
 
 namespace fidl::fmt {
 

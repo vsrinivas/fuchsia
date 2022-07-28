@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/availability_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat/availability_step.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/flat/compile_step.h"
-#include "fidl/flat_ast.h"
-#include "fidl/versioning_types.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
 namespace fidl::flat {
 

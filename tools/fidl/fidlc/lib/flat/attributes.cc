@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/attributes.h"
+#include "tools/fidl/fidlc/include/fidl/flat/attributes.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/flat/typespace.h"
-#include "fidl/flat_ast.h"
-#include "fidl/utils.h"
+#include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl::flat {
 

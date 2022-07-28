@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/flat/visitor.h"
-#include "fidl/reporter.h"
-#include "fidl/virtual_source_file.h"
+#include "tools/fidl/fidlc/include/fidl/flat/visitor.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
 
 namespace fidl::flat {
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/flat/type_resolver.h"
+#include "tools/fidl/fidlc/include/fidl/flat/type_resolver.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/flat/compile_step.h"
+#include "tools/fidl/fidlc/include/fidl/flat/compile_step.h"
 
 namespace fidl::flat {
 

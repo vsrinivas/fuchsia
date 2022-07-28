@@ -4,8 +4,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "fidl/source_span.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
 

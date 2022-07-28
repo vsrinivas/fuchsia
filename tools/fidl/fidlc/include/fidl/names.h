@@ -8,11 +8,11 @@
 #include <string>
 #include <string_view>
 
-#include "c_generator.h"
-#include "flat_ast.h"
-#include "raw_ast.h"
-#include "types.h"
-#include "utils.h"
+#include "tools/fidl/fidlc/include/fidl/c_generator.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl {
 

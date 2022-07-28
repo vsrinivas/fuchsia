@@ -10,9 +10,9 @@
 
 #include <zxtest/zxtest.h>
 
-#include "fidl/raw_ast.h"
-#include "fidl/tree_visitor.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/tree_visitor.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 // This test provides a way to write comprehensive unit tests on the fidlc
 // parser. Each test case provides a SourceElement type and a list of source

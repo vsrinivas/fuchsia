@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/findings.h>
-#include <fidl/linter.h>
-#include <fidl/raw_ast.h>
-#include <fidl/utils.h>
+#include "tools/fidl/fidlc/include/fidl/linter.h"
+
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
@@ -14,6 +12,10 @@
 #include <iostream>
 #include <set>
 #include <utility>
+
+#include "tools/fidl/fidlc/include/fidl/findings.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl::linter {
 

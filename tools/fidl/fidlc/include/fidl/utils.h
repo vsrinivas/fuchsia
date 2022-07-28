@@ -16,7 +16,7 @@
 
 #include <re2/re2.h>
 
-#include "findings.h"
+#include "tools/fidl/fidlc/include/fidl/findings.h"
 
 namespace fidl::utils {
 

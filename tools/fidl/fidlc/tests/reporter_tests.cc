@@ -4,12 +4,12 @@
 
 #include <zxtest/zxtest.h>
 
-#include "fidl/diagnostic_types.h"
-#include "fidl/diagnostics.h"
-#include "fidl/reporter.h"
-#include "fidl/source_span.h"
-#include "fidl/virtual_source_file.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/virtual_source_file.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
 

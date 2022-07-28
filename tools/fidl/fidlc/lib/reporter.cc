@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
 
-#include <fidl/diagnostics_json.h>
-#include <fidl/token.h>
 #include <zircon/assert.h>
 
 #include <sstream>
+
+#include "tools/fidl/fidlc/include/fidl/diagnostics_json.h"
+#include "tools/fidl/fidlc/include/fidl/token.h"
 
 namespace fidl {
 

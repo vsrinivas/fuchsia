@@ -1,12 +1,11 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <fidl/formatter.h>
-#include <fidl/utils.h>
-
 #include <zxtest/zxtest.h>
 
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/formatter.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
 std::string Format(const std::string& source, bool reformat_and_compare = true) {

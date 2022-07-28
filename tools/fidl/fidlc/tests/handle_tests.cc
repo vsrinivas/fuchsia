@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/flat_ast.h>
-#include <fidl/lexer.h>
-#include <fidl/parser.h>
-#include <fidl/raw_ast.h>
-#include <fidl/source_file.h>
 #include <locale.h>
 
 #include <zxtest/zxtest.h>
 
-#include "error_test.h"
-#include "fidl/diagnostics.h"
-#include "fidl/experimental_flags.h"
-#include "test_library.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostics.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/lexer.h"
+#include "tools/fidl/fidlc/include/fidl/parser.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/source_file.h"
+#include "tools/fidl/fidlc/tests/error_test.h"
+#include "tools/fidl/fidlc/tests/test_library.h"
 
 namespace {
 

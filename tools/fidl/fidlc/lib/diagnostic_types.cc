@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl/diagnostic_types.h"
+#include "tools/fidl/fidlc/include/fidl/diagnostic_types.h"
 
 #include <zircon/assert.h>
 
-#include "fidl/flat/typespace.h"
-#include "fidl/flat_ast.h"
-#include "fidl/names.h"
-#include "fidl/raw_ast.h"
-#include "fidl/source_span.h"
+#include "tools/fidl/fidlc/include/fidl/flat/typespace.h"
+#include "tools/fidl/fidlc/include/fidl/flat_ast.h"
+#include "tools/fidl/fidlc/include/fidl/names.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/source_span.h"
 
 namespace fidl::internal {
 

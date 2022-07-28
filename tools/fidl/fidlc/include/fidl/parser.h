@@ -10,12 +10,12 @@
 #include <memory>
 #include <optional>
 
-#include "experimental_flags.h"
-#include "lexer.h"
-#include "raw_ast.h"
-#include "reporter.h"
-#include "types.h"
-#include "utils.h"
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
+#include "tools/fidl/fidlc/include/fidl/lexer.h"
+#include "tools/fidl/fidlc/include/fidl/raw_ast.h"
+#include "tools/fidl/fidlc/include/fidl/reporter.h"
+#include "tools/fidl/fidlc/include/fidl/types.h"
+#include "tools/fidl/fidlc/include/fidl/utils.h"
 
 namespace fidl {
 
