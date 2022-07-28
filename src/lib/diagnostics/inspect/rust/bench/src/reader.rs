@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_inspect::{TreeMarker, TreeProxy};
 use fuchsia_async as fasync;
 use fuchsia_criterion::{criterion, FuchsiaCriterion};
 use fuchsia_inspect::{
     reader::snapshot::{Snapshot, SnapshotTree},
     Inspector, NumericProperty,
 };
-use futures::{future::BoxFuture, FutureExt};
-use inspect_runtime::service::{handle_request_stream, TreeServerSettings};
+use futures::FutureExt;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -20,6 +18,8 @@ enum InspectorState {
     Running,
     Done,
 }
+
+mod utils;
 
 /// Start a worker thread that will continually update the given inspector at the given rate.
 ///
@@ -51,16 +51,6 @@ fn start_inspector_update_thread(inspector: Inspector, changes_per_second: usize
         }
         thread.join().expect("join thread");
     };
-}
-
-/// Spawns a tree server for the test purposes.
-fn spawn_server(
-    inspector: Inspector,
-) -> Result<(TreeProxy, BoxFuture<'static, Result<(), anyhow::Error>>), anyhow::Error> {
-    let (tree, request_stream) = fidl::endpoints::create_proxy_and_stream::<TreeMarker>()?;
-    let tree_server_fut =
-        handle_request_stream(inspector, TreeServerSettings::default(), request_stream);
-    Ok((tree, tree_server_fut.boxed()))
 }
 
 /// Adds the given number of nodes as lazy nodes to the tree. Each lazy node will contain only one
@@ -105,7 +95,7 @@ fn snapshot_tree_bench(b: &mut criterion::Bencher, size: usize, frequency: usize
     let mut executor = fuchsia_async::LocalExecutor::new().unwrap();
 
     let inspector = Inspector::new_with_size(size);
-    let (proxy, tree_server_fut) = spawn_server(inspector.clone()).unwrap();
+    let (proxy, tree_server_fut) = utils::spawn_server(inspector.clone()).unwrap();
     let task = fasync::Task::spawn(tree_server_fut);
 
     let done_fn = start_inspector_update_thread(inspector.clone(), frequency);
@@ -133,7 +123,7 @@ fn uncontended_snapshot_tree_bench(b: &mut criterion::Bencher, size: usize) {
     let mut executor = fuchsia_async::LocalExecutor::new().unwrap();
 
     let inspector = Inspector::new_with_size(size);
-    let (proxy, tree_server_fut) = spawn_server(inspector.clone()).unwrap();
+    let (proxy, tree_server_fut) = utils::spawn_server(inspector.clone()).unwrap();
     let task = fasync::Task::local(tree_server_fut);
 
     b.iter_with_large_drop(|| {
@@ -156,7 +146,7 @@ fn reader_snapshot_tree_vmo_bench(b: &mut criterion::Bencher, size: usize, fille
     let mut executor = fuchsia_async::LocalExecutor::new().unwrap();
 
     let inspector = Inspector::new_with_size(size);
-    let (proxy, tree_server_fut) = spawn_server(inspector.clone()).unwrap();
+    let (proxy, tree_server_fut) = utils::spawn_server(inspector.clone()).unwrap();
     let task = fasync::Task::local(tree_server_fut);
 
     let mut nodes = vec![];

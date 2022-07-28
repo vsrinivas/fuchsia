@@ -22,7 +22,37 @@ rustc_binary("reader-bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  sources = [ "src/reader.rs" ]
+  sources = [
+    "src/reader.rs",
+    "src/utils.rs",
+  ]
+}
+
+rustc_binary("writer-bin") {
+  name = "inspect_rust_writer_benchmarks"
+  edition = "2018"
+
+  source_root = "src/writer.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
+    "//src/developer/fuchsia-criterion",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/mapped-vmo",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:num",
+    "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:rand",
+  ]
+
+  sources = [
+    "src/utils.rs",
+    "src/writer.rs",
+  ]
 }
 
 fuchsia_component("reader-component") {
@@ -31,8 +61,17 @@ fuchsia_component("reader-component") {
   deps = [ ":reader-bin" ]
 }
 
+fuchsia_component("writer-component") {
+  component_name = "writer"
+  manifest = "meta/writer.cml"
+  deps = [ ":writer-bin" ]
+}
+
 fuchsia_package("rust-inspect-benchmarks-v2") {
-  deps = [ ":reader-component" ]
+  deps = [
+    ":reader-component",
+    ":writer-component",
+  ]
 }
 
 fuchsia_package_with_single_component("rust-inspect-benchmarks") {
@@ -48,19 +87,14 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
-    "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/selectors",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/mapped-vmo",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:num",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:rand",
   ]

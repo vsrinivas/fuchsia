@@ -30,7 +30,6 @@ test_list = [
   "network_device_microbenchmarks_test",
   "perftest_trace_events_test",
   "storage_benchmarks_test",
-  "rust_inspect_benchmarks_test",
   "rust_inspect_benchmarks_v2_test",
   "rust_inspect_selectors_benchmarks_test",
 ]

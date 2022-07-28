@@ -19,4 +19,12 @@ void main() {
         componentName: 'reader.cm',
         commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
+
+  test('rust_inspect_writer_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponent(
+        packageName: 'rust-inspect-benchmarks-v2',
+        componentName: 'writer.cm',
+        commandArgs: PerfTestHelper.componentOutputPath);
+  }, timeout: Timeout.none);
 }
