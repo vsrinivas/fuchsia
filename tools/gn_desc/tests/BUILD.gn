@@ -1,0 +1,73 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":host_tests($host_toolchain)" ]
+}
+
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [ ":gn_json_integration_test" ]
+  }
+
+  rustc_binary("gn_json_integration_test_executable") {
+    testonly = true
+    edition = "2021"
+    deps = [
+      "../gn_json",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:camino",
+      "//third_party/rust_crates:itertools",
+      "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:serde_json",
+    ]
+
+    source_root = "src/main.rs"
+    sources = [ "src/main.rs" ]
+  }
+
+  # we need to copy the GN binary from the builder into the test output
+  # directory so we can run it on a different bot than does the builds.
+  gn_tool_dir = "${target_out_dir}/gn_dir"
+  host_test_data("gn_tool") {
+    sources = [ "//prebuilt/third_party/gn/${host_platform}/gn" ]
+    outputs = [ "$gn_tool_dir/{{source_file_part}}" ]
+  }
+
+  host_test_data("test_project") {
+    sources = [
+      "gn_project/.gn",
+      "gn_project/BUILD.gn",
+      "gn_project/build/BUILD.gn",
+      "gn_project/build/BUILDCONFIG.gn",
+      "gn_project/build/toolchain/BUILD.gn",
+      "gn_project/foo/BUILD.gn",
+      "gn_project/foo/bar/BUILD.gn",
+    ]
+    outputs = [ "${target_out_dir}/{{source_target_relative}}" ]
+  }
+  test_project_dir = "${target_out_dir}/gn_project"
+
+  host_test("gn_json_integration_test") {
+    binary_path = "$root_out_dir/gn_json_integration_test_executable"
+    args = [
+      "--gn-tool-dir",
+      rebase_path(gn_tool_dir, root_build_dir),
+      "--project-dir",
+      rebase_path(test_project_dir, root_build_dir),
+    ]
+    deps = [
+      ":gn_json_integration_test_executable",
+      ":gn_tool",
+      ":test_project",
+    ]
+  }
+}

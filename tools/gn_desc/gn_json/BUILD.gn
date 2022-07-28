@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+if (is_host) {
+  # The JSON parsing for GN's desc output
+  rustc_library("gn_json") {
+    edition = "2021"
+    deps = [
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:thiserror",
+    ]
+
+    source_root = "src/lib.rs"
+    sources = [
+      "src/label.rs",
+      "src/lib.rs",
+      "src/target.rs",
+    ]
+  }
+
+  # And its unit tests
+  rustc_test("gn_json_tests") {
+    edition = "2021"
+    deps = [
+      "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:thiserror",
+    ]
+
+    source_root = "src/lib.rs"
+    sources = [
+      "src/label.rs",
+      "src/lib.rs",
+      "src/target.rs",
+    ]
+  }
+}
+
+# All the (host) tests.
+group("tests") {
+  testonly = true
+  deps = [ ":gn_json_tests($host_toolchain)" ]
+}

@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("foo_binary") {
+  deps = [ "bar" ]
+
+  crate_root = "src/main.rs"
+  sources = [ "src/main.rs" ]
+  metadata = {
+    simple_key = [ "simple_value" ]
+    complex_key = [
+      {
+        arg = "arg_value"
+        arg2 = "arg2_value"
+      },
+    ]
+  }
+}
+
+action("foo_action") {
+  script = "some_script.py"
+  args = [
+    "--arg",
+    "value",
+  ]
+  deps = [ ":foo_binary" ]
+  inputs = [ "src/main.rs" ]
+  outputs = [ "$target_out_dir/action_output.txt" ]
+}

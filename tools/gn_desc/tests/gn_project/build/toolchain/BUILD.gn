@@ -1,0 +1,44 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+toolchain("main") {
+  tool("stamp") {
+    command = "nop"
+  }
+
+  tool("cc") {
+    depfile = "{{output}}.d"
+    command = "cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+    depsformat = "gcc"
+    description = "CC {{output}}"
+    outputs =
+        [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
+  }
+
+  tool("rust_bin") {
+    description = "RUST {{output}}"
+    default_output_dir = "{{root_out_dir}}"
+    outname = "{{target_output_name}}{{output_extension}}"
+    outfile = "{{output_dir}}/$outname"
+    outputs = [ outfile ]
+    depfile = "$outfile.d"
+
+    command = "{{rustenv}} rustc --color=always --crate-name {{crate_name}} {{source}}"
+    command += " --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}}"
+    command += " -o {{output}} {{rustdeps}} {{externs}}"
+  }
+
+  tool("rust_rlib") {
+    depfile = "{{output}}.d"
+
+    command = "{{rustenv}} rustc --color=always --crate-name {{crate_name}} {{source}}"
+    command += " --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}}"
+    command += " -o {{output}} {{rustdeps}} {{externs}}"
+
+    description = "RUST {{output}}"
+    outputs = [ "{{output_dir}}/lib{{target_output_name}}{{output_extension}}" ]
+    default_output_dir = "{{target_out_dir}}"
+    default_output_extension = ".rlib"
+  }
+}
