@@ -40,5 +40,8 @@ group("tests") {
 # conditions in CI as opposed to for every change in CQ or being run locally.
 group("integration") {
   testonly = true
-  deps = [ "blackout-integration:integration" ]
+  deps = [
+    "blackout-integration:integration",
+    "blobfs-checkerboard:integration",
+  ]
 }

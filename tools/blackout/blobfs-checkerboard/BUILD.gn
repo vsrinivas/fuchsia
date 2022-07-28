@@ -47,7 +47,44 @@ fuchsia_package("blackout-blobfs-checkerboard-target") {
   deps = [ ":blackout-blobfs-checkerboard-target-component" ]
 }
 
+if (is_host) {
+  host_test("blackout-blobfs-checkerboard-host") {
+    binary_path = "$root_out_dir/ffx"
+    args = [
+      "--config",
+      "storage_dev=true",
+      "storage",
+      "blackout",
+      "blobfs-checkerboard",
+      "/dev/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-009/block/fvm/blobfs-p-1/block",
+      "--bootserver",
+    ]
+
+    deps = [ "//src/developer/ffx:ffx_bin" ]
+
+    environments = [
+      {
+        dimensions = {
+          testbed = "pwr_sherlock"
+          pool = "fuchsia.tests.power-failure"
+          device_type = "Sherlock"
+        }
+        tags = [ "power-failure-sherlock" ]
+        netboot = true
+      },
+    ]
+  }
+}
+
 group("blobfs-checkerboard") {
   testonly = true
-  public_deps = [ ":blackout-blobfs-checkerboard-target" ]
+  deps = [ ":blackout-blobfs-checkerboard-target" ]
+}
+
+group("integration") {
+  testonly = true
+  deps = [
+    ":blackout-blobfs-checkerboard-host($host_toolchain)",
+    ":blackout-blobfs-checkerboard-target",
+  ]
 }
