@@ -7,6 +7,7 @@
 #define HAS_DEVICE_TREE 0
 #define PRINT_DEVICE_TREE 0
 #define PRINT_ZBI 1
+#define DEBUG_UART 1
 
 static const zbi_cpu_config_t cpu_config = {
     .cluster_count = 1,

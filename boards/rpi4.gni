@@ -9,9 +9,11 @@ board_name = "rpi4"
 custom_signing_script =
     "//zircon/kernel/target/arm64/board/rpi4/package-image.sh"
 
+custom_signing_script_deps = [ "//zircon/kernel/target/arm64/boot-shim:rpi4" ]
+
 # partitions for fx flash to flash
 zircon_a_partition = "boot"
 
 # The rpi4 image is not actually signed, but defining custom_signing_script
 # means we use zedboot.zbi.signed.
-signed_image = true
+# signed_image = true
