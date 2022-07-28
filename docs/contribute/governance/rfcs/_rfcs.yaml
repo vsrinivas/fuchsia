@@ -2006,7 +2006,7 @@
   issue: ['89252']
   gerrit_change_id: ['637489']
   status: 'Accepted'
-  reviewers: ['hjfreyer@google.com', 'wittrock@google.com', 'jsankey@google.com', 'abarth@google.com', 'wittrock@google.com', 'geb@google.com', 'shayba@google.com', 'ampearce@google.com', 'etryzelaar@google.com', 'aaronwood@google.com', 'dgonyeo@google.com']
+  reviewers: ['hjfreyer@google.com', 'wittrock@google.com', 'jsankey@google.com', 'abarth@google.com', 'geb@google.com', 'shayba@google.com', 'ampearce@google.com', 'etryzelaar@google.com', 'aaronwood@google.com', 'dgonyeo@google.com']
   submitted: '2022-01-25'
   reviewed: '2022-03-23'
 
