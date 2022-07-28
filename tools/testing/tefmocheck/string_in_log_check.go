@@ -234,6 +234,8 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		// an error if logged by unit tests.
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: serialLogType},
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: syslogType},
+		// For fxbug.dev/105382 dwc2 bug that breaks usb cdc networking
+		&stringInLogCheck{String: "Unhandled interrupt diepint.timeout for ep_num 0", Type: serialLogType},
 	}
 
 	oopsExceptBlocks := []*logBlock{
