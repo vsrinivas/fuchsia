@@ -27,4 +27,12 @@ void main() {
         componentName: 'writer.cm',
         commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
+
+  test('rust_inspect_snapshot_filter_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponent(
+        packageName: 'rust-inspect-benchmarks-v2',
+        componentName: 'snapshot_filter.cm',
+        commandArgs: PerfTestHelper.componentOutputPath);
+  }, timeout: Timeout.none);
 }
