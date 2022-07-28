@@ -14,6 +14,7 @@ ffx_plugin("ffx_input") {
   ]
 
   test_deps = [
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
@@ -24,6 +25,4 @@ ffx_plugin("ffx_input") {
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
-
-  has_proxy = true
 }

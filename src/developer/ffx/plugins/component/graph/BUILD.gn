@@ -17,7 +17,10 @@ ffx_plugin("ffx_component_graph") {
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:url",
   ]
-  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
 
   args_deps = [ "//src/lib/component_hub" ]
 

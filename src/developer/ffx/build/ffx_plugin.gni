@@ -88,14 +88,6 @@ import("plugins.gni")
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature=XXX'
-#
-#   has_proxy (optional)
-#     Whether this plugin has one or more proxies defined.
-#     For instance if the plugin crate has:
-#     #[ffx_plugin(MyProxy = "...")]
-#     then `has_proxy` should be set to true.
-#     Default: false.
-#
 template("ffx_plugin") {
   output_name = target_name
 
@@ -159,7 +151,6 @@ template("ffx_plugin") {
                                  "target_name",
                                  "with_unit_tests",
                                  "original_target_name",
-                                 "has_proxy",
                                ])
       }
 
@@ -234,7 +225,6 @@ template("ffx_plugin") {
                                "with_unit_tests",
                                "original_target_name",
                                "test_deps",
-                               "has_proxy",
                              ])
     }
     if (defined(invoker.args_with_unit_tests) && invoker.args_with_unit_tests) {
@@ -243,22 +233,9 @@ template("ffx_plugin") {
 
     lib_deps = [
       ":" + args,
-      "//src/developer/ffx/config:lib",
       "//src/developer/ffx/core:lib",
-      "//src/developer/ffx/lib/errors:lib",
-      "//src/lib/fuchsia-async",
-      "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:futures",
     ]
-    if (defined(invoker.has_proxy) && invoker.has_proxy) {
-      lib_deps += [
-        "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-        "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-        "//src/developer/ffx/lib/rcs:lib",
-        "//src/lib/diagnostics/selectors",
-      ]
-    }
 
     plugins_name = output_name + "_plugins"
     execution_lib = output_name
@@ -299,7 +276,7 @@ template("ffx_plugin") {
       ":" + plugins_name,
     ]
     if (defined(invoker.deps)) {
-      suite_deps += invoker.deps
+      #suite_deps += invoker.deps
     }
     if (defined(invoker.plugin_deps)) {
       suite_deps += [ ":" + sub_cmd ]
@@ -311,12 +288,6 @@ template("ffx_plugin") {
         if (defined(invoker.deps)) {
           deps += invoker.deps
         }
-
-        # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time
-        # of writing it is needed because not all dependencies above are used
-        # by all plugins.
-        configs +=
-            [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
 
         non_rust_deps = [ "//third_party/boringssl" ]
         forward_variables_from(invoker,
@@ -345,11 +316,6 @@ template("ffx_plugin") {
       with_unit_tests = false
       sources = [ "$target_gen_dir/plugins.rs" ]
       deps = suite_deps
-
-      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
-      # writing it is needed because not all dependencies above are used by all
-      # plugins.
-      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
 
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,

@@ -13,19 +13,15 @@ ffx_plugin("ffx_version") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//src/connectivity/overnet/lib/hoist",
-    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/core:lib",
     "//src/developer/ffx/lib/timeout:lib",
-    "//src/lib/diagnostics/selectors",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:chrono",
+  ]
+  test_deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
   ]
 
   args_sources = [ "src/args.rs" ]

@@ -11,6 +11,8 @@ ffx_plugin("ffx_debug_fidlcat") {
   deps = [
     "../connect:ffx_debug_connect",
     "//sdk/fidl/fuchsia.debugger:fuchsia.debugger-rustc",
+    "//src/developer/ffx/config:lib",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/symbol-index",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:tracing",
@@ -19,6 +21,4 @@ ffx_plugin("ffx_debug_fidlcat") {
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
-
-  has_proxy = true
 }

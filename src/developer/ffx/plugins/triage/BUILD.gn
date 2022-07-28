@@ -10,19 +10,22 @@ ffx_plugin("ffx_triage") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/developer/ffx/config:lib",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot",
     "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot_args",
     "//src/diagnostics/lib/triage",
     "//src/diagnostics/triage:triage_app_lib",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:zip",
+  ]
+  test_deps = [
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:zip",
   ]
 
   sources = [
@@ -66,6 +69,4 @@ ffx_plugin("ffx_triage") {
     "test_data/structured/map_fold_test.golden.json",
     "test_data/structured/only_runs_included_actions.golden.json",
   ]
-
-  has_proxy = true
 }

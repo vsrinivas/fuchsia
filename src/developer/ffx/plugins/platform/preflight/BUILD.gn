@@ -9,8 +9,8 @@ ffx_plugin("ffx_preflight") {
   edition = "2021"
   with_unit_tests = true
   deps = [
+    "//src/developer/ffx/lib/errors:lib",
     "//src/lib/analytics/rust:lib",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:lazy_static",
@@ -22,7 +22,7 @@ ffx_plugin("ffx_preflight") {
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//third_party/rust_crates:thiserror" ]
+  test_deps = [ "//src/lib/fuchsia-async" ]
 
   args_sources = [ "src/args.rs" ]
 

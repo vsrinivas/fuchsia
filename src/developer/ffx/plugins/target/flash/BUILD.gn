@@ -14,17 +14,16 @@ ffx_plugin("ffx_flash") {
   config_data = [ "data/config.json" ]
 
   deps = [
-    "//build/sdk/meta:rust",
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
+    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fastboot:lib",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:termion",
   ]
 
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:tempfile",
+  ]
   args_test_deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:tempfile",

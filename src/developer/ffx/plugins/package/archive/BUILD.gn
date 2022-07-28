@@ -8,16 +8,13 @@ ffx_plugin("ffx_package_archive") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-    "//src/sys/pkg/lib/fuchsia-pkg",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-  ]
+  deps = [ "//src/sys/pkg/lib/fuchsia-pkg" ]
 
   test_deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
 

@@ -15,7 +15,7 @@ ffx_plugin("ffx_repository_default") {
   args_deps = [ "//src/developer/ffx/config:lib" ]
 
   deps = [
-    "//third_party/rust_crates:serde",
+    "//src/developer/ffx/config:lib",
     "//third_party/rust_crates:serde_json",
   ]
 }

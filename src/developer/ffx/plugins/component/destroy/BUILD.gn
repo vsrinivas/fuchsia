@@ -14,8 +14,14 @@ ffx_plugin("ffx_component_destroy") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/sys/lib/moniker",
+  ]
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
   ]
 
   args_sources = [ "src/args.rs" ]

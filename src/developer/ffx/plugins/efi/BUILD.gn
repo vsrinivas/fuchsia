@@ -13,10 +13,11 @@ ffx_plugin("ffx_efi") {
 
   sources = [ "src/lib.rs" ]
   deps = [
-    "//src/lib/fuchsia-async",
+    "//src/developer/ffx/lib/errors:lib",
     "//third_party/rust_crates:fatfs",
-
-    # For tests
+  ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:tempfile",
   ]
 }

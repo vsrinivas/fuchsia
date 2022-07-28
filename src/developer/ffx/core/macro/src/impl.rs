@@ -82,12 +82,12 @@ fn generate_fake_test_proxy_method(
     quote! {
         #[cfg(test)]
         fn #method_name(
-            mut handle_request: impl FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>) + 'static
+            mut handle_request: impl FnMut(ffx_core::macro_deps::fidl::endpoints::Request<<#qualified_proxy_type as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol>) + 'static
         ) -> #qualified_proxy_type {
-            use futures::TryStreamExt;
+            use ffx_core::macro_deps::futures::TryStreamExt;
             let (proxy, mut stream) =
-                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>().unwrap();
-            fuchsia_async::Task::local(async move {
+                ffx_core::macro_deps::fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol>().unwrap();
+            ffx_core::macro_deps::fuchsia_async::Task::local(async move {
                 while let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
                 }
@@ -98,12 +98,12 @@ fn generate_fake_test_proxy_method(
 
         #[cfg(test)]
         fn #oneshot_method_name(
-            mut handle_request: impl FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>) + 'static
+            mut handle_request: impl FnMut(ffx_core::macro_deps::fidl::endpoints::Request<<#qualified_proxy_type as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol>) + 'static
         ) -> #qualified_proxy_type {
-            use futures::TryStreamExt;
+            use ffx_core::macro_deps::futures::TryStreamExt;
             let (proxy, mut stream) =
-                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>().unwrap();
-            fuchsia_async::Task::local(async move {
+                ffx_core::macro_deps::fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol>().unwrap();
+            ffx_core::macro_deps::fuchsia_async::Task::local(async move {
                 if let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
                 }
@@ -426,21 +426,21 @@ fn generate_daemon_protocol_proxy(
             // TODO(awdavies): When there is a component to test if a protocol exists, add the test
             // command for it in the daemon.
             let implementation = quote! {
-                let (#output, #server_end) = fidl::endpoints::create_endpoints::<<#path as fidl::endpoints::Proxy>::Protocol>()?;
+                let (#output, #server_end) = ffx_core::macro_deps::fidl::endpoints::create_endpoints::<<#path as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol>()?;
                 let #output = #output.into_proxy()?;
                 let #output_fut;
                 {
-                    let svc_name = <<#path as fidl::endpoints::Proxy>::Protocol as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME;
-                    use futures::TryFutureExt;
+                    let svc_name = <<#path as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol as ffx_core::macro_deps::fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME;
+                    use ffx_core::macro_deps::futures::TryFutureExt;
                     #output_fut = injector.daemon_factory().await?.connect_to_protocol(
                         svc_name,
                         #server_end.into_channel(),
-                    ).map_ok_or_else(|e| anyhow::Result::<()>::Err(anyhow::anyhow!(e)), move |fidl_result| {
+                    ).map_ok_or_else(|e| ffx_core::macro_deps::anyhow::Result::<()>::Err(ffx_core::macro_deps::anyhow::anyhow!(e)), move |fidl_result| {
                         fidl_result
                         .map(|_| ())
                         .map_err(|e| match e {
-                            fidl_fuchsia_developer_ffx::DaemonError::ProtocolNotFound =>
-                                errors::ffx_error!(
+                            ffx_core::macro_deps::fidl_fuchsia_developer_ffx::DaemonError::ProtocolNotFound =>
+                                ffx_core::macro_deps::errors::ffx_error!(
                                     format!(
 "The daemon protocol '{}' did not match any protocols on the daemon
 If you are not developing this plugin or the protocol it connects to, then this is a bug
@@ -448,8 +448,8 @@ If you are not developing this plugin or the protocol it connects to, then this 
 Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                                         svc_name)
                                     ).into(),
-                            fidl_fuchsia_developer_ffx::DaemonError::ProtocolOpenError =>
-                                errors::ffx_error!(
+                            ffx_core::macro_deps::fidl_fuchsia_developer_ffx::DaemonError::ProtocolOpenError =>
+                                ffx_core::macro_deps::errors::ffx_error!(
                                     format!(
 "The daemon protocol '{}' failed to open on the daemon.
 
@@ -463,7 +463,7 @@ Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                                     )
                                 ).into(),
                             unexpected =>
-                                errors::ffx_error!(
+                                ffx_core::macro_deps::errors::ffx_error!(
                                     format!(
 "While attempting to open the daemon protocol '{}', received an unexpected error:
 
@@ -559,13 +559,13 @@ fn generate_proxy_from_selector(
 ) -> TokenStream {
     quote! {
         let (#output, #server_end) =
-            fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Protocol>()?;
+            ffx_core::macro_deps::fidl::endpoints::create_proxy::<<#path as ffx_core::macro_deps::fidl::endpoints::Proxy>::Protocol>()?;
         let #selector =
-            selectors::parse_selector::<selectors::VerboseError>(#mapping_lit)?;
+            ffx_core::macro_deps::selectors::parse_selector::<ffx_core::macro_deps::selectors::VerboseError>(#mapping_lit)?;
         let #output_fut =
         async {
             // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
-            use futures::TryFutureExt;
+            use ffx_core::macro_deps::futures::TryFutureExt;
 
             let retry_count = 1;
             let mut tries = 0;
@@ -581,7 +581,7 @@ fn generate_proxy_from_selector(
                 }
             }?;
 
-            rcs::connect_with_timeout(
+            ffx_core::macro_deps::rcs::connect_with_timeout(
                 std::time::Duration::from_secs(15),
                 #mapping_lit,
                 &__remote_factory,
@@ -683,7 +683,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     let implementation = if proxies_to_generate.len() > 0 {
         quote! {
             #(#proxies_to_generate)*
-            let (#future_results,) = futures::join!(#futures);
+            let (#future_results,) = ffx_core::macro_deps::futures::join!(#futures);
             #method(#args)#asyncness
         }
     } else {
@@ -699,7 +699,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
             } else {
                 // The user did not opt-in for the feature. This will exit with a non-zero status
                 // after displaying the error message.
-                errors::ffx_bail!(
+                ffx_core::macro_deps::errors::ffx_bail!(
                     "This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'",
                     #key
                 )

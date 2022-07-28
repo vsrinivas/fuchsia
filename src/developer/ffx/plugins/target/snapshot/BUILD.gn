@@ -11,14 +11,14 @@ ffx_plugin("ffx_snapshot") {
   deps = [
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
   ]
+  test_deps = [ "//src/lib/fuchsia-async" ]
 
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
-
-  has_proxy = true
 }

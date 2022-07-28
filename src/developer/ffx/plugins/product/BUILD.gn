@@ -13,25 +13,13 @@ ffx_plugin("ffx_product") {
   args_sources = [ "src/args.rs" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pbms:lib",
     "//src/lib/gcs:lib",
   ]
 
-  test_deps = [
-    "//build/sdk/meta:rust",
-    "//src/developer/ffx/lib/fms:lib",
-    "//third_party/rust_crates:fs_extra",
-    "//third_party/rust_crates:pathdiff",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:url",
-  ]
-
   sources = [ "src/lib.rs" ]
-
-  has_proxy = true
 }
 
 group("product") {

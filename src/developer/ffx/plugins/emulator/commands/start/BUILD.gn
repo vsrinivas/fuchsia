@@ -24,7 +24,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:futures",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tracing",
     ]
@@ -34,8 +34,12 @@ if (is_host) {
       "src/lib.rs",
       "src/pbm.rs",
     ]
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
-    has_proxy = true
+    test_deps = [
+      "//src/developer/ffx/config:lib",
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:tempfile",
+    ]
   }
 
   group("tests") {

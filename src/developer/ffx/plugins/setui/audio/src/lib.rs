@@ -33,7 +33,6 @@ mod test {
     use super::*;
     use fidl_fuchsia_media::AudioRenderUsage;
     use fidl_fuchsia_settings::AudioRequest;
-    use futures::prelude::*;
     use test_case::test_case;
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -6,6 +6,12 @@ use fidl_fuchsia_developer_ffx::{
     DaemonError, OpenTargetError, TargetConnectionError, TunnelError,
 };
 
+/// Re-exported libraries for macros
+#[doc(hidden)]
+pub mod macro_deps {
+    pub use anyhow;
+}
+
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All
 /// other error types are printed with full context and a BUG prefix, guiding the user to file bugs
@@ -88,7 +94,7 @@ pub fn target_string(matcher: &Option<String>, is_default: &bool) -> String {
 #[macro_export]
 macro_rules! ffx_error {
     ($error_message: expr) => {{
-        $crate::FfxError::Error(anyhow::anyhow!($error_message), 1)
+        $crate::FfxError::Error($crate::macro_deps::anyhow::anyhow!($error_message), 1)
     }};
     ($fmt:expr, $($arg:tt)*) => {
         $crate::ffx_error!(format!($fmt, $($arg)*));
@@ -98,7 +104,7 @@ macro_rules! ffx_error {
 #[macro_export]
 macro_rules! ffx_error_with_code {
     ($error_code:expr, $error_message:expr $(,)?) => {{
-        $crate::FfxError::Error(anyhow::anyhow!($error_message), $error_code)
+        $crate::FfxError::Error($crate::macro_deps::anyhow::anyhow!($error_message), $error_code)
     }};
     ($error_code:expr, $fmt:expr, $($arg:tt)*) => {
         $crate::ffx_error_with_code!($error_code, format!($fmt, $($arg)*));
@@ -108,20 +114,20 @@ macro_rules! ffx_error_with_code {
 #[macro_export]
 macro_rules! ffx_bail {
     ($msg:literal $(,)?) => {
-        anyhow::bail!($crate::ffx_error!($msg))
+        $crate::macro_deps::anyhow::bail!($crate::ffx_error!($msg))
     };
     ($fmt:expr, $($arg:tt)*) => {
-        anyhow::bail!($crate::ffx_error!($fmt, $($arg)*));
+        $crate::macro_deps::anyhow::bail!($crate::ffx_error!($fmt, $($arg)*));
     };
 }
 
 #[macro_export]
 macro_rules! ffx_bail_with_code {
     ($code:literal, $msg:literal $(,)?) => {
-        anyhow::bail!($crate::ffx_error_with_code!($code, $msg))
+        $crate::macro_deps::anyhow::bail!($crate::ffx_error_with_code!($code, $msg))
     };
     ($code:expr, $fmt:expr, $($arg:tt)*) => {
-        anyhow::bail!($crate::ffx_error_with_code!($code, $fmt, $($arg)*));
+        $crate::macro_deps::anyhow::bail!($crate::ffx_error_with_code!($code, $fmt, $($arg)*));
     };
 }
 

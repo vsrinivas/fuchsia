@@ -15,12 +15,14 @@ ffx_plugin("ffx_power_logger") {
     "//src/testing/metrics-logger/fuchsia.metricslogger.test:fuchsia.metricslogger.test-rustc",
   ]
 
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+  ]
   with_unit_tests = true
 
   args_sources = [ "src/args.rs" ]
   args_deps = [ "//third_party/rust_crates:regex" ]
   args_with_unit_tests = true
-
-  has_proxy = true
 }

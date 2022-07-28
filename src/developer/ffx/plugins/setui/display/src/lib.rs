@@ -31,7 +31,6 @@ async fn command(proxy: DisplayProxy, settings: DisplaySettings) -> WatchOrSetRe
 mod test {
     use super::*;
     use fidl_fuchsia_settings::{DisplayRequest, LowLightMode, Theme, ThemeMode, ThemeType};
-    use futures::prelude::*;
     use test_case::test_case;
 
     #[fuchsia_async::run_singlethreaded(test)]

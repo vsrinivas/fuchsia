@@ -11,25 +11,22 @@ ffx_plugin("ffx_target_show") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//src/developer/ffx/lib/addr:lib",
     "//src/developer/ffx/lib/timeout:lib",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:termion",
-    "//third_party/rust_crates:thiserror",
+  ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/lib/fuchsia-async",
   ]
 
   args_sources = [ "src/args.rs" ]
@@ -38,6 +35,4 @@ ffx_plugin("ffx_target_show") {
     "src/lib.rs",
     "src/show.rs",
   ]
-
-  has_proxy = true
 }

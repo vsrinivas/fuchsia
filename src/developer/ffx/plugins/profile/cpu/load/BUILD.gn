@@ -10,9 +10,11 @@ ffx_plugin("ffx_cpu_load") {
 
   sources = [ "src/lib.rs" ]
   deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
   with_unit_tests = true
 
   args_sources = [ "src/args.rs" ]
-
-  has_proxy = true
 }

@@ -19,5 +19,4 @@ ffx_plugin("ffx_wlan_dev") {
   ]
   with_unit_tests = true
   args_with_unit_tests = true
-  has_proxy = true
 }

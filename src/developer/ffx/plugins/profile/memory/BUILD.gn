@@ -10,16 +10,17 @@ ffx_plugin("ffx_profile_memory") {
 
   deps = [
     "//sdk/fidl/fuchsia.memory:fuchsia.memory-rustc",
-    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/writer:lib",
-    "//src/lib/fuchsia",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:humansize",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
   with_unit_tests = true
 
   plugin_deps = [ "signal:ffx_profile_memory_signal" ]
@@ -31,7 +32,8 @@ ffx_plugin("ffx_profile_memory") {
     "src/lib.rs",
   ]
 
-  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
-
-  has_proxy = true
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
 }

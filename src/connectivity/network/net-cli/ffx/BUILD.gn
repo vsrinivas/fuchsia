@@ -18,8 +18,10 @@ ffx_plugin("ffx_net") {
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/network/net-cli:lib",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
   ]
 

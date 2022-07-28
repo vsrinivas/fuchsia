@@ -12,14 +12,13 @@ ffx_plugin("ffx_starnix_adb") {
     "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-net",
-    "//third_party/rust_crates:blocking",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:signal-hook",
   ]
 
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
-
-  has_proxy = true
 }

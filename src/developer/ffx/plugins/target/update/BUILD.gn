@@ -13,21 +13,18 @@ ffx_plugin("ffx_update") {
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
+  ]
   args_test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
-
-  has_proxy = true
 }

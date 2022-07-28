@@ -99,8 +99,7 @@ impl<'a> LineWaiter<'a> for Stdin {
     type LineWaiterFut = BoxFuture<'a, ()>;
 
     fn wait(&'a mut self) -> Self::LineWaiterFut {
-        #[cfg(not(test))]
-        {
+        if cfg!(not(test)) {
             use std::io::BufRead;
             blocking::unblock(|| {
                 let mut line = String::new();
@@ -110,9 +109,9 @@ impl<'a> LineWaiter<'a> for Stdin {
                 let _ = locked.read_line(&mut line);
             })
             .boxed()
+        } else {
+            async move {}.boxed()
         }
-        #[cfg(test)]
-        async move {}.boxed()
     }
 }
 

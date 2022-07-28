@@ -17,11 +17,14 @@ ffx_plugin("ffx_setui_accessibility") {
 
   deps = [
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//src/developer/ffx/plugins/setui/utils:utils",
   ]
 
-  test_deps = [ "//third_party/rust_crates:test-case" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:test-case",
+  ]
 
   args_sources = [ "src/args.rs" ]
 
@@ -31,6 +34,4 @@ ffx_plugin("ffx_setui_accessibility") {
     "src/set.rs",
     "src/watch.rs",
   ]
-
-  has_proxy = true
 }

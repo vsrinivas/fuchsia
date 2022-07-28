@@ -11,9 +11,9 @@ if (is_host) {
     with_unit_tests = true
     args_deps = []
     deps = [
+      "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/plugins/emulator/commands:ffx_emulator_commands",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
-      "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
     ]
     args_sources = [ "src/args.rs" ]
     sources = [ "src/lib.rs" ]

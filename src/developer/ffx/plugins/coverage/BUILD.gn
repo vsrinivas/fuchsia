@@ -16,10 +16,10 @@ ffx_plugin("ffx_coverage") {
     "//src/developer/ffx/core:lib",
     "//src/developer/ffx/lib/symbol-index",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:glob",
   ]
   test_deps = [
+    "//src/developer/ffx/config:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:tempfile",

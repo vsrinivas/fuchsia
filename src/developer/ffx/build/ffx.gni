@@ -12,12 +12,6 @@ template("ffx") {
   assert(is_host, "ffx presently only builds in host toolchains")
 
   ffx_deps = []
-  if (defined(invoker.plugin_deps)) {
-    foreach(d, invoker.plugin_deps) {
-      dep = d + "_suite"
-      ffx_deps += [ dep ]
-    }
-  }
 
   ffx_name = target_name
 
@@ -48,9 +42,6 @@ template("ffx") {
     # Use up to 16 threads for codegen
     configs += [ "//build/config/rust:codegen_units_16" ]
 
-    # TODO(https://fxbug.dev/104019): Avoid this suppression.
-    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
-
     if (is_debug) {
       # Disable lto for debug builds, as the additional codegen units imply the
       # use of thin-local lto
@@ -69,8 +60,6 @@ template("ffx") {
              ":" + suite_name + "_suite",
              "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
              "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-             "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
-             "//src/connectivity/overnet/lib/hoist",
              "//src/developer/ffx/config:lib",
              "//src/developer/ffx/core:lib",
              "//src/developer/ffx/daemon:lib",
@@ -80,7 +69,6 @@ template("ffx") {
              "//src/developer/ffx/lib/timeout:lib",
              "//src/developer/ffx/lib/version:lib",
              "//src/developer/ffx/lib/writer:lib",
-             "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
              "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
              "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
              "//src/lib/analytics/rust:lib",
@@ -90,12 +78,10 @@ template("ffx") {
              "//third_party/rust_crates:anyhow",
              "//third_party/rust_crates:argh",
              "//third_party/rust_crates:async-trait",
-             "//third_party/rust_crates:async-net",
              "//third_party/rust_crates:futures",
              "//third_party/rust_crates:tracing",
              "//third_party/rust_crates:simplelog",
              "//third_party/rust_crates:tracing",
-             "//third_party/rust_crates:tracing-log",
            ]
     non_rust_deps = [
       "//src/lib/chunked-compression",

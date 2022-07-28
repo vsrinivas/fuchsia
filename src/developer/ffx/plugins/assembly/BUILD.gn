@@ -38,6 +38,7 @@ ffx_plugin("ffx_assembly") {
     "//third_party/rust_crates:anyhow",
   ]
   deps = [
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fastboot",
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
@@ -60,7 +61,6 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/vbmeta",
     "//src/lib/assembly/zbi",
     "//src/sys/pkg/lib/epoch",
-    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
@@ -73,13 +73,11 @@ ffx_plugin("ffx_assembly") {
   ]
   test_deps = [
     "//src/lib/assembly/test_keys",
-    "//src/sys/pkg/lib/version",
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:serde_json5",
-    "//third_party/rust_crates:serial_test",
     "//zircon/tools/blobfs",
   ]
 }

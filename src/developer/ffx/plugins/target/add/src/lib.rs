@@ -13,7 +13,6 @@ use {
     std::net::IpAddr,
 };
 
-#[cfg(not(test))]
 use std::ffi::CString;
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
@@ -21,18 +20,18 @@ pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand
     let (addr, scope, port) =
         parse_address_parts(cmd.addr.as_str()).map_err(|e| ffx_error!("{}", e))?;
     // TODO(fxbug.dev/93511): Check if the scope ID is an index.
-    #[cfg(not(test))]
     let scope_id = if let Some(scope) = scope {
-        unsafe {
-            let scope = CString::new(scope).unwrap();
-            libc::if_nametoindex(scope.as_ptr())
+        if cfg!(not(test)) {
+            unsafe {
+                let scope = CString::new(scope).unwrap();
+                libc::if_nametoindex(scope.as_ptr())
+            }
+        } else {
+            scope.parse()?
         }
     } else {
         0
     };
-
-    #[cfg(test)]
-    let scope_id = if let Some(scope) = scope { scope.parse()? } else { 0 };
 
     let ip = match addr {
         IpAddr::V6(i) => net::IpAddress::Ipv6(net::Ipv6Address { addr: i.octets().into() }),

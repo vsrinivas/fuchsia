@@ -12,7 +12,9 @@ ffx_plugin("ffx_doctor") {
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//src/developer/ffx:ffx_lib_args",
+    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/doctor_utils:lib",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -27,7 +29,6 @@ ffx_plugin("ffx_doctor") {
   ]
   test_deps = [
     "//src/developer/ffx/plugins/doctor/test_utils:lib",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:tempfile",
   ]
 

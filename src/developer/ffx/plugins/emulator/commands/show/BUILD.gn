@@ -13,12 +13,6 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/plugins/emulator/commands:ffx_emulator_commands",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
-      "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
-    ]
-    test_deps = [
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:tempfile",
     ]
     args_sources = [ "src/args.rs" ]
     sources = [ "src/lib.rs" ]

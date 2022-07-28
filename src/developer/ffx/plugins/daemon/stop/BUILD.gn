@@ -13,9 +13,6 @@ ffx_plugin("ffx_daemon_stop") {
 
   sources = [ "src/lib.rs" ]
 
-  deps = [
-    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-  ]
+  deps = [ "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc" ]
+  test_deps = [ "//src/lib/fuchsia-async" ]
 }

@@ -20,7 +20,6 @@ mod test {
     use super::*;
     use crate::setup_fake_accessibility_proxy;
     use fidl_fuchsia_settings::{AccessibilityRequest, AccessibilitySettings};
-    use futures::prelude::*;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_accessibility_watch() -> Result<()> {

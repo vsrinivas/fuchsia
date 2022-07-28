@@ -15,11 +15,14 @@ ffx_plugin("ffx_trace") {
   sources = [ "src/lib.rs" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//sdk/fidl/fuchsia.tracing.controller:fuchsia.tracing.controller-rustc",
+    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-fs",
     "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
@@ -34,6 +37,4 @@ ffx_plugin("ffx_trace") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
   ]
-
-  has_proxy = true
 }

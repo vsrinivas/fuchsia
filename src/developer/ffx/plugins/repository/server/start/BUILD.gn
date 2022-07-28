@@ -13,11 +13,14 @@ ffx_plugin("ffx_repository_server_start") {
   sources = [ "src/lib.rs" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pkg",
     "//src/lib/network/fidl_fuchsia_net_ext",
   ]
-  test_deps = [ "//third_party/rust_crates:serde_json" ]
-
-  has_proxy = true
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
 }

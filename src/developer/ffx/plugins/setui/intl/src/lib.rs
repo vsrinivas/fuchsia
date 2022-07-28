@@ -31,7 +31,6 @@ mod test {
     use super::*;
     use fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId};
     use fidl_fuchsia_settings::{HourCycle, IntlRequest};
-    use futures::prelude::*;
     use test_case::test_case;
 
     #[fuchsia_async::run_singlethreaded(test)]

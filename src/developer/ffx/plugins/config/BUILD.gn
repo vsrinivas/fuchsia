@@ -15,7 +15,8 @@ ffx_plugin("ffx_config_plugin") {
   ]
 
   deps = [
-    "//src/lib/analytics/rust:lib",
+    "//src/developer/ffx/config:lib",
+    "//src/developer/ffx/lib/errors:lib",
     "//third_party/rust_crates:serde_json",
   ]
 

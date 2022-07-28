@@ -9,6 +9,12 @@ use futures::{TryFutureExt, TryStream, TryStreamExt};
 use std::fmt::Debug;
 use std::future::Future;
 
+/// Re-exported dependencies pulled used by macros
+#[doc(hidden)]
+pub mod macro_deps {
+    pub use futures::TryStreamExt;
+}
+
 /// An abstraction over a stream result from a watch, or the string output
 /// from a get or set call.
 pub enum Either {
@@ -85,7 +91,9 @@ macro_rules! assert_watch {
     ($expr:expr) => {
         match $expr.await? {
             crate::utils::Either::Watch(mut stream) => {
-                stream.try_next().await?.expect("Watch should have a result")
+                $crate::macro_deps::TryStreamExt::try_next(&mut stream)
+                    .await?
+                    .expect("Watch should have a result")
             }
             crate::utils::Either::Set(_) => {
                 panic!("Did not expect a set result for a watch call")

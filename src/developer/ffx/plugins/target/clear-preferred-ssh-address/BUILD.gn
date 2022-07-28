@@ -13,4 +13,5 @@ ffx_plugin("ffx_target_clear_preferred_ssh_address") {
 
   sources = [ "src/lib.rs" ]
   deps = [ "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc" ]
+  test_deps = [ "//src/lib/fuchsia-async" ]
 }

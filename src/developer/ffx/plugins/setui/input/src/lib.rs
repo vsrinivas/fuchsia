@@ -52,7 +52,6 @@ mod test {
         DeviceState, DeviceStateSource, DeviceType, InputDevice, InputRequest, InputSettings,
         SourceState, ToggleStateFlags,
     };
-    use futures::prelude::*;
     use test_case::test_case;
 
     /// Creates a one-item list of input devices with the given properties.

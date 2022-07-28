@@ -12,6 +12,7 @@ ffx_plugin("ffx_debug_symbolize") {
   sources = [ "src/lib.rs" ]
 
   deps = [
+    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/symbol-index",
     "//src/lib/fuchsia-async",
   ]

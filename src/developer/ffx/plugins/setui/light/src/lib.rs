@@ -60,7 +60,6 @@ mod test {
     use fidl_fuchsia_settings::{
         LightGroup as LightGroupSettings, LightRequest, LightType, LightValue,
     };
-    use futures::prelude::*;
     use test_case::test_case;
 
     const TEST_NAME: &str = "test_name";
