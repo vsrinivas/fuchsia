@@ -1,7 +1,6 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/fuchsia-hyper/hyper.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/pkg_resolver"
@@ -10,8 +9,10 @@
         "services": [
             "fuchsia.boot.Arguments",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.net.name.Lookup",
             "fuchsia.pkg.LocalMirror",
             "fuchsia.pkg.PackageCache",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.tracing.provider.Registry"
         ]
     }

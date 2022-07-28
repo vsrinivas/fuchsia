@@ -1,7 +1,6 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/fuchsia-hyper/hyper.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/httpsdate_time_source"
@@ -13,6 +12,8 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.net.interfaces.State",
+            "fuchsia.net.name.Lookup",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]
