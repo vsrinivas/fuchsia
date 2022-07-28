@@ -2134,20 +2134,6 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
-        let rssi_bucket_dim = convert::convert_rssi_bucket(latest_ap_state.rssi_dbm);
-        metric_events.push(MetricEvent {
-            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
-            event_codes: vec![rssi_bucket_dim as u32],
-            payload: MetricEventPayload::Count(1),
-        });
-
-        let snr_bucket_dim = convert::convert_snr_bucket(latest_ap_state.snr_db);
-        metric_events.push(MetricEvent {
-            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
-            event_codes: vec![snr_bucket_dim as u32],
-            payload: MetricEventPayload::Count(1),
-        });
-
         let oui = latest_ap_state.bssid.0.to_oui_uppercase("");
         metric_events.push(MetricEvent {
             metric_id: metrics::SUCCESSFUL_CONNECT_PER_OUI_METRIC_ID,
@@ -2582,14 +2568,10 @@ struct DailyDetailedStats {
         metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand,
         ConnectAttemptsCounter,
     >,
-    connect_per_rssi_bucket: HashMap<
-        metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket,
-        ConnectAttemptsCounter,
-    >,
-    connect_per_snr_bucket: HashMap<
-        metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket,
-        ConnectAttemptsCounter,
-    >,
+    connect_per_rssi_bucket:
+        HashMap<metrics::ConnectivityWlanMetricDimensionRssiBucket, ConnectAttemptsCounter>,
+    connect_per_snr_bucket:
+        HashMap<metrics::ConnectivityWlanMetricDimensionSnrBucket, ConnectAttemptsCounter>,
     connected_ouis: HashSet<String>,
 }
 
@@ -4592,30 +4574,6 @@ mod tests {
         ]);
         assert_eq!(breakdowns_by_channel_band[0].payload, MetricEventPayload::Count(1));
 
-        let breakdowns_by_rssi_bucket = test_helper
-            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID);
-        assert_eq!(breakdowns_by_rssi_bucket.len(), 1);
-        assert_eq!(
-            breakdowns_by_rssi_bucket[0].event_codes,
-            vec![
-                metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From50To35
-                    as u32
-            ]
-        );
-        assert_eq!(breakdowns_by_rssi_bucket[0].payload, MetricEventPayload::Count(1));
-
-        let breakdowns_by_snr_bucket = test_helper
-            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID);
-        assert_eq!(breakdowns_by_snr_bucket.len(), 1);
-        assert_eq!(
-            breakdowns_by_snr_bucket[0].event_codes,
-            vec![
-                metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From16To25
-                    as u32
-            ]
-        );
-        assert_eq!(breakdowns_by_snr_bucket[0].payload, MetricEventPayload::Count(1));
-
         let per_oui = test_helper.get_logged_metrics(metrics::SUCCESSFUL_CONNECT_PER_OUI_METRIC_ID);
         assert_eq!(per_oui.len(), 1);
         assert_eq!(per_oui[0].payload, MetricEventPayload::StringValue("00F620".to_string()));
@@ -4835,16 +4793,16 @@ mod tests {
         (false, random_bss_description!(Wpa2, rssi_dbm: -79)),
         (false, random_bss_description!(Wpa2, rssi_dbm: -40)),
         metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
-        metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From79To77 as u32,
-        metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From50To35 as u32;
+        metrics::ConnectivityWlanMetricDimensionRssiBucket::From79To77 as u32,
+        metrics::ConnectivityWlanMetricDimensionRssiBucket::From50To35 as u32;
         "breakdown_by_rssi_bucket"
     )]
     #[test_case(
         (false, random_bss_description!(Wpa2, snr_db: 11)),
         (false, random_bss_description!(Wpa2, snr_db: 35)),
         metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
-        metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From11To15 as u32,
-        metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From26To40 as u32;
+        metrics::ConnectivityWlanMetricDimensionSnrBucket::From11To15 as u32,
+        metrics::ConnectivityWlanMetricDimensionSnrBucket::From26To40 as u32;
         "breakdown_by_snr_bucket"
     )]
     #[fuchsia::test(add_test_attr = false)]

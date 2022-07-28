@@ -28,9 +28,10 @@ use {
         path::Path,
     },
     wlan_metrics_registry::{
-        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations,
-        SavedNetworksMetricDimensionSavedNetworks,
-        SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID, SAVED_NETWORKS_METRIC_ID,
+        SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations,
+        SavedNetworksMigratedMetricDimensionSavedNetworks,
+        SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+        SAVED_NETWORKS_MIGRATED_METRIC_ID,
     },
     wlan_stash::policy::{PolicyStash as Stash, POLICY_STASH_ID},
 };
@@ -627,20 +628,22 @@ fn evict_if_needed(configs: &mut Vec<NetworkConfig>) -> Option<NetworkConfig> {
 fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut CobaltSender) {
     // Count the total number of saved networks
     let num_networks = match saved_networks.len() {
-        0 => SavedNetworksMetricDimensionSavedNetworks::Zero,
-        1 => SavedNetworksMetricDimensionSavedNetworks::One,
-        2..=4 => SavedNetworksMetricDimensionSavedNetworks::TwoToFour,
-        5..=40 => SavedNetworksMetricDimensionSavedNetworks::FiveToForty,
-        41..=500 => SavedNetworksMetricDimensionSavedNetworks::FortyToFiveHundred,
-        501..=usize::MAX => SavedNetworksMetricDimensionSavedNetworks::FiveHundredAndOneOrMore,
+        0 => SavedNetworksMigratedMetricDimensionSavedNetworks::Zero,
+        1 => SavedNetworksMigratedMetricDimensionSavedNetworks::One,
+        2..=4 => SavedNetworksMigratedMetricDimensionSavedNetworks::TwoToFour,
+        5..=40 => SavedNetworksMigratedMetricDimensionSavedNetworks::FiveToForty,
+        41..=500 => SavedNetworksMigratedMetricDimensionSavedNetworks::FortyToFiveHundred,
+        501..=usize::MAX => {
+            SavedNetworksMigratedMetricDimensionSavedNetworks::FiveHundredAndOneOrMore
+        }
         _ => unreachable!(),
     };
-    cobalt_api.log_event(SAVED_NETWORKS_METRIC_ID, num_networks);
+    cobalt_api.log_event(SAVED_NETWORKS_MIGRATED_METRIC_ID, num_networks);
 
     // Count the number of configs for each saved network
     for saved_network in saved_networks {
         let configs = saved_network.1;
-        use SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations as ConfigCountDimension;
+        use SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations as ConfigCountDimension;
         let num_configs = match configs.len() {
             0 => ConfigCountDimension::Zero,
             1 => ConfigCountDimension::One,
@@ -650,7 +653,8 @@ fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut Cobalt
             501..=usize::MAX => ConfigCountDimension::FiveHundredAndOneOrMore,
             _ => unreachable!(),
         };
-        cobalt_api.log_event(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID, num_configs);
+        cobalt_api
+            .log_event(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID, num_configs);
     }
 }
 
@@ -1741,9 +1745,10 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SAVED_NETWORKS_METRIC_ID)
+                CobaltEvent::builder(SAVED_NETWORKS_MIGRATED_METRIC_ID)
                     .with_event_code(
-                        SavedNetworksMetricDimensionSavedNetworks::TwoToFour.as_event_code()
+                        SavedNetworksMigratedMetricDimensionSavedNetworks::TwoToFour
+                            .as_event_code()
                     )
                     .as_event()
             )
@@ -1753,9 +1758,9 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID)
                     .with_event_code(
-                        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::One
+                        SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::One
                             .as_event_code()
                     )
                     .as_event()
@@ -1764,9 +1769,9 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID)
                     .with_event_code(
-                        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::One
+                        SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::One
                             .as_event_code()
                     )
                     .as_event()
@@ -1814,9 +1819,10 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SAVED_NETWORKS_METRIC_ID)
+                CobaltEvent::builder(SAVED_NETWORKS_MIGRATED_METRIC_ID)
                     .with_event_code(
-                        SavedNetworksMetricDimensionSavedNetworks::TwoToFour.as_event_code()
+                        SavedNetworksMigratedMetricDimensionSavedNetworks::TwoToFour
+                            .as_event_code()
                     )
                     .as_event()
             )
@@ -1829,17 +1835,17 @@ mod tests {
         ];
         // Zero configs for one network
         assert!(cobalt_metrics.iter().any(|metric| metric
-            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID)
                 .with_event_code(
-                    SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::Zero
+                    SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::Zero
                         .as_event_code()
                 )
                 .as_event()));
         // Two configs for the other network
         assert!(cobalt_metrics.iter().any(|metric| metric
-            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
+            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID)
                 .with_event_code(
-                    SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::TwoToFour
+                    SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::TwoToFour
                         .as_event_code()
                 )
                 .as_event()));

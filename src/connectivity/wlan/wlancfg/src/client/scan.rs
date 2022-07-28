@@ -27,8 +27,8 @@ use {
     stream::FuturesUnordered,
     wlan_common,
     wlan_metrics_registry::{
-        ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
-        ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
+        ActiveScanRequestedForNetworkSelectionMigratedMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
+        ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_MIGRATED_METRIC_ID,
     },
 };
 
@@ -206,7 +206,7 @@ pub(crate) async fn perform_scan(
                 let mut cobalt_sender_guard = cobalt_sender.lock().await;
                 let cobalt_lock = &mut *cobalt_sender_guard;
                 cobalt_lock.log_event(
-                    ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
+                    ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_MIGRATED_METRIC_ID,
                     active_scan_request_count_metric,
                 );
                 drop(cobalt_sender_guard);

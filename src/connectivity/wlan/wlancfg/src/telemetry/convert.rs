@@ -75,10 +75,8 @@ pub fn convert_channel_band(
     }
 }
 
-pub fn convert_rssi_bucket(
-    rssi: i8,
-) -> metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket {
-    use metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::*;
+pub fn convert_rssi_bucket(rssi: i8) -> metrics::ConnectivityWlanMetricDimensionRssiBucket {
+    use metrics::ConnectivityWlanMetricDimensionRssiBucket::*;
     match rssi {
         -128..=-90 => From128To90,
         -89..=-86 => From89To86,
@@ -97,10 +95,8 @@ pub fn convert_rssi_bucket(
     }
 }
 
-pub fn convert_snr_bucket(
-    snr: i8,
-) -> metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket {
-    use metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::*;
+pub fn convert_snr_bucket(snr: i8) -> metrics::ConnectivityWlanMetricDimensionSnrBucket {
+    use metrics::ConnectivityWlanMetricDimensionSnrBucket::*;
     match snr {
         1..=10 => From1To10,
         11..=15 => From11To15,

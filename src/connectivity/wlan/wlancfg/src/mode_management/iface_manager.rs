@@ -714,7 +714,7 @@ impl IfaceManagerService {
         if let Some(start_time) = self.clients_enabled_time.take() {
             let elapsed_time = zx::Time::get_monotonic() - start_time;
             self.cobalt_api.log_elapsed_time(
-                wlan_metrics_registry::CLIENT_CONNECTIONS_ENABLED_DURATION_METRIC_ID,
+                wlan_metrics_registry::CLIENT_CONNECTIONS_ENABLED_DURATION_MIGRATED_METRIC_ID,
                 (),
                 elapsed_time.into_micros(),
             );
@@ -831,7 +831,7 @@ impl IfaceManagerService {
             if let Some(start_time) = ap_container.enabled_time.take() {
                 let elapsed_time = zx::Time::get_monotonic() - start_time;
                 self.cobalt_api.log_elapsed_time(
-                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_METRIC_ID,
+                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_MIGRATED_METRIC_ID,
                     (),
                     elapsed_time.into_micros(),
                 );
@@ -864,7 +864,7 @@ impl IfaceManagerService {
             if let Some(start_time) = ap_container.enabled_time.take() {
                 let elapsed_time = zx::Time::get_monotonic() - start_time;
                 self.cobalt_api.log_elapsed_time(
-                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_METRIC_ID,
+                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_MIGRATED_METRIC_ID,
                     (),
                     elapsed_time.into_micros(),
                 );

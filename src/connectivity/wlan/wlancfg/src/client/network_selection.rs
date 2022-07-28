@@ -34,11 +34,13 @@ use {
     wlan_common::{self, hasher::WlanHasher},
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_metrics_registry::{
-        SavedNetworkInScanResultMetricDimensionBssCount,
-        SavedNetworkInScanResultWithActiveScanMetricDimensionActiveScanSsidsObserved as ActiveScanSsidsObserved,
-        ScanResultsReceivedMetricDimensionSavedNetworksCount,
-        LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID, SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID,
-        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID, SCAN_RESULTS_RECEIVED_METRIC_ID,
+        SavedNetworkInScanResultMigratedMetricDimensionBssCount,
+        SavedNetworkInScanResultWithActiveScanMigratedMetricDimensionActiveScanSsidsObserved as ActiveScanSsidsObserved,
+        ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount,
+        LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
+        SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID,
+        SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID,
     },
 };
 
@@ -292,7 +294,7 @@ impl NetworkSelector {
             let mut cobalt_api_guard = self.cobalt_api.lock().await;
             let cobalt_api = &mut *cobalt_api_guard;
             cobalt_api.log_elapsed_time(
-                LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID,
+                LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
                 Vec::<u32>::new(),
                 scan_age.into_micros(),
             );
@@ -652,14 +654,16 @@ fn record_metrics_on_scan(
         // Record how many BSSs are visible in the scan results for this saved network.
         let num_bss = match bsss.len() {
             0 => unreachable!(), // The ::Zero enum exists, but we shouldn't get a scan result with no BSS
-            1 => SavedNetworkInScanResultMetricDimensionBssCount::One,
-            2..=4 => SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour,
-            5..=10 => SavedNetworkInScanResultMetricDimensionBssCount::FiveToTen,
-            11..=20 => SavedNetworkInScanResultMetricDimensionBssCount::ElevenToTwenty,
-            21..=usize::MAX => SavedNetworkInScanResultMetricDimensionBssCount::TwentyOneOrMore,
+            1 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::One,
+            2..=4 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwoToFour,
+            5..=10 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::FiveToTen,
+            11..=20 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::ElevenToTwenty,
+            21..=usize::MAX => {
+                SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwentyOneOrMore
+            }
             _ => unreachable!(),
         };
-        cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
+        cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID, num_bss);
 
         // Check if the network was found via active scan.
         if bsss
@@ -671,15 +675,17 @@ fn record_metrics_on_scan(
     }
 
     let saved_network_count_metric = match num_saved_networks_observed {
-        0 => ScanResultsReceivedMetricDimensionSavedNetworksCount::Zero,
-        1 => ScanResultsReceivedMetricDimensionSavedNetworksCount::One,
-        2..=4 => ScanResultsReceivedMetricDimensionSavedNetworksCount::TwoToFour,
-        5..=20 => ScanResultsReceivedMetricDimensionSavedNetworksCount::FiveToTwenty,
-        21..=40 => ScanResultsReceivedMetricDimensionSavedNetworksCount::TwentyOneToForty,
-        41..=usize::MAX => ScanResultsReceivedMetricDimensionSavedNetworksCount::FortyOneOrMore,
+        0 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::Zero,
+        1 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::One,
+        2..=4 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::TwoToFour,
+        5..=20 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::FiveToTwenty,
+        21..=40 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::TwentyOneToForty,
+        41..=usize::MAX => {
+            ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::FortyOneOrMore
+        }
         _ => unreachable!(),
     };
-    cobalt_api.log_event(SCAN_RESULTS_RECEIVED_METRIC_ID, saved_network_count_metric);
+    cobalt_api.log_event(SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID, saved_network_count_metric);
 
     let actively_scanned_networks_metrics = match num_actively_scanned_networks {
         0 => ActiveScanSsidsObserved::Zero,
@@ -693,7 +699,7 @@ fn record_metrics_on_scan(
         _ => unreachable!(),
     };
     cobalt_api.log_event(
-        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID,
+        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID,
         actively_scanned_networks_metrics,
     );
 }
@@ -1929,7 +1935,8 @@ mod tests {
         // Metric logged for scan age
         let metric = test_values.cobalt_events.try_next().unwrap().unwrap();
         let expected_metric =
-            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID).as_elapsed_time(0);
+            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID)
+                .as_elapsed_time(0);
         // We need to individually check each field, since the elapsed time is non-deterministic
         assert_eq!(metric.metric_id, expected_metric.metric_id);
         assert_eq!(metric.event_codes, expected_metric.event_codes);
@@ -1967,7 +1974,8 @@ mod tests {
         // Metric logged for scan age
         let metric = test_values.cobalt_events.try_next().unwrap().unwrap();
         let expected_metric =
-            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID).as_elapsed_time(0);
+            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID)
+                .as_elapsed_time(0);
         assert_eq!(metric.metric_id, expected_metric.metric_id);
         assert_eq!(metric.event_codes, expected_metric.event_codes);
         assert_eq!(metric.component, expected_metric.component);
@@ -2795,9 +2803,9 @@ mod tests {
             .iter()
             .find(|&event| event
                 == &Some(
-                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
+                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID)
                         .with_event_code(
-                            SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour
+                            SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwoToFour
                                 .as_event_code()
                         )
                         .as_event()
@@ -2809,9 +2817,10 @@ mod tests {
             .iter()
             .find(|&event| event
                 == &Some(
-                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
+                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID)
                         .with_event_code(
-                            SavedNetworkInScanResultMetricDimensionBssCount::One.as_event_code()
+                            SavedNetworkInScanResultMigratedMetricDimensionBssCount::One
+                                .as_event_code()
                         )
                         .as_event()
                 ))
@@ -2821,9 +2830,9 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_METRIC_ID)
+                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID)
                     .with_event_code(
-                        ScanResultsReceivedMetricDimensionSavedNetworksCount::TwoToFour
+                        ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::TwoToFour
                             .as_event_code()
                     )
                     .as_event()
@@ -2833,9 +2842,11 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID)
-                    .with_event_code(ActiveScanSsidsObserved::One.as_event_code())
-                    .as_event()
+                CobaltEvent::builder(
+                    SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID
+                )
+                .with_event_code(ActiveScanSsidsObserved::One.as_event_code())
+                .as_event()
             )
         );
         // No more metrics
@@ -2853,9 +2864,10 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_METRIC_ID)
+                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID)
                     .with_event_code(
-                        ScanResultsReceivedMetricDimensionSavedNetworksCount::Zero.as_event_code()
+                        ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::Zero
+                            .as_event_code()
                     )
                     .as_event()
             )
@@ -2864,9 +2876,11 @@ mod tests {
         assert_eq!(
             cobalt_events.try_next().unwrap(),
             Some(
-                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID)
-                    .with_event_code(ActiveScanSsidsObserved::Zero.as_event_code())
-                    .as_event()
+                CobaltEvent::builder(
+                    SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID
+                )
+                .with_event_code(ActiveScanSsidsObserved::Zero.as_event_code())
+                .as_event()
             )
         );
         // No more metrics

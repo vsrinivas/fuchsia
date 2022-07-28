@@ -34,8 +34,8 @@ use {
     void::ResultVoidErrExt,
     wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, stats::SignalStrengthAverage},
     wlan_metrics_registry::{
-        POLICY_CONNECTION_ATTEMPT_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
-        POLICY_DISCONNECTION_METRIC_ID as DISCONNECTION_METRIC_ID,
+        POLICY_CONNECTION_ATTEMPT_MIGRATED_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
+        POLICY_DISCONNECTION_MIGRATED_METRIC_ID as DISCONNECTION_METRIC_ID,
     },
 };
 
@@ -1031,7 +1031,7 @@ mod tests {
         wlan_common::{
             assert_variant, bss::Protection, random_bss_description, random_fidl_bss_description,
         },
-        wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
+        wlan_metrics_registry::PolicyDisconnectionMigratedMetricDimensionReason,
     };
 
     struct TestValues {
@@ -4986,7 +4986,10 @@ mod tests {
         let mut client = Client::new(client_req_sender);
         let (sender, mut receiver) = oneshot::channel();
         client
-            .disconnect(PolicyDisconnectionMetricDimensionReason::NetworkConfigUpdated, sender)
+            .disconnect(
+                PolicyDisconnectionMigratedMetricDimensionReason::NetworkConfigUpdated,
+                sender,
+            )
             .expect("failed to make request");
 
         // Run the state machine so that it handles the disconnect message.
