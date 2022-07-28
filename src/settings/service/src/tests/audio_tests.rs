@@ -142,33 +142,6 @@ async fn create_environment(
 }
 
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_audio() {
-    let (service_registry, fake_services) = create_services().await;
-    let (env, store) = create_environment(service_registry).await;
-
-    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
-
-    let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(
-        &settings,
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
-    );
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-    let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
-
-    assert_eq!(
-        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        fake_services.audio_core.lock().await.get_level_and_mute(AudioRenderUsage::Media).unwrap()
-    );
-
-    // Check to make sure value wrote out to store correctly.
-    let stored_streams = store.get::<AudioInfo>().await.streams;
-    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
-}
-
-#[fuchsia_async::run_until_stalled(test)]
 async fn test_consecutive_volume_changes() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;

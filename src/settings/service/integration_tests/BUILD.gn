@@ -6,6 +6,7 @@ group("integration_tests") {
   testonly = true
   public_deps = [
     "accessibility_tests",
+    "audio_tests",
 
     # Disable display tests while investigating flakiness
     # "display_tests",
