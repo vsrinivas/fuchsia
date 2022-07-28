@@ -53,41 +53,43 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/tiling.h"
 
-#define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
-#define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
-
 namespace {
-static zx_pixel_format_t supported_formats[4] = {
+
+constexpr zx_pixel_format_t kSupportedFormats[4] = {
     ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_ABGR_8888,
     ZX_PIXEL_FORMAT_BGR_888x};
 
-static cursor_info_t cursor_infos[3] = {
+constexpr cursor_info_t kCursorInfos[3] = {
     {.width = 64, .height = 64, .format = ZX_PIXEL_FORMAT_ARGB_8888},
     {.width = 128, .height = 128, .format = ZX_PIXEL_FORMAT_ARGB_8888},
     {.width = 256, .height = 256, .format = ZX_PIXEL_FORMAT_ARGB_8888},
 };
-static uint32_t image_types[4] = {
+constexpr uint32_t kImageTypes[4] = {
     IMAGE_TYPE_SIMPLE,
     IMAGE_TYPE_X_TILED,
     IMAGE_TYPE_Y_LEGACY_TILED,
     IMAGE_TYPE_YF_TILED,
 };
 
-static fuchsia_sysmem::wire::PixelFormatType pixel_format_types[2] = {
+constexpr fuchsia_sysmem::wire::PixelFormatType kPixelFormatTypes[2] = {
     fuchsia_sysmem::wire::PixelFormatType::kBgra32,
     fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8,
 };
 
 // TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to Intel display.
-static fuchsia_sysmem::wire::PixelFormatType yuv_pixel_format_types[2] = {
+constexpr fuchsia_sysmem::wire::PixelFormatType kYuvPixelFormatTypes[2] = {
     fuchsia_sysmem::wire::PixelFormatType::kI420,
     fuchsia_sysmem::wire::PixelFormatType::kNv12,
 };
 
-static void gpu_release(void* ctx) { static_cast<i915_tgl::Controller*>(ctx)->GpuRelease(); }
+constexpr zx_protocol_device_t kGpuCoreDeviceProtocol = {
+    .version = DEVICE_OPS_VERSION,
+    .release = [](void* ctx) { static_cast<i915_tgl::Controller*>(ctx)->GpuRelease(); }
+    // zx_gpu_dev_ is removed when unbind is called for zxdev() (in ::DdkUnbind),
+    // so it's not necessary to give it its own unbind method.
+};
 
-static zx_protocol_device_t i915_gpu_core_device_proto = {};
-static zx_protocol_device_t i915_display_controller_device_proto = {
+constexpr zx_protocol_device_t kDisplayControllerDeviceProtocol = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol =
         [](void* ctx, uint32_t id, void* proto) {
@@ -96,41 +98,34 @@ static zx_protocol_device_t i915_display_controller_device_proto = {
     .release = [](void* ctx) {},
 };
 
-static uint32_t get_bus_base(void* ctx) { return 0; }
-
-static uint32_t get_bus_count(void* ctx) {
-  return static_cast<i915_tgl::Controller*>(ctx)->GetBusCount();
-}
-
-static zx_status_t get_max_transfer_size(void* ctx, uint32_t bus_id, size_t* out_size) {
-  return static_cast<i915_tgl::Controller*>(ctx)->GetMaxTransferSize(bus_id, out_size);
-}
-
-static zx_status_t set_bitrate(void* ctx, uint32_t bus_id, uint32_t bitrate) {
-  return static_cast<i915_tgl::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
-}
-
-static zx_status_t transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
-  return static_cast<i915_tgl::Controller*>(ctx)->Transact(bus_id, ops, count);
-}
-
-static i2c_impl_protocol_ops_t i2c_ops = {
-    .get_bus_base = get_bus_base,
-    .get_bus_count = get_bus_count,
-    .get_max_transfer_size = get_max_transfer_size,
-    .set_bitrate = set_bitrate,
-    .transact = transact,
+// Can't be const because i2c_impl_protocol_t::ops is non-const.
+i2c_impl_protocol_ops_t g_i2c_protocol_ops = {
+    .get_bus_base = [](void* ctx) { return uint32_t{0}; },
+    .get_bus_count =
+        [](void* ctx) { return static_cast<i915_tgl::Controller*>(ctx)->GetBusCount(); },
+    .get_max_transfer_size =
+        [](void* ctx, uint32_t bus_id, size_t* out_size) {
+          return static_cast<i915_tgl::Controller*>(ctx)->GetMaxTransferSize(bus_id, out_size);
+        },
+    .set_bitrate =
+        [](void* ctx, uint32_t bus_id, uint32_t bitrate) {
+          return static_cast<i915_tgl::Controller*>(ctx)->SetBitrate(bus_id, bitrate);
+        },
+    .transact =
+        [](void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops, size_t count) {
+          return static_cast<i915_tgl::Controller*>(ctx)->Transact(bus_id, ops, count);
+        },
 };
 
-const display_config_t* find_config(uint64_t display_id,
-                                    cpp20::span<const display_config_t*> display_configs) {
+const display_config_t* FindConfig(uint64_t display_id,
+                                   cpp20::span<const display_config_t*> display_configs) {
   auto found =
       std::find_if(display_configs.begin(), display_configs.end(),
                    [display_id](const display_config_t* c) { return c->display_id == display_id; });
   return found != display_configs.end() ? *found : nullptr;
 }
 
-static void get_posttransform_width(const layer_t& layer, uint32_t* width, uint32_t* height) {
+void GetPostTransformWidth(const layer_t& layer, uint32_t* width, uint32_t* height) {
   const primary_layer_t* primary = &layer.cfg.primary;
   if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY ||
       primary->transform_mode == FRAME_TRANSFORM_ROT_180 ||
@@ -575,10 +570,10 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count
     added_args[i].display_id = added[i]->id();
     added_args[i].edid_present = true;
     added_args[i].panel.i2c_bus_id = added[i]->i2c_bus_id();
-    added_args[i].pixel_format_list = supported_formats;
-    added_args[i].pixel_format_count = static_cast<uint32_t>(std::size(supported_formats));
-    added_args[i].cursor_info_list = cursor_infos;
-    added_args[i].cursor_info_count = static_cast<uint32_t>(std::size(cursor_infos));
+    added_args[i].pixel_format_list = kSupportedFormats;
+    added_args[i].pixel_format_count = static_cast<uint32_t>(std::size(kSupportedFormats));
+    added_args[i].cursor_info_list = kCursorInfos;
+    added_args[i].cursor_info_count = static_cast<uint32_t>(std::size(kCursorInfos));
   }
   dc_intf_.OnDisplaysChanged(added_args, added_count, removed, removed_count, added_info,
                              added_count, &added_actual);
@@ -1187,7 +1182,7 @@ bool Controller::CheckDisplayLimits(cpp20::span<const display_config_t*> display
       }
       primary_layer_t* primary = &config->layer_list[i]->cfg.primary;
       uint32_t src_width, src_height;
-      get_posttransform_width(*config->layer_list[i], &src_width, &src_height);
+      GetPostTransformWidth(*config->layer_list[i], &src_width, &src_height);
 
       double downscale = std::max(1.0, 1.0 * src_height / primary->dest_frame.height) *
                          std::max(1.0, 1.0 * src_width / primary->dest_frame.width);
@@ -1204,7 +1199,7 @@ bool Controller::CheckDisplayLimits(cpp20::span<const display_config_t*> display
         }
         primary_layer_t* primary = &config->layer_list[j]->cfg.primary;
         uint32_t src_width, src_height;
-        get_posttransform_width(*config->layer_list[j], &src_width, &src_height);
+        GetPostTransformWidth(*config->layer_list[j], &src_width, &src_height);
 
         if (src_height > primary->dest_frame.height || src_width > primary->dest_frame.width) {
           layer_cfg_results[i][j] |= CLIENT_FRAME_SCALE;
@@ -1290,7 +1285,7 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
           }
 
           uint32_t src_width, src_height;
-          get_posttransform_width(*config->layer_list[j], &src_width, &src_height);
+          GetPostTransformWidth(*config->layer_list[j], &src_width, &src_height);
 
           // If the plane is too wide, force the client to do all composition
           // and just give us a simple configuration.
@@ -1348,10 +1343,10 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
             layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
           }
           bool found = false;
-          for (unsigned x = 0; x < std::size(cursor_infos) && !found; x++) {
-            found = image->width == cursor_infos[x].width &&
-                    image->height == cursor_infos[x].height &&
-                    image->pixel_format == cursor_infos[x].format;
+          for (unsigned x = 0; x < std::size(kCursorInfos) && !found; x++) {
+            found = image->width == kCursorInfos[x].width &&
+                    image->height == kCursorInfos[x].height &&
+                    image->pixel_format == kCursorInfos[x].format;
           }
           if (!found) {
             layer_cfg_result[i][j] |= CLIENT_USE_PRIMARY;
@@ -1478,7 +1473,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
   ReallocatePlaneBuffers(display_configs, /* reallocate_pipes */ pipe_manager_->PipeReallocated());
 
   for (auto& display : display_devices_) {
-    const display_config_t* config = find_config(display->id(), display_configs);
+    const display_config_t* config = FindConfig(display->id(), display_configs);
 
     if (config != nullptr) {
       display->ApplyConfiguration(config, config_stamp);
@@ -1553,29 +1548,29 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   // Loop over all combinations of supported image types and pixel formats, adding
   // an image format constraints for each unless the config is asking for a specific
   // format or type.
-  static_assert(std::size(image_types) * std::size(pixel_format_types) <=
+  static_assert(std::size(kImageTypes) * std::size(kPixelFormatTypes) <=
                 std::size(constraints.image_format_constraints));
-  for (unsigned i = 0; i < std::size(image_types); ++i) {
+  for (unsigned i = 0; i < std::size(kImageTypes); ++i) {
     // Skip if image type was specified and different from current type. This
     // makes it possible for a different participant to select preferred
     // modifiers.
-    if (config->type && config->type != image_types[i]) {
+    if (config->type && config->type != kImageTypes[i]) {
       continue;
     }
-    for (unsigned j = 0; j < std::size(pixel_format_types); ++j) {
+    for (unsigned j = 0; j < std::size(kPixelFormatTypes); ++j) {
       // Skip if pixel format was specified and different from current format.
       // This makes it possible for a different participant to select preferred
       // format.
       if (pixel_format != fuchsia_sysmem::wire::PixelFormatType::kInvalid &&
-          pixel_format != pixel_format_types[j]) {
+          pixel_format != kPixelFormatTypes[j]) {
         continue;
       }
       fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
           constraints.image_format_constraints[image_constraints_count++];
 
-      image_constraints.pixel_format.type = pixel_format_types[j];
+      image_constraints.pixel_format.type = kPixelFormatTypes[j];
       image_constraints.pixel_format.has_format_modifier = true;
-      switch (image_types[i]) {
+      switch (kImageTypes[i]) {
         case IMAGE_TYPE_SIMPLE:
           image_constraints.pixel_format.format_modifier.value =
               fuchsia_sysmem::wire::kFormatModifierLinear;
@@ -1609,10 +1604,10 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
     zxlogf(ERROR, "Config has unsupported type %d", config->type);
     return ZX_ERR_INVALID_ARGS;
   }
-  for (unsigned i = 0; i < std::size(yuv_pixel_format_types); ++i) {
+  for (unsigned i = 0; i < std::size(kYuvPixelFormatTypes); ++i) {
     fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
         constraints.image_format_constraints[image_constraints_count++];
-    image_constraints.pixel_format.type = yuv_pixel_format_types[i];
+    image_constraints.pixel_format.type = kYuvPixelFormatTypes[i];
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kRec709;
   }
@@ -1848,14 +1843,17 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
     ops->ctx = this;
     ops->ops = static_cast<display_controller_impl_protocol_ops_t*>(
         &display_controller_impl_protocol_ops_);
-  } else if (proto_id == ZX_PROTOCOL_I2C_IMPL) {
+    return ZX_OK;
+  }
+
+  if (proto_id == ZX_PROTOCOL_I2C_IMPL) {
     auto ops = static_cast<i2c_impl_protocol_t*>(out);
     ops->ctx = this;
-    ops->ops = &i2c_ops;
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
+    ops->ops = &g_i2c_protocol_ops;
+    return ZX_OK;
   }
-  return ZX_OK;
+
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 void Controller::DdkSuspend(ddk::SuspendTxn txn) {
@@ -2063,35 +2061,36 @@ zx_status_t Controller::Init() {
     return status;
   }
 
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "intel-display-controller";
-  args.ctx = zxdev();
-  args.ops = &i915_display_controller_device_proto;
-  args.proto_id = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL;
-  args.proto_ops = &display_controller_impl_protocol_ops_;
-  status = device_add(zxdev(), &args, &display_controller_dev_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to publish display controller device (%d)", status);
-    return status;
+  {
+    device_add_args_t display_device_add_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "intel-display-controller",
+        .ctx = zxdev(),
+        .ops = &kDisplayControllerDeviceProtocol,
+        .proto_id = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL,
+        .proto_ops = &display_controller_impl_protocol_ops_,
+    };
+    status = device_add(zxdev(), &display_device_add_args, &display_controller_dev_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to publish display controller device (%d)", status);
+      return status;
+    }
   }
 
-  i915_gpu_core_device_proto.version = DEVICE_OPS_VERSION;
-  i915_gpu_core_device_proto.release = gpu_release;
-  // zx_gpu_dev_ is removed when unbind is called for zxdev() (in ::DdkUnbind),
-  // so it's not necessary to give it its own unbind method.
-
-  args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "intel-gpu-core";
-  args.ctx = this;
-  args.ops = &i915_gpu_core_device_proto;
-  args.proto_id = ZX_PROTOCOL_INTEL_GPU_CORE;
-  args.proto_ops = &intel_gpu_core_protocol_ops_;
-  status = device_add(zxdev(), &args, &zx_gpu_dev_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to publish gpu core device (%d)", status);
-    return status;
+  {
+    device_add_args_t gpu_device_add_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "intel-gpu-core",
+        .ctx = this,
+        .ops = &kGpuCoreDeviceProtocol,
+        .proto_id = ZX_PROTOCOL_INTEL_GPU_CORE,
+        .proto_ops = &intel_gpu_core_protocol_ops_,
+    };
+    status = device_add(zxdev(), &gpu_device_add_args, &zx_gpu_dev_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to publish gpu core device (%d)", status);
+      return status;
+    }
   }
 
   root_node_ = inspector_.GetRoot().CreateChild("intel-i915");
@@ -2157,12 +2156,13 @@ zx_status_t Controller::Create(zx_device_t* parent) {
 
 }  // namespace i915_tgl
 
-static constexpr zx_driver_ops_t intel_i915_driver_ops = []() {
-  zx_driver_ops_t ops = {};
-  ops.version = DRIVER_OPS_VERSION;
-  ops.bind = [](void* ctx, zx_device_t* parent) { return i915_tgl::Controller::Create(parent); };
-  return ops;
-}();
+namespace {
 
-// clang-format off
-ZIRCON_DRIVER(intel_i915, intel_i915_driver_ops, "zircon", "0.1");
+constexpr zx_driver_ops_t kDriverOps = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = [](void* ctx, zx_device_t* parent) { return i915_tgl::Controller::Create(parent); },
+};
+
+}  // namespace
+
+ZIRCON_DRIVER(intel_i915, kDriverOps, "zircon", "0.1");
