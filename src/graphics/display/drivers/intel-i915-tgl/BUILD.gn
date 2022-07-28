@@ -108,6 +108,7 @@ test("intel-i915-tgl-test") {
     "pipe-manager-unittest.cc",
     "pipe-unittest.cc",
     "power-unittest.cc",
+    "registers-unittest.cc",
   ]
   deps = [
     ":common_srcs",
