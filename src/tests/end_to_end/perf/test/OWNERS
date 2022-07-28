@@ -8,7 +8,6 @@ per-file touch_input_latency_benchmarks.dart = neelsa@google.com
 per-file touch_input_latency_benchmarks_test.dart = jaeheon@google.com
 per-file touch_input_latency_benchmarks_test.dart = neelsa@google.com
 per-file rust_inspect_benchmarks_test.dart = file: /src/diagnostics/OWNERS
-per-file rust_inspect_reader_benchmarks_test.dart = file: /src/diagnostics/OWNERS
 per-file dart_inspect_benchmarks_test.dart = file: /src/diagnostics/OWNERS
 per-file archivist_benchmarks_test.dart = file: /src/diagnostics/OWNERS
 per-file diagnostics_benchmarks_test.dart = file: /src/diagnostics/OWNERS

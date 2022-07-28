@@ -101,7 +101,7 @@ fuchsia_component("snapshot-filter-component") {
   deps = [ ":snapshot-filter-bin" ]
 }
 
-fuchsia_package("rust-inspect-benchmarks-v2") {
+fuchsia_package("rust-inspect-benchmarks") {
   deps = [
     ":reader-component",
     ":snapshot-filter-component",
@@ -120,7 +120,7 @@ fuchsia_unittest_package("rust-inspect-benchmarks-test") {
 
 group("bench") {
   testonly = true
-  deps = [ ":rust-inspect-benchmarks-v2" ]
+  deps = [ ":rust-inspect-benchmarks" ]
 }
 
 group("tests") {

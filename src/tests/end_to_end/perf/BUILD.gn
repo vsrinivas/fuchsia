@@ -30,7 +30,7 @@ test_list = [
   "network_device_microbenchmarks_test",
   "perftest_trace_events_test",
   "storage_benchmarks_test",
-  "rust_inspect_benchmarks_v2_test",
+  "rust_inspect_benchmarks_test",
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
