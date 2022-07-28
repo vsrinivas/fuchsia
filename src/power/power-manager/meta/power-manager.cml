@@ -60,4 +60,8 @@
             from: "self",
         },
     ],
+    config: {
+        // Enable the debug service for manipulating Power Manager state at run-time.
+        enable_debug_service: { type: "bool" },
+    },
 }

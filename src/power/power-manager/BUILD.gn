@@ -33,6 +33,7 @@ rustc_binary("bin") {
   configs += [ "//build/config/rust:bootfs" ]
 
   deps = [
+    ":power-manager-config-lib",
     ":power_manager_metrics_rustlib",
     "system_power_mode_config/parser",
     "thermal_config/parser",
@@ -127,8 +128,24 @@ rustc_binary("bin") {
   ]
 }
 
-component_manifest_resources("manifest") {
-  sources = [ "meta/power-manager.cml" ]
+fuchsia_component_manifest("manifest") {
+  manifest = "meta/power-manager.cml"
+  component_name = "power-manager"
+}
+
+declare_args() {
+  enable_power_manager_debug = false
+}
+
+fuchsia_structured_config_values("default_component_config") {
+  cm_label = ":manifest"
+  values = {
+    enable_debug_service = enable_power_manager_debug
+  }
+}
+
+fuchsia_structured_config_rust_lib("power-manager-config-lib") {
+  cm_label = ":manifest"
 }
 
 group("power-manager") {
@@ -142,6 +159,7 @@ group("power-manager") {
 group("bootfs") {
   deps = [
     ":bin",
+    ":default_component_config",
     ":manifest",
   ]
 }

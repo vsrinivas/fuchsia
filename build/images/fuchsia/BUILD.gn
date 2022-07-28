@@ -293,7 +293,10 @@ if (is_fuchsia) {
     if (include_fvm_blob_sparse) {
       public_deps += [ ":copy_fvm_blob_sparse" ]
     }
-    deps = [ ":verify_base_resolver_config" ]
+    deps = [
+      ":verify_base_resolver_config",
+      ":verify_power_manager_config",
+    ]
     if (!is_coverage && custom_signing_script == "") {
       deps += [
         ":verify_capability_routes",
@@ -675,6 +678,18 @@ if (is_fuchsia) {
     non_eng_golden =
         "//src/security/policy/build/base_resolver_golden_non_eng.cvf"
     eng_golden = "//src/security/policy/build/base_resolver_golden_eng.cvf"
+    deps = []
+    if (defined(fuchsia_base.product_assembly_config_dep)) {
+      deps += [ fuchsia_base.product_assembly_config_dep ]
+    }
+  }
+  verify_structured_config_by_build_type("verify_power_manager_config") {
+    product_assembly_config_file = fuchsia_base.product_assembly_config_file
+    structured_config_target =
+        "//src/power/power-manager:default_component_config"
+    non_eng_golden =
+        "//src/security/policy/build/power_manager_golden_non_eng.cvf"
+    eng_golden = "//src/security/policy/build/power_manager_golden_eng.cvf"
     deps = []
     if (defined(fuchsia_base.product_assembly_config_dep)) {
       deps += [ fuchsia_base.product_assembly_config_dep ]

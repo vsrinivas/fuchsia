@@ -11,6 +11,7 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use log::*;
+use power_manager_config_lib;
 use serde_json as json;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -44,7 +45,11 @@ impl PowerManager {
 
         // Required call to serve the inspect tree
         let inspector = component::inspector();
-        inspect_runtime::serve(inspector, &mut fs)?;
+        inspect_runtime::serve(inspector, &mut fs).context("Failed to serve inspect")?;
+
+        let config = power_manager_config_lib::Config::take_from_startup_handle();
+        config.record_inspect(fuchsia_inspect::component::inspector().root());
+        log_config(&config);
 
         // Create the nodes according to the config file
         let node_futures = FuturesUnordered::new();
@@ -247,6 +252,11 @@ impl PowerManager {
         .collect::<Result<Vec<_>, _>>()
         .map(|_| ())
     }
+}
+
+fn log_config(config: &power_manager_config_lib::Config) {
+    let power_manager_config_lib::Config { enable_debug_service } = config;
+    info!("Configuration: enable_debug_service={}", enable_debug_service);
 }
 
 #[cfg(test)]
