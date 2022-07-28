@@ -93,13 +93,11 @@ fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderCo
     raster_builder.build()
 }
 
-/// FDR
 #[derive(Debug, FromArgs)]
-#[argh(name = "recovery")]
+#[argh(name = "recovery", description="System Recovery")]
 struct Args {
-    /// rotate
-    #[argh(option)]
-    rotation: Option<DisplayRotation>,
+    #[argh(option, description="rotate screen orientation", default="DisplayRotation::Deg0")]
+    rotation: DisplayRotation,
 }
 
 enum RecoveryMessages {
@@ -174,7 +172,7 @@ impl RecoveryAppAssistant {
 
         Self {
             app_sender: app_sender.clone(),
-            display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg90),
+            display_rotation: args.rotation,
             fdr_restriction,
         }
     }
