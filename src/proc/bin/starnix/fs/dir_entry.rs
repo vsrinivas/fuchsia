@@ -15,13 +15,6 @@ use crate::task::CurrentTask;
 use crate::types::*;
 
 struct DirEntryState {
-    /// The parent DirEntry.
-    ///
-    /// The DirEntry tree has strong references from child-to-parent and weak
-    /// references from parent-to-child. This design ensures that the parent
-    /// chain is always populated in the cache, but some children might be
-    /// missing from the cache.
-    parent: Option<DirEntryHandle>,
 
     /// The name that this parent calls this child.
     ///
@@ -63,6 +56,17 @@ pub struct DirEntry {
 
     /// The mutable state for this DirEntry.
     state: RwLock<DirEntryState>,
+
+    /// The parent DirEntry.
+    ///
+    /// The DirEntry tree has strong references from child-to-parent and weak
+    /// references from parent-to-child. This design ensures that the parent
+    /// chain is always populated in the cache, but some children might be
+    /// missing from the cache.
+    ///
+    /// It is independent from RwLock because it is acquired by readdir and introduces lock cycles.
+    /// No lock should be acquired while this lock is acquired.
+    parent: RwLock<Option<DirEntryHandle>>,
 }
 
 pub type DirEntryHandle = Arc<DirEntry>;
@@ -73,15 +77,21 @@ impl DirEntry {
         parent: Option<DirEntryHandle>,
         local_name: FsString,
     ) -> DirEntryHandle {
-        Arc::new(DirEntry {
+        let result = Arc::new(DirEntry {
             node,
             state: RwLock::new(DirEntryState {
-                parent,
                 local_name,
                 children: BTreeMap::new(),
                 mount_count: 0,
             }),
-        })
+            parent: RwLock::new(parent),
+        });
+        #[cfg(any(test, debug_assertions))]
+        {
+            let _l1 = result.state.read();
+            let _l2 = result.parent.read();
+        }
+        result
     }
 
     /// Returns a new DirEntry for the given `node` without parent. The entry has no local name.
@@ -128,7 +138,7 @@ impl DirEntry {
     /// NamespaceNode tree (which understands mounts) rather than the DirEntry
     /// tree.
     pub fn parent(&self) -> Option<DirEntryHandle> {
-        self.state.read().parent.clone()
+        self.parent.read().clone()
     }
 
     /// The parent DirEntry object or this DirEntry if this entry is the root.
@@ -141,7 +151,7 @@ impl DirEntry {
     /// NamespaceNode tree (which understands mounts) rather than the DirEntry
     /// tree.
     pub fn parent_or_self(self: &DirEntryHandle) -> DirEntryHandle {
-        self.state.read().parent.as_ref().unwrap_or(self).clone()
+        self.parent.read().as_ref().unwrap_or(self).clone()
     }
 
     /// Whether the given name has special semantics as a directory entry.
@@ -521,7 +531,7 @@ impl DirEntry {
                 // We need to update the parent and local name for the DirEntry
                 // we are renaming to reflect its new parent and its new name.
                 let mut renamed_state = renamed.state.write();
-                renamed_state.parent = Some(new_parent.clone());
+                *renamed.parent.write() = Some(new_parent.clone());
                 renamed_state.local_name = new_basename.to_owned();
             }
             // Actually add the renamed child to the new_parent's child list.
@@ -740,7 +750,7 @@ impl<'a, 'b> RenameGuard<'a, 'b> {
 /// lock on the parent's child list.
 impl Drop for DirEntry {
     fn drop(&mut self) {
-        let maybe_parent = self.state.write().parent.take();
+        let maybe_parent = self.parent.write().take();
         if let Some(parent) = maybe_parent {
             parent.internal_remove_child(self);
         }
