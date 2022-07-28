@@ -55,7 +55,13 @@ class BaseDsm : public hwreg::RegisterBase<BaseDsm, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<BaseDsm>(0); }
 };
 
-// DSSM
+// DSSM (Display Strap State)
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 825-827
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 545-546
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 545-546
+//
+// This register is based on the Tiger Lake definition.
 class Dssm : public hwreg::RegisterBase<Dssm, uint32_t> {
  public:
   enum class RefFrequency : uint8_t {
