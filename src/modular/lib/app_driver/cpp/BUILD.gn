@@ -14,10 +14,11 @@ group("cpp") {
 source_set("app_driver") {
   sources = [ "app_driver.h" ]
 
-  public_deps = [ "//sdk/lib/sys/cpp" ]
-
-  deps = [
+  public_deps = [
+    "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/modular/lib/lifecycle/cpp",
   ]
 }

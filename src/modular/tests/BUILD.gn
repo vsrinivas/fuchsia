@@ -12,6 +12,7 @@ group("tests") {
     ":basemgr_v2_test",
     ":modular_integration_tests",
     ":module_with_fake_runner",
+    ":sessionmgr_v2_test",
     "modular_config",
     "//src/cobalt/bin/testing/mock_cobalt",
 
@@ -501,6 +502,52 @@ fuchsia_test_package("basemgr_v2_test") {
         tags = [ "flaky" ]  # fxbug.dev/92821
       },
     ]
+  }
+}
+
+rustc_test("sessionmgr_v2_test_bin") {
+  edition = "2021"
+  name = "sessionmgr_v2_test"
+  source_root = "sessionmgr_v2_test.rs"
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/ui/fuchsia-scenic",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [
+    "fake_appmgr.rs",
+    "sessionmgr_v2_test.rs",
+  ]
+}
+
+fuchsia_component("sessionmgr-v2-test") {
+  testonly = true
+  manifest = "meta/sessionmgr_v2_test.cml"
+  deps = [ ":sessionmgr_v2_test_bin" ]
+}
+
+fuchsia_test_package("sessionmgr_v2_test") {
+  test_components = [ ":sessionmgr-v2-test" ]
+  deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/modular/bin/sessionmgr:component-v2",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

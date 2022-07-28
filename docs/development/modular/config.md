@@ -69,6 +69,12 @@ ffx inspect show sessionmgr.cmx:root:config
         "agent_url": "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
       }
     ],
+    "v2_modular_agents": [
+      {
+        "service_name": "fuchsia.modular.Agent.foobar",
+        "agent_url": "fuchsia-pkg://fuchsia.com/foobar#meta/foobar.cmx"
+      }
+    ],
     "restart_session_on_agent_crash": [
       "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
     ]
@@ -104,10 +110,10 @@ ffx inspect show sessionmgr.cmx:root:config
     testing.
   - **default**: `true`
 - `startup_agents`: **string[]** _(optional)_
-  - A list of fuchsia component urls that specify which agents to launch at
+  - A list of fuchsia component URLs that specify which agents to launch at
     startup.
 - `session_agents`: **string[]** _(optional)_
-  - A list of fuchsia component urls that specify which agents to launch at
+  - A list of fuchsia component URLs that specify which agents to launch at
     startup with PuppetMaster and FocusProvider services.
 - `component_args`: **array** _(optional)_
   - A list of key/value pairs to construct a map from component URI to
@@ -117,15 +123,45 @@ ffx inspect show sessionmgr.cmx:root:config
     - `args`: A list of arguments to be passed to the component specified by
       `uri`. Arguments must be prefixed with --.
 - `agent_service_index`: **array** _(optional)_
-  - A list of key/value pairs mapping from service name to the serving component's
-    URL. Agents and the session shell are both valid components to specify
-    here.  Service names must be unique: only one component can provide any
-    given service. These services are provided to modules, the session shell,
+  - A list of key/value pairs mapping from service name to the serving
+    component's URL. Agents and the session shell are both valid components to
+    specify here.
+
+    Service names must be unique: only one component can provide any
+    given service.
+
+    These services are provided to modules, the session shell,
     and agents, in their namespace (i.e. at the path
     "/svc/fully.qualified.ServiceName").
+
     - `service_name`: The name of a service offered by `agent_url`.
-    - `agent_url`: A fuchsia component url that specifies which agent/shell will
+    - `agent_url`: A fuchsia component URL that specifies which agent/shell will
       provide the named service.
+- `v2_modular_agents`: **array** _(optional)_
+  - A list of key/value pairs mapping from a name of the `fuchsia.modular.Agent`
+    protocol routed to sessionmgr from a v2 component, to a v1 agent URL.
+
+    The protocol must be present in `additional_services_for_agents`
+    passed to `fuchsia.modular/Sessionmgr.Initialize`.
+
+    Agent URLs must be unique: only one service is associated with an agent.
+
+    Modules, the session shell, and other agents, can connect to services
+    exposed by v2 agents via
+    `fuchsia.modular/ComponentContext.DeprecatedConnectToAgent`
+    and `fuchsia.modular/ComponentContext.DeprecatedConnectToAgentService`.
+
+    The agent URL and service name must be present in `agent_service_index`
+    to connect to services with `DeprecatedConnectToAgentService`.
+
+    - `service_name`: The name of a `fuchsia.modular.Agent` service.
+      This name **must** start with "fuchsia.modular.Agent.",
+      e.g. "fuchsia.modular.Agent.foo"
+    - `agent_url`: An URL that identifies this v2 agent as a Modular agent.
+      This is typically a v1 component URL that corresponds to the agent URL
+      requested by DeprecatedConnectToAgent(Service) clients, or that matches
+      an entry in `agent_service_index`,
+      e.g. "fuchsia-pkg://fuchsia.com/test_agent#meta/test_agent.cmx"
 - `restart_session_on_agent_crash`: **array** _(optional)_
   - A list of agent URLs that will cause the session to be restarted
     when they terminate unexpectedly. If an agent is not in this list,

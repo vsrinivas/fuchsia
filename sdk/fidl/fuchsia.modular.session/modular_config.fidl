@@ -99,6 +99,21 @@ type SessionmgrConfig = table {
     /// modules, shells, and agents.
    10: agent_service_index vector<AgentServiceIndexEntry>;
 
+    /// A list of `fuchsia.modular.Agent` services, as provided to sessionmgr
+    /// in `additional_services_for_agents`, mapped to a v1 agent URL.
+    ///
+    /// Modules, the session shell, and other agents, can connect to services
+    /// exposed by v2 agents via
+    /// `fuchsia.modular/ComponentContext.DeprecatedConnectToAgent`
+    /// and `fuchsia.modular/ComponentContext.DeprecatedConnectToAgentService`,
+    /// or from the namespace if the service is present in `agent_service_index`.
+    ///
+    /// The agent URL and service name must be present in `agent_service_index`
+    /// to connect to services with `DeprecatedConnectToAgentService` or
+    /// from an agent namespace.
+    @available(added=9)
+   13: v2_modular_agents vector<V2ModularAgentsEntry>;
+
     /// A list of agent URLs that will cause the session to be restarted
     /// when they terminate. If an agent is not in this list, sessionmgr will
     /// restart it individually, preserving the session.
@@ -135,6 +150,17 @@ type AgentServiceIndexEntry = table {
     /// of the same service) in the agent-services index.
     @available(added=9)
     3: expose_from string;
+};
+
+/// A service name for the `fuchsia.modular.Agent` protocol served by a v2 component
+/// and the v1 agent URL that identifies the v2 agent inside Modular.
+@available(added=9)
+type V2ModularAgentsEntry = table {
+    /// The service name.
+    1: service_name string;
+
+    /// The fuchsia component url for agent.
+    2: agent_url fuchsia.sys.component_url;
 };
 
 /// Contains the configurations for the modular framework components.

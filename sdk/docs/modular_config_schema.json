@@ -21,6 +21,23 @@
                 "agent_url"
             ]
         },
+        "v2_modular_agents_entry": {
+            "type": "object",
+            "properties": {
+                "service_name": {
+                    "type": "string",
+                    "pattern": "^fuchsia\\.modular\\.Agent\\.[^.]+([.][^.]+)*$"
+                },
+                "agent_url": {
+                    "$ref": "#/definitions/component_url"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "service_name",
+                "agent_url"
+            ]
+        },
         "basemgr": {
             "type": "object",
             "properties": {
@@ -136,6 +153,13 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/agent_service_index_entry"
+                    },
+                    "uniqueItems": true
+                },
+                "v2_modular_agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v2_modular_agents_entry"
                     },
                     "uniqueItems": true
                 },

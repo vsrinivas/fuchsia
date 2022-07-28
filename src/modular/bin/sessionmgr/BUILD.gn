@@ -23,9 +23,23 @@ executable("sessionmgr_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("sessionmgr") {
+fuchsia_component("component-v1") {
+  component_name = "sessionmgr"
   manifest = "meta/sessionmgr.cmx"
   deps = [ ":sessionmgr_bin" ]
+}
+
+fuchsia_component("component-v2") {
+  component_name = "sessionmgr"
+  manifest = "meta/sessionmgr.cml"
+  deps = [ ":sessionmgr_bin" ]
+}
+
+fuchsia_package("sessionmgr") {
+  deps = [
+    ":component-v1",
+    ":component-v2",
+  ]
 }
 
 source_set("sessionmgr_lib") {

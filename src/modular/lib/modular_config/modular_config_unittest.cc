@@ -374,6 +374,7 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
         "session_agents": [],
         "component_args": [],
         "agent_service_index": [],
+        "v2_modular_agents": [],
         "restart_session_on_agent_crash": [],
         "disable_agent_restart_on_crash": false
       }

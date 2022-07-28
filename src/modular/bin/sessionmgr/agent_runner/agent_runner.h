@@ -75,6 +75,10 @@ class AgentRunner {
   void AddRunningAgent(std::string agent_url,
                        std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client);
 
+  // Adds an agent that is already running and exposes the `fuchsia.modular.Agent` protocol
+  // at `agent` to list of agents managed by AgentRunner.
+  void AddAgentFromService(std::string agent_url, fuchsia::modular::AgentPtr agent);
+
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(

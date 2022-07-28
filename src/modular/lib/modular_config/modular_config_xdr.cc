@@ -51,6 +51,12 @@ void XdrAgentServiceIndexEntry(XdrContext* const xdr,
   }
 }
 
+void XdrV2ModularAgentsEntry(XdrContext* const xdr,
+                             fuchsia::modular::session::V2ModularAgentsEntry* const data) {
+  xdr->Field(modular_config::kServiceName, data->mutable_service_name());
+  xdr->Field(modular_config::kAgentUrl, data->mutable_agent_url());
+}
+
 std::vector<fuchsia::modular::session::SessionShellMapEntry> GetDefaultSessionShellMap() {
   fuchsia::modular::session::SessionShellConfig config;
   config.mutable_app_config()->set_url(modular_config::kDefaultSessionShellUrl);
@@ -175,6 +181,12 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kAgentServiceIndex, data->mutable_agent_service_index(),
                         XdrAgentServiceIndexEntry, has_agent_service_index,
                         std::move(default_agent_service_index));
+
+  std::vector<fuchsia::modular::session::V2ModularAgentsEntry> default_v2_modular_agents;
+  bool has_v2_modular_agents = data->has_v2_modular_agents();
+  xdr->FieldWithDefault(modular_config::kV2ModularAgents, data->mutable_v2_modular_agents(),
+                        XdrV2ModularAgentsEntry, has_v2_modular_agents,
+                        std::move(default_v2_modular_agents));
 
   bool has_disable_agent_restart_on_crash = data->has_disable_agent_restart_on_crash();
   xdr->FieldWithDefault(modular_config::kDisableAgentRestartOnCrash,

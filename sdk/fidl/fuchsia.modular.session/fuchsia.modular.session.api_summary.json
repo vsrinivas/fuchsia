@@ -153,6 +153,11 @@
         "name": "fuchsia.modular.session/SessionmgrConfig.story_shell_url"
     },
     {
+        "declaration": "vector<fuchsia.modular.session/V2ModularAgentsEntry>",
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.v2_modular_agents"
+    },
+    {
         "kind": "table",
         "name": "fuchsia.modular.session/SessionmgrConfig"
     },
@@ -164,6 +169,20 @@
     {
         "kind": "table",
         "name": "fuchsia.modular.session/StoryShellConfig"
+    },
+    {
+        "declaration": "string:2083",
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/V2ModularAgentsEntry.agent_url"
+    },
+    {
+        "declaration": "string",
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/V2ModularAgentsEntry.service_name"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/V2ModularAgentsEntry"
     },
     {
         "kind": "library",

@@ -5,11 +5,15 @@
 #ifndef SRC_MODULAR_LIB_APP_DRIVER_CPP_APP_DRIVER_H_
 #define SRC_MODULAR_LIB_APP_DRIVER_CPP_APP_DRIVER_H_
 
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/processargs.h>
 
 #include <functional>
 #include <memory>
@@ -60,13 +64,24 @@ namespace modular {
 //   return 0;
 // }
 template <typename Impl>
-class AppDriver : LifecycleImpl::Delegate {
+class AppDriver : LifecycleImpl::Delegate, public fuchsia::process::lifecycle::Lifecycle {
  public:
   AppDriver(const std::shared_ptr<sys::OutgoingDirectory>& outgoing_services,
             std::unique_ptr<Impl> impl, fit::function<void()> on_terminated)
       : lifecycle_impl_(outgoing_services, this),
         impl_(std::move(impl)),
-        on_terminated_(std::move(on_terminated)) {}
+        on_terminated_(std::move(on_terminated)) {
+    zx::channel lifecycle_request{zx_take_startup_handle(PA_LIFECYCLE)};
+    if (lifecycle_request) {
+      bindings_.AddBinding(this,
+                           fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle>(
+                               std::move(lifecycle_request)),
+                           async_get_default_dispatcher());
+    } else {
+      FX_LOGS(WARNING) << "Lifecycle startup handle is not valid. "
+                          "If this is a v2 component, it will not shut down cleanly.";
+    }
+  }
 
  private:
   // |LifecycleImpl::Delegate|
@@ -79,13 +94,18 @@ class AppDriver : LifecycleImpl::Delegate {
       async::PostTask(async_get_default_dispatcher(), [this] {
         impl_.reset();
         on_terminated_();
+        bindings_.CloseAll();
       });
     });
   }
 
+  // |fuchsia.process.lifecycle.Lifecycle|
+  void Stop() override { Terminate(); }
+
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<Impl> impl_;
   fit::function<void()> on_terminated_;
+  fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AppDriver);
 };

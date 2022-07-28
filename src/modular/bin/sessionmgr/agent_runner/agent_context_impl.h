@@ -60,6 +60,14 @@ class AgentContextImpl : fuchsia::modular::AgentController {
                    std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client,
                    inspect::Node agent_node, std::function<void()> on_crash = nullptr);
 
+  // Manages the lifecycle of the already-running agent that exposes the `fuchsia.modular.Agent`
+  // protocol at |agent|.
+  //
+  // If |on_crash| is not null, it will be called if the agent unexpectedly terminates.
+  AgentContextImpl(const AgentContextInfo& info, std::string agent_url,
+                   fuchsia::modular::AgentPtr agent, inspect::Node agent_node,
+                   std::function<void()> on_crash = nullptr);
+
   ~AgentContextImpl() override;
 
   // Stops the running agent. Calls into |AgentRunner::RemoveAgent()| to remove itself.
@@ -123,7 +131,11 @@ class AgentContextImpl : fuchsia::modular::AgentController {
   // |app_client_| owns the agent's ComponentController. Destroying it signals that the agent
   // component should be terminated.
   //
-  // Exists only in the RUNNING and TERMINATING state. Reset to nullptr when TERMINATED.
+  // Exists only in the RUNNING and TERMINATING state when `AgentContextImpl` is constructed
+  // with an `AgentConfig` or `AppClient`.
+  //
+  // Reset to nullptr when TERMINATED, and unset when `AgentContextImpl` is constructed
+  // with a `fuchsia::modular::AgentPtr`.
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client_;
 
   fuchsia::modular::AgentPtr agent_;
@@ -150,7 +162,8 @@ class AgentContextImpl : fuchsia::modular::AgentController {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
-  class FinishInitializeCall;
+  class InitializeAppClientCall;
+  class InitializeAgentPtrCall;
   class StopCall;
   class OnAppErrorCall;
 

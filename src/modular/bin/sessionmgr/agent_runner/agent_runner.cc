@@ -145,6 +145,29 @@ void AgentRunner::AddRunningAgent(
           .second);
 }
 
+void AgentRunner::AddAgentFromService(std::string agent_url, fuchsia::modular::AgentPtr agent) {
+  // Start the agent and issue all callbacks.
+  ComponentContextInfo component_info = {this, session_agents_};
+  AgentContextInfo info = {component_info, launcher_, agent_services_factory_, sessionmgr_context_};
+  fuchsia::modular::session::AppConfig agent_config;
+  agent_config.set_url(agent_url);
+
+  // AgentContextImpl will call on_critical_agent_crash if this agent is listed
+  // in |restart_session_on_agent_crash_| and terminates unexpectedly.
+  bool restart_session_on_crash =
+      !config_accessor_->sessionmgr_config().disable_agent_restart_on_crash() ||
+      std::find(restart_session_on_agent_crash_.begin(), restart_session_on_agent_crash_.end(),
+                agent_url) != restart_session_on_agent_crash_.end();
+
+  FX_CHECK(
+      running_agents_
+          .emplace(agent_url, std::make_unique<AgentContextImpl>(
+                                  info, agent_url, std::move(agent),
+                                  session_inspect_node_->CreateChild(agent_url),
+                                  restart_session_on_crash ? on_critical_agent_crash_ : nullptr))
+          .second);
+}
+
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::function<void()> done) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
@@ -231,7 +254,8 @@ void AgentRunner::ConnectToService(
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
     std::string service_name, ::zx::channel channel) {
   EnsureAgentIsRunning(
-      agent_url, [this, agent_url, requestor_url, service_name, channel = std::move(channel),
+      agent_url, [this, agent_url = agent_url, requestor_url = std::move(requestor_url),
+                  service_name = std::move(service_name), channel = std::move(channel),
                   agent_controller_request = std::move(agent_controller_request)]() mutable {
         running_agents_[agent_url]->ConnectToService(
             requestor_url, std::move(agent_controller_request), service_name, std::move(channel));

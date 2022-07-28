@@ -38,6 +38,7 @@ constexpr char kPersistUserArg[] = "--persist_user";
 // Sessionmgr constants
 constexpr char kComponentArgs[] = "component_args";
 constexpr char kAgentServiceIndex[] = "agent_service_index";
+constexpr char kV2ModularAgents[] = "v2_modular_agents";
 constexpr char kServiceName[] = "service_name";
 constexpr char kAgentUrl[] = "agent_url";
 constexpr char kExposeFrom[] = "expose_from";

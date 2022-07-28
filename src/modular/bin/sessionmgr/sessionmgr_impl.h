@@ -84,6 +84,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                                     fuchsia::sys::ServiceList v2_services_for_sessionmgr);
   void InitializeStartupAgentLauncher();
   void InitializeStartupAgents();
+  void InitializeV2ModularAgents();
   void InitializeAgentRunner(const std::string& session_shell_url);
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
                                bool use_session_shell_for_story_shell_factory);

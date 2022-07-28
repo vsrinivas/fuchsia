@@ -112,6 +112,7 @@ TEST(ModularConfigXdr, SessionmgrWriteDefaultValues) {
       "session_agents": null,
       "component_args": null,
       "agent_service_index": null,
+      "v2_modular_agents": null,
       "restart_session_on_agent_crash": null,
       "disable_agent_restart_on_crash": false
     })";
@@ -152,6 +153,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
       "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx";
   static constexpr auto kAgentServiceName = "fuchsia.modular.ModularConfigXdrTest";
   static constexpr auto kAgentUrl = "fuchsia-pkg://example.com/test_agent#meta/test_agent.cmx";
+  static constexpr auto kV2ModularAgentServiceName = "fuchsia.modular.Agent.test_agent";
   static constexpr auto kAgentComponentArg = "--test_agent_component_arg";
 
   static constexpr auto kExpectedJson = R"(
@@ -175,6 +177,12 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
           "agent_url": "fuchsia-pkg://example.com/test_agent#meta/test_agent.cmx"
         }
       ],
+      "v2_modular_agents": [
+        {
+          "service_name": "fuchsia.modular.Agent.test_agent",
+          "agent_url": "fuchsia-pkg://example.com/test_agent#meta/test_agent.cmx"
+        }
+      ],
       "restart_session_on_agent_crash": [
         "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
       ],
@@ -190,14 +198,24 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   write_config.mutable_startup_agents()->push_back(kStartupAgentUrl);
   write_config.mutable_session_agents()->push_back(kSessionAgentUrl);
   write_config.set_disable_agent_restart_on_crash(true);
-  fuchsia::modular::session::AppConfig component_arg;
-  component_arg.set_url(kAgentUrl);
-  component_arg.mutable_args()->push_back(kAgentComponentArg);
-  write_config.mutable_component_args()->push_back(std::move(component_arg));
-  fuchsia::modular::session::AgentServiceIndexEntry agent_entry;
-  agent_entry.set_service_name(kAgentServiceName);
-  agent_entry.set_agent_url(kAgentUrl);
-  write_config.mutable_agent_service_index()->push_back(std::move(agent_entry));
+  {
+    fuchsia::modular::session::AppConfig component_arg;
+    component_arg.set_url(kAgentUrl);
+    component_arg.mutable_args()->push_back(kAgentComponentArg);
+    write_config.mutable_component_args()->push_back(std::move(component_arg));
+  }
+  {
+    fuchsia::modular::session::AgentServiceIndexEntry agent_entry;
+    agent_entry.set_service_name(kAgentServiceName);
+    agent_entry.set_agent_url(kAgentUrl);
+    write_config.mutable_agent_service_index()->push_back(std::move(agent_entry));
+  }
+  {
+    fuchsia::modular::session::V2ModularAgentsEntry v2_modular_agent_entry;
+    v2_modular_agent_entry.set_service_name(kV2ModularAgentServiceName);
+    v2_modular_agent_entry.set_agent_url(kAgentUrl);
+    write_config.mutable_v2_modular_agents()->push_back(std::move(v2_modular_agent_entry));
+  }
   write_config.mutable_restart_session_on_agent_crash()->push_back(kSessionAgentUrl);
 
   // Serialize the config to JSON.
@@ -220,6 +238,8 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   EXPECT_EQ(kAgentComponentArg, read_config.component_args().at(0).args().at(0));
   EXPECT_EQ(kAgentServiceName, read_config.agent_service_index().at(0).service_name());
   EXPECT_EQ(kAgentUrl, read_config.agent_service_index().at(0).agent_url());
+  EXPECT_EQ(kV2ModularAgentServiceName, read_config.v2_modular_agents().at(0).service_name());
+  EXPECT_EQ(kAgentUrl, read_config.v2_modular_agents().at(0).agent_url());
   EXPECT_EQ(kSessionAgentUrl, read_config.restart_session_on_agent_crash().at(0));
   EXPECT_TRUE(read_config.disable_agent_restart_on_crash());
 }
@@ -256,6 +276,7 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
         "session_agents": [],
         "component_args": [],
         "agent_service_index": [],
+        "v2_modular_agents": [],
         "restart_session_on_agent_crash": [],
         "disable_agent_restart_on_crash": false
       }
@@ -294,6 +315,7 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
         "session_agents": null,
         "component_args": null,
         "agent_service_index": null,
+        "v2_modular_agents": null,
         "restart_session_on_agent_crash": null,
         "disable_agent_restart_on_crash": false
       }

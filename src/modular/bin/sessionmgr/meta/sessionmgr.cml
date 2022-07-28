@@ -1,0 +1,67 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/sessionmgr",
+        lifecycle: { stop_event: "notify" },
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.modular.internal.Sessionmgr" ],
+        },
+        {
+            protocol: "fuchsia.modular.PuppetMaster",
+            path: "/debug/sessionctl/fuchsia.modular.PuppetMaster",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config_override/data",
+        },
+
+        // Unclear if these are used.
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sys.Loader",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.scenic.Snapshot",
+            ],
+            from: "parent",
+        },
+
+        // Proxied to components in the Modular session.
+        {
+            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            from: "parent",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.modular.internal.Sessionmgr",
+                "fuchsia.modular.PuppetMaster",
+            ],
+            from: "self",
+        },
+    ],
+}

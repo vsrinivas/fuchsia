@@ -19,6 +19,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <utility>
 
 #include <fbl/unique_fd.h>
 
@@ -154,7 +155,7 @@ void SessionmgrImpl::InitializeInternal(
   session_storage_ = std::make_unique<SessionStorage>();
   OnTerminate(Reset(&session_storage_));
 
-  InitializeSessionEnvironment(session_id, std::move(v2_services_for_sessionmgr));
+  InitializeSessionEnvironment(std::move(session_id), std::move(v2_services_for_sessionmgr));
 
   // Create |puppet_master_| before |agent_runner_| to ensure agents can use it when terminating.
   InitializePuppetMaster();
@@ -162,6 +163,7 @@ void SessionmgrImpl::InitializeInternal(
 
   InitializeStartupAgentLauncher();
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
+  InitializeV2ModularAgents();
   InitializeStartupAgents();
 
   InitializeSessionShell(CloneStruct(config_accessor_.session_shell_app_config()),
@@ -267,13 +269,14 @@ void SessionmgrImpl::InitializeSessionEnvironment(
       });
 
   // Add v2-provided services.
-  for (std::string v2_service_name : v2_services_for_sessionmgr.names) {
+  for (const std::string& v2_service_name : v2_services_for_sessionmgr.names) {
     session_environment_->AddService(
         [this, v2_service_name](zx::channel request) {
           if (terminating_)
             return ZX_ERR_UNAVAILABLE;
           return v2_service_directory_->Connect(v2_service_name, std::move(request));
         },
+
         v2_service_name);
   }
 
@@ -355,6 +358,26 @@ void SessionmgrImpl::InitializeAgentRunner(const std::string& session_shell_url)
       std::move(agent_service_index), config_accessor_.sessionmgr_config().session_agents(),
       restart_session_on_agent_crash, sessionmgr_context_));
   OnTerminate(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
+}
+
+void SessionmgrImpl::InitializeV2ModularAgents() {
+  FX_DCHECK(v2_service_directory_.has_value());
+  FX_DCHECK(agent_runner_.get());
+
+  for (auto& entry : config_accessor_.sessionmgr_config().v2_modular_agents()) {
+    // Connect to Agent in |v2_service_directory_|.
+    fuchsia::modular::AgentPtr agent;
+    if (zx_status_t status =
+            v2_service_directory_->Connect(agent.NewRequest(), entry.service_name());
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect to fuchia.modular.Agent under the name '"
+                              << entry.service_name() << "' for v2 agent with v1 URL "
+                              << entry.agent_url();
+      continue;
+    }
+
+    agent_runner_->AddAgentFromService(entry.agent_url(), std::move(agent));
+  }
 }
 
 void SessionmgrImpl::InitializeStartupAgents() {

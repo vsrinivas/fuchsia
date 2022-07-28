@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <utility>
 
 #include "lib/fdio/directory.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
@@ -55,11 +56,11 @@ void GetFidlDirectoryEntries(fuchsia::io::Directory* dir,
 
 }  // namespace
 
-class AgentContextImpl::FinishInitializeCall : public Operation<> {
+class AgentContextImpl::InitializeAppClientCall : public Operation<> {
  public:
-  FinishInitializeCall(AgentContextImpl* const agent_context_impl)
+  explicit InitializeAppClientCall(AgentContextImpl* const agent_context_impl)
       : Operation(
-            "AgentContextImpl::FinishInitializeCall", [] {}, agent_context_impl->url_),
+            "AgentContextImpl::InitializeAppClientCall", [] {}, agent_context_impl->url_),
         agent_context_impl_(agent_context_impl) {}
 
  private:
@@ -107,6 +108,33 @@ class AgentContextImpl::FinishInitializeCall : public Operation<> {
   fuchsia::io::DirectoryPtr outgoing_dir_ptr_;
 };
 
+class AgentContextImpl::InitializeAgentPtrCall : public Operation<> {
+ public:
+  explicit InitializeAgentPtrCall(AgentContextImpl* const agent_context_impl)
+      : Operation(
+            "AgentContextImpl::InitializeAgentPtrCall", [] {}, agent_context_impl->url_),
+        agent_context_impl_(agent_context_impl) {}
+
+ private:
+  void Run() override {
+    FX_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
+    FlowToken flow{this};
+
+    agent_context_impl_->state_ = State::RUNNING;
+
+    FX_CHECK(agent_context_impl_->agent_);
+
+    agent_context_impl_->agent_.set_error_handler(
+        [agent_context_impl = agent_context_impl_](zx_status_t status) {
+          FX_PLOGS(ERROR, status) << "Agent " << agent_context_impl->url_
+                                  << " closed its fuchsia.modular.Agent channel.";
+          agent_context_impl->StopOnAppError();
+        });
+  }
+
+  AgentContextImpl* const agent_context_impl_;
+};
+
 // If |is_teardown| is set to true, the agent will be torn down irrespective
 // of whether there is an open-connection. Returns |true| if the
 // agent was stopped, false otherwise.
@@ -125,8 +153,10 @@ class AgentContextImpl::StopCall : public Operation<> {
       return;
     }
 
-    // If there's no fuchsia::modular::Lifecycle binding, it's not possible to teardown gracefully.
-    if (!agent_context_impl_->app_client_->lifecycle_service().is_bound()) {
+    // If there's no AppClient or fuchsia::modular::Lifecycle binding,
+    // it's not possible to teardown gracefully.
+    if (!agent_context_impl_->app_client_ ||
+        !agent_context_impl_->app_client_->lifecycle_service().is_bound()) {
       Stop(flow);
     } else {
       Teardown(flow);
@@ -233,21 +263,34 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 
   app_client_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       info.launcher, std::move(agent_config), /*data_origin=*/"", std::move(service_list));
-  operation_queue_.Add(std::make_unique<FinishInitializeCall>(this));
+  operation_queue_.Add(std::make_unique<InitializeAppClientCall>(this));
 }
 
 AgentContextImpl::AgentContextImpl(
     const AgentContextInfo& info, std::string agent_url,
     std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> app_client, inspect::Node agent_node,
     std::function<void()> on_crash)
-    : url_(agent_url),
+    : url_(std::move(agent_url)),
       app_client_(std::move(app_client)),
       component_context_impl_(info.component_context_info, url_, url_),
       agent_runner_(info.component_context_info.agent_runner),
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)),
       on_crash_(std::move(on_crash)) {
-  operation_queue_.Add(std::make_unique<FinishInitializeCall>(this));
+  operation_queue_.Add(std::make_unique<InitializeAppClientCall>(this));
+}
+
+AgentContextImpl::AgentContextImpl(const AgentContextInfo& info, std::string agent_url,
+                                   fuchsia::modular::AgentPtr agent, inspect::Node agent_node,
+                                   std::function<void()> on_crash)
+    : url_(std::move(agent_url)),
+      agent_(std::move(agent)),
+      component_context_impl_(info.component_context_info, url_, url_),
+      agent_runner_(info.component_context_info.agent_runner),
+      agent_services_factory_(info.agent_services_factory),
+      agent_node_(std::move(agent_node)),
+      on_crash_(std::move(on_crash)) {
+  operation_queue_.Add(std::make_unique<InitializeAgentPtrCall>(this));
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
@@ -259,8 +302,9 @@ void AgentContextImpl::ConnectToService(
   // Run this task on the operation queue to ensure that all member variables are
   // fully initialized before we query their state.
   operation_queue_.Add(std::make_unique<SyncCall>(
-      [this, requestor_url, agent_controller_request = std::move(agent_controller_request),
-       service_name, channel = std::move(channel)]() mutable {
+      [this, requestor_url = std::move(requestor_url),
+       agent_controller_request = std::move(agent_controller_request),
+       service_name = std::move(service_name), channel = std::move(channel)]() mutable {
         FX_CHECK(state_ == State::RUNNING);
 
         // Connect to this service either via opening the service path in the agent's
@@ -284,12 +328,16 @@ void AgentContextImpl::ConnectToService(
         //    connect to its implementation of fuchsia.modular.Agent and the agent
         //    subsequently closing the channel. During this time, the fallback logic here
         //    will fail.
-        if (!agent_.is_bound() || agent_outgoing_services_.count(service_name) > 0) {
+        if (app_client_ &&
+            (!agent_.is_bound() || agent_outgoing_services_.count(service_name) > 0)) {
           app_client_->services().ConnectToService(std::move(channel), service_name);
         } else if (agent_.is_bound()) {
           fuchsia::sys::ServiceProviderPtr agent_services;
           agent_->Connect(requestor_url, agent_services.NewRequest());
           agent_services->ConnectToService(service_name, std::move(channel));
+        } else {
+          FX_LOGS(ERROR) << "Failed to connect to agent service " << service_name
+                         << ". Agent has closed its fuchsia.modular.Agent channel.";
         }
 
         // Add a binding to the |controller|. When all the bindings go away,
