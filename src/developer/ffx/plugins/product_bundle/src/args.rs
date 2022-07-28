@@ -42,10 +42,6 @@ pub struct GetCommand {
     #[argh(positional)]
     pub product_bundle_name: Option<String>,
 
-    /// display list of downloaded files and other details.
-    #[argh(switch)]
-    pub verbose: bool,
-
     /// repositories will be named `NAME`. Defaults to the product bundle name.
     #[argh(option)]
     pub repository: Option<String>,

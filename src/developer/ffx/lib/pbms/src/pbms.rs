@@ -28,10 +28,7 @@ use {
     },
     sdk_metadata::{Metadata, PackageBundle},
     serde_json::Value,
-    std::{
-        io::Write,
-        path::{Path, PathBuf},
-    },
+    std::path::{Path, PathBuf},
     url::Url,
 };
 
@@ -196,25 +193,18 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
 }
 
 /// Helper for `get_product_data()`, see docs there.
-pub(crate) async fn get_product_data_from_gcs<W>(
+pub(crate) async fn get_product_data_from_gcs<F>(
     product_url: &url::Url,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     assert_eq!(product_url.scheme(), GS_SCHEME);
     let product_name = product_url.fragment().expect("URL with trailing product_name fragment.");
     let url = url_sans_fragment(product_url)?;
 
-    fetch_product_metadata(&vec![url.to_owned()], &mut |_d, _f| {
-        write!(writer, ".")?;
-        writer.flush()?;
-        Ok(ProgressResponse::Continue)
-    })
-    .await
-    .context("fetching metadata")?;
+    fetch_product_metadata(&vec![url.to_owned()], progress).await.context("fetching metadata")?;
 
     let storage_path: PathBuf =
         ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
@@ -240,35 +230,24 @@ where
         if !exists_in_gcs(&image.base_uri).await? {
             tracing::warn!("The base_uri does not exist: {}", image.base_uri);
         }
-        fetch_by_format(&image.format, &base_url, &local_dir, &mut |_d, _f| {
-            write!(writer, ".")?;
-            writer.flush()?;
-            Ok(ProgressResponse::Continue)
-        })
-        .await
-        .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
+        fetch_by_format(&image.format, &base_url, &local_dir, progress)
+            .await
+            .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
     }
     tracing::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
 
     let start = std::time::Instant::now();
-    writeln!(writer, "\nGetting package data for {:?}", product_bundle.name)?;
+    tracing::info!("\nGetting package data for {:?}", product_bundle.name);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
-    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, &mut |_d, _f| {
-        write!(writer, ".")?;
-        writer.flush()?;
-        Ok(ProgressResponse::Continue)
-    })
-    .await?;
+    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, progress).await?;
 
     tracing::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
 
-    writeln!(writer, "\nDownload of product data for {:?} is complete.", product_bundle.name)?;
-    if verbose {
-        if let Some(parent) = local_dir.parent() {
-            writeln!(writer, "Data written to \"{}\".", parent.display())?;
-        }
+    tracing::info!("Download of product data for {:?} is complete.", product_bundle.name);
+    if let Some(parent) = local_dir.parent() {
+        tracing::debug!("Data written to \"{}\".", parent.display());
     }
     Ok(())
 }

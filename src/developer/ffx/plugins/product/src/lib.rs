@@ -7,6 +7,7 @@
 //! - acquire related data files, such as disk partition images (data)
 
 use {
+    ::gcs::client::ProgressResponse,
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
     ffx_product_args::{GetCommand, ListCommand, ProductCommand, SubCommand},
@@ -45,7 +46,12 @@ where
 /// `ffx product list` sub-command.
 async fn pb_list<W: Write + Sync>(writer: &mut W, cmd: &ListCommand) -> Result<()> {
     if !cmd.cached {
-        update_metadata(/*verbose=*/ false, writer).await?;
+        update_metadata(&mut |_d, _f| {
+            write!(writer, ".")?;
+            writer.flush()?;
+            Ok(ProgressResponse::Continue)
+        })
+        .await?;
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     entries.sort();
@@ -71,10 +77,20 @@ async fn pb_get<W: Write + Sync>(
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
     if !cmd.cached {
-        update_metadata(cmd.verbose, writer).await?;
+        update_metadata(&mut |_d, _f| {
+            write!(writer, ".")?;
+            writer.flush()?;
+            Ok(ProgressResponse::Continue)
+        })
+        .await?;
     }
     let product_url = pbms::select_product_bundle(&cmd.product_bundle_name).await?;
-    get_product_data(&product_url, cmd.verbose, writer).await?;
+    get_product_data(&product_url, &mut |_d, _f| {
+        write!(writer, ".")?;
+        writer.flush()?;
+        Ok(ProgressResponse::Continue)
+    })
+    .await?;
 
     // Register a repository with the daemon if we downloaded any packaging artifacts.
     if let Some(product_name) = product_url.fragment() {

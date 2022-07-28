@@ -16,6 +16,7 @@ if (is_host) {
     deps = [
       "//src/developer/ffx/lib/pbms:lib",
       "//src/lib/fuchsia-async",
+      "//src/lib/gcs:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:thiserror",

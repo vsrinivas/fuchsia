@@ -27,15 +27,12 @@ use {
         },
         repo_info::RepoInfo,
     },
-    ::gcs::client::ProgressResponse,
+    ::gcs::client::{DirectoryProgress, FileProgress, ProgressResult},
     anyhow::{bail, Context, Result},
     fms::Entries,
     futures::TryStreamExt as _,
     itertools::Itertools as _,
-    std::{
-        io::Write,
-        path::{Path, PathBuf},
-    },
+    std::path::{Path, PathBuf},
 };
 
 mod gcs;
@@ -43,14 +40,12 @@ mod pbms;
 mod repo_info;
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
-pub async fn update_metadata<W>(_verbose: bool, _writer: &mut W) -> Result<()>
+pub async fn update_metadata<F>(progress: &mut F) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     let repos = pbm_repo_list().await.context("getting repo list")?;
-    fetch_product_metadata(&repos, &mut |_d, _f| Ok(ProgressResponse::Continue))
-        .await
-        .context("fetching product metadata")
+    fetch_product_metadata(&repos, progress).await.context("fetching product metadata")
 }
 
 /// Gather a list of PBM reference URLs which include the product bundle entry
@@ -181,13 +176,9 @@ pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
 /// is used.
 ///
 /// `writer` is used to output user messages.
-pub async fn get_product_data<W>(
-    product_url: &url::Url,
-    verbose: bool,
-    writer: &mut W,
-) -> Result<()>
+pub async fn get_product_data<F>(product_url: &url::Url, progress: &mut F) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     if product_url.scheme() == "file" {
         tracing::info!("There's no data download necessary for local products.");
@@ -197,9 +188,7 @@ where
         tracing::info!("Only GCS downloads are supported at this time.");
         return Ok(());
     }
-    get_product_data_from_gcs(product_url, verbose, writer)
-        .await
-        .context("reading pbms entries")?;
+    get_product_data_from_gcs(product_url, progress).await.context("reading pbms entries")?;
     Ok(())
 }
 
@@ -246,6 +235,7 @@ pub async fn get_metadata_glob(product_url: &url::Url) -> Result<PathBuf> {
 mod tests {
     use super::*;
     use crate::pbms::CONFIG_METADATA;
+    use ::gcs::client::ProgressResponse;
     use ffx_config::ConfigLevel;
     use serde_json;
     use std::{fs::File, io::Write};
@@ -296,8 +286,7 @@ mod tests {
             .set(serde_json::json!([""]))
             .await
             .expect("set pbms metadata");
-        let mut writer = Box::new(std::io::stdout());
-        update_metadata(/*verbose=*/ false, &mut writer).await.expect("get pbms");
+        update_metadata(&mut |_d, _f| Ok(ProgressResponse::Continue)).await.expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
     }

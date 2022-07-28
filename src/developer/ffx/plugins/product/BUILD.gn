@@ -15,12 +15,12 @@ ffx_plugin("ffx_product") {
   deps = [
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pbms:lib",
+    "//src/lib/gcs:lib",
   ]
 
   test_deps = [
     "//build/sdk/meta:rust",
     "//src/developer/ffx/lib/fms:lib",
-    "//src/lib/gcs:lib",
     "//third_party/rust_crates:fs_extra",
     "//third_party/rust_crates:pathdiff",
     "//third_party/rust_crates:serde",
