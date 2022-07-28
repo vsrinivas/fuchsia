@@ -92,49 +92,48 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-    std::{path::PathBuf, sync::Arc},
+    std::{collections::HashMap, path::PathBuf, sync::Arc},
     tracing::{info, warn},
 };
 
 // Allow shutdown to take up to an hour.
 pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
-fn take_vdso_vmo(index: u16, expected_name: &str) -> Result<zx::Vmo, anyhow::Error> {
-    let vmo = zx::Vmo::from(
-        fuchsia_runtime::take_startup_handle(HandleInfo::new(HandleType::VdsoVmo, index))
-            .ok_or(anyhow!("Failed to take vDSO {}", index))?,
-    );
-    let name = vmo.get_name()?.into_string()?;
-    if name == expected_name {
-        Ok(vmo)
-    } else {
-        Err(anyhow!("Unexpected vDSO, {} != {}", name, expected_name))
+fn take_vdso_vmos() -> Result<HashMap<String, zx::Vmo>, Error> {
+    let mut vmos = HashMap::new();
+    let mut i = 0;
+    while let Some(handle) = take_startup_handle(HandleInfo::new(HandleType::VdsoVmo, i)) {
+        let vmo = zx::Vmo::from(handle);
+        let name = vmo.get_name()?.into_string()?;
+        vmos.insert(name, vmo);
+        i = i + 1;
     }
+    Ok(vmos)
 }
 
-fn duplicate_vmo(vmo: &zx::Vmo) -> Result<zx::Vmo, Error> {
-    vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)
-        .map_err(|e| anyhow!("Failed to duplicate vDSO VMO: {}", e))
+fn get_vdso_vmo(name: &str) -> Result<zx::Vmo, Error> {
+    lazy_static! {
+        static ref VMOS: HashMap<String, zx::Vmo> =
+            take_vdso_vmos().expect("Failed to take vDSO VMOs");
+    }
+    if let Some(vmo) = VMOS.get(name) {
+        vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)
+            .map_err(|e| anyhow!("Failed to duplicate vDSO VMO {}: {}", name, e))
+    } else {
+        Err(anyhow!("Failed to get vDSO VMO {}", name))
+    }
 }
 
 /// Returns an owned VMO handle to the stable vDSO, duplicated from the handle
 /// provided to this process through its processargs bootstrap message.
 pub fn get_stable_vdso_vmo() -> Result<zx::Vmo, Error> {
-    lazy_static! {
-        static ref STABLE_VDSO_VMO: zx::Vmo =
-            take_vdso_vmo(0, "vdso/stable").expect("Failed to take stable vDSO VMO");
-    }
-    duplicate_vmo(&STABLE_VDSO_VMO)
+    get_vdso_vmo("vdso/stable")
 }
 
 /// Returns an owned VMO handle to the next vDSO, duplicated from the handle
 /// provided to this process through its processargs bootstrap message.
 pub fn get_next_vdso_vmo() -> Result<zx::Vmo, Error> {
-    lazy_static! {
-        static ref NEXT_VDSO_VMO: zx::Vmo =
-            take_vdso_vmo(1, "vdso/next").expect("Failed to take next vDSO VMO");
-    }
-    duplicate_vmo(&NEXT_VDSO_VMO)
+    get_vdso_vmo("vdso/next")
 }
 
 pub struct BuiltinEnvironmentBuilder {
@@ -276,7 +275,8 @@ impl BuiltinEnvironmentBuilder {
                 .ingest_bootfs_vmo(&system_resource_handle)?
                 .publish_kernel_vmo(get_stable_vdso_vmo()?)?
                 .publish_kernel_vmo(get_next_vdso_vmo()?)?
-                .publish_kernel_vmos(HandleType::VdsoVmo, 2)?
+                .publish_kernel_vmo(get_vdso_vmo("vdso/test1")?)?
+                .publish_kernel_vmo(get_vdso_vmo("vdso/test2")?)?
                 .publish_kernel_vmos(HandleType::KernelFileVmo, 0)?
                 .create_and_bind_vfs()?;
         }
