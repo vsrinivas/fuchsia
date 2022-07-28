@@ -152,8 +152,6 @@ if (is_fuchsia) {
     "//src/ui/bin/brightness_manager:auto-brightness",
   ]
 
-  recovery_system_image_deps = [ "//bundles/packages/prod:broadcom" ]
-
   recovery_eng_packages =
       recovery_packages + [
         # So recovery can read board name and version info:
@@ -198,7 +196,6 @@ if (is_fuchsia) {
   assembled_system("recovery-eng") {
     forward_variables_from(recovery_base, "*")
     base_packages = recovery_eng_packages + [ ":core-eng" ]
-    system_image_deps = recovery_system_image_deps
 
     # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
     metadata = {
@@ -230,8 +227,6 @@ if (is_fuchsia) {
   assembled_system("recovery-fdr") {
     base_packages = recovery_packages + [ ":core" ]
     generate_fvm = !bootfs_only
-
-    system_image_deps = recovery_system_image_deps
 
     # We avoid compressing blobs in the blobfs image so that they can be more
     # effectively compressed by the ZBI compressor that is tuned to zstd max.
@@ -273,7 +268,6 @@ if (is_fuchsia) {
   assembled_system("recovery-installer") {
     forward_variables_from(recovery_base, "*")
     base_packages = recovery_installer_packages + [ ":core-installer" ]
-    system_image_deps = recovery_system_image_deps
 
     # The installer needs to see all partitions on the system so that it can
     #determine the installation source and destination
