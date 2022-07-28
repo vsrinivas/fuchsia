@@ -85,5 +85,13 @@
             from: "#feedback",
             to: "#session-manager",
         },
+        {
+            directory: [
+                "tzdata",
+                "tzdata-icu-44-le",
+            ],
+            from: "#tzdata-provider",
+            to: "#session-manager",
+        },
     ],
 }

@@ -328,32 +328,22 @@
             to: "#session",
         },
         {
-            storage: "cache",
+            storage: [
+                "cache",
+                "data",
+                "tmp",
+            ],
             from: "parent",
             to: "#session",
         },
         {
-            storage: "data",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            storage: "tmp",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            directory: "dev-input-report",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            directory: "root-ssl-certificates",
+            directory: [
+                "config-data",
+                "dev-input-report",
+                "root-ssl-certificates",
+                "tzdata",
+                "tzdata-icu-44-le",
+            ],
             from: "parent",
             to: "#session",
         },
