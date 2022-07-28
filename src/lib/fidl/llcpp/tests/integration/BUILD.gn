@@ -90,6 +90,7 @@ fuchsia_unittest_package("fidl_llcpp_gen_api_tests") {
 
 fidl("fidl.test.coding.fuchsia") {
   visibility = [
+    "//src/lib/fidl/cpp/contrib/tests/*",
     "//src/lib/fidl/cpp/tests/*",
     "//src/lib/fidl/llcpp/tests/*",
   ]

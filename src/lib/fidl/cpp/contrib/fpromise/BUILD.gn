@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-  deps = [
-    "connection",
-    "fpromise",
+source_set("fpromise") {
+  public = [ "client.h" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//src/lib/fidl/cpp",
   ]
 }
