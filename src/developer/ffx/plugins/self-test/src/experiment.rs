@@ -5,7 +5,7 @@
 use {crate::test::*, anyhow::*};
 
 pub(crate) async fn test_not_enabled() -> Result<()> {
-    let isolate = Isolate::new("experiment-not-enabled").await?;
+    let isolate = new_isolate("experiment-not-enabled").await?;
 
     let out = isolate.ffx(&["self-test", "experiment"]).await?;
 
@@ -18,7 +18,7 @@ pub(crate) async fn test_not_enabled() -> Result<()> {
 }
 
 pub(crate) async fn test_enabled() -> Result<()> {
-    let isolate = Isolate::new("experiment-enabled").await?;
+    let isolate = new_isolate("experiment-enabled").await?;
 
     let _ = isolate.ffx(&["config", "set", "selftest.experiment", "true"]).await?;
 

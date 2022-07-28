@@ -14,9 +14,18 @@ use {
     termion::is_tty,
 };
 
-pub use ffx_isolate::Isolate;
-
 pub mod asserts;
+
+/// Create a new ffx isolate. This method relies on the environment provided by
+/// the ffx binary and should only be called within ffx.
+pub async fn new_isolate(name: &str) -> Result<ffx_isolate::Isolate> {
+    // This method is always called from within ffx.
+    let ffx_path = std::env::current_exe().expect("could not determine own path");
+    let ffx_path = std::fs::canonicalize(ffx_path).expect("could not canonicalize own path");
+    let ssh_key = ffx_config::get::<String, _>("ssh.priv").await?.into();
+
+    ffx_isolate::Isolate::new(name, ffx_path, ssh_key).await
+}
 
 /// Get the target nodename we're expected to interact with in this test, or
 /// pick the first discovered target. If nodename is set via $FUCHSIA_NODENAME
@@ -27,7 +36,7 @@ pub async fn get_target_nodename() -> Result<String> {
         return Ok(nodename);
     }
 
-    let isolate = Isolate::new("initial-target-discovery").await?;
+    let isolate = new_isolate("initial-target-discovery").await?;
 
     // ensure a daemon is spun up first, so we have a moment to discover targets.
     let start = Instant::now();

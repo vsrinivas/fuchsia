@@ -7,7 +7,6 @@ use fuchsia_async;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::env;
 use std::path::PathBuf;
 use std::process::Child;
 use std::process::Command;
@@ -30,7 +29,7 @@ pub struct CommandOutput {
 pub struct Isolate {
     _tmpdir: TempDir,
 
-    own_path: PathBuf,
+    ffx_path: PathBuf,
     home_dir: PathBuf,
     xdg_config_home: PathBuf,
     pub ascendd_path: PathBuf,
@@ -44,7 +43,7 @@ impl Isolate {
     /// directory. The isolated environment is torn down when the Isolate is
     /// dropped, which will attempt to terminate any running daemon and then
     /// remove all isolate files.
-    pub async fn new(name: &str) -> Result<Isolate> {
+    pub async fn new(name: &str, ffx_path: PathBuf, ssh_key: PathBuf) -> Result<Isolate> {
         let tmpdir = tempfile::Builder::new().prefix(name).tempdir()?;
         let home_dir = tmpdir.path().join("user-home");
         let tmp_dir = tmpdir.path().join("tmp");
@@ -102,21 +101,11 @@ impl Isolate {
             ))?,
         )?;
 
-        let ssh_key = ffx_config::get::<String, _>("ssh.priv").await?.into();
-
-        let own_path = Isolate::get_own_path();
-
-        Ok(Isolate { _tmpdir: tmpdir, own_path, home_dir, xdg_config_home, ascendd_path, ssh_key })
-    }
-
-    fn get_own_path() -> PathBuf {
-        let ffx_path = env::current_exe().expect("could not determine own path");
-        // when we daemonize, our path will change to /, so get the canonical path before that occurs.
-        std::fs::canonicalize(ffx_path).expect("could not canonicalize own path")
+        Ok(Isolate { _tmpdir: tmpdir, ffx_path, home_dir, xdg_config_home, ascendd_path, ssh_key })
     }
 
     pub fn ffx_cmd(&self, args: &[&str]) -> std::process::Command {
-        let mut cmd = Command::new(&self.own_path);
+        let mut cmd = Command::new(&self.ffx_path);
         cmd.args(args);
         cmd.env_clear();
 

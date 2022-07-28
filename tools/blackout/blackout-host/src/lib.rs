@@ -359,8 +359,12 @@ impl TestEnv {
     /// If either creating the isolated ffx instance or the target discovery fails, this function
     /// will panic.
     pub async fn new(package: &'static str, component: &'static str, opts: CommonOpts) -> TestEnv {
+        let ffx_path = std::env::current_exe().expect("could not determine own path");
+        let ffx_path = std::fs::canonicalize(ffx_path).expect("could not canonicalize own path");
+        let ssh_key =
+            ffx_config::get::<String, _>("ssh.priv").await.expect("could not get ssh key").into();
         let isolate = Arc::new(
-            ffx_isolate::Isolate::new("blackout-ffx")
+            ffx_isolate::Isolate::new("blackout-ffx", ffx_path, ssh_key)
                 .await
                 .expect("failed to make new isolated ffx"),
         );

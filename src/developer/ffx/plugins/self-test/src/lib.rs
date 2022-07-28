@@ -54,7 +54,7 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
 }
 
 async fn test_isolated() -> Result<()> {
-    let isolate = Isolate::new("isolated").await?;
+    let isolate = new_isolate("isolated").await?;
 
     let out = isolate.ffx(&["config", "get", "test.is-isolated"]).await?;
     assert_eq!(out.stdout, "true\n");

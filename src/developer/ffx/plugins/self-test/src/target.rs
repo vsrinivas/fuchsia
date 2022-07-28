@@ -5,7 +5,7 @@
 use {crate::test::*, anyhow::*, std::time::Duration};
 
 pub(crate) async fn test_get_ssh_address_timeout() -> Result<()> {
-    let isolate = Isolate::new("get-ssh-address").await?;
+    let isolate = new_isolate("get-ssh-address").await?;
 
     let out = isolate.ffx(&["--target", "noexist", "target", "get-ssh-address", "-t", "1"]).await?;
 
@@ -18,7 +18,7 @@ pub(crate) async fn test_get_ssh_address_timeout() -> Result<()> {
 }
 
 pub(crate) async fn test_manual_add_get_ssh_address() -> Result<()> {
-    let isolate = Isolate::new("target-add-get-ssh-address").await?;
+    let isolate = new_isolate("target-add-get-ssh-address").await?;
 
     let _ = isolate.ffx(&["target", "add", "--nowait", "[::1]:8022"]).await?;
 
@@ -32,7 +32,7 @@ pub(crate) async fn test_manual_add_get_ssh_address() -> Result<()> {
 }
 
 pub(crate) async fn test_manual_add_get_ssh_address_late_add() -> Result<()> {
-    let isolate = Isolate::new("target-add-get-ssh-address-late-add").await?;
+    let isolate = new_isolate("target-add-get-ssh-address-late-add").await?;
 
     let task = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address", "-t", "10"]);
 
@@ -54,7 +54,7 @@ pub mod include_target {
     use super::*;
 
     pub(crate) async fn test_list() -> Result<()> {
-        let isolate = Isolate::new("target-list").await?;
+        let isolate = new_isolate("target-list").await?;
 
         let mut lines = Vec::<String>::new();
 
@@ -82,7 +82,7 @@ pub mod include_target {
     pub(crate) async fn test_get_ssh_address_includes_port() -> Result<()> {
         let target_nodename = get_target_nodename().await?;
 
-        let isolate = Isolate::new("target-get-ssh-address-includes-port").await?;
+        let isolate = new_isolate("target-get-ssh-address-includes-port").await?;
 
         let out = isolate
             .ffx(&["--target", &target_nodename, "target", "get-ssh-address", "-t", "5"])
@@ -98,7 +98,7 @@ pub mod include_target {
     pub(crate) async fn test_target_show() -> Result<()> {
         let target_nodename = get_target_nodename().await?;
 
-        let isolate = Isolate::new("target-show").await?;
+        let isolate = new_isolate("target-show").await?;
 
         let out = isolate.ffx(&["--target", &target_nodename, "target", "show"]).await?;
 

@@ -8,7 +8,7 @@ use {
 };
 
 pub(crate) async fn test_echo() -> Result<()> {
-    let isolate = Isolate::new("daemon-echo").await?;
+    let isolate = new_isolate("daemon-echo").await?;
     let out = isolate.ffx(&["daemon", "echo"]).await?;
 
     let want = "SUCCESS: received \"Ffx\"\n";
@@ -18,7 +18,7 @@ pub(crate) async fn test_echo() -> Result<()> {
 }
 
 pub(crate) async fn test_config_flag() -> Result<()> {
-    let isolate = Isolate::new("daemon-config-flag").await?;
+    let isolate = new_isolate("daemon-config-flag").await?;
     let mut daemon = isolate.ffx_spawn(&["daemon", "start"])?;
 
     // This should not terminate the daemon just started, as it won't
@@ -43,7 +43,7 @@ pub(crate) async fn test_config_flag() -> Result<()> {
 }
 
 pub(crate) async fn test_stop() -> Result<()> {
-    let isolate = Isolate::new("daemon-stop").await?;
+    let isolate = new_isolate("daemon-stop").await?;
     let out = isolate.ffx(&["daemon", "stop"]).await?;
     let want = "Stopped daemon.\n";
 

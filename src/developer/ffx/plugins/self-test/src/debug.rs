@@ -57,7 +57,7 @@ pub mod include_target {
 
         let target = get_target_nodename().await?;
         let sdk = ffx_config::get_sdk().await?;
-        let isolate = Isolate::new("target-debug-run-crasher").await?;
+        let isolate = new_isolate("target-debug-run-crasher").await?;
         let mut config = "sdk.root=".to_owned();
         config.push_str(sdk.get_path_prefix().to_str().unwrap());
         if sdk.get_version() == &ffx_config::sdk::SdkVersion::InTree {
@@ -121,7 +121,7 @@ pub mod include_target {
         // //src/developer/ffx:ffx-e2e-with-target.
 
         let target = get_target_nodename().await?;
-        let isolate = Isolate::new("target-debug-limbo").await?;
+        let isolate = new_isolate("target-debug-limbo").await?;
 
         // Ensure limbo is active and clean.
         let output = isolate.ffx(&["--target", &target, "debug", "limbo", "disable"]).await?;

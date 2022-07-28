@@ -8,7 +8,7 @@ use {
 };
 
 pub(crate) async fn test_env() -> Result<()> {
-    let isolate = Isolate::new("config-env").await?;
+    let isolate = new_isolate("config-env").await?;
     let out = isolate.ffx(&["config", "env"]).await?;
 
     assert!(out.status.success());
@@ -21,7 +21,7 @@ pub(crate) async fn test_env() -> Result<()> {
 }
 
 pub(crate) async fn test_env_get_global() -> Result<()> {
-    let isolate = Isolate::new("config-env-get-global").await?;
+    let isolate = new_isolate("config-env-get-global").await?;
     let out = isolate.ffx(&["config", "env", "get", "global"]).await?;
 
     assert!(out.status.success());
@@ -31,7 +31,7 @@ pub(crate) async fn test_env_get_global() -> Result<()> {
 }
 
 pub(crate) async fn test_get_unknown_key() -> Result<()> {
-    let isolate = Isolate::new("config-get-unknown-key").await?;
+    let isolate = new_isolate("config-get-unknown-key").await?;
     let out = isolate.ffx(&["config", "get", "this-key-SHOULD-NOT-exist"]).await?;
 
     assert!(out.stdout.is_empty());
@@ -43,7 +43,7 @@ pub(crate) async fn test_get_unknown_key() -> Result<()> {
 }
 
 pub(crate) async fn test_set_then_get() -> Result<()> {
-    let isolate = Isolate::new("config-set-then-get").await?;
+    let isolate = new_isolate("config-set-then-get").await?;
     let value = "42";
 
     let out = isolate.ffx(&["config", "set", "test-unique-key", value]).await?;
