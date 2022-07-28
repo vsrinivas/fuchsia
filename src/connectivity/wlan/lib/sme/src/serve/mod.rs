@@ -15,7 +15,7 @@ use {
     fuchsia_inspect_contrib::auto_persist,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureObj, prelude::*, select, stream::FuturesUnordered},
-    log::{error, warn},
+    log::{error, info, warn},
     std::marker::Unpin,
     std::sync::{Arc, Mutex},
     void::Void,
@@ -122,7 +122,8 @@ async fn serve_generic_sme(
                 return Err(format_err!("Generic SME stream failed: {}", e));
             }
             None => {
-                return Err(format_err!("Generic SME stream terminated"));
+                info!("Generic SME stream terminated. Shutting down.");
+                return Ok(());
             }
         }
     }
@@ -427,8 +428,8 @@ mod tests {
         // Also close secondary SME endpoint in the Generic SME.
         drop(generic_sme_proxy);
 
-        // Verify SME future is finished
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Ready(Err(_)));
+        // Verify SME future finished cleanly.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Ready(Ok(())));
     }
 
     struct GenericSmeTestHelper {
