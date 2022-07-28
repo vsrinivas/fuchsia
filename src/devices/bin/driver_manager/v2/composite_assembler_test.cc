@@ -4,6 +4,9 @@
 
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 
+#include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
+
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 constexpr uint32_t kPropId = 2;
@@ -315,4 +318,78 @@ TEST_F(CompositeAssemblerTest, AddCompositeAfterNode) {
 
   // Check that our node no longer matches now that both composites have been created.
   ASSERT_FALSE(manager.BindNode(node));
+}
+
+class FakeContext : public fpromise::context {
+ public:
+  fpromise::executor* executor() const override {
+    EXPECT_TRUE(false);
+    return nullptr;
+  }
+
+  fpromise::suspended_task suspend_task() override {
+    EXPECT_TRUE(false);
+    return fpromise::suspended_task();
+  }
+};
+
+TEST_F(CompositeAssemblerTest, InspectNodes) {
+  bool bind_was_called = false;
+  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node =
+      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
+  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+
+  fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
+  fuchsia_device_manager::DeviceFragment fragment;
+  fragment.name() = kFragmentName;
+  fragment.parts().emplace_back();
+  fragment.parts()[0].match_program().emplace_back();
+  fragment.parts()[0].match_program()[0] = fuchsia_device_manager::BindInstruction BI_MATCH();
+  descriptor.fragments().push_back(fragment);
+
+  descriptor.props().emplace_back();
+  descriptor.props()[0].id() = kPropId;
+  descriptor.props()[0].value() = kPropValue;
+
+  // Create two composite device assemblers.
+  manager.AddCompositeDevice(std::string(kCompositeName), descriptor);
+
+  FakeContext context;
+
+  // Check the inspect data with an unbound node.
+  {
+    inspect::Inspector inspector;
+    manager.Inspect(inspector, inspector.GetRoot());
+    auto heirarchy = inspect::ReadFromInspector(inspector)(context).take_value();
+    ASSERT_EQ(1ul, heirarchy.children().size());
+    auto& assembler = heirarchy.children()[0];
+    EXPECT_EQ(std::string("assembler-0x0"), heirarchy.children()[0].node().name());
+    EXPECT_EQ(
+        std::string(kCompositeName),
+        heirarchy.children()[0].node().get_property<inspect::StringPropertyValue>("name")->value());
+    auto inspect_fragment =
+        assembler.node().get_property<inspect::StringPropertyValue>(std::string(kFragmentName));
+    ASSERT_NE(inspect_fragment, nullptr);
+    EXPECT_EQ(std::string("<unbound>"), inspect_fragment->value());
+  }
+
+  ASSERT_TRUE(manager.BindNode(node));
+
+  // Check the inspect data with a bound node.
+  {
+    inspect::Inspector inspector;
+    manager.Inspect(inspector, inspector.GetRoot());
+    auto heirarchy = inspect::ReadFromInspector(inspector)(context).take_value();
+    ASSERT_EQ(1ul, heirarchy.children().size());
+    auto& assembler = heirarchy.children()[0];
+    EXPECT_EQ(std::string("assembler-0x0"), heirarchy.children()[0].node().name());
+    EXPECT_EQ(
+        std::string(kCompositeName),
+        heirarchy.children()[0].node().get_property<inspect::StringPropertyValue>("name")->value());
+    auto inspect_fragment =
+        assembler.node().get_property<inspect::StringPropertyValue>(std::string(kFragmentName));
+    ASSERT_NE(inspect_fragment, nullptr);
+    EXPECT_EQ(std::string("parent"), inspect_fragment->value());
+  }
 }

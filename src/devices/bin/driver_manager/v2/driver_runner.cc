@@ -201,6 +201,10 @@ fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
   }
   inspector.emplace(std::move(orphans));
 
+  auto dfv1_composites = inspector.GetRoot().CreateChild("dfv1_composites");
+  composite_device_manager_.Inspect(inspector, dfv1_composites);
+  inspector.emplace(std::move(dfv1_composites));
+
   return fpromise::make_ok_promise(inspector);
 }
 

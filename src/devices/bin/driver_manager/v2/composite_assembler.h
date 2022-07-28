@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.device.composite/cpp/fidl.h>
 #include <fidl/fuchsia.device.manager/cpp/fidl.h>
+#include <lib/inspect/cpp/inspect.h>
 
 #include "src/devices/bin/driver_manager/binding.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
@@ -29,6 +30,8 @@ class CompositeDeviceFragment {
 
   std::shared_ptr<Node> bound_node() { return bound_node_.lock(); }
   std::string_view name() const { return name_; }
+
+  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
 
  private:
   std::string name_;
@@ -54,6 +57,8 @@ class CompositeDeviceAssembler {
   // If this node is the last node needed for the composite device, this function
   // will also create the composite node.
   bool BindNode(std::shared_ptr<Node> node);
+
+  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
 
  private:
   // Check if we have all of our fragments bound. If we do, then create the
@@ -93,6 +98,8 @@ class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::Deprecated
   // CompositeDeviceManager must outlive `svc_dir` because it will be used
   // in callbacks when other components connect to the capabilities.
   zx::status<> Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+
+  void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
 
  private:
   void AddCompositeDevice(AddCompositeDeviceRequest& request,

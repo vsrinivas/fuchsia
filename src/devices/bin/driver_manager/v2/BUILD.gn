@@ -81,6 +81,7 @@ executable("composite_assembler_test") {
 
   deps = [
     ":driver_runner",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",

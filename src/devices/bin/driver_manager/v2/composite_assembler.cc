@@ -76,6 +76,15 @@ bool CompositeDeviceFragment::BindNode(std::shared_ptr<Node> node) {
   return true;
 }
 
+void CompositeDeviceFragment::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+  std::string moniker = "<unbound>";
+  if (auto node = bound_node_.lock()) {
+    moniker = node->TopoName();
+  }
+  auto name = root.CreateString(name_, moniker);
+  inspector.emplace(std::move(name));
+}
+
 zx::status<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::Create(
     std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor,
     DriverBinder* binder, async_dispatcher_t* dispatcher) {
@@ -207,6 +216,18 @@ void CompositeDeviceAssembler::TryToAssemble() {
   binder_->Bind(*node.value(), nullptr);
 }
 
+void CompositeDeviceAssembler::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+  auto node = root.CreateChild(root.UniqueName("assembler-"));
+  auto str = node.CreateString("name", name_);
+
+  for (auto& fragment : fragments_) {
+    fragment.Inspect(inspector, node);
+  }
+
+  inspector.emplace(std::move(str));
+  inspector.emplace(std::move(node));
+}
+
 CompositeDeviceManager::CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher,
                                                fit::function<void()> rebind_callback)
     : binder_(binder), dispatcher_(dispatcher), rebind_callback_(std::move(rebind_callback)) {}
@@ -266,6 +287,12 @@ zx::status<> CompositeDeviceManager::Publish(const fbl::RefPtr<fs::PseudoDir>& s
       fidl::DiscoverableProtocolName<fuchsia_device_composite::DeprecatedCompositeCreator>,
       fbl::MakeRefCounted<fs::Service>(service));
   return zx::make_status(status);
+}
+
+void CompositeDeviceManager::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
+  for (auto& assembler : assemblers_) {
+    assembler->Inspect(inspector, root);
+  }
 }
 
 void CompositeDeviceManager::AddCompositeDevice(AddCompositeDeviceRequest& request,
