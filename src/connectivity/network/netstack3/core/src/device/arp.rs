@@ -8,9 +8,9 @@ use alloc::collections::hash_map::{Entry, HashMap};
 use core::{hash::Hash, marker::PhantomData, time::Duration};
 
 use log::{debug, error};
-use net_types::{UnicastAddr, UnicastAddress, Witness as _};
+use net_types::{ip::Ipv4Addr, UnicastAddr, UnicastAddress, Witness as _};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
-use packet_formats::arp::{ArpOp, ArpPacket, ArpPacketBuilder, HType, PType};
+use packet_formats::arp::{ArpOp, ArpPacket, ArpPacketBuilder, HType};
 
 use crate::{
     context::{CounterContext, FrameContext, StateContext, TimerContext, TimerHandler},
@@ -50,14 +50,14 @@ where
 /// entries. It is parametric on a device ID type, `D`, and a network protocol
 /// type, `P`.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct ArpTimerId<D: ArpDevice, P: PType, DeviceId> {
+pub(crate) struct ArpTimerId<D: ArpDevice, DeviceId> {
     device_id: DeviceId,
-    proto_addr: P,
+    proto_addr: Ipv4Addr,
     _marker: PhantomData<D>,
 }
 
-impl<D: ArpDevice, P: PType, DeviceId> ArpTimerId<D, P, DeviceId> {
-    fn new_request_retry(device_id: DeviceId, proto_addr: P) -> ArpTimerId<D, P, DeviceId> {
+impl<D: ArpDevice, DeviceId> ArpTimerId<D, DeviceId> {
+    fn new_request_retry(device_id: DeviceId, proto_addr: Ipv4Addr) -> ArpTimerId<D, DeviceId> {
         ArpTimerId { device_id, proto_addr, _marker: PhantomData }
     }
 
@@ -80,7 +80,7 @@ pub(crate) struct ArpFrameMetadata<D: ArpDevice, DeviceId> {
 /// Equivalent to calling `sync_ctx.deinitialize`.
 ///
 /// See [`ArpHandler::deinitialize`] for more details.
-pub(super) fn deinitialize<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
+pub(super) fn deinitialize<D: ArpDevice, C, H: ArpHandler<D, C>>(
     sync_ctx: &mut H,
     ctx: &mut C,
     device_id: H::DeviceId,
@@ -95,25 +95,19 @@ pub(super) fn deinitialize<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
 /// used when a buffer of type `B` is provided to ARP (in particular, in
 /// [`handle_packet`]), and allows ARP to reuse that buffer rather than needing
 /// to always allocate a new one.
-pub(crate) trait BufferArpContext<
-    D: ArpDevice,
-    P: PType,
-    C: ArpNonSyncCtx<D, P, Self::DeviceId>,
-    B: BufferMut,
->:
-    ArpContext<D, P, C>
+pub(crate) trait BufferArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::DeviceId>, B: BufferMut>:
+    ArpContext<D, C>
     + FrameContext<C, B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
 }
 
 impl<
         D: ArpDevice,
-        P: PType,
         B: BufferMut,
-        C: ArpNonSyncCtx<D, P, SC::DeviceId>,
-        SC: ArpContext<D, P, C>
+        C: ArpNonSyncCtx<D, SC::DeviceId>,
+        SC: ArpContext<D, C>
             + FrameContext<C, B, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>,
-    > BufferArpContext<D, P, C, B> for SC
+    > BufferArpContext<D, C, B> for SC
 {
 }
 
@@ -144,30 +138,26 @@ pub(crate) trait ArpDeviceIdContext<D: ArpDevice> {
 }
 
 /// The non-synchronized execution context for the ARP protocol.
-pub(crate) trait ArpNonSyncCtx<D: ArpDevice, P: PType, DeviceId>:
-    TimerContext<ArpTimerId<D, P, DeviceId>> + CounterContext
+pub(crate) trait ArpNonSyncCtx<D: ArpDevice, DeviceId>:
+    TimerContext<ArpTimerId<D, DeviceId>> + CounterContext
 {
 }
-impl<
-        DeviceId,
-        D: ArpDevice,
-        P: PType,
-        C: TimerContext<ArpTimerId<D, P, DeviceId>> + CounterContext,
-    > ArpNonSyncCtx<D, P, DeviceId> for C
+impl<DeviceId, D: ArpDevice, C: TimerContext<ArpTimerId<D, DeviceId>> + CounterContext>
+    ArpNonSyncCtx<D, DeviceId> for C
 {
 }
 
 /// An execution context for the ARP protocol.
-pub(crate) trait ArpContext<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, Self::DeviceId>>:
+pub(crate) trait ArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::DeviceId>>:
     ArpDeviceIdContext<D>
-    + StateContext<C, ArpState<D, P>, <Self as ArpDeviceIdContext<D>>::DeviceId>
+    + StateContext<C, ArpState<D>, <Self as ArpDeviceIdContext<D>>::DeviceId>
     + FrameContext<C, EmptyBuf, ArpFrameMetadata<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
     /// Get a protocol address of this interface.
     ///
     /// If `device_id` does not have any addresses associated with it, return
     /// `None`.
-    fn get_protocol_addr(&self, ctx: &mut C, device_id: Self::DeviceId) -> Option<P>;
+    fn get_protocol_addr(&self, ctx: &mut C, device_id: Self::DeviceId) -> Option<Ipv4Addr>;
 
     /// Get the hardware address of this interface.
     fn get_hardware_addr(&self, ctx: &mut C, device_id: Self::DeviceId) -> UnicastAddr<D::HType>;
@@ -178,21 +168,26 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, Self:
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
-        proto_addr: P,
+        proto_addr: Ipv4Addr,
         hw_addr: D::HType,
     );
 
     /// Notifies the device layer that the hardware address resolution for the
     /// given protocol address `proto_addr` failed.
-    fn address_resolution_failed(&mut self, ctx: &mut C, device_id: Self::DeviceId, proto_addr: P);
+    fn address_resolution_failed(
+        &mut self,
+        ctx: &mut C,
+        device_id: Self::DeviceId,
+        proto_addr: Ipv4Addr,
+    );
 }
 
 /// An ARP handler for ARP Events.
 ///
-/// `ArpHandler<D, P, C>` is implemented for any type which implements
-/// [`ArpContext<D, P, C>`], and it can also be mocked for use in testing.
-pub(super) trait ArpHandler<D: ArpDevice, P: PType, C>:
-    ArpDeviceIdContext<D> + TimerHandler<C, ArpTimerId<D, P, <Self as ArpDeviceIdContext<D>>::DeviceId>>
+/// `ArpHandler<D, C>` is implemented for any type which implements
+/// [`ArpContext<D, C>`], and it can also be mocked for use in testing.
+pub(super) trait ArpHandler<D: ArpDevice, C>:
+    ArpDeviceIdContext<D> + TimerHandler<C, ArpTimerId<D, <Self as ArpDeviceIdContext<D>>::DeviceId>>
 {
     /// Cleans up state associated with the device.
     ///
@@ -206,7 +201,7 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType, C>:
         ctx: &mut C,
         device_id: Self::DeviceId,
         local_addr: D::HType,
-        lookup_addr: P,
+        lookup_addr: Ipv4Addr,
     ) -> Option<D::HType>;
 
     /// Insert a static entry into this device's ARP table.
@@ -219,13 +214,13 @@ pub(super) trait ArpHandler<D: ArpDevice, P: PType, C>:
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
-        addr: P,
+        addr: Ipv4Addr,
         hw: D::HType,
     );
 }
 
-impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContext<D, P, C>>
-    ArpHandler<D, P, C> for SC
+impl<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>> ArpHandler<D, C>
+    for SC
 {
     fn deinitialize(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
         // Remove all timers associated with the device
@@ -239,7 +234,7 @@ impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContex
         ctx: &mut C,
         device_id: Self::DeviceId,
         _local_addr: D::HType,
-        lookup_addr: P,
+        lookup_addr: Ipv4Addr,
     ) -> Option<D::HType> {
         let result = self.get_state_with(device_id).table.lookup(lookup_addr).cloned();
 
@@ -256,7 +251,7 @@ impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContex
         &mut self,
         ctx: &mut C,
         device_id: Self::DeviceId,
-        addr: P,
+        addr: Ipv4Addr,
         hw: D::HType,
     ) {
         // Cancel any outstanding timers for this entry; if none exist, these
@@ -276,21 +271,21 @@ impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContex
 /// Handle an ARP timer firing.
 ///
 /// Equivalent to calling `sync_ctx.handle_timer`.
-pub(super) fn handle_timer<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
+pub(super) fn handle_timer<D: ArpDevice, C, H: ArpHandler<D, C>>(
     sync_ctx: &mut H,
     ctx: &mut C,
-    id: ArpTimerId<D, P, H::DeviceId>,
+    id: ArpTimerId<D, H::DeviceId>,
 ) {
     sync_ctx.handle_timer(ctx, id)
 }
 
-impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContext<D, P, C>>
-    TimerHandler<C, ArpTimerId<D, P, SC::DeviceId>> for SC
+impl<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>>
+    TimerHandler<C, ArpTimerId<D, SC::DeviceId>> for SC
 {
     fn handle_timer(
         &mut self,
         ctx: &mut C,
-        ArpTimerId { device_id, proto_addr, _marker }: ArpTimerId<D, P, SC::DeviceId>,
+        ArpTimerId { device_id, proto_addr, _marker }: ArpTimerId<D, SC::DeviceId>,
     ) {
         send_arp_request(self, ctx, device_id, proto_addr)
     }
@@ -299,10 +294,9 @@ impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContex
 /// Handles an inbound ARP packet.
 pub(crate) fn handle_packet<
     D: ArpDevice,
-    P: PType,
-    C: ArpNonSyncCtx<D, P, SC::DeviceId>,
+    C: ArpNonSyncCtx<D, SC::DeviceId>,
     B: BufferMut,
-    SC: BufferArpContext<D, P, C, B>,
+    SC: BufferArpContext<D, C, B>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -310,7 +304,7 @@ pub(crate) fn handle_packet<
     mut buffer: B,
 ) {
     // TODO(wesleyac) Add support for probe.
-    let packet = match buffer.parse::<ArpPacket<_, D::HType, P>>() {
+    let packet = match buffer.parse::<ArpPacket<_, D::HType, Ipv4Addr>>() {
         Ok(packet) => packet,
         Err(err) => {
             // If parse failed, it's because either the packet was malformed, or
@@ -459,11 +453,11 @@ pub(crate) fn handle_packet<
 /// See [`ArpHandler::insert_static_neighbor`] for more details.
 // TODO(rheacock): remove `cfg(test)` when this is used.
 #[cfg(test)]
-pub(super) fn insert_static_neighbor<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
+pub(super) fn insert_static_neighbor<D: ArpDevice, C, H: ArpHandler<D, C>>(
     sync_ctx: &mut H,
     ctx: &mut C,
     device_id: H::DeviceId,
-    net: P,
+    net: Ipv4Addr,
     hw: D::HType,
 ) {
     sync_ctx.insert_static_neighbor(ctx, device_id, net, hw)
@@ -474,16 +468,11 @@ pub(super) fn insert_static_neighbor<D: ArpDevice, P: PType, C, H: ArpHandler<D,
 /// The entry will potentially be overwritten by any future static entry and the
 /// entry will not be successfully added into the table if there currently is a
 /// static entry.
-fn insert_dynamic<
-    D: ArpDevice,
-    P: PType,
-    C: ArpNonSyncCtx<D, P, SC::DeviceId>,
-    SC: ArpContext<D, P, C>,
->(
+fn insert_dynamic<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     device_id: SC::DeviceId,
-    net: P,
+    net: Ipv4Addr,
     hw: D::HType,
 ) {
     // Let's extend the expiration deadline by rescheduling the timer. It is
@@ -495,12 +484,12 @@ fn insert_dynamic<
 /// Look up the hardware address for a network protocol address.
 ///
 /// Equivalent to calling `ctx.lookup`.
-pub(super) fn lookup<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
+pub(super) fn lookup<D: ArpDevice, C, H: ArpHandler<D, C>>(
     sync_ctx: &mut H,
     ctx: &mut C,
     device_id: H::DeviceId,
     local_addr: D::HType,
-    lookup_addr: P,
+    lookup_addr: Ipv4Addr,
 ) -> Option<D::HType> {
     sync_ctx.lookup(ctx, device_id, local_addr, lookup_addr)
 }
@@ -512,16 +501,11 @@ const DEFAULT_ARP_REQUEST_MAX_TRIES: usize = 4;
 // Currently at 20 seconds because that's what FreeBSD does.
 const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
 
-fn send_arp_request<
-    D: ArpDevice,
-    P: PType,
-    C: ArpNonSyncCtx<D, P, SC::DeviceId>,
-    SC: ArpContext<D, P, C>,
->(
+fn send_arp_request<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
-    lookup_addr: P,
+    lookup_addr: Ipv4Addr,
 ) {
     let tries_remaining = sync_ctx
         .get_state_mut_with(device_id)
@@ -577,18 +561,18 @@ fn send_arp_request<
 ///
 /// Each device will contain an `ArpState` object for each of the network
 /// protocols that it supports.
-pub(crate) struct ArpState<D: ArpDevice, P: PType + Hash + Eq> {
-    table: ArpTable<P, D::HType>,
+pub(crate) struct ArpState<D: ArpDevice> {
+    table: ArpTable<D::HType>,
 }
 
-impl<D: ArpDevice, P: PType + Hash + Eq> Default for ArpState<D, P> {
+impl<D: ArpDevice> Default for ArpState<D> {
     fn default() -> Self {
         ArpState { table: ArpTable::default() }
     }
 }
 
-struct ArpTable<P: Hash + Eq, H> {
-    table: HashMap<P, ArpValue<H>>,
+struct ArpTable<H> {
+    table: HashMap<Ipv4Addr, ArpValue<H>>,
 }
 
 #[derive(Debug, Eq, PartialEq)] // for testing
@@ -601,10 +585,10 @@ enum ArpValue<H> {
     Waiting { remaining_tries: usize },
 }
 
-impl<P: Hash + Eq, H> ArpTable<P, H> {
+impl<H> ArpTable<H> {
     // TODO(rheacock): remove `cfg(test)` when this is used
     #[cfg(test)]
-    fn insert_static(&mut self, net: P, hw: H) {
+    fn insert_static(&mut self, net: Ipv4Addr, hw: H) {
         // A static entry overrides everything, so just insert it.
         let _: Option<_> = self.table.insert(net, ArpValue::_Static { hardware_addr: hw });
     }
@@ -612,7 +596,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
     /// This function tries to insert a dynamic entry into the ArpTable, the
     /// bool returned from the function is used to indicate whether the
     /// insertion is successful.
-    fn insert_dynamic(&mut self, net: P, hw: H) -> bool {
+    fn insert_dynamic(&mut self, net: Ipv4Addr, hw: H) -> bool {
         // A dynamic entry should not override a static one, if that happens,
         // don't do it. if we want to handle this kind of situation in the
         // future, we can make this function return a `Result`.
@@ -636,11 +620,11 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
         true
     }
 
-    fn remove(&mut self, net: P) {
+    fn remove(&mut self, net: Ipv4Addr) {
         let _: Option<_> = self.table.remove(&net);
     }
 
-    fn get_remaining_tries(&self, net: P) -> Option<usize> {
+    fn get_remaining_tries(&self, net: Ipv4Addr) -> Option<usize> {
         if let Some(ArpValue::Waiting { remaining_tries }) = self.table.get(&net) {
             Some(*remaining_tries)
         } else {
@@ -648,7 +632,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
         }
     }
 
-    fn set_waiting(&mut self, net: P, remaining_tries: usize) {
+    fn set_waiting(&mut self, net: Ipv4Addr, remaining_tries: usize) {
         // TODO(https://fxbug.dev/81368): Remove this type.
         //
         // This type (ArpTable) is type system-defeating. Instead of interacting with entries in
@@ -658,7 +642,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
         let _: Option<_> = self.table.insert(net, ArpValue::Waiting { remaining_tries });
     }
 
-    fn lookup(&self, addr: P) -> Option<&H> {
+    fn lookup(&self, addr: Ipv4Addr) -> Option<&H> {
         match self.table.get(&addr) {
             Some(ArpValue::_Static { hardware_addr })
             | Some(ArpValue::Dynamic { hardware_addr }) => Some(hardware_addr),
@@ -667,7 +651,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
     }
 }
 
-impl<P: Hash + Eq, H> Default for ArpTable<P, H> {
+impl<H> Default for ArpTable<H> {
     fn default() -> Self {
         ArpTable { table: HashMap::default() }
     }
@@ -703,7 +687,7 @@ mod tests {
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
     const TEST_INVALID_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
-    const TEST_REQUEST_RETRY_TIMER_ID: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()> =
+    const TEST_REQUEST_RETRY_TIMER_ID: ArpTimerId<EthernetLinkDevice, ()> =
         ArpTimerId { device_id: (), proto_addr: TEST_REMOTE_IPV4, _marker: PhantomData };
 
     /// A dummy `ArpContext` that stores frames, address resolution events, and
@@ -713,7 +697,7 @@ mod tests {
         hw_addr: UnicastAddr<Mac>,
         addr_resolved: Vec<(Ipv4Addr, Mac)>,
         addr_resolution_failed: Vec<Ipv4Addr>,
-        arp_state: ArpState<EthernetLinkDevice, Ipv4Addr>,
+        arp_state: ArpState<EthernetLinkDevice>,
     }
 
     impl Default for DummyArpCtx {
@@ -728,7 +712,7 @@ mod tests {
         }
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>, (), ()>;
+    type MockNonSyncCtx = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, ()>, (), ()>;
 
     type MockCtx =
         DummySyncCtx<DummyArpCtx, ArpFrameMetadata<EthernetLinkDevice, ()>, DummyDeviceId>;
@@ -737,7 +721,7 @@ mod tests {
         type DeviceId = ();
     }
 
-    impl ArpContext<EthernetLinkDevice, Ipv4Addr, MockNonSyncCtx> for MockCtx {
+    impl ArpContext<EthernetLinkDevice, MockNonSyncCtx> for MockCtx {
         fn get_protocol_addr(&self, _ctx: &mut MockNonSyncCtx, _device_id: ()) -> Option<Ipv4Addr> {
             self.get_ref().proto_addr
         }
@@ -766,12 +750,12 @@ mod tests {
         }
     }
 
-    impl StateContext<MockNonSyncCtx, ArpState<EthernetLinkDevice, Ipv4Addr>> for MockCtx {
-        fn get_state_with(&self, _id: ()) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+    impl StateContext<MockNonSyncCtx, ArpState<EthernetLinkDevice>> for MockCtx {
+        fn get_state_with(&self, _id: ()) -> &ArpState<EthernetLinkDevice> {
             &self.get_ref().arp_state
         }
 
-        fn get_state_mut_with(&mut self, _id: ()) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+        fn get_state_mut_with(&mut self, _id: ()) -> &mut ArpState<EthernetLinkDevice> {
             &mut self.get_mut().arp_state
         }
     }
@@ -793,7 +777,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, ArpNetworkType::Ipv4);
 
-        handle_packet::<_, Ipv4Addr, _, _, _>(sync_ctx, ctx, (), buf);
+        handle_packet::<_, _, _, _>(sync_ctx, ctx, (), buf);
     }
 
     // Validate that buf is an ARP packet with the specific op, local_ipv4,
@@ -837,7 +821,7 @@ mod tests {
     fn validate_single_timer(
         non_sync_ctx: &MockNonSyncCtx,
         instant: Duration,
-        id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
+        id: ArpTimerId<EthernetLinkDevice, ()>,
     ) {
         non_sync_ctx.timer_ctx().assert_timers_installed([(id, DummyInstant::from(instant))]);
     }
@@ -954,8 +938,7 @@ mod tests {
         // Cancelling timers matches on the DeviceId, so setup a context that
         // uses IDs. The test doesn't use the context functions, so it's okay
         // that they return the same info.
-        type MockNonSyncCtx2 =
-            DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>, (), ()>;
+        type MockNonSyncCtx2 = DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, usize>, (), ()>;
 
         type MockCtx2 = crate::context::testutil::DummySyncCtx<
             DummyArpCtx,
@@ -967,7 +950,7 @@ mod tests {
             type DeviceId = usize;
         }
 
-        impl ArpContext<EthernetLinkDevice, Ipv4Addr, MockNonSyncCtx2> for MockCtx2 {
+        impl ArpContext<EthernetLinkDevice, MockNonSyncCtx2> for MockCtx2 {
             fn get_protocol_addr(
                 &self,
                 _ctx: &mut MockNonSyncCtx2,
@@ -1004,15 +987,12 @@ mod tests {
             }
         }
 
-        impl StateContext<MockNonSyncCtx2, ArpState<EthernetLinkDevice, Ipv4Addr>, usize> for MockCtx2 {
-            fn get_state_with(&self, _id: usize) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+        impl StateContext<MockNonSyncCtx2, ArpState<EthernetLinkDevice>, usize> for MockCtx2 {
+            fn get_state_with(&self, _id: usize) -> &ArpState<EthernetLinkDevice> {
                 &self.get_ref().arp_state
             }
 
-            fn get_state_mut_with(
-                &mut self,
-                _id: usize,
-            ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+            fn get_state_mut_with(&mut self, _id: usize) -> &mut ArpState<EthernetLinkDevice> {
                 &mut self.get_mut().arp_state
             }
         }
@@ -1243,7 +1223,7 @@ mod tests {
 
     #[test]
     fn test_arp_table() {
-        let mut t: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut t: ArpTable<Mac> = ArpTable::default();
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
         assert!(t.insert_dynamic(Ipv4Addr::new([10, 0, 0, 1]), mac));
@@ -1453,7 +1433,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_static_override_dynamic() {
-        let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut table: ArpTable<Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
@@ -1465,7 +1445,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_static_override_static() {
-        let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut table: ArpTable<Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
@@ -1477,7 +1457,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_static_override_waiting() {
-        let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut table: ArpTable<Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.set_waiting(ip, 4);
@@ -1488,7 +1468,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_dynamic_override_waiting() {
-        let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut table: ArpTable<Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.set_waiting(ip, 4);
@@ -1499,7 +1479,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_dynamic_override_dynamic() {
-        let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut table: ArpTable<Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
@@ -1511,7 +1491,7 @@ mod tests {
 
     #[test]
     fn test_arp_table_dynamic_should_not_override_static() {
-        let mut table: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
+        let mut table: ArpTable<Mac> = ArpTable::default();
         let ip = TEST_REMOTE_IPV4;
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);

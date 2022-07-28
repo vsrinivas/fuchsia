@@ -327,7 +327,7 @@ pub(crate) struct EthernetDeviceState {
     link_multicast_groups: RefCountedHashSet<MulticastAddr<Mac>>,
 
     /// IPv4 ARP state.
-    ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
+    ipv4_arp: ArpState<EthernetLinkDevice>,
 
     // pending_frames stores a list of serialized frames indexed by their
     // destination IP addresses. The frames contain an entire EthernetFrame
@@ -403,12 +403,12 @@ impl EthernetDeviceState {
 /// `D` is the type of device ID that identifies different Ethernet devices.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum EthernetTimerId<D> {
-    Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
+    Arp(ArpTimerId<EthernetLinkDevice, D>),
     Nudv6(NudTimerId<Ipv6, EthernetLinkDevice, D>),
 }
 
-impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D> {
-    fn from(id: ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>) -> EthernetTimerId<D> {
+impl<D> From<ArpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
+    fn from(id: ArpTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
         EthernetTimerId::Arp(id)
     }
 }
@@ -441,7 +441,7 @@ pub(super) fn handle_timer<
 impl_timer_context!(
     DeviceId,
     EthernetTimerId<DeviceId>,
-    ArpTimerId<EthernetLinkDevice, Ipv4Addr, DeviceId>,
+    ArpTimerId<EthernetLinkDevice, DeviceId>,
     EthernetTimerId::Arp(id),
     id
 );
@@ -781,16 +781,13 @@ pub(super) fn deinitialize<
 }
 
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
-    StateContext<C, ArpState<EthernetLinkDevice, Ipv4Addr>, SC::DeviceId> for SC
+    StateContext<C, ArpState<EthernetLinkDevice>, SC::DeviceId> for SC
 {
-    fn get_state_with(&self, id: SC::DeviceId) -> &ArpState<EthernetLinkDevice, Ipv4Addr> {
+    fn get_state_with(&self, id: SC::DeviceId) -> &ArpState<EthernetLinkDevice> {
         &self.get_state_with(id).link.ipv4_arp
     }
 
-    fn get_state_mut_with(
-        &mut self,
-        id: SC::DeviceId,
-    ) -> &mut ArpState<EthernetLinkDevice, Ipv4Addr> {
+    fn get_state_mut_with(&mut self, id: SC::DeviceId) -> &mut ArpState<EthernetLinkDevice> {
         &mut self.get_state_mut_with(id).link.ipv4_arp
     }
 }
@@ -823,7 +820,7 @@ impl<C: DeviceIdContext<EthernetLinkDevice>> ArpDeviceIdContext<EthernetLinkDevi
 }
 
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
-    ArpContext<EthernetLinkDevice, Ipv4Addr, C> for SC
+    ArpContext<EthernetLinkDevice, C> for SC
 {
     fn get_protocol_addr(
         &self,
@@ -1175,7 +1172,7 @@ mod tests {
                 crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::with_state(
                     DummyEthernetCtx::new(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
                 ));
-            <DummyCtx as ArpHandler<_, _, _>>::insert_static_neighbor(
+            <DummyCtx as ArpHandler<_, _>>::insert_static_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 DummyDeviceId,
