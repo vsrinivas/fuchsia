@@ -25,8 +25,11 @@ pub fn fix<R: BufRead>(lints: &mut R, filter: &[String], dryrun: bool) -> Result
         }
     }
 
-    let suggestions =
-        rustfix::get_suggestions_from_json(&all_lints, &filter_lints, Filter::Everything)?;
+    let suggestions = rustfix::get_suggestions_from_json(
+        &all_lints,
+        &filter_lints,
+        Filter::MachineApplicableOnly,
+    )?;
     if suggestions.is_empty() {
         return Err(anyhow!("Couldn't find any fixable occurances of those lints"));
     }
