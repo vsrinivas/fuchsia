@@ -52,5 +52,10 @@
             from: "parent",
             to: "#devices-tests",
         },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "parent",
+            to: "#devices-tests",
+        },
     ],
 }

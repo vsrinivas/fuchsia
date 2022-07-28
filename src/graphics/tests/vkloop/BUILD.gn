@@ -42,14 +42,13 @@ resource("shaders") {
 
 fuchsia_component("vkloop_cmp") {
   testonly = true
+  manifest = "meta/vkloop.cml"
   component_name = "vkloop"
   deps = [
     ":shaders",
     ":vkloop_bin",
     "//src/lib/vulkan/validation_layers",
   ]
-
-  manifest = "meta/vkloop.cmx"
 }
 
 fuchsia_test_package("vkloop-pkg") {
