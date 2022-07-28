@@ -551,8 +551,6 @@ group("cmx_allowlist") {
     "//src/sys/tools/run/test:run_return_value_test_manifest_compile",
     "//src/sys/tools/run/test:run_test_exiter_manifest_compile",
     "//src/sys/tools/run/test:run_tests_manifest_compile",
-    "//src/testing/fidl/echo_client_placeholder:echo_client_manifest_compile",
-    "//src/testing/fidl/echo_server_placeholder:echo_server_manifest_compile",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component_v1_manifest_compile",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_without_flags_component_v1_manifest_compile",
     "//src/testing/loadbench:loadbench_component_manifest_compile",

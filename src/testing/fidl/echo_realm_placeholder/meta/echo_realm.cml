@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+        {
+            name: "echo_client",
+            url: "#meta/echo_client.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "test.placeholders.Echo",
+            from: "#echo_server",
+            to: "#echo_client",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#echo_client",
+                "#echo_server",
+            ],
+        },
+    ],
+}

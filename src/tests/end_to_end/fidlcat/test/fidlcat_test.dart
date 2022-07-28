@@ -6,13 +6,49 @@
 // @dart=2.9
 
 import 'dart:async' show Completer;
+import 'dart:convert' show utf8;
 import 'dart:io'
-    show Directory, File, Platform, Process, ProcessSignal, stdout, stderr;
+    show Directory, File, Platform, Process, ProcessResult, stdout, stderr;
 
 import 'package:sl4f/sl4f.dart' show Sl4f;
 import 'package:test/test.dart';
 
 const _timeout = Timeout(Duration(minutes: 5));
+
+class Ffx {
+  static String _ffxPath =
+      Platform.script.resolve('runtime_deps/ffx').toFilePath();
+  static List<String> _ffxArgs =
+      Platform.environment['FUCHSIA_DEVICE_ADDR']?.isNotEmpty
+          ? ['--target', Platform.environment['FUCHSIA_DEVICE_ADDR']]
+          : [];
+  // Convert FUCHSIA_SSH_KEY into an absolute path. Otherwise ffx cannot find
+  // key and complains "Timeout attempting to reach target".
+  // See fxbug.dev/101081.
+  static Map<String, String> _environment =
+      Platform.environment['FUCHSIA_SSH_KEY']?.isNotEmpty
+          ? {
+              'FUCHSIA_SSH_KEY':
+                  File(Platform.environment['FUCHSIA_SSH_KEY']).absolute.path
+            }
+          : {};
+
+  static Future<Process> start([List<String> commandArgs]) {
+    return Process.start(_ffxPath, _ffxArgs + commandArgs,
+        environment: _environment);
+  }
+
+  static Future<ProcessResult> run([List<String> commandArgs]) async {
+    var result = await Process.run(_ffxPath, _ffxArgs + commandArgs,
+        environment: _environment);
+    if (result.exitCode != 0) {
+      throw Exception('Unexpected error running ffx:\n'
+          'command: ffx ${commandArgs.join(" ")}]\n'
+          'stdout: ${result.stdout}\n'
+          'stderror: ${result.stderr}\n');
+    }
+  }
+}
 
 class RunFidlcat {
   StringBuffer stdoutBuffer = StringBuffer();
@@ -29,24 +65,7 @@ class RunFidlcat {
   static String _socketPath;
 
   static Future<void> setUp() async {
-    final String ffxPath =
-        Platform.script.resolve('runtime_deps/ffx').toFilePath();
-    List<String> arguments = [];
-    if (Platform.environment.containsKey('FUCHSIA_DEVICE_ADDR')) {
-      arguments
-          .addAll(['--target', Platform.environment['FUCHSIA_DEVICE_ADDR']]);
-    }
-    arguments.addAll(['debug', 'connect', '--agent-only']);
-    Map<String, String> environment = {};
-    // Convert FUCHSIA_SSH_KEY into an absolute path. Otherwise ffx cannot find
-    // key and complains "Timeout attempting to reach target".
-    // See fxbug.dev/101081.
-    if (Platform.environment.containsKey('FUCHSIA_SSH_KEY')) {
-      final sshKey = Platform.environment['FUCHSIA_SSH_KEY'];
-      environment['FUCHSIA_SSH_KEY'] = File(sshKey).absolute.path;
-    }
-    _ffxProcess =
-        await Process.start(ffxPath, arguments, environment: environment);
+    _ffxProcess = await Ffx.start(['debug', 'connect', '--agent-only']);
     final Completer<String> connected = Completer();
     _ffxProcess.stdout.listen((s) {
       // For debugging.
@@ -90,7 +109,7 @@ class RunFidlcat {
           .toFilePath(),
       '-s',
       Platform.script
-          .resolve('runtime_deps/echo_client_placeholder.debug')
+          .resolve('runtime_deps/echo_realm_placeholder/echo_client.debug')
           .toFilePath(),
     ]..addAll(extraArguments);
 
@@ -132,6 +151,13 @@ class RunFidlcat {
 void main(List<String> arguments) {
   Sl4f sl4fDriver;
 
+  /// fuchsia-pkg URL for an echo realm. The echo realm contains echo client and echo server components.
+  /// The echo client is an eager child of the realm and will start when the realm is started/run.
+  const String echoRealmUrl =
+      'fuchsia-pkg://fuchsia.com/echo_realm_placeholder#meta/echo_realm.cm';
+  const String echoRealmName = 'fidlcat_test_echo_realm';
+  const String echoRealmMoniker = '/core/ffx-laboratory:$echoRealmName';
+
   setUpAll(() async {
     sl4fDriver = Sl4f.fromEnvironment();
     await RunFidlcat.setUp();
@@ -146,16 +172,20 @@ void main(List<String> arguments) {
         ' for details!');
   });
 
+  /// A helper function that will create and run an echo client and server in a realm, then
+  /// destroy the realm components.
+  Future<void> runEchoComponent() async {
+    await Ffx.run(['component', 'run', '--name', echoRealmName, echoRealmUrl]);
+    await Ffx.run(['component', 'destroy', echoRealmMoniker]);
+  }
+
   /// Simple test to ensure that fidlcat can run the echo client, and that some of the expected
   /// output is present.  It starts the agent on the target, and then launches fidlcat with the
   /// correct parameters.
   group('fidlcat', () {
     test('Simple test of echo client output and shutdown', () async {
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
-        'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
-      ]);
+      await instance.run(sl4fDriver, ['run', echoRealmUrl]);
 
       expect(
           instance.stdoutString,
@@ -163,7 +193,7 @@ void main(List<String> arguments) {
               '    value: string = "hello world"\n'
               '  }'),
           reason: instance.additionalResult);
-    });
+    }, skip: 'fidlcat does not support running v2 components yet');
 
     test('Test --stay-alive', () async {
       var instance = RunFidlcat();
@@ -183,14 +213,10 @@ void main(List<String> arguments) {
 
       await connected.future;
 
-      /// fuchsia-pkg URL for the echo client.
-      const String echoClientUrl =
-          'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx';
-
-      /// Launch three instances of echo client one after the other.
-      await sl4fDriver.ssh.run('run $echoClientUrl');
-      await sl4fDriver.ssh.run('run $echoClientUrl');
-      await sl4fDriver.ssh.run('run $echoClientUrl');
+      /// Launch three instances of the echo client one after the other.
+      await runEchoComponent();
+      await runEchoComponent();
+      await runEchoComponent();
 
       await finished.future;
 
@@ -208,7 +234,7 @@ void main(List<String> arguments) {
         '--remote-name=echo_server',
         '--extra-name=echo_client',
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
+        echoRealmUrl
       ]);
 
       final lines = instance.stdoutString.split('\n\n');
@@ -219,20 +245,17 @@ void main(List<String> arguments) {
       /// "Monitoring echo_client" and "Monitoring echo_server".
       /// With --extra-name for echo_client, we wait for echo_server before monitoring echo_client.
       /// Therefore, both line are one after the other.
-      expect(lines[1], contains('Monitoring echo_client.cmx koid='),
+      expect(lines[1], contains('Monitoring echo_client.cm koid='),
           reason: instance.additionalResult);
 
-      expect(lines[2], contains('Monitoring echo_server.cmx koid='),
+      expect(lines[2], contains('Monitoring echo_server.cm koid='),
           reason: instance.additionalResult);
-    });
+    }, skip: 'fidlcat does not support running v2 components yet');
 
     test('Test --trigger', () async {
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
-        '--trigger=.*EchoString',
-        'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
-      ]);
+      await instance
+          .run(sl4fDriver, ['--trigger=.*EchoString', 'run', echoRealmUrl]);
 
       final lines = instance.stdoutString.split('\n\n');
 
@@ -240,7 +263,7 @@ void main(List<String> arguments) {
       expect(lines[2],
           contains('sent request test.placeholders/Echo.EchoString = {\n'),
           reason: instance.additionalResult);
-    });
+    }, skip: 'fidlcat does not support running v2 components yet');
 
     test('Test --messages', () async {
       var instance = RunFidlcat();
@@ -250,7 +273,7 @@ void main(List<String> arguments) {
         '--exclude-syscalls=zx_handle_close',
         '--exclude-syscalls=zx_handle_close_many',
         'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
+        echoRealmUrl
       ]);
 
       final lines = instance.stdoutString.split('\n\n');
@@ -269,7 +292,7 @@ void main(List<String> arguments) {
               '      response: string = "hello world"\n'
               '    }'),
           reason: instance.additionalResult);
-    });
+    }, skip: 'fidlcat does not support running v2 components yet');
 
     test('Test save/replay', () async {
       var systemTempDir = Directory.systemTemp;
@@ -277,12 +300,8 @@ void main(List<String> arguments) {
       final String savePath = '${fidlcatTemp.path}/save.pb';
 
       var instanceSave = RunFidlcat();
-      await instanceSave.run(sl4fDriver, [
-        '--to',
-        savePath,
-        'run',
-        'fuchsia-pkg://fuchsia.com/echo_client_placeholder#meta/echo_client.cmx'
-      ]);
+      await instanceSave
+          .run(sl4fDriver, ['--to', savePath, 'run', echoRealmUrl]);
 
       expect(
           instanceSave.stdoutString,
@@ -300,7 +319,7 @@ void main(List<String> arguments) {
               '    value: string = "hello world"\n'
               '  }'),
           reason: instanceReplay.additionalResult);
-    });
+    }, skip: 'fidlcat does not support running v2 components yet');
 
     test('Test --with=generate-tests (more than one proces)', () async {
       final String echoProto =

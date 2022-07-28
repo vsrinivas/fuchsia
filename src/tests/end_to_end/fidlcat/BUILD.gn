@@ -64,10 +64,9 @@ template("generate_symbols") {
 }
 
 generate_symbols("echo_client_sym") {
-  library_label =
-      "//src/testing/fidl/echo_client_placeholder:bin($target_toolchain)"
+  library_label = "//src/testing/fidl/echo_realm_placeholder/echo_client:bin($target_toolchain)"
   library_path = "$_shared_out_dir/echo_client_placeholder"
-  output = "${target_gen_dir}/echo_client_placeholder.debug"
+  output = "${target_gen_dir}/echo_realm_placeholder/echo_client.debug"
 }
 
 # Examples FIDL library required by save/replay .proto tests recorded against
@@ -93,7 +92,7 @@ if (is_host) {
       "$root_out_dir/ffx",
       "$root_out_dir/fidlcat",
       "$root_out_dir/gen/tools/fidlcat/fidlcat_sdk.meta.json",
-      "${target_gen_dir}/echo_client_placeholder.debug",
+      "${target_gen_dir}/echo_realm_placeholder/echo_client.debug",
       "//src/tests/end_to_end/fidlcat/echo.pb",
       "//src/tests/end_to_end/fidlcat/echo_client.pb",
       "//src/tests/end_to_end/fidlcat/echo_client_sync.pb",
@@ -125,7 +124,6 @@ group("tests") {
 
   deps = [
     ":fidlcat_test($host_toolchain)",
-    "//src/testing/fidl/echo_client_placeholder",
-    "//src/testing/fidl/echo_server_placeholder",
+    "//src/testing/fidl/echo_realm_placeholder",
   ]
 }

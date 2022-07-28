@@ -3,9 +3,6 @@ that can be used in tests:
 
 * `placeholders.test.fidl`: FIDL library containing a simple `Echo` FIDL
   protocol definition.
-* `echo_server_placeholder`: Component that implements and serves the
-  `test.placeholders.Echo` protocol. Available as an individual component or in
-  a single-component package.
-* `echo_client_placeholder`: Component that connects to an implementation of the
-  `test.placeholders.Echo` protocol. Available as an individual component or in
-  a single-component package.
+* `echo_realm_placeholder`: A realm containing echo client and server components:
+  * `echo_client`: A child component that is eagerly started with the realm.  Connects to the `echo_server` over the `test.placeholders.Echo` protocol.
+  * `echo_server`: Implements and serves the `test.placeholders.Echo` protocol.

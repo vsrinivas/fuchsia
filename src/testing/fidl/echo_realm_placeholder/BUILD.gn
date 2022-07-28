@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Realm component used to launch echo client/server
+fuchsia_component("echo_realm") {
+  manifest = "meta/echo_realm.cml"
+}
+
+fuchsia_component("echo_server") {
+  manifest = "echo_server/meta/echo_server.cml"
+  deps = [ "echo_server:bin" ]
+}
+
+fuchsia_component("echo_client") {
+  manifest = "echo_client/meta/echo_client.cml"
+  deps = [ "echo_client:bin" ]
+}
+
+fuchsia_package("echo_realm_placeholder") {
+  deps = [
+    ":echo_client",
+    ":echo_realm",
+    ":echo_server",
+  ]
+}

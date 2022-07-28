@@ -8,18 +8,13 @@
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
 
-#include <test/placeholders/cpp/fidl.h>
-
 #include "echo_client_app.h"
 
 int main(int argc, const char** argv) {
-  std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_placeholder#meta/echo_server.cmx";
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {
-    if (!strcmp("--server", argv[i])) {
-      server_url = argv[++i];
-    } else if (!strcmp("-m", argv[i])) {
+    if (!strcmp("-m", argv[i])) {
       msg = argv[++i];
     }
   }
@@ -27,7 +22,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   echo::EchoClientApp app;
-  app.Start(server_url);
+  app.Start();
 
   app.echo()->EchoString(msg, [&loop](fidl::StringPtr value) {
     printf("***** Response: %s\n", value->data());
