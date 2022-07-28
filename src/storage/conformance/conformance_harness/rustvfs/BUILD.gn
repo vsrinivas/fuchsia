@@ -10,8 +10,8 @@ rustc_binary("bin") {
   edition = "2021"
   name = "io_conformance_harness_rustvfs"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.io.test:fuchsia.io.test_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

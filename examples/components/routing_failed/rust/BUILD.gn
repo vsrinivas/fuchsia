@@ -9,7 +9,7 @@ rustc_binary("bin") {
   edition = "2021"
   name = "routing_failed_echo_client_rust"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

@@ -9,7 +9,7 @@ ffx_plugin("ffx_debug_limbo") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.exception:fuchsia.exception-rustc",
+    "//sdk/fidl/fuchsia.exception:fuchsia.exception_rust",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/lib/zircon/rust:fuchsia-zircon-types",
   ]

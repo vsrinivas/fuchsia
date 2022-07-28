@@ -7,9 +7,9 @@ import("//build/rust/rustc_test.gni")
 rustc_test("reconnect_to_wpa2_network") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
-    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_rust",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
+    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_rust",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",

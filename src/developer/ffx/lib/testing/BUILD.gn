@@ -17,8 +17,8 @@ rustc_library("lib") {
 
   sources = [ "src/lib.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
   ]

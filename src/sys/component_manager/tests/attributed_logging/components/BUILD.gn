@@ -21,7 +21,7 @@ rustc_binary("use-unoffered") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
   ]
   sources = [ "use-unoffered.rs" ]
 }

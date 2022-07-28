@@ -10,7 +10,7 @@ rustc_library("stress-test-actor") {
   source_root = "src/actor.rs"
   deps = [
     ":actor_includes",
-    "//sdk/fidl/fuchsia.stresstest:fuchsia.stresstest-rustc",
+    "//sdk/fidl/fuchsia.stresstest:fuchsia.stresstest_rust",
     "//sdk/fidl/fuchsia.stresstest:rust_measure_tape_for_action",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",

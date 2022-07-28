@@ -28,9 +28,9 @@ rustc_test("lowpan-integration-tests-bin") {
   name = "lowpan_integration_tests"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
-    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
+    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan_rust",
+    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device_rust",
+    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test_rust",
     "//src/connectivity/lowpan/service",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -10,7 +10,7 @@ rustc_test("bin") {
   edition = "2021"
 
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

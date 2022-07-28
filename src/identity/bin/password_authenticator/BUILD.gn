@@ -13,14 +13,14 @@ rustc_binary("bin") {
 
   deps = [
     ":password_authenticator_config",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
-    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
-    "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
+    "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/identity/lib/identity_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -45,7 +45,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    ":test.identity-rustc",
+    ":test.identity_rust",
     "//src/lib/fuchsia",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",

@@ -10,10 +10,10 @@ ffx_plugin("ffx_setui_setup") {
   with_unit_tests = true
   args_with_unit_tests = true
 
-  args_deps = [ "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc" ]
+  args_deps = [ "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/developer/ffx/plugins/setui/utils:utils",
   ]
 

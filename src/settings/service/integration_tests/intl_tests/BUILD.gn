@@ -16,8 +16,8 @@ rustc_test("bin") {
     "src/intl_tests.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/intl:icudtl",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

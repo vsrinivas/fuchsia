@@ -12,11 +12,11 @@ if (is_host) {
     with_unit_tests = true
 
     deps = [
-      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
-      "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
+      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
+      "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
       "//src/connectivity/overnet/lib/ascendd",
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/ffx:ffx_lib_args",

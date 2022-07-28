@@ -13,8 +13,8 @@ bindings.
 ## Build Instructions {#build}
 
 When a [GN `fidl` rule](/build/fidl/fidl.gni) is defined for a FIDL library,
-a correspoding FIDL Rust crate is automatically generated under
-the original target name appended with `-rustc`. Transitive dependencies on
+a corresponding FIDL Rust crate is automatically generated under
+the original target name appended with `_rust`. Transitive dependencies on
 other FIDL libraries are resolved automatically.
 For example, given the declaration:
 
@@ -25,7 +25,7 @@ fidl("games.tictactoe") { ... }
 ```
 
 The FIDL crate target is
-`//src/tictactoe:games.tictactoe-rustc`. To use the FIDL crate,
+`//src/tictactoe:games.tictactoe_rust`. To use the FIDL crate,
 add the target to the `deps` field of the
 [`rustc_*` build rule](/docs/development/languages/rust/README.md#build)
 for your Rust crate. For example:
@@ -33,7 +33,7 @@ for your Rust crate. For example:
 ```gn
 rustc_binary("tictactoe") {
   # ...
-  deps = ["//src/tictactoe:games.tictactoe-rustc"]
+  deps = ["//src/tictactoe:games.tictactoe_rust"]
 }
 ```
 
@@ -58,7 +58,7 @@ Documentation in HTML format can be automatically
 generated for a FIDL crate using the `fx rustdoc` command. For example:
 
 ```bash
-fx rustdoc //src/tictactoe:games.tictactoe-rustc --open
+fx rustdoc //src/tictactoe:games.tictactoe_rust --open
 ```
 
 FIDL crates in the public Fuchsia source tree are published in the

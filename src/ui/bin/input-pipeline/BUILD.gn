@@ -16,13 +16,13 @@ rustc_binary("input-pipeline-bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
-    "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction-rustc",
-    "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation-rustc",
-    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
-    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui-rustc",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
+    "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction_rust",
+    "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation_rust",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
+    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_rust",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

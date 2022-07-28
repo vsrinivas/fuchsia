@@ -12,12 +12,12 @@ rustc_library("fuchsia-bluetooth") {
   # TODO(armansito): Split out testing code into a separate library and move
   # test-specific dependencies out.
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
-    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
+    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_rust",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_rust",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_rust",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",

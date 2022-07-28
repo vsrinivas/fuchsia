@@ -11,7 +11,7 @@ rustc_binary("bin") {
   name = "single_counter_bin"
   testonly = true
   deps = [
-    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
+    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",

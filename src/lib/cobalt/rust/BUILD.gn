@@ -13,7 +13,7 @@ rustc_library("fuchsia-cobalt") {
 
   deps = [
     "builders",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",

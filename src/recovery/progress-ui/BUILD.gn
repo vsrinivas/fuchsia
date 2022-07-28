@@ -22,7 +22,7 @@ rustc_binary("bin") {
   with_unit_tests = false
 
   deps = [
-    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui-rustc",
+    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui_rust",
     "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

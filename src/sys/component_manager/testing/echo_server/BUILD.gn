@@ -8,7 +8,7 @@ cts_rustc_binary("echo_server_testing") {
   testonly = true
   edition = "2018"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

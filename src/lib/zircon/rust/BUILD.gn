@@ -162,8 +162,8 @@ rustc_test("fuchsia-zircon-unittests") {
 
     # Test-only deps
     ":fuchsia-zircon",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

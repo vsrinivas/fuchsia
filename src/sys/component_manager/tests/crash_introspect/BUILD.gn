@@ -14,7 +14,7 @@ group("tests") {
 
 rustc_binary("report_then_panic_on_start_bin") {
   deps = [
-    "fidl:fuchsia.test-rustc",
+    "fidl:fuchsia.test_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -51,8 +51,8 @@ rustc_test("crash_introspect_test_bin") {
   edition = "2021"
   source_root = "crash_introspect_test.rs"
   deps = [
-    "fidl:fuchsia.test-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "fidl:fuchsia.test_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",

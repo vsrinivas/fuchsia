@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("sandbox-test") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",

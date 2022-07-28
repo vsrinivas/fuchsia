@@ -45,8 +45,8 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -58,7 +58,7 @@ rustc_binary("bin") {
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/power/temperature-logger/fuchsia.thermal.test:fuchsia.thermal.test-rustc",
+    "//src/power/temperature-logger/fuchsia.thermal.test:fuchsia.thermal.test_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",

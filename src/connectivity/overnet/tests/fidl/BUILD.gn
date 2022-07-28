@@ -9,7 +9,7 @@ rustc_test("fidl") {
   output_name = "fidl_on_overnet_tests"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
     "//src/connectivity/overnet/lib/core",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl/rust/handle_tests:fidl_handle_tests",

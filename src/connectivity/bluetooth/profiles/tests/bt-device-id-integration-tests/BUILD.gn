@@ -11,8 +11,8 @@ rustc_test("tests_bin") {
   source_root = "src/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.deviceid:fuchsia.bluetooth.deviceid-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
+    "//sdk/fidl/fuchsia.bluetooth.deviceid:fuchsia.bluetooth.deviceid_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",
     "//src/lib/fidl/rust/fidl",

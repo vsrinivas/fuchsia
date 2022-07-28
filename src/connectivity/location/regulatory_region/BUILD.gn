@@ -11,7 +11,7 @@ rustc_binary("bin") {
   edition = "2021"
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
+    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

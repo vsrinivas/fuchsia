@@ -26,7 +26,7 @@ rustc_binary("server_bin") {
   with_unit_tests = true
 
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
 
     # [START inspect_libs]
     "//src/lib/diagnostics/inspect/runtime/rust",

@@ -10,7 +10,7 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
+    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
     "//src/connectivity/wlan/tools/wlantool/wlan_dev:wlan-dev",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

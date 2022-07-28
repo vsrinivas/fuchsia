@@ -17,11 +17,11 @@ rustc_test("tests_bin") {
   source_root = "src/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
-    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
-    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",
     "//src/lib/fidl/rust/fidl",

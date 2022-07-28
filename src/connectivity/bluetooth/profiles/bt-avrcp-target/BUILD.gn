@@ -11,10 +11,10 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
-    "//src/connectivity/bluetooth/fidl:component-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp_rust",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
+    "//src/connectivity/bluetooth/fidl:component_rust",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/battery-client",
     "//src/lib/fidl/rust/fidl",

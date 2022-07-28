@@ -32,9 +32,9 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -63,7 +63,7 @@ rustc_binary("bin") {
     "src/testing.rs",
   ]
   test_deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fidl/rust/fidl",

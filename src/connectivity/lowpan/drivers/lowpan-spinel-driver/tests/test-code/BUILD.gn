@@ -8,8 +8,8 @@ rustc_library("test-code") {
   edition = "2021"
   name = "lowpan_test_code"
   deps = [
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",

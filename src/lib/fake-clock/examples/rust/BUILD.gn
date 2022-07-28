@@ -12,7 +12,7 @@ rustc_binary("example_bin") {
   edition = "2021"
 
   deps = [
-    "//src/lib/fake-clock/examples/fidl:fuchsia.fakeclock.test-rustc",
+    "//src/lib/fake-clock/examples/fidl:fuchsia.fakeclock.test_rust",
     "//src/lib/fake-clock/named-timer",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -37,8 +37,8 @@ rustc_test("test_bin") {
   source_root = "test/test.rs"
 
   deps = [
-    "//src/lib/fake-clock/examples/fidl:fuchsia.fakeclock.test-rustc",
-    "//src/lib/fake-clock/fidl:fidl-rustc",
+    "//src/lib/fake-clock/examples/fidl:fuchsia.fakeclock.test_rust",
+    "//src/lib/fake-clock/fidl:fidl_rust",
     "//src/lib/fake-clock/named-timer",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

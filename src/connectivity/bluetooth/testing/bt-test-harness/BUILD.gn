@@ -12,19 +12,19 @@ rustc_library("bt-test-harness") {
 
   # These are the library and code dependencies of the bt-test-harness library.
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//src/connectivity/bluetooth/fidl:host-rustc",
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
+    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_rust",
+    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_rust",
+    "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop_rust",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
+    "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test_rust",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
+    "//src/connectivity/bluetooth/fidl:host_rust",
     "//src/connectivity/bluetooth/lib/bt-device-watcher",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/hci-emulator-client",
@@ -54,8 +54,8 @@ rustc_library("bt-test-harness") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:parking_lot",

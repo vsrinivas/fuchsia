@@ -19,8 +19,8 @@ rustc_test("resolver-api-test-bin") {
   edition = "2021"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

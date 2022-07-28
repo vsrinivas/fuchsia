@@ -11,7 +11,7 @@ rustc_binary("bin") {
   output_name = "audio_device_output_harness"
 
   deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

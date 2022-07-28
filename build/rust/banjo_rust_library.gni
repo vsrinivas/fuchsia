@@ -11,7 +11,7 @@ import("//build/rust/rustc_library.gni")
 template("banjo_rust_library") {
   not_needed(invoker, [ "sources" ])
 
-  rustc_target_name = "${target_name}-rustc"
+  rustc_target_name = "${target_name}_rust"
   generation_target_name = "${target_name}_rust_compile"
 
   library_name = target_name
@@ -43,14 +43,14 @@ template("banjo_rust_library") {
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         label = get_label_info(dep, "label_no_toolchain")
-        deps += [ "${label}-rustc" ]
+        deps += [ "${label}_rust" ]
       }
     }
 
     if (defined(invoker.deps)) {
       foreach(dep, invoker.deps) {
         label = get_label_info(dep, "label_no_toolchain")
-        deps += [ "${label}-rustc" ]
+        deps += [ "${label}_rust" ]
       }
     }
 
@@ -69,7 +69,7 @@ template("banjo_dummy_rust_library") {
                "name",
              ])
 
-  rustc_target_name = "${target_name}-rustc"
+  rustc_target_name = "${target_name}_rust"
   group(rustc_target_name) {
     forward_variables_from(invoker,
                            [

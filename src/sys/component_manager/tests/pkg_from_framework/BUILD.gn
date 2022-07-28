@@ -10,7 +10,7 @@ rustc_test("pkg_from_framework_bin") {
   edition = "2018"
   source_root = "pkg_from_framework.rs"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",

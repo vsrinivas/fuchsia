@@ -9,11 +9,11 @@ ffx_plugin("ffx_profile_memory_signal") {
   edition = "2021"
 
   sources = [ "src/lib.rs" ]
-  deps = [ "//sdk/fidl/fuchsia.memory:fuchsia.memory-rustc" ]
+  deps = [ "//sdk/fidl/fuchsia.memory:fuchsia.memory_rust" ]
 
   args_sources = [ "src/args.rs" ]
   args_deps =
-      [ "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure-rustc" ]
+      [ "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_rust" ]
   args_with_unit_tests = true
   args_test_deps = [ "//third_party/rust_crates:assert_matches" ]
 }

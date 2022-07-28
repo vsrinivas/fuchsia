@@ -60,7 +60,7 @@ rustc_test("policy_test") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/appmgr/integration_tests/fidl:echo-rustc",
+    "//src/sys/appmgr/integration_tests/fidl:echo_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
   ]

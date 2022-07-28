@@ -8,10 +8,10 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 import("//tools/cmc/build/cmc.gni")
 
 fshost_integration_test_deps = [
-  "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-  "//sdk/fidl/fuchsia.fshost:fuchsia.fshost-rustc",
-  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-  "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+  "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+  "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+  "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia",
   "//src/lib/fuchsia-component-test",

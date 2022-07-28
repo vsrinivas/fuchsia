@@ -19,7 +19,7 @@ rustc_library("display-mocks") {
   sources = [ "src/lib.rs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:itertools",

@@ -14,7 +14,7 @@ rustc_library("lib") {
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify-rustc",
+    "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_rust",
     "//third_party/rust_crates:futures",
   ]
 

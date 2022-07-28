@@ -19,13 +19,13 @@ rustc_binary("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//sdk/fidl/fuchsia.scenic.scheduling:fuchsia.scenic.scheduling-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
-    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
+    "//sdk/fidl/fuchsia.scenic.scheduling:fuchsia.scenic.scheduling_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

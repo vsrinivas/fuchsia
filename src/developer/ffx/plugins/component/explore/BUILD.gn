@@ -8,8 +8,8 @@ ffx_plugin("ffx_component_explore") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.dash:fuchsia.dash-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.dash:fuchsia.dash_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -12,13 +12,13 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_rust",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

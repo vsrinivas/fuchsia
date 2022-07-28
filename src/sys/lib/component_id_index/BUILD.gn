@@ -10,7 +10,7 @@ rustc_library("component_id_index") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal_rust",
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",

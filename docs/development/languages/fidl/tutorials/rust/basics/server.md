@@ -137,7 +137,7 @@ It returns a future that completes once the client channel is closed.
 
    ```gn
    deps = [
-     "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc",
+     "//examples/fidl/fuchsia.examples:fuchsia.examples_rust",
      "//third_party/rust_crates:anyhow",
      "//third_party/rust_crates:futures",
    ]

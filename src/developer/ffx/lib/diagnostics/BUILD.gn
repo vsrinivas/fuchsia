@@ -12,9 +12,9 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//src/developer/ffx/daemon/target:lib",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fidl/rust/fidl",

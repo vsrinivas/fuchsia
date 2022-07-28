@@ -11,9 +11,9 @@ rustc_binary("bin") {
   testonly = true
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/diagnostics/validator/inspect/fidl:validate-rustc",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/diagnostics/validator/inspect/fidl:validate_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",

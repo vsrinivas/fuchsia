@@ -13,7 +13,7 @@ rustc_binary("trigger_server_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/testing:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
@@ -29,7 +29,7 @@ rustc_binary("trigger_client_bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
   ]
 
   sources = [ "static_event_stream/trigger_client.rs" ]
@@ -67,9 +67,9 @@ rustc_binary("resolved_error_reporter_bin") {
   source_root = "resolved_error/reporter.rs"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -99,7 +99,7 @@ rustc_binary("echo_client_for_events_bin") {
   source_root = "scoped/echo_client.rs"
   testonly = true
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -114,7 +114,7 @@ rustc_binary("echo_server_for_events_bin") {
   source_root = "scoped/echo_server.rs"
   testonly = true
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
@@ -143,13 +143,13 @@ rustc_binary("realm_offered_nested") {
   source_root = "realm_offered/nested.rs"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -165,7 +165,7 @@ rustc_binary("realm_offered_bin") {
   deps = [
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//src/sys/lib/component-events",
   ]
 
@@ -178,11 +178,11 @@ rustc_binary("directory_ready_root_bin") {
   source_root = "directory_ready/root.rs"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-fs",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
@@ -199,7 +199,7 @@ rustc_binary("directory_ready_child_bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -213,7 +213,7 @@ rustc_binary("synthesis_reporter_bin") {
   source_root = "synthesis/reporter.rs"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",

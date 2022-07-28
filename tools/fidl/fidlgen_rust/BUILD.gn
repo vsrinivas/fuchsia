@@ -91,7 +91,7 @@ group("goldens") {
   foreach(info, fidl_testdata_info) {
     if (info[denylist_key] + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
         info[denylist_key]) {
-      deps += [ "${info.target}-rustc" ]
+      deps += [ "${info.target}_rust" ]
     }
   }
 }

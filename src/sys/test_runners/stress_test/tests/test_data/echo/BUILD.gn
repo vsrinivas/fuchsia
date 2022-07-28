@@ -11,7 +11,7 @@ rustc_binary("echo_subject_bin") {
   edition = "2021"
   source_root = "subject/main.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -27,7 +27,7 @@ rustc_binary("echo_actor_bin") {
   edition = "2021"
   source_root = "actor/main.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/test_runners/stress_test/actor",

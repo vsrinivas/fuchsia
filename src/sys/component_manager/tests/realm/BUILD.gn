@@ -10,9 +10,9 @@ rustc_test("realm_integration_test_bin") {
   testonly = true
   sources = [ "src/lib.rs" ]
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//examples/components/routing/fidl:echo_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",

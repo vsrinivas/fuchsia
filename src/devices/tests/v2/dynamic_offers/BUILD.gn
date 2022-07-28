@@ -85,8 +85,8 @@ rustc_test("bin") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    ":fuchsia.offers.test-rustc",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    ":fuchsia.offers.test_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

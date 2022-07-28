@@ -17,9 +17,9 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
-    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.images:fuchsia.images_rust",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_rust",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

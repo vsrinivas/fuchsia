@@ -11,9 +11,9 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
-    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_rust",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

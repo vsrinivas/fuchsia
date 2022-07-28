@@ -16,9 +16,9 @@ rustc_library("lib") {
     "src/sensor.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//sdk/fidl/fuchsia.ui.display.internal:fuchsia.ui.display.internal-rustc",
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_rust",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
+    "//sdk/fidl/fuchsia.ui.display.internal:fuchsia.ui.display.internal_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -56,7 +56,7 @@ rustc_binary("bin") {
   deps = [
     ":brightness_manager_config",
     ":lib",
-    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
@@ -93,7 +93,7 @@ rustc_binary("auto-brightness_bin") {
   ]
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

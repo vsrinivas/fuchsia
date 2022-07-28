@@ -11,7 +11,7 @@ rustc_library("update-package") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-url",
@@ -26,7 +26,7 @@ rustc_library("update-package") {
     "//third_party/rust_crates:thiserror",
   ]
   if (is_fuchsia) {
-    deps += [ "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc" ]
+    deps += [ "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust" ]
   }
 
   test_deps = [

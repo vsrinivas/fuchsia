@@ -86,7 +86,7 @@ if (is_host) {
     ]
 
     test_deps = [
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
       "//src/connectivity/overnet/lib/ascendd",
       "//src/connectivity/overnet/lib/hoist",
       "//third_party/rust_crates:async-lock",

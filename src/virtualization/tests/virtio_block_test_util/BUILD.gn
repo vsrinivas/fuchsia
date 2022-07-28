@@ -12,7 +12,7 @@ rustc_binary("virtio_block_test_util") {
 
   if (is_fuchsia) {
     deps = [
-      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fuchsia",
       "//src/lib/fuchsia-async",

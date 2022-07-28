@@ -8,10 +8,10 @@ rustc_library("lib") {
   edition = "2021"
   name = "lowpan_test_utils"
   deps = [
-    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
-    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
-    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
+    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan_rust",
+    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device_rust",
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_rust",
+    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test_rust",
     "//src/connectivity/lowpan/tools/lowpanctl",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

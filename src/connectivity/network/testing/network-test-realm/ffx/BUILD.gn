@@ -8,19 +8,19 @@ ffx_plugin("ffx_net_test_realm") {
   edition = "2021"
   with_unit_tests = true
   args_deps = [
-    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm_rust",
     "//src/lib/network/fidl_fuchsia_net_ext",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm_rust",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//third_party/rust_crates:tracing",
   ]
   test_deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",

@@ -8,7 +8,7 @@ rustc_test("device") {
   edition = "2021"
   output_name = "netstack_device_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",

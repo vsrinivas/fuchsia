@@ -11,9 +11,9 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp_rust",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/connectivity/lib/net-types",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
@@ -63,7 +63,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp_rust",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
     "//src/lib/fidl/rust/fidl",
@@ -84,7 +84,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-declare",
     "//third_party/rust_crates:assert_matches",
   ]

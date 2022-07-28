@@ -9,7 +9,7 @@ ffx_plugin("ffx_cpu_load") {
   edition = "2021"
 
   sources = [ "src/lib.rs" ]
-  deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc" ]
+  deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust" ]
   test_deps = [
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",

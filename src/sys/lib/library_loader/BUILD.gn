@@ -12,8 +12,8 @@ rustc_library("library_loader") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-fs",

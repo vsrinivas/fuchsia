@@ -10,7 +10,7 @@ rustc_test("concurrency_test_driver_bin") {
   name = "concurrency_test_driver_rust"
   source_root = "src/main.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
   ]

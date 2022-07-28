@@ -24,7 +24,7 @@ rustc_library("lib") {
 
   deps = [
     ":triage-detect-config",
-    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_rust",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/lib/triage",
     "//src/lib/diagnostics/inspect/derive",

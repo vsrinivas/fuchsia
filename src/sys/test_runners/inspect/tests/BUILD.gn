@@ -11,7 +11,7 @@ rustc_test("tests_bin") {
   name = "inspect_runner_integration_test"
 
   deps = [
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/testing/fake-archive-accessor",
     "//src/lib/fuchsia",

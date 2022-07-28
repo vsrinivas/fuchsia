@@ -11,7 +11,7 @@ rustc_library("remote-block-device") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog",

@@ -16,8 +16,8 @@ rustc_test("bin") {
     "src/input_tests.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

@@ -11,10 +11,10 @@ rustc_test("integration-bin") {
   testonly = true
   name = "persistence_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/diagnostics/persistence/fidl:persist-rustc",
-    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/diagnostics/persistence/fidl:persist_rust",
+    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

@@ -23,7 +23,7 @@ rustc_test("test") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//src/identity/lib/account_common",
     "//src/identity/lib/storage_manager",
     "//src/lib/fuchsia-async",

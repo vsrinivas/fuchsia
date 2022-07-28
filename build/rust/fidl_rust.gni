@@ -19,11 +19,8 @@ import("//build/rust/rustc_library.gni")
 template("fidl_rust") {
   not_needed(invoker, [ "sdk_category" ])
 
-  # TODO(fxbug.dev/102954): Use "${target_name}_rust", and then remove the
-  # not_needed and define generation_target_name to append "_generate".
-  rust_target_name = "${target_name}-rustc"
-  not_needed([ "rust_target_name" ])
-  generation_target_name = "${target_name}_rust_generate"
+  rust_target_name = "${target_name}_rust"
+  generation_target_name = "${rust_target_name}_generate"
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -119,7 +116,7 @@ template("fidl_rust") {
       if (defined(invoker.public_deps)) {
         foreach(dep, invoker.public_deps) {
           label = get_label_info(dep, "label_no_toolchain")
-          deps += [ "${label}-rustc" ]
+          deps += [ "${label}_rust" ]
         }
       }
 
@@ -129,5 +126,16 @@ template("fidl_rust") {
 
       configs -= [ "//build/config/rust/lints:allow_unused_results" ]
     }
+  }
+
+  # TODO(fxbug.dev/102954): Remove.
+  deprecated_rust_target_name = "${target_name}-rustc"
+  group(deprecated_rust_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [ ":$rust_target_name" ]
   }
 }

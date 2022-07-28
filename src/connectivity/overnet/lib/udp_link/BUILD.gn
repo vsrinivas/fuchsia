@@ -9,8 +9,8 @@ rustc_library("udp_link") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/quic",
     "//src/lib/fuchsia-async",

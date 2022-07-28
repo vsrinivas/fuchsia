@@ -16,8 +16,8 @@ if (is_host) {
     name = "configc"
 
     deps = [
-      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
-      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config_rust",
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
       "//src/lib/assembly/validate_product",
       "//src/lib/fidl/rust/fidl",
       "//src/sys/lib/cm_rust",

@@ -16,7 +16,7 @@ rustc_test("time-zone-info-service-test") {
   source_root = "src/tests.rs"
   sources = [ "src/tests.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
     "//src/lib/fable:fable-lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",

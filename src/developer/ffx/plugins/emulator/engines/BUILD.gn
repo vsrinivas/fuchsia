@@ -17,7 +17,7 @@ if (is_host) {
       "src/serialization.rs",
     ]
     deps = [
-      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",

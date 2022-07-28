@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("run_without_regulatory_manager") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

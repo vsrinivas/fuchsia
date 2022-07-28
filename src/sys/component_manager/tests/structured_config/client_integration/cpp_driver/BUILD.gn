@@ -66,16 +66,16 @@ rustc_binary("shim_bin") {
   source_root = "shim.rs"
   sources = [ "shim.rs" ]
   deps = [
-    ":test.structuredconfig.receiver.shim-rustc",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    ":test.structuredconfig.receiver.shim_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
-    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver-rustc",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

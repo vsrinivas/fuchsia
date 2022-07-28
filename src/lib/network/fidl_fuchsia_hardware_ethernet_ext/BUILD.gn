@@ -9,7 +9,7 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
   ]

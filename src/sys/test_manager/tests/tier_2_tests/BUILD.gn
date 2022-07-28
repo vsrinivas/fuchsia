@@ -10,7 +10,7 @@ rustc_test("echo_test_bin") {
   testonly = true
   source_root = "echo_test.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
   ]

@@ -8,10 +8,10 @@ rustc_test("filter") {
   edition = "2021"
   output_name = "netstack_filter_fidl_test"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter_rust",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/lib/netfilter",

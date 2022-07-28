@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("stdout-to-debuglog") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

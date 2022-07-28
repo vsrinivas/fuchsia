@@ -18,7 +18,7 @@ rustc_library("event-queue") {
   ]
 
   test_deps = [
-    ":test.pkg.eventqueue-rustc",
+    ":test.pkg.eventqueue_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:assert_matches",
   ]

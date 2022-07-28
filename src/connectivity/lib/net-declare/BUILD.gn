@@ -33,7 +33,7 @@ rustc_library("net-declare") {
   deps = [ ":net-declare-macros" ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-types",
   ]
 

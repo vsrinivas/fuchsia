@@ -11,8 +11,8 @@ rustc_library("parser") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel-rustc",
-    "//sdk/fidl/fuchsia.power.systemmode:fuchsia.power.systemmode-rustc",
+    "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel_rust",
+    "//sdk/fidl/fuchsia.power.systemmode:fuchsia.power.systemmode_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json5",

@@ -9,7 +9,7 @@ ffx_plugin("ffx_profile_memory") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.memory:fuchsia.memory-rustc",
+    "//sdk/fidl/fuchsia.memory:fuchsia.memory_rust",
     "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",

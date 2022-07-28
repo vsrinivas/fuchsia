@@ -15,7 +15,7 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

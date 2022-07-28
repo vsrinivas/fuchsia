@@ -95,13 +95,13 @@ rustc_binary("bin") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
-    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
-    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_rust",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -169,9 +169,9 @@ rustc_binary("bin_fdr") {
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
-    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
     "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -235,13 +235,13 @@ rustc_binary("bin_installer") {
   source_root = "installer/main.rs"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_rust",
     "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -260,7 +260,7 @@ rustc_binary("bin_installer") {
     "//third_party/rust_crates:regex",
   ]
   test_deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//src/storage/testing:storage_driver_test_realm",
   ]
   sources = [

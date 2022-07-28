@@ -25,8 +25,8 @@ rustc_binary("virtio_vsock_bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
-    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_rust",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

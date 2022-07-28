@@ -169,7 +169,7 @@ instructions in this section.
       edition = "2021"
       with_unit_tests = true
       deps = [
-        "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+        "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
       ]
       sources = [
         "src/args.rs",

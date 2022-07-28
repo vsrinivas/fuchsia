@@ -12,8 +12,8 @@ rustc_library("forced-fdr") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
-    "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
+    "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel_rust",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",

@@ -9,12 +9,12 @@ rustc_test("test") {
   name = "tun_example"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
-    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",

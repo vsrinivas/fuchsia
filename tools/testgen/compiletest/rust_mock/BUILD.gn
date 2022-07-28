@@ -15,7 +15,7 @@ rustc_test("echo_client_compiletest") {
     "src/lib.rs",
   ]
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

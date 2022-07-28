@@ -10,7 +10,7 @@ rustc_library("onet_tool") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
     "//src/connectivity/overnet/lib/hoist",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

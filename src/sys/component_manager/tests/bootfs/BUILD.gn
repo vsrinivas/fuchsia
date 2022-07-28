@@ -19,7 +19,7 @@ rustc_test("bin") {
   name = "bootfs"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:anyhow",

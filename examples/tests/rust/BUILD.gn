@@ -11,8 +11,8 @@ rustc_binary("echo_test_client") {
   source_root = "echo_test_client.rs"
 
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//examples/components/routing/fidl:echo_rust",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

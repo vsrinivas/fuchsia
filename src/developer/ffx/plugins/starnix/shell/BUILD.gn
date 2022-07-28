@@ -8,7 +8,7 @@ ffx_plugin("ffx_starnix_shell") {
   version = "0.0.1"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer-rustc",
+    "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:blocking",

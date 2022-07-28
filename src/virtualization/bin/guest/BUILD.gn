@@ -23,7 +23,7 @@ rustc_binary("bin") {
   edition = "2021"
   output_name = "guest"
   deps = [
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

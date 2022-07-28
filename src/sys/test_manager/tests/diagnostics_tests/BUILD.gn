@@ -11,7 +11,7 @@ rustc_binary("publisher_bin") {
   name = "publisher"
   source_root = "publisher.rs"
   deps = [
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -33,7 +33,7 @@ rustc_test("diagnostics_test_bin") {
   source_root = "main.rs"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

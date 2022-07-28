@@ -11,9 +11,9 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50-rustc",
+    "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_rust",
     "//src/identity/lib/identity_common",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",

@@ -10,11 +10,11 @@ rustc_library("storage-isolated-driver-manager") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/lib/device-watcher/rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
@@ -35,7 +35,7 @@ rustc_library("storage-isolated-driver-manager") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//src/lib/fuchsia",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/test_util",

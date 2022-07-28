@@ -8,10 +8,10 @@ rustc_test("debug") {
   edition = "2021"
   output_name = "netstack_debug_fidl_test"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug_rust",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",

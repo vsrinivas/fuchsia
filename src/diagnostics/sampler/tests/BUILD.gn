@@ -32,12 +32,12 @@ rustc_test("integration-bin") {
   testonly = true
   name = "sampler_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
-    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
-    "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test-rustc",
-    "//src/diagnostics/sampler/tests/fidl:fuchsia.mockrebootcontroller-rustc",
-    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test_rust",
+    "//src/diagnostics/sampler/tests/fidl:fuchsia.mockrebootcontroller_rust",
+    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

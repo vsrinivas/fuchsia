@@ -10,12 +10,12 @@ ffx_plugin("ffx_wlan_ap") {
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/connectivity/wlan/wlancfg/tool/policy:donut-lib",
     "//src/developer/ffx/plugins/wlan/common:ffx-wlan-common",
   ]
   args_deps = [
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/developer/ffx/plugins/wlan/common:ffx-wlan-common",
   ]
 }

@@ -23,8 +23,8 @@ rustc_library("fidl-fuchsia-pkg-ext") {
 
   deps = [
     ":measure_fuchsia_pkg",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
     "//src/lib/http-uri-ext",

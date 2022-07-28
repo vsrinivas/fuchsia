@@ -8,10 +8,10 @@ rustc_test("reachability") {
   edition = "2021"
   output_name = "netstack_reachability_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
-    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor_rust",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",

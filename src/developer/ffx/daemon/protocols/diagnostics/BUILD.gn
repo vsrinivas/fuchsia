@@ -11,7 +11,7 @@ if (is_host) {
     with_unit_tests = true
 
     deps = [
-      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
       "//src/developer/ffx/daemon/target:lib",
       "//src/developer/ffx/lib/diagnostics:lib",
       "//src/developer/ffx/lib/protocols:lib",
@@ -23,7 +23,7 @@ if (is_host) {
       "//third_party/rust_crates:tracing",
     ]
 
-    test_deps = [ "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc" ]
+    test_deps = [ "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust" ]
 
     sources = [ "src/lib.rs" ]
   }

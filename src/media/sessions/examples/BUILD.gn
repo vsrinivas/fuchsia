@@ -16,8 +16,8 @@ rustc_binary("example_player_bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

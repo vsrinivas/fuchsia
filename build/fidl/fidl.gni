@@ -25,7 +25,6 @@ import("//build/go/toolchain.gni")
 #       (Bindings: rust, hlcpp, llcpp, banjo_{c,cpp,rust}, bindlib)
 #       Compiles ${target_name}_${binding_name}_generate($fidl_toolchain) as a
 #       source_set or rustc_library.
-#       TODO(fxbug.dev/102954): Rust is inconsistent and uses ${target_name}-rustc.
 #     ${target_name}_tables
 #       Compiles the coding tables from ${target_name}($fidl_toolchain).
 #     ${target_name}_c

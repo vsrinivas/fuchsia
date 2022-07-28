@@ -23,11 +23,11 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -72,11 +72,11 @@ rustc_test("shortcut_integration_test_bin") {
 
   deps = [
     ":bin",
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

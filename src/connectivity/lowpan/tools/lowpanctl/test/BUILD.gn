@@ -14,7 +14,7 @@ rustc_test("lowpanctl-integration-test-bin") {
   name = "lowpanctl_integration_test"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
+    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan_rust",
     "//src/connectivity/lowpan/service",
     "//src/connectivity/lowpan/tools/lowpanctl",
     "//src/lib/fuchsia-async",

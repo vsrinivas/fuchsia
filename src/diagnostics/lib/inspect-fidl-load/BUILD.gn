@@ -17,7 +17,7 @@ rustc_library("inspect-fidl-load") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
+    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

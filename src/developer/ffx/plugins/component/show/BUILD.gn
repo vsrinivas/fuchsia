@@ -8,8 +8,8 @@ ffx_plugin("ffx_component_show") {
   version = "0.1.0"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/lib/component_hub",

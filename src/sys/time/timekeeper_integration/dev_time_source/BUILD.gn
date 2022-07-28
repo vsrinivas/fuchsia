@@ -12,12 +12,12 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/time/timekeeper_integration:test.time-rustc",
+    "//src/sys/time/timekeeper_integration:test.time_rust",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]

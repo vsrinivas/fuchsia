@@ -28,9 +28,9 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio-rustc",
-    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_rust",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -46,8 +46,8 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:assert_matches",

@@ -9,8 +9,8 @@ rustc_library("vfs") {
   version = "0.1.0"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/vfs/rust/macros",
@@ -97,7 +97,7 @@ rustc_library("vfs") {
   ]
 
   test_deps = [
-    "//src/testing/fidl:placeholders-rustc",
+    "//src/testing/fidl:placeholders_rust",
     "//third_party/rust_crates:assert_matches",
   ]
 }

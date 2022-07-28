@@ -16,8 +16,8 @@ rustc_test("bin") {
     "src/factory_reset_tests.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

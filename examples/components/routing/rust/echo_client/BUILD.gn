@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("echo_client") {
   edition = "2021"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

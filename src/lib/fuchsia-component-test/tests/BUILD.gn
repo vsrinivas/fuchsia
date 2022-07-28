@@ -15,13 +15,13 @@ rustc_test("fuchsia_component_test_tests_bin") {
 
   deps = [
     "..:fuchsia-component-test",
-    "//examples/components/routing/fidl:echo-rustc",
-    "//examples/components/services:fuchsia.examples.services-rustc",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//examples/components/routing/fidl:echo_rust",
+    "//examples/components/services:fuchsia.examples.services_rust",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_rust",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -73,7 +73,7 @@ rustc_test("scoped-instance-test") {
   edition = "2021"
   source_root = "scoped_instance/lib.rs"
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/lib/syslog/rust:syslog",
@@ -89,7 +89,7 @@ rustc_binary("realm") {
   source_root = "scoped_instance/realm.rs"
   testonly = true
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",

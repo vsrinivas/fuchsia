@@ -9,7 +9,7 @@ rustc_binary("bin") {
   output_name = "fake-channel-control"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

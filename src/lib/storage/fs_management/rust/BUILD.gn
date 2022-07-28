@@ -10,8 +10,8 @@ rustc_library("fs_management") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -20,7 +20,7 @@ rustc_library("fs_management") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup-rustc",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",

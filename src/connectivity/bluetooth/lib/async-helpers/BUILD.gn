@@ -10,7 +10,7 @@ rustc_library("async-helpers") {
   with_unit_tests = true
 
   deps = [
-    "//src/connectivity/bluetooth/fidl:component-rustc",
+    "//src/connectivity/bluetooth/fidl:component_rust",
     "//src/lib/async-utils",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",

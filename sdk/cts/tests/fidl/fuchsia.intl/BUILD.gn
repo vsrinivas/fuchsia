@@ -9,8 +9,8 @@ cts_rustc_test("intl-services-system-test-bin") {
   source_root = "src/intl_services_system_test.rs"
   sources = [ "src/intl_services_system_test.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

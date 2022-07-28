@@ -23,12 +23,12 @@ _common_sources = [
 ]
 
 _common_deps = [
-  "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
-  "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-  "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
-  "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-  "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-  "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
+  "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
+  "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
+  "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+  "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+  "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+  "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_rust",
   "//src/lib/async-utils",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia",
@@ -53,7 +53,7 @@ rustc_binary("virtio_gpu_bin") {
   sources = _common_sources
 
   deps = _common_deps + [
-           "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+           "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
            "//src/lib/ui/fuchsia-framebuffer",
          ]
 }

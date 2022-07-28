@@ -162,7 +162,7 @@ rust_targets = []
 foreach(test, dangerous_tests) {
   if (defined(test.rust_target)) {
     group(test.rust_target) {
-      deps = [ ":${test.fidl_target}-rustc" ]
+      deps = [ ":${test.fidl_target}_rust" ]
     }
     rust_targets += [ ":${test.rust_target}" ]
   }

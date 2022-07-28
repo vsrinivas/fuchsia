@@ -9,7 +9,7 @@ rustc_test("http_client_integration_test") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",

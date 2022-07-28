@@ -13,7 +13,7 @@ rustc_library("test_utils_lib") {
 
   deps = [
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

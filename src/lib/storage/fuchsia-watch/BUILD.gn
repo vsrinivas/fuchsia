@@ -12,7 +12,7 @@ rustc_library("fuchsia-watch") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/fuchsia-vfs-watcher",

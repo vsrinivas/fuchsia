@@ -13,7 +13,7 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   deps = [
     ":lib",
-    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",

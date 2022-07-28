@@ -13,7 +13,7 @@ rustc_library("wlan-stash") {
 
   deps = [
     ":wlan-stash-constants",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

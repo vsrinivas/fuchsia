@@ -22,7 +22,7 @@ rustc_library("lib") {
   sources = [ "src/lib.rs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//src/lib/diagnostics/hierarchy/rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
@@ -36,7 +36,7 @@ rustc_library("lib") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
       "//src/lib/zircon/rust:fuchsia-zircon",
       "//third_party/rust_crates:thiserror",
     ]

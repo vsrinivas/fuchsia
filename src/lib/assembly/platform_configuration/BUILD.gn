@@ -10,7 +10,7 @@ if (is_host) {
     name = "assembly_platform_configuration"
     sources = [ "src/lib.rs" ]
     deps = [
-      "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
       "//src/developer/ffx/config:lib",
       "//src/lib/assembly/config_schema",
       "//third_party/rust_crates:anyhow",

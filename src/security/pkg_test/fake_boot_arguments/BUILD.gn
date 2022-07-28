@@ -13,8 +13,8 @@ rustc_binary("fake_boot_arguments-binary") {
 
   sources = [ "src/fake_boot_arguments.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",

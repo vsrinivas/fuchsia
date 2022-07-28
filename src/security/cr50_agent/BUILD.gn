@@ -22,10 +22,10 @@ rustc_binary("bin") {
   configs += [ "//build/config/rust:bootfs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.power.button:fuchsia.power.button-rustc",
-    "//sdk/fidl/fuchsia.tpm:fuchsia.tpm-rustc",
-    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.power.button:fuchsia.power.button_rust",
+    "//sdk/fidl/fuchsia.tpm:fuchsia.tpm_rust",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",

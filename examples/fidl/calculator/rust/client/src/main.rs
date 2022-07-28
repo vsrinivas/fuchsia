@@ -28,7 +28,7 @@ async fn main() -> Result<(), anyhow::Error> {
     // `CalculatorMarker` is generated code. The build rule `fidl("calculator")`
     // in <../../../fidl/BUILD.gn> generates the necessary targets so
     // <../BUILD.gn> can rely on
-    // `"//examples/fidl/calculator/fidl:calculator-rustc"` to make this
+    // `"//examples/fidl/calculator/fidl:calculator_rust"` to make this
     // available.
     let calculator =
         connect_to_protocol::<CalculatorMarker>().expect("Error connecting to Calculator Service.");

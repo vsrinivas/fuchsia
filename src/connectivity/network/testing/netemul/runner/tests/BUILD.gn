@@ -12,7 +12,7 @@ rustc_library("lib") {
   name = "netemul_runner_tests"
   deps = [
     ":test_includes",
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/fuchsia-component",
     "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",
@@ -31,7 +31,7 @@ rustc_test("netemul_runner_test") {
   edition = "2021"
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/fuchsia-async",
     "//src/sys/test_manager:test_lib",
     "//third_party/rust_crates:test-case",

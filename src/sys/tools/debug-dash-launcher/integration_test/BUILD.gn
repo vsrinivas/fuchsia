@@ -10,7 +10,7 @@ rustc_test("test_bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.dash:fuchsia.dash-rustc",
+    "//sdk/fidl/fuchsia.dash:fuchsia.dash_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

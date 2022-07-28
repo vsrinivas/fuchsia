@@ -21,7 +21,7 @@ rustc_library("ping") {
   ]
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
       "//src/lib/fuchsia-async",
     ]
   }

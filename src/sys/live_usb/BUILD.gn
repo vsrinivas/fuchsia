@@ -66,12 +66,12 @@ rustc_binary("bin") {
   configs += [ "//build/config/rust:bootfs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
-    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

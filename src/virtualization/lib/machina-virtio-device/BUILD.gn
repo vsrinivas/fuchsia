@@ -18,7 +18,7 @@ rustc_library("machina-virtio-device") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",

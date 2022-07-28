@@ -165,8 +165,8 @@ class VerifyCtsDeps:
 
         # Removes the Rust binding suffix because the SDK manifests will only
         # contain the FIDL name.
-        if dep.endswith('-rustc'):
-            dep = dep[:-6]
+        if dep.endswith('_rust'):
+            dep = dep[:-5]
 
         return dep in sdk_atom_labels and sdk_atom_labels[dep] in [
             'partner', 'public'

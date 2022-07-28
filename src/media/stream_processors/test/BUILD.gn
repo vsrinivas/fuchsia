@@ -29,8 +29,8 @@ rustc_library("stream_processor_test_lib") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
     "//src/lib/fuchsia-component",
@@ -72,8 +72,8 @@ rustc_library("stream_processor_decoder_factory_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
@@ -90,8 +90,8 @@ rustc_library("stream_processor_encoder_factory_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
@@ -108,7 +108,7 @@ rustc_test("audio_decoder_test_bin") {
   deps = [
     ":stream_processor_decoder_factory_lib",
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
@@ -152,8 +152,8 @@ rustc_test("audio_encoder_test_bin") {
   deps = [
     ":stream_processor_encoder_factory_lib",
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -195,8 +195,8 @@ rustc_library("video_frame_hasher_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/mundane",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -205,7 +205,7 @@ rustc_library("video_frame_hasher_lib") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/media/stream_processors/fuchsia-stream-processors",
     "//third_party/rust_crates:rand",
@@ -227,8 +227,8 @@ rustc_library("video_frame_stream_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -252,7 +252,7 @@ rustc_library("h264_stream_lib") {
 
   deps = [
     ":stream_processor_test_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
@@ -324,8 +324,8 @@ rustc_test("h264_encoder_test_bin") {
     ":stream_processor_encoder_factory_lib",
     ":stream_processor_test_lib",
     ":video_frame_stream_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -366,8 +366,8 @@ rustc_test("h265_encoder_test_bin") {
     ":stream_processor_encoder_factory_lib",
     ":stream_processor_test_lib",
     ":video_frame_stream_lib",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",

@@ -13,10 +13,10 @@ rustc_binary("server_suite_under_test_rust") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/tests/fidl/server_suite/fidl:fidl.serversuite-rustc",
+    "//src/tests/fidl/server_suite/fidl:fidl.serversuite_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//zircon/vdso/zx:zx-rustc",
+    "//zircon/vdso/zx:zx_rust",
   ]
 }
 

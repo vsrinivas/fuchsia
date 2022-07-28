@@ -8,7 +8,7 @@ ffx_plugin("ffx_starnix_start") {
   version = "0.0.1"
   edition = "2021"
   deps =
-      [ "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer-rustc" ]
+      [ "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer_rust" ]
 
   args_sources = [ "src/args.rs" ]
 

@@ -9,7 +9,7 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//third_party/rust_crates:anyhow",

@@ -20,7 +20,7 @@ rustc_test("rights_integration_test_bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
   ]
 
   sources = [ "rights_integration_test.rs" ]
@@ -51,11 +51,11 @@ rustc_binary("use_dir_rights_bin") {
   edition = "2021"
   source_root = "use_dir_rights.rs"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -68,11 +68,11 @@ rustc_binary("use_storage_bin") {
   edition = "2021"
   source_root = "use_storage.rs"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

@@ -10,7 +10,7 @@ rustc_library("lib") {
   edition = "2021"
   deps = [
     ":lib_includes",
-    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync-rustc",
+    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

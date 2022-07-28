@@ -10,7 +10,7 @@ rustc_binary("bin") {
   output_name = "bt-pairing-tool"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/tools/lib/pairing-delegate:pairing-delegate",
     "//src/lib/fidl/rust/fidl",

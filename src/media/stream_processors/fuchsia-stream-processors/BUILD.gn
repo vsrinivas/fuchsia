@@ -12,7 +12,7 @@ rustc_library("fuchsia-stream-processors") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/lib/fidl_table_validation",
   ]
 

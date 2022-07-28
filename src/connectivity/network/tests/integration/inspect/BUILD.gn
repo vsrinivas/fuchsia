@@ -8,11 +8,11 @@ rustc_test("inspect") {
   edition = "2021"
   output_name = "netstack_inspect_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor_rust",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",

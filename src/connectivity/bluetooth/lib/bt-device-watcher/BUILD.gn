@@ -10,7 +10,7 @@ rustc_library("bt-device-watcher") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -23,8 +23,8 @@ rustc_library("bt-device-watcher") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fuchsia",

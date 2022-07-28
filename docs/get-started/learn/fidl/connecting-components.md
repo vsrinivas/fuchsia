@@ -134,7 +134,7 @@ Add the generated bindings to the `BUILD.gn` file as a dependency:
     output_name = "echo-server"
 
     deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo-rustc",{{ '</strong>' }}
+      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo_rust",{{ '</strong>' }}
       ...
     ]
 
@@ -297,7 +297,7 @@ Add the generated bindings to the `BUILD.gn` file as a dependency:
     output_name = "echo-client"
 
     deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo-rustc",{{ '</strong>' }}
+      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo_rust",{{ '</strong>' }}
       ...
     ]
 

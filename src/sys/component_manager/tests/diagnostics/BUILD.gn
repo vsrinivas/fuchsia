@@ -13,7 +13,7 @@ rustc_binary("reporter_bin") {
   source_root = "reporter.rs"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -43,8 +43,8 @@ rustc_binary("cleanup_bin") {
   source_root = "cleanup.rs"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -60,7 +60,7 @@ rustc_test("bin") {
   edition = "2021"
   source_root = "integration_test.rs"
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",

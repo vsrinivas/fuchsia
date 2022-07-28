@@ -16,8 +16,8 @@ rustc_test("bin") {
     "src/setup_tests.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/intl:icudtl",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

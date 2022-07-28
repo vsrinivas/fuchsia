@@ -31,8 +31,8 @@ rustc_test("compat-shim-test") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    ":fuchsia.hardware.compat-rustc",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    ":fuchsia.hardware.compat_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fidl/rust/fidl",

@@ -12,9 +12,9 @@ rustc_library("lib") {
   version = "0.1.0"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input-rustc",
+    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
@@ -41,8 +41,8 @@ rustc_binary("input_helper_bin") {
   edition = "2021"
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
-    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input-rustc",
+    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

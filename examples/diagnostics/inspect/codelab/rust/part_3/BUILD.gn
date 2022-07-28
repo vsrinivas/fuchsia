@@ -12,7 +12,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",

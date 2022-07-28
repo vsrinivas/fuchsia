@@ -14,7 +14,7 @@ rustc_binary("font_manifest_generator") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_rust",
     "//src/fonts/char_set",
     "//src/fonts/font_info",
     "//src/fonts/manifest",

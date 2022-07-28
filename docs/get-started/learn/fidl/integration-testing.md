@@ -267,7 +267,7 @@ dependency:
     name = "echo-integration"
 
     deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo-rustc",{{ '</strong>' }}
+      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo_rust",{{ '</strong>' }}
       ...
     ]
 

@@ -23,8 +23,8 @@ rustc_library("rust") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_rust",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:nom",

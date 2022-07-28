@@ -8,12 +8,12 @@ rustc_test("sys") {
   edition = "2021"
   output_name = "netstack_sys_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler-rustc",
-    "//src/connectivity/network/testing/netemul/fidl:fuchsia.netemul-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_rust",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_rust",
+    "//src/connectivity/network/testing/netemul/fidl:fuchsia.netemul_rust",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/lib/fidl/rust/fidl",

@@ -18,7 +18,7 @@ rustc_library("lib") {
   visibility = [ ":*" ]
 
   deps = [
-    ":test.componentmanager.stresstests-rustc",
+    ":test.componentmanager.stresstests_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
@@ -39,7 +39,7 @@ rustc_test("realm_with_many_children_bin") {
   source_root = "realm_with_many_children.rs"
   deps = [
     ":lib",
-    ":test.componentmanager.stresstests-rustc",
+    ":test.componentmanager.stresstests_rust",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
@@ -67,7 +67,7 @@ rustc_binary("child_for_stress_test_bin") {
   source_root = "child_for_stress_test.rs"
   deps = [
     ":lib",
-    ":test.componentmanager.stresstests-rustc",
+    ":test.componentmanager.stresstests_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

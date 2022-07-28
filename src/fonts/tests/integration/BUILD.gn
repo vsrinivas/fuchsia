@@ -16,9 +16,9 @@ rustc_test("font_provider_integration_tests_bin") {
   name = "font_provider_integration_tests"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
-    "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_rust",
+    "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental_rust",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
     "//src/fonts/fidl_fuchsia_fonts_ext",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

@@ -13,7 +13,7 @@ rustc_binary("reader-bin") {
   source_root = "src/reader.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_rust",
     "//src/developer/fuchsia-criterion",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -36,7 +36,7 @@ rustc_binary("writer-bin") {
   source_root = "src/writer.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_rust",
     "//src/developer/fuchsia-criterion",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -64,7 +64,7 @@ rustc_binary("snapshot-filter-bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//src/developer/fuchsia-criterion",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/selectors",

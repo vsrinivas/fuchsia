@@ -11,8 +11,8 @@ ffx_plugin("ffx_component_select") {
   args_with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/lib/component_hub",

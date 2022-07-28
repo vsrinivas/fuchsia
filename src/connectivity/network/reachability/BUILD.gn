@@ -13,7 +13,7 @@ rustc_binary("bin") {
 
   deps = [
     "core:lib",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",

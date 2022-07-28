@@ -12,7 +12,7 @@ rustc_binary("gsctool") {
   configs += [ "//build/config/rust:bootfs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50-rustc",
+    "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

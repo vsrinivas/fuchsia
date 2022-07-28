@@ -24,11 +24,11 @@ rustc_library("routing") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
-    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal_rust",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/error/clonable_error",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/from-enum",

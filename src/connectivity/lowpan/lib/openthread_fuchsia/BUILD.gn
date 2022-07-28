@@ -9,8 +9,8 @@ rustc_library("openthread_fuchsia") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_rust",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
     "//src/connectivity/lowpan/lib/openthread_rust:openthread",
     "//src/connectivity/lowpan/lib/openthread_sys",

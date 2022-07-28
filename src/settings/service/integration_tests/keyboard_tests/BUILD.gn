@@ -16,8 +16,8 @@ rustc_test("bin") {
     "src/keyboard_tests.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/settings/service/integration_tests/utils",

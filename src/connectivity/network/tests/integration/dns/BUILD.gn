@@ -8,11 +8,11 @@ rustc_test("dns") {
   edition = "2021"
   output_name = "netstack_dns_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
-    "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp_rust",
+    "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6_rust",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
@@ -21,7 +21,7 @@ rustc_test("dns") {
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
     "//src/lib/async-utils",
-    "//src/lib/fake-clock/fidl:fidl-rustc",
+    "//src/lib/fake-clock/fidl:fidl_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/packet",

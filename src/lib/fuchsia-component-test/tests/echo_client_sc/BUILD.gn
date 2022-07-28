@@ -10,7 +10,7 @@ rustc_binary("bin") {
   edition = "2021"
   deps = [
     ":config_lib",
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
   ]

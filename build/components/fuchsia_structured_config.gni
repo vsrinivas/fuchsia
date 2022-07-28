@@ -341,7 +341,7 @@ template("fuchsia_structured_config_rust_lib") {
     sources = [ rust_source_file ]
     source_root = rust_source_file
     deps = [
-      ":${fidl_library_target}-rustc",
+      ":${fidl_library_target}_rust",
       "//src/lib/diagnostics/inspect/rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-runtime",

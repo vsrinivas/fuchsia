@@ -10,8 +10,8 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan.driver:fuchsia.lowpan.driver-rustc",
+    "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan_rust",
+    "//sdk/fidl/fuchsia.lowpan.driver:fuchsia.lowpan.driver_rust",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

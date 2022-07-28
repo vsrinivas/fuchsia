@@ -23,9 +23,9 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
-    "//src/flutter/tests/fidl:fidl-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
+    "//src/flutter/tests/fidl:fidl_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

@@ -16,7 +16,7 @@ rustc_test("bin") {
     "src/hanging_get_tests.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",

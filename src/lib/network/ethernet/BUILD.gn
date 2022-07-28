@@ -10,7 +10,7 @@ rustc_library("ethernet") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

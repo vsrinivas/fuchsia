@@ -11,7 +11,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",

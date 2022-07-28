@@ -11,8 +11,8 @@ rustc_binary("bin") {
   edition = "2021"
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
@@ -32,8 +32,8 @@ rustc_library("lib") {
   name = "pkg_local_mirror"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",

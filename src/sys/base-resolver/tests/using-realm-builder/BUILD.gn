@@ -11,9 +11,9 @@ rustc_test("driver") {
   source_root = "src/lib.rs"
   sources = [ "src/lib.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/lib/storage/vfs/rust:vfs",

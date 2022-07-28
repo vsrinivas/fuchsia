@@ -15,7 +15,7 @@ rustc_binary("cros-nvtool") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot-rustc",
+    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

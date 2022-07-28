@@ -9,8 +9,8 @@ rustc_test("bt_access_integration_tests") {
   edition = "2021"
   source_root = "src/lib.rs"
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
+    "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/bt-test-harness",
     "//src/connectivity/bluetooth/testing/hci-emulator-client",

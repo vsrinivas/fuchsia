@@ -14,8 +14,8 @@ rustc_binary("cmc") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
     "//src/lib/directed_graph",
     "//src/lib/fidl/rust/fidl",
     "//src/sys/lib/cm_json",
@@ -77,9 +77,9 @@ rustc_test("cmc_integration_test_bin") {
   edition = "2021"
   source_root = "tests/integration_test.rs"
   deps = [
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
   ]

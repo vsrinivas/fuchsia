@@ -7,11 +7,11 @@ import("//build/rust/rustc_test.gni")
 rustc_test("multiple_clients_ap") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.common.security:fuchsia.wlan.common.security-rustc",
-    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
-    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
-    "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
+    "//sdk/fidl/fuchsia.wlan.common.security:fuchsia.wlan.common.security_rust",
+    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_rust",
+    "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme_rust",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fidl/rust/fidl",

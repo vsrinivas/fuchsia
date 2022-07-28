@@ -10,7 +10,7 @@ rustc_library("config_encoder") {
   with_unit_tests = true
   sources = [ "src/lib.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config_rust",
     "//src/lib/dynfidl/rust",
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:thiserror",

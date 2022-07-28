@@ -28,8 +28,8 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     deps = [
-      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-      "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+      "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal_rust",
       "//src/lib/fidl/rust/fidl",
       "//src/sys/lib/cm_types",
       "//third_party/rust_crates:argh",
@@ -39,7 +39,7 @@ if (is_host) {
     ]
 
     test_deps = [
-      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:tempfile",
     ]

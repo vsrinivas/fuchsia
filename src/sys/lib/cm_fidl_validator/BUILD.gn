@@ -9,16 +9,16 @@ rustc_library("cm_fidl_validator") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//src/lib/directed_graph",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",

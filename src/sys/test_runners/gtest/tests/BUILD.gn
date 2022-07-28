@@ -11,7 +11,7 @@ rustc_test("tests_bin") {
   name = "gtest_runner_integration_test"
 
   deps = [
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/fuchsia-async",
     "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",
@@ -40,7 +40,7 @@ rustc_test("stress_tests_bin") {
   name = "gtest_runner_stress_test"
 
   deps = [
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/fuchsia-async",
     "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",

@@ -24,12 +24,12 @@ metrics_registry("wlan_metrics_registry") {
 }
 
 wlandevicemonitor_deps = [
-  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-  "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-  "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
-  "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
-  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
-  "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+  "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
+  "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_rust",
+  "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
+  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_rust",
+  "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme_rust",
   "//src/connectivity/wlan/lib/wlan_dev",
   "//src/lib/diagnostics/inspect/contrib/rust",
   "//src/lib/diagnostics/inspect/runtime/rust",
@@ -60,8 +60,8 @@ wlandevicemonitor_srcs = [
 ]
 
 wlandevicemonitor_test_deps = [
-  "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
-  "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
+  "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_rust",
+  "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_rust",
   "//sdk/lib/device-watcher/rust",
   "//src/connectivity/wlan/lib/common/rust/:wlan-common",
   "//src/connectivity/wlan/lib/ieee80211",

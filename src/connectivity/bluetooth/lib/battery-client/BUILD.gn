@@ -13,7 +13,7 @@ rustc_library("battery-client") {
 
   deps = [
     ":battery_client_includes",
-    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

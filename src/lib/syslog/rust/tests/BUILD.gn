@@ -27,8 +27,8 @@ rustc_test("panic_is_logged_bin") {
   edition = "2021"
   source_root = "panic_is_logged.rs"
   deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/diagnostics/lib/validating-log-listener",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

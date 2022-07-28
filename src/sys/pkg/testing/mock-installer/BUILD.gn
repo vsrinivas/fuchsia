@@ -13,7 +13,7 @@ rustc_library("mock-installer") {
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
+    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer_rust",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
@@ -21,7 +21,7 @@ rustc_library("mock-installer") {
     "//third_party/rust_crates:pretty_assertions",
   ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc" ]
+  test_deps = [ "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust" ]
 
   sources = [ "src/lib.rs" ]
 }

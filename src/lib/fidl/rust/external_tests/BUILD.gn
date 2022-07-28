@@ -20,12 +20,12 @@ rustc_test("fidl_rust_external_tests_bin") {
   output_name = "fidl_rust_external_tests"
   edition = "2021"
   deps = [
-    ":fidl.rust.test.external-rustc",
-    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions-rustc",
+    ":fidl.rust.test.external_rust",
+    "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/testing/fidl:placeholders-rustc",
+    "//src/testing/fidl:placeholders_rust",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:test-case",

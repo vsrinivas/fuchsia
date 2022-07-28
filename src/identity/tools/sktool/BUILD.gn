@@ -11,7 +11,7 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

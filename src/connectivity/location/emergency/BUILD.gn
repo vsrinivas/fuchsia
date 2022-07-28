@@ -24,10 +24,10 @@ rustc_binary("bin") {
   deps = [
     ":emergency_metrics_registry_rustlib",
     ":lib",
-    "//sdk/fidl/fuchsia.location:fuchsia.location-rustc",
-    "//sdk/fidl/fuchsia.location.position:fuchsia.location.position-rustc",
-    "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor-rustc",
-    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
+    "//sdk/fidl/fuchsia.location:fuchsia.location_rust",
+    "//sdk/fidl/fuchsia.location.position:fuchsia.location.position_rust",
+    "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor_rust",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_rust",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -38,8 +38,8 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:assert_matches",
@@ -59,10 +59,10 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.location.position:fuchsia.location.position-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.location.position:fuchsia.location.position_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
+    "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_rust",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",

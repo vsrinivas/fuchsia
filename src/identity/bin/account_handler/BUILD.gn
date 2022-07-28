@@ -11,11 +11,11 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
-    "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication-rustc",
-    "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
+    "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication_rust",
+    "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",
     "//src/lib/diagnostics/inspect/runtime/rust",

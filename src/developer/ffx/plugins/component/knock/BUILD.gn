@@ -9,7 +9,7 @@ ffx_plugin("ffx_knock") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/lib/diagnostics/selectors",
@@ -20,7 +20,7 @@ ffx_plugin("ffx_knock") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
-  test_deps = [ "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc" ]
+  test_deps = [ "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust" ]
 
   args_sources = [ "src/args.rs" ]
 

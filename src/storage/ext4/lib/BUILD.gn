@@ -12,8 +12,8 @@ rustc_library("parser") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
@@ -21,7 +21,7 @@ rustc_library("parser") {
     "//src/storage/ext4/read-only:ext4-read-only",
   ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io-rustc" ]
+  test_deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io_rust" ]
 
   sources = [ "src/lib.rs" ]
 }

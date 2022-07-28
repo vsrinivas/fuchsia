@@ -27,9 +27,9 @@ rustc_library("display-utils") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

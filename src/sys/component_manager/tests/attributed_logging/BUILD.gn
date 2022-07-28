@@ -12,7 +12,7 @@ rustc_test("test-bin") {
   source_root = "integration-test.rs"
   name = "attributed-logging-test"
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
@@ -31,7 +31,7 @@ rustc_test("e2e-bin") {
   source_root = "e2e-test.rs"
   name = "attributed-logging-e2e-test"
   deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",

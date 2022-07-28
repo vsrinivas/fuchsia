@@ -22,7 +22,7 @@ rustc_library("rust") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
@@ -52,8 +52,8 @@ rustc_test("tun-test") {
   source_root = "tests/tun.rs"
   deps = [
     ":rust",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
-    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

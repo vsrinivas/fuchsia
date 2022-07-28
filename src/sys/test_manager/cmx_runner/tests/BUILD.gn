@@ -12,7 +12,7 @@ rustc_binary("echo_proxy_server_bin") {
   testonly = true
   source_root = "echo_proxy_server.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

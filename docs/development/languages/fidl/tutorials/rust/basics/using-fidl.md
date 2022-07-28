@@ -87,7 +87,7 @@ rm -r examples/fidl/rust/fidl_crates/*
 
 For each FIDL library declaration, including the one in [Compiling FIDL][fidl-intro],
 a FIDL crate containing Rust bindings code for that library is generated under the original target
-name appended with `-rustc`.
+name appended with `_rust`.
 
 Add a dependency on the Rust bindings by referencing this generated crate. The new `rustc_binary`
 target should look like:
@@ -95,7 +95,7 @@ target should look like:
 ```gn
 rustc_binary("fidl_crates_bin") {
   edition = "2021"
-  deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc" ]
+  deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples_rust" ]
 
   sources = [ "src/main.rs" ]
 }

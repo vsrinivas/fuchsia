@@ -9,9 +9,9 @@ rustc_library("isolated-devmgr") {
   testonly = true
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/connectivity/wlan/lib/wlan_dev",
-    "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr-rustc",
+    "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",

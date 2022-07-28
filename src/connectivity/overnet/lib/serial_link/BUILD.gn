@@ -9,8 +9,8 @@ rustc_library("serial_link") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial-rustc",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_rust",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/stream_framer",
     "//src/lib/fuchsia-async",

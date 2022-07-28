@@ -17,9 +17,9 @@ rustc_library("runner") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
-    "//sdk/fidl/fuchsia.diagnostics.types:fuchsia.diagnostics.types-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_rust",
+    "//sdk/fidl/fuchsia.diagnostics.types:fuchsia.diagnostics.types_rust",
     "//src/lib/error/clonable_error",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

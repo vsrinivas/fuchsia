@@ -14,8 +14,8 @@ rustc_binary("intl_wisdom_server_rust") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//examples/intl/wisdom/fidl:wisdom-rustc",
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//examples/intl/wisdom/fidl:wisdom_rust",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",

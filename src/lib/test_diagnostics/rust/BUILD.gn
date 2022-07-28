@@ -11,8 +11,8 @@ lib_sources = [
 ]
 
 lib_deps = [
-  "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-  "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+  "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+  "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
   "//src/lib/diagnostics/data/rust",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
@@ -36,13 +36,13 @@ rustc_library("test_diagnostics") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
       "//src/lib/diagnostics/reader/rust",
     ]
   }
 
   test_deps = shared_test_deps + [
-                "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+                "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
                 "//src/lib/zircon/rust:fuchsia-zircon",
               ]
 

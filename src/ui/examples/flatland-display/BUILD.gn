@@ -30,9 +30,9 @@ rustc_binary("bin-rust") {
   sources = [ "src/main.rs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

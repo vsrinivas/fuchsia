@@ -25,10 +25,10 @@ if (is_host) {
     with_unit_tests = true
 
     deps = [
-      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-      "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-      "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+      "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
+      "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite_rust",
       "//src/developer/ffx/daemon/core:lib",
       "//src/developer/ffx/daemon/events:lib",
       "//src/developer/ffx/daemon/target:lib",

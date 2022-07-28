@@ -10,7 +10,7 @@ rustc_binary("bin") {
   output_name = "display-tool"
 
   deps = [
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//src/graphics/display/lib/rust/display-utils",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-image-format",

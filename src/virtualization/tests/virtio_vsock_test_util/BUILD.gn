@@ -12,7 +12,7 @@ rustc_binary("virtio_vsock_test_util") {
 
   if (is_fuchsia) {
     deps = [
-      "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
+      "//sdk/fidl/fuchsia.vsock:fuchsia.vsock_rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-component",

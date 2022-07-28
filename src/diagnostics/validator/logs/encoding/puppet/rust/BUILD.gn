@@ -11,8 +11,8 @@ rustc_binary("puppet") {
   testonly = true
 
   deps = [
-    "../../fidl:validate-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "../../fidl:validate_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

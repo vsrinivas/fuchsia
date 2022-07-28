@@ -35,8 +35,8 @@ rustc_library("fuchsia-hyper") {
     test_deps += [ "//third_party/rust_crates:anyhow" ]
   } else {
     deps += [
-      "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+      "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
       "//src/lib/network/fidl_fuchsia_net_ext",
       "//src/lib/webpki-roots-fuchsia",
       "//src/lib/zircon/rust:fuchsia-zircon",

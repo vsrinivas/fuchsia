@@ -37,7 +37,7 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_rust",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:lazy_static",

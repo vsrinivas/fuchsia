@@ -24,10 +24,10 @@ rustc_binary("bin") {
 
   deps = [
     ":universe_resolver_config",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -42,8 +42,8 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",

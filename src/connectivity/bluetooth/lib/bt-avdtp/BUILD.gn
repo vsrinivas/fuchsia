@@ -24,7 +24,7 @@ rustc_library("bt-avdtp") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:assert_matches",
   ]

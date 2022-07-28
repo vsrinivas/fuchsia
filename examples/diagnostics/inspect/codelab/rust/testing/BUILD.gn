@@ -11,7 +11,7 @@ rustc_library("inspect-rust-codelab-testing") {
   visibility = [ "//examples/diagnostics/inspect/codelab/rust/*" ]
 
   deps = [
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect_rust",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
   ]

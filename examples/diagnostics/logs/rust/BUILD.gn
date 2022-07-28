@@ -34,7 +34,7 @@ rustc_test("test") {
   source_root = "tests/lib.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//src/lib/diagnostics/reader",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

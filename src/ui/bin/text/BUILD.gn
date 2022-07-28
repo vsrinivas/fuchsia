@@ -34,11 +34,11 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+    "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -131,12 +131,12 @@ rustc_test("keyboard3_integration_test_bin") {
   deps = [
     ":bin",
     ":test_helpers",
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
-    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+    "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
@@ -160,9 +160,9 @@ rustc_test("text_manager_integration_test_bin") {
   deps = [
     ":bin",
     ":test_helpers",
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/ui/keymaps",
@@ -182,8 +182,8 @@ rustc_test("legacy_ime_integration_test_bin") {
   deps = [
     ":bin",
     ":test_helpers",
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -201,9 +201,9 @@ rustc_library("test_helpers") {
   sources = [ "tests/test_helpers.rs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

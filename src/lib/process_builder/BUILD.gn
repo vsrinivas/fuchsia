@@ -17,8 +17,8 @@ rustc_library("process_builder") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
@@ -35,7 +35,7 @@ rustc_library("process_builder") {
   ]
 
   test_deps = [
-    ":test-util-fidl-rustc",
+    ":test-util-fidl_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",
@@ -62,7 +62,7 @@ rustc_binary("root_job_test_runner") {
   source_root = "root_job_test_runner/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -87,7 +87,7 @@ rustc_binary("test_util") {
   source_root = "test/test_util.rs"
 
   deps = [
-    ":test-util-fidl-rustc",
+    ":test-util-fidl_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",

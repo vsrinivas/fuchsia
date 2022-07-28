@@ -11,7 +11,7 @@ rustc_binary("bin") {
   source_root = "main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
+    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",

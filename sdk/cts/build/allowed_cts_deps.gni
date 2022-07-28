@@ -22,7 +22,7 @@ ALLOWED_CTS_DEPS = [
 
 # Individual Rust dependencies that correspond to an SDK element.
 ALLOWED_RUST_DEPS = [
-  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
   "//src/lib/fidl/rust/fidl:fidl",
   "//src/lib/fuchsia-async:fuchsia-async",
   "//src/lib/fuchsia-component-test:fuchsia-component-test",
@@ -36,11 +36,11 @@ ALLOWED_RUST_DEPS = [
   "//third_party/rust_crates:tracing",
 
   # Needed by collections_integration_test.
-  "//examples/components/routing/fidl:echo-rustc",
+  "//examples/components/routing/fidl:echo_rust",
   "//src/lib/fuchsia-fs:fuchsia-fs",
   "//src/lib/fuchsia-runtime:fuchsia-runtime",
   "//src/sys/component_manager/testing/echo_server:echo_server",
-  "//src/sys/component_manager/tests/fidl:components-rustc",
+  "//src/sys/component_manager/tests/fidl:components_rust",
 
   "//src/developer/ffx:ffx_bin",
 ]

@@ -24,8 +24,8 @@ if (is_host) {
     ]
 
     deps = [
-      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-      "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+      "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal_rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-url",
       "//src/security/scrutiny/config",
@@ -59,7 +59,7 @@ if (is_host) {
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     test_deps = [
-      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//src/lib/fuchsia",
       "//src/lib/zerocopy",
       "//src/security/scrutiny/testing",

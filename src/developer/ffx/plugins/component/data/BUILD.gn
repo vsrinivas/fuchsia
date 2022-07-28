@@ -9,7 +9,7 @@ ffx_plugin("ffx_component_data") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//src/developer/ffx/plugins/component/storage:ffx_component_storage",
   ]
 

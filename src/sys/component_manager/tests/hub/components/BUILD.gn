@@ -42,8 +42,8 @@ rustc_binary("dynamic_child_reporter_bin") {
   testonly = true
   deps = [
     ":hub_report_lib",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
   ]
@@ -96,8 +96,8 @@ rustc_library("hub_report_lib") {
   source_root = "hub_report.rs"
   testonly = true
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//examples/components/routing/fidl:echo_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:tracing",

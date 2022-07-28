@@ -30,8 +30,8 @@ rustc_binary("bin") {
 
   deps = [
     ":measure_tape_for_stash",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",

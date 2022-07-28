@@ -12,8 +12,8 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
-    "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_rust",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

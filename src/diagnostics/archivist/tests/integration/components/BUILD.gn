@@ -61,7 +61,7 @@ rustc_binary("log_and_crash_component_bin") {
   edition = "2021"
   source_root = "src/log_and_crash.rs"
   deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//src/lib/diagnostics/log/message/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -77,7 +77,7 @@ rustc_binary("log_on_interest_bin") {
   edition = "2021"
   source_root = "src/log_on_interest.rs"
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -156,8 +156,8 @@ rustc_binary("socket_puppet_bin") {
   source_root = "src/socket_puppet.rs"
 
   deps = [
-    "fidl:fidl-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "fidl:fidl_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -181,7 +181,7 @@ rustc_binary("stdio_puppet_bin") {
   source_root = "src/stdio_puppet.rs"
 
   deps = [
-    "fidl:fidl-rustc",
+    "fidl:fidl_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

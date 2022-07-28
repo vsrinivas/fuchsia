@@ -11,7 +11,7 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -51,9 +51,9 @@ bin_base = {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
-    "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
+    "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/lib/diagnostics/inspect/runtime/rust",

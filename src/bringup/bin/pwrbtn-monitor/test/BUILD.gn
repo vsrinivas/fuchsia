@@ -12,10 +12,10 @@ rustc_binary("mock_services") {
   source_root = "src/mock_services.rs"
 
   deps = [
-    "fidl:fuchsia.test.pwrbtn-rustc",
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "fidl:fuchsia.test.pwrbtn_rust",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_rust",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -36,7 +36,7 @@ rustc_test("test_driver") {
   source_root = "src/test.rs"
 
   deps = [
-    "fidl:fuchsia.test.pwrbtn-rustc",
+    "fidl:fuchsia.test.pwrbtn_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

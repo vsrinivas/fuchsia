@@ -7,9 +7,9 @@ import("//build/rust/rustc_test.gni")
 rustc_test("sim_client_vs_sim_ap") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
-    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
+    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_rust",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",

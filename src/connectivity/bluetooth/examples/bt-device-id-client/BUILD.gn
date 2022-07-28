@@ -10,7 +10,7 @@ rustc_binary("bin") {
   output_name = "bt_device_id_client"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth.deviceid:fuchsia.bluetooth.deviceid-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.deviceid:fuchsia.bluetooth.deviceid_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

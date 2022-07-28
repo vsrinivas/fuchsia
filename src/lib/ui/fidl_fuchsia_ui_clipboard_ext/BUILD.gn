@@ -22,7 +22,7 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.ui.clipboard:fuchsia.ui.clipboard-rustc",
+    "//sdk/fidl/fuchsia.ui.clipboard:fuchsia.ui.clipboard_rust",
     "//third_party/rust_crates:thiserror",
   ]
   sources = [ "src/lib.rs" ]

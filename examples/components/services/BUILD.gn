@@ -23,10 +23,10 @@ fidl("fuchsia.examples.services") {
 rustc_test("branch-bin") {
   edition = "2021"
   deps = [
-    ":fuchsia.examples.services-rustc",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    ":fuchsia.examples.services_rust",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
@@ -41,7 +41,7 @@ rustc_binary("provider-bin") {
   edition = "2021"
   output_name = "provider_bin"
   deps = [
-    ":fuchsia.examples.services-rustc",
+    ":fuchsia.examples.services_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

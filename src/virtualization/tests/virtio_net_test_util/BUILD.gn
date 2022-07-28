@@ -12,8 +12,8 @@ rustc_binary("virtio_net_test_util") {
 
   if (is_fuchsia) {
     deps = [
-      "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
-      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+      "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//src/connectivity/lib/network-device/rust",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fidl/rust/fidl",

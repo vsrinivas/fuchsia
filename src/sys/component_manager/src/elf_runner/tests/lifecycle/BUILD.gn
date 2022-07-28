@@ -51,7 +51,7 @@ rustc_binary("rendezvous_exit") {
   deps = [
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -67,7 +67,7 @@ rustc_test("component_exit") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/component_manager/tests/fidl:components_rust",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures-util",
@@ -111,7 +111,7 @@ rustc_test("debug_started") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
@@ -128,7 +128,7 @@ rustc_binary("unresponsive_component") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

@@ -73,7 +73,7 @@ bindings target for the `fuchsia.examples` library:
 
   ```gn
   deps = [
-    "fidl/fuchsia.examples:fuchsia.examples-rustc",
+    "fidl/fuchsia.examples:fuchsia.examples_rust",
     ...
   ]
   ```
@@ -137,7 +137,7 @@ Compile the `fidl.examples.routing.echo` bindings:
 * {Rust}
 
   ```posix-terminal
-  fx build vendor/fuchsia-codelab/echo-fidl:echo-rustc
+  fx build vendor/fuchsia-codelab/echo-fidl:echo_rust
   ```
 
 * {C++}
@@ -152,7 +152,7 @@ editor:
 * {Rust}
 
   ```posix-terminal
-  fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo-rustc sources
+  fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo_rust sources
   ```
 
 * {C++}

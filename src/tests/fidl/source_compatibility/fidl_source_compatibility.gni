@@ -59,7 +59,7 @@ template("_rust_compat") {
     output_dir = target_out_dir
     edition = "2018"
     deps = [
-      ":${invoker.fidl}-rustc",
+      ":${invoker.fidl}_rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:futures",

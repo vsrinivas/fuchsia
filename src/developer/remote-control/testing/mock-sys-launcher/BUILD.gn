@@ -13,7 +13,7 @@ rustc_binary("mock-sys-launcher-bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

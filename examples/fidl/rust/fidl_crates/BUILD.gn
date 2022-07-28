@@ -10,7 +10,7 @@ import("//build/rust/rustc_binary.gni")
 # [START test]
 rustc_binary("fidl_crates_bin") {
   edition = "2021"
-  test_deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc" ]
+  test_deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples_rust" ]
   with_unit_tests = true
 
   sources = [ "src/main.rs" ]

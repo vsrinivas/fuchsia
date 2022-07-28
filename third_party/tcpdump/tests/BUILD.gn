@@ -27,13 +27,13 @@ rustc_test("bin") {
   edition = "2021"
   output_name = "tcpdump_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
-    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug_rust",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_rust",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_rust",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",

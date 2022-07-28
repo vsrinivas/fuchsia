@@ -343,7 +343,7 @@ rustc_test("fidl_rust_measure_tape_tests_bin") {
     ":measure_tape_for_conformance",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl/rust/gidl_util",
-    "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
+    "//src/tests/fidl/conformance_suite:conformance_fidl_rust",
   ]
   non_rust_deps = [ ":generate_measure_tape_test" ]
   sources = [ measure_tape_test_source ]

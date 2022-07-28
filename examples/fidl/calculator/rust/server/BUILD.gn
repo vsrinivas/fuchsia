@@ -23,7 +23,7 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//examples/fidl/calculator/fidl:calculator-rustc",
+    "//examples/fidl/calculator/fidl:calculator_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",

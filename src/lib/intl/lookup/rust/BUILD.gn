@@ -40,7 +40,7 @@ rustc_staticlib("lib") {
     "//zircon/system/ulib/zx",
   ]
   test_deps = [
-    ":fuchsia.intl.test-rustc",
+    ":fuchsia.intl.test_rust",
     ":l10n",
   ]
 

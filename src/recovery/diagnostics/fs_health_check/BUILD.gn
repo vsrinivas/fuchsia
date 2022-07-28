@@ -13,7 +13,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/pkg/lib/forced-fdr",

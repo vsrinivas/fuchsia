@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 common_deps = [
-  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
   "//src/lib/fdio",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia",

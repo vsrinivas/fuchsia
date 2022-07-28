@@ -9,7 +9,7 @@ ffx_plugin("ffx_input") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.ui.input.config:fuchsia.ui.input.config-rustc",
+    "//sdk/fidl/fuchsia.ui.input.config:fuchsia.ui.input.config_rust",
     "//third_party/rust_crates:anyhow",
   ]
 

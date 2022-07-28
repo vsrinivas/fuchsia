@@ -50,8 +50,8 @@ rustc_test("bin") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
-    ":fuchsia.devfs.test-rustc",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    ":fuchsia.devfs.test_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fidl/rust/fidl",

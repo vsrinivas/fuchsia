@@ -11,8 +11,8 @@ rustc_library("keymaps") {
   version = "0.1.0"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",

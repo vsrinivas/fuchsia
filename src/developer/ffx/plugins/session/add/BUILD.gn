@@ -9,7 +9,7 @@ ffx_plugin("ffx_session_add") {
   edition = "2021"
   with_unit_tests = true
 
-  deps = [ "//sdk/fidl/fuchsia.element:fuchsia.element-rustc" ]
+  deps = [ "//sdk/fidl/fuchsia.element:fuchsia.element_rust" ]
 
   test_deps = [
     "//src/lib/fuchsia",

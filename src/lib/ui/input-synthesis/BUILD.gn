@@ -26,12 +26,12 @@ rustc_library("input-synthesis") {
   version = "0.1.0"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -70,7 +70,7 @@ rustc_binary("input-synthesis-bin") {
   edition = "2021"
   deps = [
     ":input-synthesis",
-    ":test.inputsynthesis-rustc",
+    ":test.inputsynthesis_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

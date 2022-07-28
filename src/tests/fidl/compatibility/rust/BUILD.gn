@@ -15,8 +15,8 @@ rustc_binary("bin") {
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/tests/fidl/compatibility/fidl:fidl_import-rustc",
-    "//src/tests/fidl/compatibility/fidl:fidl_service-rustc",
+    "//src/tests/fidl/compatibility/fidl:fidl_import_rust",
+    "//src/tests/fidl/compatibility/fidl:fidl_service_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

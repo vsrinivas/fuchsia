@@ -10,10 +10,10 @@ rustc_binary("bin") {
   edition = "2018"
   name = "fake_netstack"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.posix:fuchsia.posix-rustc",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.posix:fuchsia.posix_rust",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
     "//src/lib/async-utils",

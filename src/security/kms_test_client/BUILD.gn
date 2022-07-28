@@ -11,8 +11,8 @@ rustc_test("bin") {
   source_root = "src/main.rs"
   sources = [ "src/main.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.kms:fuchsia.kms_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

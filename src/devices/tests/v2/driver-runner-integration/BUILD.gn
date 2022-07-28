@@ -18,7 +18,7 @@ rustc_test("driver_runner_integration_test") {
   source_root = "driver_runner_integration_test.rs"
   sources = [ "driver_runner_integration_test.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia-async",

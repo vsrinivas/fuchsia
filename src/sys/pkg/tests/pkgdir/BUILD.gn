@@ -10,8 +10,8 @@ rustc_test("driver") {
   edition = "2021"
 
   deps = [
-    "pkg-harness:test.fidl.pkg-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "pkg-harness:test.fidl.pkg_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

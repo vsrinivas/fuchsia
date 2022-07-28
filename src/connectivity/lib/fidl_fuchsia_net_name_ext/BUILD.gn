@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("fidl_fuchsia_net_name_ext") {
   with_unit_tests = true
   edition = "2021"
-  deps = [ "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc" ]
+  deps = [ "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust" ]
 
   sources = [ "src/lib.rs" ]
 

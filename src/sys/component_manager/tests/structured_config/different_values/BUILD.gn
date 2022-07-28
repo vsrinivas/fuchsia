@@ -16,7 +16,7 @@ rustc_test("bin") {
   deps = [
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver-rustc",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_rust",
   ]
 }
 

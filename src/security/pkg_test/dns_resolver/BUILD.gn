@@ -13,8 +13,8 @@ rustc_binary("security_pkg_dns_resolver-binary") {
 
   sources = [ "src/main.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

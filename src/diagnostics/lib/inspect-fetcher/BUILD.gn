@@ -17,7 +17,7 @@ rustc_library("inspect-fetcher") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

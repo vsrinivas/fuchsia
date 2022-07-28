@@ -9,7 +9,7 @@ ffx_plugin("ffx_target_echo") {
   edition = "2021"
   with_unit_tests = true
   args_with_unit_tests = true
-  deps = [ "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc" ]
+  deps = [ "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust" ]
   test_deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

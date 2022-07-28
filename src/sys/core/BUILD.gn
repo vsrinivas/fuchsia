@@ -79,7 +79,7 @@ rustc_binary("fake_appmgr_bin") {
   source_root = "test/fake_appmgr.rs"
   sources = [ "test/fake_appmgr.rs" ]
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
@@ -93,7 +93,7 @@ rustc_test("core_proxy_integration_test_bin") {
   source_root = "test/integration_test.rs"
   sources = [ "test/integration_test.rs" ]
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
+    "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:log",

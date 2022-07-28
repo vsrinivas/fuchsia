@@ -56,9 +56,9 @@ rustc_test("component_events_test_bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_rust",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -82,7 +82,7 @@ rustc_test("observer_integration_test_bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
@@ -120,8 +120,8 @@ rustc_binary("test_component_with_subrealm_bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

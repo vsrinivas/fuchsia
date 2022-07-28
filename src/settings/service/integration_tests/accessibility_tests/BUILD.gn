@@ -16,8 +16,8 @@ rustc_test("bin") {
     "src/common.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",

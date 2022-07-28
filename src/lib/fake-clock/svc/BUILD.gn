@@ -11,8 +11,8 @@ rustc_binary("fake_clock_svc") {
   with_unit_tests = true
 
   deps = [
-    "//src/lib/fake-clock/fidl:fidl-rustc",
-    "//src/lib/fake-clock/named-timer:fidl-rustc",
+    "//src/lib/fake-clock/fidl:fidl_rust",
+    "//src/lib/fake-clock/named-timer:fidl_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

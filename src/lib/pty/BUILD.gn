@@ -15,7 +15,7 @@ rustc_library("pty") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_rust",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

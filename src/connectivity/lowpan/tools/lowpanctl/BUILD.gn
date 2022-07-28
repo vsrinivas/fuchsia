@@ -11,13 +11,13 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
-    "//sdk/fidl/fuchsia.lowpan.experimental:fuchsia.lowpan.experimental-rustc",
-    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
-    "//sdk/fidl/fuchsia.lowpan.thread:fuchsia.lowpan.thread-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan_rust",
+    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan_rust",
+    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device_rust",
+    "//sdk/fidl/fuchsia.lowpan.experimental:fuchsia.lowpan.experimental_rust",
+    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test_rust",
+    "//sdk/fidl/fuchsia.lowpan.thread:fuchsia.lowpan.thread_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lowpan/lib/openthread_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

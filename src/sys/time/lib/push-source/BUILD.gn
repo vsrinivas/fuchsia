@@ -17,7 +17,7 @@ rustc_library("push-source") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
+    "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/watch_handler",
     "//src/lib/zircon/rust:fuchsia-zircon",

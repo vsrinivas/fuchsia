@@ -1208,7 +1208,7 @@ using [Inspect][doc-inspect]:
       rustc_binary("echo_server") {
         edition = "2021"
         deps = [
-          "//examples/components/routing/fidl:echo-rustc",
+          "//examples/components/routing/fidl:echo_rust",
           {{ '<strong>' }}# This library requires "inspect/client.shard.cml" {{ '</strong>' }}
           {{ '<strong>' }}"//src/lib/diagnostics/inspect/runtime/rust", {{ '</strong>' }}
           "//src/lib/diagnostics/inspect/rust",

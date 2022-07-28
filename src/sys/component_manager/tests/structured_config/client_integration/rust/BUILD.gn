@@ -19,7 +19,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver-rustc",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_rust",
     "//third_party/rust_crates:futures",
   ]
 }

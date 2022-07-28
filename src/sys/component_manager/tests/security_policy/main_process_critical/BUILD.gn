@@ -18,9 +18,9 @@ rustc_test("security_policy_critical_integration_test_bin") {
   edition = "2021"
   source_root = "security_policy_critical_integration_test.rs"
   deps = [
-    ":test.policy-rustc",
+    ":test.policy_rust",
     "../util:security_policy_test_util",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -44,7 +44,7 @@ rustc_binary("exit_on_command_bin") {
   edition = "2021"
   source_root = "exit_on_command.rs"
   deps = [
-    ":test.policy-rustc",
+    ":test.policy_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

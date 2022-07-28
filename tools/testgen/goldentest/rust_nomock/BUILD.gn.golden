@@ -16,9 +16,9 @@ rustc_test("bin") {
   ]
   deps = [
     # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
-    # ex: "//examples/components/routing/fidl:echo-rustc",
+    # ex: "//examples/components/routing/fidl:echo_rust",
     {COMPONENT_FIDL_BUILD_TARGET},
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",

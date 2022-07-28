@@ -11,17 +11,17 @@ ffx_plugin("ffx_setui_audio") {
   args_with_unit_tests = true
 
   args_deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/developer/ffx/plugins/setui/utils:utils",
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:test-case",
   ]

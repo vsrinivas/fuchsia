@@ -8,8 +8,8 @@ rustc_library("rust") {
   edition = "2021"
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/lib/driver_test_realm:realm_builder_version",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component-test",

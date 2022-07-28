@@ -15,7 +15,7 @@ rustc_binary("context-bin") {
   edition = "2021"
   output_name = "context"
   deps = [
-    "fidl:fuchsia.elf.test-rustc",
+    "fidl:fuchsia.elf.test_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -37,7 +37,7 @@ rustc_test("test") {
   name = "environ"
 
   deps = [
-    "fidl:fuchsia.elf.test-rustc",
+    "fidl:fuchsia.elf.test_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
   ]

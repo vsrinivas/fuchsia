@@ -16,8 +16,8 @@ rustc_library("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-component",

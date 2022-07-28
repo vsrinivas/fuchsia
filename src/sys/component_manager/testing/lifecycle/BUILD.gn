@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("lifecycle_placeholder") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

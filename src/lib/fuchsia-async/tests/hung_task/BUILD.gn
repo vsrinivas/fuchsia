@@ -33,7 +33,7 @@ rustc_test("test_bin") {
   source_root = "src/test.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//src/lib/diagnostics/data",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/diagnostics/reader",

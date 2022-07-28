@@ -9,7 +9,7 @@ ffx_plugin("ffx_session_launch") {
   edition = "2021"
   with_unit_tests = true
 
-  deps = [ "//sdk/fidl/fuchsia.session:fuchsia.session-rustc" ]
+  deps = [ "//sdk/fidl/fuchsia.session:fuchsia.session_rust" ]
   test_deps = [ "//src/lib/fuchsia-async" ]
 
   args_sources = [ "src/args.rs" ]

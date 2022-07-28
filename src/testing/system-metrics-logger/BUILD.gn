@@ -12,8 +12,8 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "fuchsia.systemmetrics.test:fuchsia.systemmetrics.test-rustc",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
+    "fuchsia.systemmetrics.test:fuchsia.systemmetrics.test_rust",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

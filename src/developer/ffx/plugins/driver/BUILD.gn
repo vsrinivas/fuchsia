@@ -10,12 +10,12 @@ ffx_plugin("ffx_driver") {
   with_unit_tests = true
   args_deps = [ "//src/devices/bin/driver_tools:lib" ]
   deps = [
-    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
-    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
-    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground-rustc",
-    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_rust",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_rust",
+    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_rust",
+    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/devices/bin/driver_tools:lib",
     "//src/lib/component_hub",
     "//src/lib/diagnostics/selectors",

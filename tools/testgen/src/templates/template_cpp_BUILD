@@ -8,7 +8,7 @@ executable("bin") {
  sources = [ "src/BINARY_NAME.cc" ]
  deps = [
    # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
-   # ex: "//examples/components/routing/fidl:echo-rustc",
+   # ex: "//examples/components/routing/fidl:echo_rust",
    {COMPONENT_FIDL_BUILD_TARGET},
    "//src/lib/testing/loop_fixture",
    "//sdk/fidl/fuchsia.component",

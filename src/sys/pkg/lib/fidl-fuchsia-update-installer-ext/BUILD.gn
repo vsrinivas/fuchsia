@@ -11,11 +11,11 @@ rustc_library("fidl-fuchsia-update-installer-ext") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
-    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
+    "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer_rust",
     "//src/sys/pkg/lib/event-queue",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",

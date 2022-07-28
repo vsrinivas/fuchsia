@@ -24,12 +24,12 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.nand.flashmap:fuchsia.nand.flashmap-rustc",
-    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot-rustc",
+    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_rust",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
+    "//sdk/fidl/fuchsia.nand.flashmap:fuchsia.nand.flashmap_rust",
+    "//sdk/fidl/fuchsia.vboot:fuchsia.vboot_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",

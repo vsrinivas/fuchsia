@@ -15,8 +15,8 @@ rustc_library("lib") {
   ]
   deps = [
     "../netext:lib",
-    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//third_party/rust_crates:anyhow",
   ]
 

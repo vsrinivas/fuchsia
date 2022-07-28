@@ -17,7 +17,7 @@ rustc_binary("looper_bin") {
   source_root = "src/looper.rs"
 
   deps = [
-    "fidl:fuchsia.component.tests-rustc",
+    "fidl:fuchsia.component.tests_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -41,9 +41,9 @@ rustc_test("binder_integration_test_bin") {
   source_root = "src/binder_integration_test.rs"
 
   deps = [
-    "fidl:fuchsia.component.tests-rustc",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "fidl:fuchsia.component.tests_rust",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/lib/component-events",

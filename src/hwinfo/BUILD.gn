@@ -13,10 +13,10 @@ rustc_binary("hwinfo_bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
-    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
-    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory_rust",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -137,7 +137,7 @@ rustc_test("hwinfo_positive_test") {
   source_root = "tests/hwinfo_positive_test.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -151,7 +151,7 @@ rustc_test("hwinfo_negative_test") {
   source_root = "tests/hwinfo_negative_test.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -165,7 +165,7 @@ rustc_test("hwinfo_retail_test") {
   source_root = "tests/hwinfo_retail_test.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
