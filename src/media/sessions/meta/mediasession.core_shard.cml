@@ -6,6 +6,7 @@
         {
             name: "mediasession",
             url: "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cm",
+            environment: "#full-resolver-env",
         },
     ],
     use: [
