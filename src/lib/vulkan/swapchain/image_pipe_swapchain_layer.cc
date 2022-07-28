@@ -692,7 +692,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   }
   if (!fuchsia_buffer_collection_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
-            VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME);
+            VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   }
   if (!dedicated_allocation_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
