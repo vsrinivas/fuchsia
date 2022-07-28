@@ -344,7 +344,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
 
     /// Handles `buf` from `sender`.
     ///
-    /// Returns `Ok(Some(sock, data, dst))` if a `data` must be sent to `dst`
+    /// Returns `Ok(Some(sock, msg, dst))` if `msg` must be sent to `dst`
     /// over `sock`.
     ///
     /// Returns `Ok(None)` if no action is required and the handler is ready to
@@ -356,7 +356,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
         &mut self,
         buf: &[u8],
         mut sender: std::net::SocketAddrV4,
-    ) -> Result<Option<(std::net::SocketAddrV4, Vec<u8>, Option<Mac>)>, Error> {
+    ) -> Result<Option<(std::net::SocketAddrV4, Message, Option<Mac>)>, Error> {
         let msg = match Message::from_buffer(buf) {
             Ok(msg) => {
                 debug!("parsed message from {}: {:?}", sender, msg);
@@ -410,7 +410,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
                     }
                 };
                 sender.set_ip(addr);
-                Ok(Some((sender, message.serialize(), chaddr)))
+                Ok(Some((sender, message, chaddr)))
             }
         }
     }
@@ -435,13 +435,14 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
                 ))
             }
         };
-        if let Some((dst, response, chaddr)) = handler
+        if let Some((dst, msg, chaddr)) = handler
             .handle_from_sender(&buf[..received], sender)
             .context("failed to handle buffer")?
         {
             let chaddr = if let Some(chaddr) = chaddr {
                 chaddr
             } else {
+                let response = msg.serialize();
                 let sent = socket
                     .send_to(&response, SocketAddr::V4(dst))
                     .await
@@ -458,8 +459,19 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
             };
             // Packet sockets are necessary here because the on-device Netstack does
             // not yet have a relation linking the `chaddr` MAC address to an IP address.
-            let src_ip = net_types::ip::Ipv4Addr::from(sender.ip().octets());
-            let dst_ip = *net_types::ip::Ipv4::LIMITED_BROADCAST_ADDRESS;
+            let dst_ip: net_types::ip::Ipv4Addr = (*dst.ip()).into();
+            // Prefer the ServerIdentifier if set; otherwise use the socket's local address.
+            let src_ip: net_types::ip::Ipv4Addr = msg
+                .options
+                .iter()
+                .find_map(|opt| match opt {
+                    dhcp::protocol::DhcpOption::ServerIdentifier(addr) => Some(addr.clone()),
+                    _ => None,
+                })
+                // TODO(https://fxbug.dev/105402): Eliminate this panic.
+                .expect("expect server identifier is always present")
+                .into();
+            let response = msg.serialize();
             const SERVER_PORT: std::num::NonZeroU16 =
                 nonzero_ext::nonzero!(dhcp::protocol::SERVER_PORT);
             const CLIENT_PORT: std::num::NonZeroU16 =
