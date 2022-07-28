@@ -25,6 +25,11 @@ recovery_is_zedboot =
     get_label_info(recovery_label, "label_with_toolchain") ==
     get_label_info("//build/images/zedboot", "label_with_toolchain")
 
+recovery_is_recovery_eng =
+    get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info("//build/images/recovery:recovery-eng",
+                   "label_with_toolchain")
+
 flash_manifest_version = 3
 
 # These are the common assembly-related labels.
@@ -91,6 +96,9 @@ files = {
   if (recovery_is_zedboot) {
     recovery_zbi = "$root_out_dir/zedboot.${_image_suffix}"
     recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
+  } else if (recovery_is_recovery_eng) {
+    recovery_zbi = "$root_out_dir/obj/build/images/recovery/recovery-eng/recovery-eng.${_image_suffix}"
+    recovery_vbmeta = "$root_out_dir/obj/build/images/recovery/recovery-eng/recovery-eng.vbmeta"
   } else {
     # The standard recovery image and vbmeta locations.
     recovery_zbi = "$root_out_dir/recovery.${_image_suffix}"

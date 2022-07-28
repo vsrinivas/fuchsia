@@ -224,6 +224,18 @@ if [[ ! -z "${FVM_PARTITION}" ]]; then
 
   # Provision SSH key from fastboot if --ssh-key was given.
   echo "if [[ ! -z \"\${SSH_KEY}\" ]]; then" >> "${OUTPUT}"
+
+  # If we are running from userspace fastboot, reboot into bootloader for
+  # driver to pick up the new fvm before writing the ssh key.
+  cat >> "${OUTPUT}" << EOF
+  is_userspace=\$(${FASTBOOT_PATH} \${FASTBOOT_ARGS} getvar is-userspace 2>&1 | head -n1 | cut -d' ' -f2-)
+  if [[ "\${is_userspace}" == "yes" ]]; then
+    echo "running in userspace fastboot. rebooting to userspace fastboot"
+    ${FASTBOOT_PATH} \${FASTBOOT_ARGS} reboot bootloader
+    sleep 5
+  fi
+EOF
+
   echo "  ${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" "stage \"\${SSH_KEY}\" oem add-staged-bootloader-file ssh.authorized_keys" >> "${OUTPUT}"
   echo "fi" >> "${OUTPUT}"
 
