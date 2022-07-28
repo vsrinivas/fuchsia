@@ -304,7 +304,7 @@ void TraceManager::WatchAlert(WatchAlertCallback cb) {
 
 void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider,
                                           uint64_t pid, fidl::StringPtr name) {
-  FX_LOGS(INFO) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
+  FX_VLOGS(2) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
   auto it = providers_.emplace(providers_.end(), provider.Bind(), next_provider_id_++, pid,
                                name.value_or(""));
 
