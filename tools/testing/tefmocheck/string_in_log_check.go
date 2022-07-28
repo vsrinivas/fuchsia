@@ -234,8 +234,6 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		// an error if logged by unit tests.
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: serialLogType},
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: syslogType},
-		// NAND failure checks.
-		&stringInLogCheck{String: "sys_config: ERROR failed to read any copy!", Type: serialLogType},
 	}
 
 	oopsExceptBlocks := []*logBlock{
