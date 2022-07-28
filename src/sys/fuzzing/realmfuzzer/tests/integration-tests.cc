@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-socket.h"
 #include "src/sys/fuzzing/common/async-types.h"
@@ -24,6 +25,8 @@ using fuchsia::fuzzer::CoverageDataProvider;
 using fuchsia::fuzzer::Registrar;
 
 // Test fixtures.
+
+const char* kFuzzerUrl = "fuchsia-pkg://fuchsia.com/realmfuzzer-integration-tests#meta/fake.cm";
 
 // The |RealmFuzzerTest| fakes the registrar but uses the real realmfuzzer engine.
 //
@@ -52,7 +55,12 @@ class RealmFuzzerTest : public AsyncTest {
              }
              channels.emplace_back(registrar_handle.TakeChannel());
              channels.emplace_back(provider_handle.TakeChannel());
-             if (auto status = StartProcess("realmfuzzer_engine", std::move(channels), &engine_);
+             component::FuchsiaPkgUrl url;
+             if (!url.Parse(kFuzzerUrl)) {
+               return fpromise::error(ZX_ERR_INVALID_ARGS);
+             }
+             if (auto status =
+                     StartProcess("realmfuzzer_engine", url, std::move(channels), &engine_);
                  status != ZX_OK) {
                FX_LOGS(ERROR) << "Failed to start engine process: " << zx_status_get_string(status);
                return fpromise::error(status);

@@ -31,7 +31,9 @@ class FakeRegistrar final : public Registrar {
   fidl::InterfaceHandle<Registrar> NewBinding();
 
   // FIDL methods.
-  void Register(ControllerProviderHandle provider, RegisterCallback callback) override;
+  // TODO(fxbug.dev/105370): Change the type of |url| when a proper FIDL URL type is available.
+  void Register(std::string url, ControllerProviderHandle provider,
+                RegisterCallback callback) override;
 
   ZxPromise<ControllerProviderHandle> TakeProvider();
 

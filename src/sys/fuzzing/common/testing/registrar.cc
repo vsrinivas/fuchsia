@@ -19,7 +19,8 @@ fidl::InterfaceHandle<Registrar> FakeRegistrar::NewBinding() {
   return handle;
 }
 
-void FakeRegistrar::Register(ControllerProviderHandle provider, RegisterCallback callback) {
+void FakeRegistrar::Register(std::string url, ControllerProviderHandle provider,
+                             RegisterCallback callback) {
   auto status = providers_.Send(std::move(provider));
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   callback();

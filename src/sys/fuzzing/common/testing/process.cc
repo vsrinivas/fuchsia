@@ -11,12 +11,15 @@
 
 #include <iomanip>
 
+#include "src/sys/fuzzing/common/testing/runner.h"
+
 namespace fuzzing {
 
-zx_status_t StartProcess(const std::string& relpath, std::vector<zx::channel> channels,
-                         zx::process* out) {
+zx_status_t StartProcess(const std::string& relpath, const component::FuchsiaPkgUrl& url,
+                         std::vector<zx::channel> channels, zx::process* out) {
   auto path = std::string("/pkg/bin/") + relpath;
-  const char* argv[2] = {path.c_str(), nullptr};
+  auto url_str = url.ToString();
+  const char* argv[] = {path.c_str(), url_str.c_str(), nullptr};
   uint16_t i = 0;
   std::vector<fdio_spawn_action_t> actions;
   for (auto& channel : channels) {

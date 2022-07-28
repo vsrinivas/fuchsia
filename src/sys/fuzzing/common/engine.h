@@ -22,6 +22,11 @@ zx_status_t RunEngine(int argc, char** argv, RunnerPtrMaker MakeRunnerPtr) {
   auto context = ComponentContext::Create();
   ControllerProviderImpl provider(context->executor());
 
+  // Extract command line arguments for the controller provider.
+  if (auto status = provider.Initialize(&argc, &argv); status != ZX_OK) {
+    return status;
+  }
+
   // Create the runner.
   auto result = MakeRunnerPtr(argc, argv, *context);
   if (result.is_error()) {

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 source_set("testing") {
   visibility = [ "//src/sys/*" ]
   testonly = true
@@ -27,6 +29,7 @@ source_set("testing") {
   ]
   public_deps = [
     "..:common",
+    "//sdk/fidl/fuchsia.url",
     "//sdk/testing/fidl:test_support",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/sync",
@@ -50,7 +53,7 @@ source_set("sanitizer") {
 }
 
 # A standalone fuzzer that uses a fake runner.
-executable("fuzzer") {
+executable("fuzzer-bin") {
   output_name = "fake_fuzzer_for_testing"
   testonly = true
   sources = [ "engine-main.cc" ]

@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/common/testing/process.h"
@@ -27,7 +28,7 @@ using fuchsia::fuzzer::RegistryPtr;
 
 // Test fixtures.
 
-const char* kFuzzerUrl = "an arbitrary string";
+const char* kFuzzerUrl = "fuchsia-pkg://fuchsia.com/fuzz-manager-unittests#meta/fake.cm";
 
 // This class maintains the component context and connection to the fuzz-registry.
 class RegistryIntegrationTest : public AsyncTest {
@@ -44,7 +45,9 @@ class RegistryIntegrationTest : public AsyncTest {
     ASSERT_EQ(context_->Connect(handle.NewRequest()), ZX_OK);
     std::vector<zx::channel> channels;
     channels.emplace_back(handle.TakeChannel());
-    ASSERT_EQ(StartProcess("fake_fuzzer_for_testing", std::move(channels), &process_), ZX_OK);
+    component::FuchsiaPkgUrl url;
+    ASSERT_TRUE(url.Parse(kFuzzerUrl));
+    ASSERT_EQ(StartProcess("fake_fuzzer_for_testing", url, std::move(channels), &process_), ZX_OK);
   }
 
   // Promises to connect the |controller| once a fuzzer is registered.

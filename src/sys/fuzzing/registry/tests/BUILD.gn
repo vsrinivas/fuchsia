@@ -7,10 +7,7 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":registry-integration-tests",
-    "//src/sys/fuzzing/registry",
-  ]
+  deps = [ ":registry-integration-tests" ]
 }
 
 test("integration-tests-bin") {
@@ -35,7 +32,7 @@ fuchsia_test_component("integration-tests") {
   manifest = "meta/integration-tests.cml"
   deps = [
     ":integration-tests-bin",
-    "//src/sys/fuzzing/common/testing:fuzzer",
+    "//src/sys/fuzzing/common/testing:fuzzer-bin",
   ]
 }
 
@@ -47,5 +44,5 @@ fuchsia_test_component("test-realm") {
 
 fuchsia_test_package("registry-integration-tests") {
   test_components = [ ":test-realm" ]
-  deps = [ "//src/sys/fuzzing/registry:fuzz-registry" ]
+  deps = [ "//src/sys/fuzzing/registry" ]
 }

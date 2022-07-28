@@ -20,6 +20,7 @@ protocol Registrar {
     /// The registry will close the channel to the fuzzer on error, on a corresponding call to
     /// |ClearProvider|, or on exit. The fuzzer should exit when the channel closes.
     Register(resource struct {
+        fuzzer_url fuchsia.url.Url;
         provider client_end:ControllerProvider;
     }) -> ();
 };

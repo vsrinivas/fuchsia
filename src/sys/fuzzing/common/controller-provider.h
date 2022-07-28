@@ -10,7 +10,10 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/zx/channel.h>
 
+#include <string>
+
 #include "src/lib/fxl/macros.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/controller.h"
 #include "src/sys/fuzzing/common/runner.h"
@@ -33,6 +36,9 @@ class ControllerProviderImpl final : public ControllerProvider {
   // Sets the runner. Except for unit tests, callers should prefer |Run|.
   void SetRunner(RunnerPtr runner);
 
+  // Modify the command line arguments by extracting those relevant to the engine.
+  __WARN_UNUSED_RESULT zx_status_t Initialize(int* argc, char*** argv);
+
   // Promises to register with the fuzz-registrar as being able to fulfill requests to connect to
   // this object's |Controller|. Except for unit tests, callers should prefer |Run|.
   Promise<> Serve(zx::channel channel);
@@ -41,6 +47,7 @@ class ControllerProviderImpl final : public ControllerProvider {
   fidl::Binding<ControllerProvider> binding_;
   ControllerImpl controller_;
   RegistrarPtr registrar_;
+  component::FuchsiaPkgUrl url_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ControllerProviderImpl);
 };
