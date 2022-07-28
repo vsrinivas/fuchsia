@@ -52,6 +52,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay> final
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -173,9 +175,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> 
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_driveroneway::OneWay::Send>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };

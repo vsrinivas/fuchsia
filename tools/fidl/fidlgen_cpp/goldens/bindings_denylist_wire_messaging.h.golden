@@ -8,6 +8,7 @@
 
 #ifdef __Fuchsia__
 
+#include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/server.h>
@@ -52,6 +53,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed> 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -176,6 +179,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfu
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -300,6 +305,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAn
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -433,6 +440,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSa
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -835,6 +844,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachB
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -2539,7 +2550,6 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2553,7 +2563,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2582,7 +2591,6 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2596,7 +2604,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2625,7 +2632,6 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2639,7 +2645,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2668,7 +2673,6 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2682,7 +2686,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2711,7 +2714,6 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2725,7 +2727,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
-
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 

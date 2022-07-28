@@ -74,7 +74,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::Dispatch(::fidl::Server<::test_service::SecondProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_service::SecondProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -154,7 +154,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_service::FirstProtocol>::Dispatch(::fidl::Server<::test_service::FirstProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_service::FirstProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

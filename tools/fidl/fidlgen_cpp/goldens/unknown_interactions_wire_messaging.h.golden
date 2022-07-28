@@ -15,6 +15,7 @@
     #include <lib/fidl/llcpp/server.h>
     #include <lib/fidl/llcpp/service_handler_interface.h>
     #include <lib/fidl/llcpp/sync_call.h>
+    #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
   
 #endif  // __Fuchsia__
 
@@ -193,6 +194,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
 #endif  // __Fuchsia__
 
@@ -7491,7 +7493,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7505,7 +7506,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7534,7 +7534,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7548,7 +7547,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7577,7 +7575,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse UnknownInteractionsProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7591,7 +7588,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse UnknownInteractionsProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7620,7 +7616,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse UnknownInteractionsProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7634,7 +7629,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse UnknownInteractionsProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7662,7 +7656,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result);
+  void Reply();
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result);
@@ -7673,7 +7667,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result);
+  void Reply();
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result);
@@ -7699,7 +7693,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result);
+  void Reply(int32_t some_field);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result);
@@ -7710,7 +7704,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result);
+  void Reply(int32_t some_field);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result);
@@ -7736,7 +7730,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result);
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse UnknownInteractionsProtocolFlexibleTwoWayUnionResponse);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result);
@@ -7747,7 +7741,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result);
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse UnknownInteractionsProtocolFlexibleTwoWayUnionResponse);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result);
@@ -7773,7 +7767,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result);
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse UnknownInteractionsProtocolFlexibleTwoWayTableResponse);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result);
@@ -7784,7 +7778,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result);
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse UnknownInteractionsProtocolFlexibleTwoWayTableResponse);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result);
@@ -7811,7 +7805,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7825,7 +7818,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7854,7 +7846,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7868,7 +7859,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7897,7 +7887,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7911,7 +7900,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7940,7 +7928,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7954,7 +7941,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7981,7 +7967,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template<>
-class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsProtocol> {
   public:
   WireServer() = default;
   virtual ~WireServer() = default;
@@ -8221,6 +8207,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -11973,7 +11961,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -11987,7 +11974,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -12016,7 +12002,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -12030,7 +12015,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -12059,7 +12043,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -12073,7 +12056,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -12102,7 +12084,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -12116,7 +12097,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -12356,6 +12336,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
 #endif  // __Fuchsia__
 
@@ -17141,7 +17122,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -17155,7 +17135,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t> result);
-  
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -17184,7 +17163,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -17198,7 +17176,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*> result);
-  
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -17227,7 +17204,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -17241,7 +17217,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -17270,7 +17245,6 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -17284,7 +17258,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*> result);
-  
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -17311,7 +17284,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template<>
-class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
   public:
   WireServer() = default;
   virtual ~WireServer() = default;

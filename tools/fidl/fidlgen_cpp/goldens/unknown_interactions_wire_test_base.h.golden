@@ -83,6 +83,9 @@ class WireTestBase<::test_unknowninteractions::UnknownInteractionsProtocol> : pu
       FlexibleTwoWayTableErrRequestView request, FlexibleTwoWayTableErrCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayTableErr", completer);
   }
+  virtual void handle_unknown_method(::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata, UnknownMethodCompleter::Sync& completer) override {
+    NotImplemented_("handle_unknown_method", completer);
+  }
 };
 
 template <>
@@ -258,6 +261,9 @@ class WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol> 
   virtual void StrictTwoWayTableErr(
       StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTableErr", completer);
+  }
+  virtual void handle_unknown_method(::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata, UnknownMethodCompleter::Sync& completer) override {
+    NotImplemented_("handle_unknown_method", completer);
   }
 };
 

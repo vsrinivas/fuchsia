@@ -122,7 +122,7 @@ var (
 	NaturalCompleterBase    = internalNs.member("NaturalCompleterBase")
 
 	// Unknown interaction handler declared in
-	// /src/lib/fidl/cpp/include/lib/fidl/cpp/unknown_interaction_handler.h
+	// /sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/unknown_interaction_handler.h
 	UnknownMethodHandler  = fidlNs.member("UnknownMethodHandler")
 	UnknownMethodMetadata = fidlNs.member("UnknownMethodMetadata")
 	UnknownEventHandler   = fidlNs.member("UnknownEventHandler")
@@ -414,17 +414,6 @@ func (p Protocol) OpennessValue() string {
 	default:
 		panic(fmt.Errorf("unknown openness: %s", p.Openness))
 	}
-}
-
-// UnknownInteractionHandlerEntry returns code that produces a pointer to the
-// unknown interaction handler entry for this protocol. For open and ajar
-// protocols, the handler entry is defined in the protocol dispatcher. For
-// closed protocols, this is a shared constant.
-func (p Protocol) UnknownInteractionHandlerEntry() string {
-	if p.HandlesOneWayUnknownInteractions() {
-		return fmt.Sprintf("&%s::unknown_interaction_handler_entry_", p.NaturalServerDispatcher)
-	}
-	return "&::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry"
 }
 
 // UnknownInteractionReplySender returns a string which refers to the function
@@ -826,9 +815,12 @@ func (m Method) WireResultUnwrapType() string {
 	return ""
 }
 
-func (m Method) WireReplyArgs(params ...interface{}) string {
-	if m.Result == nil || !m.Result.HasError {
-		return renderParams(param, params)
+func (m Method) WireReplyArgs() string {
+	if m.Result == nil {
+		return renderParams(param, m.ResponseArgs)
+	}
+	if !m.Result.HasError {
+		return renderParams(param, m.Result.ValueParameters)
 	}
 	if len(m.Result.ValueParameters) > 0 {
 		return fmt.Sprintf("::fitx::result<%s, %s*> result", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
@@ -839,7 +831,7 @@ func (m Method) WireReplyArgs(params ...interface{}) string {
 
 func (m Method) WireReplySuccess(varName string) string {
 	if m.Result == nil {
-		panic("Cannot call WireReplySuccess on a non-error bearing response")
+		panic("Cannot call WireReplySuccess on a response without result union.")
 	}
 
 	if m.Result.Value.InlineInEnvelope {

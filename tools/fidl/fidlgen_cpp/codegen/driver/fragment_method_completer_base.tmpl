@@ -20,7 +20,7 @@ class {{ .WireBufferCompleterImpl }} : public ::fdf::internal::BufferCompleterIm
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply({{ .WireReplyArgs .ResponseArgs }});
+  void Reply({{ .WireReplyArgs }});
 
   {{- if .HasApplicationError }}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
@@ -57,12 +57,15 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
 {{- IfdefFuchsia -}}
 
 void
-{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs .ResponseArgs }}) {
+{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs }}) {
   {{- if .HasApplicationError }}
   if (result.is_ok()) {
     return MakeReply({{ .WireReplySuccess "result.value()" }});
   }
   return ReplyError(std::move(result.error_value()));
+  {{- else if .HasTransportError }}
+  {{ .Result.BuildPayload "_response" -}}
+  return MakeReply({{ .WireReplySuccess "&_response" }});
   {{- else }}
   return MakeReply({{ RenderForwardParams .ResponseArgs }});
   {{- end }}

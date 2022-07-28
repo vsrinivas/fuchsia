@@ -2107,6 +2107,8 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 

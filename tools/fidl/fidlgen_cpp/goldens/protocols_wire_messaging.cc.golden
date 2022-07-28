@@ -628,7 +628,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::Dispatch(::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -1179,7 +1179,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::Transitional>::Dispatch(::fidl::WireServer<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage&& msg,
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::Transitional>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -1636,7 +1636,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds>::Dispatch(::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -1940,7 +1940,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(::fidl::WireServer<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::MethodWithUnion>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -2110,7 +2110,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters>::Dispatch(::fidl::WireServer<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage&& msg,
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::ManyParameters>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -2367,7 +2367,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::HandleRightsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -2919,7 +2919,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>::Dispatch(::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -2946,7 +2946,6 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Respon
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::ReplySuccess(int64_t a, int64_t b, int64_t c) {
   ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse{
       .a = std::move(a),
@@ -2983,7 +2982,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct>::ReplySuccess(int64_t a, int64_t b, int64_t c) {
   ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse{
       .a = std::move(a),
@@ -3016,7 +3014,6 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorA
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
   return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse({}));
 }
@@ -3048,7 +3045,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
   return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::WithResponse({}));
 }
@@ -3076,7 +3072,6 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorA
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
   return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse({}));
 }
@@ -3108,7 +3103,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
   return MakeReply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse({}));
 }
@@ -3136,7 +3130,6 @@ void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Handle
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::ReplySuccess(::zx::handle&& h) {
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response = ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse{
       .h = std::move(h),
@@ -3171,7 +3164,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::ReplySuccess(::zx::handle&& h) {
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response = ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse{
       .h = std::move(h),
@@ -3329,7 +3321,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProtocol>::Dispatch(::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::DiscoverableProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -3790,7 +3782,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>::Dispatch(::fidl::WireServer<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -4038,7 +4030,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::Dispatch(::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

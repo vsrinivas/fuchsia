@@ -58,6 +58,7 @@ test_names = [
   "wire_sync_fdf_channel_test",
   "wire_sync_two_way_test",
   "wire_sync_zircon_handle_test",
+  "wire_unknown_interactions_driver_test",
 ]
 
 foreach(test_name, test_names) {

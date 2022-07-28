@@ -7,7 +7,7 @@
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fidl/cpp/internal/thenable.h>
-#include <lib/fidl/cpp/unknown_interaction_handler.h>
+#include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl_driver/cpp/internal/endpoint_conversions.h>

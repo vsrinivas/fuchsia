@@ -97,6 +97,8 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInP
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -159,5 +161,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProt
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__

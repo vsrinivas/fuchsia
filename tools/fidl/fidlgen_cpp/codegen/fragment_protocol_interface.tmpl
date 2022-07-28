@@ -17,7 +17,10 @@
 // This interface uses typed channels (i.e. |{{ .Transport.Namespace }}::ClientEnd<SomeProtocol>|
 // and |{{ .Transport.Namespace }}::ServerEnd<SomeProtocol>|).
 template<>
-class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
+class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher
+{{- if .HandlesOneWayUnknownInteractions -}}
+, public {{ .UnknownMethodHandler }}
+{{- end }} {
   public:
   {{ .WireServer.Self }}() = default;
   virtual ~{{ .WireServer.Self }}() = default;

@@ -6,6 +6,7 @@
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_WIRE_MESSAGING_H_
 
 #include <lib/fdf/cpp/arena.h>
+#include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 #include <lib/fidl/llcpp/wire_coding_traits.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl_driver/cpp/server.h>

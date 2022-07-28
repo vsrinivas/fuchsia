@@ -139,7 +139,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingMessage&& msg,
                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_error::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -166,7 +166,6 @@ void fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::MakeReply(::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::test_error::wire::ExampleFooResponse _response = ::test_error::wire::ExampleFooResponse{
       .y = std::move(y),
@@ -201,7 +200,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::MakeRe
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::test_error::wire::ExampleFooResponse _response = ::test_error::wire::ExampleFooResponse{
       .y = std::move(y),

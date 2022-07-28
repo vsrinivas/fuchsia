@@ -130,6 +130,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
 #endif  // __Fuchsia__
 
@@ -4034,18 +4035,20 @@ static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownI
 
 
 
+
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> {
  public:
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 
 
 
@@ -4055,12 +4058,13 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 
 
 
@@ -4084,9 +4088,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4103,6 +4107,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> {
@@ -4124,9 +4129,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4143,6 +4148,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> {
@@ -4164,9 +4170,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4183,6 +4189,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> {
@@ -4204,9 +4211,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4223,6 +4230,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> {
@@ -4244,9 +4252,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4263,6 +4271,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> {
@@ -4284,9 +4293,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4303,6 +4312,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> {
@@ -4324,9 +4334,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4343,6 +4353,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> {
@@ -4364,9 +4375,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4378,6 +4389,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ::fdf::Arena arena_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
+
 
 
 
@@ -4401,9 +4413,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4420,6 +4432,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> {
   using Type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> {
@@ -4441,9 +4454,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4460,6 +4473,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> {
   using Type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> {
@@ -4481,9 +4495,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4500,6 +4514,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> {
   using Type = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> {
@@ -4521,9 +4536,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4540,6 +4555,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> {
@@ -4561,9 +4577,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4580,6 +4596,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> {
@@ -4601,9 +4618,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4620,6 +4637,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> {
@@ -4641,9 +4659,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -4660,6 +4678,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> {
@@ -4681,9 +4700,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -5116,7 +5135,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result);
+  void Reply();
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult result);
@@ -5148,7 +5167,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult result);
+  void Reply(int32_t some_field);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult result);
@@ -5180,7 +5199,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult result);
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult result);
@@ -5212,7 +5231,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult result);
+  void Reply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse);
 
  private:
   void MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult result);
@@ -5373,7 +5392,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 // This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
 // and |fdf::ServerEnd<SomeProtocol>|).
 template<>
-class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
   public:
   WireServer() = default;
   virtual ~WireServer() = default;
@@ -5581,6 +5600,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -7518,18 +7539,20 @@ static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownI
 
 
 
+
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> {
  public:
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 
 
 
@@ -7553,9 +7576,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7572,6 +7595,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> {
@@ -7593,9 +7617,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7612,6 +7636,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> {
@@ -7633,9 +7658,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7652,6 +7677,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> {
@@ -7673,9 +7699,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7692,6 +7718,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> {
@@ -7713,9 +7740,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7732,6 +7759,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> {
@@ -7753,9 +7781,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7772,6 +7800,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> {
@@ -7793,9 +7822,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -7812,6 +7841,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> {
@@ -7833,9 +7863,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -8356,6 +8386,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
 #endif  // __Fuchsia__
 
@@ -10376,18 +10407,20 @@ static_assert(offsetof(::fidl::WireResponse<::test_unknowninteractions::UnknownI
 
 
 
+
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> {
  public:
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 
 
 
@@ -10397,12 +10430,13 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 
 
 
@@ -10426,9 +10460,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10445,6 +10479,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> {
@@ -10466,9 +10501,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10485,6 +10520,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> {
@@ -10506,9 +10542,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10525,6 +10561,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> {
@@ -10546,9 +10583,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10565,6 +10602,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> {
@@ -10586,9 +10624,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10605,6 +10643,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> {
@@ -10626,9 +10665,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10645,6 +10684,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> {
@@ -10666,9 +10706,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -10685,6 +10725,7 @@ template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse*>;
 };
+
 
 template<>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> {
@@ -10706,9 +10747,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
     fdf::Arena& arena() {
@@ -11086,7 +11127,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 // This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
 // and |fdf::ServerEnd<SomeProtocol>|).
 template<>
-class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
   public:
   WireServer() = default;
   virtual ~WireServer() = default;

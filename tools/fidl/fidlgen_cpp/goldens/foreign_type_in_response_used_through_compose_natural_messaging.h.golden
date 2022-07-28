@@ -12,7 +12,7 @@
 #include <lib/fidl/cpp/internal/thenable.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <lib/fidl/cpp/unknown_interaction_handler.h>
+#include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 
 namespace fidl {
 
@@ -192,5 +192,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_foreigntypeinresponseuse
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__

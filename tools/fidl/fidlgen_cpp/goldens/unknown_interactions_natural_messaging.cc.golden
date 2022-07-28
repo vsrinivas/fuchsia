@@ -1534,7 +1534,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalSe
 
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                                 internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::unknown_interaction_handler_entry_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -2316,7 +2316,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -3423,7 +3423,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalSe
 
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::unknown_interaction_handler_entry_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

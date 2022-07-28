@@ -14,6 +14,9 @@ struct {{ .WireResultUnwrap }} {
 };
 {{- end }}
 
+{{/* TODO(fxbug.dev/105375): This type should probably actually just be called
+* WireResult since it owns and fdf::Arena and uses DecodedValue to own the
+* handles in the decoded message. */}}
 template<>
 class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }} {
  public:
@@ -42,9 +45,9 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
   {{- end }}
 
   explicit {{ .WireUnownedResult.Self }}(const ::fidl::Status& result) : {{ .BaseWireResult }}(result) {}
-  {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = delete;
+  {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = default;
   {{ .WireUnownedResult.Self }}(const {{ .WireUnownedResult.Self }}&) = delete;
-  {{ .WireUnownedResult.Self }}* operator=({{ .WireUnownedResult.Self }}&&) = delete;
+  {{ .WireUnownedResult.Self }}& operator=({{ .WireUnownedResult.Self }}&&) = default;
   {{ .WireUnownedResult.Self }}* operator=(const {{ .WireUnownedResult.Self }}&) = delete;
   ~{{ .WireUnownedResult.Self }}() = default;
 

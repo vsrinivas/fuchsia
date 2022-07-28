@@ -35,7 +35,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage&& msg,
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_bindingsdenylist::Allowed>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -79,7 +79,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -123,7 +123,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingMessage&& msg,
                                                                                              internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -315,7 +315,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -883,7 +883,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingMessage&& msg,
                                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+                             &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -910,7 +910,6 @@ void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding:
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse{
       .b = std::move(b),
@@ -945,7 +944,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse{
       .b = std::move(b),
@@ -976,7 +974,6 @@ void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding:
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse{
       .b = std::move(b),
@@ -1011,7 +1008,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse{
       .b = std::move(b),
@@ -1042,7 +1038,6 @@ void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding:
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse{
       .b = std::move(b),
@@ -1077,7 +1072,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse{
       .b = std::move(b),
@@ -1108,7 +1102,6 @@ void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding:
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse{
       .b = std::move(b),
@@ -1143,7 +1136,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse{
       .b = std::move(b),
@@ -1174,7 +1166,6 @@ void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding:
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse{
       .b = std::move(b),
@@ -1209,7 +1200,6 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::ReplySuccess(int32_t b) {
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse _response = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse{
       .b = std::move(b),

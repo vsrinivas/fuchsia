@@ -2176,6 +2176,22 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
 
 const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_end_ =
     &entries_[18];
+const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::unknown_interaction_handler_entry_ = {
+  .openness = ::fidl::internal::Openness::kOpen,
+  .dispatch = [](void* interface, uint64_t method_ordinal,
+      ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+    ::fidl::UnknownMethodCompleter::Sync completer(txn);
+    static_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->handle_unknown_method(
+        ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> {
+          .method_ordinal = method_ordinal,
+          
+          .unknown_interaction_type = unknown_interaction_type,
+          
+      }, completer);
+  },
+  .send_reply = ::fidl::internal::SendChannelUnknownInteractionReply,
+};
+
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::TryDispatch(
     ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage& msg,
@@ -2188,7 +2204,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -2385,7 +2401,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithResponse({}));
@@ -2421,7 +2436,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithResponse({}));
@@ -2453,7 +2467,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse {
@@ -2492,7 +2505,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse {
@@ -2527,7 +2539,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse UnknownInteractionsProtocolStrictTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse _response = std::move(UnknownInteractionsProtocolStrictTwoWayUnionErrResponse);
@@ -2564,7 +2575,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse UnknownInteractionsProtocolStrictTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse _response = std::move(UnknownInteractionsProtocolStrictTwoWayUnionErrResponse);
@@ -2597,7 +2607,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse UnknownInteractionsProtocolStrictTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse _response = std::move(UnknownInteractionsProtocolStrictTwoWayTableErrResponse);
@@ -2634,7 +2643,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse UnknownInteractionsProtocolStrictTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse _response = std::move(UnknownInteractionsProtocolStrictTwoWayTableErrResponse);
@@ -2650,8 +2658,8 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolSt
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
-  return MakeReply(result);
+fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::WithResponse({}));
 }
 
 void
@@ -2667,8 +2675,8 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
 
 
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult result) {
-  return MakeReply(result);
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply() {
+  return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::WithResponse({}));
 }
 
 void
@@ -2692,8 +2700,11 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result) {
-  return MakeReply(result);
+fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Reply(int32_t some_field) {
+  ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse {
+  .some_field = std::move(some_field),
+};
+return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::WithResponse(std::move(*&_response)));
 }
 
 void
@@ -2709,8 +2720,11 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
 
 
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult result) {
-  return MakeReply(result);
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Reply(int32_t some_field) {
+  ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse {
+  .some_field = std::move(some_field),
+};
+return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::WithResponse(std::move(*&_response)));
 }
 
 void
@@ -2734,8 +2748,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result) {
-  return MakeReply(result);
+fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse UnknownInteractionsProtocolFlexibleTwoWayUnionResponse) {
+  ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayUnionResponse);
+return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>::FromExternal(&_response)));
 }
 
 void
@@ -2751,8 +2766,9 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
 
 
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult result) {
-  return MakeReply(result);
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse UnknownInteractionsProtocolFlexibleTwoWayUnionResponse) {
+  ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayUnionResponse);
+return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>::FromExternal(&_response)));
 }
 
 void
@@ -2776,8 +2792,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result) {
-  return MakeReply(result);
+fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse UnknownInteractionsProtocolFlexibleTwoWayTableResponse) {
+  ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayTableResponse);
+return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse>::FromExternal(&_response)));
 }
 
 void
@@ -2793,8 +2810,9 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
 
 
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult result) {
-  return MakeReply(result);
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Reply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse UnknownInteractionsProtocolFlexibleTwoWayTableResponse) {
+  ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayTableResponse);
+return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse>::FromExternal(&_response)));
 }
 
 void
@@ -2835,7 +2853,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithResponse({}));
@@ -2871,7 +2888,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithResponse({}));
@@ -2903,7 +2919,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse {
@@ -2942,7 +2957,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse {
@@ -2977,7 +2991,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse);
@@ -3014,7 +3027,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse);
@@ -3047,7 +3059,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse);
@@ -3084,7 +3095,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse _response = std::move(UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse);
@@ -5319,7 +5329,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -5516,7 +5526,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithResponse({}));
@@ -5552,7 +5561,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithResponse({}));
@@ -5584,7 +5592,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse {
@@ -5623,7 +5630,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse {
@@ -5658,7 +5664,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse _response = std::move(UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse);
@@ -5695,7 +5700,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse _response = std::move(UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse);
@@ -5728,7 +5732,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse _response = std::move(UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse);
@@ -5765,7 +5768,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse _response = std::move(UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse);
@@ -7673,6 +7675,20 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
 
 const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_end_ =
     &entries_[10];
+const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::unknown_interaction_handler_entry_ = {
+  .openness = ::fidl::internal::Openness::kAjar,
+  .dispatch = [](void* interface, uint64_t method_ordinal,
+      ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+    ::fidl::UnknownMethodCompleter::Sync completer(txn);
+    static_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->handle_unknown_method(
+        ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
+          .method_ordinal = method_ordinal,
+          
+      }, completer);
+  },
+  .send_reply = ::fidl::internal::SendChannelUnknownInteractionReply,
+};
+
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::TryDispatch(
     ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage& msg,
@@ -7685,7 +7701,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  &unknown_interaction_handler_entry_);
 }
 void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -7882,7 +7898,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithResponse({}));
@@ -7918,7 +7933,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplySuccess() {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithResponse({}));
@@ -7950,7 +7964,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse {
@@ -7989,7 +8002,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::ReplySuccess(int32_t some_field) {
     ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse _response = ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse {
@@ -8024,7 +8036,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse _response = std::move(UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse);
@@ -8061,7 +8072,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse _response = std::move(UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse);
@@ -8094,7 +8104,6 @@ fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteraction
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse _response = std::move(UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse);
@@ -8131,7 +8140,6 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-  
   void
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse) {
     ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse _response = std::move(UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse);

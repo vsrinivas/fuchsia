@@ -20,6 +20,12 @@ struct {{ .WireServerDispatcher }} final {
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  {{- if .HandlesOneWayUnknownInteractions }}
+  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
+  {{- else }}
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+  {{- end }}
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -67,6 +73,24 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
 const ::fidl::internal::MethodEntry* {{ .WireServerDispatcher.NoLeading }}::entries_end_ =
     &entries_[{{- len .ClientMethods -}}];
 
+{{- if .HandlesOneWayUnknownInteractions }}
+const ::fidl::internal::UnknownInteractionHandlerEntry {{ .WireServerDispatcher.NoLeading }}::unknown_interaction_handler_entry_ = {
+  .openness = {{ .OpennessValue }},
+  .dispatch = [](void* interface, uint64_t method_ordinal,
+      ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+    ::fidl::UnknownMethodCompleter::Sync completer(txn);
+    static_cast<{{ .WireServer }}*>(interface)->handle_unknown_method(
+        {{ .UnknownMethodMetadata }} {
+          .method_ordinal = method_ordinal,
+          {{ if .HandlesTwoWayUnknownInteractions }}
+          .unknown_interaction_type = unknown_interaction_type,
+          {{ end }}
+      }, completer);
+  },
+  .send_reply = {{ .UnknownInteractionReplySender }},
+};
+{{ end }}
+
 ::fidl::DispatchResult {{ .WireServerDispatcher.NoLeading }}::TryDispatch(
     {{ .WireServer }}* impl, ::fidl::IncomingMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
@@ -79,7 +103,7 @@ void {{ .WireServerDispatcher.NoLeading }}::Dispatch(
     {{- .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  &unknown_interaction_handler_entry_);
 }
 
 {{- EnsureNamespace "" }}
@@ -109,7 +133,11 @@ struct {{ .NaturalServerDispatcher }} final {
   static const ::fidl::internal::MethodEntry* entries_end_;
   {{- if .HandlesOneWayUnknownInteractions }}
   static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
+  {{- else }}
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
   {{- end }}
+
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -168,7 +196,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry {{ .NaturalServerDispatch
 void {{ .NaturalServerDispatcher.NoLeading }}::Dispatch(
     {{- .NaturalServer }}* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, {{ .UnknownInteractionHandlerEntry }});
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 {{- EnsureNamespace "" }}

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test.unknown.interactions/cpp/driver/fidl.h>
-#include <fidl/test.unknown.interactions/cpp/fidl.h>
+#include <fidl/test.unknown.interactions/cpp/driver/wire.h>
+#include <fidl/test.unknown.interactions/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -60,52 +60,54 @@ class TestServerBase {
 };
 
 class UnknownInteractionsServerBase
-    : public ::fdf::Server<::test::UnknownInteractionsDriverProtocol>,
+    : public ::fdf::WireServer<::test::UnknownInteractionsDriverProtocol>,
       public TestServerBase {
-  void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer) override {
+  void StrictOneWay(StrictOneWayRequestView request, ::fdf::Arena& arena,
+                    StrictOneWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictOneWay called unexpectedly"); });
   }
 
-  void FlexibleOneWay(FlexibleOneWayRequest& request,
+  void FlexibleOneWay(FlexibleOneWayRequestView request, ::fdf::Arena& arena,
                       FlexibleOneWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleOneWay called unexpectedly"); });
   }
 
-  void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer) override {
+  void StrictTwoWay(StrictTwoWayRequestView request, ::fdf::Arena& arena,
+                    StrictTwoWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWay called unexpectedly"); });
   }
 
-  void StrictTwoWayFields(StrictTwoWayFieldsRequest& request,
+  void StrictTwoWayFields(StrictTwoWayFieldsRequestView request, ::fdf::Arena& arena,
                           StrictTwoWayFieldsCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayFields called unexpectedly"); });
   }
 
-  void FlexibleTwoWay(FlexibleTwoWayRequest& request,
+  void FlexibleTwoWay(FlexibleTwoWayRequestView request, ::fdf::Arena& arena,
                       FlexibleTwoWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWay called unexpectedly"); });
   }
 
-  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
+  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequestView request, ::fdf::Arena& arena,
                             FlexibleTwoWayFieldsCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayFields called unexpectedly"); });
   }
 
-  void StrictTwoWayErr(StrictTwoWayErrRequest& request,
+  void StrictTwoWayErr(StrictTwoWayErrRequestView request, ::fdf::Arena& arena,
                        StrictTwoWayErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayErr called unexpectedly"); });
   }
 
-  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request,
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
                              StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayFieldsErr called unexpectedly"); });
   }
 
-  void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
+  void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request, ::fdf::Arena& arena,
                          FlexibleTwoWayErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayErr called unexpectedly"); });
   }
 
-  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
                                FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayFieldsErr called unexpectedly"); });
   }
@@ -203,7 +205,7 @@ class UnknownInteractions : public ::zxtest::Test {
   // Retrieve the client to use for async FDF calls. May be called more than
   // once. If the client has not been used yet, bind it. Once this has been
   // called, |TakeClientChannel| is no longer allowed.
-  fdf::SharedClient<test::UnknownInteractionsDriverProtocol>& AsyncClient() {
+  fdf::WireSharedClient<test::UnknownInteractionsDriverProtocol>& AsyncClient() {
     if (client_) {
       return client_.value();
     }
@@ -223,7 +225,7 @@ class UnknownInteractions : public ::zxtest::Test {
 
   // Run code using the AsyncClient on the dispatcher thread and wait for it to complete.
   void WithAsyncClientBlocking(
-      fit::function<void(fdf::SharedClient<test::UnknownInteractionsDriverProtocol>&)>&& func) {
+      fit::function<void(fdf::WireSharedClient<test::UnknownInteractionsDriverProtocol>&)>&& func) {
     auto& client = AsyncClient();
     libsync::Completion done;
     async::PostTask(AsyncDispatcher(), [&done, &client, func = std::move(func)]() {
@@ -237,10 +239,27 @@ class UnknownInteractions : public ::zxtest::Test {
   // responsible for synchronizing and making sure the func doesn't outlive any
   // borrowed references.
   void WithAsyncClient(
-      fit::function<void(fdf::SharedClient<test::UnknownInteractionsDriverProtocol>&)>&& func) {
+      fit::function<void(fdf::WireSharedClient<test::UnknownInteractionsDriverProtocol>&)>&& func) {
     auto client = AsyncClient().Clone();
     async::PostTask(AsyncDispatcher(), [client = std::move(client),
                                         func = std::move(func)]() mutable { func(client); });
+  }
+
+  // Retrieve the client to use for async FDF calls. May be called more than
+  // once. If the client has not been used yet, bind it. Once this has been
+  // called, |TakeClientChannel| is no longer allowed.
+  fdf::WireSyncClient<test::UnknownInteractionsDriverProtocol> SyncClient() {
+    EXPECT_TRUE(client_end_.is_valid());
+    auto client_end = std::move(client_end_);
+    fdf::WireSyncClient<test::UnknownInteractionsDriverProtocol> client;
+
+    libsync::Completion bound;
+    EXPECT_OK(async::PostTask(AsyncDispatcher(), [&bound, &client_end, &client]() {
+      client.Bind(std::move(client_end));
+      bound.Signal();
+    }));
+    EXPECT_OK(bound.Wait());
+    return client;
   }
 
   fdf_dispatcher_t* Dispatcher() { return dispatcher_.value().get(); }
@@ -255,7 +274,7 @@ class UnknownInteractions : public ::zxtest::Test {
 
   fdf::ClientEnd<test::UnknownInteractionsDriverProtocol> client_end_;
   // If an AsyncClient is bound, it will be stored here.
-  std::optional<fdf::SharedClient<test::UnknownInteractionsDriverProtocol>> client_;
+  std::optional<fdf::WireSharedClient<test::UnknownInteractionsDriverProtocol>> client_;
 
   fdf::ServerEnd<test::UnknownInteractionsDriverProtocol> server_end_;
   // If a server impl is bound, it will be stored here.
@@ -325,7 +344,7 @@ struct ReadResult {
 
 template <size_t N>
 void ChannelWrite(const fdf::Channel& channel, std::array<uint8_t, N> bytes) {
-  auto arena = fdf::Arena::Create(0, "unknown-interactions-test");
+  auto arena = fdf::Arena::Create(0, "");
   ASSERT_TRUE(arena.is_ok());
   auto data = arena->Allocate(N);
   memcpy(data, bytes.data(), N);
@@ -477,11 +496,15 @@ std::array<uint8_t, sizeof(fidl_message_header_t)> MakeMessage(
 TEST_F(UnknownInteractions, OneWayStrictAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fitx::result<fidl::Error>> response;
-  WithAsyncClientBlocking([response](auto& client) { response.Signal(client->StrictOneWay()); });
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<::fidl::Status> response;
+  WithAsyncClientBlocking([response, arena = std::move(arena.value())](auto& client) {
+    response.Signal(client.buffer(arena)->StrictOneWay());
+  });
   auto result = response.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_ok());
+  EXPECT_TRUE(result.value().ok());
 
   auto received = ReadResult<16>::ReadFromChannel(server, Dispatcher());
   ASSERT_OK(received.status);
@@ -493,11 +516,15 @@ TEST_F(UnknownInteractions, OneWayStrictAsyncSend) {
 TEST_F(UnknownInteractions, OneWayFlexibleAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fitx::result<fidl::Error>> response;
-  WithAsyncClientBlocking([response](auto& client) { response.Signal(client->FlexibleOneWay()); });
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<::fidl::Status> response;
+  WithAsyncClientBlocking([response, arena = std::move(arena.value())](auto& client) {
+    response.Signal(client.buffer(arena)->FlexibleOneWay());
+  });
   auto result = response.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_ok());
+  EXPECT_TRUE(result.value().ok());
 
   auto received = ReadResult<16>::ReadFromChannel(server, Dispatcher());
   ASSERT_OK(received.status);
@@ -513,10 +540,12 @@ TEST_F(UnknownInteractions, OneWayFlexibleAsyncSend) {
 TEST_F(UnknownInteractions, TwoWayStrictAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::StrictTwoWay>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::StrictTwoWay>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->StrictTwoWay().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->StrictTwoWay().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -533,16 +562,19 @@ TEST_F(UnknownInteractions, TwoWayStrictAsyncSend) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_ok());
+  EXPECT_TRUE(result.value().ok());
 }
 
 TEST_F(UnknownInteractions, TwoWayStrictErrAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->StrictTwoWayErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->StrictTwoWayErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -559,16 +591,18 @@ TEST_F(UnknownInteractions, TwoWayStrictErrAsyncSend) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_ok());
+  EXPECT_TRUE(result.value().ok());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWay().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWay().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -585,16 +619,18 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSend) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_ok());
+  EXPECT_TRUE(result.value().ok());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendUnknownResponse) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWay().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWay().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -612,18 +648,20 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendUnknownResponse) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().error_value().reason());
+  EXPECT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOtherTransportError) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWay().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWay().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -641,18 +679,20 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOtherTransportError) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().error_value().status());
-  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().reason());
+  EXPECT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOkTransportErr) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWay().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWay().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -669,18 +709,20 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOkTransportErr) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().error_value().status());
-  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().reason());
+  EXPECT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendErrorVariant) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWay().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWay().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -697,17 +739,20 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendErrorVariant) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().reason());
+  EXPECT_FALSE(result.value().ok());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayFields().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayFields().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -725,17 +770,20 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSend) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  ASSERT_TRUE(result.value().is_ok());
-  EXPECT_EQ(32, result.value().value().some_field());
+  ASSERT_TRUE(result.value().ok());
+  EXPECT_EQ(32, result.value().value().some_field);
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayFields().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayFields().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -754,18 +802,21 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().error_value().reason());
+  EXPECT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -783,16 +834,20 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSend) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  EXPECT_TRUE(result.value().is_ok());
+  ASSERT_TRUE(result.value().ok());
+  EXPECT_TRUE(result.value().value().is_ok());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -811,20 +866,21 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  ASSERT_TRUE(result.value().is_error());
-  ASSERT_TRUE(result.value().error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction,
-            result.value().error_value().transport_error().reason());
+  ASSERT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendOtherTransportError) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -843,19 +899,21 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendOtherTransportError) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  ASSERT_TRUE(result.value().is_error());
-  ASSERT_TRUE(result.value().error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().transport_error().reason());
+  ASSERT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendErrorVariant) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -873,18 +931,21 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendErrorVariant) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  ASSERT_TRUE(result.value().is_error());
-  ASSERT_TRUE(result.value().error_value().is_application_error());
-  EXPECT_EQ(0x100, result.value().error_value().application_error());
+  ASSERT_TRUE(result.value().ok());
+  ASSERT_TRUE(result.value().value().is_error());
+  EXPECT_EQ(0x100, result.value().value().error_value());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayFieldsErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayFieldsErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -902,17 +963,21 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSend) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  ASSERT_TRUE(result.value().is_ok());
-  EXPECT_EQ(32, result.value().value().some_field());
+  ASSERT_TRUE(result.value().ok());
+  ASSERT_TRUE(result.value().value().is_ok());
+  EXPECT_EQ(32, result.value().value().value()->some_field);
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayFieldsErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayFieldsErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -931,20 +996,21 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
-  ASSERT_TRUE(result.value().is_error());
-  ASSERT_TRUE(result.value().error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction,
-            result.value().error_value().transport_error().reason());
+  ASSERT_FALSE(result.value().ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fdf::Result<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  ResponseCompleter<
+      fdf::WireUnownedResult<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>
       response_completer;
-  WithAsyncClient([response_completer](auto& client) {
-    client->FlexibleTwoWayFieldsErr().Then(
+  WithAsyncClient([response_completer, arena = std::move(arena.value())](auto& client) {
+    client.buffer(arena)->FlexibleTwoWayFieldsErr().Then(
         [response_completer](auto& response) { response_completer.Signal(std::move(response)); });
   });
 
@@ -962,9 +1028,468 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
 
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.value().ok());
+  ASSERT_TRUE(result.value().value().is_error());
+  EXPECT_EQ(0x100, result.value().value().error_value());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//// One-Way Methods - Sync Client
+///////////////////////////////////////////////////////////////////////////////
+
+TEST_F(UnknownInteractions, OneWayStrictSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto client = SyncClient();
+  auto result = client.buffer(arena.value())->StrictOneWay();
+  EXPECT_TRUE(result.ok());
+
+  auto received = ReadResult<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = MakeMessage<test::UnknownInteractionsDriverProtocol::StrictOneWay>(
+      fidl::MessageDynamicFlags::kStrictMethod);
+  EXPECT_EQ(expected, received.buf);
+}
+
+TEST_F(UnknownInteractions, OneWayFlexibleSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto client = SyncClient();
+  auto result = client.buffer(arena.value())->FlexibleOneWay();
+  EXPECT_TRUE(result.ok());
+
+  auto received = ReadResult<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleOneWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod);
+  EXPECT_EQ(expected, received.buf);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//// Two-Way Methods - Sync Client
+///////////////////////////////////////////////////////////////////////////////
+
+TEST_F(UnknownInteractions, TwoWayStrictSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->StrictTwoWay();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::StrictTwoWay>(
+      fidl::MessageDynamicFlags::kStrictMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::StrictTwoWay>(
+      fidl::MessageDynamicFlags::kStrictMethod);
+  received.reply(server, server_reply);
+
+  EXPECT_TRUE(result.get().ok());
+}
+
+TEST_F(UnknownInteractions, TwoWayStrictErrSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->StrictTwoWayErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(
+      fidl::MessageDynamicFlags::kStrictMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(
+      fidl::MessageDynamicFlags::kStrictMethod, ResultUnionTag::kSuccess, 0);
+  received.reply(server, server_reply);
+
+  EXPECT_TRUE(result.get().ok());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWay();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 0);
+  received.reply(server, server_reply);
+
+  EXPECT_TRUE(result.get().ok());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendUnknownResponse) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWay();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendOtherTransportError) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWay();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_ACCESS_DENIED);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendOkTransportErr) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWay();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError, ZX_OK);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendErrorVariant) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWay();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayFields();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 32);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(32, result.value().some_field);
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSendUnknownResponse) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayFields();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 0);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(result.value().is_ok());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendUnknownResponse) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendOtherTransportError) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_ACCESS_DENIED);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendErrorVariant) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_TRUE(result.ok());
   ASSERT_TRUE(result.value().is_error());
-  ASSERT_TRUE(result.value().error_value().is_application_error());
-  EXPECT_EQ(0x100, result.value().error_value().application_error());
+  EXPECT_EQ(0x100, result.value().error_value());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSend) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayFieldsErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 32);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result.value().is_ok());
+  EXPECT_EQ(32, result.value().value()->some_field);
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendUnknownResponse) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayFieldsErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {
+  auto server = TakeServerChannel();
+
+  zx::status<::fdf::Arena> arena = ::fdf::Arena::Create(0, "");
+  ASSERT_TRUE(arena.is_ok());
+  auto result_future = std::async([client = SyncClient(), arena = std::move(arena.value())] {
+    return client.buffer(arena)->FlexibleTwoWayFieldsErr();
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_EQ(expected, received.buf_excluding_txid());
+  EXPECT_NE(0, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
+  received.reply(server, server_reply);
+
+  auto result = result_future.get();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result.value().is_error());
+  EXPECT_EQ(0x100, result.value().error_value());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -980,9 +1505,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
 TEST_F(UnknownInteractions, StrictTwoWayResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWay(StrictTwoWayRequest& request,
+    void StrictTwoWay(StrictTwoWayRequestView request, ::fdf::Arena& arena,
                       StrictTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
+      completer.buffer(arena).Reply();
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1001,9 +1526,9 @@ TEST_F(UnknownInteractions, StrictTwoWayResponse) {
 TEST_F(UnknownInteractions, StrictTwoWayResponseMismatchedStrictness) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWay(StrictTwoWayRequest& request,
+    void StrictTwoWay(StrictTwoWayRequestView request, ::fdf::Arena& arena,
                       StrictTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
+      completer.buffer(arena).Reply();
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1023,9 +1548,9 @@ TEST_F(UnknownInteractions, StrictTwoWayResponseMismatchedStrictness) {
 TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWayErr(StrictTwoWayErrRequest& request,
+    void StrictTwoWayErr(StrictTwoWayErrRequestView request, ::fdf::Arena& arena,
                          StrictTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::ok());
+      completer.buffer(arena).Reply(fitx::ok());
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1044,9 +1569,9 @@ TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWay(FlexibleTwoWayRequest& request,
+    void FlexibleTwoWay(FlexibleTwoWayRequestView request, ::fdf::Arena& arena,
                         FlexibleTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
+      completer.buffer(arena).Reply();
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1065,9 +1590,9 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWay(FlexibleTwoWayRequest& request,
+    void FlexibleTwoWay(FlexibleTwoWayRequestView request, ::fdf::Arena& arena,
                         FlexibleTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
+      completer.buffer(arena).Reply();
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1087,9 +1612,9 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
+    void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequestView request, ::fdf::Arena& arena,
                               FlexibleTwoWayFieldsCompleter::Sync& completer) override {
-      completer.Reply({{.some_field = 42}});
+      completer.buffer(arena).Reply(42);
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1109,9 +1634,9 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
+    void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request, ::fdf::Arena& arena,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::ok());
+      completer.buffer(arena).Reply(fitx::ok());
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1130,9 +1655,9 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
+    void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request, ::fdf::Arena& arena,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::error(3203));
+      completer.buffer(arena).Reply(fitx::error(3203));
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1152,11 +1677,12 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-      completer.Reply(
-          fitx::ok(::test::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse(
-              {.some_field = 42})));
+      ::test::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse reply{
+          .some_field = 42,
+      };
+      completer.buffer(arena).Reply(fitx::ok(&reply));
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1176,9 +1702,9 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::error(3203));
+      completer.buffer(arena).Reply(fitx::error(3203));
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1290,7 +1816,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleTwoWay) {
 
 TEST_F(UnknownInteractions, UnknownStrictOneWayAjarProtocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsAjarDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsAjarDriverProtocol>,
                  public TestServerBase {
     void handle_unknown_method(
         ::fidl::UnknownMethodMetadata<::test::UnknownInteractionsAjarDriverProtocol> metadata,
@@ -1310,7 +1836,7 @@ TEST_F(UnknownInteractions, UnknownStrictOneWayAjarProtocol) {
 
 TEST_F(UnknownInteractions, UnknownFlexibleOneWayAjarPotocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsAjarDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsAjarDriverProtocol>,
                  public TestServerBase {
    public:
     libsync::Completion ran_unknown_interaction_handler;
@@ -1337,7 +1863,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleOneWayAjarPotocol) {
 
 TEST_F(UnknownInteractions, UnknownStrictTwoWayAjarProtocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsAjarDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsAjarDriverProtocol>,
                  public TestServerBase {
     void handle_unknown_method(
         ::fidl::UnknownMethodMetadata<::test::UnknownInteractionsAjarDriverProtocol> metadata,
@@ -1357,7 +1883,7 @@ TEST_F(UnknownInteractions, UnknownStrictTwoWayAjarProtocol) {
 
 TEST_F(UnknownInteractions, UnknownFlexibleTwoWayAjarProtocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsAjarDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsAjarDriverProtocol>,
                  public TestServerBase {
    public:
     void handle_unknown_method(
@@ -1378,7 +1904,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleTwoWayAjarProtocol) {
 
 TEST_F(UnknownInteractions, UnknownStrictOneWayClosedProtocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsClosedDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsClosedDriverProtocol>,
                  public TestServerBase {};
   BindServer(std::make_unique<Server>());
 
@@ -1392,7 +1918,7 @@ TEST_F(UnknownInteractions, UnknownStrictOneWayClosedProtocol) {
 
 TEST_F(UnknownInteractions, UnknownFlexibleOneWayClosedPotocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsClosedDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsClosedDriverProtocol>,
                  public TestServerBase {};
   BindServer(std::make_unique<Server>());
 
@@ -1406,7 +1932,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleOneWayClosedPotocol) {
 
 TEST_F(UnknownInteractions, UnknownStrictTwoWayClosedProtocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsClosedDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsClosedDriverProtocol>,
                  public TestServerBase {};
   BindServer(std::make_unique<Server>());
 
@@ -1420,7 +1946,7 @@ TEST_F(UnknownInteractions, UnknownStrictTwoWayClosedProtocol) {
 
 TEST_F(UnknownInteractions, UnknownFlexibleTwoWayClosedProtocol) {
   auto client = TakeClientChannel();
-  class Server : public ::fdf::Server<::test::UnknownInteractionsClosedDriverProtocol>,
+  class Server : public ::fdf::WireServer<::test::UnknownInteractionsClosedDriverProtocol>,
                  public TestServerBase {};
   BindServer(std::make_unique<Server>());
 

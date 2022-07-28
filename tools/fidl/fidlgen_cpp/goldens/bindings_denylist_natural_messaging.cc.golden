@@ -34,7 +34,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(::fidl::Server<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage&& msg,
                                                                                          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_bindingsdenylist::Allowed>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -74,7 +74,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -114,7 +114,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                 internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -231,7 +231,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
@@ -565,7 +565,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(::fidl::Server<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingMessage&& msg,
                                                                                                  internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 void fidl::Server<::test_bindingsdenylist::DenyEachBinding>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

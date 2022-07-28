@@ -8,6 +8,7 @@
 
 #ifdef __Fuchsia__
 
+#include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/server.h>
@@ -51,6 +52,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_anonymous::SomeProtocol> fi
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -463,7 +466,6 @@ class ::fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMe
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
-
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 
@@ -477,7 +479,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
-
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 

@@ -15,6 +15,7 @@
     #include <lib/fidl/llcpp/server.h>
     #include <lib/fidl/llcpp/service_handler_interface.h>
     #include <lib/fidl/llcpp/sync_call.h>
+    #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
   
 #endif  // __Fuchsia__
 
@@ -110,6 +111,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRe
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -2183,6 +2186,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional> fi
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -3009,6 +3014,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -4398,6 +4405,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -4929,6 +4938,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters> 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -5261,6 +5272,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProt
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -6146,6 +6159,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -7520,7 +7535,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Res
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*> result);
-  
   void ReplySuccess(int64_t a, int64_t b, int64_t c);
   void ReplyError(uint32_t error);
 
@@ -7534,7 +7548,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*> result);
-  
   void ReplySuccess(int64_t a, int64_t b, int64_t c);
   void ReplyError(uint32_t error);
 
@@ -7563,7 +7576,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Err
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t> result);
-  
   void ReplySuccess();
   void ReplyError(uint32_t error);
 
@@ -7577,7 +7589,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t> result);
-  
   void ReplySuccess();
   void ReplyError(uint32_t error);
 
@@ -7606,7 +7617,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Err
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<::test_protocols::wire::ErrorEnum> result);
-  
   void ReplySuccess();
   void ReplyError(::test_protocols::wire::ErrorEnum error);
 
@@ -7620,7 +7630,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<::test_protocols::wire::ErrorEnum> result);
-  
   void ReplySuccess();
   void ReplyError(::test_protocols::wire::ErrorEnum error);
 
@@ -7649,7 +7658,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::Han
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*> result);
-  
   void ReplySuccess(::zx::handle&& h);
   void ReplyError(uint32_t error);
 
@@ -7663,7 +7671,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::WithErrorSynta
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*> result);
-  
   void ReplySuccess(::zx::handle&& h);
   void ReplyError(uint32_t error);
 
@@ -7768,6 +7775,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProt
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -8063,6 +8072,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -9660,6 +9671,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscovera
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 

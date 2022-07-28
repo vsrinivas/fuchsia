@@ -8,6 +8,7 @@
 
 #ifdef __Fuchsia__
 
+#include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/server.h>
@@ -59,6 +60,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfEr
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -789,7 +792,6 @@ class ::fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorS
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
-
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 
@@ -803,7 +805,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOf
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
-
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 
@@ -832,7 +833,6 @@ class ::fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorS
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
-
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 
@@ -846,7 +846,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOf
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
-
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 

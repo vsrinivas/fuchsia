@@ -15,6 +15,7 @@
     #include <lib/fidl/llcpp/server.h>
     #include <lib/fidl/llcpp/service_handler_interface.h>
     #include <lib/fidl/llcpp/sync_call.h>
+    #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
   
 #endif  // __Fuchsia__
 
@@ -132,6 +133,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProto
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -4612,7 +4615,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
-  
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
 
@@ -4626,7 +4628,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
-  
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
 
@@ -4692,7 +4693,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::LocalStructPayload*> result);
-  
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
 
@@ -4706,7 +4706,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::LocalStructPayload*> result);
-  
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
 
@@ -4772,7 +4771,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
-  
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
 
@@ -4786,7 +4784,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads_imported::wire::ImportStructPayload*> result);
-  
   void ReplySuccess(int32_t a);
   void ReplyError(uint32_t error);
 
@@ -4852,7 +4849,6 @@ class ::fidl::internal::WireCompleterImpl<::test_protocolpayloads::MainProtocol:
   using CompleterImplBase::CompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*> result);
-  
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
 
@@ -4866,7 +4862,6 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainPro
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
   void Reply(::fitx::result<uint32_t, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse*> result);
-  
   void ReplySuccess(uint32_t a, uint32_t b);
   void ReplyError(uint32_t error);
 

@@ -54,6 +54,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProt
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 
@@ -190,9 +192,9 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProto
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_driverhandle::HandlesInProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>* request);
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_driverhandle::HandlesInProtocol::SendHandles>(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
@@ -284,6 +286,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtoco
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
 #endif  // __Fuchsia__
 

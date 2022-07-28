@@ -70,7 +70,6 @@ sdk_source_set("cpp") {
     "include/lib/fidl/cpp/internal/thenable.h",
     "include/lib/fidl/cpp/unified_messaging.h",
     "include/lib/fidl/cpp/unified_messaging_declarations.h",
-    "include/lib/fidl/cpp/unknown_interaction_handler.h",
   ]
   sources = [
     "any_error_in.cc",

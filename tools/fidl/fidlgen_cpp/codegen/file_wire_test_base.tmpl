@@ -34,6 +34,12 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
             NotImplemented_("{{ .Name }}", completer); }
       {{- end }}
     {{- end }}
+
+    {{- if .HandlesOneWayUnknownInteractions }}
+    virtual void handle_unknown_method({{ .UnknownMethodMetadata }} metadata, UnknownMethodCompleter::Sync& completer) override {
+      NotImplemented_("handle_unknown_method", completer);
+    }
+    {{- end }}
   };
 
   template<>

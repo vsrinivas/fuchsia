@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNKNOWN_INTERACTION_HANDLER_H_
-#define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNKNOWN_INTERACTION_HANDLER_H_
+#ifndef LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_UNKNOWN_INTERACTION_HANDLER_H_
+#define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_UNKNOWN_INTERACTION_HANDLER_H_
 
 #include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
@@ -81,4 +81,4 @@ class UnknownEventHandler {
 
 }  // namespace fidl
 
-#endif  // SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNKNOWN_INTERACTION_HANDLER_H_
+#endif  // LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_UNKNOWN_INTERACTION_HANDLER_H_

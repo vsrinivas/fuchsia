@@ -12,10 +12,9 @@ class {{ .WireCompleterImpl }} : public ::fidl::internal::CompleterImplBase<{{ .
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply({{ .WireReplyArgs .ResponseArgs }});
+  void Reply({{ .WireReplyArgs }});
 
   {{- if .HasApplicationError }}
-  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
@@ -29,10 +28,9 @@ class {{ .WireBufferCompleterImpl }} : public ::fidl::internal::BufferCompleterI
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply({{ .WireReplyArgs .ResponseArgs }});
+  void Reply({{ .WireReplyArgs }});
 
   {{- if .HasApplicationError }}
-  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
@@ -67,12 +65,15 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
 {{- IfdefFuchsia -}}
 
 void
-{{ .WireCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs .ResponseArgs }}) {
+{{ .WireCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs }}) {
   {{- if .HasApplicationError }}
   if (result.is_ok()) {
     return MakeReply({{ .WireReplySuccess "result.value()" }});
   }
   return ReplyError(std::move(result.error_value()));
+  {{- else if .HasTransportError }}
+  {{ .Result.BuildPayload "_response" -}}
+  return MakeReply({{ .WireReplySuccess "&_response" }});
   {{- else }}
   return MakeReply({{ RenderForwardParams .ResponseArgs }});
   {{- end }}
@@ -90,7 +91,6 @@ void
 }
 
 {{- if .HasApplicationError }}
-  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void
   {{ .WireCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}
@@ -105,12 +105,15 @@ void
 
 
 void
-{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs .ResponseArgs }}) {
+{{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs }}) {
   {{- if .HasApplicationError }}
   if (result.is_ok()) {
     return MakeReply({{ .WireReplySuccess "result.value()" }});
   }
   return ReplyError(std::move(result.error_value()));
+  {{- else if .HasTransportError }}
+  {{ .Result.BuildPayload "_response" -}}
+  return MakeReply({{ .WireReplySuccess "&_response" }});
   {{- else }}
   return MakeReply({{ RenderForwardParams .ResponseArgs }});
   {{- end }}
@@ -134,7 +137,6 @@ void
 }
 
 {{- if .HasApplicationError }}
-  {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueParameters }}) {
     {{ .Result.BuildPayload "_response" -}}
