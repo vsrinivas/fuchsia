@@ -4,6 +4,7 @@
 
 source_set("display") {
   sources = [
+    "color_converter.h",
     "display.cc",
     "display.h",
     "display_controller.cc",
@@ -25,6 +26,7 @@ source_set("display") {
     "//sdk/fidl/fuchsia.ui.display",
     "//sdk/fidl/fuchsia.ui.display.internal",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",

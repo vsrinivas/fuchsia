@@ -292,6 +292,12 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   return true;
 }
 
+bool DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform) {
+  FX_CHECK(display_);
+  uint64_t display_id = display_->display_id();
+  return SetDisplayColorConversion(display_id, *display_controller_, transform);
+}
+
 bool DisplaySwapchain::SetDisplayColorConversion(
     uint64_t display_id, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
     const ColorTransform& transform) {
@@ -333,10 +339,14 @@ bool DisplaySwapchain::SetDisplayColorConversion(
   return true;
 }
 
-bool DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform) {
-  FX_CHECK(display_);
-  uint64_t display_id = display_->display_id();
-  return SetDisplayColorConversion(display_id, *display_controller_, transform);
+bool DisplaySwapchain::SetMinimumRgb(uint8_t minimum_rgb) {
+  fuchsia::hardware::display::Controller_SetMinimumRgb_Result cmd_result;
+  auto status = (*display_controller_)->SetMinimumRgb(minimum_rgb, &cmd_result);
+  if (status != ZX_OK || cmd_result.is_err()) {
+    FX_LOGS(WARNING) << "gfx::DisplaySwapchain::SetMinimumRGB failed";
+    return false;
+  }
+  return true;
 }
 
 void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {

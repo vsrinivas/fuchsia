@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_ENGINE_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_ENGINE_H_
 
+#include <fuchsia/ui/display/color/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include <memory>
@@ -138,6 +139,7 @@ class Engine : public scheduling::FrameRenderer {
   void SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> events) override;
 
  private:
+
   // Initialize annotation session and annotation manager.
   void InitializeAnnotationManager();
 

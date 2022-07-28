@@ -22,7 +22,7 @@ class Image;
 class Semaphore;
 using ImagePtr = fxl::RefPtr<Image>;
 using SemaphorePtr = fxl::RefPtr<Semaphore>;
-} // namespace escher
+}  // namespace escher
 
 namespace scenic_impl {
 namespace gfx {
@@ -55,6 +55,14 @@ class Swapchain {
   // using the following formula:
   // (coefficients * (pixel + preoffsets)) + postoffsets.
   virtual bool SetDisplayColorConversion(const ColorTransform& transform) = 0;
+
+  // Submits a minimum value that all channels of all pixels rendered are clamped
+  // to. This can be used to mitigate the apparent effects of backlight bleeding
+  // on certain devices in low-light environments.
+  //
+  // The valid range for a minimum value is [0, 255] (inclusive).  For a new
+  // minimum value M, each color channel's range will be limited to [M, 255].
+  virtual bool SetMinimumRgb(uint8_t minimum_rgb) = 0;
 
   // Used to tell swapchain if protected memory should be used to allocate framebuffers. If there is
   // any state change, the caller expects swapchain to reallocate buffers immediately.

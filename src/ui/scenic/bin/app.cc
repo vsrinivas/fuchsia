@@ -15,9 +15,11 @@
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
 #include "src/ui/scenic/lib/display/display_power_manager.h"
+#include "src/ui/scenic/lib/flatland/engine/color_converter.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
+#include "src/ui/scenic/lib/gfx/engine/color_converter.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/gfx/screenshotter.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
@@ -414,6 +416,11 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
     engine_ = std::make_shared<gfx::Engine>(escher_->GetWeakPtr(), gfx_buffer_collection_importer,
                                             scenic_->inspect_node()->CreateChild("Engine"));
+
+    if (!config_values_.i_can_haz_flatland) {
+      color_converter_ =
+          std::make_unique<gfx::ColorConverter>(app_context_.get(), engine_->scene_graph());
+    }
   }
 
   scenic_->SetFrameScheduler(frame_scheduler_);
@@ -538,10 +545,10 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
                          : std::nullopt;
         });
 
-    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::display::color::Converter>)> handler =
-        fit::bind_member(flatland_engine_.get(), &flatland::Engine::SetColorConversionInterface);
-    zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
-    FX_DCHECK(status == ZX_OK);
+    if (config_values_.i_can_haz_flatland) {
+      color_converter_ =
+          std::make_unique<flatland::ColorConverter>(app_context_.get(), flatland_compositor_);
+    }
 
     frame_renderer_ = std::make_shared<TemporaryFrameRendererDelegator>(flatland_manager_,
                                                                         flatland_engine_, engine_);

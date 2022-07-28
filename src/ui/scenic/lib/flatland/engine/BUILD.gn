@@ -22,6 +22,8 @@ template("engine_library") {
   source_set(target_name) {
     forward_variables_from(invoker, "*")
     sources = [
+      "color_converter.cc",
+      "color_converter.h",
       "display_compositor.cc",
       "display_compositor.h",
       "engine.cc",
@@ -37,6 +39,7 @@ template("engine_library") {
       "//sdk/fidl/fuchsia.ui.display.color",
       "//sdk/lib/sys/inspect/cpp",
       "//src/lib/fxl",
+      "//src/ui/scenic/lib/display",
       "//src/ui/scenic/lib/display:display",
       "//src/ui/scenic/lib/flatland",
       "//src/ui/scenic/lib/flatland/renderer",

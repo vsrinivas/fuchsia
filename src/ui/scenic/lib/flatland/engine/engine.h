@@ -56,40 +56,10 @@ class Engine {
   // Returns all renderables reachable from the display's root transform.
   Renderables GetRenderables(const FlatlandDisplay& display);
 
-  // Binds the engine as the backend to the color correction service.
-  void SetColorConversionInterface(
-      fidl::InterfaceRequest<fuchsia::ui::display::color::Converter> request) {
-    if (color_conversion_impl_ != nullptr) {
-      FX_LOGS(WARNING) << "Color correction Implementation already exists.";
-    }
-    color_conversion_impl_ =
-        std::make_shared<ColorConversionImpl>(std::move(request), flatland_compositor_);
-  }
 
  private:
   // Initialize all inspect::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
-
-  // Separate out the color correction implementation as a nested class within the engine,
-  // so that we can lazily create it after allocating the engine.
-  class ColorConversionImpl : public fuchsia::ui::display::color::Converter {
-   public:
-    ColorConversionImpl(fidl::InterfaceRequest<fuchsia::ui::display::color::Converter> request,
-                        std::weak_ptr<DisplayCompositor> flatland_compositor)
-        : binding_(this, std::move(request)), flatland_compositor_(flatland_compositor) {}
-
-    // |fuchsia::ui::display::color::Converter|
-    void SetValues(fuchsia::ui::display::color::ConversionProperties properties,
-                   SetValuesCallback callback) override;
-
-    // |fuchsia::ui::display::color::Converter|
-    void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCallback callback) override;
-
-   private:
-    // The FIDL binding for the color correction api, which references |this| as the implementation.
-    fidl::Binding<fuchsia::ui::display::color::Converter> binding_;
-    std::weak_ptr<flatland::DisplayCompositor> flatland_compositor_;
-  };
 
   struct SceneState {
     UberStruct::InstanceMap snapshot;
@@ -102,7 +72,6 @@ class Engine {
     SceneState(Engine& engine, TransformHandle root_transform);
   };
 
-  std::shared_ptr<ColorConversionImpl> color_conversion_impl_;
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
   std::shared_ptr<flatland::UberStructSystem> uber_struct_system_;

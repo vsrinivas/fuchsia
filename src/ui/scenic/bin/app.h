@@ -17,6 +17,7 @@
 #include "src/ui/scenic/bin/temporary_frame_renderer_delegator.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
+#include "src/ui/scenic/lib/display/color_converter.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/display_power_manager.h"
 #include "src/ui/scenic/lib/display/singleton_display_service.h"
@@ -41,7 +42,6 @@
 #include "src/ui/scenic/lib/view_tree/observer_registry.h"
 #include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
-
 namespace scenic_impl {
 
 class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
@@ -126,6 +126,8 @@ class App {
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
   std::shared_ptr<flatland::Engine> flatland_engine_;
+
+  std::unique_ptr<display::ColorConverterImpl> color_converter_;
 
   std::shared_ptr<TemporaryFrameRendererDelegator> frame_renderer_;
 

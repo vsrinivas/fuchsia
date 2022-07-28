@@ -94,6 +94,7 @@ class FakeSwapchain : public scenic_impl::gfx::Swapchain {
   }
 
   bool SetDisplayColorConversion(const ColorTransform& transform) override { return false; }
+  bool SetMinimumRgb(uint8_t minimum_rgb) override { return false; }
   void SetUseProtectedMemory(bool use_protected_memory) override {}
   vk::Format GetImageFormat() override { return target_->format(); }
 

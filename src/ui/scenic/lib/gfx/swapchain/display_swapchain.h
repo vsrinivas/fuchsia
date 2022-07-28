@@ -49,18 +49,22 @@ class DisplaySwapchain : public Swapchain {
                            size_t swapchain_index, Layer& layer,
                            DrawCallback draw_callback) override;
 
-  // Passes along color correction information to the display
+  // |Swapchain|
   bool SetDisplayColorConversion(const ColorTransform& transform) override;
 
-  static bool SetDisplayColorConversion(
-      uint64_t display_id, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
-      const ColorTransform& transform);
+  // |Swapchain|
+  bool SetMinimumRgb(uint8_t minimum_rgb) override;
 
   // Set the state for protected memory usage in |use_protected_memory_|. If there is a state
   // change to true, it reallocates |swapchain_buffers_| using protected memory.
   void SetUseProtectedMemory(bool use_protected_memory) override;
 
   vk::Format GetImageFormat() override;
+
+  // Static function made accessible for tests.
+  static bool SetDisplayColorConversion(
+      uint64_t display_id, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
+      const ColorTransform& transform);
 
  private:
   friend class test::DisplaySwapchainTest;

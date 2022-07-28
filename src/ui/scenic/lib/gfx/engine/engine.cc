@@ -413,5 +413,4 @@ void Engine::DumpScenes(std::ostream& output,
     output << "\n===\n\n";
   }
 }
-
 }  // namespace scenic_impl::gfx
