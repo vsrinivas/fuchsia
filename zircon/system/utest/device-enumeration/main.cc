@@ -168,6 +168,10 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       // USB
       "aml-usb-crg-phy-v2",
       "xhci/xhci",
+
+      // Thermal
+      "sys/platform/05:07:a/thermal",
+      "class/thermal/000",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

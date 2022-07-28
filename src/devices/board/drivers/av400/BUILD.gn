@@ -100,6 +100,7 @@ fuchsia_driver("av400-driver") {
     "av400-rtc.cc",
     "av400-sdio.cc",
     "av400-spi.cc",
+    "av400-thermal.cc",
     "av400-usb.cc",
     "av400.cc",
   ]
@@ -121,6 +122,7 @@ fuchsia_driver("av400-driver") {
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/devices/lib/fidl-metadata",
@@ -135,6 +137,10 @@ fuchsia_driver("av400-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("av400") {

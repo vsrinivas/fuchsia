@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -138,7 +139,7 @@ class FakeAmlTSensor : public AmlTSensor {
       config.trip_point_info[2].up_temp_celsius = -273.15f + 2.0f;
     }
 
-    EXPECT_OK(test->InitSensor(config));
+    EXPECT_OK(test->InitSensor(config, PDEV_PID_AMLOGIC_T931));
     return test;
   }
 

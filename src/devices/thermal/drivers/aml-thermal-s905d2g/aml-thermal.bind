@@ -19,6 +19,8 @@ if fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_P
     fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_PLL,
     fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_DDR,
   }
+} else if fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A5 {
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_PLL;
 } else {
   false;
 }

@@ -102,6 +102,7 @@
 #define A5_GPIO_IRQ_10 52  // 32+20
 #define A5_GPIO_IRQ_11 53  // 32+21
 
+#define A5_TS_PLL_IRQ 62     // 30+32
 #define A5_AUDIO_TODDR_A 64  // 32+32
 #define A5_AUDIO_TODDR_B 65  // 33+32
 #define A5_AUDIO_SPDIFIN 67  // 35+32
@@ -208,7 +209,21 @@
 #define A5_SYS_CTRL_BASE 0xfe010000
 #define A5_SYS_CTRL_LENGTH 0x2000
 
+// sticky register -  not reset by watchdog
+#define A5_SYS_CTRL_STICKY_REG0 ((0x00b0 << 2) + 0xfe010000)
+#define A5_SYS_CTRL_STICKY_REG1 ((0x00b1 << 2) + 0xfe010000)
+#define A5_SYS_CTRL_STICKY_REG2 ((0x00b2 << 2) + 0xfe010000)  // AO_CPU - rtc
+#define A5_SYS_CTRL_STICKY_REG3 ((0x00b3 << 2) + 0xfe010000)  // AO_CPU - tsensor
+#define A5_SYS_CTRL_STICKY_REG4 ((0x00b4 << 2) + 0xfe010000)
+#define A5_SYS_CTRL_STICKY_REG5 ((0x00b5 << 2) + 0xfe010000)
+#define A5_SYS_CTRL_STICKY_REG6 ((0x00b6 << 2) + 0xfe010000)
+#define A5_SYS_CTRL_STICKY_REG7 ((0x00b7 << 2) + 0xfe010000)  // AO_CPU - wakeup reason
+
 // Temperature
+#define A5_TEMP_SENSOR_PLL_BASE 0xfe020000
+#define A5_TEMP_SENSOR_PLL_LENGTH 0x50
+#define A5_TEMP_SENSOR_PLL_TRIM A5_SYS_CTRL_STICKY_REG3
+#define A5_TEMP_SENSOR_PLL_TRIM_LENGTH 0x4
 
 // These registers are used to derive calibration data for the temperature sensors. The registers
 // are not documented in the datasheet - they were copied over from u-boot/Cast code.

@@ -11,8 +11,15 @@
 
 // clang-format off
 
-// Register offset
+// Clock Gate Register offset
 #define AML_HHI_TS_CLK_CNTL     0x64 << 2
+#define AML_HHI_TS_CLK_CNTL_A5  0x56 << 2
+#define AML_HHI_TS_CLK_ENABLE     0x130U /* u-boot */
+#define AML_HHI_TS_CLK_ENABLE_A5  0x12fU // Bit8   - clk_en
+                                         // Bit7:0 - clk_div, div N, if you want div8, set to 7
+                                         // The source clock of TS_CLK is 24Mhz, and TS_CLK needs
+                                         // to be set to 0.5Mhz (div48, set to 0x2f)
+// Register offset
 #define AML_TS_CFG_REG1         (0x1 << 2)
 #define AML_TS_CFG_REG2         (0x2 << 2)
 #define AML_TS_CFG_REG3         (0x3 << 2)
@@ -32,7 +39,6 @@
 #define AML_TEMP_CAL            1
 #define AML_TS_TEMP_MASK        0xfff
 #define AML_TS_CH_SEL           0x3 /* set 3'b011 for work */
-#define AML_HHI_TS_CLK_ENABLE   0x130U /* u-boot */
 #define AML_TS_VALUE_CONT       0x10
 #define AML_TS_REBOOT_TIME      0xff  // TODO(fxbug.dev/62972): Reconsider this setting
 

@@ -5,7 +5,8 @@
     "models": [
         "A311D",
         "S905D2G",
-        "T931"
+        "T931",
+        "A5"
     ],
     "areas": [
         "Thermal"

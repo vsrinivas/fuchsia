@@ -6,6 +6,7 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/platform-defs.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -357,6 +358,12 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
     return status;
   }
 
+  pdev_device_info_t device_info;
+  status = pdev_get_device_info(&pdev_, &device_info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "aml-thermal: failed to get device info: %s", zx_status_get_string(status));
+    return status;
+  }
   // Map amlogic temperature sensor peripheral control registers.
   mmio_buffer_t mmio;
   status = pdev_map_mmio_buffer(&pdev_, kSensorMmio, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -387,18 +394,32 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
     return status;
   }
 
-  return InitSensor(thermal_config);
+  return InitSensor(thermal_config, device_info.pid);
 }
 
-zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
+zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config,
+                                   uint32_t version) {
   // Copy the thermal_config
   memcpy(&thermal_config_, &thermal_config, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
 
-  // Get the trim info.
-  trim_info_ = trim_mmio_->Read32(0);
-
-  // Set the clk.
-  hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE, AML_HHI_TS_CLK_CNTL);
+  switch (version) {
+    case PDEV_PID_AMLOGIC_S905D2:
+    case PDEV_PID_AMLOGIC_T931:
+    case PDEV_PID_AMLOGIC_A311D:
+      // Get the trim info.
+      trim_info_ = trim_mmio_->Read32(0);
+      // Set the clk.
+      hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE, AML_HHI_TS_CLK_CNTL);
+      break;
+    case PDEV_PID_AMLOGIC_A5:
+      // Get the trim info.
+      trim_info_ = trim_mmio_->Read32(0);
+      // Set the clk.
+      hiu_mmio_->Write32(AML_HHI_TS_CLK_ENABLE_A5, AML_HHI_TS_CLK_CNTL_A5);
+      break;
+    default:
+      ZX_ASSERT_MSG(0, "Unsupport version");
+  }
 
   // Not setting IRQ's here.
   auto sensor_ctl = TsCfgReg1::Get().ReadFrom(&*sensor_base_mmio_);

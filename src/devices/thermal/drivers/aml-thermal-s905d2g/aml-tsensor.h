@@ -34,7 +34,8 @@ class AmlTSensor {
   float ReadTemperatureCelsius();
   zx_status_t Create(zx_device_t* parent,
                      fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
-  zx_status_t InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
+  zx_status_t InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config,
+                         uint32_t version);
   zx_status_t GetStateChangePort(zx_handle_t* port);
   ~AmlTSensor();
 
