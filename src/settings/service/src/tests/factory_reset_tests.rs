@@ -14,70 +14,11 @@ use crate::tests::fakes::recovery_policy_service::RecoveryPolicy;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
 use assert_matches::assert_matches;
-use fidl_fuchsia_settings::{FactoryResetMarker, FactoryResetProxy, FactoryResetSettings};
+use fidl_fuchsia_settings::FactoryResetMarker;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_factory_test_environment";
-const STARTING_RESET: bool = true;
-const CHANGED_RESET: bool = false;
-
-async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
-    let service_registry = ServiceRegistry::create();
-    let recovery_policy_service_handler = RecoveryPolicy::create();
-    service_registry
-        .lock()
-        .await
-        .register_service(Arc::new(Mutex::new(recovery_policy_service_handler.clone())));
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .fidl_interfaces(&[Interface::FactoryReset])
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
-
-    let factory_reset_proxy =
-        env.connect_to_protocol::<FactoryResetMarker>().expect("FactoryReset should be available");
-    (factory_reset_proxy, recovery_policy_service_handler)
-}
-
-// Tests that the FIDL calls for the reset setting result in appropriate
-// commands sent to the service.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_set() {
-    let (factory_reset_proxy, recovery_policy_service_handler) = setup_env().await;
-
-    // Validate the default value when the service starts.
-    let settings = factory_reset_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.is_local_reset_allowed, Some(STARTING_RESET));
-
-    // Validate no value has been sent to the recovery policy service.
-    {
-        let local_reset_allowed = recovery_policy_service_handler.is_local_reset_allowed();
-        let local_reset_allowed = local_reset_allowed.lock().await;
-        assert_eq!(*local_reset_allowed, None);
-    }
-
-    // Update the value.
-    let mut factory_reset_settings = FactoryResetSettings::EMPTY;
-    factory_reset_settings.is_local_reset_allowed = Some(CHANGED_RESET);
-    factory_reset_proxy
-        .set(factory_reset_settings)
-        .await
-        .expect("set completed")
-        .expect("set successful");
-
-    // Validate the value was sent to the recovery policy service.
-    {
-        let mutex = recovery_policy_service_handler.is_local_reset_allowed();
-        let local_reset_allowed = mutex.lock().await;
-        assert_eq!(*local_reset_allowed, Some(CHANGED_RESET));
-    }
-
-    // Validate the value is available on the next watch.
-    let settings = factory_reset_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.is_local_reset_allowed, Some(CHANGED_RESET));
-}
 
 // Makes sure that settings are restored from storage when service comes online.
 #[fuchsia_async::run_until_stalled(test)]
