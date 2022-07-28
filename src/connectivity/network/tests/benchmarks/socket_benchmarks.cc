@@ -265,6 +265,7 @@ bool PingLatency(perftest::RepeatState* state) {
 }
 
 constexpr char kFakeNetstackEnvVar[] = "FAKE_NETSTACK";
+constexpr char kNetstack3EnvVar[] = "NETSTACK3";
 
 void RegisterTests() {
   constexpr std::string_view kSingleReadTestNameFmt = "WriteRead/%s/%s/%ld%s";
@@ -312,14 +313,18 @@ void RegisterTests() {
     }
   };
 
-  constexpr size_t kTransferSizesForTcp[] = {
-      1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
-  };
-  for (size_t transfer : kTransferSizesForTcp) {
-    perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(), TcpWriteRead<Ipv4>,
-                           transfer);
-    perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(), TcpWriteRead<Ipv6>,
-                           transfer);
+  // TODO(https://fxbug.dev/104013): Remove the conditional once Netstack3
+  // supports enough of the POSIX TCP socket API.
+  if (!std::getenv(kNetstack3EnvVar)) {
+    constexpr size_t kTransferSizesForTcp[] = {
+        1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
+    };
+    for (size_t transfer : kTransferSizesForTcp) {
+      perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(),
+                             TcpWriteRead<Ipv4>, transfer);
+      perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(),
+                             TcpWriteRead<Ipv6>, transfer);
+    }
   }
 
   // NB: Knowledge encoded at a distance: these datagrams avoid IP fragmentation
@@ -335,7 +340,7 @@ void RegisterTests() {
     }
   }
 
-  [&network_to_string]() {
+  auto register_ping = [&network_to_string]() {
 #if !defined(__Fuchsia__)
     // When running on not-Fuchsia, we may not be permitted to create ICMP sockets.
     if (int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP); fd < 0) {
@@ -355,7 +360,12 @@ void RegisterTests() {
     perftest::RegisterTest(
         fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv6)).c_str(),
         PingLatency<Ipv6>);
-  }();
+  };
+  // TODO(https://fxbug.dev/47321): Remove the conditional once Netstack3
+  // supports enough of the POSIX ICMP socket API.
+  if (!std::getenv(kNetstack3EnvVar)) {
+    register_ping();
+  }
 }
 
 PERFTEST_CTOR(RegisterTests)
@@ -367,6 +377,8 @@ int main(int argc, char** argv) {
     test_suite += ".fastudp";
   } else if (std::getenv(kFakeNetstackEnvVar)) {
     test_suite += ".fake_netstack";
+  } else if (std::getenv(kNetstack3EnvVar)) {
+    test_suite += ".netstack3";
   }
   return perftest::PerfTestMain(argc, argv, test_suite.c_str());
 }

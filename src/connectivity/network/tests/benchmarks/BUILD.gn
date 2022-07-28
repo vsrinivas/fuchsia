@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components/fuchsia_test_package.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 import("//build/components/fuchsia_unittest_package.gni")
 import("//build/test.gni")
 
 group("benchmarks") {
   testonly = true
   deps = [
-    ":socket-benchmarks",
-    ":socket-benchmarks-with-fake-netstack",
-    ":socket-benchmarks-with-fast-udp",
+    ":socket-benchmarks-tests",
     ":udp-serde-benchmarks",
   ]
 }
@@ -39,7 +39,7 @@ test("socket_benchmarks") {
   ]
 }
 
-fuchsia_unittest_package("socket-benchmarks") {
+fuchsia_unittest_component("socket-benchmarks") {
   manifest = "meta/socket-benchmarks.cml"
   deps = [
     ":socket_benchmarks",
@@ -47,7 +47,7 @@ fuchsia_unittest_package("socket-benchmarks") {
   ]
 }
 
-fuchsia_unittest_package("socket-benchmarks-with-fast-udp") {
+fuchsia_unittest_component("socket-benchmarks-with-fast-udp") {
   manifest = "meta/socket-benchmarks-with-fast-udp.cml"
   deps = [
     ":socket_benchmarks",
@@ -55,11 +55,28 @@ fuchsia_unittest_package("socket-benchmarks-with-fast-udp") {
   ]
 }
 
-fuchsia_unittest_package("socket-benchmarks-with-fake-netstack") {
+fuchsia_unittest_component("socket-benchmarks-with-fake-netstack") {
   manifest = "meta/socket-benchmarks-with-fake-netstack.cml"
   deps = [
     ":socket_benchmarks",
     "fake-netstack",
+  ]
+}
+
+fuchsia_unittest_component("socket-benchmarks-with-netstack3") {
+  manifest = "meta/socket-benchmarks-with-netstack3.cml"
+  deps = [
+    ":socket_benchmarks",
+    "//src/connectivity/network/netstack3:component",
+  ]
+}
+
+fuchsia_test_package("socket-benchmarks-tests") {
+  test_components = [
+    ":socket-benchmarks",
+    ":socket-benchmarks-with-fake-netstack",
+    ":socket-benchmarks-with-fast-udp",
+    ":socket-benchmarks-with-netstack3",
   ]
 }
 
@@ -71,9 +88,7 @@ fuchsia_unittest_package("udp-serde-benchmarks") {
 group("tests") {
   testonly = true
   deps = [
-    ":socket-benchmarks",
-    ":socket-benchmarks-with-fake-netstack",
-    ":socket-benchmarks-with-fast-udp",
+    ":socket-benchmarks-tests",
     ":udp-serde-benchmarks",
   ]
   if (host_os == "linux") {

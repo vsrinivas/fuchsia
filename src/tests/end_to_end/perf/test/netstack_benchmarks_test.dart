@@ -15,7 +15,7 @@ void main() {
   test('socket_benchmarks', () async {
     final helper = await PerfTestHelper.make();
     await helper.runTestComponent(
-        packageName: 'socket-benchmarks',
+        packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks.cm',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
@@ -23,15 +23,23 @@ void main() {
   test('socket_benchmarks_with_fast_udp', () async {
     final helper = await PerfTestHelper.make();
     await helper.runTestComponent(
-        packageName: 'socket-benchmarks-with-fast-udp',
+        packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks-with-fast-udp.cm',
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+  }, timeout: Timeout.none);
+
+  test('socket_benchmarks_with_netstack3', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponent(
+        packageName: 'socket-benchmarks-tests',
+        componentName: 'socket-benchmarks-with-netstack3.cm',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_fake_netstack', () async {
     final helper = await PerfTestHelper.make();
     await helper.runTestComponent(
-        packageName: 'socket-benchmarks-with-fake-netstack',
+        packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks-with-fake-netstack.cm',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
   }, timeout: Timeout.none);
