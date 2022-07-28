@@ -290,6 +290,10 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
       // fine to return one of these buffers at a time.
       desc.return_flags = static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                                 netdev::wire::TxReturnFlags::kTxRetNotAvailable);
+
+      // TODO(https://fxbug.dev/32098): We're assuming that writing to the FIFO
+      // here is a sufficient memory barrier for the other end to access the
+      // data. That is currently true but not really guaranteed by the API.
       zx_status_t status = fifo_tx_.write(sizeof(desc_idx), &desc_idx, 1, nullptr);
       switch (status) {
         case ZX_OK:
@@ -615,6 +619,10 @@ void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) 
 
 void Session::ReturnTxDescriptors(const uint16_t* descriptors, size_t count) {
   size_t actual_count;
+
+  // TODO(https://fxbug.dev/32098): We're assuming that writing to the FIFO here
+  // is a sufficient memory barrier for the other end to access the data. That
+  // is currently true but not really guaranteed by the API.
   zx_status_t status = fifo_tx_.write(sizeof(uint16_t), descriptors, count, &actual_count);
   constexpr char kLogFormat[] = "%s: failed to return %ld tx descriptors: %s";
   switch (status) {
@@ -1020,6 +1028,10 @@ void Session::CommitRx() {
     return;
   }
   size_t actual;
+
+  // TODO(https://fxbug.dev/32098): We're assuming that writing to the FIFO here
+  // is a sufficient memory barrier for the other end to access the data. That
+  // is currently true but not really guaranteed by the API.
   zx_status_t status = fifo_rx_->fifo.write(sizeof(uint16_t), rx_return_queue_.get(),
                                             rx_return_queue_count_, &actual);
   constexpr char kLogFormat[] = "%s: failed to return %ld rx descriptors: %s";

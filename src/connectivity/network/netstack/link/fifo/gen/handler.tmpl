@@ -245,6 +245,11 @@ func FifoWrite(handle zx.Handle, b []{{ .EntryType }}) (zx.Status, uint32) {
 	var actual uint
 	var _x {{ .EntryType }}
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
+
+	// TODO(https://fxbug.dev/32098): We're assuming that writing to the FIFO
+	// here is a sufficient memory barrier for the other end to access the data.
+	// That is currently true but not really guaranteed by the API.
+
 	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(_x)), data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }

@@ -548,6 +548,11 @@ impl<K: AllocKind> Pending<K> {
             *waker = Some(cx.waker().clone());
             return Poll::Pending;
         }
+
+        // TODO(https://fxbug.dev/32098): We're assuming that writing to the
+        // FIFO here is a sufficient memory barrier for the other end to access
+        // the data. That is currently true but not really guaranteed by the
+        // API.
         let submitted = ready!(fifo.try_write(cx, &storage[..]))
             .map_err(|status| Error::Fifo("write", K::REFL.as_str(), status))?;
         let _drained = storage.drain(0..submitted);
