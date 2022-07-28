@@ -606,9 +606,11 @@ fn get_ipv6_address_from_addr(addr: fnet::IpAddress) -> fnet::Ipv6Address {
     assert_matches!(addr, fnet::IpAddress::Ipv6(ipv6) => ipv6)
 }
 
-// TODO(https://fxbug.dev/104930): Implement macros to generate the error
-// conversion implementations and controllers.
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug, PartialEq, multicast_forwarding_macros::FromIdenticalEnums)]
+#[identical_enums(
+    fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError,
+    fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError
+)]
 enum AddRouteError {
     #[error("Invalid address")]
     InvalidAddress,
@@ -620,29 +622,11 @@ enum AddRouteError {
     InputCannotBeOutput,
 }
 
-impl From<fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError> for AddRouteError {
-    fn from(value: fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError) -> Self {
-        match value {
-            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InputCannotBeOutput => AddRouteError::InputCannotBeOutput,
-            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InterfaceNotFound => AddRouteError::InterfaceNotFound,
-            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress => AddRouteError::InvalidAddress,
-            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing => AddRouteError::RequiredRouteFieldsMissing,
-        }
-    }
-}
-
-impl From<fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError> for AddRouteError {
-    fn from(value: fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError) -> Self {
-        match value {
-            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::InputCannotBeOutput => AddRouteError::InputCannotBeOutput,
-            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::InterfaceNotFound => AddRouteError::InterfaceNotFound,
-            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::InvalidAddress => AddRouteError::InvalidAddress,
-            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing => AddRouteError::RequiredRouteFieldsMissing,
-        }
-    }
-}
-
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug, PartialEq, multicast_forwarding_macros::FromIdenticalEnums)]
+#[identical_enums(
+    fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError,
+    fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError
+)]
 enum DelRouteError {
     #[error("Invalid address")]
     InvalidAddress,
@@ -650,68 +634,16 @@ enum DelRouteError {
     NotFound,
 }
 
-impl From<fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError> for DelRouteError {
-    fn from(value: fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError) -> Self {
-        match value {
-            fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress => {
-                DelRouteError::InvalidAddress
-            }
-            fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::NotFound => {
-                DelRouteError::NotFound
-            }
-        }
-    }
-}
-
-impl From<fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError> for DelRouteError {
-    fn from(value: fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError) -> Self {
-        match value {
-            fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError::InvalidAddress => {
-                DelRouteError::InvalidAddress
-            }
-            fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError::NotFound => {
-                DelRouteError::NotFound
-            }
-        }
-    }
-}
-
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug, PartialEq, multicast_forwarding_macros::FromIdenticalEnums)]
+#[identical_enums(
+    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError,
+    fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError
+)]
 enum GetRouteStatsError {
     #[error("Invalid address")]
     InvalidAddress,
     #[error("Route not found")]
     NotFound,
-}
-
-impl From<fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError>
-    for GetRouteStatsError
-{
-    fn from(value: fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError) -> Self {
-        match value {
-            fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress => {
-                GetRouteStatsError::InvalidAddress
-            }
-            fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::NotFound => {
-                GetRouteStatsError::NotFound
-            }
-        }
-    }
-}
-
-impl From<fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError>
-    for GetRouteStatsError
-{
-    fn from(value: fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError) -> Self {
-        match value {
-            fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError::InvalidAddress => {
-                GetRouteStatsError::InvalidAddress
-            }
-            fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError::NotFound => {
-                GetRouteStatsError::NotFound
-            }
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -750,169 +682,104 @@ trait RoutingTableController {
     );
 }
 
-/// Proxies requests to a
-/// `fnet_multicast_admin::Ipv4RoutingTableControllerProxy`.
-struct Ipv4RoutingTableController {
-    controller: fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
-}
-
-impl Ipv4RoutingTableController {
-    fn new(router_realm: &netemul::TestRealm<'_>) -> Self {
-        Ipv4RoutingTableController {
-            controller: router_realm
-                .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
-                .expect("connect to protocol"),
+macro_rules! routing_table_controller_impl {
+    ($controller:ident, $controller_proxy:path, $controller_marker:path, $event_type:path, $version:path) => {
+        struct $controller {
+            controller: $controller_proxy,
         }
-    }
-}
 
-#[async_trait]
-impl RoutingTableController for Ipv4RoutingTableController {
-    async fn add_route(
-        &self,
-        addresses: UnicastSourceAndMulticastDestination,
-        route: fnet_multicast_admin::Route,
-    ) -> Result<(), AddRouteError> {
-        let mut ipv4_addresses = assert_matches!(addresses, IpAddr::V4(addr) => addr);
-        self.controller
-            .add_route(&mut ipv4_addresses, route)
-            .await
-            .expect("add_route failed")
-            .map_err(Into::into)
-    }
-
-    async fn del_route(
-        &self,
-        addresses: UnicastSourceAndMulticastDestination,
-    ) -> Result<(), DelRouteError> {
-        let mut ipv4_addresses = assert_matches!(addresses, IpAddr::V4(addr) => addr);
-        self.controller
-            .del_route(&mut ipv4_addresses)
-            .await
-            .expect("del_route failed")
-            .map_err(Into::into)
-    }
-
-    async fn get_route_stats(
-        &self,
-        addresses: UnicastSourceAndMulticastDestination,
-    ) -> Result<fnet_multicast_admin::RouteStats, GetRouteStatsError> {
-        let mut ipv4_addresses = assert_matches!(addresses, IpAddr::V4(addr) => addr);
-        self.controller
-            .get_route_stats(&mut ipv4_addresses)
-            .await
-            .expect("get_route_stats failed")
-            .map_err(Into::into)
-    }
-
-    async fn watch_routing_events(&self) -> Result<RoutingEventResult, fidl::Error> {
-        self.controller.watch_routing_events().await.map(
-            |(dropped_events, addresses, input_interface, event)| RoutingEventResult {
-                dropped_events: dropped_events,
-                addresses: IpAddr::V4(addresses),
-                input_interface: input_interface,
-                event: event,
-            },
-        )
-    }
-
-    async fn expect_closed_for_reason(
-        &self,
-        expected_reason: fnet_multicast_admin::TableControllerCloseReason,
-    ) {
-        let fnet_multicast_admin::Ipv4RoutingTableControllerEvent::OnClose { error: reason } = self
-            .controller
-            .take_event_stream()
-            .try_next()
-            .await
-            .expect("read Ipv4RoutingTableController event")
-            .expect("Ipv4RoutingTableController event stream ended unexpectedly");
-        assert_eq!(reason, expected_reason);
-        assert_eq!(self.controller.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
-    }
-}
-
-/// Proxies requests to a
-/// `fnet_multicast_admin::Ipv6RoutingTableControllerProxy`.
-struct Ipv6RoutingTableController {
-    controller: fnet_multicast_admin::Ipv6RoutingTableControllerProxy,
-}
-
-impl Ipv6RoutingTableController {
-    fn new(router_realm: &netemul::TestRealm<'_>) -> Self {
-        Ipv6RoutingTableController {
-            controller: router_realm
-                .connect_to_protocol::<fnet_multicast_admin::Ipv6RoutingTableControllerMarker>()
-                .expect("connect to protocol"),
+        impl $controller {
+            fn new(router_realm: &netemul::TestRealm<'_>) -> Self {
+                Self {
+                    controller: router_realm
+                        .connect_to_protocol::<$controller_marker>()
+                        .expect("connect to protocol"),
+                }
+            }
         }
-    }
+
+        #[async_trait]
+        impl RoutingTableController for $controller {
+            async fn add_route(
+                &self,
+                addresses: UnicastSourceAndMulticastDestination,
+                route: fnet_multicast_admin::Route,
+            ) -> Result<(), AddRouteError> {
+                let mut fidl_addresses = assert_matches!(addresses, $version(addr) => addr);
+                self.controller
+                    .add_route(&mut fidl_addresses, route)
+                    .await
+                    .expect("add_route failed")
+                    .map_err(Into::into)
+            }
+
+            async fn del_route(
+                &self,
+                addresses: UnicastSourceAndMulticastDestination,
+            ) -> Result<(), DelRouteError> {
+                let mut fidl_addresses = assert_matches!(addresses, $version(addr) => addr);
+                self.controller
+                    .del_route(&mut fidl_addresses)
+                    .await
+                    .expect("del_route failed")
+                    .map_err(Into::into)
+            }
+
+            async fn get_route_stats(
+                &self,
+                addresses: UnicastSourceAndMulticastDestination,
+            ) -> Result<fnet_multicast_admin::RouteStats, GetRouteStatsError> {
+                let mut fidl_addresses = assert_matches!(addresses, $version(addr) => addr);
+                self.controller
+                    .get_route_stats(&mut fidl_addresses)
+                    .await
+                    .expect("get_route_stats failed")
+                    .map_err(Into::into)
+            }
+
+            async fn watch_routing_events(&self) -> Result<RoutingEventResult, fidl::Error> {
+                self.controller.watch_routing_events().await.map(
+                    |(dropped_events, addresses, input_interface, event)| RoutingEventResult {
+                        dropped_events,
+                        addresses: $version(addresses),
+                        input_interface,
+                        event,
+                    },
+                )
+            }
+
+            async fn expect_closed_for_reason(
+                &self,
+                expected_reason: fnet_multicast_admin::TableControllerCloseReason,
+            ) {
+                let $event_type { error: reason } = self
+                    .controller
+                    .take_event_stream()
+                    .try_next()
+                    .await
+                    .expect("failed to read controller event")
+                    .expect("event stream ended unexpectedly");
+                assert_eq!(reason, expected_reason);
+                assert_eq!(self.controller.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
+            }
+        }
+    };
 }
 
-#[async_trait]
-impl RoutingTableController for Ipv6RoutingTableController {
-    async fn add_route(
-        &self,
-        addresses: UnicastSourceAndMulticastDestination,
-        route: fnet_multicast_admin::Route,
-    ) -> Result<(), AddRouteError> {
-        let mut ipv6_addresses = assert_matches!(addresses, IpAddr::V6(addr) => addr);
-        self.controller
-            .add_route(&mut ipv6_addresses, route)
-            .await
-            .expect("add_route failed")
-            .map_err(Into::into)
-    }
-
-    async fn del_route(
-        &self,
-        addresses: UnicastSourceAndMulticastDestination,
-    ) -> Result<(), DelRouteError> {
-        let mut ipv6_addresses = assert_matches!(addresses, IpAddr::V6(addr) => addr);
-        self.controller
-            .del_route(&mut ipv6_addresses)
-            .await
-            .expect("del_route failed")
-            .map_err(Into::into)
-    }
-
-    async fn get_route_stats(
-        &self,
-        addresses: UnicastSourceAndMulticastDestination,
-    ) -> Result<fnet_multicast_admin::RouteStats, GetRouteStatsError> {
-        let mut ipv6_addresses = assert_matches!(addresses, IpAddr::V6(addr) => addr);
-        self.controller
-            .get_route_stats(&mut ipv6_addresses)
-            .await
-            .expect("get_route_stats failed")
-            .map_err(Into::into)
-    }
-
-    async fn watch_routing_events(&self) -> Result<RoutingEventResult, fidl::Error> {
-        self.controller.watch_routing_events().await.map(
-            |(dropped_events, addresses, input_interface, event)| RoutingEventResult {
-                dropped_events: dropped_events,
-                addresses: IpAddr::V6(addresses),
-                input_interface: input_interface,
-                event: event,
-            },
-        )
-    }
-
-    async fn expect_closed_for_reason(
-        &self,
-        expected_reason: fnet_multicast_admin::TableControllerCloseReason,
-    ) {
-        let fnet_multicast_admin::Ipv6RoutingTableControllerEvent::OnClose { error: reason } = self
-            .controller
-            .take_event_stream()
-            .try_next()
-            .await
-            .expect("read Ipv6RoutingTableController event")
-            .expect("Ipv6RoutingTableController event stream ended unexpectedly");
-        assert_eq!(reason, expected_reason);
-        assert_eq!(self.controller.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
-    }
-}
+routing_table_controller_impl!(
+    Ipv4RoutingTableController,
+    fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
+    fnet_multicast_admin::Ipv4RoutingTableControllerMarker,
+    fnet_multicast_admin::Ipv4RoutingTableControllerEvent::OnClose,
+    IpAddr::V4
+);
+routing_table_controller_impl!(
+    Ipv6RoutingTableController,
+    fnet_multicast_admin::Ipv6RoutingTableControllerProxy,
+    fnet_multicast_admin::Ipv6RoutingTableControllerMarker,
+    fnet_multicast_admin::Ipv6RoutingTableControllerEvent::OnClose,
+    IpAddr::V6
+);
 
 /// Adds the `addr` to the `interface`.
 async fn add_address(interface: &netemul::TestInterface<'_>, addr: fnet::Subnet) {
