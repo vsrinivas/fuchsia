@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_FUZZING_LIBFUZZER_PROCESS_H_
-#define SRC_SYS_FUZZING_LIBFUZZER_PROCESS_H_
+#ifndef SRC_SYS_FUZZING_COMMON_CHILD_PROCESS_H_
+#define SRC_SYS_FUZZING_COMMON_CHILD_PROCESS_H_
 
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
@@ -23,28 +23,43 @@ namespace fuzzing {
 // When spawned, cloned file descriptors will inherit from the parent process while transferred
 // file descriptors will be piped to or from this class and accessible via the |WriteTo..| and
 // |ReadFrom...| methods. Only takes effect on spawning.
-enum SpawnAction : uint32_t {
+enum FdAction : uint32_t {
   kClone = FDIO_SPAWN_ACTION_CLONE_FD,
   kTransfer = FDIO_SPAWN_ACTION_TRANSFER_FD,
 };
 
-class Process {
+class ChildProcess {
  public:
-  explicit Process(ExecutorPtr executor);
-  ~Process() = default;
+  explicit ChildProcess(ExecutorPtr executor);
+  ~ChildProcess() = default;
 
   bool is_verbose() const { return verbose_; }
   void set_verbose(bool verbose) { verbose_ = verbose; }
 
-  // Sets how to handle the output file descriptors. See |SpawnAction| above.
-  void SetStdoutSpawnAction(SpawnAction action);
-  void SetStderrSpawnAction(SpawnAction action);
+  // Adds a command line argument for the process. The first |arg| added should be the executable
+  // path relative to the "/pkg" directory, i.e. the same value as might be found in
+  // `program.binary` field in a component manifest.
+  void AddArg(const std::string& arg);
 
-  // Returns a promise to spawn a new child process. The promise will return an error if a previous
-  // process was spawned but has not been |Kill|ed and |Reset|, or if spawning fails. On error, this
-  // object will be effectively |Kill|ed, and will need to be |Reset| before |Spawn| can be called
-  // again.
-  ZxPromise<> Spawn(const std::vector<std::string>& args);
+  // Adds all of the given |args|.
+  void AddArgs(std::initializer_list<const char*> args);
+
+  // Sets how to handle the output file descriptors. See |FdAction| above.
+  void SetStdoutFdAction(FdAction action);
+  void SetStderrFdAction(FdAction action);
+
+  // Takes a |channel| to be passed as a startup channel to the child process by |Spawn|.
+  void AddChannel(zx::channel channel);
+
+  // Spawns the new child process. Returns an error if a previous process was spawned but has not
+  // been |Kill|ed and |Reset|, or if spawning fails.
+  __WARN_UNUSED_RESULT zx_status_t Spawn();
+
+  // Returns a promise to |Spawn| a new child process.
+  ZxPromise<> SpawnAsync();
+
+  // Return a copy of the process.
+  __WARN_UNUSED_RESULT zx_status_t Duplicate(zx::process* out);
 
   // Returns a promise to wait for the promise to be spawned and then write data to the its stdin.
   // The promise will return an error if stdin has already been closed by |CloseStdin| or |Kill|.
@@ -62,13 +77,17 @@ class Process {
   ZxPromise<std::string> ReadFromStdout();
   ZxPromise<std::string> ReadFromStderr();
 
+  // Promises to wait for the spawned process to terminate.
+  ZxPromise<> Wait();
+
   // Returns a promise that kills the spawned process and waits for it to fully terminate. This
   // leaves the process in a "killed" state; it must be |Reset| before it can be reused.
   ZxPromise<> Kill();
 
-  // Returns this object to a state in which |Spawn| can be called again. This effectively kills the
-  // process, but does not wait for it to fully terminate. Callers should prefer to |Kill| and then
-  // |Reset|.
+  // Returns this object to an initial state, from which |Spawn| can be called again. This
+  // effectively kills the process, but does not wait for it to fully terminate. Callers should
+  // prefer to |Kill| and then |Reset|. |AddArgs|, |SetFdAction|, and/or |SetChannels| will need to
+  // be called again before respawning.
   void Reset();
 
  private:
@@ -83,6 +102,10 @@ class Process {
   ExecutorPtr executor_;
   bool verbose_ = false;
 
+  // Parameters for |fdio_spawn_etc|.
+  std::vector<std::string> args_;
+  std::vector<zx::channel> channels_;
+
   // The handle to the spawned process.
   zx::process process_;
 
@@ -92,8 +115,8 @@ class Process {
     // Piped file descriptor connected to the process.
     int fd = -1;
 
-    // How to create the file descriptor in the spawned process. See |SpawnAction|.
-    SpawnAction spawn_action = kTransfer;
+    // How to create the file descriptor in the spawned process. See |FdAction|.
+    FdAction action = kTransfer;
 
     // Blocks reads or writes until the process is spawned.
     ZxCompleter<> on_spawn;
@@ -117,9 +140,9 @@ class Process {
 
   Scope scope_;
 
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Process);
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ChildProcess);
 };
 
 }  // namespace fuzzing
 
-#endif  // SRC_SYS_FUZZING_LIBFUZZER_PROCESS_H_
+#endif  // SRC_SYS_FUZZING_COMMON_CHILD_PROCESS_H_

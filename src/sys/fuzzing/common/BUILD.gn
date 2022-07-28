@@ -5,6 +5,14 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":error-unittests-pkg",
+    ":unittests-pkg",
+  ]
+}
+
 source_set("common") {
   visibility = [ "//src/sys/*" ]
   testonly = true
@@ -16,6 +24,8 @@ source_set("common") {
     "async-eventpair.h",
     "async-socket.cc",
     "async-socket.h",
+    "child-process.cc",
+    "child-process.h",
     "component-context.cc",
     "component-context.h",
     "controller-provider.cc",
@@ -46,6 +56,7 @@ source_set("common") {
     "../fidl:fuchsia.fuzzer",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//zircon/system/ulib/async:async-cpp",
@@ -85,7 +96,7 @@ source_set("runner-fatal-unittests") {
   public_deps = [ ":runner-unittests-common" ]
 }
 
-test("unittests_bin") {
+test("unittests-bin") {
   output_name = "fuzzing_common_unittests"
   visibility = [ ":*" ]
   testonly = true
@@ -109,14 +120,49 @@ test("unittests_bin") {
   ]
 }
 
+test("error-unittests-bin") {
+  output_name = "fuzzing_common_error_unittests"
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "child-process-unittest.cc" ]
+  deps = [
+    ":common",
+    "testing",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 fuchsia_component("unittests") {
   visibility = [ ":*" ]
   testonly = true
   manifest = "meta/unittests.cml"
-  deps = [ ":unittests_bin" ]
+  deps = [ ":unittests-bin" ]
 }
 
-fuchsia_test_package("tests") {
+fuchsia_component("error-unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/error-unittests.cml"
+  deps = [
+    ":error-unittests-bin",
+    "testing:echo",
+  ]
+}
+
+fuchsia_test_package("unittests-pkg") {
   package_name = "fuzzing-common-tests"
   test_components = [ ":unittests" ]
+}
+
+fuchsia_test_package("error-unittests-pkg") {
+  package_name = "fuzzing-common-error-tests"
+
+  # Some tests involve handling intentional crashes.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":error-unittests" ]
 }

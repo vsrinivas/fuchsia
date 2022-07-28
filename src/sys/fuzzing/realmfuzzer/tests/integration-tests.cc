@@ -7,14 +7,13 @@
 
 #include <memory>
 
-#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-socket.h"
 #include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/child-process.h"
 #include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/controller-provider.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
-#include "src/sys/fuzzing/common/testing/process.h"
 #include "src/sys/fuzzing/common/testing/registrar.h"
 
 namespace fuzzing {
@@ -39,13 +38,13 @@ class RealmFuzzerTest : public AsyncTest {
   void SetUp() override {
     AsyncTest::SetUp();
     context_ = ComponentContext::CreateWithExecutor(executor());
+    process_ = std::make_unique<ChildProcess>(executor());
   }
 
   // Creates fake registry and coverage components, and spawns the engine.
   ZxPromise<ControllerPtr> Start() {
     registrar_ = std::make_unique<FakeRegistrar>(executor());
     return fpromise::make_promise([this]() -> ZxResult<> {
-             std::vector<zx::channel> channels;
              fidl::InterfaceHandle<Registrar> registrar_handle = registrar_->NewBinding();
              fidl::InterfaceHandle<CoverageDataProvider> provider_handle;
              if (auto status = context_->Connect(provider_handle.NewRequest()); status != ZX_OK) {
@@ -53,20 +52,12 @@ class RealmFuzzerTest : public AsyncTest {
                               << zx_status_get_string(status);
                return fpromise::error(status);
              }
-             channels.emplace_back(registrar_handle.TakeChannel());
-             channels.emplace_back(provider_handle.TakeChannel());
-             component::FuchsiaPkgUrl url;
-             if (!url.Parse(kFuzzerUrl)) {
-               return fpromise::error(ZX_ERR_INVALID_ARGS);
-             }
-             if (auto status =
-                     StartProcess("realmfuzzer_engine", url, std::move(channels), &engine_);
-                 status != ZX_OK) {
-               FX_LOGS(ERROR) << "Failed to start engine process: " << zx_status_get_string(status);
-               return fpromise::error(status);
-             }
+             process_->AddChannel(registrar_handle.TakeChannel());
+             process_->AddChannel(provider_handle.TakeChannel());
+             process_->AddArgs({"bin/realmfuzzer_engine", kFuzzerUrl});
              return fpromise::ok();
            })
+        .and_then(process_->SpawnAsync())
         .and_then(registrar_->TakeProvider())
         .and_then([this, consumer_fut = Future<>(), controller = ControllerPtr()](
                       Context& context,
@@ -89,17 +80,17 @@ class RealmFuzzerTest : public AsyncTest {
 
   ZxPromise<> Stop() {
     provider_->Stop();
-    return AwaitTermination(std::move(engine_), executor());
+    return process_->Wait();
   }
 
   void TearDown() override {
-    engine_.kill();
+    process_->Kill();
     AsyncTest::TearDown();
   }
 
  private:
   std::unique_ptr<ComponentContext> context_;
-  zx::process engine_;
+  std::unique_ptr<ChildProcess> process_;
   ControllerProviderPtr provider_;
   std::unique_ptr<FakeRegistrar> registrar_;
   Scope scope_;

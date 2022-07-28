@@ -11,6 +11,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/child-process.h"
 #include "src/sys/fuzzing/realmfuzzer/target/process.h"
 
 namespace fuzzing {
@@ -41,7 +42,7 @@ class TestTarget final {
   void Reset();
 
   ExecutorPtr executor_;
-  zx::process process_;
+  ChildProcess target_;
   zx::channel local_;
   uint64_t id_ = kInvalidTargetId;
   Scope scope_;

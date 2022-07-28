@@ -39,7 +39,7 @@ config("libfuzzer") {
 }
 
 executable("fuzzer") {
-  output_name = "libfuzzer_test_fuzzer"
+  output_name = "libfuzzer_unittest_fuzzer"
   visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [
@@ -79,11 +79,4 @@ executable("relay") {
     "//zircon/system/ulib/sync",
   ]
   deps = [ "//sdk/lib/sys/cpp" ]
-}
-
-executable("echo") {
-  output_name = "libfuzzer_test_echo"
-  visibility = [ "//src/sys/fuzzing/*" ]
-  testonly = true
-  sources = [ "echo.cc" ]
 }

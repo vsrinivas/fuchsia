@@ -17,9 +17,9 @@
 #include <re2/re2.h>
 
 #include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/child-process.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/runner.h"
-#include "src/sys/fuzzing/libfuzzer/process.h"
 
 namespace fuzzing {
 
@@ -54,20 +54,16 @@ class LibFuzzerRunner : public Runner {
 
   Status CollectStatus() override;
 
- protected:
-  // Creates the list of actions to perform when spawning libFuzzer. Returns pipes to |stdin| and
-  // from |stderr|.
-  std::vector<fdio_spawn_action_t> MakeSpawnActions(int* stdin_fd, int* stderr_fd);
-
  private:
   explicit LibFuzzerRunner(ExecutorPtr executor);
 
-  // Construct a set of libFuzzer command-line arguments for the current options.
-  std::vector<std::string> MakeArgs();
+  // Construct a set of libFuzzer command-line arguments for the current options and add them to
+  // this object's process.
+  void AddArgs();
 
   // Returns a promise that runs a libFuzzer process asynchronously and returns the fuzzing result
   // and the input that caused it.
-  ZxPromise<Artifact> RunAsync(std::vector<std::string> args);
+  ZxPromise<Artifact> RunAsync();
 
   // Returns a promise that reads the output of the process run by |RunAsync|. The promise will
   // update the fuzzer status accordingly, and return the fuzzing result when idenitifed.
@@ -108,7 +104,7 @@ class LibFuzzerRunner : public Runner {
   bool minimized_ = false;
 
   // Asynchronous process used to run libFuzzer instances.
-  Process process_;
+  ChildProcess process_;
   Barrier barrier_;
   Workflow workflow_;
 

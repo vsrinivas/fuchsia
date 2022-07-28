@@ -5,20 +5,10 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":default-tests",
-    ":error-tests",
-  ]
-}
-
 source_set("libfuzzer") {
   visibility = [ ":*" ]
   testonly = true
   sources = [
-    "process.cc",
-    "process.h",
     "runner.cc",
     "runner.h",
   ]
@@ -32,7 +22,6 @@ source_set("libfuzzer") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//src/lib/fsl",
     "//third_party/boringssl",
   ]
 }
@@ -49,20 +38,6 @@ test("unittests_bin") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/fuzzing/common:runner-unittests",
-    "//src/sys/fuzzing/common/testing",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-test("error_unittests_bin") {
-  output_name = "libfuzzer_error_unittests"
-  visibility = [ ":*" ]
-  testonly = true
-  sources = [ "process-unittest.cc" ]
-  deps = [
-    ":libfuzzer",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main",
     "//src/sys/fuzzing/common/testing",
     "//third_party/googletest:gtest",
   ]
@@ -95,29 +70,7 @@ fuchsia_component("unittests") {
   ]
 }
 
-fuchsia_component("error-unittests") {
-  visibility = [ ":*" ]
-  testonly = true
-  manifest = "meta/error-unittests.cml"
-  deps = [
-    ":error_unittests_bin",
-    "testing:echo",
-  ]
-}
-
-fuchsia_test_package("default-tests") {
+fuchsia_test_package("tests") {
   package_name = "libfuzzer-tests"
   test_components = [ ":test-realm" ]
-}
-
-fuchsia_test_package("error-tests") {
-  package_name = "libfuzzer-error-tests"
-
-  # Some tests involve handling intentional crashes.
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-  test_components = [ ":error-unittests" ]
 }

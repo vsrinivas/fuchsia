@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/fuzzing/libfuzzer/process.h"
+#include "src/sys/fuzzing/common/child-process.h"
 
 #include <string>
 
@@ -14,36 +14,31 @@ namespace fuzzing {
 
 // Test fixtures.
 
-const char* kEcho = "/pkg/bin/libfuzzer_test_echo";
+const char* kEcho = "bin/fuzzing_echo_for_test";
 
-class ProcessTest : public AsyncTest {};
+class ChildProcessTest : public AsyncTest {};
 
 // Unit tests.
 
-TEST_F(ProcessTest, SpawnFailure) {
-  Process process(executor());
-  process.set_verbose(true);
-  FUZZING_EXPECT_ERROR(process.Spawn({"bogus"}), ZX_ERR_NOT_FOUND);
-  RunUntilIdle();
-
-  // Spawn failure leaves process in a "killed" state.
-  FUZZING_EXPECT_ERROR(process.Spawn({kEcho}), ZX_ERR_BAD_STATE);
+TEST_F(ChildProcessTest, Spawn) {
+  ChildProcess process(executor());
+  process.AddArg("bogus");
+  FUZZING_EXPECT_ERROR(process.SpawnAsync(), ZX_ERR_NOT_FOUND);
   RunUntilIdle();
 
   // Can respawn after reset.
   process.Reset();
-  FUZZING_EXPECT_OK(process.Spawn({kEcho}));
+  process.AddArg(kEcho);
+  FUZZING_EXPECT_OK(process.SpawnAsync());
   RunUntilIdle();
 
   // Cannot spawn when spawned.
-  FUZZING_EXPECT_ERROR(process.Spawn({kEcho}), ZX_ERR_BAD_STATE);
+  FUZZING_EXPECT_ERROR(process.SpawnAsync(), ZX_ERR_BAD_STATE);
   RunUntilIdle();
 }
 
-TEST_F(ProcessTest, ReadFromStdout) {
-  Process process(executor());
-  process.SetStderrSpawnAction(kClone);
-
+TEST_F(ChildProcessTest, ReadFromStdout) {
+  ChildProcess process(executor());
   std::string hello("hello");
   std::string world("world");
   std::string input = hello + "\n" + world;
@@ -51,14 +46,13 @@ TEST_F(ProcessTest, ReadFromStdout) {
   FUZZING_EXPECT_OK(process.ReadFromStdout(), hello);
   FUZZING_EXPECT_OK(process.ReadFromStdout(), world);
   FUZZING_EXPECT_OK(process.WriteAndCloseStdin(input.data(), input.size()), input.size());
-  FUZZING_EXPECT_OK(process.Spawn({kEcho, "--stdout"}));
+  process.AddArgs({kEcho, "--stdout"});
+  FUZZING_EXPECT_OK(process.SpawnAsync());
   RunUntilIdle();
 }
 
-TEST_F(ProcessTest, ReadFromStderr) {
-  Process process(executor());
-  process.SetStdoutSpawnAction(kClone);
-
+TEST_F(ChildProcessTest, ReadFromStderr) {
+  ChildProcess process(executor());
   std::string hello("hello");
   std::string world("world");
   std::string input = hello + "\n" + world;
@@ -66,13 +60,15 @@ TEST_F(ProcessTest, ReadFromStderr) {
   FUZZING_EXPECT_OK(process.ReadFromStderr(), hello);
   FUZZING_EXPECT_OK(process.ReadFromStderr(), world);
   FUZZING_EXPECT_OK(process.WriteAndCloseStdin(input.data(), input.size()), input.size());
-  FUZZING_EXPECT_OK(process.Spawn({kEcho, "--stderr"}));
+  process.AddArgs({kEcho, "--stderr"});
+  FUZZING_EXPECT_OK(process.SpawnAsync());
   RunUntilIdle();
 }
 
-TEST_F(ProcessTest, Kill) {
-  Process process(executor());
-  FUZZING_EXPECT_OK(process.Spawn({kEcho, "--stdout", "--stderr"}));
+TEST_F(ChildProcessTest, Kill) {
+  ChildProcess process(executor());
+  process.AddArgs({kEcho, "--stdout", "--stderr"});
+  FUZZING_EXPECT_OK(process.SpawnAsync());
 
   std::string input("hello\nworld");
   FUZZING_EXPECT_OK(process.WriteToStdin(input.data(), input.size()), input.size());
@@ -82,7 +78,7 @@ TEST_F(ProcessTest, Kill) {
   RunUntilIdle();
 
   // Cannot respawn until reset.
-  FUZZING_EXPECT_ERROR(process.Spawn({kEcho}), ZX_ERR_BAD_STATE);
+  FUZZING_EXPECT_ERROR(process.SpawnAsync(), ZX_ERR_BAD_STATE);
   FUZZING_EXPECT_ERROR(process.WriteToStdin(input.data(), input.size()));
   FUZZING_EXPECT_ERROR(process.ReadFromStdout());
   FUZZING_EXPECT_ERROR(process.ReadFromStderr());
@@ -90,7 +86,8 @@ TEST_F(ProcessTest, Kill) {
 
   // Can respawn after reset.
   process.Reset();
-  FUZZING_EXPECT_OK(process.Spawn({kEcho}));
+  process.AddArg(kEcho);
+  FUZZING_EXPECT_OK(process.SpawnAsync());
   RunUntilIdle();
 }
 

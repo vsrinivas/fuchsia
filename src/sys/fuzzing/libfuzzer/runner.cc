@@ -191,20 +191,20 @@ ZxPromise<> LibFuzzerRunner::Configure(const OptionsPtr& options) {
 }
 
 ZxPromise<FuzzResult> LibFuzzerRunner::Execute(Input input) {
-  auto args = MakeArgs();
+  AddArgs();
   auto test_input = kTestInputPath;
   WriteInputToFile(input, test_input);
-  args.push_back(test_input);
-  return RunAsync(std::move(args))
+  process_.AddArg(test_input);
+  return RunAsync()
       .and_then([](const Artifact& artifact) { return fpromise::ok(artifact.fuzz_result()); })
       .wrap_with(workflow_);
 }
 
 ZxPromise<Artifact> LibFuzzerRunner::Fuzz() {
-  auto args = MakeArgs();
-  args.push_back(kLiveCorpusPath);
-  args.push_back(kSeedCorpusPath);
-  return RunAsync(std::move(args))
+  AddArgs();
+  process_.AddArg(kLiveCorpusPath);
+  process_.AddArg(kSeedCorpusPath);
+  return RunAsync()
       .and_then([this](Artifact& artifact) {
         ReloadLiveCorpus();
         return fpromise::ok(std::move(artifact));
@@ -213,22 +213,22 @@ ZxPromise<Artifact> LibFuzzerRunner::Fuzz() {
 }
 
 ZxPromise<Input> LibFuzzerRunner::Minimize(Input input) {
-  auto args = MakeArgs();
+  AddArgs();
   WriteInputToFile(input, kTestInputPath);
-  args.push_back("-minimize_crash=1");
-  args.push_back(kTestInputPath);
+  process_.AddArg("-minimize_crash=1");
+  process_.AddArg(kTestInputPath);
   minimized_ = false;
-  return RunAsync(std::move(args))
+  return RunAsync()
       .and_then([](Artifact& artifact) { return fpromise::ok(artifact.take_input()); })
       .wrap_with(workflow_);
 }
 
 ZxPromise<Input> LibFuzzerRunner::Cleanse(Input input) {
-  auto args = MakeArgs();
+  AddArgs();
   WriteInputToFile(input, kTestInputPath);
-  args.push_back("-cleanse_crash=1");
-  args.push_back(kTestInputPath);
-  return RunAsync(std::move(args))
+  process_.AddArg("-cleanse_crash=1");
+  process_.AddArg(kTestInputPath);
+  return RunAsync()
       .and_then([input = std::move(input)](Artifact& artifact) mutable {
         auto result = artifact.take_input();
         // A quirk of libFuzzer's cleanse workflow is that it doesn't return *anything* if the input
@@ -240,12 +240,12 @@ ZxPromise<Input> LibFuzzerRunner::Cleanse(Input input) {
 
 ZxPromise<> LibFuzzerRunner::Merge() {
   std::filesystem::create_directory(kTempCorpusPath);
-  auto args = MakeArgs();
-  args.push_back("-merge=1");
-  args.push_back(kTempCorpusPath);
-  args.push_back(kSeedCorpusPath);
-  args.push_back(kLiveCorpusPath);
-  return RunAsync(std::move(args))
+  AddArgs();
+  process_.AddArg("-merge=1");
+  process_.AddArg(kTempCorpusPath);
+  process_.AddArg(kSeedCorpusPath);
+  process_.AddArg(kLiveCorpusPath);
+  return RunAsync()
       .and_then([this](const Artifact& artifact) {
         std::filesystem::remove_all(kLiveCorpusPath);
         std::filesystem::rename(kTempCorpusPath, kLiveCorpusPath);
@@ -274,29 +274,28 @@ Status LibFuzzerRunner::CollectStatus() {
 ///////////////////////////////////////////////////////////////
 // Process-related methods.
 
-std::vector<std::string> LibFuzzerRunner::MakeArgs() {
-  std::vector<std::string> args;
+void LibFuzzerRunner::AddArgs() {
   auto cmdline_iter = cmdline_.begin();
   while (cmdline_iter != cmdline_.end() && *cmdline_iter != "--") {
-    args.push_back(*cmdline_iter++);
+    process_.AddArg(*cmdline_iter++);
   }
   if (options_->has_runs()) {
-    args.push_back(MakeArg("runs", options_->runs()));
+    process_.AddArg(MakeArg("runs", options_->runs()));
   }
   if (options_->has_max_total_time()) {
     auto max_total_time = options_->max_total_time();
     max_total_time = Clamp(max_total_time, kOneSecond, "duration", "second", "max_total_time");
     options_->set_max_total_time(max_total_time);
-    args.push_back(MakeArg("max_total_time", max_total_time / kOneSecond));
+    process_.AddArg(MakeArg("max_total_time", max_total_time / kOneSecond));
   }
   if (options_->has_seed()) {
-    args.push_back(MakeArg("seed", options_->seed()));
+    process_.AddArg(MakeArg("seed", options_->seed()));
   }
   if (options_->has_max_input_size()) {
-    args.push_back(MakeArg("max_len", options_->max_input_size()));
+    process_.AddArg(MakeArg("max_len", options_->max_input_size()));
   }
   if (options_->has_mutation_depth()) {
-    args.push_back(MakeArg("mutate_depth", options_->mutation_depth()));
+    process_.AddArg(MakeArg("mutate_depth", options_->mutation_depth()));
   }
   if (options_->has_dictionary_level()) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the dictionary level.";
@@ -305,31 +304,31 @@ std::vector<std::string> LibFuzzerRunner::MakeArgs() {
     FX_LOGS(WARNING) << "libFuzzer does not support ignoring process exits.";
   }
   if (options_->has_detect_leaks()) {
-    args.push_back(MakeArg("detect_leaks", options_->detect_leaks() ? "1" : "0"));
+    process_.AddArg(MakeArg("detect_leaks", options_->detect_leaks() ? "1" : "0"));
   }
   if (options_->has_run_limit()) {
     auto run_limit = options_->run_limit();
     run_limit = Clamp(run_limit, kOneSecond, "duration", "second", "run_limit");
     options_->set_run_limit(run_limit);
-    args.push_back(MakeArg("timeout", run_limit / kOneSecond));
+    process_.AddArg(MakeArg("timeout", run_limit / kOneSecond));
   }
   if (options_->has_malloc_limit()) {
     auto malloc_limit = options_->malloc_limit();
     malloc_limit = Clamp(malloc_limit, kOneMb, "memory amount", "MB", "malloc_limit");
     options_->set_malloc_limit(malloc_limit);
-    args.push_back(MakeArg("malloc_limit_mb", malloc_limit / kOneMb));
+    process_.AddArg(MakeArg("malloc_limit_mb", malloc_limit / kOneMb));
   }
   if (options_->has_oom_limit()) {
     auto oom_limit = options_->oom_limit();
     oom_limit = Clamp(oom_limit, kOneMb, "memory amount", "MB", "oom_limit");
     options_->set_oom_limit(oom_limit);
-    args.push_back(MakeArg("rss_limit_mb", oom_limit / kOneMb));
+    process_.AddArg(MakeArg("rss_limit_mb", oom_limit / kOneMb));
   }
   if (options_->has_purge_interval()) {
     auto purge_interval = options_->purge_interval();
     purge_interval = Clamp(purge_interval, kOneSecond, "duration", "second", "purge_interval");
     options_->set_purge_interval(purge_interval);
-    args.push_back(MakeArg("purge_allocator_interval", purge_interval / kOneSecond));
+    process_.AddArg(MakeArg("purge_allocator_interval", purge_interval / kOneSecond));
   }
   if (options_->has_malloc_exitcode()) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'malloc_exitcode'.";
@@ -347,68 +346,20 @@ std::vector<std::string> LibFuzzerRunner::MakeArgs() {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'pulse_interval'.";
   }
   if (has_dictionary_) {
-    args.push_back(MakeArg("dict", kDictionaryPath));
+    process_.AddArg(MakeArg("dict", kDictionaryPath));
   }
   std::filesystem::remove(kResultInputPath);
-  args.push_back(MakeArg("exact_artifact_path", kResultInputPath));
+  process_.AddArg(MakeArg("exact_artifact_path", kResultInputPath));
   while (cmdline_iter != cmdline_.end()) {
-    args.push_back(*cmdline_iter++);
+    process_.AddArg(*cmdline_iter++);
   }
-  return args;
 }
 
-std::vector<fdio_spawn_action_t> LibFuzzerRunner::MakeSpawnActions(int* stdin_fd, int* stderr_fd) {
-  int fds[2];
-  std::vector<fdio_spawn_action_t> spawn_actions;
-
-  // Standard input.
-  if (pipe(fds) != 0) {
-    FX_LOGS(FATAL) << "Failed to pipe stdin to libfuzzer " << strerror(errno);
-  }
-  FX_DCHECK(stdin_fd);
-  *stdin_fd = fds[1];
-  spawn_actions.push_back({
-      .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-      .fd =
-          {
-              .local_fd = fds[0],
-              .target_fd = STDIN_FILENO,
-          },
-  });
-
-  // Standard output.
-  spawn_actions.push_back({
-      .action = FDIO_SPAWN_ACTION_CLONE_FD,
-      .fd =
-          {
-              .local_fd = STDOUT_FILENO,
-              .target_fd = STDOUT_FILENO,
-          },
-  });
-
-  // Standard error.
-  if (pipe(fds) != 0) {
-    FX_LOGS(FATAL) << "Failed to pipe stderr from libfuzzer " << strerror(errno);
-  }
-  FX_DCHECK(stderr_fd);
-  *stderr_fd = fds[0];
-  spawn_actions.push_back({
-      .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-      .fd =
-          {
-              .local_fd = fds[1],
-              .target_fd = STDERR_FILENO,
-          },
-  });
-
-  return spawn_actions;
-}
-
-ZxPromise<Artifact> LibFuzzerRunner::RunAsync(std::vector<std::string> args) {
-  return fpromise::make_promise([this, args = std::move(args)](Context& context) {
+ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
+  return fpromise::make_promise([this](Context& context) {
            process_.set_verbose(verbose_);
-           process_.SetStdoutSpawnAction(SpawnAction::kClone);
-           return process_.Spawn(args);
+           process_.SetStdoutFdAction(FdAction::kClone);
+           return process_.SpawnAsync();
          })
       .and_then([this, parse = ZxFuture<FuzzResult>(),
                  kill = ZxFuture<>()](Context& context) mutable -> ZxResult<FuzzResult> {

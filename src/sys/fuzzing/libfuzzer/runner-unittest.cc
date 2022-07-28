@@ -62,7 +62,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
   void Configure(const OptionsPtr& options) override {
     RunnerTest::Configure(options);
     auto libfuzzer_runner = std::static_pointer_cast<LibFuzzerRunner>(runner_);
-    std::vector<std::string> cmdline{"/pkg/bin/libfuzzer_test_fuzzer"};
+    std::vector<std::string> cmdline{"bin/libfuzzer_unittest_fuzzer"};
 
 // See notes on LIBFUZZER_SHOW_OUTPUT above.
 #if LIBFUZZER_SHOW_OUTPUT

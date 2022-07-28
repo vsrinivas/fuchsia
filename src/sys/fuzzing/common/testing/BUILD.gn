@@ -15,8 +15,6 @@ source_set("testing") {
     "module.h",
     "monitor.cc",
     "monitor.h",
-    "process.cc",
-    "process.h",
     "registrar.cc",
     "registrar.h",
     "runner.cc",
@@ -50,6 +48,14 @@ source_set("sanitizer") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
   ]
+}
+
+# Simple echo executable.
+executable("echo") {
+  output_name = "fuzzing_echo_for_test"
+  visibility = [ "//src/sys/fuzzing/*" ]
+  testonly = true
+  sources = [ "echo.cc" ]
 }
 
 # A standalone fuzzer that uses a fake runner.

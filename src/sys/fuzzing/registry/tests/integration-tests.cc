@@ -12,10 +12,9 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/pkg_url/fuchsia_pkg_url.h"
+#include "src/sys/fuzzing/common/child-process.h"
 #include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
-#include "src/sys/fuzzing/common/testing/process.h"
 
 namespace fuzzing {
 namespace {
@@ -36,18 +35,20 @@ class RegistryIntegrationTest : public AsyncTest {
   void SetUp() override {
     AsyncTest::SetUp();
     context_ = ComponentContext::CreateWithExecutor(executor());
+    process_ = std::make_unique<ChildProcess>(executor());
   }
 
   // Launch a fuzzer and give it a channel to register itself with the fuzz-registry.
   void Register() {
+    process_->Reset();
+    process_->AddArgs({"bin/fake_fuzzer_for_testing", kFuzzerUrl});
+
     // Connect a channel to the fuzz-registry.
     fidl::InterfaceHandle<Registrar> handle;
     ASSERT_EQ(context_->Connect(handle.NewRequest()), ZX_OK);
-    std::vector<zx::channel> channels;
-    channels.emplace_back(handle.TakeChannel());
-    component::FuchsiaPkgUrl url;
-    ASSERT_TRUE(url.Parse(kFuzzerUrl));
-    ASSERT_EQ(StartProcess("fake_fuzzer_for_testing", url, std::move(channels), &process_), ZX_OK);
+    process_->AddChannel(handle.TakeChannel());
+
+    ASSERT_EQ(process_->Spawn(), ZX_OK);
   }
 
   // Promises to connect the |controller| once a fuzzer is registered.
@@ -69,17 +70,17 @@ class RegistryIntegrationTest : public AsyncTest {
     registry_->Disconnect(kFuzzerUrl, bridge.completer.bind());
     return bridge.consumer.promise()
         .then([](Result<zx_status_t>& result) { return AsZxResult(result); })
-        .and_then(AwaitTermination(std::move(process_), executor()));
+        .and_then(process_->Wait());
   }
 
   void TearDown() override {
-    process_.kill();
+    process_->Kill();
     AsyncTest::TearDown();
   }
 
  private:
   std::unique_ptr<ComponentContext> context_;
-  zx::process process_;
+  std::unique_ptr<ChildProcess> process_;
   RegistryPtr registry_;
 };
 
