@@ -3,151 +3,166 @@
 // found in the LICENSE file.
 
 use {
-    crate::{diagnostics, events},
-    fidl::endpoints::create_proxy,
-    fidl_fuchsia_test_manager as test_manager, fuchsia_async as fasync,
-    fuchsia_async::TimeoutExt,
-    fuchsia_syslog::fx_log_err,
-    fuchsia_zircon as zx,
-    futures::channel::oneshot,
+    crate::diagnostics::{forward_all, SocketTrio},
+    crate::events::{handle_run_events, handle_suite_events, LaunchResult},
+    anyhow::{anyhow, Context as _, Error, Result},
+    fidl_fuchsia_test_manager as test_manager, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::channel::{mpsc, oneshot},
+    futures::{join, SinkExt},
+    std::cell::RefCell,
+    std::rc::Rc,
+    test_manager::{Artifact, LaunchError, RunControllerProxy, SuiteControllerProxy},
+    tracing::warn,
 };
 
-#[derive(Default)]
-pub struct Fuzzer {
-    run_controller: Option<test_manager::RunControllerProxy>,
-    bridged: Vec<diagnostics::Bridge>,
-    suite_event_handler: Option<fasync::Task<()>>,
+pub type ConnectResponse = std::result::Result<(zx::Socket, zx::Socket, zx::Socket), i32>;
+
+#[derive(Clone, Debug)]
+pub enum FuzzerState {
+    Stopped,
+    Starting,
+    Running,
+    Failed(zx::Status),
 }
 
-impl Drop for Fuzzer {
-    fn drop(&mut self) {
-        if self.run_controller.is_some() {
-            panic!("fuzzer dropped without being stopped or killed");
+#[derive(Debug)]
+pub struct Fuzzer {
+    state: Rc<RefCell<FuzzerState>>,
+    sender: Option<mpsc::UnboundedSender<SocketTrio>>,
+    kill: Option<oneshot::Sender<()>>,
+    task: Option<fasync::Task<()>>,
+}
+
+impl Default for Fuzzer {
+    fn default() -> Self {
+        Self {
+            state: Rc::new(RefCell::new(FuzzerState::Stopped)),
+            sender: None,
+            kill: None,
+            task: None,
         }
     }
 }
 
 impl Fuzzer {
-    /// Uses the run_builder to start the fuzzer if it is not currently running; otherwise does
-    /// nothing. The URL is passed through test_manager and is opaque to this code.
+    pub fn get_state(&self) -> FuzzerState {
+        self.state.borrow().clone()
+    }
+
+    fn set_state(&self, desired: FuzzerState) {
+        let mut state = self.state.borrow_mut();
+        *state = desired;
+    }
+
     pub async fn start(
         &mut self,
-        run_builder: test_manager::RunBuilderProxy,
-        fuzzer_url: &str,
-        deadline: zx::Time,
-    ) -> Result<(), zx::Status> {
-        // Return immediately if already started; e.g. upon reconnect.
-        if self.run_controller.is_some() {
-            return Ok(());
-        }
-        // Add the test suite.
-        let (suite_proxy, suite_controller) = create_proxy::<test_manager::SuiteControllerMarker>()
-            .expect("failed to create suite_controller");
-        let options = test_manager::RunOptions {
-            log_iterator: Some(test_manager::LogsIteratorOption::ArchiveIterator),
-            ..test_manager::RunOptions::EMPTY
-        };
-        run_builder.add_suite(fuzzer_url, options, suite_controller).map_err(|e| {
-            fx_log_err!("failed to add test suite: {}", e);
-            zx::Status::INTERNAL
-        })?;
-        // Build and execute the run.
-        let (run_proxy, run_controller) = create_proxy::<test_manager::RunControllerMarker>()
-            .expect("failed to create run_controller");
-        run_builder.build(run_controller).map_err(|e| {
-            fx_log_err!("failed to build test: {}", e);
-            zx::Status::INTERNAL
-        })?;
-        self.run_controller = Some(run_proxy);
+        run_proxy: RunControllerProxy,
+        suite_proxy: SuiteControllerProxy,
+    ) {
+        self.set_state(FuzzerState::Starting);
 
-        // Bridge the diagnostics.
-        self.bridged.clear();
+        // Start a task to handle feedback from the test.
+        let (sockets_sender, sockets_receiver) = mpsc::unbounded::<SocketTrio>();
+        let (start_sender, start_receiver) = oneshot::channel::<Result<(), LaunchError>>();
+        let (kill_sender, kill_receiver) = oneshot::channel::<()>();
+        self.sender = Some(sockets_sender);
+        self.kill = Some(kill_sender);
+        self.task = Some(fasync::Task::local(run_fuzzer(
+            Rc::clone(&self.state),
+            run_proxy,
+            suite_proxy,
+            sockets_receiver,
+            start_sender,
+            kill_receiver,
+        )));
 
-        let (stdout_sender, stdout_bridge) = diagnostics::Bridge::create_socket_forwarder();
-        self.bridged.push(stdout_bridge);
-
-        let (stderr_sender, stderr_bridge) = diagnostics::Bridge::create_socket_forwarder();
-        self.bridged.push(stderr_bridge);
-
-        let (syslog_sender, syslog_bridge) = diagnostics::Bridge::create_archive_forwarder();
-        self.bridged.push(syslog_bridge);
-
-        // Wait for the test suite's single case to start.
-        let (sender, receiver) = oneshot::channel::<zx::Status>();
-        self.suite_event_handler = Some(fasync::Task::spawn(async move {
-            // Errors will be communicated via the oneshot channel.
-            let mut handler =
-                events::SuiteEventHandler::new(stdout_sender, stderr_sender, syslog_sender);
-            let _ = handler.handle(suite_proxy, sender).await;
-        }));
-        let result = receiver
-            .on_timeout(deadline, || Err(oneshot::Canceled))
-            .await
-            .unwrap_or(zx::Status::CANCELED);
-        let result = zx::Status::ok(result.into_raw());
-        if result.is_err() {
-            self.kill().await;
-        }
-        result
-    }
-
-    /// Returns sockets connected to the fuzzer's stdout, stderr, and syslog.
-    pub async fn get_artifacts(&self) -> Result<Vec<zx::Socket>, zx::Status> {
-        if self.bridged.is_empty() {
-            return Err(zx::Status::BAD_STATE);
-        }
-        let mut artifacts = Vec::new();
-        for bridge in &self.bridged {
-            let artifact = bridge.subscribe()?;
-            artifacts.push(artifact);
-        }
-        Ok(artifacts)
-    }
-
-    /// Waits for the fuzzer to stop following a call to fuchsia.fuzzer.Registry.Disconnect.
-    /// This method is idempotent; subsequent calls have no effect.
-    pub async fn stop(&mut self) {
-        // The registry should invoke fuchsia.fuzzer.ControllerProvider.Stop, which will cause the
-        // fuzzer to (eventually) stop.
-        self.join().await;
-    }
-
-    /// Asks the test_manager to immediately stop the fuzzer. This method is idempotent; subsequent
-    /// calls have no effect.
-    pub async fn kill(&mut self) {
-        if let Some(run_controller) = self.run_controller.take() {
-            match run_controller.kill() {
-                Ok(_) | Err(fidl::Error::ClientChannelClosed { .. }) => {}
-                Err(e) => fx_log_err!("failed to kill run_controller: {}", e),
-            };
-        }
-        self.join().await;
-    }
-
-    async fn join(&mut self) {
-        let suite_event_handler = self.suite_event_handler.take();
-        if let Some(suite_event_handler) = suite_event_handler {
-            suite_event_handler.await;
-        }
-
-        let run_controller = self.run_controller.take();
-        if let Some(run_controller) = run_controller {
-            loop {
-                let events = match run_controller.get_events().await {
-                    Err(fidl::Error::ClientChannelClosed { .. }) => Vec::new(),
-                    Err(e) => {
-                        fx_log_err!("{:?}", e);
-                        Vec::new()
-                    }
-                    Ok(events) => events,
-                };
-                if events.is_empty() {
-                    break;
-                }
+        // Wait for the task to indicate it has launched (or failed).
+        let launch_result = match start_receiver.await {
+            Ok(launch_result) => launch_result,
+            Err(_) => {
+                warn!("failed to start fuzzer: suite controller closed unexpectedly");
+                self.set_state(FuzzerState::Failed(zx::Status::INTERNAL));
+                return;
             }
+        };
+        match launch_result {
+            Ok(()) => self.set_state(FuzzerState::Running),
+            Err(e) => {
+                warn!("failed to start fuzzer: {:?}", e);
+                let status = match e {
+                    LaunchError::ResourceUnavailable => zx::Status::NO_RESOURCES,
+                    LaunchError::InstanceCannotResolve => zx::Status::NOT_FOUND,
+                    LaunchError::InvalidArgs => zx::Status::INVALID_ARGS,
+                    LaunchError::FailedToConnectToTestSuite => zx::Status::NOT_SUPPORTED,
+                    LaunchError::NoMatchingCases => zx::Status::NOT_FOUND,
+                    _ => zx::Status::INTERNAL,
+                };
+                self.set_state(FuzzerState::Failed(status));
+            }
+        };
+    }
+
+    pub async fn connect(&mut self) -> Result<Result<(zx::Socket, zx::Socket, zx::Socket), i32>> {
+        let (rx, tx) = SocketTrio::create().context("failed to create sockets")?;
+        let response = match self.sender.as_ref() {
+            Some(mut sender) => {
+                sender.send(tx).await.context("failed to send sockets")?;
+                Ok((rx.stdout, rx.stderr, rx.syslog))
+            }
+            None => {
+                warn!("failed to connect fuzzer: shutting down...");
+                Err(zx::Status::BAD_STATE.into_raw())
+            }
+        };
+        Ok(response)
+    }
+
+    pub async fn stop(&mut self) {
+        if let Some(task) = self.task.take() {
+            task.await;
         }
-        while let Some(bridge) = self.bridged.pop() {
-            bridge.join().await;
+        self.sender = None;
+        self.set_state(FuzzerState::Stopped);
+    }
+
+    pub async fn kill(&mut self) {
+        if let Some(kill) = self.kill.take() {
+            let _ = kill.send(());
         }
+        self.stop().await;
+    }
+}
+
+async fn run_fuzzer(
+    state: Rc<RefCell<FuzzerState>>,
+    run_proxy: RunControllerProxy,
+    suite_proxy: SuiteControllerProxy,
+    sockets_receiver: mpsc::UnboundedReceiver<SocketTrio>,
+    start_sender: oneshot::Sender<LaunchResult>,
+    kill_receiver: oneshot::Receiver<()>,
+) {
+    let (artifact_sender, artifact_receiver) = mpsc::unbounded::<Artifact>();
+    let (stop_sender, stop_receiver) = oneshot::channel::<()>();
+    let events_fut = async move {
+        let results = join!(
+            handle_run_events(run_proxy, artifact_sender.clone(), kill_receiver),
+            handle_suite_events(suite_proxy, artifact_sender, start_sender),
+        );
+        results.0?;
+        results.1?;
+        stop_sender.send(()).map_err(|_| anyhow!("failed to stop output forwarding"))?;
+        Ok::<(), Error>(())
+    };
+    let results =
+        join!(events_fut, forward_all(artifact_receiver, sockets_receiver, stop_receiver),);
+    {
+        let mut state = state.borrow_mut();
+        *state = FuzzerState::Stopped;
+    }
+    if let Err(e) = results.0 {
+        warn!("{:?}", e);
+    }
+    if let Err(e) = results.1 {
+        warn!("{:?}", e);
     }
 }

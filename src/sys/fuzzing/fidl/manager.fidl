@@ -40,24 +40,11 @@ protocol Manager {
         log_socket zx.handle:SOCKET;
     }) error zx.status;
 
-    /// Stops the associated fuzzer as soon as possible.
+    /// Stops the associated fuzzer immediately, ending any workflows in progress.
     ///
-    /// Returns ZX_OK if a running fuzzer was stopped.
-    /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized.
+    /// Returns ZX_OK if the given fuzzer was active.
+    /// Returns ZX_ERR_NOT_FOUND if no fuzzer was active with the given URL.
     Stop(struct {
-        fuzzer_url fuchsia.url.Url;
-    }) -> (struct {
-        result zx.status;
-    });
-
-
-    /// Stops the associated fuzzer immediately.
-    ///
-    /// Some output may be truncated.
-    ///
-    /// Returns ZX_OK if a running fuzzer was stopped.
-    /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized.
-    Kill(struct {
         fuzzer_url fuchsia.url.Url;
     }) -> (struct {
         result zx.status;
