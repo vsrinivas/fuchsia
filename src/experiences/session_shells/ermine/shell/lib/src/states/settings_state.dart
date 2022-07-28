@@ -62,6 +62,7 @@ abstract class SettingsState implements TaskService {
   bool get channelPageVisible;
   bool get dataSharingConsentPageVisible;
   bool get wifiPageVisible;
+  bool get keyboardPageVisible;
   WiFiStrength get wifiStrength;
   BatteryCharge get batteryCharge;
   String get dateTime;
@@ -95,7 +96,8 @@ abstract class SettingsState implements TaskService {
   bool get clientConnectionsMonitor;
   int get wifiToggleMillisecondsPassed;
   bool get dataSharingConsentEnabled;
-  String get currentKeyboardMap;
+  String get currentKeymap;
+  List<String> get supportedKeymaps;
 
   factory SettingsState.from(
       {required Map<String, Set<String>> shortcutBindings,
@@ -143,4 +145,6 @@ abstract class SettingsState implements TaskService {
   void toggleMute();
   void setClientConnectionsEnabled({bool enabled});
   void setDataSharingConsent({bool enabled});
+  void showKeyboardSettings();
+  void updateKeymap(String id);
 }

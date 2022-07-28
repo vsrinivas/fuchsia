@@ -4,10 +4,13 @@
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:flutter/material.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 
 /// Defines a [TaskService] to control keyboard mappings.
@@ -17,11 +20,38 @@ class KeyboardService implements TaskService {
   KeyboardProxy? _proxy;
   KeyboardSettings? _keyboardSettings;
   StreamSubscription? _keyboardSubscription;
+  Map<KeymapId, String> _keymapIds = {
+    KeymapId.usQwerty: 'usQwerty',
+    KeymapId.frAzerty: 'frAzerty',
+    KeymapId.usDvorak: 'usDvorak'
+  };
+  String _keymap = 'usQwerty';
 
   KeyboardService();
 
-  // TODO(fxb/79589): Convert keymap to readable string via keymap.fidl
-  String get currentKeyMap => _keyboardSettings?.keymap.toString() ?? '';
+  String get currentKeymap => _keymap;
+  set currentKeymap(String value) {
+    assert(_proxy != null, 'KeyboardService not started');
+
+    var newKeymapId =
+        _keymapIds.keys.firstWhereOrNull((id) => _keymapIds[id] == value);
+    if (newKeymapId == null) {
+      log.warning(
+          'Error while setting keyboard mapping: $value not found in supported keymaps');
+    }
+
+    if (_keymap != value) {
+      _keymap = value;
+      final KeyboardSettings newKeyboardSettings = KeyboardSettings(
+        keymap: newKeymapId,
+      );
+      _proxy?.set(newKeyboardSettings).catchError((e) {
+        log.warning('Error while setting keyboard mapping: $e');
+      });
+    }
+  }
+
+  List<String> get supportedKeymaps => _keymapIds.values.toList();
 
   @override
   Future<void> start() async {
@@ -50,6 +80,10 @@ class KeyboardService implements TaskService {
 
   void _onKeyboardSettingsChanged(KeyboardSettings settings) {
     _keyboardSettings = settings;
+    final newKeymap = _keymapIds[_keyboardSettings?.keymap] ?? 'usQwerty';
+    if (_keymap != newKeymap) {
+      _keymap = newKeymap;
+    }
     onChanged();
 
     _keyboardSubscription =

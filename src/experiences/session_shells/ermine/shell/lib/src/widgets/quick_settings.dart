@@ -7,6 +7,7 @@ import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/settings/about_settings.dart';
 import 'package:ermine/src/widgets/settings/channel_settings.dart';
 import 'package:ermine/src/widgets/settings/data_sharing_consent_settings.dart';
+import 'package:ermine/src/widgets/settings/keyboard_settings.dart';
 import 'package:ermine/src/widgets/settings/shortcut_settings.dart';
 import 'package:ermine/src/widgets/settings/timezone_settings.dart';
 import 'package:ermine/src/widgets/settings/wifi_settings.dart';
@@ -54,7 +55,9 @@ class QuickSettings extends StatelessWidget {
                   ),
                 if (state.dataSharingConsentPageVisible)
                   DataSharingConsentSettings(appState, state),
-                if (state.wifiPageVisible) WiFiSettings(state: state)
+                if (state.wifiPageVisible) WiFiSettings(state: state),
+                if (state.keyboardPageVisible)
+                  KeyboardSettings(state: state, onChange: state.updateKeymap)
               ],
             ),
           );
@@ -395,6 +398,22 @@ class _ListSettings extends StatelessWidget {
                   title: Text(Strings.aboutFuchsia),
                   onTap: appState.settingsState.showAboutSettings,
                 ),
+                // Keyboard Input
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.keyboard),
+                  title: Text(Strings.keyboard),
+                  trailing: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Text(appState.settingsState.currentKeymap),
+                      Icon(Icons.arrow_right),
+                    ],
+                  ),
+                  onTap: appState.settingsState.showKeyboardSettings,
+                ),
                 // Features not implemented yet.
                 // Bluetooth
                 ListTile(
@@ -402,13 +421,6 @@ class _ListSettings extends StatelessWidget {
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.bluetooth_connected),
                   title: Text(Strings.bluetooth),
-                ),
-                // Keyboard Input
-                ListTile(
-                  enabled: false,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.keyboard_outlined),
-                  title: Text(Strings.keyboard),
                 ),
                 // Language
                 ListTile(

@@ -24,6 +24,7 @@ void main() async {
   final aboutPageVisible = false.asObservable();
   final channelPageVisible = false.asObservable();
   final wifiPageVisible = false.asObservable();
+  final keyboardPageVisible = false.asObservable();
   final dataSharingConsentPageVisible = false.asObservable();
   final dateTime = '12:00 AM'.asObservable();
   final scale = 1.0.asObservable();
@@ -32,6 +33,7 @@ void main() async {
   final brightnessAuto = false.asObservable();
   final volumeLevel = 1.0.asObservable();
   final volumeMuted = false.asObservable();
+  final currentKeymap = 'usQwerty'.asObservable();
 
   setUp(() {
     app = MockAppState();
@@ -54,6 +56,7 @@ void main() async {
     when(settings.brightnessAuto).thenAnswer((_) => brightnessAuto.value);
     when(settings.volumeLevel).thenAnswer((_) => volumeLevel.value);
     when(settings.volumeMuted).thenAnswer((_) => volumeMuted.value);
+    when(settings.currentKeymap).thenAnswer((_) => currentKeymap.value);
     when(settings.shortcutsPageVisible)
         .thenAnswer((_) => shortcutsPageVisible.value);
     when(settings.timezonesPageVisible)
@@ -62,6 +65,8 @@ void main() async {
     when(settings.channelPageVisible)
         .thenAnswer((_) => channelPageVisible.value);
     when(settings.wifiPageVisible).thenAnswer((_) => wifiPageVisible.value);
+    when(settings.keyboardPageVisible)
+        .thenAnswer((_) => keyboardPageVisible.value);
     when(settings.dataSharingConsentPageVisible)
         .thenAnswer((_) => dataSharingConsentPageVisible.value);
 

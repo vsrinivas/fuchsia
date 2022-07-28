@@ -66,6 +66,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       (() => settingsPage.value == SettingsPage.wifi).asComputed();
 
   @override
+  bool get keyboardPageVisible => _keyboardPageVisible.value;
+  late final _keyboardPageVisible =
+      (() => settingsPage.value == SettingsPage.keyboard).asComputed();
+
+  @override
   WiFiStrength get wifiStrength => _wifiStrength.value;
   final _wifiStrength = Observable<WiFiStrength>(WiFiStrength.good);
 
@@ -183,9 +188,12 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       TextEditingController();
 
   @override
-  String get currentKeyboardMap => _currentKeyboardMap.value;
-  set currentKeyboardMap(String value) => _currentKeyboardMap.value = value;
-  final Observable<String> _currentKeyboardMap = Observable<String>('');
+  String get currentKeymap => _currentKeymap.value;
+  set currentKeymap(String value) => _currentKeymap.value = value;
+  final Observable<String> _currentKeymap = Observable<String>('');
+
+  @override
+  final List<String> supportedKeymaps = ObservableList<String>();
 
   @override
   final List<NetworkInformation> availableNetworks =
@@ -393,7 +401,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     };
     keyboardService.onChanged = () {
       runInAction(() {
-        currentKeyboardMap = keyboardService.currentKeyMap;
+        currentKeymap = keyboardService.currentKeymap;
+        supportedKeymaps
+          ..clear()
+          ..addAll(keyboardService.supportedKeymaps);
       });
     };
   }
@@ -426,7 +437,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await batteryWatcherService.stop();
     await channelService.stop();
     await wifiService.stop();
-    keyboardService.stop();
+    await keyboardService.stop();
     _dateTimeNow = null;
   }
 
@@ -450,6 +461,13 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   void updateTimezone(String timezone) => runInAction(() {
         selectedTimezone = timezone;
         timezoneService.timezone = timezone;
+        settingsPage.value = SettingsPage.none;
+      });
+
+  @override
+  void updateKeymap(String id) => runInAction(() {
+        currentKeymap = id;
+        keyboardService.currentKeymap = id;
         settingsPage.value = SettingsPage.none;
       });
 
@@ -555,4 +573,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void setDataSharingConsent({bool enabled = true}) =>
       runInAction(() => dataSharingConsentService.setConsent(consent: enabled));
+
+  @override
+  void showKeyboardSettings() =>
+      runInAction(() => settingsPage.value = SettingsPage.keyboard);
 }
