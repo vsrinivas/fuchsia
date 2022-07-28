@@ -6,7 +6,8 @@ use {
     crate::{
         above_root_capabilities::AboveRootCapabilitiesForTest,
         constants::{HERMETIC_ENVIRONMENT_NAME, HERMETIC_TESTS_COLLECTION, TEST_ROOT_REALM_NAME},
-        diagnostics, enclosing_env,
+        diagnostics::{self, IsolatedLogsProvider},
+        enclosing_env,
         error::LaunchTestError,
         facet, resolver,
         run_events::SuiteEvents,
@@ -14,6 +15,7 @@ use {
     },
     anyhow::{anyhow, format_err, Context, Error},
     cm_rust,
+    diagnostics_bridge::ArchiveReaderManager,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl,
@@ -66,8 +68,6 @@ pub const HERMETIC_RESOLVER_CAPABILITY_NAME: &'static str = "hermetic_resolver";
 /// A |RunningSuite| represents a launched test component.
 pub(crate) struct RunningSuite {
     instance: RealmInstance,
-    // Task that checks that archivist is active and responding to requests.
-    archivist_ready_task: Option<fasync::Task<()>>,
     logs_iterator_task: Option<fasync::Task<Result<(), Error>>>,
     /// Server ends of event pairs used to track if a client is accessing a component's
     /// custom storage. Used to defer destruction of the realm until clients have completed
@@ -109,7 +109,6 @@ impl RunningSuite {
 
         Ok(RunningSuite {
             custom_artifact_tokens: vec![],
-            archivist_ready_task: None,
             logs_iterator_task: None,
             instance,
             test_collection: facets.collection,
@@ -159,14 +158,21 @@ impl RunningSuite {
             }
         };
 
-        match diagnostics::serve_syslog(archive_accessor, log_iterator) {
-            Ok(diagnostics::ServeSyslogOutcome {
-                logs_iterator_task,
-                archivist_responding_task,
-            }) => {
-                self.logs_iterator_task = logs_iterator_task;
-                self.archivist_ready_task = Some(archivist_responding_task);
+        let logs_iterator_task_result = match log_iterator {
+            ftest_manager::LogsIterator::Archive(iterator) => {
+                IsolatedLogsProvider::new(archive_accessor)
+                    .spawn_iterator_server(iterator)
+                    .map(Some)
             }
+            ftest_manager::LogsIterator::Batch(iterator) => {
+                IsolatedLogsProvider::new(archive_accessor)
+                    .start_streaming_logs(iterator)
+                    .map(|()| None)
+            }
+            _ => Ok(None),
+        };
+        self.logs_iterator_task = match logs_iterator_task_result {
+            Ok(task) => task,
             Err(e) => {
                 warn!("Error spawning iterator server: {:?}", e);
                 sender.send(Err(LaunchTestError::StreamIsolatedLogs(e).into())).await.unwrap();
@@ -346,12 +352,6 @@ impl RunningSuite {
             fasync::OnSignals::new(token, zx::Signals::EVENTPAIR_CLOSED | zx::Signals::USER_0)
                 .unwrap_or_else(|_| zx::Signals::empty())
         });
-        // Before destroying the realm, ensure archivist has responded to a query. This ensures
-        // that the server end of the log iterator served to the client will be received by
-        // archivist. TODO(fxbug.dev/105308): Remove this hack once component events are ordered.
-        if let Some(archivist_ready_task) = self.archivist_ready_task {
-            archivist_ready_task.await;
-        }
         futures::future::join_all(tokens_closed_signals)
             .map(|_| Ok(()))
             .on_timeout(TEARDOWN_TIMEOUT, || {
