@@ -104,14 +104,14 @@ efi_status EfiGptBlockDevice::Write(const void *data, size_t offset, size_t leng
                                       offset, length, data);
 }
 
-const gpt_entry_t *EfiGptBlockDevice::FindPartition(const char *name) {
+const gpt_entry_t *EfiGptBlockDevice::FindPartition(std::string_view name) {
   for (const GptEntryInfo &ele : GetGptEntries()) {
     const gpt_entry_t &entry = ele.entry;
     if (entry.first == 0 && entry.last == 0) {
       continue;
     }
 
-    if (strcmp(name, ele.utf8_name) == 0) {
+    if (name == ele.utf8_name) {
       return &entry;
     }
   }
@@ -120,7 +120,7 @@ const gpt_entry_t *EfiGptBlockDevice::FindPartition(const char *name) {
 }
 
 fitx::result<efi_status, size_t> EfiGptBlockDevice::CheckAndGetPartitionAccessRangeInStorage(
-    const char *name, size_t offset, size_t length) {
+    std::string_view name, size_t offset, size_t length) {
   const gpt_entry_t *entry = FindPartition(name);
   if (!entry) {
     return fitx::error(EFI_NOT_FOUND);
@@ -135,7 +135,7 @@ fitx::result<efi_status, size_t> EfiGptBlockDevice::CheckAndGetPartitionAccessRa
   return fitx::ok(abs_offset);
 }
 
-fitx::result<efi_status> EfiGptBlockDevice::ReadPartition(const char *name, size_t offset,
+fitx::result<efi_status> EfiGptBlockDevice::ReadPartition(std::string_view name, size_t offset,
                                                           size_t length, void *out) {
   auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
   if (res.is_error()) {
@@ -152,7 +152,7 @@ fitx::result<efi_status> EfiGptBlockDevice::ReadPartition(const char *name, size
   return fitx::ok();
 }
 
-fitx::result<efi_status> EfiGptBlockDevice::WritePartition(const char *name, const void *data,
+fitx::result<efi_status> EfiGptBlockDevice::WritePartition(std::string_view name, const void *data,
                                                            size_t offset, size_t length) {
   auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
   if (res.is_error()) {

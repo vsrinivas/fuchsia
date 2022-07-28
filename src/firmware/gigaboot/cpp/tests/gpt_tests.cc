@@ -6,17 +6,10 @@
 
 #include "gpt.h"
 #include "mock_boot_service.h"
-#include "src/lib/utf_conversion/utf_conversion.h"
 #include "utils.h"
 
 namespace gigaboot {
 namespace {
-
-void SetGptEntryName(const char* name, gpt_entry_t& entry) {
-  size_t dst_len = sizeof(entry.name) / sizeof(uint16_t);
-  utf8_to_utf16(reinterpret_cast<const uint8_t*>(name), strlen(name),
-                reinterpret_cast<uint16_t*>(entry.name), &dst_len);
-}
 
 TEST(GigabootTest, FindEfiGptDevice) {
   MockStubService stub_service;

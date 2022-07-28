@@ -4,7 +4,7 @@
 
 #include "mock_boot_service.h"
 
-#include <zircon/assert.h>
+#include "src/lib/utf_conversion/utf_conversion.h"
 
 efi_loaded_image_protocol* gEfiLoadedImage = nullptr;
 efi_system_table* gEfiSystemTable = nullptr;
@@ -166,6 +166,12 @@ efi_status MockStubService::GetMemoryMap(size_t* memory_map_size, efi_memory_des
   memcpy(memory_map, memory_map_.data(), total_size);
 
   return EFI_SUCCESS;
+}
+
+void SetGptEntryName(const char* name, gpt_entry_t& entry) {
+  size_t dst_len = sizeof(entry.name) / sizeof(uint16_t);
+  utf8_to_utf16(reinterpret_cast<const uint8_t*>(name), strlen(name),
+                reinterpret_cast<uint16_t*>(entry.name), &dst_len);
 }
 
 }  // namespace gigaboot

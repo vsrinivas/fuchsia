@@ -82,6 +82,8 @@ uint64_t ToBigEndian(uint64_t val);
 // Convert an given integer, assuming in big endian to little endian order.
 uint64_t BigToHostEndian(uint64_t val);
 
+constexpr size_t kUefiPageSize = 4096;
+
 }  // namespace gigaboot
 
 #endif  // SRC_FIRMWARE_GIGABOOT_CPP_UTILS_H_

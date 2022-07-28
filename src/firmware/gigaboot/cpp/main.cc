@@ -43,7 +43,9 @@ int main(int argc, char** argv) {
   printf("netifc: network interface opened\n");
 
   printf("Auto boot in 2 seconds. Press f to enter fastboot.\n");
-  char key = key_prompt("f", 2);
+  // If time out, the first char in the `valid_keys` argument will be returned. Thus
+  // we put a random different char here, so that we don't always drop to fastboot.
+  char key = key_prompt("0f", 2);
   if (key == 'f') {
     zx::status<> ret = gigaboot::FastbootTcpMain();
     if (ret.is_error()) {

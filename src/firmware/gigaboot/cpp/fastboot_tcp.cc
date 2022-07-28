@@ -34,6 +34,10 @@ zx::status<> TcpInitialize(tcp6_socket &fb_tcp_socket) {
   }
 }
 
+// Statically allocate the download buffer
+constexpr size_t kDownloadBufferSize = 512 * 1024 * 1024;
+uint8_t download_buffer[kDownloadBufferSize];
+
 }  // namespace
 
 class TcpTransport : public TcpTransportInterface {
@@ -72,7 +76,7 @@ zx::status<> FastbootTcpMain() {
   }
 
   TcpTransport transport(fb_tcp_socket);
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
 
   while (true) {
     // TODO(b/235489025): Investigate broadcasting mdns here.

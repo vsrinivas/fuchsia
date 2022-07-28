@@ -59,6 +59,7 @@ class BlockDevice : public Device {
   void InitializeGpt();
   void FinalizeGpt();
   void AddGptPartition(const gpt_entry_t& new_entry);
+  size_t total_blocks() { return total_blocks_; }
 
  private:
   efi_block_io_media block_io_media_;
@@ -121,6 +122,8 @@ inline auto SetupEfiGlobalState(MockStubService& stub, Device& image) {
     gEfiSystemTable = nullptr;
   });
 }
+
+void SetGptEntryName(const char* name, gpt_entry_t& entry);
 
 }  // namespace gigaboot
 #endif  // SRC_FIRMWARE_GIGABOOT_CPP_TESTS_MOCK_BOOT_SERVICE_H_

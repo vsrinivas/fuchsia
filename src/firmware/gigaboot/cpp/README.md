@@ -13,14 +13,15 @@ fx set workstation.x64 --with //src/firmware/gigaboot/cpp:esp
 fx build
 ```
 
-The output path of the image is `<build_out_dir>/gigaboot_cpp.esp.blk`. Until
-fastboot is implemented, the following gives one way to flash the image to NUC
-for testing/development.
+The output path of the image is `<build_out_dir>/gigaboot_cpp.esp.blk`. The
+following gives two ways to flash the image to a NUC device.
+
+# Userspace fastboot with USB installer
 
 1. Follow instructions in [Install Fuchsia on a NUC] to prepare a bootable USB
 with the Fuchsia installer image and bootstrap NUC for the first time. The
 USB Fuchsia installer image has a userspace fastboot over tcp component that
-we'll use to flash gigaboot. This only needs to be done once.
+can be used to flash gigaboot. This only needs to be done once.
 
 2. Plug in the bootable USB and power on NUC. Find out the ip address of the
 device from the serial log or via `ffx target list`.
@@ -31,5 +32,16 @@ device from the serial log or via `ffx target list`.
 gigaboot image.
 
 Repeat step 2-4 for future flash.
+
+# Fastboot over tcp from gigaboot
+
+Fastboot over tcp is enabled on gigaboot and supports `fastboot flash`. Once
+device powers up, keep pressing `f` key to put device into fastboot mode. The
+ip6 address is printed on the console/monitor. Run
+`fastboot flash fuchsia-esp <gigaboot image> -s tcp:<ip address>` to flash the
+image.
+
+If a broken gigaboot is flashed to the device during development, use the USB
+installer approach to recover.
 
 [Install Fuchsia on a NUC]: /docs/development/hardware/intel_nuc.md

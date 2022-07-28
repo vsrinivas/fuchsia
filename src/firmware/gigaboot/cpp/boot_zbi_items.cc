@@ -40,7 +40,7 @@ bool AddMemoryRanges(void* zbi, size_t capacity) {
         reinterpret_cast<efi_memory_descriptor*>(scratch_buffer + i * dsize);
     const zbi_mem_range_t range = {
         .paddr = desc->PhysicalStart,
-        .length = desc->NumberOfPages * ZX_PAGE_SIZE,
+        .length = desc->NumberOfPages * kUefiPageSize,
         .type = EfiToZbiMemRangeType(desc->Type),
     };
     memcpy(&ranges[i], &range, sizeof(range));

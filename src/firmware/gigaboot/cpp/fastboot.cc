@@ -8,6 +8,11 @@
 #include <lib/fastboot/fastboot_base.h>
 #include <stdio.h>
 
+#include <algorithm>
+
+#include <phys/efi/main.h>
+
+#include "gpt.h"
 #include "utils.h"
 
 namespace gigaboot {
@@ -25,15 +30,80 @@ zx::status<> Fastboot::ProcessCommand(std::string_view cmd, fastboot::Transport 
 void Fastboot::DoClearDownload() {}
 
 zx::status<void *> Fastboot::GetDownloadBuffer(size_t total_download_size) {
-  return zx::error(ZX_ERR_NOT_SUPPORTED);
+  return zx::ok(download_buffer_.data());
+}
+
+cpp20::span<Fastboot::VariableCallbackEntry> Fastboot::GetVariableCallbackTable() {
+  static VariableCallbackEntry var_entries[] = {
+      {"max-download-size", &Fastboot::GetVarMaxDownloadSize},
+  };
+
+  return var_entries;
 }
 
 cpp20::span<Fastboot::CommandCallbackEntry> Fastboot::GetCommandCallbackTable() {
   static CommandCallbackEntry cmd_entries[] = {
+      {"getvar", &Fastboot::GetVar},
+      {"flash", &Fastboot::Flash},
       {"continue", &Fastboot::Continue},
   };
 
   return cmd_entries;
+}
+
+zx::status<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transport) {
+  CommandArgs args;
+  ExtractCommandArgs(cmd, ":", args);
+  if (args.num_args < 2) {
+    return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
+  }
+
+  auto var_table = GetVariableCallbackTable();
+  for (const VariableCallbackEntry &ele : var_table) {
+    if (args.args[1] == ele.name) {
+      return (this->*(ele.cmd))(args, transport);
+    }
+  }
+
+  return SendResponse(ResponseType::kFail, "Unknown variable", transport);
+}
+
+zx::status<> Fastboot::GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *transport) {
+  char size_str[16] = {0};
+  snprintf(size_str, sizeof(size_str), "0x%08zx", download_buffer_.size());
+  return SendResponse(ResponseType::kOkay, size_str, transport);
+}
+
+zx::status<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transport) {
+  CommandArgs args;
+  ExtractCommandArgs(cmd, ":", args);
+  if (args.num_args < 2) {
+    return SendResponse(ResponseType::kFail, "Not enough argument", transport);
+  }
+
+  auto gpt_device = FindEfiGptDevice();
+  if (gpt_device.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to find gpt device", transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  auto load_res = gpt_device.value().Load();
+  if (load_res.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to load gpt", transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  ZX_ASSERT(args.args[1].size() < fastboot::kMaxCommandPacketSize);
+
+  auto ret = gpt_device.value().WritePartition(args.args[1], download_buffer_.data(), 0,
+                                               total_download_size());
+
+  if (ret.is_error()) {
+    return SendResponse(ResponseType::kFail, EfiStatusToString(ret.error_value()), transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
 }
 
 zx::status<> Fastboot::Continue(std::string_view cmd, fastboot::Transport *transport) {

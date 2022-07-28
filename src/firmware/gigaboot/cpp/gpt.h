@@ -9,6 +9,7 @@
 #include <zircon/hw/gpt.h>
 
 #include <optional>
+#include <string_view>
 
 #include <fbl/vector.h>
 
@@ -27,11 +28,14 @@ class EfiGptBlockDevice {
   EfiGptBlockDevice(EfiGptBlockDevice &&) = default;
   EfiGptBlockDevice &operator=(EfiGptBlockDevice &&) = default;
 
-  fitx::result<efi_status> ReadPartition(const char *name, size_t offset, size_t length, void *out);
-  fitx::result<efi_status> WritePartition(const char *name, const void *data, size_t offset,
+  fitx::result<efi_status> ReadPartition(std::string_view name, size_t offset, size_t length,
+                                         void *out);
+  fitx::result<efi_status> WritePartition(std::string_view name, const void *data, size_t offset,
                                           size_t length);
+
   // Find partition info.
-  const gpt_entry_t *FindPartition(const char *name);
+  const gpt_entry_t *FindPartition(std::string_view name);
+
   // Load GPT from device.
   fitx::result<efi_status> Load();
 
@@ -59,7 +63,7 @@ class EfiGptBlockDevice {
 
   // Check that the given range is within boundary of a partition and returns the absolute offset
   // relative to the storage start.
-  fitx::result<efi_status, size_t> CheckAndGetPartitionAccessRangeInStorage(const char *name,
+  fitx::result<efi_status, size_t> CheckAndGetPartitionAccessRangeInStorage(std::string_view name,
                                                                             size_t offset,
                                                                             size_t length);
 };

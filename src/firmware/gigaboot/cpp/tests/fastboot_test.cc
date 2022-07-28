@@ -71,8 +71,11 @@ class TestTcpTransport : public TcpTransportInterface {
   std::vector<uint8_t> out_data_;
 };
 
+constexpr size_t kDownloadBufferSize = 1024;
+uint8_t download_buffer[kDownloadBufferSize];
+
 TEST(FastbootTest, FastbootContinueTest) {
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
   fastboot::TestTransport transport;
   transport.AddInPacket(std::string("continue"));
   zx::status<> ret = fastboot.ProcessPacket(&transport);
@@ -84,7 +87,7 @@ TEST(FastbootTest, FastbootContinueTest) {
 }
 
 TEST(FastbootTcpSessionTest, ExitOnFastbootContinue) {
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
   TestTcpTransport transport;
 
   // Handshake message
@@ -115,7 +118,7 @@ TEST(FastbootTcpSessionTest, ExitOnFastbootContinue) {
 }
 
 TEST(FastbootTcpSessionTest, HandshakeFailsNotFB) {
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
   TestTcpTransport transport;
 
   // Handshake message
@@ -132,7 +135,7 @@ TEST(FastbootTcpSessionTest, HandshakeFailsNotFB) {
 }
 
 TEST(FastbootTcpSessionTest, HandshakeFailsNotNumericVersion) {
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
   TestTcpTransport transport;
 
   // Handshake message
@@ -149,7 +152,7 @@ TEST(FastbootTcpSessionTest, HandshakeFailsNotNumericVersion) {
 }
 
 TEST(FastbootTcpSessionTest, ExitWhenNoMoreData) {
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
   TestTcpTransport transport;
 
   // Handshake message
@@ -166,7 +169,7 @@ TEST(FastbootTcpSessionTest, ExitWhenNoMoreData) {
 }
 
 TEST(FastbootTcpSessionTest, ExitOnCommandFailure) {
-  Fastboot fastboot;
+  Fastboot fastboot(download_buffer);
   TestTcpTransport transport;
 
   // Handshake message
@@ -184,6 +187,188 @@ TEST(FastbootTcpSessionTest, ExitOnCommandFailure) {
   // Skips 8- bytes length prefix
   ASSERT_NO_FATAL_FAILURE(transport.PopOutput(8));
   ASSERT_NO_FATAL_FAILURE(transport.PopAndCheckOutput("FAIL"));
+}
+
+void CheckPacketsEqual(const fastboot::Packets& lhs, const fastboot::Packets& rhs) {
+  ASSERT_EQ(lhs.size(), rhs.size());
+  for (size_t i = 0; i < lhs.size(); i++) {
+    ASSERT_EQ(lhs[i], rhs[i]);
+  }
+}
+
+class FastbootFlashTest : public ::testing::Test {
+ public:
+  FastbootFlashTest()
+      : image_device_({"path-A", "path-B", "path-C", "image"}),
+        block_device_({"path-A", "path-B", "path-C"}, 1024) {
+    stub_service_.AddDevice(&image_device_);
+
+    // Add a block device for fastboot flash test.
+    stub_service_.AddDevice(&block_device_);
+    block_device_.InitializeGpt();
+  }
+
+  void AddPartition(const gpt_entry_t& new_entry) {
+    block_device_.AddGptPartition(new_entry);
+    block_device_.FinalizeGpt();
+  }
+
+  uint8_t* BlockDeviceStart() { return block_device_.fake_disk_io_protocol().contents(0).data(); }
+
+  // A helper to download data to fastboot
+  void DownloadData(Fastboot& fastboot, const std::vector<uint8_t>& download_content) {
+    char download_command[fastboot::kMaxCommandPacketSize];
+    snprintf(download_command, fastboot::kMaxCommandPacketSize, "download:%08zx",
+             download_content.size());
+    fastboot::TestTransport transport;
+    transport.AddInPacket(std::string(download_command));
+    zx::status<> ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    // Download
+    transport.AddInPacket(download_content);
+    ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    char expected_data_message[fastboot::kMaxCommandPacketSize];
+    snprintf(expected_data_message, fastboot::kMaxCommandPacketSize, "DATA%08zx",
+             download_content.size());
+    CheckPacketsEqual(transport.GetOutPackets(), {
+                                                     expected_data_message,
+                                                     "OKAY",
+                                                 });
+  }
+
+  MockStubService& stub_service() { return stub_service_; }
+  Device& image_device() { return image_device_; }
+  BlockDevice& block_device() { return block_device_; }
+
+ private:
+  MockStubService stub_service_;
+  Device image_device_;
+  BlockDevice block_device_;
+};
+
+TEST(FastbootTest, GetVarNotEnoughArgument) {
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("getvar"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST(FastbootTest, GetVarUknown) {
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("getvar:non-existing"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, GetVarMaxDownloadSize) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("getvar:max-download-size"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  fastboot::Packets expected_packets = {"OKAY0x00000400"};
+  CheckPacketsEqual(transport.GetOutPackets(), expected_packets);
+}
+
+TEST_F(FastbootFlashTest, FlashPartition) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+
+  // Add a gpt entry for zircon_a
+  gpt_entry_t entry{{}, {}, kGptFirstUsableBlocks, kGptFirstUsableBlocks + 5, 0, {}};
+  SetGptEntryName(GPT_ZIRCON_A_NAME, entry);
+  AddPartition(entry);
+
+  Fastboot fastboot(download_buffer);
+
+  // Download some data to flash to the partition.
+  std::vector<uint8_t> download_content;
+  for (size_t i = 0; i <= 0xff; i++) {
+    download_content.push_back(static_cast<uint8_t>(i));
+  }
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("flash:") + GPT_ZIRCON_A_NAME);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  fastboot::Packets expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  uint8_t* partition_start = BlockDeviceStart() + entry.first * kBlockSize;
+  ASSERT_TRUE(memcmp(partition_start, download_content.data(), download_content.size()) == 0);
+}
+
+TEST_F(FastbootFlashTest, FlashPartitionFailedToFindGptDevice) {
+  // Set the current device to one whose parent is not the added block device for the test.
+  Device image({"non-parent-path", "image"});
+  stub_service().AddDevice(&image);
+  auto cleanup = SetupEfiGlobalState(stub_service(), image);
+
+  // Add a gpt entry for zircon_a
+  gpt_entry_t entry{{}, {}, kGptFirstUsableBlocks, kGptFirstUsableBlocks + 5, 0, {}};
+  SetGptEntryName(GPT_ZIRCON_A_NAME, entry);
+  AddPartition(entry);
+
+  Fastboot fastboot(download_buffer);
+
+  // Download some data to flash to the partition.
+  std::vector<uint8_t> download_content(128, 0);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("flash:") + GPT_ZIRCON_A_NAME);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  // Should fail while searching for gpt device.
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, FlashPartitionFailedToLoadGptDevice) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  // Clear the gpt.
+  memset(BlockDeviceStart(), 0, block_device().total_blocks() * kBlockSize);
+
+  Fastboot fastboot(download_buffer);
+
+  // Download some data to flash to the partition.
+  std::vector<uint8_t> download_content(128, 0);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("flash:") + GPT_ZIRCON_A_NAME);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  // Should fail while loading gpt.
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
 }  // namespace
