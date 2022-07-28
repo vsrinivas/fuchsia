@@ -831,23 +831,6 @@
                         message: "A `use from parent` declaration was found at `/core/audio_core` for `fuchsia.audio.effects.ProcessorCreator`, but no matching `offer` declaration was found in the parent",
                     },
                 },
-                {
-                    using_node: "/core/linux_runner",
-                    capability: "fuchsia.wayland.Server",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: "/core/linux_runner",
-                                        capability_id: "fuchsia.wayland.Server",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/linux_runner` for `fuchsia.wayland.Server`, but no matching `offer` declaration was found in the parent",
-                    },
-                },
 
                 // TODO(fxbug.dev/103940): once fixed, delete the suppressions below.
                 {
