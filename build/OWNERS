@@ -4,4 +4,6 @@ jayzhuang@google.com
 fangism@google.com
 rudymathu@google.com
 
+per-file security.gni = file://src/security/OWNERS
+
 # COMPONENT: Build>GN
