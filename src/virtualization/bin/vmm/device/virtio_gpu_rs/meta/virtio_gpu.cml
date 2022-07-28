@@ -22,6 +22,7 @@
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
             ],
+            availability: "optional",
         },
     ],
     expose: [
