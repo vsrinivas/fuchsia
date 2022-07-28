@@ -4179,6 +4179,14 @@ mod tests {
         ) {
             unimplemented!()
         }
+
+        fn flush_neighbor_table(
+            &mut self,
+            _ctx: &mut Dummyv6NonSyncCtx,
+            _device_id: Self::DeviceId,
+        ) {
+            unimplemented!()
+        }
     }
 
     #[test]

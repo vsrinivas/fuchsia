@@ -1128,6 +1128,10 @@ mod tests {
         ) -> Option<Mac> {
             unimplemented!()
         }
+
+        fn flush(&mut self, _ctx: &mut DummyNonSyncCtx, _device_id: Self::DeviceId) {
+            unimplemented!()
+        }
     }
 
     impl DeviceIdContext<EthernetLinkDevice> for DummyCtx {

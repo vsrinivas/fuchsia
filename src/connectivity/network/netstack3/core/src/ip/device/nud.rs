@@ -4,7 +4,10 @@
 
 //! Neighbor unreachability detection.
 
-use alloc::collections::hash_map::{Entry, HashMap};
+use alloc::{
+    collections::hash_map::{Entry, HashMap},
+    vec::Vec,
+};
 use core::{fmt::Debug, hash::Hash, marker::PhantomData, num::NonZeroU8};
 
 use assert_matches::assert_matches;
@@ -144,6 +147,9 @@ pub(crate) trait NudIpHandler<I: Ip, C>: IpDeviceIdContext<I> {
         neighbor: SpecifiedAddr<I::Addr>,
         link_addr: &[u8],
     );
+
+    /// Clears the neighbor table.
+    fn flush_neighbor_table(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 }
 
 pub(crate) trait NudHandler<I: Ip, D: LinkDevice, C>: DeviceIdContext<D> {
@@ -183,6 +189,9 @@ pub(crate) trait NudHandler<I: Ip, D: LinkDevice, C>: DeviceIdContext<D> {
         device_id: Self::DeviceId,
         lookup_addr: SpecifiedAddr<I::Addr>,
     ) -> Option<D::Address>;
+
+    /// Clears the neighbor tabe.
+    fn flush(&mut self, ctx: &mut C, device_id: Self::DeviceId);
 }
 
 impl<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, SC::DeviceId>, SC: NudContext<I, D, C>>
@@ -338,6 +347,44 @@ impl<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, SC::DeviceId>, SC: NudCont
             | Some(NeighborState::Dynamic(DynamicNeighborState::Complete { link_address: _ })) => {}
         }
     }
+
+    fn flush(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
+        let NudState { neighbors } = self.get_state_mut(device_id);
+
+        let mut previously_incomplete = Vec::new();
+
+        neighbors.retain(|neighbor, state| {
+            match state {
+                NeighborState::Dynamic(state) => {
+                    match state {
+                        DynamicNeighborState::Incomplete { transmit_counter: _ } => {
+                            previously_incomplete.push(*neighbor);
+                        }
+                        DynamicNeighborState::Complete { link_address: _ } => {}
+                    }
+
+                    // Only flush dynamic entries.
+                    false
+                }
+                NeighborState::Static(_) => true,
+            }
+        });
+
+        previously_incomplete.into_iter().for_each(|neighbor| {
+            assert_ne!(
+                ctx.cancel_timer(NudTimerId {
+                    device_id,
+                    lookup_addr: neighbor,
+                    _marker: PhantomData,
+                }),
+                None,
+                "previously incomplete entry for {} should have had a timer",
+                neighbor
+            );
+
+            self.address_resolution_failed(ctx, device_id, neighbor);
+        });
+    }
 }
 
 #[cfg(test)]
@@ -372,7 +419,10 @@ mod tests {
             FrameContext as _, InstantContext as _,
         },
         device::link::testutil::{DummyLinkAddress, DummyLinkDevice, DummyLinkDeviceId},
-        ip::{icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT, receive_ipv6_packet, FrameDestination},
+        ip::{
+            device::update_ipv6_configuration, icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+            receive_ipv6_packet, FrameDestination,
+        },
         testutil::{DummyEventDispatcherConfig, TestIpExt as _},
     };
 
@@ -454,19 +504,29 @@ mod tests {
     }
 
     trait TestIpExt: Ip {
-        const LOOKUP_ADDR: SpecifiedAddr<Self::Addr>;
+        const LOOKUP_ADDR1: SpecifiedAddr<Self::Addr>;
+        const LOOKUP_ADDR2: SpecifiedAddr<Self::Addr>;
+        const LOOKUP_ADDR3: SpecifiedAddr<Self::Addr>;
     }
 
     impl TestIpExt for Ipv4 {
         // Safe because the address is non-zero.
-        const LOOKUP_ADDR: SpecifiedAddr<Ipv4Addr> =
+        const LOOKUP_ADDR1: SpecifiedAddr<Ipv4Addr> =
             unsafe { SpecifiedAddr::new_unchecked(net_ip_v4!("192.168.0.1")) };
+        const LOOKUP_ADDR2: SpecifiedAddr<Ipv4Addr> =
+            unsafe { SpecifiedAddr::new_unchecked(net_ip_v4!("192.168.0.2")) };
+        const LOOKUP_ADDR3: SpecifiedAddr<Ipv4Addr> =
+            unsafe { SpecifiedAddr::new_unchecked(net_ip_v4!("192.168.0.3")) };
     }
 
     impl TestIpExt for Ipv6 {
         // Safe because the address is non-zero.
-        const LOOKUP_ADDR: SpecifiedAddr<Ipv6Addr> =
+        const LOOKUP_ADDR1: SpecifiedAddr<Ipv6Addr> =
             unsafe { SpecifiedAddr::new_unchecked(net_ip_v6!("fe80::1")) };
+        const LOOKUP_ADDR2: SpecifiedAddr<Ipv6Addr> =
+            unsafe { SpecifiedAddr::new_unchecked(net_ip_v6!("fe80::2")) };
+        const LOOKUP_ADDR3: SpecifiedAddr<Ipv6Addr> =
+            unsafe { SpecifiedAddr::new_unchecked(net_ip_v6!("fe80::3")) };
     }
 
     #[ip_test]
@@ -484,7 +544,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             link_addr,
             DynamicNeighborUpdateSource::Confirmation,
         );
@@ -509,23 +569,23 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             LINK_ADDR1,
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_eq!(sync_ctx.take_frames(), []);
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR1, LINK_ADDR1);
 
         // Dynamic entries should not overwrite static entries.
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR1, LINK_ADDR1);
     }
 
     #[ip_test]
@@ -542,34 +602,34 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             LINK_ADDR1,
             DynamicNeighborUpdateSource::Probe,
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_eq!(sync_ctx.take_frames(), []);
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR1, LINK_ADDR1);
 
         // Dynamic entries may be overwritten by new dynamic entries.
         NudHandler::set_dynamic_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             LINK_ADDR2,
             DynamicNeighborUpdateSource::Probe,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR2);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR1, LINK_ADDR2);
 
         // A static entry may overwrite a dynamic entry.
         NudHandler::set_static_neighbor(
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             LINK_ADDR3,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR3);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR1, LINK_ADDR3);
     }
 
     #[ip_test]
@@ -585,14 +645,19 @@ mod tests {
         assert_eq!(sync_ctx.take_frames(), []);
 
         assert_matches!(
-            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, I::LOOKUP_ADDR),
+            NudHandler::lookup(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                DummyLinkDeviceId,
+                I::LOOKUP_ADDR1
+            ),
             None
         );
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
             HashMap::from([(
-                I::LOOKUP_ADDR,
+                I::LOOKUP_ADDR1,
                 NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
                     MAX_MULTICAST_SOLICIT - 1
                 )),
@@ -603,26 +668,31 @@ mod tests {
         non_sync_ctx.timer_ctx().assert_timers_installed([(
             NudTimerId {
                 device_id: DummyLinkDeviceId,
-                lookup_addr: I::LOOKUP_ADDR,
+                lookup_addr: I::LOOKUP_ADDR1,
                 _marker: PhantomData,
             },
             non_sync_ctx.now() + ONE_SECOND.get(),
         )]);
         assert_eq!(
             sync_ctx.take_frames(),
-            [(MockNudMessageMeta { lookup_addr: I::LOOKUP_ADDR }, Vec::new())]
+            [(MockNudMessageMeta { lookup_addr: I::LOOKUP_ADDR1 }, Vec::new())]
         );
 
         // Calling lookup immediately again does not trigger a new NUD message.
         assert_matches!(
-            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, I::LOOKUP_ADDR),
+            NudHandler::lookup(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                DummyLinkDeviceId,
+                I::LOOKUP_ADDR1
+            ),
             None
         );
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
             HashMap::from([(
-                I::LOOKUP_ADDR,
+                I::LOOKUP_ADDR1,
                 NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
                     MAX_MULTICAST_SOLICIT - 1
                 )),
@@ -633,7 +703,7 @@ mod tests {
         non_sync_ctx.timer_ctx().assert_timers_installed([(
             NudTimerId {
                 device_id: DummyLinkDeviceId,
-                lookup_addr: I::LOOKUP_ADDR,
+                lookup_addr: I::LOOKUP_ADDR1,
                 _marker: PhantomData,
             },
             non_sync_ctx.now() + ONE_SECOND.get(),
@@ -645,21 +715,21 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             DummyLinkDeviceId,
-            I::LOOKUP_ADDR,
+            I::LOOKUP_ADDR1,
             LINK_ADDR1,
             DynamicNeighborUpdateSource::Confirmation,
         );
-        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR, LINK_ADDR1);
+        check_lookup_has(&mut sync_ctx, &mut non_sync_ctx, I::LOOKUP_ADDR1, LINK_ADDR1);
 
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(
             nud.neighbors,
             HashMap::from([(
-                I::LOOKUP_ADDR,
+                I::LOOKUP_ADDR1,
                 NeighborState::Dynamic(DynamicNeighborState::Complete { link_address: LINK_ADDR1 }),
             )])
         );
-        assert_eq!(resolved, &[(I::LOOKUP_ADDR, LINK_ADDR1)]);
+        assert_eq!(resolved, &[(I::LOOKUP_ADDR1, LINK_ADDR1)]);
         assert_eq!(failed, &[]);
     }
 
@@ -676,13 +746,18 @@ mod tests {
         assert_eq!(sync_ctx.take_frames(), []);
 
         assert_matches!(
-            NudHandler::lookup(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId, I::LOOKUP_ADDR),
+            NudHandler::lookup(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                DummyLinkDeviceId,
+                I::LOOKUP_ADDR1
+            ),
             None
         );
 
         let timer_id = NudTimerId {
             device_id: DummyLinkDeviceId,
-            lookup_addr: I::LOOKUP_ADDR,
+            lookup_addr: I::LOOKUP_ADDR1,
             _marker: PhantomData,
         };
         for i in 1..=MAX_MULTICAST_SOLICIT {
@@ -692,7 +767,7 @@ mod tests {
             assert_eq!(
                 nud.neighbors,
                 HashMap::from([(
-                    I::LOOKUP_ADDR,
+                    I::LOOKUP_ADDR1,
                     NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
                         MAX_MULTICAST_SOLICIT - i
                     )),
@@ -706,7 +781,7 @@ mod tests {
                 .assert_timers_installed([(timer_id, non_sync_ctx.now() + ONE_SECOND.get())]);
             assert_eq!(
                 sync_ctx.take_frames(),
-                [(MockNudMessageMeta { lookup_addr: I::LOOKUP_ADDR }, Vec::new())]
+                [(MockNudMessageMeta { lookup_addr: I::LOOKUP_ADDR1 }, Vec::new())]
             );
 
             assert_eq!(
@@ -722,9 +797,87 @@ mod tests {
         let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
         assert_eq!(nud.neighbors, HashMap::new());
         assert_eq!(resolved, &[]);
-        assert_eq!(failed, &[I::LOOKUP_ADDR]);
+        assert_eq!(failed, &[I::LOOKUP_ADDR1]);
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
         assert_eq!(sync_ctx.take_frames(), []);
+    }
+
+    #[ip_test]
+    fn flush_entries<I: Ip + TestIpExt>() {
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(MockCtx::<I>::with_state(MockNudContext {
+                retrans_timer: ONE_SECOND,
+                nud: Default::default(),
+                resolved: Default::default(),
+                failed: Default::default(),
+            }));
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
+        assert_eq!(sync_ctx.take_frames(), []);
+
+        NudHandler::set_static_neighbor(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            DummyLinkDeviceId,
+            I::LOOKUP_ADDR1,
+            LINK_ADDR1,
+        );
+        NudHandler::set_dynamic_neighbor(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            DummyLinkDeviceId,
+            I::LOOKUP_ADDR2,
+            LINK_ADDR2,
+            DynamicNeighborUpdateSource::Probe,
+        );
+        assert_matches!(
+            NudHandler::lookup(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                DummyLinkDeviceId,
+                I::LOOKUP_ADDR3
+            ),
+            None
+        );
+        let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
+        assert_eq!(
+            nud.neighbors,
+            HashMap::from([
+                (I::LOOKUP_ADDR1, NeighborState::Static(LINK_ADDR1),),
+                (
+                    I::LOOKUP_ADDR2,
+                    NeighborState::Dynamic(DynamicNeighborState::Complete {
+                        link_address: LINK_ADDR2
+                    }),
+                ),
+                (
+                    I::LOOKUP_ADDR3,
+                    NeighborState::Dynamic(DynamicNeighborState::new_incomplete(
+                        MAX_MULTICAST_SOLICIT - 1
+                    )),
+                ),
+            ])
+        );
+        assert_eq!(resolved, &[]);
+        assert_eq!(failed, &[]);
+        non_sync_ctx.timer_ctx().assert_timers_installed([(
+            NudTimerId {
+                device_id: DummyLinkDeviceId,
+                lookup_addr: I::LOOKUP_ADDR3,
+                _marker: PhantomData,
+            },
+            non_sync_ctx.now() + ONE_SECOND.get(),
+        )]);
+
+        // Flushing the table should clear all dynamic entries and timers.
+        NudHandler::flush(&mut sync_ctx, &mut non_sync_ctx, DummyLinkDeviceId);
+        let MockNudContext { retrans_timer: _, nud, resolved, failed } = sync_ctx.get_ref();
+        assert_eq!(
+            nud.neighbors,
+            HashMap::from([(I::LOOKUP_ADDR1, NeighborState::Static(LINK_ADDR1),),])
+        );
+        assert_eq!(resolved, &[]);
+        assert_eq!(failed, &[I::LOOKUP_ADDR3]);
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
     #[test]
@@ -954,5 +1107,15 @@ mod tests {
                 })
             )])
         );
+
+        // Disabling the device should clear the neighbor table.
+        update_ipv6_configuration(&mut sync_ctx, &mut non_sync_ctx, device_id, |config| {
+            config.ip_config.ip_enabled = false;
+        });
+        assert_eq!(
+            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
+            HashMap::new()
+        );
+        non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

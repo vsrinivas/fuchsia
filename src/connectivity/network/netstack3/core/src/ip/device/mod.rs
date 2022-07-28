@@ -32,6 +32,7 @@ use crate::{
     ip::{
         device::{
             dad::{DadHandler, DadTimerId},
+            nud::NudIpHandler,
             route_discovery::{Ipv6DiscoveredRouteTimerId, RouteDiscoveryHandler},
             router_solicitation::{RsHandler, RsTimerId},
             slaac::{SlaacHandler, SlaacTimerId},
@@ -552,12 +553,15 @@ fn disable_ipv6_device<
         + RsHandler<C>
         + DadHandler<C>
         + RouteDiscoveryHandler<C>
-        + SlaacHandler<C>,
+        + SlaacHandler<C>
+        + NudIpHandler<Ipv6, C>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
+    NudIpHandler::flush_neighbor_table(sync_ctx, ctx, device_id);
+
     SlaacHandler::remove_all_slaac_addresses(sync_ctx, ctx, device_id);
 
     RouteDiscoveryHandler::invalidate_routes(sync_ctx, ctx, device_id);
@@ -1103,7 +1107,8 @@ pub(crate) fn update_ipv6_configuration<
         + RsHandler<C>
         + DadHandler<C>
         + RouteDiscoveryHandler<C>
-        + SlaacHandler<C>,
+        + SlaacHandler<C>
+        + NudIpHandler<Ipv6, C>,
     F: FnOnce(&mut Ipv6DeviceConfiguration),
 >(
     sync_ctx: &mut SC,

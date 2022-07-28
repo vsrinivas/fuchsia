@@ -401,6 +401,15 @@ impl<C: NonSyncContext> NudIpHandler<Ipv6, C> for SyncCtx<C> {
             DeviceIdInner::Loopback => {}
         }
     }
+
+    fn flush_neighbor_table(&mut self, ctx: &mut C, device_id: DeviceId) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                NudHandler::<Ipv6, EthernetLinkDevice, _>::flush(self, ctx, id)
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
 }
 
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>> BufferIpDeviceContext<Ipv4, NonSyncCtx, B>
