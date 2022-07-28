@@ -10,13 +10,31 @@ see the [debian_guest](./packages/debian_guest/README.md) package.
 These instructions assume familiarity with how to build Fuchsia images and
 boot them on your target device.
 
-## Build host system with the guest package
+## Build host system with the guest components
 
-Configure, build, and boot the guest package as follows:
-``` sh
-fx set core.x64 --with-base //src/virtualization
+To configure the system to run the guest components, you'll need to add the
+guest package and a core shard for each guest component you wish to run. For
+example, if you want to run the Debian guest:
+
+```sh
+fx set core.x64 --with-base //src/virtualization --args=\
+'core_realm_shards += [ "//src/virtualization/bin/guest_manager:debian_core_shard" ]'
+```
+
+The available core shards are:
+
+```
+//src/virtualization/bin/guest_manager:debian_core_shard
+//src/virtualization/bin/guest_manager:termina_core_shard
+//src/virtualization/bin/guest_manager:zircon_core_shard
+```
+
+Next, build the guest package:
+
+```
 fx build
 ```
+
 For ARM64 targets, replace `x64` with `arm64` or the appropriate board name.
 
 ### Note for external developers
