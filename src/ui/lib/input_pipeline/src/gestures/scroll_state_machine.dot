@@ -1,0 +1,99 @@
+digraph {
+  rankdir="LR"
+  label="TWO-FINGER SWIPE RECOGNIZER" labelloc="t"
+
+  // The gesture arena, which invokes methods on the various states of the recognizer.
+  arena [shape="doublecircle"]
+
+  // Definition of `InitialContender`.
+  //
+  // This state does _not_ require the 2 finger to be down, to allow
+  // the user some time between initial touchpad contact, and depressing
+  // the button.
+  arena -> examine_at_initial_contender [label="examine\nevent()"]
+  examine_at_initial_contender [shape="diamond" label="exactly\n2 finger contact?"]
+  examine2_at_initial_contender [shape="diamond" label="button pressed?"]
+  examine_at_initial_contender -> examine2_at_initial_contender [label="yes"]
+  examine_at_initial_contender -> return_mismatch_at_initial_contender [label="no"]
+  examine2_at_initial_contender -> return_finger_contact_contender_at_initial_contender [label="no"]
+  examine2_at_initial_contender -> return_mismatch_at_initial_contender [label="yes"]
+  return_finger_contact_contender_at_initial_contender [shape="rectangle" label="return\nFingerContactContender"]
+  return_mismatch_at_initial_contender [shape="rectangle" label="return\nMismatch"]
+  subgraph cluster_initial_contender {
+    label="InitialContender\n`impl Contender`"
+    examine_at_initial_contender
+    examine2_at_initial_contender
+    return_finger_contact_contender_at_initial_contender
+    return_mismatch_at_initial_contender
+  }
+
+  // Definition of `FingerContactContender`.
+  arena -> examine_at_finger_contact_contender [label="examine\nevent()"]
+  examine_at_finger_contact_contender [shape="diamond" label="exactly\n2 fingers?"]
+  examine_at_finger_contact_contender -> return_mismatch_at_finger_contact_contender [label="no"]
+  examine_at_finger_contact_contender -> examine2_at_finger_contact_contender [label="yes"]
+  examine2_at_finger_contact_contender [shape="diamond" label="button\npressed?"]
+  examine2_at_finger_contact_contender -> return_mismatch_at_finger_contact_contender [label="yes"]
+  examine2_at_finger_contact_contender -> examine3_at_finger_contact_contender [label="no"]
+  examine3_at_finger_contact_contender [shape="diamond" label="movement > threshold && \n dictection ~vertical ~horizontal ?"]
+  examine3_at_finger_contact_contender -> return_self_at_finger_contact_contender [label="no"]
+  examine3_at_finger_contact_contender -> return_matched_contender [label="yes"]
+  return_mismatch_at_finger_contact_contender [shape="rectangle" label="return\nMismatch"]
+  return_matched_contender [shape="rectangle" label="return\MatchedContender"]
+  return_self_at_finger_contact_contender [shape="rectangle" label="return\n`self`"]
+  subgraph cluster_finger_contact_contender {
+    label="FingerContactContender\n`impl Contender`"
+    examine_at_finger_contact_contender
+    examine2_at_finger_contact_contender
+    examine3_at_finger_contact_contender
+    return_mismatch_at_finger_contact_contender
+    return_matched_contender
+    return_self_at_finger_contact_contender
+  }
+
+  // Definition of `MatchedContender`.
+  arena -> verify_at_matched_contender [label="verify\nevent()"]
+  verify_at_matched_contender [shape="diamond" label="exactly\n 2 fingers?"]
+  verify_at_matched_contender -> return_mismatch_at_matched_contender [label="no"]
+  verify_at_matched_contender -> verify2_at_matched_contender [label="yes"]
+  verify2_at_matched_contender [shape="diamond" label="button\npressed?"]
+  verify2_at_matched_contender -> return_mismatch_at_matched_contender [label="yes"]
+  verify2_at_matched_contender -> verify3_at_matched_contender [label="no"]
+  verify3_at_matched_contender [shape="diamond" label="on same\ndirection?"]
+  verify3_at_matched_contender -> return_mismatch_at_matched_contender [label="no"]
+  verify3_at_matched_contender -> return_self_at_matched_contender [label="yes"]
+  return_mismatch_at_matched_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_matched_contender [shape="rectangle" label="return\n`self`"]
+  arena -> return_winner_at_matched_contender [label="process\nbuffered\nevents()"]
+  return_winner_at_matched_contender [shape="rectangle" label="return\nvec![events], Winner, Scroll"]
+  subgraph cluster_matched_contender {
+    label="MatchedContender"
+    verify_at_matched_contender
+    verify2_at_matched_contender
+    verify3_at_matched_contender
+    return_mismatch_at_matched_contender
+    return_self_at_matched_contender
+    return_winner_at_matched_contender
+  }
+
+  arena -> process_at_winner [label="process\nnew\nevent()"]
+  process_at_winner [shape="diamond" label="button\npressed?"]
+  process_at_winner -> return_end_with_event_at_winner [label="yes"]
+  process_at_winner -> process2_at_winner [label="no"]
+  process2_at_winner [shape="diamond" label="num\nfingers\npresent"]
+  process2_at_winner -> process3_at_winner [label="2"]
+  process2_at_winner -> return_end_with_event_at_winner [label="!=2"]
+  process3_at_winner [shape="diamond" label="on same\ndirection?"]
+  process3_at_winner -> return_end_with_event_at_winner [label="no"]
+  process3_at_winner -> return_continue_with_event_at_winner [label="yes"]
+  return_continue_with_event_at_winner [shape="rectangle" label="return\nContinueGesture(\nSome, self)"]
+  return_end_with_event_at_winner [shape="rectangle" label="return\nEndGesture(Some)"]
+  subgraph cluster_forward_motion {
+    label="Winner"
+    process_at_winner
+    process2_at_winner
+    process3_at_winner
+    return_continue_with_event_at_winner
+    return_end_with_event_at_winner
+  }
+}
