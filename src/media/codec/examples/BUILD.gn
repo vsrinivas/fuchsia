@@ -17,14 +17,12 @@ declare_args() {
 # Test video encode of camera stream
 fuchsia_shell_package("encode-camera") {
   testonly = true
-  manifest = "encode_camera/meta/encode_camera.cmx"
   deps = [ "//src/media/codec/examples/encode_camera" ]
 }
 
 # Test video encode of from raw video file
 fuchsia_shell_package("encode-file") {
   testonly = true
-  manifest = "encode_file/meta/encode_file.cmx"
   deps = [ "//src/media/codec/examples/encode_file" ]
 }
 
