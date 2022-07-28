@@ -12,6 +12,7 @@ group("tests") {
   deps = [
     ":flutter-embedder-test",
     ":flutter-embedder-test-ip",
+    "//src/ui/testing/test_ui_stack:test-ui-stack",
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
@@ -78,9 +79,7 @@ fuchsia_unittest_package("flutter-embedder-test-ip") {
   manifest = "meta/flutter-embedder-test-ip.cml"
   deps = [
     ":flutter-embedder-test-ip-bin",
-    "//src/connectivity/network/netstack:component-legacy",
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
-    "//src/ui/testing/ui_test_realm:test_realms",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
   ]
@@ -100,27 +99,20 @@ test("flutter-embedder-test-ip-bin") {
   ]
   output_name = "flutter-embedder-test-ip"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.display",
-    "//sdk/fidl/fuchsia.input.injection",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.test.input",
+    "//sdk/fidl/fuchsia.ui.test.scene",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/fit",
     "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/ui/input/testing/fake_input_report_device",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

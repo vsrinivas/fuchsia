@@ -18,10 +18,11 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.input3",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.shortcut",
+    "//sdk/fidl/fuchsia.ui.test.input",
     "//sdk/fidl/fuchsia.ui.test.scene",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/ui/testing/ui_test_manager:ui_test_manager",
+    "//src/ui/testing/ui_test_realm",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

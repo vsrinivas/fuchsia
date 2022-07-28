@@ -8,6 +8,7 @@
 #include <fuchsia/ui/input3/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
+#include <fuchsia/ui/test/input/cpp/fidl.h>
 #include <fuchsia/ui/test/scene/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -75,6 +76,7 @@ int run_test_ui_stack(int argc, const char** argv) {
   AddPublicService<fuchsia::ui::shortcut::Registry>(context.get(), realm_exposed_services.get());
 
   // Helper services.
+  AddPublicService<fuchsia::ui::test::input::Registry>(context.get(), realm_exposed_services.get());
   AddPublicService<fuchsia::ui::test::scene::Provider>(context.get(), realm_exposed_services.get());
 
   context->outgoing()->ServeFromStartupInfo();

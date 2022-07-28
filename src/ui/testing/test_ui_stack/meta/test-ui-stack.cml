@@ -22,6 +22,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.shortcut.Registry",
+                "fuchsia.ui.test.input.Registry",
                 "fuchsia.ui.test.scene.Provider",
             ],
         },
@@ -31,6 +32,7 @@
             protocol: [
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
+                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
@@ -54,6 +56,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.shortcut.Registry",
+                "fuchsia.ui.test.input.Registry",
                 "fuchsia.ui.test.scene.Provider",
             ],
             from: "self",

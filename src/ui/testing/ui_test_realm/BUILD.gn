@@ -107,6 +107,7 @@ fuchsia_component("root_presenter_scene_with_input") {
     "//src/ui/bin/root_presenter:component_v2",
     "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
+    "//src/ui/testing/input_helper:input-helper-component",
     "//src/ui/testing/scene_provider:scene-provider-deps",
   ]
 }
@@ -141,6 +142,7 @@ fuchsia_component("scene_manager_scene_with_input") {
     "//src/ui/bin/shortcut:shortcut_manager",
     "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
+    "//src/ui/testing/input_helper:input-helper-component",
     "//src/ui/testing/scene_provider:scene-provider-deps",
   ]
 }

@@ -5,15 +5,14 @@
 #ifndef SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_IP_H_
 #define SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_IP_H_
 
-#include <fuchsia/input/injection/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/test/input/cpp/fidl.h>
+#include <fuchsia/ui/test/scene/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
@@ -21,10 +20,7 @@
 #include <optional>
 #include <vector>
 
-#include "embedder_view.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/input/testing/fake_input_report_device/fake.h"
-#include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
 #include "src/ui/testing/views/color.h"
 
 namespace flutter_embedder_test_ip {
@@ -47,25 +43,10 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing:
         kTestTimeout);
   }
 
-  embedder_tests::ViewContext CreatePresentationContext() {
-    FX_CHECK(scenic()) << "Scenic is not connected.";
-
-    return {
-        .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
-        .view_token = CreatePresentationViewToken(),
-    };
-  }
-
-  fuchsia::ui::views::ViewToken CreatePresentationViewToken() {
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    auto presenter = realm_->Connect<fuchsia::ui::policy::Presenter>();
-    presenter.set_error_handler(
-        [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
-    presenter->PresentView(std::move(view_holder_token), nullptr);
-
-    return std::move(view_token);
-  }
+  bool HasViewConnected(
+      const fuchsia::ui::observation::geometry::ProviderPtr& geometry_provider,
+      std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse>& watch_response,
+      zx_koid_t view_ref_koid);
 
   scenic::Screenshot TakeScreenshot() {
     FX_LOGS(INFO) << "Taking screenshot... ";
@@ -102,69 +83,12 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing:
         timeout);
   }
 
-  void RegisterInjectionDevice() {
-    registry_ = realm_->Connect<fuchsia::input::injection::InputDeviceRegistry>();
+  // Registers a fake touch screen device with an injection coordinate space
+  // spanning [-1000, 1000] on both axes.
+  void RegisterTouchScreen();
 
-    // Create a FakeInputDevice
-    fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
-        input_device_ptr_.NewRequest(), dispatcher());
-
-    // Set descriptor
-    auto device_descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
-    auto touch = device_descriptor->mutable_touch()->mutable_input();
-    touch->set_touch_type(fuchsia::input::report::TouchType::TOUCHSCREEN);
-    touch->set_max_contacts(10);
-
-    fuchsia::input::report::Axis axis;
-    axis.unit.type = fuchsia::input::report::UnitType::NONE;
-    axis.unit.exponent = 0;
-    axis.range.min = -1000;
-    axis.range.max = 1000;
-
-    fuchsia::input::report::ContactInputDescriptor contact;
-    contact.set_position_x(axis);
-    contact.set_position_y(axis);
-    contact.set_pressure(axis);
-
-    touch->mutable_contacts()->push_back(std::move(contact));
-
-    fake_input_device_->SetDescriptor(std::move(device_descriptor));
-
-    // Register the FakeInputDevice
-    registry_->Register(std::move(input_device_ptr_));
-  }
-
-  // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
-  // (0, 0) is the center of the display.
-  void InjectInput(int64_t x, int64_t y) {
-    FX_LOGS(INFO) << "Injecting input... ";
-
-    // Set InputReports to inject. One contact at the specified location (x, y),
-    // followed by no contacts.
-    fuchsia::input::report::ContactInputReport contact_input_report;
-    contact_input_report.set_contact_id(1);
-
-    contact_input_report.set_position_x(x);
-    contact_input_report.set_position_y(y);
-
-    fuchsia::input::report::TouchInputReport touch_input_report;
-    auto contacts = touch_input_report.mutable_contacts();
-    contacts->push_back(std::move(contact_input_report));
-
-    fuchsia::input::report::InputReport input_report;
-    input_report.set_touch(std::move(touch_input_report));
-
-    std::vector<fuchsia::input::report::InputReport> input_reports;
-    input_reports.push_back(std::move(input_report));
-
-    fuchsia::input::report::TouchInputReport remove_touch_input_report;
-    fuchsia::input::report::InputReport remove_input_report;
-    remove_input_report.set_touch(std::move(remove_touch_input_report));
-    input_reports.push_back(std::move(remove_input_report));
-    fake_input_device_->SetReports(std::move(input_reports));
-
-    FX_LOGS(INFO) << "Input dispatched.";
-  }
+  // Simulates a tap at location (x, y).
+  void InjectTap(int32_t x, int32_t y);
 
   // Injects an input event, and posts a task to retry after `kTapRetryInterval`.
   //
@@ -182,11 +106,7 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing:
   // drop the touch event.
   //
   // TODO(fxbug.dev/96986): Improve synchronization and remove retry logic.
-  void TryInject(int64_t x = 0, int64_t y = 0) {
-    InjectInput(x, y);
-    async::PostDelayedTask(
-        dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
-  }
+  void TryInject(int32_t x, int32_t y);
 
  private:
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
@@ -194,14 +114,14 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing:
   void SetUpRealmBase();
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
+  fuchsia::ui::test::input::RegistryPtr input_registry_;
+  fuchsia::ui::test::input::TouchScreenPtr fake_touchscreen_;
+  fuchsia::ui::test::scene::ProviderPtr scene_provider_;
+  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
 
   // Wrapped in optional since the view is not created until the middle of SetUp
-  std::optional<embedder_tests::EmbedderView> embedder_view_;
   component_testing::RealmBuilder realm_builder_;
   std::unique_ptr<component_testing::RealmRoot> realm_;
-  fuchsia::input::injection::InputDeviceRegistryPtr registry_;
-  std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_input_device_;
-  fuchsia::input::report::InputDevicePtr input_device_ptr_;
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being

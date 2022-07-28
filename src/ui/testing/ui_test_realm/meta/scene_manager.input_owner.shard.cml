@@ -12,6 +12,10 @@
             name: "shortcut-manager",
             url: "#meta/shortcut_manager.cm",
         },
+        {
+            name: "input-helper",
+            url: "#meta/input-helper.cm",
+        },
     ],
     offer: [
         {
@@ -45,6 +49,11 @@
             from: "#scenic",
             to: "#scene-manager",
         },
+        {
+            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            from: "#scene-manager",
+            to: [ "#input-helper" ],
+        },
     ],
     expose: [
         {
@@ -60,6 +69,10 @@
                 "test.inputsynthesis.Text",
             ],
             from: "#input-synthesis",
+        },
+        {
+            protocol: [ "fuchsia.ui.test.input.Registry" ],
+            from: "#input-helper",
         },
     ],
 }

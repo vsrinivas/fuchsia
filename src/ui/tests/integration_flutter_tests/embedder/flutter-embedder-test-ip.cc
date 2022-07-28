@@ -4,14 +4,10 @@
 
 #include "src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test-ip.h"
 
-#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -31,9 +27,34 @@ static constexpr auto kChildFlutterRealm = "child_flutter";
 static constexpr auto kChildFlutterRealmRef = ChildRef{kChildFlutterRealm};
 static constexpr auto kParentFlutterRealm = "parent_flutter";
 static constexpr auto kParentFlutterRealmRef = ChildRef{kParentFlutterRealm};
-static constexpr auto kInputPipelineTestRealm = "input_pipeline_test_realm";
-static constexpr auto kInputPipelineTestRealmRef = ChildRef{kInputPipelineTestRealm};
-static constexpr auto kInputPipelineTestRealmUrl = "#meta/root_presenter_scene_with_input.cm";
+static constexpr auto kTestUIStack = "ui";
+static constexpr auto kTestUIStackRef = ChildRef{kTestUIStack};
+static constexpr auto kTestUIStackUrl =
+    "fuchsia-pkg://fuchsia.com/test-ui-stack#meta/test-ui-stack.cm";
+
+bool CheckViewExistsInSnapshot(const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot,
+                               zx_koid_t view_ref_koid) {
+  if (!snapshot.has_views()) {
+    return false;
+  }
+
+  auto snapshot_count = std::count_if(
+      snapshot.views().begin(), snapshot.views().end(),
+      [view_ref_koid](const auto& view) { return view.view_ref_koid() == view_ref_koid; });
+
+  return snapshot_count > 0;
+}
+
+bool CheckViewExistsInUpdates(
+    const std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>& updates,
+    zx_koid_t view_ref_koid) {
+  auto update_count =
+      std::count_if(updates.begin(), updates.end(), [view_ref_koid](auto& snapshot) {
+        return CheckViewExistsInSnapshot(snapshot, view_ref_koid);
+      });
+
+  return update_count > 0;
+}
 
 }  // namespace
 
@@ -70,8 +91,8 @@ static size_t OverlayPixelCount(std::map<scenic::Color, size_t>& histogram) {
 void FlutterEmbedderTestIp::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
 
-  // Add base components.
-  realm_builder_.AddChild(kInputPipelineTestRealm, kInputPipelineTestRealmUrl);
+  // Add test UI stack component.
+  realm_builder_.AddChild(kTestUIStack, kTestUIStackUrl);
 
   // Add embedded child component to realm.
   realm_builder_.AddChild(kChildFlutterRealm, kChildViewUrl);
@@ -79,37 +100,45 @@ void FlutterEmbedderTestIp::SetUpRealmBase() {
   // Add child flutter app routes. Note that we do not route ViewProvider to ParentRef{} as it is
   // embedded.
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = kInputPipelineTestRealmRef,
+                                .source = kTestUIStackRef,
                                 .targets = {kChildFlutterRealmRef}});
+
+  // Route base system services to flutter and the test UI stack.
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                             Protocol{fuchsia::scheduler::ProfileProvider::Name_},
                              Protocol{fuchsia::sys::Environment::Name_},
                              Protocol{fuchsia::sysmem::Allocator::Name_},
                              Protocol{fuchsia::vulkan::loader::Loader::Name_},
                              Protocol{fuchsia::tracing::provider::Registry::Name_}},
             .source = ParentRef{},
-            .targets = {kChildFlutterRealmRef}});
-
-  // Add base routes.
-  realm_builder_.AddRoute(Route{.capabilities =
-                                    {
-                                        Protocol{fuchsia::logger::LogSink::Name_},
-                                        Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                                        Protocol{fuchsia::sysmem::Allocator::Name_},
-                                        Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                        Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                                    },
-                                .source = ParentRef{},
-                                .targets = {kInputPipelineTestRealmRef}});
+            .targets = {kChildFlutterRealmRef, kTestUIStackRef}});
 
   // Capabilities routed to test driver.
   realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
-                             Protocol{fuchsia::ui::pointerinjector::Registry::Name_},
-                             Protocol{fuchsia::ui::policy::Presenter::Name_},
+      Route{.capabilities = {Protocol{fuchsia::ui::test::input::Registry::Name_},
+                             Protocol{fuchsia::ui::test::scene::Provider::Name_},
                              Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-            .source = kInputPipelineTestRealmRef,
+            .source = kTestUIStackRef,
             .targets = {ParentRef{}}});
+}
+
+// Checks whether the view with |view_ref_koid| has connected to the view tree. The response of a
+// f.u.o.g.Provider.Watch call is stored in |watch_response| if it contains |view_ref_koid|.
+bool FlutterEmbedderTestIp::HasViewConnected(
+    const fuchsia::ui::observation::geometry::ProviderPtr& geometry_provider,
+    std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse>& watch_response,
+    zx_koid_t view_ref_koid) {
+  std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> geometry_result;
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
+  FX_LOGS(INFO) << "Waiting for geometry result";
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
+  FX_LOGS(INFO) << "Received geometry result";
+  if (CheckViewExistsInUpdates(geometry_result->updates(), view_ref_koid)) {
+    watch_response = std::move(geometry_result);
+  };
+  return watch_response.has_value();
 }
 
 void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_url,
@@ -119,7 +148,7 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
 
   // Capabilities routed to embedded flutter app.
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = kInputPipelineTestRealmRef,
+                                .source = kTestUIStackRef,
                                 .targets = {kParentFlutterRealmRef}});
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
@@ -154,29 +183,62 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
   }
   realm_ = std::make_unique<RealmRoot>(realm_builder_.Build());
 
-  scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
-  scenic_.set_error_handler([](zx_status_t status) {
-    FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+  // Register fake touch screen device.
+  RegisterTouchScreen();
+
+  // Instruct Root Presenter to present test's View.
+  std::optional<zx_koid_t> view_ref_koid;
+  scene_provider_ = realm_->Connect<fuchsia::ui::test::scene::Provider>();
+  scene_provider_.set_error_handler(
+      [](auto) { FX_LOGS(ERROR) << "Error from test scene provider"; });
+  fuchsia::ui::test::scene::ProviderAttachClientViewRequest request;
+  request.set_view_provider(realm_->Connect<fuchsia::ui::app::ViewProvider>());
+  scene_provider_->RegisterGeometryObserver(geometry_provider_.NewRequest(), []() {});
+  scene_provider_->AttachClientView(
+      std::move(request),
+      [&view_ref_koid](auto client_view_ref_koid) { view_ref_koid = client_view_ref_koid; });
+
+  FX_LOGS(INFO) << "Waiting for client view ref koid";
+  RunLoopUntil([&view_ref_koid] { return view_ref_koid.has_value(); });
+
+  // Wait for the client view to get attached to the view tree.
+  std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> watch_response;
+  FX_LOGS(INFO) << "Waiting for client view to render";
+  RunLoopUntil([this, &watch_response, &view_ref_koid] {
+    return HasViewConnected(geometry_provider_, watch_response, *view_ref_koid);
   });
+  FX_LOGS(INFO) << "Client view has rendered";
 
-  FX_LOGS(INFO) << "Launching component: " << component_url;
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
-  auto view_provider = realm_->Connect<fuchsia::ui::app::ViewProvider>();
-  view_provider->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_control),
-                                       std::move(view_ref));
-
-  // Present the view.
-  embedder_view_.emplace(CreatePresentationContext(), std::move(view_holder_token));
-
-  // Embed the view.
-  std::optional<bool> view_state_changed_observed;
-  embedder_view_->EmbedView(
-      [&view_state_changed_observed](auto) { view_state_changed_observed = true; });
-
-  RunLoopUntil([&view_state_changed_observed] { return view_state_changed_observed.has_value(); });
-  ASSERT_TRUE(view_state_changed_observed.value());
+  scenic_ = realm_->Connect<fuchsia::ui::scenic::Scenic>();
   FX_LOGS(INFO) << "Launched component: " << component_url;
+}
+
+void FlutterEmbedderTestIp::RegisterTouchScreen() {
+  FX_LOGS(INFO) << "Registering fake touch screen";
+  input_registry_ = realm_->Connect<fuchsia::ui::test::input::Registry>();
+  input_registry_.set_error_handler([](auto) { FX_LOGS(ERROR) << "Error from input helper"; });
+  bool touchscreen_registered = false;
+  fuchsia::ui::test::input::RegistryRegisterTouchScreenRequest request;
+  request.set_device(fake_touchscreen_.NewRequest());
+  input_registry_->RegisterTouchScreen(
+      std::move(request), [&touchscreen_registered]() { touchscreen_registered = true; });
+  RunLoopUntil([&touchscreen_registered] { return touchscreen_registered; });
+  FX_LOGS(INFO) << "Touchscreen registered";
+}
+
+void FlutterEmbedderTestIp::InjectTap(int32_t x, int32_t y) {
+  fuchsia::ui::test::input::TouchScreenSimulateTapRequest tap_request;
+  tap_request.mutable_tap_location()->x = x;
+  tap_request.mutable_tap_location()->y = y;
+  fake_touchscreen_->SimulateTap(std::move(tap_request), [x, y]() {
+    FX_LOGS(INFO) << "Tap injected at (" << x << ", " << y << ")";
+  });
+}
+
+void FlutterEmbedderTestIp::TryInject(int32_t x, int32_t y) {
+  InjectTap(x, y);
+  async::PostDelayedTask(
+      dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
 }
 
 TEST_F(FlutterEmbedderTestIp, Embedding) {
@@ -198,9 +260,8 @@ TEST_F(FlutterEmbedderTestIp, HittestEmbedding) {
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
 
-  // Tap the center of child view.
-  RegisterInjectionDevice();
-  TryInject();
+  // Simulate a tap at the center of the child view.
+  TryInject(/* x = */ 0, /* y = */ 0);
 
   // Take screenshot until we see the child-view's tapped color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildTappedColor, [](std::map<scenic::Color, size_t> histogram) {
@@ -218,9 +279,8 @@ TEST_F(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
   // Take screenshots until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
 
-  // Tap the center of child view. Since it's not hit-testable, the tap should go to the parent.
-  RegisterInjectionDevice();
-  TryInject();
+  // Simulate a tap at the center of the child view.
+  TryInject(/* x = */ 0, /* y = */ 0);
 
   // The parent-view should change color.
   ASSERT_TRUE(
@@ -257,9 +317,6 @@ TEST_F(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
 
-  // Tap the center of child view.
-  RegisterInjectionDevice();
-
   // The bottom-left corner of the overlay is at the center of the screen,
   // which is at (0, 0) in the injection coordinate space. Inject a pointer
   // event just outside the overlay's bounds, and ensure that it goes to the
@@ -279,5 +336,4 @@ TEST_F(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
     EXPECT_GT(overlay_pixel_count, histogram[kChildTappedColor]);
   }));
 }
-
 }  // namespace flutter_embedder_test_ip

@@ -8,6 +8,10 @@
             name: "input-pipeline",
             url: "#meta/input-pipeline.cm",
         },
+        {
+            name: "input-helper",
+            url: "#meta/input-helper.cm",
+        },
     ],
     offer: [
         {
@@ -29,6 +33,16 @@
             from: "#text-manager",
             to: [ "#root-presenter" ],
         },
+        {
+            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            from: "#input-pipeline",
+            to: [ "#input-helper" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#input-helper" ],
+        },
     ],
     expose: [
         {
@@ -37,6 +51,10 @@
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
             from: "#input-pipeline",
+        },
+        {
+            protocol: [ "fuchsia.ui.test.input.Registry" ],
+            from: "#input-helper",
         },
     ],
 }
