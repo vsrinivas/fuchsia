@@ -174,16 +174,10 @@ impl LinesBuilder {
         }
     }
 
-    #[inline]
-    pub fn set_default_transform(&mut self, affine_transform: &AffineTransform) {
-        self.lines.transform = Some(*affine_transform);
-    }
-
     pub fn build<F>(mut self, layers: F) -> Lines
     where
         F: Fn(GeomId) -> Option<Layer> + Send + Sync,
     {
-        let transform = self.lines.transform;
         let ps_layers = self.lines.x.par_windows(2).with_min_len(MIN_LEN).zip_eq(
             self.lines.y.par_windows(2).with_min_len(MIN_LEN).zip_eq(
                 self.lines.ids[..self.lines.ids.len().checked_sub(1).unwrap_or_default()]
@@ -198,6 +192,8 @@ impl LinesBuilder {
             let p1y = ys[1];
 
             if id.is_none() {
+                // Returns a length of 0 so that the line segments between two
+                // polygonal chains generate no pixel segments.
                 return Default::default();
             }
 
@@ -222,11 +218,8 @@ impl LinesBuilder {
                 )
             }
 
-            let transform = layer
-                .affine_transform
-                .as_ref()
-                .map(|transform| &transform.0)
-                .or(transform.as_ref());
+            let transform = layer.affine_transform.as_ref().map(|transform| &transform.0);
+
             let (p0x, p0y, p1x, p1y) = if let Some(transform) = transform {
                 let (p0x, p0y) = transform_point((p0x, p0y), transform);
                 let (p1x, p1y) = transform_point((p1x, p1y), transform);
@@ -387,11 +380,15 @@ impl LinesBuilder {
     }
 }
 
+// `x`, `y` and `ids` have the same size and encode polygonal chains.
+// In `ids`, `None` identifies the last element of a chain.
+//
+// `lines` and `lengths` have the same size and encode pixel segments
+// generators.
 #[derive(Debug, Default)]
 pub struct Lines {
     pub x: Vec<f32>,
     pub y: Vec<f32>,
-    transform: Option<AffineTransform>,
     pub ids: Vec<Option<GeomId>>,
     pub orders: Vec<u32>,
     pub x0: Vec<f32>,
@@ -407,13 +404,6 @@ pub struct Lines {
 }
 
 impl Lines {
-    // This type is only used in forma where it does not need `is_empty`.
-    #[allow(clippy::len_without_is_empty)]
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.x.len()
-    }
-
     #[inline]
     pub fn unwrap(mut self) -> LinesBuilder {
         self.orders.clear();
