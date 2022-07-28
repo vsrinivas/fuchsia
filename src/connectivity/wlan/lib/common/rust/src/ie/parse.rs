@@ -30,8 +30,11 @@ pub fn parse_ssid<B: ByteSlice>(raw_body: B) -> FrameParseResult<B> {
 pub fn parse_supported_rates<B: ByteSlice>(
     raw_body: B,
 ) -> FrameParseResult<LayoutVerified<B, [SupportedRate]>> {
+    // IEEE Std 802.11-2016, 9.2.4.3 specifies that the Supported Rates IE may contain at most
+    // eight rates. However, in practice some devices transmit more (rather than using Extended
+    // Supported Rates). As the rates are encoded in a standard IE, this function does not validate
+    // the number of rates to improve interoperability.
     validate!(!raw_body.is_empty(), "Empty Supported Rates IE");
-    validate!(raw_body.len() <= SUPPORTED_RATES_MAX_LEN, "Too many bytes in Supported Rates IE");
     // unwrap() is OK because sizeof(SupportedRate) is 1, and any slice length is a multiple of 1
     Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
 }
@@ -404,10 +407,14 @@ mod tests {
         assert_eq!("Empty Supported Rates IE", err.debug_message());
     }
 
+    // This test expects to pass despite IEEE Std 802.11-2016, 9.2.4.3 specifying a limit of eight
+    // rates. This limit is intentionally ignored when parsing Supported Rates to improve
+    // interoperability with devices that write more than eight rates into the IE.
     #[test]
-    pub fn supported_rates_too_long() {
-        let err = parse_supported_rates(&[0u8; 9][..]).expect_err("expected Err");
-        assert_eq!("Too many bytes in Supported Rates IE", err.debug_message());
+    pub fn supported_rates_ok_overloaded() {
+        let rates =
+            parse_supported_rates(&[0u8; 9][..]).expect("rejected overloaded Supported Rates IE");
+        assert_eq!(&rates[..], &[SupportedRate(0); 9][..],);
     }
 
     #[test]

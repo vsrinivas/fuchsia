@@ -2307,9 +2307,12 @@ mod tests {
     #[test_case(vec![1, 0],
                 vec![50, 0],
                 vec![] ; "when no rates")]
+    // This case expects the Supported Rates to reach SME successfully despite the number of rates
+    // exceeding the limit of eight specified in IEEE Std 802.11-2016 9.2.4.3. This limit is
+    // ignored while parsing rates to improve interoperability with devices that overload the IE.
     #[test_case(vec![1, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                 vec![50, 9, 10],
-                vec![] ; "when too many supported rates")]
+                vec![1, 2, 3, 4, 5, 6, 7, 8, 9] ; "when too many supported rates")]
     #[fuchsia::test]
     fn assoc_req_with_bad_rates_still_passed_to_sme(
         supported_rates_ie: Vec<u8>,
