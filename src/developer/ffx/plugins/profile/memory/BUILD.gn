@@ -30,6 +30,8 @@ ffx_plugin("ffx_profile_memory") {
   sources = [
     "src/digest.rs",
     "src/lib.rs",
+    "src/plugin_output.rs",
+    "src/write_human_readable_output.rs",
   ]
 
   test_deps = [

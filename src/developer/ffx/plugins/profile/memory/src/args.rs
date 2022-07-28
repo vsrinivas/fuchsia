@@ -17,4 +17,7 @@ pub struct MemoryCommand {
         description = "outputs the json returned by memory_monitor. For debug purposes only, no garantee is made on the stability of the output of this command."
     )]
     pub print_json_from_memory_monitor: bool,
+
+    #[argh(option, description = "filters by process koids. Repeatable flag.")]
+    pub process_koids: Vec<u64>,
 }

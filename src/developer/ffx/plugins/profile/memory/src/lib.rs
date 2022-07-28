@@ -5,8 +5,12 @@
 //! Library that obtains and prints memory digests of a running fuchsia device.
 
 mod digest;
+mod plugin_output;
+mod write_human_readable_output;
 
 use {
+    crate::plugin_output::filter_digest_by_process_koids,
+    crate::write_human_readable_output::write_human_readable_output,
     anyhow::Result,
     digest::{processed, raw},
     ffx_core::ffx_plugin,
@@ -14,7 +18,7 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_memory::MonitorProxy,
     futures::AsyncReadExt,
-    humansize::{file_size_opts::BINARY, FileSize},
+    plugin_output::ProfileMemoryOutput,
     std::io::Write,
 };
 
@@ -23,20 +27,23 @@ use {
 pub async fn print_memory_digest(
     monitor_proxy: MonitorProxy,
     cmd: MemoryCommand,
-    #[ffx(machine = processed::Digest)] mut writer: Writer,
+    #[ffx(machine = ProfileMemoryOutput)] mut writer: Writer,
 ) -> Result<()> {
     if cmd.print_json_from_memory_monitor {
         let raw_data = get_raw_data(monitor_proxy).await?;
         writeln!(writer, "{}", String::from_utf8(raw_data)?)?;
         Ok(())
     } else {
+        let digest = get_digest(monitor_proxy).await?;
+        let processed_digest = processed::Digest::from(digest);
+        let output = match cmd.process_koids.len() {
+            0 => ProfileMemoryOutput::CompleteDigest(processed_digest),
+            _ => filter_digest_by_process_koids(processed_digest, cmd.process_koids),
+        };
         if writer.is_machine() {
-            let digest = get_digest(monitor_proxy).await?;
-            writer.machine(&processed::Digest::from(digest))?;
-            Ok(())
+            writer.machine(&output)
         } else {
-            let digest = get_digest(monitor_proxy).await?;
-            pretty_print_full_digest(writer, processed::Digest::from(digest))
+            write_human_readable_output(writer, output)
         }
     }
 }
@@ -65,69 +72,6 @@ async fn get_digest(
 ) -> anyhow::Result<raw::Digest> {
     let buffer = get_raw_data(monitor_proxy).await?;
     Ok(serde_json::from_slice(&buffer)?)
-}
-
-/// Print to `w` a human-readable presentation of `digest`.
-fn pretty_print_full_digest<'a>(mut w: Writer, digest: processed::Digest) -> Result<()> {
-    writeln!(w, "Time:  {}", digest.time)?;
-    writeln!(w, "VMO:   {}", digest.kernel.vmo.file_size(BINARY).unwrap())?;
-    writeln!(w, "Free:  {}", digest.kernel.free.file_size(BINARY).unwrap())?;
-    writeln!(w)?;
-    writeln!(w, "Task:      kernel")?;
-    writeln!(w, "PID:       1")?;
-    let kernel_total = digest.kernel.wired
-        + digest.kernel.vmo
-        + digest.kernel.total_heap
-        + digest.kernel.mmu
-        + digest.kernel.ipc;
-    writeln!(w, "Total:     {}", kernel_total.file_size(BINARY).unwrap())?;
-    writeln!(w, "    wired: {}", digest.kernel.wired.file_size(BINARY).unwrap())?;
-    writeln!(w, "    vmo:   {}", digest.kernel.vmo.file_size(BINARY).unwrap())?;
-    writeln!(w, "    heap:  {}", digest.kernel.total_heap.file_size(BINARY).unwrap())?;
-    writeln!(w, "    mmu:   {}", digest.kernel.mmu.file_size(BINARY).unwrap())?;
-    writeln!(w, "    ipc:   {}", digest.kernel.ipc.file_size(BINARY).unwrap())?;
-    writeln!(w)?;
-    for process in digest.processes {
-        writeln!(w, "Task:          {}", process.name)?;
-        writeln!(w, "PID:           {}", process.koid)?;
-        writeln!(w, "Private Bytes: {}", process.memory.private.file_size(BINARY).unwrap())?;
-        writeln!(w, "Total(Shared): {}", process.memory.scaled.file_size(BINARY).unwrap())?;
-        writeln!(w, "Total:         {}", process.memory.total.file_size(BINARY).unwrap())?;
-        let names = {
-            let mut names: Vec<&String> = process.name_to_memory.keys().collect();
-            names.sort_unstable_by(|&a, &b| {
-                let sa = process.name_to_memory.get(a).unwrap();
-                let sb = process.name_to_memory.get(b).unwrap();
-                (sb.private, sb.scaled).cmp(&(sa.private, sa.scaled))
-            });
-            names
-        };
-        for name in names {
-            if let Some(sizes) = process.name_to_memory.get(name) {
-                if sizes.total == 0 {
-                    continue;
-                }
-                // If the VMO is not shared between multiple
-                // processes, all three metrics are equivalent, and
-                // there is no point in printing all of them.
-                if sizes.total == sizes.private {
-                    writeln!(w, "    {}: {}", name, sizes.total.file_size(BINARY).unwrap())?;
-                } else {
-                    writeln!(
-                        w,
-                        "    {}: {} {} {}",
-                        name,
-                        sizes.private.file_size(BINARY).unwrap(),
-                        sizes.scaled.file_size(BINARY).unwrap(),
-                        sizes.total.file_size(BINARY).unwrap()
-                    )?;
-                }
-            }
-        }
-        writeln!(w)?;
-    }
-    writeln!(w)?;
-    Ok(())
 }
 
 #[cfg(test)]
