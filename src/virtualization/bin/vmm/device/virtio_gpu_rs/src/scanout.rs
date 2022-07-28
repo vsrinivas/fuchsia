@@ -8,7 +8,7 @@ use {
     crate::wire,
     anyhow::{anyhow, Context, Error},
     async_utils::hanging_get::client::HangingGetStream,
-    fidl::endpoints::create_proxy,
+    fidl::endpoints::{create_proxy, ClientEnd},
     fidl_fuchsia_element::{GraphicalPresenterMarker, ViewSpec},
     fidl_fuchsia_math as fmath,
     fidl_fuchsia_ui_composition::{
@@ -16,6 +16,7 @@ use {
         ImageProperties, LayoutInfo, ParentViewportWatcherMarker, PresentArgs, TransformId,
         ViewBoundProtocols,
     },
+    fidl_fuchsia_ui_input3::KeyboardListenerMarker,
     fidl_fuchsia_ui_views::{ViewCreationToken, ViewIdentityOnCreation, ViewportCreationToken},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -142,7 +143,10 @@ impl FlatlandScanout {
     ///
     /// The creation returns once the backing view for the `Scanout` has been created and presented
     /// to the user.
-    pub async fn attach(mut command_sender: GpuCommandSender) -> Result<(), Error> {
+    pub async fn attach(
+        mut command_sender: GpuCommandSender,
+        keyboard_listener: Option<ClientEnd<KeyboardListenerMarker>>,
+    ) -> Result<(), Error> {
         let flatland =
             connect_to_protocol::<FlatlandMarker>().context("error connecting to Flatland")?;
 
@@ -152,7 +156,8 @@ impl FlatlandScanout {
                 .context("failed to create ParentViewportWatcherProxy")?;
         let (mut view_token, viewport_token) = create_view_creation_tokens();
         let viewref_pair = ViewRefPair::new()?;
-        let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        let view_ref_for_presenter = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        let mut view_ref_for_keyboard = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
         let mut view_identity = ViewIdentityOnCreation::from(viewref_pair);
         let view_bound_protocols = ViewBoundProtocols { ..ViewBoundProtocols::EMPTY };
         flatland
@@ -164,10 +169,24 @@ impl FlatlandScanout {
             )
             .context("Failed to create_view")?;
 
+        // If we have a keyboard listener for a virtio-input device, connect it to our view now.
+        let keyboard = if let Some(keyboard_listener) = keyboard_listener {
+            let keyboard = connect_to_protocol::<fidl_fuchsia_ui_input3::KeyboardMarker>()?;
+            match keyboard.add_listener(&mut view_ref_for_keyboard, keyboard_listener).await {
+                Err(e) => {
+                    tracing::warn!("Failed to register keyboard listener: {}", e);
+                    None
+                }
+                Ok(()) => Some(keyboard),
+            }
+        } else {
+            None
+        };
+
         // Display with graphical presenter.
         let view_spec = ViewSpec {
             viewport_creation_token: Some(viewport_token),
-            view_ref: Some(view_ref_dup),
+            view_ref: Some(view_ref_for_presenter),
             ..ViewSpec::EMPTY
         };
         let graphical_presenter = connect_to_protocol::<GraphicalPresenterMarker>()
@@ -239,6 +258,10 @@ impl FlatlandScanout {
         // attached to the device, the controller will be passed to this task over the channel.
         let (sender, receiver) = oneshot::channel::<ScanoutController>();
         let event_handler = fasync::Task::local(async move {
+            // We need to keep the connection to the keyboard protocol open as long as we want to
+            // continue to receive events.
+            let _keyboard = keyboard;
+
             let mut scanout_controller = receiver.await.unwrap();
 
             loop {

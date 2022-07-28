@@ -12,7 +12,8 @@ use {
     crate::gpu_device::GpuDevice,
     crate::scanout::FlatlandScanout,
     anyhow::{anyhow, Context},
-    fidl::endpoints::RequestStream,
+    fidl::endpoints::{ClientEnd, RequestStream},
+    fidl_fuchsia_ui_input3::KeyboardListenerMarker,
     fidl_fuchsia_virtualization_hardware::VirtioGpuRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server,
@@ -22,7 +23,7 @@ use {
 
 async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(), anyhow::Error> {
     // Receive start info as first message.
-    let (start_info, _keyboard_listener, _pointer_listener, responder) = virtio_gpu_fidl
+    let (start_info, keyboard_listener, _pointer_listener, responder) = virtio_gpu_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Failed to read fidl message from the channel."))?
@@ -50,10 +51,15 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     // Create the device and attempt to attach an initial scanout. This may fail, ex if run within
     // an environment without Flatland or a graphical shell. If this happens then the GPU will
     // simply not expose any scanouts to the driver.
+    //
+    // We don't await here, but instead we will send a config change interrupt when the scanout is
+    // attached. This allows us to not block any vcpus while the scanout is being created.
     let mut gpu_device = GpuDevice::new(&guest_mem, control_handle);
     let command_sender = gpu_device.command_sender();
     fasync::Task::local(async move {
-        if let Err(e) = FlatlandScanout::attach(command_sender).await {
+        let keyboard_listener =
+            keyboard_listener.map(|k| ClientEnd::<KeyboardListenerMarker>::from(k.into_channel()));
+        if let Err(e) = FlatlandScanout::attach(command_sender, keyboard_listener).await {
             tracing::warn!("Failed to create scanout: {}", e);
         }
     })
