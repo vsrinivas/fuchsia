@@ -276,8 +276,6 @@ void AmlCpu::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
 
   // Make sure that the state is in bounds?
   if (request->state >= opps.count) {
-    zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u", __func__,
-           request->state, opps.count);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
