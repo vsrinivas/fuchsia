@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 
 #include <variant>
 
 #include <fbl/auto_lock.h>
 
-#include "fdio_unistd.h"
-#include "internal.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
 
 __EXPORT
 zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {

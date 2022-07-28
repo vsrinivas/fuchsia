@@ -16,9 +16,8 @@
 
 #include <fbl/auto_lock.h>
 
-#include "fdio_unistd.h"
-#include "internal.h"
-#include "zxio.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/zxio.h"
 
 // An implementation of a POSIX timerfd.
 struct fdio_timer_t {

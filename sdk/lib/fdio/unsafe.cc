@@ -4,7 +4,8 @@
 
 #include <lib/fdio/unsafe.h>
 
-#include "fdio_unistd.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
 
 __EXPORT
 fdio_t* fdio_unsafe_fd_to_io(int fd) {

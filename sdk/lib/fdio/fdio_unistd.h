@@ -5,18 +5,25 @@
 #ifndef LIB_FDIO_FDIO_UNISTD_H_
 #define LIB_FDIO_FDIO_UNISTD_H_
 
+#include <lib/fdio/limits.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <cerrno>
+#include <optional>
 
-#include "internal.h"
+#include <fbl/ref_ptr.h>
 
-std::optional<int> bind_to_fd_locked(const fdio_ptr& io) __TA_REQUIRES(fdio_lock);
-std::optional<int> bind_to_fd(const fdio_ptr& io) __TA_EXCLUDES(fdio_lock);
-fdio_ptr fd_to_io_locked(int fd) __TA_REQUIRES(fdio_lock);
-fdio_ptr fd_to_io(int fd) __TA_EXCLUDES(fdio_lock);
-fdio_ptr unbind_from_fd_locked(int fd) __TA_REQUIRES(fdio_lock);
-fdio_ptr unbind_from_fd(int fd) __TA_EXCLUDES(fdio_lock);
+#include "sdk/lib/fdio/fdio_state.h"
+
+struct fdio;
+
+std::optional<int> bind_to_fd_locked(const fbl::RefPtr<fdio>& io) __TA_REQUIRES(fdio_lock);
+std::optional<int> bind_to_fd(const fbl::RefPtr<fdio>& io) __TA_EXCLUDES(fdio_lock);
+fbl::RefPtr<fdio> fd_to_io_locked(int fd) __TA_REQUIRES(fdio_lock);
+fbl::RefPtr<fdio> fd_to_io(int fd) __TA_EXCLUDES(fdio_lock);
+fbl::RefPtr<fdio> unbind_from_fd_locked(int fd) __TA_REQUIRES(fdio_lock);
+fbl::RefPtr<fdio> unbind_from_fd(int fd) __TA_EXCLUDES(fdio_lock);
 
 int fdio_status_to_errno(zx_status_t status);
 

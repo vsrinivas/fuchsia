@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sdk/lib/fdio/namespace/namespace.h"
+
 #include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
@@ -12,14 +15,18 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
-#include "../fdio_unistd.h"
 #include "fidl/fuchsia.io/cpp/wire_types.h"
-#include "local-connection.h"
-#include "local-filesystem.h"
+#include "sdk/lib/fdio/cleanpath.h"
+#include "sdk/lib/fdio/fdio_state.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/namespace/local-connection.h"
+#include "sdk/lib/fdio/namespace/local-filesystem.h"
+#include "sdk/lib/fdio/unistd.h"
 
 namespace fio = fuchsia_io;
 
-zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
+zx::status<fbl::RefPtr<fdio>> fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
 zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io) { return ns->SetRoot(io); }
 

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fdio_unistd.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
 
 #include <fbl/auto_lock.h>
 
-#include "internal.h"
+#include "sdk/lib/fdio/internal.h"
 
-std::optional<int> bind_to_fd(const fdio_ptr& io) {
+std::optional<int> bind_to_fd(const fbl::RefPtr<fdio>& io) {
   fbl::AutoLock lock(&fdio_lock);
   return bind_to_fd_locked(io);
 }
 
-std::optional<int> bind_to_fd_locked(const fdio_ptr& io) {
+std::optional<int> bind_to_fd_locked(const fbl::RefPtr<fdio>& io) {
   for (size_t fd = 0; fd < fdio_fdtab.size(); ++fd) {
     if (fdio_fdtab[fd].try_set(io)) {
       return fd;
@@ -33,12 +33,12 @@ fdio_slot* slot_locked(int fd) __TA_REQUIRES(fdio_lock) {
 
 }  // namespace
 
-fdio_ptr fd_to_io(int fd) {
+fbl::RefPtr<fdio> fd_to_io(int fd) {
   fbl::AutoLock lock(&fdio_lock);
   return fd_to_io_locked(fd);
 }
 
-fdio_ptr fd_to_io_locked(int fd) {
+fbl::RefPtr<fdio> fd_to_io_locked(int fd) {
   fdio_slot* slot = slot_locked(fd);
   if (slot == nullptr) {
     return nullptr;
@@ -46,12 +46,12 @@ fdio_ptr fd_to_io_locked(int fd) {
   return slot->get();
 }
 
-fdio_ptr unbind_from_fd(int fd) {
+fbl::RefPtr<fdio> unbind_from_fd(int fd) {
   fbl::AutoLock lock(&fdio_lock);
   return unbind_from_fd_locked(fd);
 }
 
-fdio_ptr unbind_from_fd_locked(int fd) __TA_REQUIRES(fdio_lock) {
+fbl::RefPtr<fdio> unbind_from_fd_locked(int fd) __TA_REQUIRES(fdio_lock) {
   fdio_slot* slot = slot_locked(fd);
   if (slot == nullptr) {
     return nullptr;

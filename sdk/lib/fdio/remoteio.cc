@@ -10,8 +10,9 @@
 
 #include <fbl/auto_lock.h>
 
-#include "fdio_unistd.h"
-#include "zxio.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/socket.h"
+#include "sdk/lib/fdio/zxio.h"
 
 namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sdk/lib/fdio/socket.h"
+
 #include <lib/fitx/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
@@ -28,6 +30,7 @@
 #include <safemath/safe_conversions.h>
 
 #include "fdio_unistd.h"
+#include "sdk/lib/fdio/get_client.h"
 #include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 #include "zxio.h"
 

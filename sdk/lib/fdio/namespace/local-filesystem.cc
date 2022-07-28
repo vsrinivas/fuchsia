@@ -23,6 +23,7 @@
 
 #include "local-connection.h"
 #include "local-vnode.h"
+#include "sdk/lib/fdio/directory_internal.h"
 
 namespace fio = fuchsia_io;
 

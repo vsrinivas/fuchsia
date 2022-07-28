@@ -14,8 +14,9 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "local-filesystem.h"
-#include "local-vnode.h"
+#include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/namespace/local-filesystem.h"
+#include "sdk/lib/fdio/namespace/local-vnode.h"
 
 namespace fdio_internal {
 namespace {
@@ -53,7 +54,7 @@ static_assert(sizeof(LocalConnection) <= sizeof(zxio_storage_t),
 LocalConnection::LocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn)
     : fs(std::move(fs)), vn(std::move(vn)) {}
 
-struct local_connection : public base {
+struct local_connection : public fdio_t {
   LocalConnection& local_dir() { return *reinterpret_cast<LocalConnection*>(&zxio_storage().io); }
 
   zx_status_t close() override {

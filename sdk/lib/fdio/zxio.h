@@ -7,11 +7,11 @@
 
 #include <lib/zxio/cpp/inception.h>
 
-#include "internal.h"
+#include "sdk/lib/fdio/internal.h"
 
 namespace fdio_internal {
 
-struct zxio : public base {
+struct zxio : public fdio_t {
   static zx::status<fdio_ptr> create();
   static zx::status<fdio_ptr> create_null();
 

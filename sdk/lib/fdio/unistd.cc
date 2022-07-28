@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sdk/lib/fdio/unistd.h"
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -42,7 +44,7 @@
 
 #include "sdk/lib/fdio/cleanpath.h"
 #include "sdk/lib/fdio/fdio_unistd.h"
-#include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/namespace/namespace.h"
 #include "sdk/lib/fdio/zxio.h"
 
 namespace fio = fuchsia_io;
@@ -50,24 +52,6 @@ namespace fio = fuchsia_io;
 static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 
 // non-thread-safe emulation of unistd io functions using the fdio transports
-
-// Constexpr function to force initialization at program load time. Otherwise initialization may
-// occur after |__libc_extension_init|, wiping the fd table *after* it has been filled in with valid
-// entries; musl invokes |__libc_start_init| after |__libc_extensions_init|.
-//
-// There are no language guarantees here. C++20 provides the constinit specifier, and clang provides
-// the [[clang::require_constant_initialization]] attribute, but until we are on C++20 this is the
-// best we can do.
-//
-// Note that even moving the initialization to |__libc_extensions_init| doesn't work out in the
-// presence of sanitizers that deliberately initialize with garbage *after* |__libc_extensions_init|
-// runs.
-fdio_state_t __fdio_global_state = []() constexpr {
-  return fdio_state_t{
-      .cwd_path = fdio_internal::PathBuffer('/'),
-  };
-}
-();
 
 // Verify the O_* flags which align with fuchsia.io.
 static_assert(O_PATH == static_cast<uint32_t>(fio::wire::OpenFlags::kNodeReference),

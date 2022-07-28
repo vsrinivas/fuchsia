@@ -7,8 +7,7 @@
 #include <lib/zxio/ops.h>
 #include <zircon/syscalls.h>
 
-#include "internal.h"
-#include "zxio.h"
+#include "sdk/lib/fdio/zxio.h"
 
 struct fdio_waitable_t {
   zxio_t io;

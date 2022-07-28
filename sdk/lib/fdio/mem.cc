@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/fd.h>
+#include <lib/zx/status.h>
+#include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
+
+// This header contains the public definition of memfd_create and is necessary to ensure the
+// function gets the correct linkage.
 #include <sys/mman.h>
 
 #include <algorithm>
 
-#include "fdio_unistd.h"
-#include "internal.h"
-#include "zxio.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/zxio.h"
 
 __EXPORT
 int memfd_create(const char* name, unsigned int flags) {

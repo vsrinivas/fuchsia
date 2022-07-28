@@ -23,8 +23,9 @@
 #include <fbl/unique_fd.h>
 #include <netpacket/packet.h>
 
-#include "fdio_unistd.h"
-#include "internal.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/get_client.h"
+#include "sdk/lib/fdio/internal.h"
 #include "src/network/getifaddrs.h"
 
 namespace fio = fuchsia_io;

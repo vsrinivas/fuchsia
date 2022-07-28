@@ -7,8 +7,10 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "local-filesystem.h"
-#include "local-vnode.h"
+#include "sdk/lib/fdio/namespace/local-filesystem.h"
+#include "sdk/lib/fdio/namespace/local-vnode.h"
+
+struct fdio;
 
 namespace fdio_internal {
 
@@ -18,8 +20,8 @@ namespace fdio_internal {
 // filesystem, which are released on |fdio_t|'s close method.
 //
 // On failure, nullptr is returned.
-zx::status<fdio_ptr> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
-                                           fbl::RefPtr<LocalVnode> vn);
+zx::status<fbl::RefPtr<fdio>> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
+                                                    fbl::RefPtr<LocalVnode> vn);
 
 // If |io| is a connection to a local Vnode, returns a reference to that LocalVnode.
 //

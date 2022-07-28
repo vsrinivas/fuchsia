@@ -6,26 +6,16 @@
 #define LIB_FDIO_INTERNAL_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket/cpp/wire.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/vfs.h>
-#include <lib/zx/debuglog.h>
-#include <lib/zxio/ops.h>
+#include <lib/fdio/fdio.h>
+#include <lib/zx/status.h>
 #include <lib/zxio/zxio.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <threads.h>
 #include <zircon/types.h>
+
+#include <variant>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/string_buffer.h>
-
-#include "sdk/lib/fdio/cleanpath.h"
 
 using fdio_ptr = fbl::RefPtr<fdio>;
 
@@ -77,31 +67,6 @@ zx_status_t fdio_wait(const fdio_ptr& io, uint32_t events, zx::time deadline,
 // case, in_out_path is also adjusted.
 fdio_ptr fdio_iodir(int dirfd, std::string_view& in_out_path);
 
-zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
-
-zx::status<fdio_ptr> fdio_datagram_socket_create(
-    zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client,
-    size_t tx_meta_buf_size, size_t rx_meta_buf_size);
-
-zx::status<fdio_ptr> fdio_stream_socket_create(
-    zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
-
-zx::status<fdio_ptr> fdio_raw_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
-
-zx::status<fdio_ptr> fdio_packet_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client);
-
-// Creates an |fdio_t| referencing the root of the |ns| namespace.
-zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns);
-
-// Change the root of the given namespace |ns| to match |io|.
-//
-// Does not take ownership of |io|. The caller is responsible for retaining a reference to |io|
-// for the duration of this call and for releasing that reference after this function returns.
-zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io);
-
 // Validates a |path| argument.
 //
 // Returns ZX_OK if |path| is non-null and less than |PATH_MAX| in length
@@ -110,8 +75,6 @@ zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io);
 //
 // Otherwise, returns |ZX_ERR_INVALID_ARGS|.
 zx_status_t fdio_validate_path(const char* path, size_t* out_length);
-
-void fdio_chdir(fdio_ptr io, const char* path);
 
 // Wraps an arbitrary handle with an object that works with wait hooks.
 zx::status<fdio_ptr> fdio_waitable_create(std::variant<zx::handle, zx::unowned_handle> h,
@@ -298,144 +261,5 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
 
   zx::duration sndtimeo_ = zx::duration::infinite();
 };
-
-namespace fdio_internal {
-
-using base = fdio_t;
-
-zx_status_t fdio_open_at(fidl::UnownedClientEnd<fuchsia_io::Directory> directory,
-                         std::string_view path, fuchsia_io::wire::OpenFlags flags,
-                         fidl::ServerEnd<fuchsia_io::Node> request);
-
-struct OpenAtOptions {
-  // Do not allow this open to resolve to a directory. If the operation would
-  // open a directory, instead generates a ZX_ERR_NOT_FILE error.
-  bool disallow_directory;
-
-  // Permit absolute path as input. If the provided path is absolute, instead
-  // generates a ZX_ERR_INVALID_ARGS error.
-  bool allow_absolute_path;
-};
-
-zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, fuchsia_io::wire::OpenFlags flags,
-                                  uint32_t mode, OpenAtOptions options);
-
-}  // namespace fdio_internal
-
-// TODO(tamird): every operation on this type should require the global lock.
-struct fdio_slot {
- public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(fdio_slot);
-
-  fdio_slot() = default;
-
-  fdio_ptr get() {
-    fdio_t** ptr = std::get_if<fdio_t*>(&inner_);
-    if (ptr != nullptr) {
-      return fbl::RefPtr(*ptr);
-    }
-    return nullptr;
-  }
-
-  fdio_ptr release() {
-    fdio_t** ptr = std::get_if<fdio_t*>(&inner_);
-    if (ptr != nullptr) {
-      fdio_ptr io = fbl::ImportFromRawPtr(*ptr);
-      inner_ = available{};
-      return io;
-    }
-    return nullptr;
-  }
-
-  bool try_set(fdio_ptr io) {
-    if (std::holds_alternative<available>(inner_)) {
-      inner_ = fbl::ExportToRawPtr(&io);
-      return true;
-    }
-    return false;
-  }
-
-  fdio_ptr replace(fdio_ptr io) {
-    auto previous = std::exchange(inner_, fbl::ExportToRawPtr(&io));
-    fdio_t** ptr = std::get_if<fdio_t*>(&previous);
-    if (ptr != nullptr) {
-      return fbl::ImportFromRawPtr(*ptr);
-    }
-    return nullptr;
-  }
-
-  std::optional<void (fdio_slot::*)()> try_reserve() {
-    if (std::holds_alternative<available>(inner_)) {
-      inner_ = reserved{};
-      return &fdio_slot::release_reservation;
-    }
-    return std::nullopt;
-  }
-
-  bool try_fill(fdio_ptr io) {
-    if (std::holds_alternative<reserved>(inner_)) {
-      inner_ = fbl::ExportToRawPtr(&io);
-      return true;
-    }
-    return false;
-  }
-
- private:
-  struct available {};
-  struct reserved {};
-
-  void release_reservation() {
-    if (std::holds_alternative<reserved>(inner_)) {
-      inner_ = available{};
-    }
-  }
-
-  // TODO(https::/fxbug.dev/72214): clang incorrectly rejects std::variant<.., fdio_ptr> as a
-  // non-literal type. When that is fixed, change this |fdio_t*| to |fdio_ptr|.
-  std::variant<available, reserved, fdio_t*> inner_;
-};
-
-using fdio_state_t = struct {
-  mtx_t lock;
-  mtx_t cwd_lock __TA_ACQUIRED_BEFORE(lock);
-  mode_t umask __TA_GUARDED(lock);
-  fdio_slot root __TA_GUARDED(lock);
-  fdio_slot cwd __TA_GUARDED(lock);
-  std::array<fdio_slot, FDIO_MAX_FD> fdtab __TA_GUARDED(lock);
-  fdio_ns_t* ns __TA_GUARDED(lock);
-  fdio_internal::PathBuffer cwd_path __TA_GUARDED(cwd_lock);
-};
-
-extern fdio_state_t __fdio_global_state;
-
-#define fdio_lock (__fdio_global_state.lock)
-#define fdio_root_handle (__fdio_global_state.root)
-#define fdio_cwd_handle (__fdio_global_state.cwd)
-#define fdio_cwd_lock (__fdio_global_state.cwd_lock)
-#define fdio_cwd_path (__fdio_global_state.cwd_path)
-#define fdio_fdtab (__fdio_global_state.fdtab)
-#define fdio_root_ns (__fdio_global_state.ns)
-
-template <class T>
-zx::status<typename fidl::WireSyncClient<T>>& get_client() {
-  static zx::status<typename fidl::WireSyncClient<T>> client;
-  static std::once_flag once;
-
-  std::call_once(once, [&]() {
-    client = [&]() -> zx::status<typename fidl::WireSyncClient<T>> {
-      auto endpoints = fidl::CreateEndpoints<T>();
-      if (endpoints.is_error()) {
-        return endpoints.take_error();
-      }
-      zx_status_t status = fdio_service_connect_by_name(fidl::DiscoverableProtocolName<T>,
-                                                        endpoints->server.channel().release());
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
-    }();
-  });
-  return client;
-}
 
 #endif  // LIB_FDIO_INTERNAL_H_

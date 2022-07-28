@@ -9,8 +9,10 @@
 
 #include <fbl/auto_lock.h>
 
-#include "fdio_unistd.h"
-#include "internal.h"
+#include "sdk/lib/fdio/directory_internal.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/unistd.h"
 
 namespace fio = fuchsia_io;
 

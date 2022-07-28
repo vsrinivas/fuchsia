@@ -5,9 +5,11 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/watcher.h>
 #include <lib/stdcompat/span.h>
+#include <lib/zxio/types.h>
 #include <zircon/types.h>
 
-#include "fdio_unistd.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
 
 namespace fio = fuchsia_io;
 
@@ -23,7 +25,7 @@ struct ZxioCallbackAdapterContext {
 
 __EXPORT
 zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void* cookie) {
-  fdio_ptr io = fd_to_io(dirfd);
+  fbl::RefPtr<fdio> io = fd_to_io(dirfd);
   if (io == nullptr || cb == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

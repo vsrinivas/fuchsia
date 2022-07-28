@@ -5,8 +5,6 @@
 #include <string.h>
 #include <zircon/types.h>
 
-#include "internal.h"
-
 size_t fdio_iovec_get_capacity(const zx_iovec_t* vector, size_t vector_count) {
   size_t total_capacity = 0u;
   for (size_t i = 0; i < vector_count; ++i) {

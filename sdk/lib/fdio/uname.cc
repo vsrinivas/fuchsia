@@ -10,8 +10,8 @@
 
 #include <vector>
 
-#include "fdio_unistd.h"
-#include "internal.h"
+#include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/get_client.h"
 
 extern "C" __EXPORT int uname(utsname* uts) {
   if (!uts) {

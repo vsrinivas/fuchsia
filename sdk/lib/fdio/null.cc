@@ -4,7 +4,7 @@
 
 #include <lib/zxio/types.h>
 
-#include "internal.h"
+#include "sdk/lib/fdio/internal.h"
 
 fdio::~fdio() = default;
 

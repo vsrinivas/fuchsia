@@ -40,7 +40,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "internal.h"
 #include "lib/stdcompat/string_view.h"
 
 namespace fio = fuchsia_io;
