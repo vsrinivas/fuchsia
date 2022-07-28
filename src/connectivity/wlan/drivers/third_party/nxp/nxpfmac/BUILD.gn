@@ -75,11 +75,7 @@ fuchsia_driver("nxpfmac_sdio-driver") {
 fuchsia_driver_component("nxpfmac_sdio") {
   component_name = "nxpfmac_sdio"
   deps = [ ":nxpfmac_sdio-driver" ]
-  visibility += [
-    "*",
-    "//bundles/drivers:pci",
-    "//src/connectivity/wlan:drivers",
-  ]
+  visibility += [ "//src/connectivity/wlan:drivers" ]
   info = "nxpfmac_driver-info.json"
   colocate = true
 }
