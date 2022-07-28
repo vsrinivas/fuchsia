@@ -27,7 +27,6 @@ namespace {
 constexpr zx::time kSignaledTimeStamp1(12345);
 constexpr zx::time kSignaledTimeStamp2(67890);
 constexpr uint32_t kKey = 789;
-constexpr uint32_t kUnboundInterruptNumber = 29;
 
 // Use an alias so we use a different test case name.
 using InterruptTest = RootResourceFixture;
@@ -261,85 +260,6 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   interrupt.trigger(0, zx::time());
   zx_signals_t observed;
   ASSERT_OK(thread.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &observed));
-}
-
-#if defined(__x86_64__)  // fxbug.dev/46207
-#define MAYBE_BindVcpuTest DISABLED_BindVcpuTest
-#else
-#define MAYBE_BindVcpuTest BindVcpuTest
-#endif
-
-// Tests binding an interrupt to multiple VCPUs
-TEST_F(InterruptTest, MAYBE_BindVcpuTest) {
-  zx::interrupt interrupt;
-  zx::guest guest;
-  zx::vmar vmar;
-  zx::vcpu vcpu;
-
-  zx_status_t status = zx::guest::create(*root_resource_, 0, &guest, &vmar);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    fprintf(stderr, "Guest creation not supported\n");
-    return;
-  }
-  ASSERT_OK(status);
-
-  ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
-  ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu));
-
-  ASSERT_OK(interrupt.bind_vcpu(vcpu, 0));
-  // Binding again to the same VCPU is okay.
-  ASSERT_OK(interrupt.bind_vcpu(vcpu, 0));
-}
-
-// Tests binding a virtual interrupt to a VCPU
-TEST_F(InterruptTest, UnableToBindVirtualInterruptToVcpu) {
-  zx::interrupt interrupt;
-  zx::port port;
-  zx::guest guest;
-  zx::vmar vmar;
-  zx::vcpu vcpu;
-
-  zx_status_t status = zx::guest::create(*root_resource_, 0, &guest, &vmar);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    fprintf(stderr, "Guest creation not supported\n");
-    return;
-  }
-  ASSERT_OK(status);
-
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
-  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
-  ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu));
-
-  ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_NOT_SUPPORTED);
-}
-
-#if defined(__x86_64__)  // fxbug.dev/46207
-#define MAYBE_UnableToBindToVcpuAfterPort DISABLED_UnableToBindToVcpuAfterPort
-#else
-#define MAYBE_UnableToBindToVcpuAfterPort UnableToBindToVcpuAfterPort
-#endif
-
-// Tests binding an interrupt to a VCPU, after binding it to a port
-TEST_F(InterruptTest, MAYBE_UnableToBindToVcpuAfterPort) {
-  zx::interrupt interrupt;
-  zx::port port;
-  zx::guest guest;
-  zx::vmar vmar;
-  zx::vcpu vcpu;
-
-  zx_status_t status = zx::guest::create(*root_resource_, 0, &guest, &vmar);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    fprintf(stderr, "Guest creation not supported\n");
-    return;
-  }
-  ASSERT_OK(status);
-
-  ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
-  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
-  ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu));
-
-  ASSERT_OK(interrupt.bind(port, 0, 0));
-  ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_ALREADY_BOUND);
 }
 
 // Tests support for null output timestamp
