@@ -189,7 +189,7 @@ impl LightController {
 
     /// Writes the given list of light states for a light group to the actual hardware.
     ///
-    /// None elements in the vector are ignored and not written to the hardware.
+    /// [LightState::None] elements in the vector are ignored and not written to the hardware.
     async fn write_light_group_to_hardware(
         &self,
         group: &mut LightGroup,
@@ -228,13 +228,17 @@ impl LightController {
                     "set_simple_value",
                 ),
             };
-            set_result.map(|_| ()).map_err(|_| {
-                ControllerError::ExternalFailure(
-                    SettingType::Light,
-                    "fuchsia.hardware.light".into(),
-                    format!("{} for light {}", method_name, hardware_index).into(),
-                )
-            })?;
+            set_result
+                .map_err(|e| format!("{e:?}"))
+                .and_then(|res| res.map_err(|e| format!("{e:?}")))
+                .map_err(|e| {
+                    ControllerError::ExternalFailure(
+                        SettingType::Light,
+                        "fuchsia.hardware.light".into(),
+                        format!("{} for light {}", method_name, hardware_index).into(),
+                        e.into(),
+                    )
+                })?;
 
             // Set was successful, save this light value.
             group.lights[i] = light.clone();
@@ -319,27 +323,30 @@ impl LightController {
     /// [`LightGroup`]: ../../light/types/struct.LightGroup.html
     async fn restore_from_hardware(&self) -> SettingHandlerResult {
         let num_lights =
-            self.light_proxy.call_async(LightProxy::get_num_lights).await.map_err(|_| {
+            self.light_proxy.call_async(LightProxy::get_num_lights).await.map_err(|e| {
                 ControllerError::ExternalFailure(
                     SettingType::Light,
                     "fuchsia.hardware.light".into(),
                     "get_num_lights".into(),
+                    format!("{e:?}").into(),
                 )
             })?;
 
         let id = fuchsia_trace::Id::new();
         let mut current = self.client.read_setting::<LightInfo>(id).await;
         for i in 0..num_lights {
-            let info = match call_async!(self.light_proxy => get_info(i)).await {
-                Ok(Ok(info)) => info,
-                _ => {
-                    return Err(ControllerError::ExternalFailure(
+            let info = call_async!(self.light_proxy => get_info(i))
+                .await
+                .map_err(|e| format!("{e:?}"))
+                .and_then(|res| res.map_err(|e| format!("{e:?}")))
+                .map_err(|e| {
+                    ControllerError::ExternalFailure(
                         SettingType::Light,
                         "fuchsia.hardware.light".into(),
                         format!("get_info for light {}", i).into(),
-                    ));
-                }
-            };
+                        e.into(),
+                    )
+                })?;
             let (name, group) = self.light_info_to_group(i, info).await?;
             let _ = current.light_groups.insert(name, group);
         }
@@ -381,42 +388,47 @@ impl LightController {
     ) -> Result<LightState, ControllerError> {
         // Read the proper value depending on the light type.
         let value = match light_type {
-            LightType::Brightness => LightValue::Brightness(
-                match call_async!(self.light_proxy => get_current_brightness_value(index)).await {
-                    Ok(Ok(brightness)) => brightness,
-                    _ => {
-                        return Err(ControllerError::ExternalFailure(
+            LightType::Brightness => {
+                call_async!(self.light_proxy => get_current_brightness_value(index))
+                    .await
+                    .map_err(|e| format!("{e:?}"))
+                    .and_then(|res| res.map_err(|e| format!("{e:?}")))
+                    .map(LightValue::Brightness)
+                    .map_err(|e| {
+                        ControllerError::ExternalFailure(
                             SettingType::Light,
                             "fuchsia.hardware.light".into(),
                             format!("get_current_brightness_value for light {}", index).into(),
-                        ));
-                    }
-                },
-            ),
-            LightType::Rgb => {
-                match call_async!(self.light_proxy => get_current_rgb_value(index)).await {
-                    Ok(Ok(rgb)) => rgb.into(),
-                    _ => {
-                        return Err(ControllerError::ExternalFailure(
-                            SettingType::Light,
-                            "fuchsia.hardware.light".into(),
-                            format!("get_current_rgb_value for light {}", index).into(),
-                        ));
-                    }
-                }
+                            e.into(),
+                        )
+                    })?
             }
-            LightType::Simple => LightValue::Simple(
-                match call_async!(self.light_proxy => get_current_simple_value(index)).await {
-                    Ok(Ok(on)) => on,
-                    _ => {
-                        return Err(ControllerError::ExternalFailure(
-                            SettingType::Light,
-                            "fuchsia.hardware.light".into(),
-                            format!("get_current_simple_value for light {}", index).into(),
-                        ));
-                    }
-                },
-            ),
+            LightType::Rgb => call_async!(self.light_proxy => get_current_rgb_value(index))
+                .await
+                .map_err(|e| format!("{e:?}"))
+                .and_then(|res| res.map_err(|e| format!("{e:?}")))
+                .map(LightValue::from)
+                .map_err(|e| {
+                    ControllerError::ExternalFailure(
+                        SettingType::Light,
+                        "fuchsia.hardware.light".into(),
+                        format!("get_current_rgb_value for light {}", index).into(),
+                        e.into(),
+                    )
+                })?,
+            LightType::Simple => call_async!(self.light_proxy => get_current_simple_value(index))
+                .await
+                .map_err(|e| format!("{e:?}"))
+                .and_then(|res| res.map_err(|e| format!("{e:?}")))
+                .map(LightValue::Simple)
+                .map_err(|e| {
+                    ControllerError::ExternalFailure(
+                        SettingType::Light,
+                        "fuchsia.hardware.light".into(),
+                        format!("get_current_simple_value for light {}", index).into(),
+                        e.into(),
+                    )
+                })?,
         };
 
         Ok(LightState { value: Some(value) })

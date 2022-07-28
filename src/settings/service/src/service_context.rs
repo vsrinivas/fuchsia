@@ -5,16 +5,13 @@
 use crate::event::{Event, Publisher};
 use crate::message::base::MessengerType;
 use crate::service;
-
 use anyhow::{format_err, Error};
 use fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy};
-use futures::future::{BoxFuture, OptionFuture};
-
 use fuchsia_async as fasync;
 use fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path};
-use glob::glob;
-
 use fuchsia_zircon as zx;
+use futures::future::{BoxFuture, OptionFuture};
+use glob::glob;
 use std::future::Future;
 
 pub type GenerateService =

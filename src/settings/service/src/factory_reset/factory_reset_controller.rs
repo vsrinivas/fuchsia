@@ -14,7 +14,6 @@ use crate::handler::setting_handler::{
 use crate::service_context::ExternalServiceProxy;
 use async_trait::async_trait;
 use fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy};
-use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use settings_storage::storage_factory::StorageAccess;
@@ -89,11 +88,11 @@ impl FactoryResetManager {
                 set_is_local_reset_allowed(info.is_local_reset_allowed)
             )
             .map_err(|e| {
-                fx_log_err!("Failed to set local reset: {:?}", e);
                 ControllerError::ExternalFailure(
                     SettingType::FactoryReset,
                     "factory_reset_policy".into(),
                     "restore_reset_state".into(),
+                    format!("{e:?}").into(),
                 )
             })?;
         }
@@ -117,11 +116,11 @@ impl FactoryResetManager {
             set_is_local_reset_allowed(info.is_local_reset_allowed)
         )
         .map_err(|e| {
-            fx_log_err!("Failed to set local reset: {:?}", e);
             ControllerError::ExternalFailure(
                 SettingType::FactoryReset,
                 "factory_reset_policy".into(),
                 "set_local_reset_allowed".into(),
+                format!("{e:?}").into(),
             )
         })?;
         self.client.write_setting(info.into(), id).await.map(|_| None)

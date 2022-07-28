@@ -589,14 +589,13 @@ impl SettingProxy {
     /// retried. Based on this determination, the function will request from
     /// the proxy whether to retry the request or remove the request (and send
     /// response).
-    fn handle_result(&mut self, mut result: SettingHandlerResult) {
+    fn handle_result(&mut self, result: SettingHandlerResult) {
         let active_request = self.active_request.as_mut().expect("request should be present");
         let mut retry = false;
 
         if matches!(result, Err(ControllerError::ExternalFailure(..)))
             || matches!(result, Err(ControllerError::ExitError))
         {
-            result = Err(ControllerError::IrrecoverableError);
             retry = true;
         } else if matches!(result, Err(ControllerError::TimeoutError)) {
             publish!(

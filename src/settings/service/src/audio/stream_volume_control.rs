@@ -107,25 +107,28 @@ impl StreamVolumeControl {
 
         if (self.stored_stream.user_volume_level - new_stream_value.user_volume_level).abs()
             > f32::EPSILON
-            && proxy.set_volume(new_stream_value.user_volume_level).is_err()
         {
-            self.stored_stream = new_stream_value;
-            return Err(ControllerError::ExternalFailure(
-                SettingType::Audio,
-                CONTROLLER_ERROR_DEPENDENCY.into(),
-                "set volume".into(),
-            ));
+            if let Err(e) = proxy.set_volume(new_stream_value.user_volume_level) {
+                self.stored_stream = new_stream_value;
+                return Err(ControllerError::ExternalFailure(
+                    SettingType::Audio,
+                    CONTROLLER_ERROR_DEPENDENCY.into(),
+                    "set volume".into(),
+                    format!("{e:?}").into(),
+                ));
+            }
         }
 
-        if self.stored_stream.user_volume_muted != new_stream_value.user_volume_muted
-            && proxy.set_mute(stream.user_volume_muted).is_err()
-        {
-            self.stored_stream = new_stream_value;
-            return Err(ControllerError::ExternalFailure(
-                SettingType::Audio,
-                CONTROLLER_ERROR_DEPENDENCY.into(),
-                "set mute".into(),
-            ));
+        if self.stored_stream.user_volume_muted != new_stream_value.user_volume_muted {
+            if let Err(e) = proxy.set_mute(stream.user_volume_muted) {
+                self.stored_stream = new_stream_value;
+                return Err(ControllerError::ExternalFailure(
+                    SettingType::Audio,
+                    CONTROLLER_ERROR_DEPENDENCY.into(),
+                    "set mute".into(),
+                    format!("{e:?}").into(),
+                ));
+            }
         }
 
         self.stored_stream = new_stream_value;
@@ -147,30 +150,35 @@ impl StreamVolumeControl {
         let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 
         let guard = trace_guard!(id, "bind usage volume control");
-        if call!(self.audio_service => bind_usage_volume_control(&mut usage, server_end)).is_err() {
+        if let Err(e) =
+            call!(self.audio_service => bind_usage_volume_control(&mut usage, server_end))
+        {
             return Err(ControllerError::ExternalFailure(
                 SettingType::Audio,
                 CONTROLLER_ERROR_DEPENDENCY.into(),
                 format!("bind_usage_volume_control for audio_core {:?}", usage).into(),
+                format!("{e:?}").into(),
             ));
         }
         drop(guard);
 
         let guard = trace_guard!(id, "set values");
         // Once the volume control is bound, apply the persisted audio settings to it.
-        if vol_control_proxy.set_volume(self.stored_stream.user_volume_level).is_err() {
+        if let Err(e) = vol_control_proxy.set_volume(self.stored_stream.user_volume_level) {
             return Err(ControllerError::ExternalFailure(
                 SettingType::Audio,
                 CONTROLLER_ERROR_DEPENDENCY.into(),
                 format!("set_volume for vol_control {:?}", stream_type).into(),
+                format!("{e:?}").into(),
             ));
         }
 
-        if vol_control_proxy.set_mute(self.stored_stream.user_volume_muted).is_err() {
+        if let Err(e) = vol_control_proxy.set_mute(self.stored_stream.user_volume_muted) {
             return Err(ControllerError::ExternalFailure(
                 SettingType::Audio,
                 CONTROLLER_ERROR_DEPENDENCY.into(),
                 "set_mute for vol_control".into(),
+                format!("{e:?}").into(),
             ));
         }
         drop(guard);

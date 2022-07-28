@@ -847,6 +847,7 @@ fn test_retry() {
                     setting_type,
                     "test_component".into(),
                     "connect".into(),
+                    "Error".into(),
                 ))),
             );
         }
@@ -866,12 +867,16 @@ fn test_retry() {
         .await
         .expect("result should be present");
 
-        // Make sure the result is an `ControllerError::IrrecoverableError`
-        if let Err(error) = handler_result {
-            assert_eq!(error, HandlerError::IrrecoverableError);
-        } else {
-            panic!("error should have been encountered");
-        }
+        assert_eq!(
+            handler_result,
+            Err(HandlerError::ExternalFailure(
+                SettingType::Unknown,
+                "test_component".into(),
+                "connect".into(),
+                "Error".into()
+            )),
+            "error should have been encountered",
+        );
 
         // For each failed attempt, make sure a retry event was broadcasted
         for _ in 0..SETTING_PROXY_MAX_ATTEMPTS {

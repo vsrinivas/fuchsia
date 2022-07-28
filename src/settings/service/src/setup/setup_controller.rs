@@ -13,7 +13,7 @@ use crate::service_context::ServiceContext;
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_zircon as zx;
 use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use settings_storage::storage_factory::StorageAccess;
 
@@ -23,30 +23,29 @@ async fn reboot(service_context_handle: &ServiceContext) -> Result<(), Controlle
     let hardware_power_statecontrol_admin = service_context_handle
         .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
-        .map_err(|_| {
+        .map_err(|e| {
             ControllerError::ExternalFailure(
                 SettingType::Setup,
                 "hardware_power_statecontrol_manager".into(),
                 "connect".into(),
+                format!("{e:?}").into(),
             )
         })?;
 
-    let reboot_err = || {
+    let reboot_err = |e: String| {
         ControllerError::ExternalFailure(
             SettingType::Setup,
             "hardware_power_statecontrol_manager".into(),
             "reboot".into(),
+            e.into(),
         )
     };
 
     call_async!(hardware_power_statecontrol_admin => reboot(RebootReason::UserRequest))
         .await
-        .map_err(|_| reboot_err())
+        .map_err(|e| reboot_err(format!("{e:?}")))
         .and_then(|r| {
-            r.map_err(|zx_status| {
-                fx_log_err!("Failed to reboot device: {}", zx_status);
-                reboot_err()
-            })
+            r.map_err(|zx_status| reboot_err(format!("{:?}", zx::Status::from_raw(zx_status))))
         })
 }
 

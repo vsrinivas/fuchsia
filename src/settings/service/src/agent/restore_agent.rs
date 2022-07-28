@@ -84,8 +84,8 @@ impl RestoreAgent {
                                 );
                                 continue;
                             }
-                            _ => {
-                                fx_log_err!("error during restore for {:?}", component);
+                            e => {
+                                fx_log_err!("error during restore for {component:?}: {e:?}");
                                 return Err(AgentError::UnexpectedError);
                             }
                         }

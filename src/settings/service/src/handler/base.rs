@@ -188,8 +188,8 @@ pub enum Error {
         reason: Cow<'static, str>,
     },
 
-    #[error("External failure for setting type:{0:?} dependency: {1:?} request:{2:?}")]
-    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
+    #[error("External failure for setting type:{0:?} dependency: {1:?} request:{2:?} error:{3}")]
+    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>, Cow<'static, str>),
 
     #[error("Unhandled type: {0:?}")]
     UnhandledType(SettingType),
@@ -226,8 +226,8 @@ impl From<ControllerError> for Error {
             ControllerError::WriteFailure(setting_type) => Error::StorageFailure(setting_type),
             ControllerError::InitFailure(description) => Error::InitFailure(description),
             ControllerError::RestoreFailure(description) => Error::RestoreFailure(description),
-            ControllerError::ExternalFailure(setting_type, dependency, request) => {
-                Error::ExternalFailure(setting_type, dependency, request)
+            ControllerError::ExternalFailure(setting_type, dependency, request, error) => {
+                Error::ExternalFailure(setting_type, dependency, request, error)
             }
             ControllerError::InvalidArgument(setting_type, argument, value) => {
                 Error::InvalidArgument(setting_type, argument, value)

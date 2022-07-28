@@ -104,8 +104,11 @@ pub enum ControllerError {
     InitFailure(Cow<'static, str>),
     #[error("Restoration of setting on controller startup failed: cause {0:?}")]
     RestoreFailure(Cow<'static, str>),
-    #[error("Call to an external dependency {1:?} for setting type {0:?} failed. Request:{2:?}")]
-    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
+    #[error(
+        "Call to an external dependency {1:?} for setting type {0:?} failed. \
+         Request:{2:?}: Error:{3}"
+    )]
+    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>, Cow<'static, str>),
     #[error("Invalid input argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
     InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
     #[error(

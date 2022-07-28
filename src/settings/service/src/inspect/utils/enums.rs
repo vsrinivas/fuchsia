@@ -41,7 +41,7 @@ impl From<Error> for ResponseType {
                 ResponseType::InvalidArgument
             }
             Error::IncompatibleArguments { .. } => ResponseType::IncompatibleArguments,
-            Error::ExternalFailure(_setting_type, _dependency, _request) => {
+            Error::ExternalFailure(_setting_type, _dependency, _request, _error) => {
                 ResponseType::ExternalFailure
             }
             Error::UnhandledType(_setting_type) => ResponseType::UnhandledType,

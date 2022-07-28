@@ -215,11 +215,12 @@ impl VolumeController {
             .connect::<fidl_fuchsia_media::AudioCoreMarker>()
             .await;
 
-        let audio_service = service_result.map_err(|_| {
+        let audio_service = service_result.map_err(|e| {
             ControllerError::ExternalFailure(
                 SettingType::Audio,
                 "fuchsia.media.audio".into(),
                 "connect for audio_core".into(),
+                format!("{e:?}").into(),
             )
         })?;
 

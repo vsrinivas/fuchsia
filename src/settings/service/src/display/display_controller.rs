@@ -194,11 +194,12 @@ impl BrightnessManager for ExternalBrightnessControl {
             call!(self.brightness_service => set_manual_brightness(info.manual_brightness_value))
         }
         .map(|_| None)
-        .map_err(|_| {
+        .map_err(|e| {
             ControllerError::ExternalFailure(
                 SettingType::Display,
                 "brightness_service".into(),
                 "set_brightness".into(),
+                format!("{e:?}").into(),
             )
         })
     }

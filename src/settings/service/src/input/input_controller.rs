@@ -21,7 +21,7 @@ use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use settings_storage::storage_factory::StorageAccess;
 
 use async_trait::async_trait;
-use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_trace as ftrace;
 use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
@@ -338,11 +338,11 @@ impl InputControllerInner {
             })?;
 
         camera_proxy.set_software_mute_state(is_muted).await.map_err(|e| {
-            fx_log_err!("Failed to push cam state: {:#?}", e);
             ControllerError::ExternalFailure(
                 SettingType::Input,
                 "fuchsia.camera3.Device".into(),
                 "SetSoftwareMuteState".into(),
+                format!("{e:?}").into(),
             )
         })
     }
