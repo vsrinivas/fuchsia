@@ -7,6 +7,19 @@ import("//build/dart/dart_library.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/flutter/test.gni")
 
+group("localized_flutter_app") {
+  testonly = true
+  deps = [
+    ":localized-flutter-app",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":localized_flutter_app_unittests" ]
+}
+
 dart_library("lib") {
   package_name = "localized_flutter_app"
   sources = [
@@ -26,7 +39,7 @@ dart_library("lib") {
 
 flutter_component("component") {
   component_name = "localized-flutter-app"
-  manifest = "meta/localized_flutter_app.cmx"
+  manifest = "meta/localized_flutter_app.cml"
   deps = [ ":lib" ]
 }
 
