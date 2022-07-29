@@ -153,6 +153,12 @@ type PlugDetectCapabilities = strict enum {
 
 type StreamProperties = table {
     /// A unique identifier. If not included, there is no unique id for the StreamConfig.
+    /// `unique_id` arrays starting with 0x42, 0x54, ... (or `BT` in ASCII) are
+    /// reserved for drivers implementing Bluetooth technologies.
+    /// `unique_id` arrays starting with 0x55, 0x53, 0x42, ... (or `USB` in ASCII) are
+    /// reserved for drivers implementing USB technologies.
+    /// Note that even though the above values map to readable ASCII characters, array
+    /// values can span the entire uint8 range (0-255).
     1: unique_id array<uint8, UNIQUE_ID_SIZE>;
 
     /// Stream type is input or output. Required.
