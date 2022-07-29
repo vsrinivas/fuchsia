@@ -106,6 +106,7 @@
                 "fuchsia.weave.Provisioner",
                 "fuchsia.weave.Signer",
                 "fuchsia.web.ContextProvider",
+                "google.cast.multizone.Leader",
                 "google.device.key.encryptor.DeviceKeyEncryptor",
                 "google.deviceproperty.Reader",
                 "google.deviceproperty.Writer",
