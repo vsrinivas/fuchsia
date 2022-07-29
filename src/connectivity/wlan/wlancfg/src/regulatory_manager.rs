@@ -48,6 +48,8 @@ impl<I: IfaceManagerApi + ?Sized> RegulatoryManager<I> {
                 }
             };
 
+            info!("Received regulatory region code {}", region_string);
+
             let mut region_array = [0u8; REGION_CODE_LEN];
             if region_string.len() != region_array.len() {
                 warn!("Region code {:?} does not have length {}", region_string, REGION_CODE_LEN);
