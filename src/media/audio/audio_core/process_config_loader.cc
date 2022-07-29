@@ -76,7 +76,8 @@ uint32_t CountLoopbackStages(const PipelineConfig::MixGroup& root) {
 
 fpromise::result<rapidjson::SchemaDocument, std::string> LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
-  const rapidjson::ParseResult result = schema_doc.Parse(kAudioCoreConfigSchema);
+  const rapidjson::ParseResult result =
+      schema_doc.Parse<rapidjson::kParseIterativeFlag>(kAudioCoreConfigSchema);
   if (result.IsError()) {
     std::ostringstream oss;
     oss << "Failed to load config schema: " << rapidjson::GetParseError_En(result.Code()) << "("

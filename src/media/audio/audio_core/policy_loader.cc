@@ -118,7 +118,7 @@ fpromise::result<AudioPolicy> PolicyLoader::ParseConfig(const char* file_body) {
   rapidjson::Document doc;
 
   std::vector<AudioPolicy::Rule> rules;
-  rapidjson::ParseResult parse_res = doc.Parse(file_body);
+  rapidjson::ParseResult parse_res = doc.Parse<rapidjson::kParseIterativeFlag>(file_body);
   if (parse_res.IsError()) {
     FX_LOGS(ERROR) << "Failed to parse settings file JSON schema: "
                    << rapidjson::GetParseError_En(parse_res.Code()) << " " << parse_res.Offset()
