@@ -17,16 +17,31 @@ guest package and a core shard for each guest component you wish to run. For
 example, if you want to run the Debian guest:
 
 ```sh
-fx set core.x64 --with-base //src/virtualization --args=\
-'core_realm_shards += [ "//src/virtualization/bin/guest_manager:debian_core_shard" ]'
+fx set core.x64 \
+    --with-base //src/virtualization/bundles:debian \
+    --args='core_realm_shards += [ "//src/virtualization/bundles:debian_core_shards" ]'
 ```
 
-The available core shards are:
-
+Or Zircon:
+```sh
+fx set core.x64 \
+    --with-base //src/virtualization/bundles:zircon \
+    --args='core_realm_shards += [ "//src/virtualization/bundles:zircon_core_shards" ]'
 ```
-//src/virtualization/bin/guest_manager:debian_core_shard
-//src/virtualization/bin/guest_manager:termina_core_shard
-//src/virtualization/bin/guest_manager:zircon_core_shard
+
+Or Termina:
+```sh
+fx set core.x64 \
+    --with-base //src/virtualization/bundles:termina \
+    --args='core_realm_shards += [ "//src/virtualization/bundles:termina_core_shards" ]'
+```
+
+To include support for all the guest packges, you can use the `all_guests` and `all_core_shards`
+labels:
+```sh
+fx set core.x64 \
+    --with-base //src/virtualization/bundles:all_guests \
+    --args='core_realm_shards += [ "//src/virtualization/bundles:all_core_shards" ]'
 ```
 
 Next, build the guest package:

@@ -7,7 +7,7 @@ use {
     std::fmt,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GuestType {
     Debian,
     Termina,
@@ -45,6 +45,21 @@ impl GuestType {
             GuestType::Zircon => "fuchsia.virtualization.ZirconGuestManager",
             GuestType::Debian => "fuchsia.virtualization.DebianGuestManager",
             GuestType::Termina => "fuchsia.virtualization.TerminaGuestManager",
+        }
+    }
+
+    pub fn gn_target_label(self) -> &'static str {
+        match self {
+            GuestType::Zircon => "//src/virtualization/bundles:zircon",
+            GuestType::Debian => "//src/virtualization/bundles:debian",
+            GuestType::Termina => "//src/virtualization/bundles:termina",
+        }
+    }
+    pub fn gn_core_shard_label(&self) -> &'static str {
+        match self {
+            GuestType::Zircon => "//src/virtualization/bundles:zircon_core_shards",
+            GuestType::Debian => "//src/virtualization/bundles:debian_core_shards",
+            GuestType::Termina => "//src/virtualization/bundles:termina_core_shards",
         }
     }
 }
