@@ -35,8 +35,10 @@ class Pipe {
   Pipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power);
   virtual ~Pipe() = default;
 
-  Pipe(i915_tgl::Pipe&&) = delete;
-  Pipe(const i915_tgl::Pipe&) = delete;
+  Pipe(const Pipe&) = delete;
+  Pipe(Pipe&&) = delete;
+  Pipe& operator=(const Pipe&) = delete;
+  Pipe& operator=(Pipe&&) = delete;
 
   void AttachToDisplay(uint64_t display_id, bool is_edp);
   void Detach();
