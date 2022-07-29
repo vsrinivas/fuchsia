@@ -4,6 +4,7 @@
 
 #include "src/media/audio/services/mixer/fidl_realtime/fidl_stream_sink.h"
 
+#include <lib/sync/cpp/completion.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <condition_variable>
@@ -97,17 +98,23 @@ class FidlStreamSinkTest : public ::testing::Test {
   void* BufferOffset(int64_t offset) { return static_cast<char*>(buffer_->start()) + offset; }
 
   void AddProducerQueue(std::shared_ptr<CommandQueue> q) {
-    thread_->PostTask([this, q]() {
+    libsync::Completion done;
+    thread_->PostTask([this, q, &done]() {
       ScopedThreadChecker checker(stream_sink_server().thread().checker());
       stream_sink_server().AddProducerQueue(q);
+      done.Signal();
     });
+    ASSERT_EQ(done.Wait(zx::sec(5)), ZX_OK);
   }
 
   void RemoveProducerQueue(std::shared_ptr<CommandQueue> q) {
-    thread_->PostTask([this, q]() {
+    libsync::Completion done;
+    thread_->PostTask([this, q, &done]() {
       ScopedThreadChecker checker(stream_sink_server().thread().checker());
       stream_sink_server().RemoveProducerQueue(q);
+      done.Signal();
     });
+    ASSERT_EQ(done.Wait(zx::sec(5)), ZX_OK);
   }
 
   void PutPacket(fuchsia_media2::wire::PayloadRange payload,
