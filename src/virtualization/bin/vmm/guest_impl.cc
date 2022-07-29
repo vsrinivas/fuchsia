@@ -40,3 +40,10 @@ void GuestImpl::GetConsole(GetConsoleCallback callback) {
   callback(fuchsia::virtualization::Guest_GetConsole_Result::WithResponse(
       fuchsia::virtualization::Guest_GetConsole_Response{duplicate(remote_console_socket_)}));
 }
+
+void GuestImpl::GetHostVsockEndpoint(
+    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint,
+    GetHostVsockEndpointCallback callback) {
+  // TODO(fxbug.dev/97355): Implement this.
+  FX_CHECK(false) << "Not implemented";
+}

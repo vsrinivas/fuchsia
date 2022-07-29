@@ -41,6 +41,13 @@ class FakeManager : public fuchsia::virtualization::testing::Manager_TestBase,
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) override;
 
+  // |fuchsia::virtualization::Guest|
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint,
+      GetHostVsockEndpointCallback callback) override {
+    NotImplemented_(__func__);
+  }
+
   void NotImplemented_(const std::string& name) override;
 
   FakeHostVsock host_vsock_{&guest_vsock_};

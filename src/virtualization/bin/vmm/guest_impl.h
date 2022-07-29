@@ -30,6 +30,9 @@ class GuestImpl : public fuchsia::virtualization::Guest {
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
   void GetConsole(GetConsoleCallback callback) override;
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint,
+      GetHostVsockEndpointCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::virtualization::Guest> bindings_;

@@ -74,6 +74,13 @@ protocol GuestVsockEndpoint {
     });
 };
 
+// A host port and acceptor pair. When a guest attempts to initiate a connection on the given port,
+// the matching acceptor is used.
+type Listener = resource struct {
+    port uint32;
+    acceptor client_end:HostVsockAcceptor;
+};
+
 /// Exposed by a host to provide the ability for listeners to be multiplexed by
 /// port and to manage dynamic port allocation for outbound connections.
 @discoverable
@@ -83,6 +90,7 @@ protocol HostVsockEndpoint {
     ///
     /// Possible errors:
     ///     - ZX_ERR_ALREADY_BOUND: A client is already listening on this port.
+    // TOOD(fxbug.dev/97355): Update Listen to take a Listener struct as the only argument.
     Listen(resource struct {
         port uint32;
         acceptor client_end:HostVsockAcceptor;

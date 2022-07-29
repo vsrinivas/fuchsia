@@ -130,6 +130,13 @@ type GuestConfig = resource table {
    19: virtio_sound bool;
     /// Enable input streams (capture) for virtio-sound (false if absent).
    20: virtio_sound_input bool;
+
+    /// Host ports to listen for guest initiated vsock connections on. This can be used for
+    /// simplicity if a Listener is known at config creation time, or if a Listener must be
+    /// available at the moment of guest creation for timing reasons.
+    ///
+    /// To add a Listener after a guest starts, see HostVsockEndpoint::Listen.
+   21: vsock_listeners vector<Listener>:MAX;
 };
 
 /// Protocol to provide a guest's configuration.

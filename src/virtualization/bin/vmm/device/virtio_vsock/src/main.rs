@@ -31,7 +31,7 @@ async fn run_virtio_vsock(
     vsock_device: Rc<VsockDevice>,
 ) -> Result<(), Error> {
     // Receive start info as first message.
-    let (start_info, guest_cid, responder) = virtio_vsock_fidl
+    let (start_info, guest_cid, _, responder) = virtio_vsock_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Unexpected end of stream"))?

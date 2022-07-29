@@ -242,9 +242,11 @@ protocol VirtioVsock {
     /// Returns:
     ///   - ZX_OK if device startup succeeded
     ///   - ZX_ERR_INVALID_ARGS if guest_cid is a reserved value
+    ///   - Any errors returned from fuchsia.virtualization.HostVsockEndpoint::Listen
     Start(resource struct {
         start_info StartInfo;
         guest_cid uint32;
+        listeners vector<fuchsia.virtualization.Listener>:MAX;
     }) -> (struct {}) error zx.status;
 };
 

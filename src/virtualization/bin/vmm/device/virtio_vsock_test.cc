@@ -244,7 +244,7 @@ class VirtioVsockTest : public TestWithDevice {
 
     // Start message.
     VirtioVsock_Start_Result result;
-    ASSERT_EQ(ZX_OK, vsock_->Start(std::move(start_info), kGuestCid, &result));
+    ASSERT_EQ(ZX_OK, vsock_->Start(std::move(start_info), kGuestCid, {}, &result));
     ASSERT_TRUE(result.is_response());
 
     // Queue setup.

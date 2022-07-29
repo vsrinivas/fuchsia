@@ -60,7 +60,7 @@ zx_status_t VirtioVsock::Start(const zx::guest& guest, fuchsia::component::Realm
   }
 
   VirtioVsock_Start_Result result;
-  status = vsock_->Start(std::move(start_info), kGuestCid, &result);
+  status = vsock_->Start(std::move(start_info), kGuestCid, {}, &result);
   if (status != ZX_OK) {
     return status;
   }
