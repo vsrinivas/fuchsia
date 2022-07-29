@@ -35,7 +35,25 @@ class View : public fuchsia::ui::scenic::SessionListener {
     // Create a Scenic Session and a Scenic SessionListener.
     scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
 
-    InitializeScene(std::move(view_token));
+    auto create_view_cmd =
+        scenic::NewCreateViewCmd(kViewId, std::move(view_token), "transparency_benchmark_view");
+    InitializeScene(std::move(create_view_cmd));
+  }
+
+  View(sys::ComponentContext* component_context, fuchsia::ui::views::ViewToken view_token,
+       fuchsia::ui::views::ViewRefControl view_ref_control, fuchsia::ui::views::ViewRef view_ref)
+      : session_listener_binding_(this) {
+    // Connect to Scenic.
+    fuchsia::ui::scenic::ScenicPtr scenic =
+        component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+
+    // Create a Scenic Session and a Scenic SessionListener.
+    scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
+
+    auto create_view_cmd =
+        scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(view_ref_control),
+                                 std::move(view_ref), "transparency_benchmark_view");
+    InitializeScene(std::move(create_view_cmd));
   }
 
  private:
@@ -88,13 +106,12 @@ class View : public fuchsia::ui::scenic::SessionListener {
     return image_id;
   }
 
-  void InitializeScene(fuchsia::ui::views::ViewToken view_token) {
+  void InitializeScene(fuchsia::ui::gfx::Command view_creation_command) {
     // Build up a list of commands we will send over our Scenic Session.
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
     // View: Use |view_token| to create a View in the Session.
-    PushCommand(&cmds, scenic::NewCreateViewCmd(kViewId, std::move(view_token),
-                                                "transparency_benchmark_view"));
+    PushCommand(&cmds, std::move(view_creation_command));
     PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kScaleId));
     PushCommand(&cmds, scenic::NewAddChildCmd(kViewId, kScaleId));
 
@@ -467,6 +484,15 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
     auto view =
         std::make_unique<View>(component_context_, scenic::ToViewToken(std::move(view_token)));
+    views_.push_back(std::move(view));
+  }
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateViewWithViewRef(zx::eventpair view_token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {
+    auto view =
+        std::make_unique<View>(component_context_, scenic::ToViewToken(std::move(view_token)),
+                               std::move(view_ref_control), std::move(view_ref));
     views_.push_back(std::move(view));
   }
 

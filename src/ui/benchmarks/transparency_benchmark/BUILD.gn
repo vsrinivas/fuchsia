@@ -24,6 +24,6 @@ executable("bin") {
 }
 
 fuchsia_package_with_single_component("transparency_benchmark") {
-  manifest = "meta/transparency_benchmark.cmx"
+  manifest = "meta/transparency_benchmark.cml"
   deps = [ ":bin" ]
 }

@@ -6,15 +6,11 @@ This benchmark is still a work in progress.
 
 ## Running the example
 
-From garnet, this can be run with:
-```
-present_view fuchsia-pkg://fuchsia.com/transparency_benchmark#meta/transparency_benchmark.cmx
-```
+TODO(https://fxbug.dev/105469): Add support for Flatland to this benchmark
 
-From topaz, this can be run with:
+This can be run in session_manager on any product where flatland is disabled. Add
+`--args=use_flatland_by_default=false` to your `fx set` and run the benchmark:
 
 ```
-sessionctl add_mod fuchsia-pkg://fuchsia.com/transparency_benchmark#meta/transparency_benchmark.cmx
+$ session_control add fuchsia-pkg://fuchsia.com/transparency_benchmark#meta/transparency_benchmark.cm
 ```
-
-In garnet, `Alt`+`Esc` toggles back and forth between the console and graphics.
