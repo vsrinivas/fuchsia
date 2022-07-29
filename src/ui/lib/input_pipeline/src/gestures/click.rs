@@ -8,7 +8,7 @@ use {
         VerifyEventResult,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
-    crate::utils::Position,
+    crate::utils::{euclidean_distance, Position},
     std::collections::HashSet,
 };
 
@@ -239,9 +239,7 @@ fn position_from_event(event: &TouchpadEvent) -> Position {
 /// between (pos1.x, pos1.y) and (pos2.x, pos2.y) is less than the click
 /// threshold.
 fn position_is_in_click_threshold(pos1: Position, pos2: Position, threshold: f32) -> bool {
-    let delta_x = pos1.x - pos2.x;
-    let delta_y = pos1.y - pos2.y;
-    (delta_x * delta_x + delta_y * delta_y).sqrt() < threshold
+    euclidean_distance(pos1, pos2) < threshold
 }
 
 #[cfg(test)]
