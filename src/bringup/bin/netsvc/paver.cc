@@ -150,6 +150,11 @@ int Paver::StreamBuffer() {
   zx_status_t status = res2.ok() ? res2.value().status : res2.status();
 
   exit_code_.store(status);
+
+  // Shutdown the loop. Destructor ordering will destroy the streamer first, so
+  // we must force the loop to stop before then.
+  loop.Shutdown();
+  loop.JoinThreads();
   return 0;
 }
 
