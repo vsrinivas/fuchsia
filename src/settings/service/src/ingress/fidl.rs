@@ -225,9 +225,10 @@ impl Interface {
                             });
                     }
                     Interface::DoNotDisturb => {
+                        let seeder = seeder.clone();
                         let _ = service_dir.add_fidl_service(
                             move |stream: DoNotDisturbRequestStream| {
-                                crate::do_not_disturb::fidl_io::spawn(delegate.clone(), stream);
+                                seeder.seed(stream);
                             },
                         );
                     }
@@ -304,7 +305,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_settings::{DoNotDisturbMarker, PrivacyMarker};
+    use fidl_fuchsia_settings::{InputMarker, PrivacyMarker};
     use fuchsia_async as fasync;
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
@@ -336,9 +337,9 @@ mod tests {
             .get_signature();
         let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
 
-        let setting_type = SettingType::DoNotDisturb;
+        let setting_type = SettingType::Input;
 
-        let registrant: Registrant = Interface::DoNotDisturb.registrant();
+        let registrant: Registrant = Interface::Input.registrant();
 
         // Verify dependencies properly derived from the interface.
         assert!(registrant
@@ -362,7 +363,7 @@ mod tests {
 
         // Connect to the DoNotDisturb interface and request watching.
         let do_not_disturb_proxy = nested_environment
-            .connect_to_protocol::<DoNotDisturbMarker>()
+            .connect_to_protocol::<InputMarker>()
             .expect("should connect to protocol");
         fasync::Task::spawn(async move {
             let _ = do_not_disturb_proxy.watch().await;

@@ -24,15 +24,13 @@ async fn test_multiple_watches() {
     };
     assert_ne!(initial_setting, updated_setting);
 
-    // The following calls should succeed but not return as no value is available.
+    // The following call should succeed but not return as no value is available.
     let second_watch = proxy.watch();
-    let third_watch = proxy.watch();
 
-    // Now we'll set a value which should cause the pending watches to complete.
+    // Now we'll set a value which should cause the pending watch to complete.
     proxy.set(updated_setting.clone()).await.expect("set completed").expect("set successful");
 
     assert_eq!(second_watch.await.expect("watch completed"), updated_setting);
-    assert_eq!(third_watch.await.expect("watch completed"), updated_setting);
 
     let _ = instance.destroy().await;
 }

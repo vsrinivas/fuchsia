@@ -4,20 +4,17 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::do_not_disturb::types::DoNotDisturbInfo;
-use crate::fidl_common::FidlResponseErrorLogger;
-use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::request_respond;
-use fidl::endpoints::ProtocolMarker;
+use crate::ingress::{request, watch, Scoped};
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
+use fidl::endpoints::{ControlHandle, Responder};
 use fidl_fuchsia_settings::{
-    DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbSettings, DoNotDisturbWatchResponder,
-    Error,
+    DoNotDisturbRequest, DoNotDisturbSetResponder, DoNotDisturbSetResult, DoNotDisturbSettings,
+    DoNotDisturbWatchResponder,
 };
-use fuchsia_async as fasync;
-
-fidl_hanging_get_responder!(DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder,);
+use fuchsia_syslog::fx_log_warn;
+use std::convert::TryFrom;
 
 impl From<SettingInfo> for DoNotDisturbSettings {
     fn from(response: SettingInfo) -> Self {
@@ -32,47 +29,59 @@ impl From<SettingInfo> for DoNotDisturbSettings {
     }
 }
 
-fn to_request(settings: DoNotDisturbSettings) -> Option<Request> {
+impl ErrorResponder for DoNotDisturbSetResponder {
+    fn id(&self) -> &'static str {
+        "DoNotDisturb_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl request::Responder<Scoped<DoNotDisturbSetResult>> for DoNotDisturbSetResponder {
+    fn respond(self, Scoped(mut response): Scoped<DoNotDisturbSetResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl watch::Responder<DoNotDisturbSettings, fuchsia_zircon::Status> for DoNotDisturbWatchResponder {
+    fn respond(self, response: Result<DoNotDisturbSettings, fuchsia_zircon::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+fn to_request(settings: DoNotDisturbSettings) -> Request {
     let mut dnd_info = DoNotDisturbInfo::empty();
     dnd_info.user_dnd = settings.user_initiated_do_not_disturb;
     dnd_info.night_mode_dnd = settings.night_mode_initiated_do_not_disturb;
-    Some(Request::SetDnD(dnd_info))
+    Request::SetDnD(dnd_info)
 }
 
-fidl_process!(DoNotDisturb, SettingType::DoNotDisturb, process_request);
-
-async fn process_request(
-    context: RequestContext<DoNotDisturbSettings, DoNotDisturbWatchResponder>,
-    req: DoNotDisturbRequest,
-) -> Result<Option<DoNotDisturbRequest>, anyhow::Error> {
-    // Support future expansion of FIDL
-    #[allow(unreachable_patterns)]
-    match req {
-        DoNotDisturbRequest::Set { settings, responder } => {
-            if let Some(request) = to_request(settings) {
-                fasync::Task::spawn(async move {
-                    request_respond!(
-                        context,
-                        responder,
-                        SettingType::DoNotDisturb,
-                        request,
-                        Ok(()),
-                        Err(Error::Failed),
-                        DoNotDisturbMarker
-                    );
-                })
-                .detach();
-            } else {
-                responder
-                    .send(&mut Err(Error::Failed))
-                    .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
+impl TryFrom<DoNotDisturbRequest> for Job {
+    type Error = JobError;
+    fn try_from(req: DoNotDisturbRequest) -> Result<Self, Self::Error> {
+        // Support future expansion of FIDL
+        #[allow(unreachable_patterns)]
+        match req {
+            DoNotDisturbRequest::Set { settings, responder } => {
+                Ok(request::Work::new(SettingType::DoNotDisturb, to_request(settings), responder)
+                    .into())
+            }
+            DoNotDisturbRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::DoNotDisturb, responder))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", req);
+                Err(JobError::Unsupported)
             }
         }
-        DoNotDisturbRequest::Watch { responder } => context.watch(responder, true).await,
-        _ => {
-            return Ok(Some(req));
-        }
     }
-
-    Ok(None)
 }
