@@ -435,7 +435,8 @@ impl UnvalidatedConfig {
 /// and any networks or endpoints it contains are garbage-collected when the
 /// client end of their control channel is dropped.
 pub(crate) struct NetworkEnvironment {
-    _sandbox: netemul::TestSandbox,
+    // We only start a test sandbox if the requested configuration requires it.
+    _sandbox: Option<netemul::TestSandbox>,
     _networks: HashMap<String, fnetemul_network::NetworkProxy>,
     _endpoints: HashMap<String, fnetemul_network::EndpointProxy>,
 }
@@ -468,10 +469,15 @@ impl Config {
         let Self { networks, netstacks, eager_components } = self;
 
         // Create the networks and endpoints in a netemul sandbox.
-        let sandbox = netemul::TestSandbox::new().context("create test sandbox")?;
+        let mut maybe_sandbox = None;
         let mut network_handles = HashMap::new();
         let mut endpoint_handles = HashMap::new();
         for Network { name, endpoints } in networks {
+            let sandbox = if let Some(sandbox) = maybe_sandbox.as_ref() {
+                sandbox
+            } else {
+                maybe_sandbox.insert(netemul::TestSandbox::new().context("create test sandbox")?)
+            };
             let network = sandbox
                 .create_network(name.clone())
                 .await
@@ -556,7 +562,7 @@ impl Config {
         }
 
         Ok(NetworkEnvironment {
-            _sandbox: sandbox,
+            _sandbox: maybe_sandbox,
             _networks: network_handles,
             _endpoints: endpoint_handles,
         })
@@ -1073,6 +1079,7 @@ mod tests {
         };
         let (NetworkEnvironment { _sandbox: sandbox, _networks, _endpoints }, ()) =
             futures::future::join(configure_environment, mock_netstack).await;
+        let sandbox = sandbox.expect("sandbox was not configured");
 
         let network_manager = sandbox.get_network_manager().expect("get network manager");
         let networks = network_manager.list_networks().await.expect("list virtual networks");
