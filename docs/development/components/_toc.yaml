@@ -15,10 +15,8 @@ toc:
 - title: "Provide data files to components"
   path: /docs/development/components/data.md
 - title: "Configure components"
-  path: /docs/development/components/configuration_mechanisms.md
-- title: "Structured Configuration"
-  path: /docs/development/components/structured_config.md
-  status: experimental
+  section:
+  - include: /docs/development/components/configuration/_toc.yaml
 - title: "Component storage index"
   path: /docs/development/components/component_id_index.md
 - title: "Migrating legacy components"

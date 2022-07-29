@@ -1285,7 +1285,7 @@ ability for components to receive updates over FIDL.
 [chromium_config]: https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/configuration.md
 [windows_registry]: https://docs.microsoft.com/en-us/windows/win32/sysinfo/about-the-registry
 
-[config_data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
+[config_data]: /docs/development/components/configuration/config_data.md
 [fidl_contrib]: /docs/contribute/contributing-to-fidl/README.md
 [ffx]: /docs/development/tools/ffx/getting-started.md
 [component_instance_id]: /docs/glossary/README.md#component-instance-identifier

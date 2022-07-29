@@ -220,7 +220,7 @@ The helper component abstraction offers several important benefits:
 Some clients may need to configure parameters like display rotation, pixel
 density, etc. The Test UI Stack can accommodate these use cases with [structured
 component
-configuration](/docs/development/components/structured_config.md).
+configuration](/docs/development/components/configuration/structured_config.md).
 Clients can override parameters they wish to control,
 which the Test UI Stack component can then propagate to the appropriate base UI
 components.

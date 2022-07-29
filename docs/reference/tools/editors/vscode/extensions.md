@@ -108,7 +108,7 @@ Note: You need to configure Fuchsia environment variables to run this extension.
 #### JSON5
 
 In some cases, you may work on Fuchsia components using a
-[structure configuration][structured-config-json5] written in JSON5.
+[structured configuration][structured-config-json5] written in JSON5.
 [JSON5](https://marketplace.visualstudio.com/items?itemName=mrmlnc.vscode-json5){: .external}
 adds syntax highlighting for JSON5 files.
 
@@ -209,4 +209,4 @@ from [Configuring workflow](#rust-configure-workflow):
 [vscode-remote-workspaces]: /docs/reference/tools/editors/vscode/remote-workspaces.md
 [extension-install]: /docs/reference/tools/editors/vscode/fuchsia-ext-install.md
 [extension-link]: https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.vscode-fuchsia
-[structured-config-json5]: /docs/development/components/structured_config.md
+[structured-config-json5]: /docs/development/components/configuration/structured_config.md

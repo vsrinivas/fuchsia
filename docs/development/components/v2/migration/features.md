@@ -568,7 +568,7 @@ specific features your components may support:
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [collection-persistent-storage]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Collection.persistent_storage
 [component-id-index]: /docs/development/components/component_id_index.md
-[config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
+[config-data]: /docs/development/components/configuration/config_data.md
 [device-model]: /docs/development/drivers/concepts/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [dynamic-children]: /docs/concepts/components/v2/realms.md#dynamic-children

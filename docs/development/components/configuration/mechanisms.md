@@ -147,7 +147,8 @@ Configuration files may also be placed in the same package as the component they
 configure. This ensures that the configuration will be distributed with the
 component and does not require complex and brittle routing. However, it also
 means that the configuration cannot be changed without repackaging the
-component.
+component. More details are provided in the guide on
+[providing data files to components][providing_data_files].
 
 Packages contents are stored in [blobfs][blobfs], a content addressed file
 system which de-duplicates blobs. This means if multiple packages include an
@@ -199,9 +200,10 @@ Service-based configuration does not work well for the following problems:
 [rfc0127]: /docs/contribute/governance/rfcs/0127_structured_configuration.md
 
 [blobfs]: /docs/concepts/filesystems/blobfs.md
-[config_data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
+[config_data]: config_data.md
 [ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [realm_builder]: /docs/development/testing/components/realm_builder.md
 [settings_service]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/settings/service/
 [structured_config]: structured_config.md
+[providing_data_files]: /docs/development/components/data.md

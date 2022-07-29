@@ -257,8 +257,7 @@ _Defined in [fonts.gni](/src/fonts/build/fonts.gni)_
 
 A local font bundle is a set of font assets that are placed directly into the
 Font Provider's namespace using
-[build-time configuration data](/docs/development/components/data.md)
-(`config_data()`).
+[`config_data()`](/docs/development/components/configuration/config_data.md).
 
 Most local font bundles are declared in
 [`//src/fonts/collections/BUILD.gn`](/src/fonts/collections/BUILD.gn).

@@ -428,7 +428,7 @@ it produces identically laid-out messages as the statically-typed FIDL bindings.
 [Documentation][sc-docs] for the prototype is currently available for in-tree
 developers.
 
-[sc-docs]: /docs/development/components/structured_config.md
+[sc-docs]: /docs/development/components/configuration/structured_config.md
 
 ## Drawbacks, alternatives, and unknowns
 

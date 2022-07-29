@@ -74,7 +74,7 @@ build configuration rules.
 See [this diff][session-manager-diff] for an example of changing
 session_manager's size limit configuration to match the new location.
 
-[sc-docs]: https://fuchsia.dev/fuchsia-src/development/components/structured_config?hl=en
+[sc-docs]: https://fuchsia.dev/fuchsia-src/development/components/configuration/structured_config
 [sa-chat]: https://goto.google.com/fuchsia-product-assembly-chat
 [sa-hours]: https://goto.google.com/fuchsia-product-assembly-office-hours
 [example-cml]: /examples/assembly/structured_config/configured_by_assembly/meta/to_configure.cml

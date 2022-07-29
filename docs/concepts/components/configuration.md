@@ -169,5 +169,5 @@ types but runtime modifiable in others.
 
 [board]: /docs/development/build/build_system/boards_and_products.md#boards
 [channel]: /docs/concepts/packages/ota.md#update-omaha
-[config_mechanisms]: /docs/development/components/configuration_mechanisms.md
+[config_mechanisms]: /docs/development/components/configuration/mechanisms.md
 [product]: /docs/development/build/build_system/boards_and_products.md#products
