@@ -5,8 +5,8 @@
 // This file defines a GIDL-like DSL in C++ to help with defining FIDL
 // payload bytes.
 
-#ifndef SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_BYTES_H_
-#define SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_BYTES_H_
+#ifndef SRC_TESTS_FIDL_CHANNEL_UTIL_BYTES_H_
+#define SRC_TESTS_FIDL_CHANNEL_UTIL_BYTES_H_
 
 #include <lib/fidl/cpp/transaction_header.h>
 #include <zircon/assert.h>
@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-namespace server_suite {
+namespace channel_util {
 
 class Bytes {
  public:
@@ -121,6 +121,6 @@ inline Bytes handle_absent() { return repeat(0x00).times(4); }
 inline Bytes pointer_present() { return repeat(0xff).times(8); }
 inline Bytes pointer_absent() { return repeat(0x00).times(8); }
 
-}  // namespace server_suite
+}  // namespace channel_util
 
-#endif  // SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_BYTES_H_
+#endif  // SRC_TESTS_FIDL_CHANNEL_UTIL_BYTES_H_

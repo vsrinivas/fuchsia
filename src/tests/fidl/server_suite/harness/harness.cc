@@ -36,14 +36,15 @@ void ServerTest::SetUp() {
                    [](auto*, fidl::UnbindInfo info, auto) {
                      ASSERT_TRUE(info.is_dispatcher_shutdown() || info.is_user_initiated() ||
                                  info.is_peer_closed())
-                         << "server unbound with error: " << info.FormatDescription().c_str();
+                         << "reporter server unbound with error: "
+                         << info.FormatDescription().c_str();
                    });
 
   // Create a Target on the test server, to run tests against.
   auto startResult =
       runner_->Start(fidl_serversuite::RunnerStartRequest(std::move(reporter_endpoints->client)));
   ASSERT_TRUE(startResult.is_ok()) << startResult.error_value();
-  target_ = Channel(startResult->target().TakeHandle());
+  target_ = channel_util::Channel(startResult->target().TakeHandle());
   ASSERT_OK(target_.get().get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 

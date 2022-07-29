@@ -2,13 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("server_suite") {
-  testonly = true
-  deps = [
-    "cpp",
-    "go",
-    "hlcpp",
-    "llcpp",
-    "rust",
-  ]
+import("//build/fidl/fidl.gni")
+
+fidl("fidl.clientsuite") {
+  sources = [ "clientsuite.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

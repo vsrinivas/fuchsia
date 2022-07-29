@@ -17,6 +17,8 @@ group("tests_no_e2e") {
     "//sdk/lib/fidl_driver/tests",
     "//src/lib/fidl:tests",
     "//src/lib/fidl_table_validation/fidl_table_validation_tests",
+    "//src/tests/fidl/channel_util:tests",
+    "//src/tests/fidl/client_suite",
     "//src/tests/fidl/dyn_suite",
     "//src/tests/fidl/go_bindings_test",
     "//src/tests/fidl/server_suite",

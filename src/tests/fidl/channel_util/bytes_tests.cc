@@ -6,9 +6,9 @@
 
 #include <gtest/gtest.h>
 
-#include "src/tests/fidl/server_suite/harness/bytes.h"
+#include "src/tests/fidl/channel_util/bytes.h"
 
-namespace server_suite {
+namespace channel_util {
 
 TEST(Bytes, Basic) {
   Bytes b1(0x12);
@@ -138,4 +138,4 @@ TEST(Bytes, InlineEnvelope) {
   ASSERT_EQ(expected2, inline_envelope(u8(0x55), false));
 }
 
-}  // namespace server_suite
+}  // namespace channel_util

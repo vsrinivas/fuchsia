@@ -1,0 +1,42 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// FIDL client binding implementation tests.
+//
+// Flow of the FIDL client side test suite:
+// - Clients are responsible for executing tests in their local test runners.
+// - In order to start a Test, they call Start() to retrieve a suitably
+// configured Target server for the specific test. For instance, depending
+// on the test type, the Target may respond differently.
+library fidl.clientsuite;
+
+// The Harness is responsible for setting up server-side behavior.
+@discoverable
+protocol Harness {
+    // Create a Target to run tests against.
+    Start(resource struct {
+        test Test;
+    }) -> (resource struct {
+        target client_end:Target;
+        finisher client_end:Finisher;
+    });
+};
+
+// Target is the server-side of the connection against with client tests are
+// run.
+protocol Target {
+    TwoWayNoPayload() -> ();
+};
+
+protocol Finisher {
+    Finish() -> (struct {
+        errors vector<string>;
+    });
+};
+
+type Test = flexible enum : uint32 {
+    SETUP = 1;
+    SERVER_CLOSES_CHANNEL = 2;
+    TWO_WAY_NO_PAYLOAD = 3;
+};

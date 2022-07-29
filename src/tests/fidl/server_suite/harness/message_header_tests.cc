@@ -5,6 +5,8 @@
 #include "src/tests/fidl/server_suite/harness/harness.h"
 #include "src/tests/fidl/server_suite/harness/ordinals.h"
 
+using namespace channel_util;
+
 namespace server_suite {
 
 // Check that the channel is closed when a new one-way request with a non-zero txid is received.

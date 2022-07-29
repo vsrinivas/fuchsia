@@ -3,33 +3,36 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/test.gni")
 
 executable("bin") {
   testonly = true
-  output_name = "server_suite_harness"
+  output_name = "client_suite_harness"
   sources = [
-    "basic_tests.cc",
-    "coding_tests.cc",
-    "epitaph_tests.cc",
-    "handle_rights_tests.cc",
     "harness.cc",
     "harness.h",
-    "message_header_tests.cc",
+    "main.cc",
     "ordinals.h",
+    "test_handlers.cc",
   ]
 
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/lib/testing/predicates",
     "//src/tests/fidl/channel_util",
-    "//src/tests/fidl/server_suite/fidl:fidl.serversuite_cpp",
-    "//third_party/googletest:gtest",
+    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+}
+
+fuchsia_component("harness") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness.cml"
+  deps = [ ":bin" ]
 }

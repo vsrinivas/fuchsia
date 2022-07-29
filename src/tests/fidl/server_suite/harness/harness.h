@@ -10,10 +10,10 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/tests/fidl/server_suite/harness/channel.h"
+#include "src/lib/testing/predicates/status.h"
+#include "src/tests/fidl/channel_util/channel.h"
 
 #define WAIT_UNTIL(condition) ASSERT_TRUE(_wait_until(condition));
-#define ASSERT_OK(value) ASSERT_EQ(ZX_OK, value)
 
 // Defines a new server test. Relies on gtest under the hood.
 // Tests must use upper camel case names and be defined in the |Test| enum in
@@ -39,16 +39,18 @@ class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
 
 class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
  protected:
+  static constexpr zx::duration kTimeoutDuration = zx::sec(5);
+
   explicit ServerTest(fidl_serversuite::Test test) : test_(test) {}
 
   void SetUp() override;
   void TearDown() override;
 
   const Reporter& reporter() { return reporter_; }
-  Channel& client_end() { return target_; }
+  channel_util::Channel& client_end() { return target_; }
 
+  // Use WAIT_UNTIL instead of calling |_wait_until| directly.
   bool _wait_until(fit::function<bool()> condition) {
-    constexpr zx::duration kTimeoutDuration = zx::sec(5);
     return RunLoopWithTimeoutOrUntil(std::move(condition), kTimeoutDuration);
   }
 
@@ -57,7 +59,7 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
 
   fidl::SyncClient<fidl_serversuite::Runner> runner_;
 
-  Channel target_;
+  channel_util::Channel target_;
 
   Reporter reporter_;
 };

@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+source_set("channel_util") {
+  testonly = true
+  sources = [
+    "bytes.h",
+    "channel.h",
+  ]
+  deps = [
+    "//sdk/lib/fidl",
+    "//src/lib/fidl/cpp",
+  ]
+}
+
+test("channel_util_test") {
+  output_name = "channel_util_test"
+  sources = [
+    "bytes.h",
+    "bytes_tests.cc",
+  ]
+  deps = [
+    "//src/lib/fidl/cpp:cpp_base",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":channel_util_test($host_toolchain)" ]
+}

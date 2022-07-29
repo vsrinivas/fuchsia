@@ -5,6 +5,8 @@
 #include "src/tests/fidl/server_suite/harness/harness.h"
 #include "src/tests/fidl/server_suite/harness/ordinals.h"
 
+using namespace channel_util;
+
 namespace server_suite {
 
 SERVER_TEST(BadPayloadEncoding) {

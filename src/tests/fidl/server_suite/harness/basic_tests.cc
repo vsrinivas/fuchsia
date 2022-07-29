@@ -5,6 +5,8 @@
 #include "src/tests/fidl/server_suite/harness/harness.h"
 #include "src/tests/fidl/server_suite/harness/ordinals.h"
 
+using namespace channel_util;
+
 namespace server_suite {
 
 // Check that the test runner is set up correctly without doing anything else.
