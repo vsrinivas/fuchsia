@@ -660,6 +660,12 @@ async fn monitor_device(name: String, iface_tree: Arc<IfaceTreeHolder>) -> Resul
                         if let Some(x) = telemetry_data.thread_stable_network_data {
                             inspector.root().record_bytes("thread_stable_network_data", x);
                         }
+                        if let Some(x) = telemetry_data.stack_version {
+                            inspector.root().record_string("stack_version", x);
+                        }
+                        if let Some(x) = telemetry_data.rcp_version {
+                            inspector.root().record_string("rcp_version", x);
+                        }
                     }
                     Err(e) => {
                         fx_log_warn!("Error in logging telemetry. Error: {}", e);
