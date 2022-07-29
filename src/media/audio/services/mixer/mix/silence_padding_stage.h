@@ -5,8 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_SILENCE_PADDING_STAGE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_SILENCE_PADDING_STAGE_H_
 
+#include <zircon/types.h>
+
+#include <cstdint>
 #include <optional>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "src/media/audio/lib/format2/fixed.h"
@@ -98,6 +102,8 @@ class SilencePaddingStage : public PipelineStage {
     FX_CHECK(source->format() == format())
         << "SilencePaddingStage format does not match with source format";
     FX_CHECK(gain_ids.empty());
+    FX_CHECK(source->reference_clock_koid() == reference_clock_koid())
+        << "SilencePaddingStage clock does not match with source clock";
     source_ = std::move(source);
   }
   void RemoveSource(PipelineStagePtr source) final {
@@ -107,6 +113,9 @@ class SilencePaddingStage : public PipelineStage {
                                 << " does not match with " << source->name();
     source_ = nullptr;
   }
+
+  // Returns the source.
+  const PipelineStagePtr& source() const { return source_; }
 
  protected:
   void AdvanceSelfImpl(Fixed frame) final {}

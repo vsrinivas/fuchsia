@@ -4,6 +4,10 @@
 
 #include "src/media/audio/services/mixer/mix/silence_padding_stage.h"
 
+#include <lib/syslog/cpp/macros.h>
+
+#include <algorithm>
+#include <cstdint>
 #include <optional>
 #include <utility>
 
