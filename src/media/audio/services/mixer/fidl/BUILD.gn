@@ -69,6 +69,7 @@ executable("fidl_unittests") {
     ":fidl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock/testing",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/fidl/testing",
     "//third_party/googletest:gmock",

@@ -24,20 +24,6 @@ source_set("coefficient_table") {
 
 source_set("processing") {
   sources = [
-    "gain_control.cc",
-    "gain_control.h",
-  ]
-
-  public_deps = [ ":sampler" ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-source_set("sampler") {
-  sources = [
     "channel_strip.h",
     "coefficient_table_cache.h",
     "filter.cc",
@@ -77,7 +63,7 @@ source_set("sampler") {
   ]
 }
 
-# Any executable which uses `sampler` (either directly or transitively) must also include either
+# Any executable which uses `processing` (either directly or transitively) must also include either
 # `prebuilt_coefficient_tables` or `empty_coefficient_tables` below. The decision of which tables to
 # include is usually left to the top-most build rule (i.e., the executable), since that rule often
 # has the most insight into system constraints, such as code size.
@@ -126,7 +112,6 @@ executable("unittest-bin") {
     "coefficient_table_cache_unittest.cc",
     "coefficient_table_unittest.cc",
     "filter_unittest.cc",
-    "gain_control_unittest.cc",
     "gain_unittest.cc",
     "point_sampler_unittest.cc",
     "position_manager_unittest.cc",

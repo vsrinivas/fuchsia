@@ -44,6 +44,7 @@ executable("fidl_realtime_unittests") {
   deps = [
     ":fidl_realtime",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/mix/testing",
     "//third_party/googletest:gmock",

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_LIB_PROCESSING_GAIN_CONTROL_H_
-#define SRC_MEDIA_AUDIO_LIB_PROCESSING_GAIN_CONTROL_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_GAIN_CONTROL_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_GAIN_CONTROL_H_
 
 #include <lib/zx/time.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <optional>
@@ -95,6 +96,9 @@ class GainControl {
     }
   };
 
+  explicit GainControl(zx_koid_t reference_clock_koid)
+      : reference_clock_koid_(reference_clock_koid) {}
+
   // Advances state by applying all changes up to and including `reference_time`.
   void Advance(zx::time reference_time);
 
@@ -114,8 +118,11 @@ class GainControl {
   // Sets mute *immediately*.
   void SetMute(bool is_muted);
 
+  // Returns the koid of the clock used by this gain control.
+  [[nodiscard]] zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
+
   // Returns state.
-  const State& state() const { return state_; }
+  [[nodiscard]] const State& state() const { return state_; }
 
  private:
   struct GainCommand {
@@ -145,6 +152,8 @@ class GainControl {
   // Completes the active gain ramp.
   void CompleteActiveGainRamp();
 
+  zx_koid_t reference_clock_koid_;
+
   // Commands to be applied *immediately* in the next `Advance` call. Since each consequent call to
   // `SetGain` or `SetMute` will override the previous call, we only need to store the last one.
   std::optional<GainCommand> immediate_gain_command_;
@@ -163,4 +172,4 @@ class GainControl {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_LIB_PROCESSING_GAIN_CONTROL_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_GAIN_CONTROL_H_

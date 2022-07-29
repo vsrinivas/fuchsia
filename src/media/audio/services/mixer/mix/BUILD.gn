@@ -21,6 +21,8 @@ source_set("mix") {
     "custom_stage.h",
     "detached_thread.cc",
     "detached_thread.h",
+    "gain_control.cc",
+    "gain_control.h",
     "mix_job_context.h",
     "mix_job_subtask.cc",
     "mix_job_subtask.h",
@@ -52,6 +54,8 @@ source_set("mix") {
   deps = [
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
+    "//src/media/audio/lib/format2",
+    "//src/media/audio/lib/processing",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
@@ -64,6 +68,7 @@ executable("mix_unittests") {
 
   sources = [
     "custom_stage_unittest.cc",
+    "gain_control_unittest.cc",
     "packet_queue_producer_stage_unittest.cc",
     "packet_view_unittest.cc",
     "pipeline_stage_unittest.cc",
@@ -77,6 +82,9 @@ executable("mix_unittests") {
     "//sdk/fidl/fuchsia.audio.effects",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/media/audio/lib/format2",
+    "//src/media/audio/lib/processing",
+    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//src/media/audio/services/mixer/mix/testing",
     "//third_party/googletest:gmock",
   ]
