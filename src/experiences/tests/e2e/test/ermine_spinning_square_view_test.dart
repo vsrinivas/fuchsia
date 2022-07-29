@@ -46,9 +46,9 @@ void main() {
     return null;
   }
 
-  test('Verify spinning square view is shown', () async {
+  test('Verify spinning square view is launched', () async {
     const componentUrl =
-        'fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx';
+        'fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cm';
     await ermine.launch(componentUrl);
     expect(
         await ermine.waitFor(() async {
@@ -59,28 +59,30 @@ void main() {
         }),
         isTrue);
 
-    // Get the view rect.
-    final viewRect = await ermine.getViewRect(componentUrl);
     // Give the view couple of seconds to draw before taking its screenshot.
     await Future.delayed(Duration(seconds: 2));
-    final screenshot = await screenshotUntilNotBlack(viewRect);
-    expect(screenshot, isNotNull);
-    final histogram = ermine.histogram(screenshot!);
 
-    // spinning-square-rs displays a red square on purple background.
-    const purple = 0xffb73a67; //  (0xAABBGGRR)
-    const red = 0xff5700f5; //  (0xAABBGGRR)
-    // We should find atleast 2 colors (the visible cursor adds its own color).
-    expect(histogram.keys.length >= 2, isTrue);
-    expect(histogram[purple], isNotNull);
-    expect(histogram[red], isNotNull);
-    expect(histogram[purple]! > histogram[red]!, isTrue);
+    // Get the view rect.
+    expect(
+        await ermine.waitFor(() async {
+          final viewRect = await ermine.getViewRect(componentUrl);
+          print('Spinning-square-view rect: $viewRect');
+          return viewRect.width > 0 && viewRect.height > 0;
+        }),
+        isTrue);
+    // TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
+    // final viewRect = await ermine.getViewRect(componentUrl);
+    // final screenshot = await screenshotUntilNotBlack(viewRect);
+    // expect(screenshot, isNotNull);
+    // final histogram = ermine.histogram(screenshot!);
 
-    // Close the view.
-    await ermine.driver.requestData('close');
-    // Verify the view is closed.
-    await ermine.driver.waitForAbsent(find.text('spinning_square_view'));
-    // Ensure the component has stopped running.
-    await ermine.isStopped(componentUrl);
+    // // spinning-square-rs displays a red square on purple background.
+    // const purple = 0xffb73a67; //  (0xAABBGGRR)
+    // const red = 0xff5700f5; //  (0xAABBGGRR)
+    // // We should find atleast 2 colors (the visible cursor adds its own color).
+    // expect(histogram.keys.length >= 2, isTrue);
+    // expect(histogram[purple], isNotNull);
+    // expect(histogram[red], isNotNull);
+    // expect(histogram[purple]! > histogram[red]!, isTrue);
   });
 }

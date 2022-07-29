@@ -5,8 +5,8 @@ This folder houses all end-to-end tests for the Workstation product configuratio
 
 # Build
 
-`fx set workstation.x64 --release --args=flutter_driver_enabled=true`
+`fx set workstation_eng.x64 --release --args=flutter_driver_enabled=true`
 
 # Run
 
-`fx test -o --e2e experiences_ermine_session_shell_e2e_test`
+`fx test --e2e -o ermine_session_shell_e2e_test`

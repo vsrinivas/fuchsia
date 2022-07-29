@@ -619,12 +619,13 @@ class ErmineDriver {
           await login.tap(find.byValueKey('login'));
           await login.waitForAbsent(find.byType('Login'),
               timeout: Duration(minutes: 2));
-          print('password entered');
+          print('Login done');
         }
       }
     }
 
     print('Starting ermine shell');
+    await Future.delayed(Duration(seconds: 2));
     await inspectSnapshot(kLoginInspectSelector,
         predicate: (snapshot) => snapshot['ermineReady'] == true);
     // We should land on the Ermine shell.
@@ -719,7 +720,8 @@ class ViewSnapshot {
   String get url => inspectData['url'] ?? '';
 
   Rectangle get viewport {
-    final viewRect = inspectData['viewportLTRB'];
+    final viewRect =
+        inspectData['viewportLTRB']?.split(',')?.map(num.parse).toList();
     if (viewRect != null) {
       return Rectangle.fromPoints(
         Point(viewRect[0], viewRect[1]),
