@@ -66,6 +66,11 @@ VMO_VMAR_TEST(PagerWriteback, SimpleTrapDirty) {
 
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), check_vmar));
 
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
   // Writes to a VMO created without TRAP_DIRTY go through without blocking.
   Vmo* vmo_no_trap;
   ASSERT_TRUE(pager.CreateVmo(1, &vmo_no_trap));
@@ -81,6 +86,10 @@ VMO_VMAR_TEST(PagerWriteback, SimpleTrapDirty) {
   zx_handle_t handle;
   ASSERT_EQ(ZX_ERR_INVALID_ARGS,
             zx_vmo_create(zx_system_get_page_size(), ZX_VMO_TRAP_DIRTY, &handle));
+
+  // No requests seen.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo_no_trap, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo_no_trap, 0, &offset, &length));
 }
 
 // Tests that OP_DIRTY dirties pages even without a write to the VMO.
@@ -634,6 +643,7 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   ASSERT_TRUE(outcome1 || outcome2);
 
   // No remaining requests.
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
   ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
 }
 
@@ -790,6 +800,11 @@ TEST(PagerWriteback, FailDirtyRequests) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
 
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that partially failed DIRTY requests allow the write to partially complete.
@@ -865,6 +880,11 @@ TEST(PagerWriteback, PartialFailDirtyRequests) {
   // No dirty pages and no changes in VMO contents.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that DIRTY requests are generated when offsets with zero page markers are written to.
@@ -955,6 +975,11 @@ TEST(PagerWriteback, DirtyRequestsForZeroPages) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   ASSERT_EQ(data, *buf);
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that ZX_PAGER_OP_DIRTY works for a mix of zero and non-zero pages.
@@ -1005,6 +1030,11 @@ TEST(PagerWriteback, DirtyZeroAndNonZeroPages) {
   zx_vmo_dirty_range_t range = {.offset = 0, .length = kNumPages};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that ZX_PAGER_OP_FAIL can fail DIRTY page requests for zero pages.
@@ -1054,6 +1084,11 @@ TEST(PagerWriteback, FailDirtyRequestsForZeroPages) {
   // No dirty pages too.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that DIRTY requests are generated for ranges including zero pages as expected.
@@ -1165,6 +1200,11 @@ TEST(PagerWriteback, DirtyRequestsForZeroRanges) {
   range = {.offset = 0, .length = kNumPages};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that no DIRTY requests are generated on a commit.
@@ -1419,6 +1459,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NoQueryOnClone, 0) {
   // Verify clone contents.
   memset(expected.data(), data_clone, sizeof(data));
   ASSERT_TRUE(check_buffer_data(clone.get(), 0, 1, expected.data(), true));
+
+  // No requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that WRITEBACK_BEGIN/END clean pages as expected.
@@ -1488,6 +1533,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SimpleWriteback, 0) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
 
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a write after WRITEBACK_BEGIN but before WRITEBACK_END is handled correctly.
@@ -1580,6 +1630,11 @@ TEST(PagerWriteback, DirtyDuringWriteback) {
   // beginning the writeback.
   ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that mapping write permissions are cleared as expected on writeback.
@@ -1688,6 +1743,11 @@ TEST(PagerWriteback, WritebackWithMapping) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   ASSERT_EQ(data, *buf);
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that the zero page marker cannot be overwritten by another page, unless written to at which
@@ -1759,6 +1819,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CannotOverwriteZeroPage, 0) {
 
   // Verify written data.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that VMOs created without the ZX_VMO_TRAP_DIRTY flag track dirty pages as expected.
@@ -1885,6 +1950,11 @@ TEST(PagerWriteback, DirtyNoTrapRandomOffsets) {
   zx_vmo_dirty_range_t range = {.offset = 0, .length = kNumPages};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   ASSERT_TRUE(check_buffer_data(vmo, 0, kNumPages, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that adding the WRITE permission with zx_vmar_protect does not override read-only mappings
@@ -1949,6 +2019,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(DirtyAfterMapProtect, 0) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   ASSERT_EQ(data, *buf);
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that zero pages are supplied by the kernel for the newly extended range after a resize, and
@@ -2024,6 +2099,10 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeSupplyZero, ZX_VMO_RESIZABLE) {
   // The last two pages should be dirty.
   zx_vmo_dirty_range_t range = {.offset = 2, .length = 2};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writing to the newly extended range after a resize can generate DIRTY requests as
@@ -2138,6 +2217,10 @@ TEST(PagerWriteback, ResizeDirtyRequest) {
   // Verify that all the pages are dirty.
   range = {.offset = 0, .length = 8};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writeback on a resized VMO works as expected.
@@ -2192,6 +2275,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWriteback, ZX_VMO_RESIZABLE) {
 
   // Verify VMO contents.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a resize down unblocks outstanding DIRTY requests that are out-of-bounds.
@@ -2285,6 +2373,10 @@ TEST(PagerWriteback, ResizeWithOutstandingDirtyRequests) {
 
   // The VMO has no dirty pages.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a resize down unblocks outstanding DIRTY requests that are out-of-bounds when the
@@ -2364,6 +2456,11 @@ TEST(PagerWriteback, ResizeWritebackWithOutstandingDirtyRequests) {
   // Verify dirty ranges and VMO contents again.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writing again to resized range that is being written back triggers new DIRTY requests.
@@ -2452,6 +2549,11 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequestsInterleaved) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
   memset(expected.data() + zx_system_get_page_size(), 0xdd, 2 * zx_system_get_page_size());
   ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writing again to a written back resized range triggers new DIRTY requests.
@@ -2531,6 +2633,11 @@ TEST(PagerWriteback, ResizeWritebackNewDirtyRequests) {
   memset(expected.data() + zx_system_get_page_size(), 0xbb, zx_system_get_page_size());
   memset(expected.data() + 2 * zx_system_get_page_size(), 0xcc, zx_system_get_page_size());
   ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a write interleaved with a writeback trims / resets an awaiting clean zero range if it
@@ -2628,6 +2735,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackIntersectingWrite, ZX_VMO_RESIZA
 
   // Verify VMO contents.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a write outside of an awaiting clean zero range does not affect it.
@@ -2708,6 +2820,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackNonIntersectingWrite, ZX_VMO_RES
 
   // Verify VMO contents.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a resize interleaved with a writeback trims / resets an awaiting clean zero range if
@@ -2819,6 +2936,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackIntersectingResize, ZX_VMO_RESIZ
 
   // Verify VMO contents.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a resize beyond an awaiting clean zero range does not affect it.
@@ -2853,6 +2975,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackNonIntersectingResize, ZX_VMO_RE
 
   // All pages should be clean now.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writeback on a resized range that starts after a gap (zero range) is ignored.
@@ -2925,6 +3052,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackAfterGap, ZX_VMO_RESIZABLE) {
   // Verify VMO contents.
   memset(expected.data() + 2 * zx_system_get_page_size(), 0xbb, zx_system_get_page_size());
   ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writeback on a resized range with multiple zero ranges (gaps) terminates before the
@@ -3009,6 +3141,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackMulipleGaps, ZX_VMO_RESIZABLE) {
 
   memset(expected.data() + 3 * zx_system_get_page_size(), 0xbb, 2 * zx_system_get_page_size());
   ASSERT_TRUE(check_buffer_data(vmo, 0, 5, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a WritebackBegin on a resized range followed by a partial WritebackEnd works as
@@ -3050,6 +3187,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackPartialEnd, ZX_VMO_RESIZABLE) {
 
   // Verify that all pages are clean now.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests repeated writebacks on a resized range.
@@ -3105,6 +3247,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackRepeated, ZX_VMO_RESIZABLE) {
   // End the redundant writeback we started. This should be a no-op.
   ASSERT_TRUE(pager.WritebackEndPages(vmo, 1, 4));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a resized range that has mappings can be written back as expected.
@@ -3188,6 +3335,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackWithMapping, ZX_VMO_RESIZABLE) {
   // Verify VMO contents.
   memset(expected.data() + zx_system_get_page_size(), 0xbb, sizeof(uint8_t));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a resized range that has mappings and is in the process of being written back is
@@ -3310,6 +3462,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackInterleavedWriteWithMapping, ZX_
   // All pages should be clean now.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 6, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Test that OP_ZERO writes zeros in a pager-backed VMO.
@@ -3372,6 +3529,7 @@ TEST(PagerWriteback, OpZero) {
   // No more page requests seen.
   uint64_t offset, length;
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
 }
 
 // Test OP_ZERO on a pager-backed VMO created with ZX_VMO_TRAP_DIRTY.
@@ -3470,6 +3628,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroTail, ZX_VMO_RESIZABLE) {
   // Only the single page we supplied previously should be committed.
   ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
   ASSERT_EQ(zx_system_get_page_size(), info.committed_bytes);
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Test that OP_ZERO can decommit committed pages in a newly extended (but not written back yet)
@@ -3543,6 +3706,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroDecommit, ZX_VMO_RESIZABLE) {
   ranges[0] = {0, 1, 0};
   ranges[1] = {1, 2, ZX_VMO_DIRTY_RANGE_IS_ZERO};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Test OP_ZERO on a clone of a pager-backed VMO.
@@ -3635,6 +3803,10 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroClone, 0) {
 
   // The clone does not support dirty pages.
   ASSERT_FALSE(pager.VerifyDirtyRanges(clone3.get(), nullptr, 0));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Test OP_ZERO that conflicts with a simultaneous resize.
@@ -3745,6 +3917,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroPartialPage, ZX_VMO_RESIZABLE) {
   memset(expected.data() + zx_system_get_page_size() - sizeof(uint64_t), 0, sizeof(uint64_t));
   // Verify dirty ranges.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that dirty pages can be written back after detach.
@@ -3801,6 +3978,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackDirtyPagesAfterDetach, 0) {
 
   // Verify that the page is clean now.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a newly resized range can be written back after detach.
@@ -3859,6 +4041,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackResizedRangeAfterDetach, ZX_VMO_RESIZA
 
   // No more dirty pages.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that clean pages are decommitted on detach.
@@ -3888,6 +4075,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(DecommitCleanOnDetach, 0) {
   // No committed pages.
   ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
   ASSERT_EQ(0, info.committed_bytes);
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that DIRTY requests cannot be generated after detach.
@@ -3921,8 +4113,10 @@ VMO_VMAR_TEST(PagerWriteback, NoDirtyRequestsAfterDetach) {
     ASSERT_EQ(ZX_ERR_BAD_STATE, vmo1->vmo().write(&data, 0, sizeof(data)));
   }
 
+  // No more requests.
   uint64_t offset, length;
   ASSERT_FALSE(pager.GetPageDirtyRequest(vmo1, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo1, 0, &offset, &length));
 
   // No pages are dirty still.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo1, nullptr, 0));
@@ -3967,6 +4161,10 @@ VMO_VMAR_TEST(PagerWriteback, NoDirtyRequestsAfterDetach) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo2, nullptr, 0));
 
   ASSERT_FALSE(pager.GetPageDirtyRequest(vmo2, 0, &offset, &length));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo2, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo2, 0, &offset, &length));
 }
 
 // Tests that detach with a pending DIRTY request fails the request.
@@ -4016,6 +4214,11 @@ VMO_VMAR_TEST(PagerWriteback, DetachWithPendingDirtyRequest) {
   // No pages are committed.
   ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
   ASSERT_EQ(0, info.committed_bytes);
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that failing a DIRTY request after the VMO is detached is a no-op.
@@ -4054,6 +4257,10 @@ TEST(PagerWriteback, FailDirtyRequestAfterDetach) {
 
   // The page was not dirtied.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is marked modified on a zx_vmo_write.
@@ -4092,6 +4299,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnVmoWrite, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is marked modified when written through a mapping.
@@ -4141,6 +4353,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnMappingWrite, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is marked modified on resize.
@@ -4184,6 +4401,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnResize, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is marked modified on a ZX_VMO_OP_ZERO.
@@ -4221,6 +4443,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnOpZero, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is not marked modified on a zx_vmo_read.
@@ -4250,6 +4477,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnVmoRead, 0) {
   // Verify contents and dirty ranges.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is not marked modified when read through a mapping.
@@ -4290,6 +4522,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnMappingRead, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_EQ(*(uint8_t*)(expected.data()), data);
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is not marked modified when a write is failed by failing a DIRTY request.
@@ -4361,6 +4598,11 @@ TEST(PagerWriteback, NotModifiedOnFailedDirtyRequest) {
   // Verify contents and dirty ranges.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is not marked modified on a failed zx_vmo_write.
@@ -4424,6 +4666,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedVmoWrite, 0) {
   // be reported as dirty.
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is not marked modified on a failed resize.
@@ -4476,6 +4723,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedOnFailedResize, ZX_VMO_RESIZABLE) {
   // Verify contents and dirty ranges.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a VMO is marked modified when a zx_vmo_write partially succeeds.
@@ -4580,6 +4832,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedOnPartialVmoWrite, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
   range.length = 1;
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a clone cannot be marked modified.
@@ -4623,6 +4880,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NotModifiedCloneWrite, 0) {
   memcpy(expected.data(), data, sizeof(data));
   ASSERT_TRUE(check_buffer_data(clone.get(), 0, 1, expected.data(), true));
   ASSERT_FALSE(pager.VerifyDirtyRanges(clone.get(), nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that querying the modified state without the reset option does not reset.
@@ -4667,6 +4929,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ModifiedNoReset, 0) {
   ASSERT_TRUE(pager.VerifyModified(vmo));
   // Querying the modified state now with the reset option should have reset the modified flag.
   ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that pinning a page for read does not dirty it and does not mark the VMO modified.
@@ -4715,6 +4982,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForRead, 0) {
   // Verify contents and dirty ranges.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that pinning a page for write dirties it and marks the VMO modified.
@@ -4784,6 +5056,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForWrite, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a page cannot be marked clean while it is pinned.
@@ -4874,6 +5151,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinnedWriteback, 0) {
   // The VMO should now be clean.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that writing to a page after pinning does not generate additional DIRTY requests.
@@ -4954,6 +5236,11 @@ TEST(PagerWriteback, DirtyAfterPin) {
   memset(expected.data(), data, sizeof(data));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that pinning an already dirty page does not generate additional DIRTY requests.
@@ -5031,6 +5318,10 @@ TEST(PagerWriteback, PinAfterDirty) {
   // Verify contents and dirty ranges.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that both READ and DIRTY requests are generated as expected when pinning an unpopulated
@@ -5115,6 +5406,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(PinForWriteUnpopulated, 0) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a failed pin write does not mark the VMO modified.
@@ -5180,6 +5476,11 @@ TEST(PagerWriteback, NotModifiedFailedPinWrite) {
   // Verify contents and dirty ranges.
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a pin write that fails part of the way does not mark the VMO modified.
@@ -5250,6 +5551,11 @@ TEST(PagerWriteback, NotModifiedPartialFailedPinWrite) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests pinning for write through a slice.
@@ -5333,6 +5639,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SlicePinWrite, 0) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
                                                              zx_system_get_page_size(), &range,
                                                              sizeof(range), &num_ranges, nullptr));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests writing to a VMO through a slice.
@@ -5440,6 +5751,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceWrite, 0) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
                                                              zx_system_get_page_size(), &range,
                                                              sizeof(range), &num_ranges, nullptr));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests OP_ZERO on a slice.
@@ -5496,6 +5812,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceOpZero, 0) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
                                                              zx_system_get_page_size(), &range,
                                                              sizeof(range), &num_ranges, nullptr));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests a racing resize while a commit is blocked on a page request.
@@ -5539,6 +5860,11 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitResizeRace, ZX_VMO_RESIZABLE) {
   vmo->GenerateBufferContents(expected.data(), 1, 0);
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests that a write completes successfully if a clean page is evicted after the generation of a
@@ -5618,6 +5944,11 @@ TEST(PagerWriteback, EvictAfterDirtyRequest) {
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 // Tests dirtying a large range at once. The core-tests run with random delayed PMM allocation, so
@@ -5651,6 +5982,11 @@ TEST(PagerWriteback, DirtyLargeRange) {
   ASSERT_EQ(200 * zx_system_get_page_size(), info.committed_bytes);
   zx_vmo_dirty_range_t range = {.offset = 0, .length = 200, .options = 0};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
 }  // namespace pager_tests
