@@ -108,6 +108,7 @@ pub(super) enum RecognizedGesture {
     PrimaryTap,
     SecondaryTap,
     Motion,
+    Scroll,
 }
 
 #[derive(Debug)]
