@@ -46,17 +46,8 @@ pub trait IfaceManagerApi {
     /// Removes all internal references of the provided interface ID.
     async fn handle_removed_iface(&mut self, iface_id: u16) -> Result<(), Error>;
 
-    /// Selects a client iface and issues a scan request.  On success, the `ScanTransactionProxy`
-    /// is returned to the caller so that the scan results can be monitored.
-    async fn scan(
-        &mut self,
-        scan_request: fidl_sme::ScanRequest,
-    ) -> Result<fidl_sme::ScanTransactionProxy, Error>;
-
     /// Selects a client iface and return it for use with a scan
-    async fn get_sme_proxy_for_scan(
-        &mut self,
-    ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error>;
+    async fn get_sme_proxy_for_scan(&mut self) -> Result<fidl_sme::ClientSmeProxy, Error>;
 
     /// Disconnects all configured clients and disposes of all client ifaces before instructing
     /// the PhyManager to stop client connections.
@@ -146,16 +137,6 @@ impl IfaceManagerApi for IfaceManager {
         self.sender.try_send(IfaceManagerRequest::RemoveIface(req))?;
         receiver.await?;
         Ok(())
-    }
-
-    async fn scan(
-        &mut self,
-        scan_request: fidl_sme::ScanRequest,
-    ) -> Result<fidl_sme::ScanTransactionProxy, Error> {
-        let (responder, receiver) = oneshot::channel();
-        let req = ScanRequest { scan_request, responder };
-        self.sender.try_send(IfaceManagerRequest::Scan(req))?;
-        receiver.await?
     }
 
     async fn get_sme_proxy_for_scan(
@@ -327,9 +308,6 @@ mod tests {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
                 IfaceManagerRequest::Connect(ConnectRequest { responder, .. }) => {
-                    handle_negative_test_result_responder(responder, failure_mode);
-                }
-                IfaceManagerRequest::Scan(ScanRequest { responder, .. }) => {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
                 IfaceManagerRequest::GetScanProxy(ScanProxyRequest { responder }) => {
@@ -783,70 +761,6 @@ mod tests {
             test_values.exec.run_until_stalled(&mut removed_iface_fut),
             Poll::Ready(Err(_))
         );
-    }
-
-    #[fuchsia::test]
-    fn test_scan_success() {
-        let mut test_values = test_setup();
-
-        // Request a scan
-        let scan_fut = test_values
-            .iface_manager
-            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
-        pin_mut!(scan_fut);
-        assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-
-        // Verify that the service sees the request.
-        let next_message = test_values.receiver.next();
-        pin_mut!(next_message);
-
-        assert_variant!(
-            test_values.exec.run_until_stalled(&mut next_message),
-            Poll::Ready(Some(IfaceManagerRequest::Scan(ScanRequest{
-                scan_request: _,
-                responder
-            }))) => {
-                let (proxy, _) = create_proxy::<fidl_sme::ScanTransactionMarker>()
-                    .expect("failed to create scan proxy");
-                responder.send(Ok(proxy)).expect("failed to send scan proxy");
-            }
-        );
-
-        // Verify that the client side gets the scan proxy
-        assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Ready(Ok(_)));
-    }
-
-    #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
-    #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
-    #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
-    #[fuchsia::test(add_test_attr = false)]
-    fn scan_negative_test(failure_mode: NegativeTestFailureMode) {
-        let mut test_values = test_setup();
-
-        // Request a scan
-        let scan_fut = test_values
-            .iface_manager
-            .scan(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
-        pin_mut!(scan_fut);
-
-        let service_fut =
-            iface_manager_api_negative_test(test_values.receiver, failure_mode.clone());
-        pin_mut!(service_fut);
-
-        match failure_mode {
-            NegativeTestFailureMode::RequestFailure => {}
-            _ => {
-                // Run the request and the servicing of the request
-                assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Pending);
-                assert_variant!(
-                    test_values.exec.run_until_stalled(&mut service_fut),
-                    Poll::Ready(())
-                );
-            }
-        }
-
-        // Verify that an error is returned.
-        assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
     }
 
     #[fuchsia::test]

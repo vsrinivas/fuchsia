@@ -357,7 +357,7 @@ mod tests {
         crate::{client::types as client_types, regulatory_manager::REGION_CODE_LEN},
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
-        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::{channel::oneshot, task::Poll},
         pin_utils::pin_mut,
         std::unimplemented,
@@ -411,13 +411,6 @@ mod tests {
         }
 
         async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn scan(
-            &mut self,
-            _scan_request: fidl_sme::ScanRequest,
-        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             unimplemented!()
         }
 

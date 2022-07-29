@@ -52,12 +52,6 @@ pub struct RemoveIfaceRequest {
 }
 
 #[derive(Debug)]
-pub struct ScanRequest {
-    pub scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
-    pub responder: oneshot::Sender<Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error>>,
-}
-
-#[derive(Debug)]
 pub struct ScanProxyRequest {
     pub responder: oneshot::Sender<Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error>>,
 }
@@ -110,7 +104,6 @@ pub enum IfaceManagerRequest {
     HasIdleIface(HasIdleIfaceRequest),
     AddIface(AddIfaceRequest),
     RemoveIface(RemoveIfaceRequest),
-    Scan(ScanRequest),
     GetScanProxy(ScanProxyRequest),
     StopClientConnections(StopClientConnectionsRequest),
     StartClientConnections(StartClientConnectionsRequest),

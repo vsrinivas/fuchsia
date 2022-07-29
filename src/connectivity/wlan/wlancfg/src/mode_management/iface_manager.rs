@@ -679,23 +679,6 @@ impl IfaceManagerService {
         self.aps.retain(|ap_container| ap_container.iface_id != iface_id);
     }
 
-    async fn scan(
-        &mut self,
-        mut scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
-    ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-        let client_iface = self.get_client(None).await?;
-
-        let (local, remote) = fidl::endpoints::create_proxy()?;
-        let scan_result = client_iface.sme_proxy.scan(&mut scan_request, remote);
-
-        self.clients.push(client_iface);
-
-        match scan_result {
-            Ok(()) => Ok(local),
-            Err(e) => Err(format_err!("failed to scan: {:?}", e)),
-        }
-    }
-
     async fn get_sme_proxy_for_scan(
         &mut self,
     ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
@@ -1270,11 +1253,6 @@ pub(crate) async fn serve_iface_manager_requests(
                             error!("could not respond to RemoveIfaceRequest");
                         }
                     }
-                    IfaceManagerRequest::Scan(ScanRequest {  scan_request, responder }) => {
-                        if responder.send(iface_manager.scan( scan_request).await).is_err() {
-                            error!("could not respond to ScanRequest");
-                        }
-                    }
                     IfaceManagerRequest::GetScanProxy(ScanProxyRequest {  responder }) => {
                         if responder.send(iface_manager.get_sme_proxy_for_scan().await).is_err() {
                             error!("could not respond to ScanRequest");
@@ -1791,131 +1769,6 @@ mod tests {
 
         iface_manager.aps.push(ap_container);
         iface_manager
-    }
-
-    /// Tests the case where the only available client iface is one that has been configured.  The
-    /// Client SME proxy associated with the configured iface should be used for scanning.
-    #[fuchsia::test]
-    fn test_scan_with_configured_iface() {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
-        let (mut iface_manager, _next_sme_req) =
-            create_iface_manager_with_client(&test_values, true);
-
-        // Scan and ensure that the response is handled properly
-        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
-            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
-        ));
-
-        pin_mut!(scan_fut);
-        let _scan_proxy = match exec.run_until_stalled(&mut scan_fut) {
-            Poll::Ready(proxy) => proxy,
-            Poll::Pending => panic!("no scan was requested"),
-        };
-    }
-
-    /// Tests the case where the only available client iface is one that has is unconfigured.  The
-    /// Client SME proxy associated with the unconfigured iface should be used for scanning.
-    #[fuchsia::test]
-    fn test_scan_with_unconfigured_iface() {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create an unconfigured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
-        let (mut iface_manager, _next_sme_req) =
-            create_iface_manager_with_client(&test_values, false);
-
-        // Scan and ensure that the response is handled properly
-        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
-            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
-        ));
-
-        pin_mut!(scan_fut);
-        let _scan_proxy = match exec.run_until_stalled(&mut scan_fut) {
-            Poll::Ready(proxy) => proxy,
-            Poll::Pending => panic!("no scan was requested"),
-        };
-    }
-
-    /// Tests the scan behavior in the case where no client ifaces are present.  Ensures that the
-    /// scan call results in an error.
-    #[fuchsia::test]
-    fn test_scan_with_no_ifaces() {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create a PhyManager with no knowledge of any client ifaces.
-        let test_values = test_setup(&mut exec);
-        let phy_manager =
-            create_empty_phy_manager(test_values.monitor_service_proxy.clone(), test_values.node);
-
-        // Create and IfaceManager and issue a scan request.
-        let mut iface_manager = IfaceManagerService::new(
-            phy_manager,
-            test_values.client_update_sender,
-            test_values.ap_update_sender,
-            test_values.monitor_service_proxy,
-            test_values.saved_networks,
-            test_values.network_selector,
-            test_values.cobalt_api,
-            test_values.telemetry_sender,
-            test_values.stats_sender,
-        );
-        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
-            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
-        ));
-
-        // Ensure that the scan request results in an error.
-        pin_mut!(scan_fut);
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
-    }
-
-    /// Tests the case where a scan request cannot be made of the SME proxy.
-    #[fuchsia::test]
-    fn test_scan_fails() {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
-        let (mut iface_manager, next_sme_req) =
-            create_iface_manager_with_client(&test_values, true);
-
-        // Drop the SME's serving end so that the request to scan will fail.
-        drop(next_sme_req);
-
-        // Scan and ensure that an error is returned.
-        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
-            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
-        ));
-
-        pin_mut!(scan_fut);
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
-    }
-
-    /// Tests the case where a scan is requested, the PhyManager provides a client iface ID, but
-    /// when the IfaceManager attempts to create an SME proxy, the creation fails.
-    #[fuchsia::test]
-    fn test_scan_sme_creation_fails() {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create an IfaceManager and drop its client.
-        let test_values = test_setup(&mut exec);
-        let (mut iface_manager, _next_sme_req) =
-            create_iface_manager_with_client(&test_values, true);
-        let _ = iface_manager.clients.pop();
-
-        // Drop the serving end of our device service proxy so that the request to create an SME
-        // proxy fails.
-        drop(test_values.monitor_service_stream);
-
-        // Scan and ensure that an error is returned.
-        let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
-            fidl_fuchsia_wlan_sme::PassiveScanRequest {},
-        ));
-
-        pin_mut!(scan_fut);
-        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
     }
 
     /// Move stash requests forward so that a save request can progress.
@@ -4429,13 +4282,6 @@ mod tests {
             unimplemented!()
         }
 
-        async fn scan(
-            &mut self,
-            _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
-        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-            unimplemented!()
-        }
-
         async fn get_sme_proxy_for_scan(
             &mut self,
         ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
@@ -4679,61 +4525,6 @@ mod tests {
             iface_manager,
             req,
             remove_iface_receiver,
-            test_type,
-        );
-    }
-
-    #[test_case(TestType::Pass; "successfully scanned")]
-    #[test_case(TestType::Fail; "failed to scanned")]
-    #[test_case(TestType::ClientError; "client drops receiver")]
-    #[fuchsia::test(add_test_attr = false)]
-    fn service_scan_test(test_type: TestType) {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
-        let (iface_manager, _stream) = match test_type {
-            TestType::Pass | TestType::ClientError => {
-                let (iface_manager, stream) = create_iface_manager_with_client(&test_values, true);
-                (iface_manager, Some(stream))
-            }
-            TestType::Fail => {
-                let phy_manager = phy_manager::PhyManager::new(
-                    test_values.monitor_service_proxy.clone(),
-                    test_values.node,
-                );
-                let iface_manager = IfaceManagerService::new(
-                    Arc::new(Mutex::new(phy_manager)),
-                    test_values.client_update_sender,
-                    test_values.ap_update_sender,
-                    test_values.monitor_service_proxy,
-                    test_values.saved_networks.clone(),
-                    test_values.network_selector.clone(),
-                    test_values.cobalt_api,
-                    test_values.telemetry_sender,
-                    test_values.stats_sender,
-                );
-                (iface_manager, None)
-            }
-        };
-
-        // Make a scan request.
-        let (scan_sender, scan_receiver) = oneshot::channel();
-        let req = ScanRequest {
-            scan_request: fidl_fuchsia_wlan_sme::ScanRequest::Passive(
-                fidl_fuchsia_wlan_sme::PassiveScanRequest {},
-            ),
-            responder: scan_sender,
-        };
-        let req = IfaceManagerRequest::Scan(req);
-
-        run_service_test(
-            &mut exec,
-            test_values.network_selector,
-            iface_manager,
-            req,
-            scan_receiver,
-            test_values.monitor_service_stream,
             test_type,
         );
     }

@@ -446,13 +446,6 @@ mod tests {
             unimplemented!();
         }
 
-        async fn scan(
-            &mut self,
-            _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
-        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-            unimplemented!();
-        }
-
         async fn get_sme_proxy_for_scan(
             &mut self,
         ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {

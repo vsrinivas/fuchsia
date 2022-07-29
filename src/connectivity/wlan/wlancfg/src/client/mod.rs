@@ -636,13 +636,6 @@ mod tests {
             unimplemented!()
         }
 
-        async fn scan(
-            &mut self,
-            _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
-        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-            unimplemented!()
-        }
-
         async fn get_sme_proxy_for_scan(
             &mut self,
         ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
@@ -2042,13 +2035,6 @@ mod tests {
         }
 
         async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn scan(
-            &mut self,
-            _scan_request: fidl_sme::ScanRequest,
-        ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
             unimplemented!()
         }
 
