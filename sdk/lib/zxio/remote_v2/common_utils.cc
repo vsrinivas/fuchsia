@@ -24,9 +24,6 @@ zxio_node_protocols_t ToZxioNodeProtocols(NodeProtocols protocols) {
   if (protocols & NodeProtocols::kDevice) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DEVICE;
   }
-  if (protocols & NodeProtocols::kTty) {
-    zxio_protocols |= ZXIO_NODE_PROTOCOL_TTY;
-  }
   return zxio_protocols;
 }
 
@@ -44,9 +41,6 @@ NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
 
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
     protocols |= NodeProtocols::kDevice;
-  }
-  if (zxio_protocols & ZXIO_NODE_PROTOCOL_TTY) {
-    protocols |= NodeProtocols::kTty;
   }
   return protocols;
 }

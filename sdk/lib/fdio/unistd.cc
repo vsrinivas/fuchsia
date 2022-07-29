@@ -1599,10 +1599,8 @@ struct dirent* readdir(DIR* dir) {
         return DT_REG;
       if (protocols & ZXIO_NODE_PROTOCOL_DEVICE)
         return DT_BLK;
-      if (protocols & ZXIO_NODE_PROTOCOL_TTY)
-        return DT_CHR;
-      // There is no good analogue for FIDL services in POSIX land.
       if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR)
+        // There is no good analogue for FIDL services in POSIX land.
         return DT_UNKNOWN;
       return DT_UNKNOWN;
     })(entry.protocols);

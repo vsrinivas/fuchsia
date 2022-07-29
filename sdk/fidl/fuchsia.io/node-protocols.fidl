@@ -40,7 +40,4 @@ type NodeProtocols = strict bits : uint64 {
     ///
     /// TODO(https://fxbug.dev/103827): Document why this is needed or remove it.
     DEVICE = 0x10000000;
-
-    @deprecated("tty functionalities may be covered by a tty service")
-    TTY = 0x20000000;
 };

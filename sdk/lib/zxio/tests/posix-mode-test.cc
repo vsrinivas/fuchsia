@@ -17,7 +17,6 @@ TEST(NodeProtocolsToPosixType, Basic) {
   EXPECT_EQ(S_IFDIR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DIRECTORY));
   EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_FILE));
   EXPECT_EQ(S_IFBLK, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DEVICE));
-  EXPECT_EQ(S_IFCHR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_TTY));
 }
 
 TEST(NodeProtocolsToPosixType, MultiProtocol) {

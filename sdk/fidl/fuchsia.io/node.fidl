@@ -47,6 +47,8 @@ type NodeInfo = strict resource union {
         /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
         unused zx.handle:<EVENTPAIR, optional>;
     };
+
+    /// The connection composes [`fuchsia.hardware.pty/Device`].
     7: tty resource struct {
         event zx.handle:<EVENTPAIR, optional>;
     };

@@ -1962,11 +1962,6 @@
         "value": "4"
     },
     {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.TTY",
-        "value": "536870912"
-    },
-    {
         "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.io/NodeProtocols",

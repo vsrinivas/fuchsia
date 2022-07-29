@@ -124,12 +124,12 @@ class DirentIteratorImpl {
     switch (type) {
       case DT_BLK:
         return ZXIO_NODE_PROTOCOL_DEVICE;
-      case DT_CHR:
-        return ZXIO_NODE_PROTOCOL_TTY;
       case DT_DIR:
         return ZXIO_NODE_PROTOCOL_DIRECTORY;
       case DT_REG:
         return ZXIO_NODE_PROTOCOL_FILE;
+      case DT_CHR:
+        // Not supported.
       case DT_FIFO:
         // Not supported.
       case DT_LNK:
@@ -206,8 +206,6 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
   switch (mode & (S_IFMT | fuchsia_io::wire::kModeTypeService)) {
     case S_IFDIR:
       return ZXIO_NODE_PROTOCOL_DIRECTORY;
-    case S_IFCHR:
-      return ZXIO_NODE_PROTOCOL_TTY;
     case S_IFBLK:
       return ZXIO_NODE_PROTOCOL_DEVICE;
     case S_IFREG:
@@ -216,6 +214,8 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
       // fuchsia::io has mode type service which breaks stat.
       // TODO(fxbug.dev/52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
       return ZXIO_NODE_PROTOCOL_FILE;
+    case S_IFCHR:
+      // Character-oriented devices are not supported on Fuchsia.
     case S_IFIFO:
       // Named pipes are not supported on Fuchsia.
     case S_IFLNK:
@@ -241,9 +241,6 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   }
   if (protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
     return S_IFBLK;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_TTY) {
-    return S_IFCHR;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR) {
     // There is no good analogue for FIDL services in POSIX land...

@@ -88,8 +88,7 @@ type ConnectionInfo = resource table {
             1: unused zx.handle:EVENTPAIR;
         };
 
-        /// The object may be cast to a Tty interface.
-        @deprecated("tty functionalities may be covered by a tty service")
+        /// The connection composes [`fuchsia.hardware.pty/Device`].
         5: tty @generated_name("TtyInfo") resource table {
             /// An optional event which transmits information about a device's state.
             ///
