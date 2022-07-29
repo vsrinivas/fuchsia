@@ -36,7 +36,7 @@ class TestFidlServer : public BaseFidlServer<TestFidlServer, fuchsia_audio_mixer
   void Create(CreateRequestView request, CreateCompleter::Sync& completer) override {}
 
  private:
-  static inline constexpr std::string_view Name = "TestFidlServer";
+  static inline constexpr std::string_view kName = "TestFidlServer";
   template <class ServerT, class ProtocolT>
   friend class ::media_audio::BaseFidlServer;
 

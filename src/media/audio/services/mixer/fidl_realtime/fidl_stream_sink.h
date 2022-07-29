@@ -51,7 +51,7 @@ class FidlStreamSink : public BaseFidlServer<FidlStreamSink, fuchsia_media2::Str
   void Clear(ClearRequestView request, ClearCompleter::Sync& completer) override;
 
  private:
-  static inline constexpr std::string_view Name = "FidlStreamSink";
+  static inline constexpr std::string_view kName = "FidlStreamSink";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 

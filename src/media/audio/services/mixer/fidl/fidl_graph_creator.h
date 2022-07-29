@@ -27,7 +27,7 @@ class FidlGraphCreator
   void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
 
  private:
-  static inline constexpr std::string_view Name = "FidlGraphCreator";
+  static inline constexpr std::string_view kName = "FidlGraphCreator";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 

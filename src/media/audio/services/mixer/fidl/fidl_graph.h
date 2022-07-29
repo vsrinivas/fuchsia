@@ -70,7 +70,7 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
   std::string_view name() const { return name_; }
 
  private:
-  static inline constexpr std::string_view Name = "FidlGraph";
+  static inline constexpr std::string_view kName = "FidlGraph";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 

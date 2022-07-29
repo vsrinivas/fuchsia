@@ -52,7 +52,7 @@ class BaseFidlServerUntyped {
 //    // ...
 //
 //  private:
-//    static inline const std::string_view Name = "FidlServer";
+//    static inline const std::string_view kName = "FidlServer";
 //    template<class ServerT, class ProtocolT>
 //    friend class BaseFidlServer;
 //
@@ -144,9 +144,9 @@ class BaseFidlServer : public fidl::WireServer<ProtocolT>, public internal::Base
   // Can be overridden by subclasses.
   virtual void OnShutdown(fidl::UnbindInfo info) {
     if (!info.is_user_initiated() && !info.is_peer_closed()) {
-      FX_LOGS(ERROR) << ServerT::Name << " shutdown with unexpected status: " << info;
+      FX_LOGS(ERROR) << ServerT::kName << " shutdown with unexpected status: " << info;
     } else {
-      FX_LOGS(DEBUG) << ServerT::Name << " shutdown with status: " << info;
+      FX_LOGS(DEBUG) << ServerT::kName << " shutdown with status: " << info;
     }
   }
 

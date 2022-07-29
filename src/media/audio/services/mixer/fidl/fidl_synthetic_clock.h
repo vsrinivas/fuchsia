@@ -38,7 +38,7 @@ class FidlSyntheticClock
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
-  static inline const std::string_view Name = "FidlSyntheticClockRealm";
+  static inline const std::string_view kName = "FidlSyntheticClockRealm";
 
   explicit FidlSyntheticClock(std::shared_ptr<Clock> clock) : clock_(std::move(clock)) {}
 
@@ -70,7 +70,7 @@ class FidlSyntheticClockRealm
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
-  static inline const std::string_view Name = "FidlSyntheticClockRealm";
+  static inline const std::string_view kName = "FidlSyntheticClockRealm";
 
   FidlSyntheticClockRealm() = default;
 
