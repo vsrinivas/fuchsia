@@ -200,10 +200,15 @@ class TA_CAP("mutex") CriticalMutex : private Mutex {
 
   // Release the mutex. Must be held by the current thread.
   void Release() TA_REL() TA_EXCL(thread_lock) {
+    // Make a copy because once we have released the mutex we can no longer
+    // access should_clear_.
+    bool should_clear_copy = should_clear_;
+    should_clear_ = false;
+
     Mutex::Release();
-    if (should_clear_) {
+
+    if (should_clear_copy) {
       Thread::Current::preemption_state().ClearTimesliceExtension();
-      should_clear_ = false;
     }
   }
 
@@ -214,6 +219,8 @@ class TA_CAP("mutex") CriticalMutex : private Mutex {
   void AssertHeld() const TA_ASSERT() { return Mutex::AssertHeld(); }
 
  private:
+  // This field must not be accessed concurrently.  Be sure to only access it
+  // after |Mutex::Acquire| has returned and before |Mutex::Release| is called.
   bool should_clear_{false};
 };
 
