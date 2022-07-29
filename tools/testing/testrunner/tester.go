@@ -165,24 +165,20 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	// Might as well emit any profiles directly to the output directory.
-	// TODO(fxbug.dev/61208): until this is resolved, we make the assumption
-	// that the binaries are statically linked and will only produce one
-	// profile on execution. Once build IDs are embedded in profiles
-	// automatically, we can switch to a more flexible scheme where, say,
-	// we set
-	// LLVM_PROFILE_FILE=<output dir>/<test-specific namsepace>/%p.profraw
+	// We'll set
+	// LLVM_PROFILE_FILE=<output dir>/<test-specific namsepace>/%m.profraw
 	// and then record any .profraw file written to that directory as an
 	// emitted profile.
-	profileRel := filepath.Join(llvmProfileSinkType, test.Path+llvmProfileExtension)
-	profileAbs := filepath.Join(t.localOutputDir, profileRel)
-	os.MkdirAll(filepath.Dir(profileAbs), os.ModePerm)
+	profileRelDir := filepath.Join(llvmProfileSinkType, test.Path)
+	profileAbsDir := filepath.Join(t.localOutputDir, profileRelDir)
+	os.MkdirAll(profileAbsDir, os.ModePerm)
 
 	r := newRunner(t.dir, append(
 		t.env,
 		fmt.Sprintf("%s=%s", constants.TestOutDirEnvKey, outDir),
 		// When host-side tests are instrumented for profiling, executing
 		// them will write a profile to the location under this environment variable.
-		fmt.Sprintf("%s=%s", llvmProfileEnvKey, profileAbs),
+		fmt.Sprintf("%s=%s", llvmProfileEnvKey, filepath.Join(profileAbsDir, "%m"+llvmProfileExtension)),
 	))
 	if test.Timeout > 0 {
 		var cancel context.CancelFunc
@@ -318,16 +314,29 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		testResult.FailReason = err.Error()
 	}
 
-	if exists, profileErr := osmisc.FileExists(profileAbs); profileErr != nil {
-		logger.Errorf(ctx, "unable to determine whether a profile was emitted: %s", profileErr)
-	} else if exists {
+	var sinks []runtests.DataSink
+	profileErr := filepath.WalkDir(profileAbsDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			profileRel, err := filepath.Rel(profileAbsDir, path)
+			if err != nil {
+				return err
+			}
+			sinks = append(sinks, runtests.DataSink{
+				Name: filepath.Base(path),
+				File: filepath.Join(profileRelDir, profileRel),
+			})
+		}
+		return nil
+	})
+	if profileErr != nil {
+		logger.Errorf(ctx, "unable to determine whether profiles were emitted: %s", profileErr)
+	}
+	if len(sinks) > 0 {
 		testResult.DataSinks.Sinks = runtests.DataSinkMap{
-			llvmProfileSinkType: []runtests.DataSink{
-				{
-					Name: filepath.Base(profileRel),
-					File: profileRel,
-				},
-			},
+			llvmProfileSinkType: sinks,
 		}
 	}
 	return testResult, nil

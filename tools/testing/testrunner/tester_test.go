@@ -94,9 +94,9 @@ func TestSubprocessTester(t *testing.T) {
 	}
 
 	passingTest := filepath.Join("host_x64", "passing")
-	passingProfile := filepath.Join("llvm-profile", passingTest+".profraw")
+	passingProfile := filepath.Join("llvm-profile", passingTest, "default.profraw")
 	failingTest := filepath.Join("host_x64", "failing")
-	failingProfile := filepath.Join("llvm-profile", failingTest+".profraw")
+	failingProfile := filepath.Join("llvm-profile", failingTest, "default.profraw")
 	for _, profile := range []string{passingProfile, failingProfile} {
 		abs := filepath.Join(tmpDir, profile)
 		os.MkdirAll(filepath.Dir(abs), 0o700)
