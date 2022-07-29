@@ -111,7 +111,10 @@ pub async fn load_vmo<'a>(
     // TODO(fxbug.dev/52468): This does not ask or wait for a Describe event, which means a failure to
     // open the file will appear as a PEER_CLOSED error on this call.
     let vmo = file_proxy
-        .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
+        .get_backing_memory(
+            // Clone the VMO because it could still be written by the debugger.
+            fio::VmoFlags::READ | fio::VmoFlags::EXECUTE | fio::VmoFlags::PRIVATE_CLONE,
+        )
         .await
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?
         .map_err(|status| {
