@@ -4331,6 +4331,41 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
       DEBUG_ASSERT(status == ZX_OK);
     }
 
+    // Deferred cleanup if inserting pages starting at supply_zero_offset_ fails partway below.
+    // Pages starting at supply_zero_offset_ can only be Dirty. So if we added any new pages with
+    // the intention of dirtying them in this function, but we could not successfully do so (because
+    // allocation for a page list node failed part of the way), we need to roll back.
+    auto zero_offset_cleanup = fit::defer([this, end_offset]() {
+      AssertHeld(lock_);
+      if (supply_zero_offset_ < end_offset) {
+        list_node_t freed_list;
+        list_initialize(&freed_list);
+
+        page_list_.RemovePages(
+            [&freed_list](VmPageOrMarker* p, uint64_t off) {
+              DEBUG_ASSERT(p->IsPage());
+              vm_page_t* page = p->Page();
+              DEBUG_ASSERT(is_page_dirty_tracked(page));
+              DEBUG_ASSERT(!page->is_loaned());
+              // The only Clean pages will be the new ones we inserted in this function.
+              if (is_page_clean(page)) {
+                vm_page_t* released_page = p->ReleasePage();
+                DEBUG_ASSERT(released_page == page);
+                DEBUG_ASSERT(page->object.pin_count == 0);
+                pmm_page_queues()->Remove(page);
+                DEBUG_ASSERT(!list_in_list(&page->queue_node));
+                list_add_tail(&freed_list, &page->queue_node);
+              }
+              return ZX_ERR_NEXT;
+            },
+            supply_zero_offset_, end_offset);
+
+        if (!list_is_empty(&freed_list)) {
+          FreePages(&freed_list);
+        }
+      }
+    });
+
     // Install zero pages in gaps starting at supply_zero_offset_.
     for (uint64_t off = ktl::max(start_offset, supply_zero_offset_); off < end_offset;
          off += PAGE_SIZE) {
@@ -4357,6 +4392,9 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
       }
       ASSERT(status == ZX_OK);
     }
+
+    // We were able to successfully insert all the required pages. Cancel the cleanup.
+    zero_offset_cleanup.cancel();
 
     DEBUG_ASSERT(list_is_empty(&zero_pages_list));
   }
