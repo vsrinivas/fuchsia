@@ -27,11 +27,11 @@ pub fn make_input_handler() -> std::rc::Rc<dyn crate::input_handler::InputHandle
                 min_movement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
             }),
             Box::new(primary_tap::InitialContender {
-                max_finger_displacement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+                max_finger_displacement_in_mm: MAX_TAP_MOVEMENT_IN_MM,
                 max_time_elapsed: TAP_TIMEOUT,
             }),
             Box::new(secondary_tap::InitialContender {
-                max_finger_displacement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+                max_finger_displacement_in_mm: MAX_TAP_MOVEMENT_IN_MM,
                 max_time_elapsed: TAP_TIMEOUT,
             }),
         ]
@@ -185,6 +185,7 @@ pub(super) trait Winner: std::fmt::Debug {
 }
 
 const SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM: f32 = 16.0 / 12.0;
+const MAX_TAP_MOVEMENT_IN_MM: f32 = 2.0;
 const TAP_TIMEOUT: zx::Duration = zx::Duration::from_millis(200);
 
 #[derive(Debug)]
