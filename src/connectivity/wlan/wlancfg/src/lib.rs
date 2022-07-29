@@ -9,4 +9,6 @@ pub mod legacy;
 pub mod mode_management;
 pub mod regulatory_manager;
 pub mod telemetry;
+#[cfg(test)]
+mod tests;
 pub mod util;

@@ -4,7 +4,6 @@
 #![cfg(test)]
 
 use {
-    core::pin::Pin,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_zircon as zx,
@@ -99,7 +98,7 @@ fn assert_eq_sme_scan_requests(
 #[track_caller]
 pub fn poll_for_and_validate_sme_scan_request_and_send_results(
     exec: &mut fasync::TestExecutor,
-    network_selection_fut: &mut Pin<&mut impl futures::Future>,
+    network_selection_fut: &mut (impl futures::Future + std::marker::Unpin),
     sme_stream: &mut fidl_sme::ClientSmeRequestStream,
     expected_scan_request: &fidl_sme::ScanRequest,
     mut scan_results: Vec<fidl_sme::ScanResult>,
