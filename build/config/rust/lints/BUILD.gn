@@ -84,6 +84,7 @@ config("allow_unused_results") {
     "//src/recovery/*",
     "//src/security/*",
     "//src/session/*",
+    "//src/settings/service:*",
     "//src/storage/*",
     "//src/sys/*",
     "//src/testing/*",

@@ -7,6 +7,7 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
+import("//third_party/cobalt/metrics_registry.gni")
 
 group("service") {
   testonly = true
@@ -24,6 +25,7 @@ rustc_library("lib") {
   edition = "2021"
 
   deps = [
+    ":setui_metrics_registry",
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_rust",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_rust",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
@@ -278,6 +280,11 @@ rustc_library("lib") {
   disable_rbe = true
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+metrics_registry("setui_metrics_registry") {
+  project_id = 16
+  generate_rust = true
 }
 
 fuchsia_unittest_package("setui_service_tests") {

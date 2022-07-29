@@ -4,7 +4,16 @@
 
 use anyhow::Error;
 use fidl_fuchsia_io as fio;
-use fuchsia_component_test::{Capability, ChildOptions, ChildRef, RealmBuilder, Ref, Route};
+use fidl_fuchsia_metrics::{
+    MetricEventLoggerFactoryRequest, MetricEventLoggerFactoryRequestStream,
+    MetricEventLoggerRequest,
+};
+use fuchsia_async as fasync;
+use fuchsia_component::server::{ServiceFs, ServiceFsDir};
+use fuchsia_component_test::{
+    Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
+};
+use futures::{StreamExt, TryStreamExt};
 
 pub struct SettingsRealmInfo<'a> {
     pub builder: RealmBuilder,
@@ -15,6 +24,7 @@ pub struct SettingsRealmInfo<'a> {
 
 pub async fn create_realm_basic(info: &SettingsRealmInfo<'_>) -> Result<(), Error> {
     const STORE_URL: &str = "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm";
+    const COBALT_URL: &str = "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cm";
 
     // setui_service needs to connect to fidl_fuchsia_stash to start its storage.
     let store = info.builder.add_child("store", STORE_URL, ChildOptions::new().eager()).await?;
@@ -23,6 +33,24 @@ pub async fn create_realm_basic(info: &SettingsRealmInfo<'_>) -> Result<(), Erro
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.stash.Store"))
                 .from(&store)
+                .to(info.settings),
+        )
+        .await?;
+    let cobalt = info
+        .builder
+        .add_local_child(
+            "cobalt",
+            move |handles: LocalComponentHandles| Box::pin(cobalt_impl(handles)),
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    info.builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.metrics.MetricEventLoggerFactory",
+                ))
+                .from(&cobalt)
                 .to(info.settings),
         )
         .await?;
@@ -76,5 +104,55 @@ pub async fn create_realm_basic(info: &SettingsRealmInfo<'_>) -> Result<(), Erro
             .await?;
     }
 
+    Ok(())
+}
+
+// Mock cobalt impl since it's not necessary for the integration tests.
+async fn cobalt_impl(handles: LocalComponentHandles) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    let _: &mut ServiceFsDir<'_, _> =
+        fs.dir("svc").add_fidl_service(move |mut stream: MetricEventLoggerFactoryRequestStream| {
+            fasync::Task::spawn(async move {
+                while let Ok(Some(MetricEventLoggerFactoryRequest::CreateMetricEventLogger {
+                    logger,
+                    responder,
+                    ..
+                })) = stream.try_next().await
+                {
+                    fasync::Task::spawn(async move {
+                        let mut stream = logger.into_stream().unwrap();
+                        while let Some(Ok(request)) = stream.next().await {
+                            match request {
+                                MetricEventLoggerRequest::LogOccurrence { responder, .. } => {
+                                    let _ = responder.send(&mut Ok(()));
+                                }
+                                MetricEventLoggerRequest::LogInteger { responder, .. } => {
+                                    let _ = responder.send(&mut Ok(()));
+                                }
+                                MetricEventLoggerRequest::LogIntegerHistogram {
+                                    responder, ..
+                                } => {
+                                    let _ = responder.send(&mut Ok(()));
+                                }
+                                MetricEventLoggerRequest::LogString { responder, .. } => {
+                                    let _ = responder.send(&mut Ok(()));
+                                }
+                                MetricEventLoggerRequest::LogMetricEvents { responder, .. } => {
+                                    let _ = responder.send(&mut Ok(()));
+                                }
+                                MetricEventLoggerRequest::LogCustomEvent { responder, .. } => {
+                                    let _ = responder.send(&mut Ok(()));
+                                }
+                            }
+                        }
+                    })
+                    .detach();
+                    let _ = responder.send(&mut Ok(()));
+                }
+            })
+            .detach();
+        });
+    let _: &mut ServiceFs<_> = fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+    fs.collect::<()>().await;
     Ok(())
 }

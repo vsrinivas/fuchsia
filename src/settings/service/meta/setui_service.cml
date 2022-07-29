@@ -37,6 +37,7 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sounds.Player",
                 "fuchsia.media.UsageReporter",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.stash.Store",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.brightness.Control",

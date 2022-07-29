@@ -127,6 +127,11 @@
             to: "#stash",
         },
         {
+            storage: "data",
+            from: "parent",
+            to: "#setui_service",
+        },
+        {
             protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
             from: "#text_manager",
             to: [ "#scenic" ],

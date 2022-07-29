@@ -80,6 +80,11 @@
             to: "#stash",
         },
         {
+            storage: "data",
+            from: "parent",
+            to: "#setui_service",
+        },
+        {
             // The config data contains time zone resources, required for this
             // test to work.  All dart runners need it.  The correct config-data
             // subdir needs to be routed. By convention, the config-data dir is

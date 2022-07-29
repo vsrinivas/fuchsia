@@ -23,7 +23,7 @@ use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
 #[cfg(test)]
 use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::component;
-use fuchsia_syslog::fx_log_warn;
+use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -75,6 +75,7 @@ use crate::job::source::Seeder;
 use crate::keyboard::keyboard_controller::KeyboardController;
 use crate::light::light_controller::LightController;
 use crate::message::MessageHubUtil;
+use crate::migration::MigrationManagerBuilder;
 use crate::monitor::base as monitor_base;
 use crate::night_mode::night_mode_controller::NightModeController;
 use crate::policy::policy_handler;
@@ -483,7 +484,21 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
         let fidl_storage_factory = if let Some(factory) = self.fidl_storage_factory {
             factory
         } else {
-            Arc::new(FidlStorageFactory::new(0, self.storage_dir.unwrap_or_else(init_storage_dir)))
+            let (migration_id, storage_dir) = if let Some(storage_dir) = self.storage_dir {
+                let mut builder = MigrationManagerBuilder::new();
+                builder.set_migration_dir(Clone::clone(&storage_dir));
+                let migration_manager = builder.build();
+                let migration_id = migration_manager
+                    .run_tracked_migrations()
+                    .await
+                    .context("migrations failed")?;
+                fx_log_info!("migrated storage to {migration_id:?}");
+                (migration_id, storage_dir)
+            } else {
+                (None, init_storage_dir())
+            };
+
+            Arc::new(FidlStorageFactory::new(migration_id.unwrap_or(0), storage_dir))
         };
 
         let service_context =
