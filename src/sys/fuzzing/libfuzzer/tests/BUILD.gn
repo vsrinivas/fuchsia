@@ -1,0 +1,86 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fuzzer-integration-tests-pkg",
+    ":fuzzer-test-integration-tests-pkg",
+  ]
+}
+
+# This package contains integration tests that use the "real" fuzzing engine, which generates inputs
+# to drive a simple test fuzzer, to imitates a real fuzzer.
+
+executable("fuzzer-bin") {
+  testonly = true
+  output_name = "libfuzzer_test_fuzzer"
+  deps = [
+    "//src/sys/fuzzing/common/testing:sanitizer",
+    "//src/sys/fuzzing/common/tests:fuzzer-lib",
+  ]
+  configs += [ "//src/sys/fuzzing/libfuzzer/testing:libfuzzer" ]
+  exclude_toolchain_tags = [ "instrumented" ]
+}
+
+test("integration-test-bin") {
+  output_name = "libfuzzer_integration_tests"
+  sources = [ "integration-tests.cc" ]
+  deps = [
+    "//src/sys/fuzzing/common/testing",
+    "//src/sys/fuzzing/common/tests:integration-tests-lib",
+  ]
+}
+
+fuchsia_test_component("fuzzer-integration-tests") {
+  manifest = "meta/fuzzer.cml"
+  deps = [
+    ":fuzzer-bin",
+    ":integration-test-bin",
+    "//src/sys/fuzzing/common/testing/data:corpus",
+    "//src/sys/fuzzing/libfuzzer:engine-bin",
+  ]
+}
+
+fuchsia_test_package("fuzzer-integration-tests-pkg") {
+  package_name = "libfuzzer-integration-tests"
+  test_components = [ ":fuzzer-integration-tests" ]
+}
+
+# This package contains integration tests that use a test "engine", which uses fixed inputs to drive
+# a simple test fuzzer without instrumentation, to imitate the fuzzer tests that run in CQ.
+
+executable("fuzzer-uninstrumented-bin") {
+  testonly = true
+  output_name = "libfuzzer_test_fuzzer_uninstrumented"
+  deps = [
+    "//src/lib/fuzzing/cpp:fuzzer_test",
+    "//src/sys/fuzzing/common/tests:fuzzer-lib",
+  ]
+  exclude_toolchain_tags = [ "instrumented" ]
+}
+
+renamed_binary("fuzzer-uninstrumented-renamed") {
+  testonly = true
+  dest = "bin/libfuzzer_test_fuzzer"
+  source = "$root_out_dir/libfuzzer_test_fuzzer_uninstrumented"
+  source_deps = [ ":fuzzer-uninstrumented-bin" ]
+}
+
+fuchsia_test_component("fuzzer-test-integration-test") {
+  manifest = "meta/fuzzer-test.cml"
+  deps = [
+    ":fuzzer-uninstrumented-renamed",
+    "//src/sys/fuzzing/common/testing/data:corpus",
+  ]
+}
+
+fuchsia_test_package("fuzzer-test-integration-tests-pkg") {
+  package_name = "libfuzzer-test-integration-test"
+  test_components = [ ":fuzzer-test-integration-test" ]
+}

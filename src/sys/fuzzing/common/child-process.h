@@ -17,6 +17,7 @@
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/status.h"
 
 namespace fuzzing {
 
@@ -76,6 +77,9 @@ class ChildProcess {
   // file descriptor is closed or was cloned, and will return |ZX_ERR_STOP| on EOF.
   ZxPromise<std::string> ReadFromStdout();
   ZxPromise<std::string> ReadFromStderr();
+
+  // Collect process-related statistics for the child process.
+  ZxResult<ProcessStats> GetStats();
 
   // Promises to wait for the spawned process to terminate.
   ZxPromise<> Wait();

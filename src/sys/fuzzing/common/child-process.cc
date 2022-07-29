@@ -289,6 +289,14 @@ ZxPromise<> ChildProcess::AwaitPrevious(int fd, ZxConsumer<> consumer) {
   return previous.promise();
 }
 
+ZxResult<ProcessStats> ChildProcess::GetStats() {
+  ProcessStats stats;
+  if (auto status = GetStatsForProcess(process_, &stats); status != ZX_OK) {
+    return fpromise::error(status);
+  }
+  return fpromise::ok(std::move(stats));
+}
+
 ZxPromise<> ChildProcess::Wait() {
   return fpromise::make_promise(
       [this, terminated = ZxFuture<zx_packet_signal_t>()](Context& context) mutable -> ZxResult<> {

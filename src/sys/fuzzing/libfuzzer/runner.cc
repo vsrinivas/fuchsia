@@ -24,6 +24,7 @@
 #include <openssl/sha.h>
 #include <re2/re2.h>
 
+#include "src/lib/files/directory.h"
 #include "src/lib/files/eintr_wrapper.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -67,6 +68,12 @@ std::string MakeArg(const std::string& flag, T value) {
   return oss.str();
 }
 
+void CreateDirectory(const char* pathname) {
+  if (!files::CreateDirectory(pathname)) {
+    FX_LOGS(FATAL) << "Failed to create '" << pathname << "': " << strerror(errno);
+  }
+}
+
 // Reads a byte sequence from a file.
 Input ReadInputFromFile(const std::string& pathname) {
   std::vector<uint8_t> data;
@@ -94,8 +101,8 @@ RunnerPtr LibFuzzerRunner::MakePtr(ExecutorPtr executor) {
 
 LibFuzzerRunner::LibFuzzerRunner(ExecutorPtr executor)
     : Runner(executor), process_(executor), workflow_(this) {
-  FX_CHECK(std::filesystem::create_directory(kSeedCorpusPath));
-  FX_CHECK(std::filesystem::create_directory(kLiveCorpusPath));
+  CreateDirectory(kSeedCorpusPath);
+  CreateDirectory(kLiveCorpusPath);
 }
 
 void LibFuzzerRunner::AddDefaults(Options* options) {
@@ -239,7 +246,7 @@ ZxPromise<Input> LibFuzzerRunner::Cleanse(Input input) {
 }
 
 ZxPromise<> LibFuzzerRunner::Merge() {
-  std::filesystem::create_directory(kTempCorpusPath);
+  CreateDirectory(kTempCorpusPath);
   AddArgs();
   process_.AddArg("-merge=1");
   process_.AddArg(kTempCorpusPath);
@@ -268,7 +275,19 @@ ZxPromise<> LibFuzzerRunner::Stop() {
 
 Status LibFuzzerRunner::CollectStatus() {
   // For libFuzzer, we return the most recently parsed status rather than point-in-time status.
-  return CopyStatus(status_);
+  auto status = CopyStatus(status_);
+
+  // Add other stats.
+  auto elapsed = zx::clock::get_monotonic() - start_;
+  status.set_elapsed(elapsed.to_nsecs());
+
+  auto stats = process_.GetStats();
+  if (stats.is_ok()) {
+    std::vector<ProcessStats> process_stats({stats.take_value()});
+    status.set_process_stats(std::move(process_stats));
+  }
+
+  return status;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -364,6 +383,8 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
       .and_then([this, parse = ZxFuture<FuzzResult>(),
                  kill = ZxFuture<>()](Context& context) mutable -> ZxResult<FuzzResult> {
         if (!parse) {
+          status_.set_running(true);
+          start_ = zx::clock::get_monotonic();
           parse = ParseOutput();
         }
         if (!parse(context)) {
@@ -375,6 +396,7 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
         if (!kill(context)) {
           return fpromise::pending();
         }
+        status_.set_running(false);
         process_.Reset();
         return parse.take_result();
       })
@@ -468,16 +490,14 @@ void LibFuzzerRunner::ParseStatus(re2::StringPiece* input) {
   }
   auto reason = UpdateReason::PULSE;  // By default, assume it's just a status update.
   if (reason_str == "INITED") {
-    status_.set_running(true);
-    start_ = zx::clock::get_monotonic();
     reason = UpdateReason::INIT;
   } else if (reason_str == "NEW") {
     reason = UpdateReason::NEW;
   } else if (reason_str == "REDUCE") {
     reason = UpdateReason::REDUCE;
   } else if (reason_str == "DONE") {
-    status_.set_running(false);
     reason = UpdateReason::DONE;
+    status_.set_running(false);
   }
 
   // Parse covered PCs.
@@ -505,10 +525,6 @@ void LibFuzzerRunner::ParseStatus(re2::StringPiece* input) {
       status_.set_corpus_total_size(corpus_total_size * kOneMb);
     }
   }
-
-  // Add other stats.
-  auto elapsed = zx::clock::get_monotonic() - start_;
-  status_.set_elapsed(elapsed.to_nsecs());
 
   std::vector<ProcessStats> process_stats;
   status_.set_process_stats(std::move(process_stats));

@@ -96,7 +96,7 @@ class LibFuzzerRunner : public Runner {
   bool has_dictionary_ = false;
   zx::time start_;
 
-  // If true, eachoes the piped stderr to this process's stderr.
+  // If true, echoes the piped stderr to this process's stderr.
   bool verbose_ = true;
 
   Status status_;
