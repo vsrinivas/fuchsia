@@ -6,6 +6,8 @@ group("bin") {
   testonly = true
   public_deps = [
     "omaha-client",
+    "package-tool",
+    "package-tool:host",
     "pkgctl:pkgctl-bin",
     "pm",
     "pm:host",
@@ -20,6 +22,7 @@ group("tests") {
     "grand-swd-binary:tests",
     "multi-universal-tool:tests",
     "omaha-client:tests",
+    "package-tool:tests",
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",

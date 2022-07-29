@@ -10,18 +10,9 @@ ffx_plugin("ffx_package_build") {
   with_unit_tests = true
   deps = [
     "//src/developer/ffx/lib/errors:lib",
-    "//src/lib/versioning/version-history/rust:version-history",
-    "//src/sys/pkg/lib/fuchsia-pkg",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
+    "//src/sys/pkg/lib/package-tool",
   ]
-
-  test_deps = [
-    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//third_party/rust_crates:pretty_assertions",
-    "//third_party/rust_crates:tempfile",
-  ]
+  args_deps = [ "//src/sys/pkg/lib/package-tool" ]
 
   args_sources = [ "src/args.rs" ]
 
