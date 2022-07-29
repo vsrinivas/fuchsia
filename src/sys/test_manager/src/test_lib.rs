@@ -75,9 +75,7 @@ impl TestBuilder {
                                 events.push(TestRunEvent::debug_data(
                                     fidl_event.timestamp,
                                     data_file.name.expect("Name cannot be empty"),
-                                    fuchsia_fs::read_file(&file_proxy)
-                                        .await
-                                        .context("Read debugdata file")?,
+                                    file_proxy,
                                 ));
                             }
                         }
@@ -90,31 +88,28 @@ impl TestBuilder {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct TestRunEvent {
     pub timestamp: Option<i64>,
     pub payload: TestRunEventPayload,
 }
 
 impl TestRunEvent {
-    pub fn debug_data<S: Into<String>, T: Into<String>>(
+    pub fn debug_data<S: Into<String>>(
         timestamp: Option<i64>,
         filename: S,
-        contents: T,
+        proxy: fio::FileProxy,
     ) -> Self {
         Self {
             timestamp,
-            payload: TestRunEventPayload::DebugData {
-                filename: filename.into(),
-                contents: contents.into(),
-            },
+            payload: TestRunEventPayload::DebugData { filename: filename.into(), proxy },
         }
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub enum TestRunEventPayload {
-    DebugData { filename: String, contents: String },
+    DebugData { filename: String, proxy: fio::FileProxy },
 }
 
 /// Events produced by test suite.

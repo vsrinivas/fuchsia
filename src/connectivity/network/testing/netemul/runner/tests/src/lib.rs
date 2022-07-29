@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use assert_matches::assert_matches;
 use fidl_fuchsia_test_manager as ftest_manager;
 use test_manager_test_lib::RunEvent;
 
@@ -23,7 +24,7 @@ pub async fn run_test(test_url: &str) -> Result<(Vec<RunEvent>, Vec<String>), an
     // `TestBuilder::run` returns a `Vec` of `TestRunEvent`s, which only ever
     // include debug data currently, so expect this to be empty.
     let test_run_events = test_run_result.expect("builder execution failed");
-    assert_eq!(&test_run_events[..], []);
+    assert_matches!(&test_run_events[..], []);
 
     test_suite_result
 }

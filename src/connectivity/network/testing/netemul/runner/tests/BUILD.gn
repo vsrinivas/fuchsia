@@ -17,6 +17,7 @@ rustc_library("lib") {
     "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures-util",
   ]
   sources = [ "src/lib.rs" ]

@@ -10,7 +10,7 @@ use {
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    futures::{channel::mpsc, prelude::*},
+    futures::{channel::mpsc, prelude::*, stream},
     pretty_assertions::assert_eq,
     test_manager_test_lib::{GroupRunEventByTestCase, RunEvent, TestBuilder, TestRunEventPayload},
 };
@@ -694,25 +694,25 @@ async fn debug_data_test() {
         expected_events.into_iter().group_by_test_case_unordered(),
     );
 
-    let test_run_events = run_events_result.unwrap();
+    let test_run_events = stream::iter(run_events_result.unwrap());
     // There may be a number of files in debug data due to the processing done
     // in debug data. In addition, the names of the files are set by some libraries
     // which we aren't concerned about. So here, we'll just check that a file that contains
     // the content our test wrote exists.
     assert!(
-        test_run_events.iter().any(|run_event| {
-            let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
-            contents == "Debug data from test\n"
-        }),
-        "Actual events: {:?}",
         test_run_events
+            .any(|run_event| async move {
+                let TestRunEventPayload::DebugData { proxy, .. } = &run_event.payload;
+                let contents = fuchsia_fs::read_file(&proxy).await.expect("read_file");
+                contents == "Debug data from test\n"
+            })
+            .await,
     );
 }
 
 async fn debug_data_stress_test(case_name: &str, vmo_count: usize, vmo_size: usize) {
     const TEST_URL: &str =
         "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_spam_test.cm";
-    let expected_debug_data_contents = "a".repeat(vmo_size);
 
     let builder = TestBuilder::new(
         connect_test_manager().await.expect("cannot connect to run builder proxy"),
@@ -739,19 +739,21 @@ async fn debug_data_stress_test(case_name: &str, vmo_count: usize, vmo_size: usi
         expected_events.into_iter().group_by_test_case_unordered(),
     );
 
-    let test_run_events = run_events_result.unwrap();
+    let test_run_events = stream::iter(run_events_result.unwrap());
     // There may be a number of files in debug data due to the processing done
     // in debug data. In addition, the names of the files are set by some libraries
     // which we aren't concerned about. So here, we'll just check that a file that contains
     // the content our test wrote exists.
-    let debug_data_events: Vec<_> = test_run_events
-        .into_iter()
-        .filter(|run_event| {
-            let TestRunEventPayload::DebugData { contents, .. } = &run_event.payload;
-            contents == &expected_debug_data_contents
+    let num_vmos = test_run_events
+        .then(|run_event| async move {
+            let TestRunEventPayload::DebugData { proxy, .. } = &run_event.payload;
+            let contents = fuchsia_fs::read_file(&proxy).await.expect("read file");
+            contents.len() == vmo_size && contents.as_bytes().iter().all(|byte| *byte == b'a')
         })
-        .collect();
-    assert_eq!(debug_data_events.len(), vmo_count);
+        .filter(|matches_vmo| futures::future::ready(*matches_vmo))
+        .count()
+        .await;
+    assert_eq!(num_vmos, vmo_count);
 }
 
 #[fuchsia::test]
