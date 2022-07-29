@@ -59,4 +59,10 @@ protocol Launcher {
         /// A optional inline command to run
         command string:<MAX, optional>;
     }) -> (struct {}) error LauncherError;
+
+    /// This event fires when a shell has terminated.
+    -> OnTerminated(struct {
+        /// The process exit code of the shell.
+        return_code int32;
+    });
 };

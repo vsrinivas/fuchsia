@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Error, Result},
+    anyhow::{anyhow, Error, Result},
     atty::Stream,
     errors::{ffx_bail, ffx_error},
     ffx_component_explore_args::ExploreComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_dash::{LauncherError, LauncherProxy},
+    fidl_fuchsia_dash::{LauncherError, LauncherEvent, LauncherProxy},
     fidl_fuchsia_io as fio,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -91,8 +91,8 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
     let pty = fuchsia_async::Socket::from_socket(pty)?;
     let (mut read_from_pty, mut write_to_pty) = pty.split();
 
-    // Setup a thread for forwarding stdin. Reading from stdin is a blocking operation which will
-    // halt the executor if it were to run on the same thread.
+    // Set up a thread for forwarding stdin. Reading from stdin is a blocking operation which
+    // will halt the executor if it were to run on the same thread.
     std::thread::spawn(move || {
         let mut executor = fuchsia_async::LocalExecutor::new()?;
         executor.run_singlethreaded(async move {
@@ -127,5 +127,14 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
         drop(terminal);
         eprintln!("Connection to terminal closed");
     }
-    Ok(())
+
+    // Report process errors and return the exit status.
+    let mut event_stream = launcher_proxy.take_event_stream();
+    match event_stream.next().await {
+        Some(Ok(LauncherEvent::OnTerminated { return_code })) => {
+            std::process::exit(return_code);
+        }
+        Some(Err(e)) => Err(anyhow!("OnTerminated event error: {:?}", e)),
+        None => Err(anyhow!("didn't receive an expected OnTerminated event")),
+    }
 }

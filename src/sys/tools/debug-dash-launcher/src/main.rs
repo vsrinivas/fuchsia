@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{self, Context};
-use fidl_fuchsia_dash::{LauncherRequest, LauncherRequestStream};
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_zircon as zx;
-use futures::prelude::*;
-use launch::{launch_with_pty, launch_with_socket};
-use tracing::*;
+use {
+    anyhow::{self, Context},
+    fidl::endpoints::{ControlHandle, Responder},
+    fidl_fuchsia_dash::{LauncherControlHandle, LauncherRequest, LauncherRequestStream},
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::{component, health::Reporter},
+    fuchsia_zircon as zx,
+    futures::prelude::*,
+    launch::{launch_with_pty, launch_with_socket},
+    std::convert::TryInto,
+    tracing::*,
+};
 
 mod launch;
 mod socket;
@@ -47,8 +51,8 @@ async fn main() -> Result<(), anyhow::Error> {
                     } => {
                         let mut result =
                             launch_with_pty(&moniker, pty, tools_url, command).await.map(|p| {
-                                info!("Launched dash for instance {}", moniker);
-                                log_on_process_exit(p);
+                                info!("launched Dash for instance {}", moniker);
+                                notify_on_process_exit(p, responder.control_handle().clone());
                             });
                         let _ = responder.send(&mut result);
                     }
@@ -62,8 +66,8 @@ async fn main() -> Result<(), anyhow::Error> {
                         let mut result = launch_with_socket(&moniker, socket, tools_url, command)
                             .await
                             .map(|p| {
-                                info!("Launched dash for instance {}", moniker);
-                                log_on_process_exit(p);
+                                info!("launched Dash for instance {}", moniker);
+                                notify_on_process_exit(p, responder.control_handle().clone());
                             });
                         let _ = responder.send(&mut result);
                     }
@@ -75,15 +79,19 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn log_on_process_exit(process: zx::Process) {
+fn notify_on_process_exit(process: zx::Process, control_handle: LauncherControlHandle) {
     fasync::Task::spawn(async move {
         let _ = fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED).await;
         match process.info() {
             Ok(info) => {
+                let _ = control_handle
+                    .send_on_terminated(info.return_code.try_into().unwrap())
+                    .context("error sending OnTerminated event");
                 info!("Dash process has terminated (exit code: {})", info.return_code);
             }
             Err(s) => {
                 info!("Dash process has terminated (could not get exit code: {})", s);
+                control_handle.shutdown();
             }
         }
     })
