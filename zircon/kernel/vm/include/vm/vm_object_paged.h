@@ -158,10 +158,7 @@ class VmObjectPaged final : public VmObject {
     return cow_pages_locked()->FailPageRequestsLocked(offset, len, error_status);
   }
 
-  zx_status_t DirtyPages(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
-    return cow_pages_locked()->DirtyPagesLocked(offset, len);
-  }
+  zx_status_t DirtyPages(uint64_t offset, uint64_t len) override;
   zx_status_t EnumerateDirtyRanges(uint64_t offset, uint64_t len,
                                    DirtyRangeEnumerateFunction&& dirty_range_fn) override {
     Guard<Mutex> guard{&lock_};

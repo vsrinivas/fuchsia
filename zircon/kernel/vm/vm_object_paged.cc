@@ -1555,6 +1555,42 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
   return cow_pages_locked()->SupplyPagesLocked(offset, len, pages, /*new_zeroed_pages=*/false);
 }
 
+zx_status_t VmObjectPaged::DirtyPages(uint64_t offset, uint64_t len) {
+  zx_status_t status;
+  // It is possible to encounter delayed PMM allocations, which requires waiting on the
+  // page_request.
+  __UNINITIALIZED LazyPageRequest page_request;
+
+  // Initialize a list of allocated pages that DirtyPagesLocked will allocate any new pages into
+  // before inserting them in the VMO. Allocated pages can therefore be shared across multiple calls
+  // to DirtyPagesLocked. Instead of having to allocate and free pages in case DirtyPagesLocked
+  // cannot successfully dirty the entire range atomically, we can just hold on to the allocated
+  // pages and use them for the next call. This ensures that we are making forward progress with
+  // each successive call to DirtyPagesLocked.
+  list_node alloc_list;
+  list_initialize(&alloc_list);
+  auto alloc_list_cleanup = fit::defer([&alloc_list]() -> void {
+    if (!list_is_empty(&alloc_list)) {
+      pmm_free(&alloc_list);
+    }
+  });
+
+  Guard<Mutex> guard{&lock_};
+  do {
+    status = cow_pages_locked()->DirtyPagesLocked(offset, len, &alloc_list, &page_request);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      zx_status_t wait_status;
+      guard.CallUnlocked([&page_request, &wait_status]() { wait_status = page_request->Wait(); });
+      if (wait_status != ZX_OK) {
+        return wait_status;
+      }
+      // If the wait was successful, loop around and try the call again, which will re-validate any
+      // state that might have changed when the lock was dropped.
+    }
+  } while (status == ZX_ERR_SHOULD_WAIT);
+  return status;
+}
+
 zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
   // Is it a valid cache flag?
   if (cache_policy & ~ZX_CACHE_POLICY_MASK) {

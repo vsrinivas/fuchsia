@@ -5620,4 +5620,37 @@ TEST(PagerWriteback, EvictAfterDirtyRequest) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
 }
 
+// Tests dirtying a large range at once. The core-tests run with random delayed PMM allocation, so
+// by requiring a large number of pages to be allocated at once, we increase the likelihood of
+// falling back to single page allocations and gradually accumulating the required number of pages.
+TEST(PagerWriteback, DirtyLargeRange) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(100, ZX_VMO_TRAP_DIRTY | ZX_VMO_RESIZABLE, &vmo));
+
+  // Empty source VMO to supply with zero pages.
+  zx::vmo vmo_src;
+  ASSERT_OK(zx::vmo::create(100 * zx_system_get_page_size(), 0, &vmo_src));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 0, 100 * zx_system_get_page_size(), vmo_src, 0));
+
+  // Resize the VMO up so that we also need to add zero pages at the tail.
+  ASSERT_TRUE(vmo->Resize(200));
+
+  // No pages in the VMO yet.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(0, info.committed_bytes);
+
+  // Dirty the entire VMO at once. This will allocate all 200 pages.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 200));
+
+  // All pages have been allocated and dirtied.
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(200 * zx_system_get_page_size(), info.committed_bytes);
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 200, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
 }  // namespace pager_tests

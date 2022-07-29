@@ -313,8 +313,12 @@ class VmCowPages final
     return DirtyState(page->object.dirty_state) == DirtyState::AwaitingClean;
   }
 
-  // See VmObject::DirtyPages
-  zx_status_t DirtyPagesLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+  // See VmObject::DirtyPages. |page_request| is required to support delayed PMM allocations; if
+  // ZX_ERR_SHOULD_WAIT is returned the caller should wait on |page_request|. |alloc_list| will hold
+  // any pages that were allocated but not used in case of delayed PMM allocations, so that it can
+  // be reused across multiple successive calls whilst ensuring forward progress.
+  zx_status_t DirtyPagesLocked(uint64_t offset, uint64_t len, list_node_t* alloc_list,
+                               LazyPageRequest* page_request) TA_REQ(lock_);
 
   using DirtyRangeEnumerateFunction = VmObject::DirtyRangeEnumerateFunction;
   // See VmObject::EnumerateDirtyRanges

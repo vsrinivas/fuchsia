@@ -4201,7 +4201,8 @@ zx_status_t VmCowPages::FailPageRequestsLocked(uint64_t offset, uint64_t len,
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
+zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_node_t* alloc_list,
+                                         LazyPageRequest* page_request) {
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -4280,23 +4281,49 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(status == ZX_OK);
   }
 
+  // Utilize the already allocated pages in alloc_list.
+  uint64_t alloc_list_len = list_length(alloc_list);
+  zero_pages_count = zero_pages_count > alloc_list_len ? zero_pages_count - alloc_list_len : 0;
+
+  // Allocate the number of zero pages required upfront, so that we can fail the call early if the
+  // page allocation fails.
   if (zero_pages_count > 0) {
-    // Allocate the number of zero pages required upfront, so that we can fail the call early if the
-    // page allocation fails.
-    list_node zero_pages_list;
-    list_initialize(&zero_pages_list);
-    // TODO(fxbug.dev/99890): Support delayed allocations here.
-    zx_status_t status = pmm_alloc_pages(
-        zero_pages_count, pmm_alloc_flags_ & ~PMM_ALLOC_FLAG_CAN_WAIT, &zero_pages_list);
-    if (status != ZX_OK) {
+    // First try to allocate all the pages at once. This is an optimization and avoids repeated
+    // calls to the PMM to allocate single pages. If the PMM returns ZX_ERR_SHOULD_WAIT, fall back
+    // to allocating one page at a time below, giving reclamation strategies a better chance to
+    // catch up with incoming allocation requests.
+    zx_status_t status = pmm_alloc_pages(zero_pages_count, pmm_alloc_flags_, alloc_list);
+    if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
       return status;
     }
 
-    auto zero_pages_cleanup = fit::defer([this, &zero_pages_list]() {
-      if (!list_is_empty(&zero_pages_list)) {
-        FreePages(&zero_pages_list);
+    // Fall back to allocating a single page at a time. We want to do this before we can start
+    // inserting pages into the page list, to avoid rolling back any pages we inserted but could not
+    // dirty in case we fail partway after having inserted some pages into the page list. Rolling
+    // back like this can lead to a livelock where we are constantly allocating some pages, freeing
+    // them, waiting on the page_request, and then repeating.
+    //
+    // If allocations do fail partway here, we will have accumulated the allocated pages in
+    // alloc_list, so we will be able to reuse them on a subsequent call to DirtyPagesLocked. This
+    // ensures we are making forward progress across successive calls.
+    while (zero_pages_count > 0) {
+      vm_page_t* new_page;
+      status = pmm_alloc_page(pmm_alloc_flags_, &new_page);
+      // If single page allocation fails, bubble up the failure.
+      if (status != ZX_OK) {
+        // If asked to wait, fill in the page request for the caller to wait on.
+        if (status == ZX_ERR_SHOULD_WAIT) {
+          DEBUG_ASSERT(page_request);
+          status = AnonymousPageRequester::Get().FillRequest(page_request->get());
+          DEBUG_ASSERT(status == ZX_ERR_SHOULD_WAIT);
+          return status;
+        }
+        // Map all allocation failures except ZX_ERR_SHOULD_WAIT to ZX_ERR_NO_MEMORY.
+        return ZX_ERR_NO_MEMORY;
       }
-    });
+      list_add_tail(alloc_list, &new_page->queue_node);
+      zero_pages_count--;
+    }
 
     // Increment the generation count as we're going to be inserting new pages.
     IncrementHierarchyGenerationCountLocked();
@@ -4305,9 +4332,9 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
     if (start_offset < supply_zero_offset_) {
       const uint64_t end = ktl::min(supply_zero_offset_, end_offset);
       status = page_list_.ForEveryPageInRange(
-          [this, &zero_pages_list](const VmPageOrMarker* p, uint64_t off) {
+          [this, &alloc_list](const VmPageOrMarker* p, uint64_t off) {
             if (p->IsMarker()) {
-              DEBUG_ASSERT(!list_is_empty(&zero_pages_list));
+              DEBUG_ASSERT(!list_is_empty(alloc_list));
               AssertHeld(lock_);
 
               // AddNewPageLocked will also zero the page and update any mappings.
@@ -4315,9 +4342,9 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
               // TODO(rashaeqbal): Depending on how often we end up forking zero markers, we might
               // want to pass do_range_udpate = false, and defer updates until later, so we can
               // perform a single batch update.
-              zx_status_t status = AddNewPageLocked(
-                  off, list_remove_head_type(&zero_pages_list, vm_page, queue_node),
-                  CanOverwriteContent::Zero, nullptr);
+              zx_status_t status =
+                  AddNewPageLocked(off, list_remove_head_type(alloc_list, vm_page, queue_node),
+                                   CanOverwriteContent::Zero, nullptr);
               // AddNewPageLocked will not fail with ZX_ERR_ALREADY_EXISTS as we can overwrite
               // markers with OverwriteInitialContent, nor with ZX_ERR_NO_MEMORY as we don't need to
               // allocate a new slot in the page list, we're simply replacing its content.
@@ -4335,6 +4362,10 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
     // Pages starting at supply_zero_offset_ can only be Dirty. So if we added any new pages with
     // the intention of dirtying them in this function, but we could not successfully do so (because
     // allocation for a page list node failed part of the way), we need to roll back.
+    //
+    // Note that this roll back is fine as it does not risk forward progress, as opposed to rolling
+    // back in case of ZX_ERR_SHOULD_WAIT. The caller will not retry with an error status of
+    // ZX_ERR_NO_MEMORY.
     auto zero_offset_cleanup = fit::defer([this, end_offset]() {
       AssertHeld(lock_);
       if (supply_zero_offset_ < end_offset) {
@@ -4379,10 +4410,9 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         continue;
       }
 
-      DEBUG_ASSERT(!list_is_empty(&zero_pages_list));
-
+      DEBUG_ASSERT(!list_is_empty(alloc_list));
       // AddNewPageLocked will also zero the page and update any mappings.
-      status = AddNewPageLocked(off, list_remove_head_type(&zero_pages_list, vm_page, queue_node),
+      status = AddNewPageLocked(off, list_remove_head_type(alloc_list, vm_page, queue_node),
                                 CanOverwriteContent::Zero, nullptr);
       // We know that there was no page here so AddNewPageLocked will not fail with
       // ZX_ERR_ALREADY_EXISTS. The only possible error is ZX_ERR_NO_MEMORY if we failed to allocate
@@ -4395,11 +4425,16 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
 
     // We were able to successfully insert all the required pages. Cancel the cleanup.
     zero_offset_cleanup.cancel();
-
-    DEBUG_ASSERT(list_is_empty(&zero_pages_list));
   }
 
-  return page_list_.ForEveryPageAndContiguousRunInRange(
+  // After this point, we have to mark all the requested pages Dirty *atomically*. The user pager
+  // might be tracking filesystem space reservations based on the success / failure of this call. So
+  // if we fail partway, the user pager might think that no pages in the specified range have been
+  // dirtied, which would be incorrect. If there are any conditions that would cause us to fail,
+  // evaluate those before reaching here, so that we can return the failure early before starting to
+  // mark pages Dirty.
+
+  zx_status_t status = page_list_.ForEveryPageAndContiguousRunInRange(
       [](const VmPageOrMarker* p, uint64_t off) {
         if (p->IsPage()) {
           vm_page_t* page = p->Page();
@@ -4423,6 +4458,10 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
         return ZX_ERR_NEXT;
       },
       start_offset, end_offset);
+
+  // We don't expect a failure from the traversal.
+  DEBUG_ASSERT(status == ZX_OK);
+  return status;
 }
 
 void VmCowPages::TryAdvanceSupplyZeroOffsetLocked(uint64_t start_offset, uint64_t end_offset) {
