@@ -59,7 +59,7 @@ pub(crate) struct Builder {
 }
 
 impl Builder {
-    pub fn new(name: PackageName) -> Self {
+    pub(crate) fn new(name: PackageName) -> Self {
         Self {
             contents: HashMap::new(),
             meta_package: MetaPackage::from_name(name),
@@ -67,14 +67,20 @@ impl Builder {
         }
     }
 
-    pub fn add_entry(&mut self, blob_path: String, hash: Hash, source_path: PathBuf, size: u64) {
+    pub(crate) fn add_entry(
+        &mut self,
+        blob_path: String,
+        hash: Hash,
+        source_path: PathBuf,
+        size: u64,
+    ) {
         if blob_path != "meta/".to_string() {
             self.contents.insert(blob_path.clone(), hash);
         }
         self.blobs.insert(blob_path, BlobEntry { source_path, size, hash });
     }
 
-    pub fn build(self) -> Result<Package, MetaContentsError> {
+    pub(crate) fn build(self) -> Result<Package, MetaContentsError> {
         Ok(Package {
             meta_contents: MetaContents::from_map(self.contents)?,
             meta_package: self.meta_package,

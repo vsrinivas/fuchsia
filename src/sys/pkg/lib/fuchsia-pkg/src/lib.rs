@@ -12,6 +12,7 @@ mod meta_contents;
 mod meta_package;
 mod meta_subpackages;
 mod package;
+mod package_builder;
 mod package_directory;
 mod package_manifest;
 mod package_manifest_list;
@@ -20,7 +21,6 @@ mod path_to_string;
 
 pub use {
     crate::{
-        build::{build, build_with_file_system, FileSystem},
         creation_manifest::CreationManifest,
         errors::{
             BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
@@ -31,6 +31,7 @@ pub use {
         meta_subpackages::transitional,
         meta_subpackages::MetaSubpackages,
         package::{BlobEntry, Package},
+        package_builder::PackageBuilder,
         package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
         package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder, RelativeTo},
         package_manifest_list::PackageManifestList,
@@ -39,9 +40,3 @@ pub use {
     fuchsia_url::errors::PackagePathSegmentError,
     path_to_string::PathToStringExt,
 };
-
-#[cfg(not(target_os = "fuchsia"))]
-mod package_builder;
-
-#[cfg(not(target_os = "fuchsia"))]
-pub use package_builder::PackageBuilder;

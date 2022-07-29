@@ -79,16 +79,23 @@ impl PackageBuilder {
             return Err(anyhow!("package missing meta/package entry"));
         };
 
-        let mut builder = PackageBuilder::new(meta_package.name());
         ensure!(meta_package.variant().is_zero(), "package variant must be zero");
+
+        let mut builder = PackageBuilder::new(meta_package.name());
+
+        // Read the abi revision from `meta/fuchsia.abi/abi-revision`, or error out if it's missing.
+        if let Some(path) = manifest.far_contents().get("meta/fuchsia.abi/abi-revision") {
+            let abi_revision = std::fs::read(&path)?;
+            builder.abi_revision(AbiRevision::try_from(abi_revision.as_slice())?.into());
+        }
 
         for (at_path, file) in manifest.external_contents() {
             builder.add_file_as_blob(at_path, file)?;
         }
 
         for (at_path, file) in manifest.far_contents() {
-            // The package builder will automatically create a meta/package, so don't try to add it.
-            if at_path == "meta/package" {
+            // Ignore files that the package builder will automatically create.
+            if at_path == "meta/package" || at_path == "meta/fuchsia.abi/abi-revision" {
                 continue;
             }
 
@@ -731,6 +738,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(target_os = "fuchsia"))]
     #[test]
     fn test_from_archive() {
         // this package is defined in this test's build rules

@@ -12,6 +12,7 @@ lib_deps = [
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-fs",
   "//src/lib/fuchsia-url",
+  "//src/lib/versioning/version-history/rust:version-history",
   "//src/lib/zircon/rust:fuchsia-zircon-status",
   "//src/sys/pkg/lib/far/rust:fuchsia-archive",
   "//src/sys/pkg/lib/fuchsia-hash",
@@ -24,9 +25,6 @@ lib_deps = [
   "//third_party/rust_crates:thiserror",
   "//third_party/rust_crates:walkdir",
 ]
-if (!is_fuchsia) {
-  lib_deps += [ "//src/lib/versioning/version-history/rust:version-history" ]
-}
 
 test_deps = [
   "//third_party/rust_crates:assert_matches",

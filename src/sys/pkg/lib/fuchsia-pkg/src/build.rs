@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::{fs, io};
 use tempfile::NamedTempFile;
 
-pub fn build(
+pub(crate) fn build(
     creation_manifest: &CreationManifest,
     meta_far_path: impl AsRef<Path>,
     published_name: impl AsRef<str>,
@@ -27,7 +27,7 @@ pub fn build(
 }
 
 // Used to mock out native filesystem for testing
-pub trait FileSystem<'a> {
+pub(crate) trait FileSystem<'a> {
     type File: io::Read;
     fn open(&'a self, path: &str) -> Result<Self::File, io::Error>;
     fn len(&self, path: &str) -> Result<u64, io::Error>;
@@ -49,7 +49,7 @@ impl FileSystem<'_> for ActualFileSystem {
     }
 }
 
-pub fn build_with_file_system<'a>(
+pub(crate) fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
     meta_far_path: impl AsRef<Path>,
     published_name: impl AsRef<str>,

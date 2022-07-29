@@ -23,66 +23,33 @@ pub async fn cmd_archive(cmd: ArchiveCommand) -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use fuchsia_pkg::{build_with_file_system, CreationManifest, FileSystem, MetaPackage};
-    use maplit::{btreemap, hashmap};
-    use std::collections::HashMap;
+    use fuchsia_pkg::PackageBuilder;
     use std::fs;
-    use std::io;
     use std::path::PathBuf;
-
-    struct FakeFileSystem {
-        content_map: HashMap<String, Vec<u8>>,
-    }
-
-    impl<'a> FileSystem<'a> for FakeFileSystem {
-        type File = &'a [u8];
-        fn open(&'a self, path: &str) -> Result<Self::File, io::Error> {
-            Ok(self.content_map.get(path).unwrap().as_slice())
-        }
-        fn len(&self, path: &str) -> Result<u64, io::Error> {
-            Ok(self.content_map.get(path).unwrap().len() as u64)
-        }
-        fn read(&self, path: &str) -> Result<Vec<u8>, io::Error> {
-            Ok(self.content_map.get(path).unwrap().clone())
-        }
-    }
 
     fn create_package_manifest(
         package_manifest_path: PathBuf,
         meta_far_path: PathBuf,
         blob_path: PathBuf,
     ) {
-        let blob_path_string = blob_path.into_os_string().into_string().unwrap();
-        let creation_manifest = CreationManifest::from_external_and_far_contents(
-            btreemap! {
-                "lib/mylib.so".to_string() => blob_path_string.clone()
-            },
-            btreemap! {
-                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
-                "meta/package".to_string() => "host/meta/package".to_string()
-            },
-        )
-        .unwrap();
-        let component_manifest_contents = "my_component.cmx contents";
-        let mut v = vec![];
-        let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
-        meta_package.serialize(&mut v).unwrap();
-        let file_system = FakeFileSystem {
-            content_map: hashmap! {
-                blob_path_string.clone() => Vec::new(),
-                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
-                "host/meta/package".to_string() => v
-            },
-        };
+        let tmp = tempfile::TempDir::new().unwrap();
 
-        let package_manifest = build_with_file_system(
-            &creation_manifest,
-            &meta_far_path,
-            "test_package",
-            None,
-            &file_system,
-        )
-        .unwrap();
+        let mut builder = PackageBuilder::new("my-package-name");
+
+        builder
+            .add_file_as_blob("lib/mylib.so", blob_path.into_os_string().into_string().unwrap())
+            .unwrap();
+
+        builder
+            .add_contents_to_far(
+                "meta/my_component.cmx",
+                "my_component.cmx contents".as_bytes(),
+                tmp.path(),
+            )
+            .unwrap();
+
+        let package_manifest = builder.build(&tmp.path(), &meta_far_path).unwrap();
+
         let package_manifest_file = fs::File::create(&package_manifest_path).unwrap();
         serde_json::to_writer_pretty(&package_manifest_file, &package_manifest).unwrap();
     }
@@ -112,7 +79,7 @@ mod test {
         assert!(result_far.exists());
         let archive = File::open(&result_far).unwrap();
         let mut package_archive = fuchsia_archive::Utf8Reader::new(&archive).unwrap();
-        assert_eq!(package_archive.read_file("meta.far").unwrap().len(), 16384);
+        assert_eq!(package_archive.read_file("meta.far").unwrap().len(), 20480);
         assert_eq!(
             package_archive
                 .read_file("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b")
