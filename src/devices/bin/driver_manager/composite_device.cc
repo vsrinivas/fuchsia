@@ -250,7 +250,11 @@ zx_status_t CompositeDevice::BindFragment(size_t index, const fbl::RefPtr<Device
   }
   bound_fragments_.push_back(unbound_fragments_.erase(*fragment));
   if (dev->has_outgoing_directory()) {
-    TryAssemble();
+    status = TryAssemble();
+    if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+      LOGF(ERROR, "Failed to assemble composite device: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   return ZX_OK;
