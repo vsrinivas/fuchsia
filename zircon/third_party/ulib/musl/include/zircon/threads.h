@@ -16,6 +16,18 @@ __BEGIN_CDECLS
 // they wish the thread handle to outlive the execution of the C11 thread.
 zx_handle_t thrd_get_zx_handle(thrd_t t);
 
+// Sets the process handle that is used, by this thread, when creating new threads.
+//
+// This does not take ownership of the passed in handle, and does not transfer ownership of the old
+// handle. The caller is responsible for ensuring that the handle remains valid for the life of the
+// thread, or until a different handle is installed.
+//
+// The default value is copied from zx_process_self() in the initial thread, and then copied from
+// the thread calling thrd_create into each new thread.
+//
+// Returns the previously set process handle.
+zx_handle_t thrd_set_zx_process(zx_handle_t proc_handle);
+
 // Converts a threads.h-style status value to an |zx_status_t|.
 static inline zx_status_t __PURE thrd_status_to_zx_status(int thrd_status) {
   switch (thrd_status) {

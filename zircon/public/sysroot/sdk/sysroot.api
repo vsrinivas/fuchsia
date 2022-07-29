@@ -238,7 +238,7 @@
   "include/zircon/syscalls/system.h": "97a11153a706b0d883a3a0942bfddacb",
   "include/zircon/syscalls/types.h": "2486f00253fe454abcce12868b7566ab",
   "include/zircon/testonly-syscalls.h": "a5e34a29034182a9af62963a44359124",
-  "include/zircon/threads.h": "26b09160d793d4669ea2fa3d10d2f150",
+  "include/zircon/threads.h": "0e01c22126479fb344bddd7d924cff0e",
   "include/zircon/time.h": "61c8aac18e1c19c1b8fa58a4e67b9468",
   "include/zircon/tls.h": "1375b46d719742354e0636195789af9f",
   "include/zircon/types.h": "b4d6e004227bef91ccc2d45111062fc3",

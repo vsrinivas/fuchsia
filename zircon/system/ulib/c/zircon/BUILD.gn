@@ -2,16 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("../libc.gni")
+
 source_set("zircon") {
   sources = [
     "getentropy.c",
     "internal.c",
     "take_startup_handle.c",
     "thrd_get_zx_handle.cc",
+    "thrd_set_zx_process.cc",
     "utc.cc",
   ]
   deps = [
     "//zircon/system/ulib/runtime",
     "//zircon/third_party/ulib/musl:musl_internal",
   ]
+}
+
+libc_test("unittests") {
+  sources = [ "thrd_set_zx_process_test.cc" ]
 }

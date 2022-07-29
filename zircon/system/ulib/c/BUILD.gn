@@ -33,7 +33,11 @@ group("components") {
 group("unittests") {
   testonly = true
   deps = []
-  foreach(subdir, libc_components + [ "sanitizers" ]) {
+  foreach(subdir,
+          libc_components + [
+                "sanitizers",
+                "zircon",
+              ]) {
     deps += [ "$subdir:unittests" ]
   }
 }
