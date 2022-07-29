@@ -92,7 +92,7 @@ fi
 export PATH="${newpath}"
 
 # Forward the args to the system `env`.
-exec /usr/bin/env -S -i \
+exec /usr/bin/env -i \
   "FUCHSIA_DIR=${fuchsia_dir}" \
   "TERM=${TERM}" \
   "PATH=${newpath}" \
