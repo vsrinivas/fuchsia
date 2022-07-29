@@ -15,7 +15,6 @@
 #include <kernel/spinlock.h>
 #include <object/dispatcher.h>
 #include <object/port_dispatcher.h>
-#include <object/vcpu_dispatcher.h>
 
 enum class InterruptState {
   WAITING = 0,
@@ -41,9 +40,6 @@ class InterruptDispatcher
   void InterruptHandler();
   zx_status_t Bind(fbl::RefPtr<PortDispatcher> port_dispatcher, uint64_t key);
   zx_status_t Unbind(fbl::RefPtr<PortDispatcher> port_dispatcher);
-  virtual zx_status_t BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
   void on_zero_handles() final;
 
@@ -52,14 +48,11 @@ class InterruptDispatcher
   virtual void UnmaskInterrupt() = 0;
   virtual void DeactivateInterrupt() = 0;
   virtual void UnregisterInterruptHandler() = 0;
-  virtual bool HasVcpu() const TA_REQ(spinlock_) { return false; }
 
   InterruptDispatcher();
   void Signal() { event_.Signal(); }
   zx_status_t set_flags(uint32_t flags);
   bool SendPacketLocked(zx_time_t timestamp) TA_REQ(spinlock_);
-  bool HasPort() const TA_REQ(spinlock_) { return !!port_dispatcher_; }
-  InterruptState state() const TA_REQ(spinlock_) { return state_; }
 
   // Bits for Interrupt.flags
   // The interrupt is virtual.
@@ -72,9 +65,6 @@ class InterruptDispatcher
   // The interrupt should be masked following waiting.
   static constexpr uint32_t INTERRUPT_MASK_POSTWAIT = (1u << 4);
 
-  // Controls the access to Interrupt properties
-  DECLARE_SPINLOCK(InterruptDispatcher) spinlock_;
-
  private:
   AutounsignalEvent event_;
   // Interrupt Flags
@@ -85,6 +75,9 @@ class InterruptDispatcher
   InterruptState state_ TA_GUARDED(spinlock_);
   PortInterruptPacket port_packet_ TA_GUARDED(spinlock_) = {};
   fbl::RefPtr<PortDispatcher> port_dispatcher_ TA_GUARDED(spinlock_);
+
+  // Controls the access to Interrupt properties
+  DECLARE_SPINLOCK(InterruptDispatcher) spinlock_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_DISPATCHER_H_

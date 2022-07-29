@@ -23,8 +23,6 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
   InterruptEventDispatcher(const InterruptDispatcher&) = delete;
   InterruptEventDispatcher& operator=(const InterruptDispatcher&) = delete;
 
-  zx_status_t BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) final;
-
  private:
   explicit InterruptEventDispatcher(uint32_t vector);
 
@@ -35,11 +33,8 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
 
   zx_status_t RegisterInterruptHandler();
   static interrupt_eoi IrqHandler(void* ctx);
-  static interrupt_eoi VcpuIrqHandler(void* ctx);
-  void VcpuInterruptHandler();
 
   const uint32_t vector_;
-  fbl::RefPtr<VcpuDispatcher> vcpu_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_INTERRUPT_EVENT_DISPATCHER_H_

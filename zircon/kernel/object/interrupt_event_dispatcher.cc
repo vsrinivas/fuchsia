@@ -109,49 +109,11 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
   return ZX_OK;
 }
 
-zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_dispatcher) {
-  Guard<SpinLock, IrqSave> guard{&spinlock_};
-  if (state() == InterruptState::DESTROYED) {
-    return ZX_ERR_CANCELED;
-  } else if (state() == InterruptState::WAITING) {
-    return ZX_ERR_BAD_STATE;
-  } else if (vcpu_ == vcpu_dispatcher) {
-    return ZX_OK;
-  } else if (HasPort() || vcpu_) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  // It is safe to register the handler before assigning |vcpu_|, as we prevent
-  // any races by holding |spinlock_|.
-  MaskInterrupt();
-  UnregisterInterruptHandler();
-  zx_status_t status = register_int_handler(vector_, VcpuIrqHandler, this);
-  UnmaskInterrupt();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  vcpu_ = ktl::move(vcpu_dispatcher);
-  return ZX_OK;
-}
-
 interrupt_eoi InterruptEventDispatcher::IrqHandler(void* ctx) {
   InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
 
   self->InterruptHandler();
   return IRQ_EOI_DEACTIVATE;
-}
-
-interrupt_eoi InterruptEventDispatcher::VcpuIrqHandler(void* ctx) {
-  InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
-  self->VcpuInterruptHandler();
-  // Skip the EOI to allow the guest to deactivate the interrupt.
-  return IRQ_EOI_PRIORITY_DROP;
-}
-
-void InterruptEventDispatcher::VcpuInterruptHandler() {
-  Guard<SpinLock, IrqSave> guard{&spinlock_};
-  vcpu_->PhysicalInterrupt(vector_);
 }
 
 InterruptEventDispatcher::InterruptEventDispatcher(uint32_t vector) : vector_(vector) {
