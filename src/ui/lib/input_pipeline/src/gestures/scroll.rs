@@ -4,8 +4,8 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, MouseEvent, ProcessBufferedEventsResult, ProcessNewEventResult,
-        RecognizedGesture, TouchpadEvent, VerifyEventResult,
+        self, EndGestureEvent, ExamineEventResult, MouseEvent, ProcessBufferedEventsResult,
+        ProcessNewEventResult, RecognizedGesture, TouchpadEvent, VerifyEventResult,
     },
     crate::mouse_binding,
     crate::utils::{euclidean_distance, Position},
@@ -391,15 +391,21 @@ impl gesture_arena::MatchedContender for MatchedContender {
 impl gesture_arena::Winner for Winner {
     fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> ProcessNewEventResult {
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
-            0 => ProcessNewEventResult::EndGesture(None),
+            0 => ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent),
             2 => {
                 if event.pressed_buttons.len() > 0 {
-                    return ProcessNewEventResult::EndGesture(Some(event));
+                    return ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(
+                        event,
+                    ));
                 }
 
                 let positions = match ContactPositions::from(&event) {
                     Ok(positions) => positions,
-                    Err(_) => return ProcessNewEventResult::EndGesture(Some(event)),
+                    Err(_) => {
+                        return ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(
+                            event,
+                        ))
+                    }
                 };
 
                 let movements = match self.last_positions.get_movements(&positions) {
@@ -407,7 +413,9 @@ impl gesture_arena::Winner for Winner {
                     // surface event, this is likely a bug in firmware or driver.
                     Err(_) => {
                         fx_log_err!("new event contact id not match old event");
-                        return ProcessNewEventResult::EndGesture(Some(event));
+                        return ProcessNewEventResult::EndGesture(
+                            EndGestureEvent::UnconsumedEvent(event),
+                        );
                     }
                     Ok(m) => m,
                 };
@@ -418,7 +426,9 @@ impl gesture_arena::Winner for Winner {
                     .collect();
 
                 if directions.iter().any(|&d| d != Some(self.direction)) {
-                    return ProcessNewEventResult::EndGesture(Some(event));
+                    return ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(
+                        event,
+                    ));
                 }
 
                 ProcessNewEventResult::ContinueGesture(
@@ -434,7 +444,7 @@ impl gesture_arena::Winner for Winner {
                     }),
                 )
             }
-            _ => ProcessNewEventResult::EndGesture(Some(event)),
+            _ => ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(event)),
         }
     }
 }
@@ -945,7 +955,7 @@ mod test {
             TouchpadEvent { timestamp: zx::Time::ZERO, pressed_buttons: vec![], contacts: vec![] };
         let got = winner.process_new_event(event);
 
-        assert_matches!(got, ProcessNewEventResult::EndGesture(None));
+        assert_matches!(got, ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent));
     }
 
     #[test_case(
@@ -1009,7 +1019,10 @@ mod test {
         });
         let got = winner.process_new_event(event);
 
-        assert_matches!(got, ProcessNewEventResult::EndGesture(Some(_)));
+        assert_matches!(
+            got,
+            ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(_))
+        );
     }
 
     #[test_case(TouchpadEvent{
@@ -1036,11 +1049,8 @@ mod test {
         // - assert_matches: floating point is not allow in match.
         // - assert_eq: `ContinueGesture` has Box dyn type.
         match got {
-            ProcessNewEventResult::EndGesture(None) => {
-                panic!("Got EndGesture(None), want ContinueGesture()")
-            }
-            ProcessNewEventResult::EndGesture(Some(_)) => {
-                panic!("Got EndGesture(Some), want ContinueGesture()")
+            ProcessNewEventResult::EndGesture(_) => {
+                panic!("Got {:?}, want ContinueGesture()", got)
             }
             ProcessNewEventResult::ContinueGesture(got_mouse_event, _) => {
                 pretty_assertions::assert_eq!(
