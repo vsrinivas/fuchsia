@@ -99,6 +99,10 @@ create_cros_tree() {
   repo init -u https://chrome-internal.googlesource.com/chromeos/manifest-internal -b release-"${termina_revision}"
   repo sync -j8
 
+  # Fix for python3 >= 3.10 where Collections Abstract Base Classes are moved to collection.abs; see
+  # https://chromium.googlesource.com/chromiumos/chromite/+/e10029e471d8d71bee50923e8eef29bb9a556544%5E%21/#F0
+  (cd chromite; git cherry-pick e10029e471d8d71bee50923e8eef29bb9a556544)
+
   (cd src/overlays; git checkout cros/test-magma)
   (cd src/third_party/chromiumos-overlay; git checkout cros/test-magma)
   (cd src/platform2; git checkout cros/test-magma)
