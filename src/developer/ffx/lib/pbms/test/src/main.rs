@@ -48,6 +48,19 @@ impl RepositoryRegistryProxy {
 #[fuchsia_async::run_singlethreaded]
 pub async fn main() -> Result<()> {
     let cmd: ProductBundleCommand = argh::from_env();
+
+    let overrides = None;
+    let mut ptt_env_path = ffx_config::default_env_path().context("getting default_env_path")?;
+    ptt_env_path.pop();
+    ptt_env_path.push(".ffx_ptt_env");
+    // Pass value for --config: must either be a file path, a valid JSON object,
+    // or comma separated key=value pairs.
+    let config_entries = vec![];
+    ffx_config::init(&config_entries, overrides, ptt_env_path)
+        .context("initializing ffx config")?;
+
+    tracing::trace!("pbms testing tool main.");
+
     let repos = RepositoryRegistryProxy {};
     product_bundle_plugin_impl(cmd, &mut stdout(), repos).await
 }
