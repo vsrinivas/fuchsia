@@ -911,7 +911,7 @@ constexpr auto BasicLoadObserverMemszTooSmallTest = [](auto&& elf) {
   EXPECT_EQ(1, diag.errors());
   EXPECT_EQ(0, diag.warnings());
   ASSERT_EQ(1, errors.size());
-  EXPECT_STREQ("PT_LOAD has `p_memsz < p_filez`", errors.front());
+  EXPECT_STREQ("PT_LOAD has `p_memsz < p_filesz`", errors.front());
 };
 
 TEST(ElfldltlPhdrTests, BasicLoadObserverMemszTooSmall) {
@@ -1458,6 +1458,152 @@ constexpr auto ContiguousLoadObserverCompliantTest = [](auto&& elf) {
 
 TEST(ElfldltlPhdrTests, ContiguousLoadObserverCompliant) {
   TestAllFormats(ContiguousLoadObserverCompliantTest);
+}
+
+constexpr auto LoadObserverCallbackTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+
+  struct ExpectedLoad {
+    size_type offset, filesz, memsz, limit;
+  };
+  constexpr std::array kExpected{
+      ExpectedLoad{
+          .offset = 0,
+          .filesz = 1234,
+          .memsz = 2345,
+          .limit = kAlign,
+      },
+      ExpectedLoad{
+          .offset = kAlign,
+          .filesz = 2345,
+          .memsz = 3456,
+          .limit = 2 * kAlign,
+      },
+  };
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kInterp,
+          .offset = 1200,
+          .filesz = 17,
+          .memsz = 17,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kExpected[0].offset,
+          .vaddr = 0,
+          .filesz = kExpected[0].filesz,
+          .memsz = kExpected[0].memsz,
+          .align = kAlign,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kExpected[1].offset,
+          .vaddr = kAlign,
+          .filesz = kExpected[1].filesz,
+          .memsz = kExpected[1].memsz,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = 0;
+  size_type vaddr_size = 0;
+
+  size_t count = 0;
+  auto check_phdrs = [kExpected, &count, &diag](auto& callback_diag, const Phdr& phdr) -> bool {
+    EXPECT_EQ(&callback_diag, &diag);
+
+    // We only get callbacks for the PT_LOAD headers, not the others.
+    EXPECT_EQ(phdr.type, ElfPhdrType::kLoad);
+
+    EXPECT_LT(count, std::size(kExpected));
+    if (count >= std::size(kExpected)) {
+      return false;
+    }
+
+    EXPECT_EQ(phdr.offset(), kExpected[count].offset, "#%zu", count);
+    EXPECT_EQ(phdr.filesz(), kExpected[count].filesz, "#%zu", count);
+    EXPECT_EQ(phdr.memsz(), kExpected[count].memsz, "#%zu", count);
+
+    ++count;
+    return true;
+  };
+
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs),
+      elfldltl::MakePhdrLoadObserver<Elf>(kPageSize, vaddr_start, vaddr_size, check_phdrs)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_EQ(0, vaddr_start);
+  EXPECT_EQ(kAlign * 2, vaddr_size);
+
+  ASSERT_EQ(count, 2);
+};
+
+TEST(ElfldltlPhdrTests, LoadObserverCallback) { TestAllFormats(LoadObserverCallbackTest); }
+
+constexpr auto LoadObserverCallbackBailoutTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using size_type = typename Elf::size_type;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kInterp,
+          .offset = 1200,
+          .filesz = 17,
+          .memsz = 17,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 0,
+          .vaddr = 0,
+          .filesz = 1234,
+          .memsz = 1234,
+          .align = kAlign,
+      },
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = 0,
+          .vaddr = kAlign,
+          .filesz = 1234,
+          .memsz = 2345,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  size_type vaddr_start = -1;
+  size_type vaddr_size = 0;
+
+  auto bail_early = [](auto& diag, const Phdr& phdr) {
+    EXPECT_EQ(phdr.memsz(), 1234);
+    return false;
+  };
+  EXPECT_FALSE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs),
+      elfldltl::MakePhdrLoadObserver<Elf>(kPageSize, vaddr_start, vaddr_size, bail_early)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_EQ(0, vaddr_start);
+
+  // It should have bailed out on seeing the first PT_LOAD, but only after the
+  // generic code updated the vaddr_size.  It's still before the second PT_LOAD
+  // gets processed, so the vaddr_size shouldn't have its final value yet.
+  EXPECT_EQ(kAlign, vaddr_size);
+};
+
+TEST(ElfldltlPhdrTests, LoadObserverCallbackBailout) {
+  TestAllFormats(LoadObserverCallbackBailoutTest);
 }
 
 constexpr auto ReadPhdrsFromFileBadSizeTest = [](auto&& elf) {

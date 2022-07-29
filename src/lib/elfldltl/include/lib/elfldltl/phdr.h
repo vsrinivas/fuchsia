@@ -417,9 +417,18 @@ enum class PhdrLoadPolicy {
   kContiguous,
 };
 
+struct PhdrLoadNoCallback {
+  template <class Diagnostics, class Phdr>
+  std::true_type operator()(Diagnostics& diagnostics, const Phdr& phdr) const {
+    return {};
+  }
+};
+
 // A PT_LOAD observer for a given metadata policy.
-template <class Elf, PhdrLoadPolicy Policy = PhdrLoadPolicy::kBasic>
-class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfPhdrType::kLoad> {
+template <class Elf, PhdrLoadPolicy Policy = PhdrLoadPolicy::kBasic,
+          typename Callback = PhdrLoadNoCallback>
+class PhdrLoadObserver
+    : public PhdrObserver<PhdrLoadObserver<Elf, Policy, Callback>, ElfPhdrType::kLoad> {
  private:
   using Base = PhdrSingletonObserver<Elf, ElfPhdrType::kStack>;
   using Phdr = typename Elf::Phdr;
@@ -428,17 +437,31 @@ class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfP
  public:
   // `vaddr_start` and `vaddr_size` are updated to track the size of the
   // page-aligned memory image throughout observation.
-  PhdrLoadObserver(size_type page_size, size_type& vaddr_start, size_type& vaddr_size)
-      : vaddr_start_(vaddr_start), vaddr_size_(vaddr_size), page_size_(page_size) {
+  PhdrLoadObserver(size_type page_size, size_type& vaddr_start, size_type& vaddr_size,
+                   Callback callback)
+      : vaddr_start_(vaddr_start),
+        vaddr_size_(vaddr_size),
+        page_size_(page_size),
+        callback_(std::move(callback)) {
     ZX_ASSERT(cpp20::has_single_bit(page_size));
     vaddr_start_ = 0;
     vaddr_size_ = 0;
     ZX_DEBUG_ASSERT(NoHeadersSeen());
   }
 
+  template <typename C = Callback, typename = std::enable_if_t<std::is_default_constructible_v<C>>>
+  PhdrLoadObserver(size_type page_size, size_type& vaddr_start, size_type& vaddr_size)
+      : PhdrLoadObserver(page_size, vaddr_start, vaddr_size, Callback{}) {}
+
   template <class Diag>
   constexpr bool Observe(Diag& diag, PhdrTypeMatch<ElfPhdrType::kLoad> type, const Phdr& phdr) {
     using namespace std::literals::string_view_literals;
+
+    static_assert(std::is_invocable_r_v<bool, Callback, Diag&, const Phdr&>);
+    auto success = [&]() {
+      UpdateHighWatermarks(phdr);
+      return std::invoke(callback_, diag, phdr);
+    };
 
     // If `p_align` is not page-aligned, then this file cannot be loaded through
     // normal memory mapping.
@@ -451,7 +474,7 @@ class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfP
       return false;
     }
 
-    if (phdr.memsz() < phdr.filesz() && !diag.FormatError("PT_LOAD has `p_memsz < p_filez`"sv)) {
+    if (phdr.memsz() < phdr.filesz() && !diag.FormatError("PT_LOAD has `p_memsz < p_filesz`"sv)) {
       return false;
     }
 
@@ -489,8 +512,8 @@ class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfP
 
       vaddr_start_ = AlignDown(phdr.vaddr(), page_size_);
       vaddr_size_ = AlignUp(phdr.vaddr() + phdr.memsz(), page_size_) - vaddr_start_;
-      UpdateHighWatermarks(phdr);
-      return true;
+
+      return success();
     }
 
     if (AlignDown(phdr.vaddr(), align) < high_memory_watermark_) [[unlikely]] {
@@ -518,8 +541,8 @@ class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfP
     }
 
     vaddr_size_ = AlignUp(phdr.vaddr() + phdr.memsz(), page_size_) - vaddr_start_;
-    UpdateHighWatermarks(phdr);
-    return true;
+
+    return success();
   }
 
   template <class Diag>
@@ -564,7 +587,19 @@ class PhdrLoadObserver : public PhdrObserver<PhdrLoadObserver<Elf, Policy>, ElfP
   size_type high_memory_watermark_;
   [[no_unique_address]] std::conditional_t<kTrackFileOffsets, size_type, Empty>
       high_file_watermark_;
+
+  // Additional tail of observer function.
+  [[no_unique_address]] Callback callback_;
 };
+
+// This acts as a deduction guide with partial explicit specialization.
+template <class Elf, PhdrLoadPolicy Policy = PhdrLoadPolicy::kBasic, typename T>
+constexpr auto MakePhdrLoadObserver(typename Elf::size_type page_size,
+                                    typename Elf::size_type& vaddr_start,
+                                    typename Elf::size_type& vaddr_size, T&& callback) {
+  using Obs = PhdrLoadObserver<Elf, Policy, std::decay_t<T>>;
+  return Obs(page_size, vaddr_start, vaddr_size, std::forward<T>(callback));
+}
 
 }  // namespace elfldltl
 
