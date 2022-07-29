@@ -166,7 +166,6 @@ TEST_F(FileCacheTest, WritebackOperation) {
     ASSERT_EQ(vn->Writeback(op), 1UL);
     // Writeback() should not touch active Pages such as |page|.
     ASSERT_EQ(vn->GetDirtyPageCount(), 1);
-    ASSERT_EQ(op.to_write, 1UL);
     ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
     ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
     ASSERT_EQ(page->IsWriteback(), false);
@@ -179,7 +178,6 @@ TEST_F(FileCacheTest, WritebackOperation) {
   key = 1;
   // Now, 2nd Page meets op.if_page.
   ASSERT_EQ(vn->Writeback(op), 1UL);
-  ASSERT_EQ(op.to_write, 0UL);
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 2);
   ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 0);

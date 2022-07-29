@@ -484,7 +484,6 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
       page->ClearWriteback();
     } else {
       ++nwritten;
-      --operation.to_write;
     }
   }
   if (operation.bSync) {

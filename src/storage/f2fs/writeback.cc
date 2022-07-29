@@ -93,10 +93,7 @@ void Writer::EnqueuePage(storage::Operation &operation, LockedPage &page, PageTy
 }
 
 fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType type) {
-  if (write_buffer_[static_cast<uint32_t>(type)]->IsEmpty()) {
-    if (completion) {
-      return fpromise::make_promise([completion]() { sync_completion_signal(completion); });
-    }
+  if (!completion && write_buffer_[static_cast<uint32_t>(type)]->IsEmpty()) {
     return fpromise::make_ok_promise();
   }
   return fpromise::make_promise([this, completion, type]() mutable {
@@ -126,6 +123,7 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
     if (completion) {
       sync_completion_signal(completion);
     }
+    return fpromise::ok();
   });
 }
 
@@ -133,8 +131,16 @@ void Writer::ScheduleTask(fpromise::promise<> task) {
 #ifdef __Fuchsia__
   executor_.schedule_task(sequencer_.wrap(std::move(task)));
 #else   // __Fuchsia__
-  auto result = fpromise::run_single_threaded(std::move(task));
+  __UNUSED auto result = fpromise::run_single_threaded(std::move(task));
   assert(result.is_ok());
+#endif  // __Fuchsia__
+}
+
+void Writer::ScheduleWriteback(fpromise::promise<> task) {
+#ifdef __Fuchsia__
+  writeback_executor_.schedule_task(std::move(task));
+#else   // __Fuchsia__
+  __UNUSED auto result = fpromise::run_single_threaded(std::move(task));
 #endif  // __Fuchsia__
 }
 

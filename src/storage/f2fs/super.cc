@@ -42,6 +42,58 @@ void F2fs::PutSuper() {
   superblock_info_.reset();
 }
 
+void F2fs::ScheduleWriteback() {
+  block_t dirty_data_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
+  block_t limit = kMaxDirtyDataPages;
+  block_t flush_limit = limit / 2;
+
+  // |limit| is configurable according to the maximum allowable memory for f2fs
+  // TODO: when f2fs can get hints about memory pressure, revisit it.
+  if (dirty_data_pages < flush_limit) {
+    return;
+  }
+
+  if (!writeback_flag_.test_and_set(std::memory_order_acquire)) {
+    auto promise = fpromise::make_promise([this, limit, flush_limit]() mutable {
+      // It adjusts the number of dirty Pages to be flushed (X) according to |level| as below.
+      // If |level| = 0, X = |dirty_data_pages| / 3
+      // If |level| = 1, X = |dirty_data_pages| * 2 / 3
+      // If |level| = 2, X = |dirty_data_pages|
+      // Writeback runs until |dirty_data_pages| is less than a half of |limit|.
+      int level = 0;
+      block_t dirty_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
+      FX_LOGS(INFO) << "[f2fs] A writeback thread triggered..";
+      ZX_DEBUG_ASSERT(writeback_flag_.test(std::memory_order_acquire));
+      while (dirty_pages >= flush_limit) {
+        block_t to_write = ((dirty_pages * safemath::CheckAdd<block_t>(1, level)) / 3).ValueOrDie();
+        WritebackOperation op = {.to_write = to_write};
+        op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
+          if (!vnode->IsDir() && vnode->GetDirtyPageCount()) {
+            return ZX_OK;
+          }
+          return ZX_ERR_NEXT;
+        };
+        auto written = SyncDirtyDataPages(op);
+        FX_LOGS(INFO) << "[f2fs] Writeback [" << level << "] " << written << " of " << dirty_pages
+                      << " dirty Pages..";
+        block_t after_writeback = superblock_info_->GetPageCount(CountType::kDirtyData);
+        // If the number of dirty Pages increases after writeback, flush more dirty Pages by
+        // increasing |level|. Otherwise, |level| decreases.
+        if (dirty_pages < after_writeback || after_writeback >= limit) {
+          level = std::min(level + 1, 2);
+        } else {
+          level = std::max(level - 1, 0);
+        }
+        dirty_pages = after_writeback;
+      }
+      writeback_flag_.clear(std::memory_order_relaxed);
+      writeback_flag_.notify_all();
+      return fpromise::ok();
+    });
+    writer_->ScheduleWriteback(std::move(promise));
+  }
+}
+
 void F2fs::SyncFs(bool bShutdown) {
   // TODO:: Consider !superblock_info_.IsDirty()
   if (bShutdown) {
@@ -54,6 +106,7 @@ void F2fs::SyncFs(bool bShutdown) {
       }
       return ZX_ERR_NEXT;
     };
+    StopWriteback();
     SyncDirtyDataPages(op);
   } else {
     WriteCheckpoint(false, false);

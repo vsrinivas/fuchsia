@@ -19,6 +19,9 @@ namespace f2fs {
 class F2fs;
 class PageOperations;
 constexpr auto kWriteTimeOut = std::chrono::seconds(60);
+// F2fs flushes dirty pages when the number of dirty data pages exceeds a half of
+// |kMaxDirtyDataPages|.
+constexpr int kMaxDirtyDataPages = 51200;
 
 class SegmentWriteBuffer {
  public:
@@ -117,6 +120,7 @@ class Writer {
   ~Writer();
 
   void ScheduleTask(fpromise::promise<> task);
+  void ScheduleWriteback(fpromise::promise<> task);
   // It schedules SubmitPages().
   // If |completion| is set, it notifies the caller of the operation completion.
   void ScheduleSubmitPages(sync_completion_t *completion = nullptr,
@@ -136,6 +140,7 @@ class Writer {
 #ifdef __Fuchsia__
   fpromise::sequencer sequencer_;
   fs::BackgroundExecutor executor_;
+  fs::BackgroundExecutor writeback_executor_;
 #endif  // __Fuchsia__
 };
 

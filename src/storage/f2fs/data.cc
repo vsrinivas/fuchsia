@@ -446,10 +446,8 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, LockedPage *out) {
     return ret;
   }
 
-  page->WaitOnWriteback();
-
   fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-
+  page->WaitOnWriteback();
   block_t data_blkaddr;
   do {
     LockedPage dnode_page;

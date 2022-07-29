@@ -287,21 +287,24 @@ zx_status_t F2fs::GetValidCheckpoint() {
 }
 
 pgoff_t F2fs::SyncDirtyDataPages(WritebackOperation &operation) {
-  pgoff_t nwritten = 0;
+  pgoff_t total_nwritten = 0;
   GetVCache().ForDirtyVnodesIf(
       [&](fbl::RefPtr<VnodeF2fs> &vnode) {
         if (!vnode->ShouldFlush()) {
           GetVCache().RemoveDirty(vnode.get());
         } else if (vnode->GetDirtyPageCount()) {
-          nwritten += vnode->Writeback(operation);
-        }
-        if (!operation.to_write) {
-          return ZX_ERR_STOP;
+          auto nwritten = vnode->Writeback(operation);
+          total_nwritten = safemath::CheckAdd<pgoff_t>(total_nwritten, nwritten).ValueOrDie();
+          if (nwritten >= operation.to_write) {
+            return ZX_ERR_STOP;
+          } else {
+            operation.to_write -= nwritten;
+          }
         }
         return ZX_OK;
       },
       std::move(operation.if_vnode));
-  return nwritten;
+  return total_nwritten;
 }
 
 // Freeze all the FS-operations for checkpoint.
@@ -400,7 +403,8 @@ void F2fs::DoCheckpoint(bool is_umount) {
   }
 
   orphan_blocks = static_cast<uint32_t>(
-      (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) + kOrphansPerBlock - 1) / kOrphansPerBlock);
+      (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) + kOrphansPerBlock - 1) /
+      kOrphansPerBlock);
   ckpt.cp_pack_start_sum = 1 + orphan_blocks + LeToCpu(raw_sb_->cp_payload);
   ckpt.cp_pack_total_block_count =
       2 + data_sum_blocks + orphan_blocks + LeToCpu(raw_sb_->cp_payload);

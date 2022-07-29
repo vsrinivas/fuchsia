@@ -332,18 +332,7 @@ bool SegmentManager::HasNotEnoughFreeSecs(uint32_t freed) {
 void SegmentManager::BalanceFs() {
   if (superblock_info_->IsOnRecovery())
     return;
-  // when writeback Pages exceeds |writeback_limit|, it trigger a Writer task.
-  block_t writeback_limit =
-      static_cast<block_t>(superblock_info_->GetActiveLogs()) * kDefaultBlocksPerSegment;
-  block_t dirty_data_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
-  block_t writeback_pages = superblock_info_->GetPageCount(CountType::kWriteback);
-  // The limits are adjusted according to the maximum allowable memory usage for f2fs
-  // TODO: when we can get hints about memory pressure, revisit it.
-  block_t soft_limit = kMaxDirtyDataPages - writeback_limit - writeback_pages;
-  block_t hard_limit = kMaxDirtyDataPages;
-  // Without GC, it triggers checkpoint aggressively to secure free segments from pre-free ones.
   if (NeedToCheckpoint()) {
-    FX_LOGS(DEBUG) << "[f2fs] High prefree segments: " << PrefreeSegments();
     fs_->WriteCheckpoint(false, false);
   } else if (HasNotEnoughFreeSecs()) {
     if (auto ret = fs_->GetGcManager().F2fsGc(); ret.is_error()) {
@@ -352,33 +341,7 @@ void SegmentManager::BalanceFs() {
       ZX_DEBUG_ASSERT(ret.error_value() == ZX_ERR_UNAVAILABLE);
     }
   }
-
-  if (dirty_data_pages >= soft_limit) {
-    // f2fs starts writeback when the number of dirty pages exceeds a soft limit.
-    WritebackOperation op = {.to_write = dirty_data_pages, .bSync = true};
-
-    if (dirty_data_pages < hard_limit) {
-      op.bSync = false;
-      op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
-        if (!vnode->IsDir()) {
-          return ZX_OK;
-        }
-        return ZX_ERR_NEXT;
-      };
-      op.to_write = kDefaultBlocksPerSegment;
-    }
-
-    if (op.bSync == true) {
-      FX_LOGS(WARNING) << "[f2fs] High committed pages: " << dirty_data_pages << " / "
-                       << hard_limit;
-    } else {
-      FX_LOGS(DEBUG) << "[f2fs] Moderate committed pages: " << dirty_data_pages << " / "
-                     << hard_limit;
-    }
-
-    // Allocate blocks for dirty pages of dirty vnodes
-    fs_->SyncDirtyDataPages(op);
-  }
+  fs_->ScheduleWriteback();
 }
 
 void SegmentManager::LocateDirtySegment(uint32_t segno, DirtyType dirty_type) {

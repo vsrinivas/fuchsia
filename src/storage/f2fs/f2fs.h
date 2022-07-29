@@ -317,6 +317,12 @@ class F2fs : public fs::Vfs {
                                  PageType type = PageType::kNrPageType) {
     writer_->ScheduleSubmitPages(completion, type);
   }
+  void ScheduleWriteback();
+  void StopWriteback() {
+    while (writeback_flag_.test_and_set(std::memory_order_acquire)) {
+      writeback_flag_.wait(true, std::memory_order_relaxed);
+    }
+  }
 
  private:
   zx_status_t MakeReadOperation(LockedPage &page, block_t blk_addr, bool is_sync = true);
@@ -338,6 +344,7 @@ class F2fs : public fs::Vfs {
 
   VnodeCache vnode_cache_;
   std::unique_ptr<Writer> writer_;
+  std::atomic_flag writeback_flag_ = ATOMIC_FLAG_INIT;
 
 #ifdef __Fuchsia__
   DirEntryCache dir_entry_cache_;

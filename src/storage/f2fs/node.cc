@@ -940,10 +940,10 @@ zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
   // 		return kAopWritepageActivate;
   // 	}
 #endif
+  fs::SharedLock rlock(GetSuperblockInfo().GetFsLock(LockType::kNodeOp));
   page->WaitOnWriteback();
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
-    fs::SharedLock rlock(GetSuperblockInfo().GetFsLock(LockType::kNodeOp));
     // get old block addr of this node page
     nid_t nid = page.GetPage<NodePage>().NidOfNode();
     ZX_DEBUG_ASSERT(page->GetIndex() == nid);

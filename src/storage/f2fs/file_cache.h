@@ -28,9 +28,6 @@ enum class PageFlag {
 };
 
 constexpr pgoff_t kPgOffMax = std::numeric_limits<pgoff_t>::max();
-// TODO: Once f2fs can get hints about memory pressure, remove it.
-// Now, the maximum allowable memory for dirty data pages is 200MiB
-constexpr int kMaxDirtyDataPages = 51200;
 
 // It defines a writeback operation.
 struct WritebackOperation {
