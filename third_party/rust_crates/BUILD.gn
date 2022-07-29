@@ -923,10 +923,6 @@ group("tracing-core") {
   public_deps = [ ":tracing-core-v0_1_21" ]
 }
 
-group("tracing-futures") {
-  public_deps = [ ":tracing-futures-v0_2_5" ]
-}
-
 group("tracing-log") {
   public_deps = [ ":tracing-log-v0_1_2" ]
 }
@@ -10533,32 +10529,6 @@ rust_library("tracing-core-v0_1_21") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("tracing-futures-v0_2_5") {
-  crate_name = "tracing_futures"
-  crate_root = "//third_party/rust_crates/vendor/tracing-futures/src/lib.rs"
-  output_name = "tracing_futures-3433c9509e7eda17"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":pin-project-v1_0_11" ]
-  deps += [ ":tracing-v0_1_29" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=3433c9509e7eda17",
-    "-Cextra-filename=-3433c9509e7eda17",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"pin-project\"",
-    "--cfg=feature=\"std\"",
-    "--cfg=feature=\"std-future\"",
   ]
 
   visibility = [ ":*" ]

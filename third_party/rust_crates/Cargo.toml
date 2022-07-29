@@ -200,7 +200,6 @@ toml = "0.5"
 toml_edit = "0.2.1"
 tracing = { version = "0.1.29", features = ["log"] }
 tracing-core = "0.1.21"
-tracing-futures = "0.2.5"
 tracing-log = "0.1.2"
 tracing-mutex = { version = "0.2.1", features = ["parkinglot"] }
 typed-builder = "0.10.0"
