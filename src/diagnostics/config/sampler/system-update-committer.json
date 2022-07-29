@@ -4,54 +4,49 @@
             "event_codes": [
                 0
             ],
-            "metric_id": 21,
-            "metric_type": "Occurrence",
+            "metric_id": 121,
+            "metric_type": "Integer",
             "selector": "core/system-update-committer:root/verification/ota_verification_duration:success",
-            "upload_once": true,
-            "use_legacy_cobalt": true
+            "upload_once": true
         },
         {
             "event_codes": [
                 1
             ],
-            "metric_id": 21,
-            "metric_type": "Occurrence",
+            "metric_id": 121,
+            "metric_type": "Integer",
             "selector": "core/system-update-committer:root/verification/ota_verification_duration:failure_blobfs",
-            "upload_once": true,
-            "use_legacy_cobalt": true
+            "upload_once": true
         },
         {
             "event_codes": [
                 1,
                 1
             ],
-            "metric_id": 22,
+            "metric_id": 122,
             "metric_type": "Occurrence",
             "selector": "core/system-update-committer:root/verification/ota_verification_failure:verify",
-            "upload_once": true,
-            "use_legacy_cobalt": true
+            "upload_once": true
         },
         {
             "event_codes": [
                 1,
                 2
             ],
-            "metric_id": 22,
+            "metric_id": 122,
             "metric_type": "Occurrence",
             "selector": "core/system-update-committer:root/verification/ota_verification_failure:fidl",
-            "upload_once": true,
-            "use_legacy_cobalt": true
+            "upload_once": true
         },
         {
             "event_codes": [
                 1,
                 3
             ],
-            "metric_id": 22,
+            "metric_id": 122,
             "metric_type": "Occurrence",
             "selector": "core/system-update-committer:root/verification/ota_verification_failure:timeout",
-            "upload_once": true,
-            "use_legacy_cobalt": true
+            "upload_once": true
         }
     ],
     "poll_rate_sec": 3600,
