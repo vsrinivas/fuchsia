@@ -105,6 +105,7 @@ protocol LocalService {
     ///   themselves with this unless they are using notifications/indications for high throughput.
     ///   Optional.
     /// - response An empty response to acknowledge that the update was received.
+    @transitional("Not currently sent. Comment on fxbug.dev/96397 to request support")
     PeerUpdate(table {
         1: peer_id bt.PeerId;
         2: mtu uint16;
@@ -125,7 +126,8 @@ protocol LocalService {
     ///
     /// LocalServices must keep track of available credit provided by the `ValueChangedCredit`
     /// method and send at most that many `OnNotifyValue` and `OnIndicateValue` events. If more
-    /// events are sent than available credits, the protocol will be closed.
+    /// events are sent than available credits, or the parameters are invalid, the protocol will be
+    /// closed.
     -> OnNotifyValue(ValueChangedParameters);
 
     /// This event is used to send an indication to a peer. Indications should be used instead of
@@ -137,7 +139,8 @@ protocol LocalService {
     ///
     /// LocalServices must keep track of available credit provided by the `ValueChangedCredit`
     /// method and send at most that many `OnNotifyValue` and `OnIndicateValue` events. If more
-    /// events are sent than available credits, the protocol will be closed.
+    /// events are sent than available credits, or the parameters are invalid, the protocol will be
+    /// closed.
     ///
     /// + request `update` The parameters associated with the changed characteristic.
     /// + request `confirmation` When all peers that will be updated have confirmed the indication,

@@ -588,27 +588,22 @@
     {
         "kind": "enum/member",
         "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_CHARACTERISTICS",
-        "value": "4"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_LOCAL_SERVICE",
-        "value": "1"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_SERVICE_HANDLE",
-        "value": "2"
-    },
-    {
-        "kind": "enum/member",
-        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_UUID",
         "value": "3"
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_SERVICE_HANDLE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.gatt2/PublishServiceError.INVALID_UUID",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.bluetooth.gatt2/PublishServiceError.UNLIKELY_ERROR",
-        "value": "5"
+        "value": "4"
     },
     {
         "declaration": "uint32",

@@ -139,17 +139,15 @@ type Error = strict enum {
 
 /// Errors that can occur during service publication.
 type PublishServiceError = flexible enum {
-    /// The provided LocalService client_end was not a valid instance of the protocol.
-    INVALID_LOCAL_SERVICE = 1;
     /// The service handle is invalid or already in use on the Server publishing the service.
-    INVALID_SERVICE_HANDLE = 2;
+    INVALID_SERVICE_HANDLE = 1;
     /// Invalid service UUID provided.
-    INVALID_UUID = 3;
+    INVALID_UUID = 2;
     /// The `ServiceInfo.characteristics` field was formatted invalidly or missing. If the service
     /// is meant to be empty, the vector should be empty, but present.
-    INVALID_CHARACTERISTICS = 4;
+    INVALID_CHARACTERISTICS = 3;
     /// A general error occurred that can not be classified as one of the more specific errors.
-    UNLIKELY_ERROR = 5;
+    UNLIKELY_ERROR = 4;
 };
 
 // A Handle uniquely identifies a characteristic or descriptor.
