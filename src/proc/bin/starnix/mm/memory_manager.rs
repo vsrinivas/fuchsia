@@ -5,7 +5,6 @@
 use bitflags::bitflags;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use lazy_static::lazy_static;
-use std::collections::{hash_map::Entry, HashMap};
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
@@ -576,7 +575,6 @@ impl MemoryManagerState {
         flags: zx::VmarFlags,
     ) -> Result<(), Errno> {
         let (_, mapping) = self.mappings.get(&addr).ok_or(errno!(EINVAL))?;
-        let mapping = mapping.with_flags(flags);
 
         // SAFETY: This is safe because the vmar belongs to a different process.
         unsafe { self.user_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
@@ -588,6 +586,7 @@ impl MemoryManagerState {
         })?;
 
         let end = (addr + length).round_up(*PAGE_SIZE)?;
+        let mapping = mapping.with_flags(flags);
         self.mappings.insert(addr..end, mapping);
         Ok(())
     }
@@ -906,41 +905,27 @@ impl MemoryManager {
         let state = self.state.read();
         let mut target_state = target.state.write();
 
-        let mut vmos = HashMap::<zx::Koid, Arc<zx::Vmo>>::new();
-
         for (range, mapping) in state.mappings.iter() {
             let vmo_info = mapping.vmo.info().map_err(impossible_error)?;
-            let handle_info = mapping.vmo.basic_info().map_err(impossible_error)?;
-            let mut entry = vmos.entry(vmo_info.koid);
-            let target_vmo = match entry {
-                Entry::Vacant(v) => {
-                    let vmo = if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED)
-                        || mapping.options.contains(MappingOptions::SHARED)
-                    {
-                        mapping.vmo.clone()
-                    } else {
-                        let mut vmo = mapping
-                            .vmo
-                            .create_child(
-                                zx::VmoChildOptions::SNAPSHOT | zx::VmoChildOptions::RESIZABLE,
-                                0,
-                                vmo_info.size_bytes,
-                            )
-                            .map_err(Self::get_errno_for_map_err)?;
-                        // We can't use mapping.permissions for this check because it's possible
-                        // that the current mapping doesn't need execute rights, but some other
-                        // mapping of the same VMO does.
-                        if handle_info.rights.contains(zx::Rights::EXECUTE) {
-                            vmo = vmo
-                                .replace_as_executable(&VMEX_RESOURCE)
-                                .map_err(impossible_error)?;
-                        }
-                        Arc::new(vmo)
-                    };
-                    v.insert(vmo)
+            let target_vmo = if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED)
+                || mapping.options.contains(MappingOptions::SHARED)
+            {
+                mapping.vmo.clone()
+            } else {
+                let mut vmo = mapping
+                    .vmo
+                    .create_child(
+                        zx::VmoChildOptions::SNAPSHOT | zx::VmoChildOptions::RESIZABLE,
+                        0,
+                        vmo_info.size_bytes,
+                    )
+                    .map_err(Self::get_errno_for_map_err)?;
+                if mapping.permissions.contains(zx::VmarFlags::PERM_EXECUTE) {
+                    vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
                 }
-                Entry::Occupied(ref mut o) => o.get_mut(),
+                Arc::new(vmo)
             };
+
             let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
             let length = range.end - range.start;
             target_state.map(
@@ -986,7 +971,7 @@ impl MemoryManager {
     fn get_errno_for_map_err(status: zx::Status) -> Errno {
         match status {
             zx::Status::INVALID_ARGS => errno!(EINVAL),
-            zx::Status::ACCESS_DENIED => errno!(EACCES), // or EPERM?
+            zx::Status::ACCESS_DENIED => errno!(EPERM),
             zx::Status::NOT_SUPPORTED => errno!(ENODEV),
             zx::Status::NO_MEMORY => errno!(ENOMEM),
             zx::Status::NO_RESOURCES => errno!(ENOMEM),
