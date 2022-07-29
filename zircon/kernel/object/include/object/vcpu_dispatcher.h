@@ -29,8 +29,7 @@ class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher, ZX_DEFAULT_VC
 
   zx_status_t Enter(zx_port_packet_t* packet);
   void Kick();
-  void PhysicalInterrupt(uint32_t vector);
-  void VirtualInterrupt(uint32_t vector);
+  void Interrupt(uint32_t vector);
   zx_status_t ReadState(zx_vcpu_state_t* vcpu_state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);

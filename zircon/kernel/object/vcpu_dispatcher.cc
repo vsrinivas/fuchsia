@@ -56,12 +56,7 @@ void VcpuDispatcher::Kick() {
   vcpu_->Kick();
 }
 
-void VcpuDispatcher::PhysicalInterrupt(uint32_t vector) {
-  canary_.Assert();
-  vcpu_->Interrupt(vector, hypervisor::InterruptType::PHYSICAL);
-}
-
-void VcpuDispatcher::VirtualInterrupt(uint32_t vector) {
+void VcpuDispatcher::Interrupt(uint32_t vector) {
   canary_.Assert();
   vcpu_->Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
 }
