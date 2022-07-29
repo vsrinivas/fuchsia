@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/4d2b6affc4696bcc8d5dd98b5e7a46fba3bd66b2/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/8f5a4233d6f2ba0a9bc348f37b627f13c11295b3/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/4d2b6affc4696bcc8d5dd98b5e7a46fba3bd66b2/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/8f5a4233d6f2ba0a9bc348f37b627f13c11295b3/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
