@@ -52,7 +52,6 @@ Symbols:
   - { Name: _zx_handle_replace, Type: Func }
   - { Name: _zx_interrupt_ack, Type: Func }
   - { Name: _zx_interrupt_bind, Type: Func }
-  - { Name: _zx_interrupt_bind_vcpu, Type: Func }
   - { Name: _zx_interrupt_create, Type: Func }
   - { Name: _zx_interrupt_destroy, Type: Func }
   - { Name: _zx_interrupt_trigger, Type: Func }
@@ -245,7 +244,6 @@ Symbols:
   - { Name: zx_handle_replace, Type: Func, Weak: true }
   - { Name: zx_interrupt_ack, Type: Func, Weak: true }
   - { Name: zx_interrupt_bind, Type: Func, Weak: true }
-  - { Name: zx_interrupt_bind_vcpu, Type: Func, Weak: true }
   - { Name: zx_interrupt_create, Type: Func, Weak: true }
   - { Name: zx_interrupt_destroy, Type: Func, Weak: true }
   - { Name: zx_interrupt_trigger, Type: Func, Weak: true }

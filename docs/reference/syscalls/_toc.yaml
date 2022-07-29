@@ -342,8 +342,6 @@ toc:
     path: /docs/reference/syscalls/interrupt_ack.md
   - title: "zx_interrupt_bind"
     path: /docs/reference/syscalls/interrupt_bind.md
-  - title: "zx_interrupt_bind_vcpu"
-    path: /docs/reference/syscalls/interrupt_bind_vcpu.md
   - title: "zx_interrupt_create"
     path: /docs/reference/syscalls/interrupt_create.md
   - title: "zx_interrupt_destroy"

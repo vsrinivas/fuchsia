@@ -152,7 +152,6 @@
 + [vcpu_interrupt](vcpu_interrupt.md) - raise an interrupt on a VCPU
 + [vcpu_read_state](vcpu_read_state.md) - read state from a VCPU
 + [vcpu_write_state](vcpu_write_state.md) - write state to a VCPU
-+ [interrupt_bind_vcpu](interrupt_bind_vcpu.md) - bind an interrupt object to a VCPU
 
 ## Global system information
 + [system_get_dcache_line_size](system_get_dcache_line_size.md)
