@@ -2,12 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/core/build/core_shard.gni")
+
 group("fuzzing") {
   testonly = true
   deps = [
+    ":fuzzing-core-shard",
     "manager",
     "registry",
   ]
+}
+
+core_shard("fuzzing-core-shard") {
+  shard_file = "meta/fuzzing.core-shard.cml"
 }
 
 group("tests") {

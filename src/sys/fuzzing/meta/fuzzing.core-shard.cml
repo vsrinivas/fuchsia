@@ -1,0 +1,57 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Add fuzz-manager to core
+{
+    children: [
+        {
+            name: "fuzz-manager",
+            url: "fuchsia-pkg://fuchsia.com/fuzz-manager#meta/fuzz-manager.cm",
+            environment: "#full-resolver-env",
+        },
+        {
+            name: "fuzz-registry",
+            url: "fuchsia-pkg://fuchsia.com/fuzz-registry#meta/fuzz-registry.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#fuzz-manager",
+                "#fuzz-registry",
+            ],
+        },
+
+        // Needed to start fuzzers within the Test runner Framework.
+        {
+            protocol: [ "fuchsia.test.manager.RunBuilder" ],
+            from: "#test_manager",
+            to: "#fuzz-manager",
+        },
+
+        // Need by fuzz-test-runner to register fuzzers.
+        {
+            protocol: [ "fuchsia.fuzzer.Registrar" ],
+            from: "#fuzz-registry",
+            to: "#test_manager",
+        },
+
+        // Need by fuzz-manager to connect to fuzzers.
+        {
+            protocol: [ "fuchsia.fuzzer.Registry" ],
+            from: "#fuzz-registry",
+            to: "#fuzz-manager",
+        },
+
+        // Integrate with Remote Control Service
+        {
+            protocol: [ "fuchsia.fuzzer.Manager" ],
+            from: "#fuzz-manager",
+            to: "#remote-control",
+        },
+    ],
+}
