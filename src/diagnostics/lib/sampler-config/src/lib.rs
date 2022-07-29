@@ -100,9 +100,6 @@ pub struct MetricConfig {
     /// the specified metric only once, the first time
     /// it becomes available to the sampler.
     pub upload_once: Option<bool>,
-    /// Optional boolean specifying whether to use Cobalt v1.0
-    /// protocol. This value may either be absent or true.
-    pub use_legacy_cobalt: Option<bool>,
 }
 
 /// Configuration for a single FIRE metric template to map from an Inspect property
@@ -131,9 +128,6 @@ struct MetricTemplate {
     /// the specified metric only once, the first time
     /// it becomes available to the sampler.
     upload_once: Option<bool>,
-    /// Optional boolean specifying whether to use Cobalt v1.0 protocol. This value
-    /// may either be absent or true. Not all metric types are supported.
-    use_legacy_cobalt: Option<bool>,
 }
 
 /// Supported Cobalt Metric types
@@ -256,14 +250,8 @@ pub struct SamplerConfig {
 
 impl MetricConfig {
     fn from_template(template: MetricTemplate, component: &ComponentIdInfo) -> Result<Self, Error> {
-        let MetricTemplate {
-            mut selectors,
-            event_codes,
-            metric_id,
-            metric_type,
-            upload_once,
-            use_legacy_cobalt,
-        } = template;
+        let MetricTemplate { mut selectors, event_codes, metric_id, metric_type, upload_once } =
+            template;
         let selectors = SelectorList(
             selectors
                 .iter_mut()
@@ -285,14 +273,7 @@ impl MetricConfig {
                 codes
             }
         };
-        Ok(MetricConfig {
-            event_codes,
-            selectors,
-            metric_id,
-            metric_type,
-            upload_once,
-            use_legacy_cobalt,
-        })
+        Ok(MetricConfig { event_codes, selectors, metric_id, metric_type, upload_once })
     }
 
     fn insert_moniker(template: &str, moniker: &str) -> Result<String, Error> {

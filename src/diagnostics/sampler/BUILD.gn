@@ -20,7 +20,6 @@ rustc_library("lib") {
 
   deps = [
     ":sampler-component-config",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//src/diagnostics/lib/sampler-config",

@@ -14,7 +14,6 @@
 //!  - metric_type: DataType
 //!  - event_codes: Vec<u32>
 //!  - upload_once boolean
-//!  - use_legacy_cobalt boolean
 //!
 //! **NOTE:** Multiple selectors can be provided in a single metric. Only one selector is
 //! expected to fetch/match data. When one does, the other selectors will be disabled for
@@ -99,10 +98,6 @@ use {
     diagnostics_data::{self, Data},
     diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     diagnostics_reader::{ArchiveReader, Inspect},
-    fidl_fuchsia_cobalt::{
-        CobaltEvent, CountEvent, EventPayload, HistogramBucket as CobaltHistogramBucket,
-        LoggerFactoryMarker, LoggerFactoryProxy, LoggerProxy,
-    },
     fidl_fuchsia_metrics::{
         HistogramBucket, MetricEvent, MetricEventLoggerFactoryMarker,
         MetricEventLoggerFactoryProxy, MetricEventLoggerProxy, MetricEventPayload, ProjectSpec,
@@ -124,14 +119,10 @@ use {
     tracing::{info, warn},
 };
 
-/// An event to be logged to the legacy or cobalt logger. Events are generated first,
+/// An event to be logged to the cobalt logger. Events are generated first,
 /// then logged. (This permits unit-testing the code that generates events from
 /// Diagnostic data.)
-#[derive(Debug)]
-enum EventToLog {
-    MetricEvent(MetricEvent),
-    CobaltEvent(CobaltEvent),
-}
+type EventToLog = MetricEvent;
 
 pub struct TaskCancellation {
     senders: Vec<oneshot::Sender<()>>,
@@ -266,11 +257,6 @@ impl SamplerExecutor {
     /// Instantiate connection to the cobalt logger and map ProjectConfigurations
     /// to [`ProjectSampler`] plans.
     pub async fn new(sampler_config: SamplerConfig) -> Result<Self, Error> {
-        let logger_factory: Arc<LoggerFactoryProxy> = Arc::new(
-            connect_to_protocol::<LoggerFactoryMarker>()
-                .context("Failed to connect to the Cobalt LoggerFactory")?,
-        );
-
         let metric_logger_factory: Arc<MetricEventLoggerFactoryProxy> = Arc::new(
             connect_to_protocol::<MetricEventLoggerFactoryMarker>()
                 .context("Failed to connect to the Metric LoggerFactory")?,
@@ -313,7 +299,6 @@ impl SamplerExecutor {
                     ));
                 ProjectSampler::new(
                     project_config,
-                    logger_factory.clone(),
                     metric_logger_factory.clone(),
                     minimum_sample_rate_sec,
                     project_sampler_stats.clone(),
@@ -389,9 +374,8 @@ pub struct ProjectSampler {
     /// Cache from Inspect selector to last sampled property. This is the selector from
     /// [`MetricConfig`]; it may contain wildcards.
     metric_cache: HashMap<MetricCacheKey, Property>,
-    /// Cobalt logger proxy using this ProjectSampler's project id.
-    cobalt_logger: Option<LoggerProxy>,
-    /// fuchsia.metrics logger proxy using this ProjectSampler's project id.
+    /// Cobalt logger proxy using this ProjectSampler's project id. It's an Option so it doesn't
+    /// have to be created for unit tests; it will always be Some() outside unit tests.
     metrics_logger: Option<MetricEventLoggerProxy>,
     /// Map from moniker to relevant selectors.
     moniker_to_selector_map: HashMap<String, Vec<SelectorIndexes>>,
@@ -446,7 +430,6 @@ enum SnapshotOutcome {
 impl ProjectSampler {
     pub async fn new(
         config: ProjectConfig,
-        cobalt_logger_factory: Arc<LoggerFactoryProxy>,
         metric_logger_factory: Arc<MetricEventLoggerFactoryProxy>,
         minimum_sample_rate_sec: i64,
         project_sampler_stats: Arc<ProjectSamplerStats>,
@@ -466,31 +449,10 @@ impl ProjectSampler {
             ));
         }
 
-        let mut cobalt_logged: i64 = 0;
-        let mut metrics_logged: i64 = 0;
-        for metric_config in &config.metrics {
-            if metric_config.use_legacy_cobalt.unwrap_or(false) {
-                cobalt_logged += 1;
-            } else {
-                metrics_logged += 1;
-            }
-        }
-
         project_sampler_stats.project_sampler_count.add(1);
         project_sampler_stats.metrics_configured.add(config.metrics.len() as u64);
 
-        let cobalt_logger = if cobalt_logged > 0 {
-            let (cobalt_logger_proxy, cobalt_server_end) =
-                fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
-            cobalt_logger_factory
-                .create_logger_from_project_spec(customer_id, project_id, cobalt_server_end)
-                .await?;
-            Some(cobalt_logger_proxy)
-        } else {
-            None
-        };
-
-        let metrics_logger = if metrics_logged > 0 {
+        let metrics_logger = {
             let (metrics_logger_proxy, metrics_server_end) =
                 fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
             let mut project_spec = ProjectSpec::EMPTY;
@@ -501,8 +463,6 @@ impl ProjectSampler {
                 .await?
                 .map_err(|e| format_err!("error response {:?}", e))?;
             Some(metrics_logger_proxy)
-        } else {
-            None
         };
         let mut all_selectors = Vec::<String>::new();
         for metric in &config.metrics {
@@ -519,7 +479,6 @@ impl ProjectSampler {
             moniker_to_selector_map: HashMap::new(),
             metrics: config.metrics,
             metric_cache: HashMap::new(),
-            cobalt_logger,
             metrics_logger,
             poll_rate_sec,
             project_sampler_stats,
@@ -713,7 +672,6 @@ impl ProjectSampler {
                             filename: diagnostics_filename.to_string(),
                             selector: selector_string.to_string(),
                         };
-                        let use_cobalt = metric.use_legacy_cobalt == Some(true);
                         if let Some(event) = self
                             .prepare_sample(
                                 metric_type,
@@ -721,7 +679,6 @@ impl ProjectSampler {
                                 codes,
                                 metric_cache_key,
                                 &found_values[0].property,
-                                use_cobalt,
                             )
                             .await?
                         {
@@ -770,7 +727,6 @@ impl ProjectSampler {
         event_codes: Vec<u32>,
         metric_cache_key: MetricCacheKey,
         new_sample: &Property,
-        use_legacy_logger: bool,
     ) -> Result<Option<EventToLog>, Error> {
         let previous_sample_opt: Option<&Property> = self.metric_cache.get(&metric_cache_key);
 
@@ -781,17 +737,7 @@ impl ProjectSampler {
             &metric_type,
         ) {
             self.maybe_update_cache(new_sample, &metric_type, metric_cache_key);
-            Ok(Some(if use_legacy_logger {
-                let transformed_payload: EventPayload = transform_to_legacy_cobalt(payload);
-                EventToLog::CobaltEvent(CobaltEvent {
-                    metric_id,
-                    event_codes,
-                    payload: transformed_payload,
-                    component: None,
-                })
-            } else {
-                EventToLog::MetricEvent(MetricEvent { metric_id, event_codes, payload })
-            }))
+            Ok(Some(EventToLog { metric_id, event_codes, payload }))
         } else {
             Ok(None)
         }
@@ -799,27 +745,21 @@ impl ProjectSampler {
 
     async fn log_events(&mut self, events: Vec<EventToLog>) -> Result<(), Error> {
         for event in events.into_iter() {
-            match event {
-                EventToLog::CobaltEvent(mut event) => {
-                    self.cobalt_logger.as_ref().unwrap().log_cobalt_event(&mut event).await?;
-                }
-                EventToLog::MetricEvent(event) => {
-                    let mut metric_events = vec![event];
-                    // Note: The MetricEvent vector can't be marked send because it
-                    // is a dyn object stream and rust can't confirm that it doesn't have handles. This
-                    // is fine because we don't actually need to "send" to make the API call. But if we chain
-                    // the creation of the future with the await on the future, rust interperets all variables
-                    // including the reference to the event vector as potentially being needed across the await.
-                    // So we have to split the creation of the future out from the await on the future. :(
-                    let log_future = self
-                        .metrics_logger
-                        .as_ref()
-                        .unwrap()
-                        .log_metric_events(&mut metric_events.iter_mut());
+            let mut metric_events = vec![event];
+            // Note: The MetricEvent vector can't be marked send because it
+            // is a dyn object stream and rust can't confirm that it doesn't have handles. This
+            // is fine because we don't actually need to "send" to make the API call. But if we
+            // chain the creation of the future with the await on the future, rust interperets all
+            // variables including the reference to the event vector as potentially being needed
+            // across the await. So we have to split the creation of the future out from the await
+            // on the future. :(
+            let log_future = self
+                .metrics_logger
+                .as_ref()
+                .unwrap()
+                .log_metric_events(&mut metric_events.iter_mut());
 
-                    log_future.await?.map_err(|e| format_err!("error from cobalt: {:?}", e))?;
-                }
-            }
+            log_future.await?.map_err(|e| format_err!("error from cobalt: {:?}", e))?;
             self.project_sampler_stats.cobalt_logs_sent.add(1);
         }
         Ok(())
@@ -837,34 +777,6 @@ impl ProjectSampler {
             }
             DataType::Integer | DataType::String => (),
         }
-    }
-}
-
-/// Transforms a [`MetricEventPayload`] (Cobalt 1.1) to an equivalent [`EventPayload`] (Cobalt 1.0).
-/// Only [`MetricEventPayload::Count`], [`MetricEventPayload::IntegerValue`], and
-/// [`MetricEventPayload::Histogram`] are supported.
-fn transform_to_legacy_cobalt(payload: MetricEventPayload) -> EventPayload {
-    match payload {
-        MetricEventPayload::Count(count) => {
-            // Safe to unwrap because we use cobalt v1.0 sanitization when constructing the Count metric event payload.
-            EventPayload::EventCount(CountEvent {
-                count: count.try_into().unwrap(),
-                period_duration_micros: 0,
-            })
-        }
-        // Cobalt 1.0 doesn't have Integer values, MEMORY_USED is the closest approximation.
-        MetricEventPayload::IntegerValue(value) => EventPayload::MemoryBytesUsed(value),
-        MetricEventPayload::Histogram(hist) => {
-            let legacy_histogram = hist
-                .into_iter()
-                .map(|metric_bucket| CobaltHistogramBucket {
-                    index: metric_bucket.index,
-                    count: metric_bucket.count,
-                })
-                .collect();
-            EventPayload::IntHistogram(legacy_histogram)
-        }
-        _ => unreachable!("We only support count, int, and histogram"),
     }
 }
 
@@ -1250,7 +1162,6 @@ mod tests {
             moniker_to_selector_map: HashMap::new(),
             metrics: vec![],
             metric_cache: HashMap::new(),
-            cobalt_logger: None,
             metrics_logger: None,
             poll_rate_sec: 3600,
             project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
@@ -1265,7 +1176,6 @@ mod tests {
             // upload_once means that process_component_data will return SelectorsChanged if
             // it is found in the map.
             upload_once: Some(true),
-            use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
         match executor::block_on(sampler.process_component_data(
@@ -1292,7 +1202,6 @@ mod tests {
             // upload_once means that the method will return SelectorsChanged if it is found
             // in the map.
             upload_once: Some(true),
-            use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
         match executor::block_on(sampler.process_component_data(
@@ -1318,7 +1227,6 @@ mod tests {
             // upload_once means that the method will return SelectorsChanged if it is found
             // in the map.
             upload_once: Some(true),
-            use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
         match executor::block_on(sampler.process_component_data(
@@ -1375,7 +1283,6 @@ mod tests {
             moniker_to_selector_map: HashMap::new(),
             metrics: vec![],
             metric_cache: HashMap::new(),
-            cobalt_logger: None,
             metrics_logger: None,
             poll_rate_sec: 3600,
             project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
@@ -1388,7 +1295,6 @@ mod tests {
             metric_type: DataType::Integer,
             event_codes: Vec::new(),
             upload_once: Some(true),
-            use_legacy_cobalt: Some(false),
         });
         sampler.metrics.push(MetricConfig {
             selectors: SelectorList(vec![sampler_config::parse_selector_for_test(
@@ -1398,7 +1304,6 @@ mod tests {
             metric_type: DataType::Integer,
             event_codes: Vec::new(),
             upload_once: Some(true),
-            use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
 
@@ -1456,14 +1361,6 @@ mod tests {
                 assert_eq!(count, params.diff as u64);
             }
             _ => panic!("Expecting event counts."),
-        }
-
-        let transformed_event = transform_to_legacy_cobalt(event);
-        match transformed_event {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, params.diff);
-            }
-            _ => panic!("Expecting count events."),
         }
     }
 
@@ -1601,15 +1498,8 @@ mod tests {
             }
             _ => panic!("Expecting event counts."),
         }
-
-        let transformed_event = transform_to_legacy_cobalt(event);
-        match transformed_event {
-            EventPayload::MemoryBytesUsed(value) => {
-                assert_eq!(value, params.sample);
-            }
-            _ => panic!("Expecting count events."),
-        }
     }
+
     #[fuchsia::test]
     fn test_normal_process_int() {
         process_int_tester(IntTesterParams {
@@ -1808,27 +1698,6 @@ mod tests {
             }
             _ => panic!("Expecting int histogram."),
         }
-
-        let transformed_event = transform_to_legacy_cobalt(event);
-
-        match transformed_event {
-            EventPayload::IntHistogram(histogram_buckets) => {
-                assert_eq!(histogram_buckets.len(), params.diff.len());
-
-                let expected_histogram_buckets = params
-                    .diff
-                    .iter()
-                    .enumerate()
-                    .map(|(index, count)| CobaltHistogramBucket {
-                        index: u32::try_from(index).unwrap(),
-                        count: *count,
-                    })
-                    .collect::<Vec<CobaltHistogramBucket>>();
-
-                assert_eq!(histogram_buckets, expected_histogram_buckets);
-            }
-            _ => panic!("Expecting int histogram."),
-        }
     }
 
     /// Test that simple in-bounds first-samples of both types of Inspect histograms
@@ -1963,7 +1832,6 @@ mod tests {
             moniker_to_selector_map: HashMap::new(),
             metrics: vec![],
             metric_cache: HashMap::new(),
-            cobalt_logger: None,
             metrics_logger: None,
             poll_rate_sec: 3600,
             project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
@@ -1977,7 +1845,6 @@ mod tests {
             metric_type: DataType::Occurrence,
             event_codes,
             upload_once: Some(false),
-            use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
 
@@ -2022,18 +1889,15 @@ mod tests {
             let events = events.expect(context);
             assert_eq!(events.len(), 1, "Events len not 1: {}: {}", context, events.len());
             let event = &events[0];
-            if let EventToLog::MetricEvent(MetricEvent { payload, .. }) = event {
-                if let fidl_fuchsia_metrics::MetricEventPayload::Count(payload) = payload {
-                    assert_eq!(
-                        payload, &value,
-                        "Wrong payload, expected {} got {} at {}",
-                        value, payload, context
-                    );
-                } else {
-                    panic!("Expected MetricEventPayload::Count at {}, got {:?}", context, payload);
-                }
+            let EventToLog { payload, .. } = event;
+            if let fidl_fuchsia_metrics::MetricEventPayload::Count(payload) = payload {
+                assert_eq!(
+                    payload, &value,
+                    "Wrong payload, expected {} got {} at {}",
+                    value, payload, context
+                );
             } else {
-                panic!("Expected EventToLog::MetricEvent at {}, got {:?}", context, event);
+                panic!("Expected MetricEventPayload::Count at {}, got {:?}", context, payload);
             }
         }
 

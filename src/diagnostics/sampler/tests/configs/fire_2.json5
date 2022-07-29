@@ -8,7 +8,6 @@
             metric_id: 4,
             metric_type: "Integer",
             selector: "single_counter:root/samples:{MONIKER}",
-            use_legacy_cobalt: true,
         },
     ],
     poll_rate_sec: 3,
