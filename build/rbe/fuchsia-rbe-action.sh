@@ -16,13 +16,36 @@ script_dir="$(dirname "$script")"
 # The value is an absolute path.
 project_root="$(readlink -f "$script_dir"/../..)"
 
-script_subdir="$(realpath --relative-to="$project_root" "$script_dir")"
+# realpath doesn't ship with Mac OS X (provided by coreutils package).
+# We only want it for calculating relative paths.
+# Work around this using Python.
+if which realpath 2>&1 > /dev/null
+then
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    realpath --relative-to="$from" "$to"
+  }
+else
+  # Point to our prebuilt python3.
+  python="$(ls "$project_root"/prebuilt/third_party/python3/*/bin/python3)" || {
+    echo "*** Python interpreter not found under $project_root/prebuilt/third_party/python3."
+    exit 1
+  }
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    "$python" -c "import os; print(os.path.relpath('$to', start='$from'))"
+  }
+fi
+
+script_subdir="$(relpath "$project_root" "$script_dir")"
 
 check_output_dir_leaks="$script_dir"/output-scanner.sh
 
 # $PWD must be inside $project_root.
-build_subdir="$(realpath --relative-to="$project_root" . )"
-project_root_rel="$(realpath --relative-to=. "$project_root")"
+build_subdir="$(relpath "$project_root" . )"
+project_root_rel="$(relpath . "$project_root")"
 
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
@@ -183,7 +206,7 @@ test -z "$fsatrace_path" || {
   # Adjust paths so that command is relative to $PWD, while rewrapper
   # parameters are relative to $project_root.
 
-  fsatrace_relpath="$(realpath -s --relative-to="$project_root" "$fsatrace_path")"
+  fsatrace_relpath="$(relpath "$project_root" "$fsatrace_path")"
   fsatrace_so="$fsatrace_relpath.so"
   inputs_array+=( "$fsatrace_relpath" "$fsatrace_so" )
   output_files_array+=( "$primary_output_name.remote-fsatrace" )
