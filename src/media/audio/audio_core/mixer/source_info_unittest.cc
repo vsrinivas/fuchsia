@@ -57,7 +57,7 @@ TEST_F(SourceInfoTest, ResetPositions) {
   auto& info = mixer_.source_info();
   info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u, 1u));
   // All these values will be overwritten
-  bookkeeping.source_pos_modulo = 1u;
+  bookkeeping.set_source_pos_modulo(1u);
   info.next_dest_frame = -97;
   info.next_source_frame = Fixed(7);
   info.source_pos_error = zx::duration(-777);
@@ -69,7 +69,7 @@ TEST_F(SourceInfoTest, ResetPositions) {
   EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(1700));
 
   // cleared by ResetPositions
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
+  EXPECT_EQ(bookkeeping.source_pos_modulo(), 0ull);
   EXPECT_EQ(info.source_pos_error, zx::duration(0));
 }
 
@@ -77,9 +77,9 @@ TEST_F(SourceInfoTest, ResetPositions) {
 // source_modulo to a given dest frame, based on the step_size, rate_modulo and denominator.
 void SourceInfoTest::TestPositionAdvanceNoRateModulo(bool advance_source_pos_modulo) {
   auto& bookkeeping = mixer_.bookkeeping();
-  bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
+  bookkeeping.set_step_size(kOneFrame + Fixed::FromRaw(2));
   bookkeeping.SetRateModuloAndDenominator(0, 1);
-  bookkeeping.source_pos_modulo = 1;
+  bookkeeping.set_source_pos_modulo(1u);
 
   auto& info = mixer_.source_info();
   info.next_source_frame = Fixed(3);
@@ -94,7 +94,7 @@ void SourceInfoTest::TestPositionAdvanceNoRateModulo(bool advance_source_pos_mod
 
   // These should be unchanged
   EXPECT_EQ(info.source_pos_error, zx::duration(-17));
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 1u);
+  EXPECT_EQ(bookkeeping.source_pos_modulo(), 1u);
 
   // These should be updated
   EXPECT_EQ(info.next_dest_frame, 11u);  // starts at 2, advance 9
@@ -113,9 +113,9 @@ TEST_F(SourceInfoTest, UpdateRunningPositions_NoRateModulo) {
 
 void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_modulo) {
   auto& bookkeeping = mixer_.bookkeeping();
-  bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
+  bookkeeping.set_step_size(kOneFrame + Fixed::FromRaw(2));
   bookkeeping.SetRateModuloAndDenominator(2, 5);
-  bookkeeping.source_pos_modulo = 2;
+  bookkeeping.set_source_pos_modulo(2u);
 
   auto& info = mixer_.source_info();
   info.next_dest_frame = 2;
@@ -140,13 +140,13 @@ void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_m
     // source_pos_modulo / denominator (20 / 5) is 4, so source_pos adds 4 subframes.
     // The remaining source_pos_modulo (20 % 5) is 0.
     // Thus new source_pos should be 12 frames (3+9), 22 subframes (18+4), modulo 0/5.
-    EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
+    EXPECT_EQ(bookkeeping.source_pos_modulo(), 0ull);
   } else {
     // rate_mod/denom is 2/5, so source_pos_modulo increased by (9 * 2) and ended up as 2 (22).
     // source_pos_modulo / denominator (22 / 5) is 4, so source_pos adds 4 subframes.
     // The remaining source_pos_modulo (22 % 5) is 2.
     // Thus new source_pos should be 12 frames (3+9), 22 subframes (18+4), modulo 2/5.
-    EXPECT_EQ(bookkeeping.source_pos_modulo, 2ull);
+    EXPECT_EQ(bookkeeping.source_pos_modulo(), 2ull);
   }
   EXPECT_EQ(info.next_dest_frame, 11u);
   EXPECT_EQ(info.next_source_frame, Fixed(Fixed(12) + Fixed::FromRaw(22)))

@@ -11,7 +11,7 @@
 
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/lib/format2/fixed.h"
-#include "src/media/audio/lib/processing/sampler.h"
+#include "src/media/audio/lib/processing/sinc_sampler.h"
 
 namespace media::audio::mixer {
 
@@ -27,13 +27,13 @@ class SincSampler : public Mixer {
            bool accumulate) override;
 
  protected:
-  SincSampler(Gain::Limits gain_limits, std::unique_ptr<media_audio::Sampler> sinc_sampler)
+  SincSampler(Gain::Limits gain_limits, std::unique_ptr<media_audio::SincSampler> sinc_sampler)
       : Mixer(sinc_sampler->pos_filter_length() - Fixed::FromRaw(1),
               sinc_sampler->neg_filter_length() - Fixed::FromRaw(1), gain_limits),
         sinc_sampler_(std::move(sinc_sampler)) {}
 
  private:
-  std::unique_ptr<media_audio::Sampler> sinc_sampler_;
+  std::unique_ptr<media_audio::SincSampler> sinc_sampler_;
 };
 
 }  // namespace media::audio::mixer

@@ -83,11 +83,10 @@ class MixStage : public ReadableStream {
                                     Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                     int64_t dest_frame, zx::time mono_now_from_dest,
                                     bool timeline_changed);
-  void SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                   const TimelineRate& frac_source_frames_per_dest_frame);
 
   void MixStream(Mixer& mixer, ReadableStream& stream);
-  std::optional<Buffer> NextSourceBuffer(Mixer& mixer, ReadableStream& stream, int64_t dest_frames);
+  std::optional<Buffer> NextSourceBuffer(Mixer& mixer, ReadableStream& stream,
+                                         int64_t dest_frames) const;
 
   std::mutex stream_lock_;
   std::vector<StreamHolder> streams_ FXL_GUARDED_BY(stream_lock_);

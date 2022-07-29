@@ -24,10 +24,10 @@ TEST(BookkeepingTest, Defaults) {
   StubMixer mixer;
   auto& bookkeeping = mixer.bookkeeping();
 
-  EXPECT_EQ(bookkeeping.step_size, kOneFrame);
+  EXPECT_EQ(bookkeeping.step_size(), kOneFrame);
   EXPECT_EQ(bookkeeping.rate_modulo(), 0ull);
   EXPECT_EQ(bookkeeping.denominator(), 1ull);
-  EXPECT_EQ(bookkeeping.source_pos_modulo, 0ull);
+  EXPECT_EQ(bookkeeping.source_pos_modulo(), 0ull);
 
   EXPECT_TRUE(bookkeeping.gain.IsUnity());
   EXPECT_FALSE(bookkeeping.gain.IsSilent());
@@ -40,19 +40,19 @@ constexpr Fixed kTestSourcePos = Fixed(123) + Fixed::FromRaw(4567);
 TEST(BookkeepingTest, SetRateModuloAndDenominatorScale) {
   StubMixer mixer;
   auto& bk = mixer.bookkeeping();
-  EXPECT_EQ(bk.source_pos_modulo, 0ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 0ull);
   EXPECT_EQ(bk.denominator(), 1ull);
 
   // Zero stays zero: source_pos_modulo remains 0.
   auto source_pos = bk.SetRateModuloAndDenominator(3, 10);
-  EXPECT_EQ(bk.source_pos_modulo, 0ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 0ull);
   EXPECT_EQ(bk.denominator(), 10ull);
   EXPECT_EQ(source_pos, Fixed(0));
 
   // Integer scale: 5/10 => 10/20
-  bk.source_pos_modulo = 5;
+  bk.set_source_pos_modulo(5);
   source_pos = bk.SetRateModuloAndDenominator(7, 20, kTestSourcePos);
-  EXPECT_EQ(bk.source_pos_modulo, 10ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 10ull);
   EXPECT_EQ(bk.denominator(), 20ull);
   EXPECT_EQ(source_pos, kTestSourcePos);
 }
@@ -63,17 +63,17 @@ TEST(BookkeepingTest, SetRateModuloAndDenominatorRound) {
   auto& bk = mixer.bookkeeping();
   auto source_pos = bk.SetRateModuloAndDenominator(7, 20);
   EXPECT_EQ(source_pos, Fixed(0));
-  bk.source_pos_modulo = 10;
+  bk.set_source_pos_modulo(10);
 
   // Round-up: 10/20 == 8.5/17 => 9/17.
   source_pos = bk.SetRateModuloAndDenominator(2, 17, kTestSourcePos);
-  EXPECT_EQ(bk.source_pos_modulo, 9ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 9ull);
   EXPECT_EQ(bk.denominator(), 17ull);
   EXPECT_EQ(source_pos, kTestSourcePos);
 
   // Round-down: 9/17 == 16'000'000'000.41/30'222'222'223 => 16'000'000'000/30'222'222'223
   source_pos = bk.SetRateModuloAndDenominator(1'234'567'890, 30'222'222'223, kTestSourcePos);
-  EXPECT_EQ(bk.source_pos_modulo, 16'000'000'000ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 16'000'000'000ull);
   EXPECT_EQ(bk.denominator(), 30'222'222'223ull);
   EXPECT_EQ(source_pos, kTestSourcePos);
 }
@@ -84,11 +84,11 @@ TEST(BookkeepingTest, SetRateModuloAndDenominatorZeroRate) {
   auto& bk = mixer.bookkeeping();
   auto source_pos = bk.SetRateModuloAndDenominator(7, 20, kTestSourcePos);
   EXPECT_EQ(source_pos, kTestSourcePos);
-  bk.source_pos_modulo = 10;
+  bk.set_source_pos_modulo(10);
 
   source_pos = bk.SetRateModuloAndDenominator(0, 1);
   // No change (to source_pos_modulo OR denominator): 10/20 => 10/20.
-  EXPECT_EQ(bk.source_pos_modulo, 10ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 10ull);
   EXPECT_EQ(bk.denominator(), 20ull);
   EXPECT_EQ(source_pos, Fixed(0));
 }
@@ -99,11 +99,11 @@ TEST(BookkeepingTest, SetRateModuloAndDenominatorModuloRollover) {
   auto& bk = mixer.bookkeeping();
   auto source_pos = bk.SetRateModuloAndDenominator(7, 20);
   EXPECT_EQ(source_pos, Fixed(0));
-  bk.source_pos_modulo = 19;
+  bk.set_source_pos_modulo(19);
 
   source_pos = bk.SetRateModuloAndDenominator(3, 5, kTestSourcePos);
   // Round-up: 19/20 == 4.75/5 => 5/5 => 0/5+Fixed::FromRaw(1).
-  EXPECT_EQ(bk.source_pos_modulo, 0ull);
+  EXPECT_EQ(bk.source_pos_modulo(), 0ull);
   EXPECT_EQ(bk.denominator(), 5ull);
   EXPECT_EQ(source_pos, Fixed(kTestSourcePos + Fixed::FromRaw(1)));
 }

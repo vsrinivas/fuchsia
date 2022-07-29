@@ -433,9 +433,9 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   int64_t dest_offset, previous_dest_offset;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = Fixed(cfg.source_rate) / cfg.dest_rate;
+  bk.set_step_size(Fixed(cfg.source_rate) / cfg.dest_rate);
   bk.SetRateModuloAndDenominator(
-      Fixed(cfg.source_rate).raw_value() - (bk.step_size.raw_value() * cfg.dest_rate),
+      Fixed(cfg.source_rate).raw_value() - (bk.step_size().raw_value() * cfg.dest_rate),
       cfg.dest_rate);
 
   float gain_db;
@@ -483,7 +483,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
     // For repeatability, start each run at exactly the same position.
     dest_offset = 0;
     auto source_offset = Fixed(0);
-    bk.source_pos_modulo = 0;
+    bk.set_source_pos_modulo(0);
 
     auto t0 = zx::clock::get_monotonic();
 

@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/processing/position_manager.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media_audio {
@@ -20,8 +21,7 @@ class SincSampler : public Sampler {
 
   // TODO(fxbug.dev/87651): This is temporary to preserve the existing `media::audio::Mixer` API, to
   // be refactored once we switch to the new mixer service mix stage.
-  virtual void SetRateValues(int64_t step_size, uint64_t rate_modulo, uint64_t denominator,
-                             uint64_t* source_pos_mod) = 0;
+  virtual PositionManager& position_manager() = 0;
 
   Type type() const final { return Type::kSincSampler; }
 

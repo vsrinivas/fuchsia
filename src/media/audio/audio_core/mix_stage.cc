@@ -45,6 +45,22 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
   return zx::duration(ticks_per_frame.Scale(delay_frames));
 }
 
+// From a TimelineRate, calculate the [step_size, denominator, rate_modulo] used by Mixer::Mix()
+void SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
+                 const TimelineRate& frac_source_frames_per_dest_frame) {
+  bookkeeping.set_step_size(Fixed::FromRaw(frac_source_frames_per_dest_frame.Scale(1)));
+
+  // Now that we have a new step_size, generate new rate_modulo and denominator values to
+  // account for step_size's limitations.
+  auto new_rate_modulo =
+      frac_source_frames_per_dest_frame.subject_delta() -
+      (frac_source_frames_per_dest_frame.reference_delta() * bookkeeping.step_size().raw_value());
+  auto new_denominator = frac_source_frames_per_dest_frame.reference_delta();
+
+  info.next_source_frame = bookkeeping.SetRateModuloAndDenominator(new_rate_modulo, new_denominator,
+                                                                   info.next_source_frame);
+}
+
 // Source position errors generally represent only the rate difference between time sources. We
 // reconcile clocks upon every ReadLock call, so even with wildly divergent clocks (+1000ppm vs.
 // -1000ppm) source position error would be 1/50 of the duration between ReadLock calls. If source
@@ -59,21 +75,21 @@ constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    TimelineFunction ref_time_to_frac_presentation_frame,
-                   std::shared_ptr<Clock> audio_clock, std::optional<float> min_gain_db,
+                   std::shared_ptr<Clock> ref_clock, std::optional<float> min_gain_db,
                    std::optional<float> max_gain_db)
     : MixStage(output_format, block_size,
                fbl::MakeRefCounted<VersionedTimelineFunction>(ref_time_to_frac_presentation_frame),
-               audio_clock, min_gain_db, max_gain_db) {}
+               std::move(ref_clock), min_gain_db, max_gain_db) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-                   std::shared_ptr<Clock> audio_clock, std::optional<float> min_gain_db,
+                   std::shared_ptr<Clock> ref_clock, std::optional<float> min_gain_db,
                    std::optional<float> max_gain_db)
     : ReadableStream("MixStage", output_format),
       output_buffer_frames_(block_size),
       output_buffer_(block_size * output_format.channels()),
-      output_ref_clock_(std::move(audio_clock)),
-      output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame),
+      output_ref_clock_(std::move(ref_clock)),
+      output_ref_clock_to_fractional_frame_(std::move(ref_time_to_frac_presentation_frame)),
       gain_limits_{
           .min_gain_db = min_gain_db,
           .max_gain_db = max_gain_db,
@@ -158,7 +174,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLockImpl(ReadLockContext& ct
   auto snapshot = ref_time_to_frac_presentation_frame();
 
   cur_mix_job_.read_lock_ctx = &ctx;
-  cur_mix_job_.buf = &output_buffer_[0];
+  cur_mix_job_.buf = output_buffer_.data();
   cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
   cur_mix_job_.total_applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
@@ -237,7 +253,7 @@ void MixStage::ForEachSource(TaskType task_type, Fixed dest_frame) {
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
-      sources.emplace_back(StreamHolder{holder});
+      sources.emplace_back(holder);
     }
   }
 
@@ -369,14 +385,14 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
       // We need to advance this many destination frames to find a D' as illustrated above,
       // but don't advance past the end of the destination buffer.
       initial_dest_advance = Mixer::Bookkeeping::SourceLenToDestLen(
-          mix_to_packet_gap, bookkeeping.step_size, bookkeeping.rate_modulo(),
-          bookkeeping.denominator(), bookkeeping.source_pos_modulo);
+          mix_to_packet_gap, bookkeeping.step_size(), bookkeeping.rate_modulo(),
+          bookkeeping.denominator(), bookkeeping.source_pos_modulo());
       initial_dest_advance = std::clamp(initial_dest_advance, 0l, dest_frames - dest_offset);
 
       // Advance our long-running positions.
       auto initial_source_running_position = info.next_source_frame;
       auto initial_source_offset = source_offset;
-      auto initial_source_pos_modulo = bookkeeping.source_pos_modulo;
+      auto initial_source_pos_modulo = bookkeeping.source_pos_modulo();
       info.AdvanceAllPositionsBy(initial_dest_advance, bookkeeping);
 
       // Advance our local offsets.
@@ -395,16 +411,16 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
           << Fixed(-mixer.pos_filter_width()) << ") should >= 0 -- source running position was "
           << initial_source_running_position << " (+ " << initial_source_pos_modulo << "/"
           << bookkeeping.denominator() << " modulo), is now " << info.next_source_frame << " (+ "
-          << bookkeeping.source_pos_modulo << "/" << bookkeeping.denominator()
+          << bookkeeping.source_pos_modulo() << "/" << bookkeeping.denominator()
           << " modulo); advanced dest by " << initial_dest_advance;
 
       FX_CHECK(dest_offset <= dest_frames)
           << ffl::String::DecRational << "dest_offset " << dest_offset << " advanced by "
           << initial_dest_advance << " to " << dest_frames << ", exceeding " << dest_frames << ";"
-          << " mix_to_packet_gap=" << mix_to_packet_gap << " step_size=" << bookkeeping.step_size
+          << " mix_to_packet_gap=" << mix_to_packet_gap << " step_size=" << bookkeeping.step_size()
           << " rate_modulo=" << bookkeeping.rate_modulo()
           << " denominator=" << bookkeeping.denominator()
-          << " source_pos_modulo=" << bookkeeping.source_pos_modulo << " (was "
+          << " source_pos_modulo=" << bookkeeping.source_pos_modulo() << " (was "
           << initial_source_pos_modulo << ")";
     }
 
@@ -505,14 +521,14 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
 
 std::optional<ReadableStream::Buffer> MixStage::NextSourceBuffer(Mixer& mixer,
                                                                  ReadableStream& stream,
-                                                                 int64_t dest_frames) {
+                                                                 int64_t dest_frames) const {
   auto& info = mixer.source_info();
   auto& bookkeeping = mixer.bookkeeping();
 
   // Request enough source_frames to produce dest_frames.
   Fixed source_frames = Mixer::Bookkeeping::DestLenToSourceLen(
-                            dest_frames, bookkeeping.step_size, bookkeeping.rate_modulo(),
-                            bookkeeping.denominator(), bookkeeping.source_pos_modulo) +
+                            dest_frames, bookkeeping.step_size(), bookkeeping.rate_modulo(),
+                            bookkeeping.denominator(), bookkeeping.source_pos_modulo()) +
                         mixer.pos_filter_width();
 
   Fixed source_start = info.next_source_frame;
@@ -708,7 +724,7 @@ void MixStage::ReconcileClocksAndSetStepSize(::media_audio::ClockSynchronizer& c
   // system MONOTONIC time as mono_now_from_source. Record the difference (in ns) between
   // mono_now_source and mono_now_from_dest as source position error.
   auto mono_now_from_source = Mixer::SourceInfo::MonotonicNsecFromRunningSource(
-      info, bookkeeping.source_pos_modulo, bookkeeping.denominator());
+      info, bookkeeping.source_pos_modulo(), bookkeeping.denominator());
 
   // Having converted both to monotonic time, now get the delta -- this is source position error
   info.source_pos_error = mono_now_from_source - mono_now_from_dest;
@@ -821,22 +837,6 @@ void MixStage::SyncSourcePositionFromClocks(ClockSynchronizer& clock_sync,
     }
     ++jam_sync_count_;
   }
-}
-
-// From a TimelineRate, calculate the [step_size, denominator, rate_modulo] used by Mixer::Mix()
-void MixStage::SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                           const TimelineRate& frac_source_frames_per_dest_frame) {
-  bookkeeping.step_size = Fixed::FromRaw(frac_source_frames_per_dest_frame.Scale(1));
-
-  // Now that we have a new step_size, generate new rate_modulo and denominator values to
-  // account for step_size's limitations.
-  auto new_rate_modulo =
-      frac_source_frames_per_dest_frame.subject_delta() -
-      (frac_source_frames_per_dest_frame.reference_delta() * bookkeeping.step_size.raw_value());
-  auto new_denominator = frac_source_frames_per_dest_frame.reference_delta();
-
-  info.next_source_frame = bookkeeping.SetRateModuloAndDenominator(new_rate_modulo, new_denominator,
-                                                                   info.next_source_frame);
 }
 
 }  // namespace media::audio

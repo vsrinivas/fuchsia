@@ -55,10 +55,12 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
   }
 
   struct MakePublicCtor : SincSampler {
-    MakePublicCtor(Gain::Limits gain_limits, std::unique_ptr<Sampler> sinc_sampler)
+    MakePublicCtor(Gain::Limits gain_limits, std::unique_ptr<media_audio::SincSampler> sinc_sampler)
         : SincSampler(gain_limits, std::move(sinc_sampler)) {}
   };
-  return std::make_unique<MakePublicCtor>(gain_limits, std::move(sinc_sampler));
+  return std::make_unique<MakePublicCtor>(
+      gain_limits, std::unique_ptr<media_audio::SincSampler>(
+                       static_cast<media_audio::SincSampler*>(sinc_sampler.release())));
 }
 
 void SincSampler::EagerlyPrepare() { sinc_sampler_->EagerlyPrepare(); }
@@ -69,13 +71,13 @@ void SincSampler::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset
   TRACE_DURATION("audio", "SincSampler::Mix");
 
   auto info = &bookkeeping();
+  auto& position_manager = sinc_sampler_->position_manager();
   PositionManager::CheckPositions(
       dest_frames, dest_offset_ptr, source_frames, source_offset_ptr->raw_value(),
-      sinc_sampler_->pos_filter_length().raw_value(), info->step_size.raw_value(),
-      info->rate_modulo(), info->denominator(), info->source_pos_modulo);
-  static_cast<media_audio::SincSampler*>(sinc_sampler_.get())
-      ->SetRateValues(info->step_size.raw_value(), info->rate_modulo(), info->denominator(),
-                      &info->source_pos_modulo);
+      sinc_sampler_->pos_filter_length().raw_value(), info->step_size().raw_value(),
+      info->rate_modulo(), info->denominator(), info->source_pos_modulo());
+  position_manager.SetRateValues(info->step_size().raw_value(), info->rate_modulo(),
+                                 info->denominator(), info->source_pos_modulo());
 
   Sampler::Source source{source_void_ptr, source_offset_ptr, source_frames};
   Sampler::Dest dest{dest_ptr, dest_offset_ptr, dest_frames};
@@ -99,6 +101,10 @@ void SincSampler::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset
         source, dest,
         Sampler::Gain{.type = media_audio::GainType::kNonUnity, .scale = info->gain.GetGainScale()},
         accumulate);
+  }
+
+  if (info->rate_modulo() > 0) {
+    info->set_source_pos_modulo(position_manager.source_pos_modulo());
   }
 }
 

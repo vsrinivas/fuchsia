@@ -29,10 +29,10 @@ void PositionManager::CheckPositions(int64_t dest_frame_count, int64_t* dest_off
                                      int64_t source_frame_count, int64_t frac_source_offset,
                                      int64_t frac_pos_filter_length, int64_t frac_step_size,
                                      uint64_t rate_modulo, uint64_t denominator,
-                                     uint64_t source_position_modulo) {
+                                     uint64_t source_pos_modulo) {
   CheckDestPositions(dest_frame_count, *dest_offset_ptr);
   CheckSourcePositions(source_frame_count, frac_source_offset, frac_pos_filter_length);
-  CheckRateValues(frac_step_size, rate_modulo, denominator, source_position_modulo);
+  CheckRateValues(frac_step_size, rate_modulo, denominator, source_pos_modulo);
 }
 
 void PositionManager::CheckDestPositions(int64_t dest_frame_count, int64_t dest_offset) {
@@ -64,7 +64,7 @@ void PositionManager::CheckSourcePositions(int64_t source_frame_count, int64_t f
 }
 
 void PositionManager::CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo,
-                                      uint64_t denominator, uint64_t source_position_modulo) {
+                                      uint64_t denominator, uint64_t source_pos_modulo) {
   FX_CHECK(frac_step_size > 0) << "step_size must be positive; cannot be zero";
 
   FX_CHECK(denominator > 0) << "denominator cannot be zero";
@@ -72,8 +72,8 @@ void PositionManager::CheckRateValues(int64_t frac_step_size, uint64_t rate_modu
   FX_CHECK(rate_modulo < denominator) << "rate_modulo (" << rate_modulo
                                       << ") must be less than denominator (" << denominator << ")";
 
-  FX_CHECK(source_position_modulo < denominator)
-      << "source_position_modulo (" << source_position_modulo << ") must be less than denominator ("
+  FX_CHECK(source_pos_modulo < denominator)
+      << "source_position_modulo (" << source_pos_modulo << ") must be less than denominator ("
       << denominator << ")";
 }
 
@@ -130,22 +130,21 @@ void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t sourc
 }
 
 void PositionManager::SetRateValues(int64_t frac_step_size, uint64_t rate_modulo,
-                                    uint64_t denominator, uint64_t* source_pos_mod) {
+                                    uint64_t denominator, uint64_t source_pos_modulo) {
   if constexpr (kTracePositionEvents) {
     TRACE_DURATION("audio", __func__, "step_size",
                    Fixed::FromRaw(frac_step_size).Integral().Floor(), "step_size.frac",
                    Fixed::FromRaw(frac_step_size).Fraction().raw_value(), "rate_modulo",
                    rate_modulo, "denominator", denominator);
   }
-  CheckRateValues(frac_step_size, rate_modulo, denominator, *source_pos_mod);
+  CheckRateValues(frac_step_size, rate_modulo, denominator, source_pos_modulo);
 
   frac_step_size_ = frac_step_size;
   rate_modulo_ = rate_modulo;
 
   if (rate_modulo_ > 0) {
     denominator_ = denominator;
-    source_pos_modulo_ptr_ = source_pos_mod;
-    source_pos_modulo_ = *source_pos_modulo_ptr_;
+    source_pos_modulo_ = source_pos_modulo;
   }
 }
 
@@ -212,9 +211,6 @@ void PositionManager::UpdateOffsets() {
   }
   *source_offset_ptr_ = Fixed::FromRaw(frac_source_offset_);
   *dest_offset_ptr_ = dest_offset_;
-  if (rate_modulo_) {
-    *source_pos_modulo_ptr_ = source_pos_modulo_;
-  }
 }
 
 }  // namespace media_audio

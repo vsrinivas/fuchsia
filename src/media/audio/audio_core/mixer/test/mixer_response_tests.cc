@@ -232,9 +232,9 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
 
   // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
   auto& bk = mixer->bookkeeping();
-  bk.step_size = (kOneFrame * source_frames) / num_dest_frames;
+  bk.set_step_size(kOneFrame * source_frames / num_dest_frames);
   bk.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * source_frames - bk.step_size * num_dest_frames).raw_value(),
+      Fixed(kOneFrame * source_frames - bk.step_size() * num_dest_frames).raw_value(),
       num_dest_frames);
 
   bool use_full_set = FrequencySet::UseFullFrequencySet;
@@ -273,7 +273,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     // Maintain ongoing source_pos_modulo across multiple Mix() calls for that frequency.
     int64_t dest_frames, dest_offset = 0;
     auto source_frames = source.NumFrames();
-    bk.source_pos_modulo = 0;
+    bk.set_source_pos_modulo(0);
 
     // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
     // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
@@ -727,9 +727,9 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
 
   // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
   auto& bk = mixer->bookkeeping();
-  bk.step_size = (kOneFrame * source_frames) / num_dest_frames;
+  bk.set_step_size(kOneFrame * source_frames / num_dest_frames);
   bk.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * source_frames - bk.step_size * num_dest_frames).raw_value(),
+      Fixed(kOneFrame * source_frames - bk.step_size() * num_dest_frames).raw_value(),
       num_dest_frames);
 
   int64_t dest_frames, dest_offset = 0;

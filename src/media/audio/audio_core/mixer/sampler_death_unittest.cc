@@ -137,11 +137,11 @@ TEST_P(SamplerDeathTest, SourcePositionTooHigh) {
 // Incoming step_size can be as low as 1 fractional frame, but not zero.
 TEST_P(SamplerDeathTest, StepSizeTooLow) {
   auto mix_params = SamplerDeathTest::DefaultMixParams();
-  mixer_->bookkeeping().step_size = Fixed::FromRaw(1);
+  mixer_->bookkeeping().set_step_size(Fixed::FromRaw(1));
   MixWithParams(mix_params);  // (we expect to continue without process exit)
 
   mix_params = SamplerDeathTest::DefaultMixParams();
-  mixer_->bookkeeping().step_size = Fixed::FromRaw(0);
+  mixer_->bookkeeping().set_step_size(Fixed::FromRaw(0));
   EXPECT_DEATH(MixWithParams(mix_params), "");
 }
 
@@ -159,11 +159,11 @@ TEST_P(SamplerDeathTest, NumeratorTooHigh) {
 TEST_P(SamplerDeathTest, SourcePosModuloTooHigh) {
   auto mix_params = SamplerDeathTest::DefaultMixParams();
   mixer_->bookkeeping().SetRateModuloAndDenominator(64, 243);
-  mixer_->bookkeeping().source_pos_modulo = 242;
+  mixer_->bookkeeping().set_source_pos_modulo(242);
   MixWithParams(mix_params);  // (we expect to continue without process exit)
 
   mix_params = SamplerDeathTest::DefaultMixParams();
-  mixer_->bookkeeping().source_pos_modulo = 243;
+  mixer_->bookkeeping().set_source_pos_modulo(243);
   EXPECT_DEATH(MixWithParams(mix_params), "");
 }
 

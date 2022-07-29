@@ -71,11 +71,11 @@ void PointSampler::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offse
                        bool accumulate) {
   TRACE_DURATION("audio", "PointSampler::Mix");
 
-  auto info = &bookkeeping();
+  const auto info = &bookkeeping();
   PositionManager::CheckPositions(
       dest_frames, dest_offset_ptr, source_frames, source_offset_ptr->raw_value(),
-      point_sampler_->pos_filter_length().raw_value(), info->step_size.raw_value(),
-      info->rate_modulo(), info->denominator(), info->source_pos_modulo);
+      point_sampler_->pos_filter_length().raw_value(), info->step_size().raw_value(),
+      info->rate_modulo(), info->denominator(), info->source_pos_modulo());
 
   Sampler::Source source{source_void_ptr, source_offset_ptr, source_frames};
   Sampler::Dest dest{dest_ptr, dest_offset_ptr, dest_frames};

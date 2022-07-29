@@ -213,7 +213,7 @@ TEST_F(SincSamplerOutputTest, UnityConstant) {
   }
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
 
   // Mix the first half of the destination
   mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
@@ -256,9 +256,9 @@ TEST_F(SincSamplerOutputTest, DownSampleConstant) {
   }
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = (kOneFrame * kSourceRate) / kDestRate;
+  bk.set_step_size(kOneFrame * kSourceRate / kDestRate);
   bk.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * kSourceRate - bk.step_size * kDestRate).raw_value(), kDestRate);
+      Fixed(kOneFrame * kSourceRate - bk.step_size() * kDestRate).raw_value(), kDestRate);
 
   // Mix the first half of the destination
   mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
@@ -300,9 +300,9 @@ TEST_F(SincSamplerOutputTest, UpSampleConstant) {
   }
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = (kOneFrame * kSourceRate) / kDestRate;
+  bk.set_step_size(kOneFrame * kSourceRate / kDestRate);
   bk.SetRateModuloAndDenominator(
-      kOneFrame.raw_value() * kSourceRate - bk.step_size.raw_value() * kDestRate, kDestRate);
+      kOneFrame.raw_value() * kSourceRate - bk.step_size().raw_value() * kDestRate, kDestRate);
 
   // Mix the first half of the destination
   mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen, &source_offset,
@@ -562,7 +562,7 @@ void SincSamplerPositionTest::TestSourceOffsetAtEnd(bool mute) {
   int64_t dest_offset = 0;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
 
   bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
@@ -592,12 +592,12 @@ void SincSamplerPositionTest::TestRateModulo(bool include_rate_modulo, bool mute
   int64_t dest_offset = 0;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = (kOneFrame * 2) / 3;
+  bk.set_step_size(kOneFrame * 2 / 3);
 
   if (include_rate_modulo) {
-    bk.SetRateModuloAndDenominator(Fixed(2).raw_value() - bk.step_size.raw_value() * 3, 3);
+    bk.SetRateModuloAndDenominator(Fixed(2).raw_value() - bk.step_size().raw_value() * 3, 3);
     ASSERT_EQ(bk.rate_modulo(),
-              static_cast<uint64_t>(Fixed(Fixed(2) - (bk.step_size * 3)).raw_value()));
+              static_cast<uint64_t>(Fixed(Fixed(2) - (bk.step_size() * 3)).raw_value()));
   }
 
   bk.gain.SetSourceMute(mute);
@@ -636,7 +636,7 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
   int64_t dest_offset = 0;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
   bk.SetRateModuloAndDenominator(3333, 10000);
 
   bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
@@ -644,7 +644,7 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo, 9999u);
+  EXPECT_EQ(bk.source_pos_modulo(), 9999u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroAlmostRollover) {
   TestPositionModuloFromZeroNoRollover(false);
@@ -667,16 +667,16 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroNoRollover(bool mute)
   int64_t dest_offset = 0;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
   bk.SetRateModuloAndDenominator(3332, 10000);
-  bk.source_pos_modulo = 3;
+  bk.set_source_pos_modulo(3);
 
   bk.gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo, 9999u);
+  EXPECT_EQ(bk.source_pos_modulo(), 9999u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroAlmostRollover) {
   TestPositionModuloFromNonZeroNoRollover(false);
@@ -701,7 +701,7 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
   int64_t dest_offset = 1;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
   bk.SetRateModuloAndDenominator(5000, 10000);
 
   bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
@@ -709,7 +709,7 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
              false);
   EXPECT_EQ(dest_offset, static_cast<int64_t>(dest_frames));
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo, 0u);
+  EXPECT_EQ(bk.source_pos_modulo(), 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroExactRollover) {
   TestPositionModuloFromZeroRollover(false);
@@ -732,16 +732,16 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroRollover(bool mute) {
   int64_t dest_offset = 1;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
   bk.SetRateModuloAndDenominator(3332, 10000);
-  bk.source_pos_modulo = 3336;
+  bk.set_source_pos_modulo(3336);
 
   bk.gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo, 0u);
+  EXPECT_EQ(bk.source_pos_modulo(), 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroExactRollover) {
   TestPositionModuloFromNonZeroRollover(false);
@@ -768,9 +768,9 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   int64_t dest_offset = 0;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame - Fixed::FromRaw(1);
+  bk.set_step_size(kOneFrame - Fixed::FromRaw(1));
   bk.SetRateModuloAndDenominator(2, 3);
-  bk.source_pos_modulo = 2;
+  bk.set_source_pos_modulo(2);
 
   bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
@@ -778,7 +778,7 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   EXPECT_EQ(dest_offset, 2);
   EXPECT_EQ(source_offset, Fixed(Fixed(source_frames) - mixer->pos_filter_width()))
       << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo, 0u);
+  EXPECT_EQ(bk.source_pos_modulo(), 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloExactRolloverCausesEarlyComplete) {
   TestSourcePosModuloExactRolloverForCompletion(false);

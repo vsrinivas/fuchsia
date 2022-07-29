@@ -6,6 +6,7 @@
 
 #include <iterator>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/format2/fixed.h"
@@ -89,34 +90,33 @@ TEST(PositionManagerTest, UpdateOffsets) {
 
   auto step_size = kFracOneFrame;
   auto rate_modulo = 0ul;
-  auto denominator = 1ul;
-  auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  auto denominator = 2ul;
+  auto source_position_modulo = 1ul;
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, source_position_modulo);
 
   source_offset = Fixed::FromRaw(27);
   dest_offset = 42;
-  source_position_modulo = 72;
   pos_mgr.UpdateOffsets();
+  source_position_modulo = pos_mgr.source_pos_modulo();
 
   EXPECT_EQ(source_offset, Fixed(0));
   EXPECT_EQ(dest_offset, 0);
-  EXPECT_EQ(source_position_modulo, 72ul);
+  EXPECT_EQ(pos_mgr.source_pos_modulo(), 0ul);
 
   // Now that `rate_modulo` and `denominator` are non-zero, `source_position_modulo` should be
   // updated.
   rate_modulo = 1ul;
   denominator = 2ul;
-  source_position_modulo = 0;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  source_position_modulo = 1ul;
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, source_position_modulo);
 
   source_offset = Fixed::FromRaw(27);
   dest_offset = 42;
-  source_position_modulo = 72;
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, Fixed(0));
   EXPECT_EQ(dest_offset, 0);
-  EXPECT_EQ(source_position_modulo, 0ul);
+  EXPECT_EQ(pos_mgr.source_pos_modulo(), 1ul);
 }
 
 TEST(PositionManagerTest, CanFrameBeMixed) {
@@ -153,8 +153,7 @@ TEST(PositionManagerTest, AdvanceFrameBasic) {
   int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(kFracOneFrame, 0, 1, &source_position_modulo);
+  pos_mgr.SetRateValues(kFracOneFrame, 0, 1, 0ul);
 
   Fixed expected_source_offset = source_offset + Fixed(1);
   auto received_source_offset = Fixed::FromRaw(pos_mgr.AdvanceFrame());
@@ -174,8 +173,7 @@ TEST(PositionManagerTest, AdvanceFrameSourceReachesEnd) {
   int64_t dest_offset = 2;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(kFracOneFrame, 0, 1, &source_position_modulo);
+  pos_mgr.SetRateValues(kFracOneFrame, 0, 1, 0ul);
 
   Fixed expected_source_offset = source_offset + Fixed(1);
   auto received_source_offset = Fixed::FromRaw(pos_mgr.AdvanceFrame());
@@ -200,8 +198,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
   constexpr auto step_size = kFracOneFrame;
   auto rate_modulo = 1ul;
   auto denominator = 243ul;
-  auto source_position_modulo = 242ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 242ul);
 
   Fixed expected_source_offset = Fixed(2) - Fixed::FromRaw(1);
   EXPECT_TRUE(pos_mgr.CanFrameBeMixed());
@@ -233,8 +230,7 @@ TEST(PositionManagerTest, AdvanceFrameSourceModuloAlmostReachesEnd) {
   constexpr auto step_size = kFracOneFrame;
   auto rate_modulo = 1ul;
   auto denominator = 243ul;
-  auto source_position_modulo = 241ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 241ul);
 
   // Source modulo starts just two shy of incrementing `source_offset`, and `rate_modulo` increments
   // it by one. This is the boundary case, one less than where source modulo would affect
@@ -270,8 +266,7 @@ TEST(PositionManagerTest, AdvanceFrameDestReachesEnd) {
   pos_mgr.SetDestValues(dest, dest_frame_count, &dest_offset);
 
   constexpr auto step_size = kFracOneFrame;
-  auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(step_size, 0, 1, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, 0, 1, 0ul);
 
   // When `dest_offset` reaches `dest_frame_count`, we can no longer mix a frame, but `source` is
   // not consumed.
@@ -325,9 +320,8 @@ TEST(PositionManagerTest, AdvanceToEndDest) {
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = kFracOneFrame * 2 - 1;
-  auto source_position_modulo = 1ul;
   auto denominator = 2ul;
-  pos_mgr.SetRateValues(step_size, 0, denominator, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, 0, denominator, 1ul);
 
   // `AdvanceToEnd` should be limited by `dest`.
   auto num_source_frame_count_skipped = pos_mgr.AdvanceToEnd();
@@ -337,7 +331,7 @@ TEST(PositionManagerTest, AdvanceToEndDest) {
 
   EXPECT_EQ(source_offset, Fixed(11) - Fixed::FromRaw(6));
   EXPECT_EQ(dest_offset, 5);
-  EXPECT_EQ(source_position_modulo, 1ul);
+  EXPECT_EQ(pos_mgr.source_pos_modulo(), 0ul);
   EXPECT_FALSE(pos_mgr.CanFrameBeMixed());
   EXPECT_FALSE(pos_mgr.IsSourceConsumed());
 }
@@ -352,9 +346,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceBasic) {
   float dest[13];
   int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
-
-  auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(kFracHalfFrame, 0, 1, &source_position_modulo);
+  pos_mgr.SetRateValues(kFracHalfFrame, 0, 1, 0ul);
 
   // `AdvanceToEnd` should be limited by `source`.
   auto num_source_frame_count_skipped = pos_mgr.AdvanceToEnd();
@@ -366,7 +358,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceBasic) {
   EXPECT_EQ(source_offset, expect_source_offset)
       << std::hex << source_offset.raw_value() << " != " << expect_source_offset.raw_value();
   EXPECT_EQ(dest_offset, 9);
-  EXPECT_EQ(source_position_modulo, 0u);
+  EXPECT_EQ(pos_mgr.source_pos_modulo(), 0ul);
   EXPECT_FALSE(pos_mgr.CanFrameBeMixed());
   EXPECT_TRUE(pos_mgr.IsSourceConsumed());
 }
@@ -385,8 +377,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceExactModulo) {
   constexpr auto step_size = 2 * kFracOneFrame;
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
-  auto source_position_modulo = 20ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 20ul);
 
   // `AdvanceToEnd` should be limited by `source`, where `rate_module` contributes EXACTLY what
   // consumes `source`.
@@ -397,7 +388,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceExactModulo) {
 
   EXPECT_EQ(source_offset, Fixed(11));
   EXPECT_EQ(dest_offset, 5);
-  EXPECT_EQ(source_position_modulo, 0ul);
+  EXPECT_EQ(pos_mgr.source_pos_modulo(), 0ul);
   EXPECT_FALSE(pos_mgr.CanFrameBeMixed());
   EXPECT_TRUE(pos_mgr.IsSourceConsumed());
 }
@@ -417,8 +408,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceExtraModulo) {
   constexpr auto step_size = kFracOneFrame * 2;
   auto rate_modulo = 1ul;
   auto denominator = 25ul;
-  auto source_position_modulo = 24ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 24ul);
 
   // `AdvanceToEnd` should be limited by `source`, where `source_position_modulo` flows beyond
   // `source` by <1 frame.
@@ -429,7 +419,7 @@ TEST(PositionManagerTest, AdvanceToEndSourceExtraModulo) {
 
   EXPECT_EQ(source_offset, Fixed(11));
   EXPECT_EQ(dest_offset, 5);
-  EXPECT_EQ(source_position_modulo, 4ul);
+  EXPECT_EQ(pos_mgr.source_pos_modulo(), 4ul);
   EXPECT_FALSE(pos_mgr.CanFrameBeMixed());
   EXPECT_TRUE(pos_mgr.IsSourceConsumed());
 }
@@ -445,8 +435,7 @@ TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
   auto step_size = (24 << Fixed::Format::FractionalBits);
   auto rate_modulo = 0ul;
   auto denominator = 1ul;
-  auto source_position_modulo = 0ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
+  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 0ul);
 
   int16_t source[360];
   auto source_offset = Fixed::FromRaw(-1);

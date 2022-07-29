@@ -890,7 +890,7 @@ TEST_F(PointSamplerPositionTest, SourceOffsetAtEnd) {
   int64_t dest_offset = 0;
 
   auto& bk = mixer->bookkeeping();
-  bk.step_size = kOneFrame;
+  bk.set_step_size(kOneFrame);
 
   mixer->Mix(accum.data(), accum.size(), &dest_offset, source.data(), source.size(), &source_offset,
              false);

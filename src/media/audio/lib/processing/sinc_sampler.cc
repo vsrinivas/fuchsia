@@ -96,10 +96,7 @@ class SincSamplerImpl : public SincSampler {
     }
   }
 
-  void SetRateValues(int64_t step_size, uint64_t rate_modulo, uint64_t denominator,
-                     uint64_t* source_pos_mod) final {
-    position_.SetRateValues(step_size, rate_modulo, denominator, source_pos_mod);
-  }
+  PositionManager& position_manager() final { return position_; }
 
  private:
   static void PopulateFramesToChannelStrip(const void* source_void_ptr,

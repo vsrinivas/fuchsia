@@ -32,7 +32,7 @@ constexpr bool kMixerPositionTraceEvents = false;
 // appropriately processed result, and summing this output into a common destination buffer.
 class Mixer {
  public:
-  struct Bookkeeping;
+  class Bookkeeping;
 
   // SourceInfo
   //
@@ -58,73 +58,17 @@ class Mixer {
       next_dest_frame = target_dest_frame;
       next_source_frame =
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
-      bookkeeping.source_pos_modulo = 0;
+      bookkeeping.set_source_pos_modulo(0);
       source_pos_error = zx::duration(0);
     }
 
     // Used by custom code when debugging.
-    std::string PositionsToString(std::string tag = "") {
+    std::string PositionsToString(const std::string& tag = "") const {
       return tag + ": next_dest " + std::to_string(next_dest_frame) + ", next_source " +
              ffl::String(next_source_frame, ffl::String::DecRational).c_str() + ", pos_err " +
              std::to_string(source_pos_error.get());
     }
 
-   private:
-    // From current values, advance the long-running positions by dest_frames, which
-    // must be non-negative.
-    void AdvancePositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping,
-                            bool advance_source_pos_modulo) {
-      FX_CHECK(dest_frames >= 0) << "Unexpected negative advance:"
-                                 << " dest_frames=" << dest_frames
-                                 << " denom=" << bookkeeping.denominator()
-                                 << " rate_mod=" << bookkeeping.rate_modulo() << " "
-                                 << " source_pos_mod=" << bookkeeping.source_pos_modulo;
-
-      int64_t frac_source_frame_delta = bookkeeping.step_size.raw_value() * dest_frames;
-      if (kMixerPositionTraceEvents) {
-        TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "advance_source_pos_modulo",
-                       advance_source_pos_modulo, "frac_source_frame_delta",
-                       frac_source_frame_delta);
-      }
-
-      if (bookkeeping.rate_modulo()) {
-        // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
-        __int128_t denominator_128 = bookkeeping.denominator();
-        __int128_t source_pos_modulo_128 =
-            static_cast<__int128_t>(bookkeeping.rate_modulo()) * dest_frames;
-        if (advance_source_pos_modulo) {
-          source_pos_modulo_128 += bookkeeping.source_pos_modulo;
-        }
-        // else, assume (for now) that source_pos_modulo started at zero.
-
-        // mod these back down into range.
-        auto new_source_pos_modulo = static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
-        if (advance_source_pos_modulo) {
-          bookkeeping.source_pos_modulo = new_source_pos_modulo;
-        } else {
-          // source_pos_modulo has already been advanced; it is already at its eventual value.
-          // new_source_pos_modulo is what source_pos_modulo WOULD have become, if it had started at
-          // zero. Now advance source_pos_modulo_128 by the difference (which is what its initial
-          // value must have been), just in case this causes frac_source_frame_delta to increment.
-          source_pos_modulo_128 += bookkeeping.source_pos_modulo;
-          source_pos_modulo_128 -= new_source_pos_modulo;
-          if (bookkeeping.source_pos_modulo < new_source_pos_modulo) {
-            source_pos_modulo_128 += denominator_128;
-          }
-        }
-        frac_source_frame_delta += static_cast<int64_t>(source_pos_modulo_128 / denominator_128);
-      }
-      next_source_frame = Fixed::FromRaw(next_source_frame.raw_value() + frac_source_frame_delta);
-      next_dest_frame += dest_frames;
-      if (kMixerPositionTraceEvents) {
-        TRACE_DURATION("audio", "AdvancePositionsBy End", "nest_source_frame",
-                       next_source_frame.Integral().Floor(), "next_source_frame.frac",
-                       next_source_frame.Fraction().raw_value(), "next_dest_frame", next_dest_frame,
-                       "source_pos_modulo", bookkeeping.source_pos_modulo);
-      }
-    }
-
-   public:
     void UpdateRunningPositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping) {
       AdvancePositionsBy(dest_frames, bookkeeping, false);
     }
@@ -285,6 +229,61 @@ class Mixer {
     // next_source_frame is reset to that clock-derived value, and this field is set to zero. This
     // field sets the direction and magnitude of any steps taken for clock reconciliation.
     zx::duration source_pos_error{0};
+
+   private:
+    // From current values, advance the long-running positions by dest_frames, which
+    // must be non-negative.
+    void AdvancePositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping,
+                            bool advance_source_pos_modulo) {
+      FX_CHECK(dest_frames >= 0) << "Unexpected negative advance:"
+                                 << " dest_frames=" << dest_frames
+                                 << " denom=" << bookkeeping.denominator()
+                                 << " rate_mod=" << bookkeeping.rate_modulo() << " "
+                                 << " source_pos_mod=" << bookkeeping.source_pos_modulo();
+
+      int64_t frac_source_frame_delta = bookkeeping.step_size().raw_value() * dest_frames;
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "advance_source_pos_modulo",
+                       advance_source_pos_modulo, "frac_source_frame_delta",
+                       frac_source_frame_delta);
+      }
+
+      if (bookkeeping.rate_modulo()) {
+        // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
+        __int128_t denominator_128 = bookkeeping.denominator();
+        __int128_t source_pos_modulo_128 =
+            static_cast<__int128_t>(bookkeeping.rate_modulo()) * dest_frames;
+        if (advance_source_pos_modulo) {
+          source_pos_modulo_128 += bookkeeping.source_pos_modulo();
+        }
+        // else, assume (for now) that source_pos_modulo started at zero.
+
+        // mod these back down into range.
+        auto new_source_pos_modulo = static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
+        if (advance_source_pos_modulo) {
+          bookkeeping.set_source_pos_modulo(new_source_pos_modulo);
+        } else {
+          // source_pos_modulo has already been advanced; it is already at its eventual value.
+          // new_source_pos_modulo is what source_pos_modulo WOULD have become, if it had started at
+          // zero. Now advance source_pos_modulo_128 by the difference (which is what its initial
+          // value must have been), just in case this causes frac_source_frame_delta to increment.
+          source_pos_modulo_128 += bookkeeping.source_pos_modulo();
+          source_pos_modulo_128 -= new_source_pos_modulo;
+          if (bookkeeping.source_pos_modulo() < new_source_pos_modulo) {
+            source_pos_modulo_128 += denominator_128;
+          }
+        }
+        frac_source_frame_delta += static_cast<int64_t>(source_pos_modulo_128 / denominator_128);
+      }
+      next_source_frame = Fixed::FromRaw(next_source_frame.raw_value() + frac_source_frame_delta);
+      next_dest_frame += dest_frames;
+      if (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", "AdvancePositionsBy End", "nest_source_frame",
+                       next_source_frame.Integral().Floor(), "next_source_frame.frac",
+                       next_source_frame.Fraction().raw_value(), "next_dest_frame", next_dest_frame,
+                       "source_pos_modulo", bookkeeping.source_pos_modulo());
+      }
+    }
   };
 
   // Bookkeeping
@@ -300,7 +299,8 @@ class Mixer {
   //
   // Source_offset and step_size use the same fixed-point format, so they have identical precision
   // limitations. Source_pos_modulo, then, represents fractions of source subframe position.
-  struct Bookkeeping {
+  class Bookkeeping {
+   public:
     explicit Bookkeeping(Gain::Limits gain_limits = Gain::Limits{}) : gain(gain_limits) {}
 
     static Fixed DestLenToSourceLen(int64_t dest_frames, Fixed step_size, uint64_t rate_modulo,
@@ -375,10 +375,6 @@ class Mixer {
     // Bookkeeping should contain the rechannel matrix eventually. Mapping from one channel
     // configuration to another is essentially an MxN gain table that can be applied during Mix().
 
-    // This fixed-point value is a fractional "stride" for the source: how much to increment our
-    // sampling position in the source stream, for each output (dest) frame produced.
-    Fixed step_size = kOneFrame;
-
     // This parameter (along with denominator) expresses leftover rate precision that step_size
     // cannot express. When non-zero, rate_modulo and denominator express a fractional value of the
     // step_size unit that src position should advance, for each dest frame.
@@ -388,12 +384,20 @@ class Mixer {
     // position precision that step_size and source_offset (respectively) cannot express.
     uint64_t denominator() const { return denominator_; }
 
+    // This fixed-point value is a fractional "stride" for the source: how much to increment our
+    // sampling position in the source stream, for each output (dest) frame produced.
+    Fixed step_size() const { return step_size_; }
+    void set_step_size(Fixed step_size) { step_size_ = step_size; }
+
     // This parameter (along with denominator) expresses leftover position precision that Mix
     // parameter cannot express. When present, source_pos_modulo and denominator express a
     // fractional value of the source_offset unit, for additional precision on current position.
     // Note: this field is also referenced when updating long-running position fields in SourceInfo.
     // TODO(fxbug.dev/85108): Refactor Bookkeeping and SourceInfo.
-    uint64_t source_pos_modulo = 0;
+    uint64_t source_pos_modulo() const { return source_pos_modulo_; }
+    void set_source_pos_modulo(uint64_t source_pos_modulo) {
+      source_pos_modulo_ = source_pos_modulo;
+    }
 
     // Update rate_modulo|denominator|source_pos_modulo as a trio.
     // The 'source_pos' param and retval are relevant only after the long-running source position
@@ -408,8 +412,8 @@ class Mixer {
       FX_CHECK(denominator_ > 0) << "denominator: " << denominator_;
       FX_CHECK(rate_modulo_ < denominator_)
           << "rate_modulo: " << rate_modulo_ << ", denominator: " << denominator_;
-      FX_CHECK(source_pos_modulo < denominator_)
-          << "source_pos_modulo: " << source_pos_modulo << ", denominator: " << denominator_;
+      FX_CHECK(source_pos_modulo_ < denominator_)
+          << "source_pos_modulo: " << source_pos_modulo_ << ", denominator: " << denominator_;
 
       // Only rescale source_pos_modulo if denominator changes. Even then, don't change denominator
       // and source_pos_modulo if new rate is zero (even if they requested a different denominator).
@@ -430,7 +434,7 @@ class Mixer {
         // source_pos_modulo is strictly < denominator_, so the scaled source_pos_mod < new_denom.
         // Our conceptual "+1/2" for rounding could only make new_source_pos_mod EQUAL to new_denom,
         // never exceed it. So our new source_pos_modulo cannot overflow its uint64.
-        __uint128_t new_source_pos_mod = static_cast<__uint128_t>(source_pos_modulo) * new_denom;
+        __uint128_t new_source_pos_mod = static_cast<__uint128_t>(source_pos_modulo_) * new_denom;
         new_source_pos_mod += static_cast<__uint128_t>(denominator_ / 2);
         new_source_pos_mod /= static_cast<__uint128_t>(denominator_);
 
@@ -439,7 +443,7 @@ class Mixer {
           source_pos += Fixed::FromRaw(1);
         }
 
-        source_pos_modulo = static_cast<uint64_t>(new_source_pos_mod);
+        source_pos_modulo_ = static_cast<uint64_t>(new_source_pos_mod);
         denominator_ = new_denom;
       }
       rate_modulo_ = new_rate_mod;
@@ -450,6 +454,8 @@ class Mixer {
    private:
     uint64_t rate_modulo_ = 0;
     uint64_t denominator_ = 1;
+    Fixed step_size_ = kOneFrame;
+    uint64_t source_pos_modulo_ = 0;
   };
 
   virtual ~Mixer() = default;
