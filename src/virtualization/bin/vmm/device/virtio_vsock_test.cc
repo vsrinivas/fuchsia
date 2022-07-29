@@ -244,7 +244,8 @@ class VirtioVsockTest : public TestWithDevice {
 
     // Start message.
     VirtioVsock_Start_Result result;
-    ASSERT_EQ(ZX_OK, vsock_->Start(std::move(start_info), kGuestCid, {}, &result));
+    ASSERT_EQ(ZX_OK, vsock_->Start(std::move(start_info), kGuestCid, std::move(initial_listeners_),
+                                   &result));
     ASSERT_TRUE(result.is_response());
 
     // Queue setup.
@@ -446,6 +447,7 @@ class VirtioVsockTest : public TestWithDevice {
   HostVsockEndpointPtr host_endpoint_;
 
   std::unique_ptr<component_testing::RealmRoot> realm_;
+  std::vector<::fuchsia::virtualization::Listener> initial_listeners_;
 
   std::unique_ptr<VirtioQueueFake> rx_queue_;
   std::unique_ptr<VirtioQueueFake> tx_queue_;
@@ -1189,6 +1191,33 @@ TEST_F(VirtioVsockTest, SkipBadRxDescriptors) {
   virtio_vsock_hdr_t* header;
   ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
   EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
+}
+
+class VirtioVsockInitialListenerTest : public VirtioVsockTest {};
+
+TEST_F(VirtioVsockInitialListenerTest, GuestConnectToInitialListener) {
+  TestListener listener1, listener2, listener3;
+
+  initial_listeners_.push_back({123, listener1.NewBinding()});
+  initial_listeners_.push_back({kVirtioVsockHostPort, listener2.NewBinding()});
+  initial_listeners_.push_back({789, listener3.NewBinding()});
+
+  ASSERT_NO_FATAL_FAILURE(VirtioVsockTest::SetUp());
+
+  // Guest initiated request to a listener passed via the start message.
+  SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
+
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener2.ConnectionCountEquals(1); }, zx::sec(5)));
+  ASSERT_EQ(listener2.requests_.size(), 1ul);
+  listener2.RespondToGuestRequests();
+
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RESPONSE);
+  EXPECT_EQ(header->src_port, kVirtioVsockHostPort);
+  EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
 }
 
 }  // namespace

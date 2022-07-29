@@ -10,10 +10,9 @@ use {
     anyhow::{anyhow, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_virtualization::{
-        HostVsockAcceptorProxy, HostVsockEndpointConnect2Responder,
-        HostVsockEndpointListenResponder, HOST_CID,
+        HostVsockAcceptorProxy, HostVsockEndpointConnect2Responder, HOST_CID,
     },
-    fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
         future::{self, LocalBoxFuture},
@@ -154,7 +153,7 @@ impl VsockDevice {
                     Ok(()) => match self.guest_initiated_connect(key) {
                         Ok(connection) => {
                             let device = self.clone();
-                            fuchsia_async::Task::local(async move {
+                            fasync::Task::local(async move {
                                 device.poll_connection_for_actions(connection).await
                             })
                             .detach();
@@ -334,33 +333,35 @@ impl VsockDevice {
     }
 
     // Listens on a given host port via the Listen HostVsockEndpoint FIDL protocol. There can only
-    // be a single listener per host port. If there is already a listener this will respond to the
-    // client with zx::Status::ALREADY_BOUND.
-    pub async fn listen(
-        &self,
+    // be a single listener per host port. If there is already a listener bound to a host port,
+    // this will return zx::Status::ALREADY_BOUND.
+    pub fn listen(
+        self: &Rc<Self>,
         host_port: u32,
         acceptor: HostVsockAcceptorProxy,
-        responder: HostVsockEndpointListenResponder,
-    ) -> Result<(), fidl::Error> {
-        if let Err(err) = self.port_manager.borrow_mut().add_listener(host_port) {
-            return responder.send(&mut Err(err.into_raw()));
-        }
+    ) -> Result<(), zx::Status> {
+        self.port_manager.borrow_mut().add_listener(host_port)?;
 
         let closed = acceptor.on_closed().extend_lifetime();
         if let Some(_) = self.listeners.borrow_mut().insert(host_port, acceptor) {
             panic!("Client already listening on port {} but the port was untracked", host_port);
         };
-        responder.send(&mut Ok(()))?;
 
-        if let Err(err) = closed.await {
-            panic!("Failed to wait on peer closed signal: {}", err);
-        };
+        // Remove the Listener when the client closes the acceptor.
+        let device = self.clone();
+        fasync::Task::local(async move {
+            if let Err(err) = closed.await {
+                panic!("Failed to wait on peer closed signal: {}", err);
+            };
 
-        if let None = self.listeners.borrow_mut().remove(&host_port) {
-            panic!("Port {} not found in listening list when attempting to remove", host_port);
-        }
+            if let None = device.listeners.borrow_mut().remove(&host_port) {
+                panic!("Port {} not found in listening list when attempting to remove", host_port);
+            }
 
-        self.port_manager.borrow_mut().remove_listener(host_port);
+            device.port_manager.borrow_mut().remove_listener(host_port);
+        })
+        .detach();
+
         Ok(())
     }
 
@@ -585,7 +586,6 @@ mod tests {
             HostVsockAcceptorMarker, HostVsockEndpointMarker, HostVsockEndpointProxy,
             HostVsockEndpointRequest, DEFAULT_GUEST_CID,
         },
-        fuchsia_async as fasync,
         futures::{FutureExt, TryStreamExt},
         std::task::Poll,
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
@@ -595,13 +595,14 @@ mod tests {
         device: Rc<VsockDevice>,
         request: HostVsockEndpointRequest,
     ) {
-        let device_ = device.clone();
         match request {
-            HostVsockEndpointRequest::Listen { port, acceptor, responder } => device_
-                .listen(port, acceptor.into_proxy().unwrap(), responder)
-                .await
-                .expect("failed to respond to listen request"),
-            HostVsockEndpointRequest::Connect2 { guest_port, responder } => device_
+            HostVsockEndpointRequest::Listen { port, acceptor, responder } => {
+                let result = device.listen(port, acceptor.into_proxy().unwrap());
+                responder
+                    .send(&mut result.map_err(|err| err.into_raw()))
+                    .expect("failed to send listen response");
+            }
+            HostVsockEndpointRequest::Connect2 { guest_port, responder } => device
                 .client_initiated_connect(guest_port, responder)
                 .await
                 .expect("failed to respond to client initiated connect"),
@@ -983,38 +984,23 @@ mod tests {
         send_then_read_bytes(&[7u8, 5, 3, 1], &socket2);
     }
 
-    #[test]
-    fn register_client_listener_and_connect_on_port() {
+    #[fuchsia::test]
+    async fn register_client_listener_and_connect_on_port() {
         let host_port = 12345;
         let guest_port = 5;
         let invalid_host_port = 54321;
 
-        let mut executor = fasync::TestExecutor::new().expect("failed to create test executor");
-        let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
-            .expect("failed to create HostVsockEndpoint proxy/stream");
-
         let device = VsockDevice::new();
+        let device_proxy = serve_host_vsock_endpoints(device.clone());
 
         let (client_end, mut client_stream) = create_request_stream::<HostVsockAcceptorMarker>()
             .expect("failed to create HostVsockAcceptor request stream");
 
-        let mut listen_fut = proxy.listen(host_port, client_end);
-        assert!(executor.run_until_stalled(&mut listen_fut).is_pending());
-
-        let responder_fut =
-            if let Poll::Ready(val) = executor.run_until_stalled(&mut stream.try_next()) {
-                handle_host_vsock_endpoint_stream(device.clone(), val.unwrap().unwrap())
-            } else {
-                panic!("Expected future to be ready")
-            };
-        futures::pin_mut!(responder_fut);
-        assert!(executor.run_until_stalled(&mut responder_fut).is_pending());
-
-        if let Poll::Ready(val) = executor.run_until_stalled(&mut listen_fut) {
-            assert!(val.unwrap().is_ok());
-        } else {
-            panic!("Expected future to be ready");
-        };
+        device_proxy
+            .listen(host_port, client_end)
+            .await
+            .expect("failed to get response to listen request")
+            .expect("listen unexpectedly failed");
 
         // Attempt and fail to connect on a port without a listener.
         let result = device.guest_initiated_connect(VsockConnectionKey::new(
@@ -1044,37 +1030,35 @@ mod tests {
             ))
             .expect("expected connection");
 
-        let connect_fut = device.poll_connection_for_actions(guest_connection);
-        futures::pin_mut!(connect_fut);
-        assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+        let device_clone = device.clone();
+        fasync::Task::local(async move {
+            device_clone.poll_connection_for_actions(guest_connection).await
+        })
+        .detach();
 
         // Device reported this new connection.
         let reported_key =
-            new_connections.try_next().unwrap().expect("expected a new connection key").key();
+            new_connections.next().await.expect("expected a new connection key").key();
         assert_eq!(
             reported_key,
             VsockConnectionKey::new(HOST_CID, host_port, DEFAULT_GUEST_CID, guest_port)
         );
 
         // Respond to the guest's connection request from the client's acceptor.
+        let (src_cid, src_port, port, responder) = client_stream
+            .try_next()
+            .await
+            .unwrap()
+            .unwrap()
+            .into_accept()
+            .expect("failed to parse message as an Accept call");
+        assert_eq!(src_cid, DEFAULT_GUEST_CID);
+        assert_eq!(src_port, guest_port);
+        assert_eq!(port, host_port);
+
         let (_client_socket, device_socket) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create sockets");
-        if let Poll::Ready(val) = executor.run_until_stalled(&mut client_stream.try_next()) {
-            let (src_cid, src_port, port, responder) = val
-                .unwrap()
-                .unwrap()
-                .into_accept()
-                .expect("failed to parse message as an Accept call");
-            assert_eq!(src_cid, DEFAULT_GUEST_CID);
-            assert_eq!(src_port, guest_port);
-            assert_eq!(port, host_port);
-            responder.send(&mut Ok(device_socket)).expect("failed to send response to device");
-        } else {
-            panic!("Expected future to be ready");
-        };
-
-        // Continue running the connect future so that the state can transition to read-write.
-        assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+        responder.send(&mut Ok(device_socket)).expect("failed to send response to device");
 
         // The device sent a reply to the guest.
         let mem = IdentityDriverMem::new();
@@ -1088,15 +1072,15 @@ mod tests {
         let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem)
             .expect("failed to get next chain");
 
+        let mut rx_waiters: FuturesUnordered<LocalBoxFuture<'_, WantRxChainResult>> =
+            FuturesUnordered::new();
+
+        // One future which will never return, preventing this from resolving to Poll::Ready(None).
+        rx_waiters.push(Box::pin(future::pending::<WantRxChainResult>()));
+
         device
-            .handle_rx_chain(
-                chain,
-                &mut control_packets,
-                &mut new_connections,
-                &mut FuturesUnordered::new(),
-            )
-            .now_or_never()
-            .expect("future should have completed")
+            .handle_rx_chain(chain, &mut control_packets, &mut new_connections, &mut rx_waiters)
+            .await
             .expect("failed to handle rx queue");
 
         let used_chain = state.fake_queue.next_used().expect("no next used chain");
@@ -1121,6 +1105,7 @@ mod tests {
 
         let (client_end1, client_stream1) = create_request_stream::<HostVsockAcceptorMarker>()
             .expect("failed to create HostVsockAcceptor request stream");
+
         let result = device_proxy
             .listen(12345, client_end1)
             .await

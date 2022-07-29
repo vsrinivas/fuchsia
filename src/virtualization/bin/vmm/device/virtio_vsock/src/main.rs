@@ -31,7 +31,7 @@ async fn run_virtio_vsock(
     vsock_device: Rc<VsockDevice>,
 ) -> Result<(), Error> {
     // Receive start info as first message.
-    let (start_info, guest_cid, _, responder) = virtio_vsock_fidl
+    let (start_info, guest_cid, listeners, responder) = virtio_vsock_fidl
         .try_next()
         .await?
         .ok_or(anyhow!("Unexpected end of stream"))?
@@ -45,6 +45,19 @@ async fn run_virtio_vsock(
     if let Err(err) = vsock_device.set_guest_cid(guest_cid) {
         responder.send(&mut Err(zx::Status::INVALID_ARGS.into_raw()))?;
         return Err(err);
+    }
+
+    // Attempt to register any initial listeners before the device starts. Listeners passed this
+    // way are guaranteed to be available for even the earliest guest initiated connection.
+    let result = listeners.into_iter().try_for_each(|listener| {
+        vsock_device.listen(
+            listener.port,
+            listener.acceptor.into_proxy().map_err(|_| zx::Status::BAD_HANDLE)?,
+        )
+    });
+    if result.is_err() {
+        responder.send(&mut result.map_err(|status| status.into_raw()))?;
+        return result.map_err(|err| anyhow!("Failed to register initial listener: {}", err));
     }
 
     // Acknowledge that StartInfo was correct by responding to the controller.
@@ -87,9 +100,11 @@ async fn handle_host_vsock_endpoint(
     host_endpoint_fidl
         .try_for_each_concurrent(None, |request| async {
             match request {
-                HostVsockEndpointRequest::Listen { port, acceptor, responder } => {
-                    vsock_device.listen(port, acceptor.into_proxy()?, responder).await
-                }
+                HostVsockEndpointRequest::Listen { port, acceptor, responder } => responder.send(
+                    &mut vsock_device
+                        .listen(port, acceptor.into_proxy()?)
+                        .map_err(|err| err.into_raw()),
+                ),
                 HostVsockEndpointRequest::Connect2 { guest_port, responder } => {
                     vsock_device.client_initiated_connect(guest_port, responder).await
                 }
