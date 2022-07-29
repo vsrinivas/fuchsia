@@ -44,10 +44,13 @@ impl<'a> UdpSocket<'a> {
     }
 
     /// Platform callback for handling received data.
-    pub fn handle_receive(&self, msg: OtMessageBox<'a>, info: &ot::message::Info) {
+    pub fn handle_receive(&self, msg: &ot::Message<'a>, info: &ot::message::Info) {
         if let Some(handler) = self.0.mHandler {
             unsafe {
-                handler(self.0.mContext, msg.take_ot_ptr(), info.as_ot_ptr());
+                // SAFETY: The safety of this call is predicated on the underlying
+                //         handler not taking ownership of the ot::Message instance.
+                //         This is guaranteed as a part of the API contract.
+                handler(self.0.mContext, msg.as_ot_ptr(), info.as_ot_ptr());
             }
         }
     }

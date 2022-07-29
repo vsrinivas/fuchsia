@@ -58,7 +58,7 @@ pub(crate) fn poll_ot_udp_socket(
 
                 // TODO(fxbug.dev/93438): Set hop count. Figure out how to get this info.
                 // TODO(fxbug.dev/93438): Set ECN. Need to figure out how to get this info.
-                ot_udp_socket.handle_receive(message, &info);
+                ot_udp_socket.handle_receive(&message, &info);
             }
             Poll::Ready(Err(err)) => {
                 return Poll::Ready(Err(err.into()));
