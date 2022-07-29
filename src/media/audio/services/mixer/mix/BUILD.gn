@@ -46,6 +46,7 @@ source_set("mix") {
   ]
 
   public_deps = [
+    "//src/media/audio/lib/processing",
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
     "//zircon/system/ulib/fzl",
@@ -55,7 +56,6 @@ source_set("mix") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/format2",
-    "//src/media/audio/lib/processing",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
