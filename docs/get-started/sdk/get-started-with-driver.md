@@ -855,7 +855,7 @@ Do the following:
 ## Next steps {:#next-steps}
 
 Learn more about how the `qemu_edu` driver works in the
-[Driver sample walkthrough: qemu_edu][driver-sample-walkthrough] guide.
+[Driver codelab][driver-codelab] guide.
 
 ## Appendices
 
@@ -948,6 +948,6 @@ killall pm
 [eductl-cml]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/meta/eductl.cml
 [zxdb-user-guide]: /docs/development/debugger/README.md
 [driver-concepts]: /docs/concepts/drivers/README.md
-[driver-sample-walkthrough]: /docs/development/sdk/driver-sample-qemu-edu.md
+[driver-codelab]: /docs/get-started/sdk/learn/driver/introduction.md
 [driver-framework]: /docs/concepts/drivers/driver_framework.md
 [femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md

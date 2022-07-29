@@ -7,8 +7,9 @@ toc:
 - heading: Driver development
 - title: "Get started with driver development"
   path: /docs/get-started/sdk/get-started-with-driver.md
-- title: "Driver sample walkthrough: qemu_edu"
-  path: /docs/development/sdk/driver-sample-qemu-edu.md
+- title: Driver codelab
+  section:
+  - include: /docs/get-started/sdk/learn/driver/_toc.yaml
 - title: "Write bind rules for a driver"
   path: /docs/development/sdk/write-bind-rules-for-driver.md
 - title: "Bind library code generation tutorial for Bazel"
