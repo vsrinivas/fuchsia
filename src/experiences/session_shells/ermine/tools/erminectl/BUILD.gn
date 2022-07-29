@@ -11,7 +11,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//src/experiences/session_shells/ermine/fidl:ermine.tools-rustc",
+    "//src/experiences/session_shells/ermine/fidl:ermine.tools_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
