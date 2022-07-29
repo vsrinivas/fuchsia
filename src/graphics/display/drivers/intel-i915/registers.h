@@ -267,7 +267,11 @@ class AudioPinEldCPReadyStatus : public hwreg::RegisterBase<AudioPinEldCPReadySt
   static auto Get() { return hwreg::RegisterAddr<AudioPinEldCPReadyStatus>(0x650C0); }
 };
 
-// CLCLK_CTL
+// CDCLK_CTL (CD Clock Control)
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 220-222
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 328-329
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 325-326
 class CdClockCtl : public hwreg::RegisterBase<CdClockCtl, uint32_t> {
  public:
   DEF_FIELD(27, 26, skl_cd_freq_select);
@@ -290,7 +294,7 @@ class CdClockCtl : public hwreg::RegisterBase<CdClockCtl, uint32_t> {
     // Truncate the frequency to 0.25MHz for rounding.
     uint32_t mhz_4x_trunc = khz / 250;
     // Round the frequency to 0.5 MHz.
-    uint32_t mhz_2x_round = mhz_4x_trunc / 2 + (mhz_4x_trunc & 0x1);
+    uint32_t mhz_2x_round = (mhz_4x_trunc + 1) / 2;
     // Return rounded value minus 1 (0x2 in U10.1 format).
     return mhz_2x_round - 2;
   }
