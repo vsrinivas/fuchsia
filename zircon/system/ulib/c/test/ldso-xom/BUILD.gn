@@ -1,0 +1,42 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+shared_library("xom-test-lib") {
+  testonly = true
+  sources = [ "a.c" ]
+
+  if (current_cpu == "arm64") {
+    ldflags = [ "-Wl,--execute-only" ]
+  }
+}
+
+test("ldso-xom-test") {
+  sources = [ "ldso-xom-test.c" ]
+  deps = [
+    ":xom-test-lib",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  if (current_cpu == "arm64") {
+    ldflags = [ "-Wl,--execute-only" ]
+  }
+}
+
+fuchsia_unittest_package("ldso-xom-test-package") {
+  package_name = "ldso-xom-test"
+  deps = [ ":ldso-xom-test" ]
+}
+
+group("tests") {
+  testonly = true
+
+  # --execute-only is only supported for AArch64, so this test won't test anything
+  # meaningful on other platforms.
+  if (current_cpu == "arm64") {
+    deps = [ ":ldso-xom-test-package" ]
+  }
+}

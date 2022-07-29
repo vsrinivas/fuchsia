@@ -967,7 +967,8 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
     zx_vm_option_t zx_options = ZX_VM_SPECIFIC | ZX_VM_ALLOW_FAULTS;
     zx_options |= (ph->p_flags & PF_R) ? ZX_VM_PERM_READ : 0;
     zx_options |= (ph->p_flags & PF_W) ? ZX_VM_PERM_WRITE : 0;
-    zx_options |= (ph->p_flags & PF_X) ? ZX_VM_PERM_EXECUTE : 0;
+    const zx_vm_option_t exec_perm = ZX_VM_PERM_EXECUTE | ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED;
+    zx_options |= (ph->p_flags & PF_X) ? exec_perm : 0;
     uintptr_t mapaddr = (uintptr_t)base + this_min;
     zx_handle_t map_vmo = vmo;
     size_t map_size = this_max - this_min;
