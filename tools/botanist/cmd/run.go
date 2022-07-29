@@ -123,9 +123,6 @@ type RunCommand struct {
 	// Timeout is the duration allowed for the command to finish execution.
 	timeout time.Duration
 
-	// SysloggerFile, if nonempty, is the file to where the system's logs will be written.
-	syslogFile string
-
 	// syslogDir, if nonempty, is the directory in which system syslogs will be written.
 	syslogDir string
 
@@ -214,7 +211,6 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
-	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
 	f.StringVar(&r.syslogDir, "syslog-dir", "", "the directory to write all system logs to.")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 	f.StringVar(&r.serialLogDir, "serial-log-dir", "", "the directory to write all serial logs to.")
@@ -304,11 +300,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					serialLogName = "serial_log.txt"
 				}
 				serialLogPath := filepath.Join(r.serialLogDir, serialLogName)
-				sl, err := os.Create(serialLogPath)
-				if err != nil {
-					return err
-				}
-				sl.Close()
 
 				// Start capturing the serial log for this target.
 				if err := t.CaptureSerialLog(serialLogPath); err != nil && ctx.Err() == nil {
@@ -383,7 +374,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer os.Remove(testbedConfig)
 
 		if !r.netboot {
-			for i, t := range targetSlice {
+			for _, t := range targetSlice {
 				t := t
 				client, err := t.SSHClient()
 				if err != nil {
@@ -398,11 +389,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					}
 					logger.Debugf(ctx, "added package repo to target %s", t.Nodename())
 				}
-				if i == 0 && r.syslogFile != "" {
-					go func() {
-						t0.CaptureSyslog(client, r.syslogFile, r.repoURL, r.blobURL)
-					}()
-				}
 				if r.syslogDir != "" {
 					if _, err := os.Stat(r.syslogDir); errors.Is(err, os.ErrNotExist) {
 						if err := os.Mkdir(r.syslogDir, os.ModePerm); err != nil {
@@ -416,11 +402,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 							syslogName = "syslog.txt"
 						}
 						syslogPath := filepath.Join(r.syslogDir, syslogName)
-						if _, err := os.Create(syslogPath); err != nil {
-							logger.Errorf(ctx, "failed to create syslog file %s: %s", syslogPath, err)
-							return
+						if err := t.CaptureSyslog(client, syslogPath, r.repoURL, r.blobURL); err != nil && ctx.Err() == nil {
+							logger.Errorf(ctx, "failed to capture syslog at %s: %s", syslogPath, err)
 						}
-						t.CaptureSyslog(client, syslogPath, r.repoURL, r.blobURL)
 					}()
 				}
 			}
