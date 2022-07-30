@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{create_endpoints, ControlHandle, ServerEnd},
-    fidl::{AsHandleRef, Status},
+    fidl::{AsHandleRef, Event, Status},
     fidl_fidl_serversuite::{
         ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
         TargetTwoWayResultRequest, TargetTwoWayTablePayloadResponse,
@@ -91,6 +91,23 @@ async fn run_target_server(
                 TargetRequest::CloseWithEpitaph { epitaph_status, control_handle } => {
                     control_handle.shutdown_with_epitaph(Status::from_raw(epitaph_status));
                 }
+                TargetRequest::ByteVectorSize { vec, responder } => {
+                    responder.send(vec.len().try_into().unwrap()).expect("failed to send response");
+                }
+                TargetRequest::HandleVectorSize { vec, responder } => {
+                    responder.send(vec.len().try_into().unwrap()).expect("failed to send response");
+                }
+                TargetRequest::CreateNByteVector { n, responder } => {
+                    let bytes: Vec<u8> = vec![0; n.try_into().unwrap()];
+                    responder.send(&bytes).expect("failed to send response");
+                }
+                TargetRequest::CreateNHandleVector { n, responder } => {
+                    let mut handles: Vec<fidl::Event> = Vec::new();
+                    for _ in 0..n {
+                        handles.push(Event::create().unwrap());
+                    }
+                    responder.send(&mut handles.into_iter()).expect("failed to send response");
+                }
             }
             Ok(())
         })
@@ -108,7 +125,9 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                         | Test::TwoWayNoPayloadWithZeroTxid
                         | Test::BadAtRestFlagsCausesClose
                         | Test::BadDynamicFlagsCausesClose
-                        | Test::ServerSendsTooFewRights => false,
+                        | Test::ServerSendsTooFewRights
+                        | Test::ResponseExceedsByteLimit
+                        | Test::ResponseExceedsHandleLimit => false,
                         _ => true,
                     };
                     responder.send(enabled)?;

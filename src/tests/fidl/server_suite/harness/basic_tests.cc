@@ -94,7 +94,7 @@ SERVER_TEST(TwoWayResultWithPayload) {
       // clang-format off
       header(kTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
       union_ordinal(1), out_of_line_envelope(24, 0),
-      string_length(3), pointer_present(),
+      string_header(3),
       'a','b','c', padding(5),
       // clang-format on
   };
@@ -106,7 +106,7 @@ SERVER_TEST(TwoWayResultWithPayload) {
       // clang-format off
       header(kTxid, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),
       union_ordinal(1), out_of_line_envelope(24, 0),
-      string_length(3), pointer_present(),
+      string_header(3),
       'a','b','c', padding(5),
       // clang-format on
   };

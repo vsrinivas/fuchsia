@@ -90,6 +90,27 @@ class TargetServer : public fidl::serversuite::Target {
     ZX_ASSERT(ZX_OK == binding_->Close(epitaph_status));
   }
 
+  void ByteVectorSize(std::vector<uint8_t> vec, ByteVectorSizeCallback callback) override {
+    callback(static_cast<uint32_t>(vec.size()));
+  }
+
+  void HandleVectorSize(std::vector<zx::event> vec, HandleVectorSizeCallback callback) override {
+    callback(static_cast<uint32_t>(vec.size()));
+  }
+
+  void CreateNByteVector(uint32_t n, CreateNByteVectorCallback callback) override {
+    std::vector<uint8_t> bytes(n);
+    callback(std::move(bytes));
+  }
+
+  void CreateNHandleVector(uint32_t n, CreateNHandleVectorCallback callback) override {
+    std::vector<zx::event> handles(n);
+    for (auto& handle : handles) {
+      ZX_ASSERT(ZX_OK == zx::event::create(0, &handle));
+    }
+    callback(std::move(handles));
+  }
+
   void set_binding(fidl::Binding<fidl::serversuite::Target>* binding) { binding_ = binding; }
 
  private:
@@ -106,6 +127,8 @@ class RunnerServer : public fidl::serversuite::Runner {
       case fidl::serversuite::Test::BAD_AT_REST_FLAGS_CAUSES_CLOSE:
       case fidl::serversuite::Test::BAD_DYNAMIC_FLAGS_CAUSES_CLOSE:
       case fidl::serversuite::Test::SERVER_SENDS_TOO_FEW_RIGHTS:
+      case fidl::serversuite::Test::RESPONSE_EXCEEDS_BYTE_LIMIT:
+      case fidl::serversuite::Test::RESPONSE_EXCEEDS_HANDLE_LIMIT:
         callback(false);
         return;
       default:

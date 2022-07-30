@@ -14,6 +14,7 @@ executable("bin") {
     "handle_rights_tests.cc",
     "harness.cc",
     "harness.h",
+    "limit_tests.cc",
     "message_header_tests.cc",
     "ordinals.h",
   ]

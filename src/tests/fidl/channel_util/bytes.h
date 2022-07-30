@@ -103,9 +103,29 @@ inline Bytes header(zx_txid_t txid, uint64_t ordinal, fidl::MessageDynamicFlags 
   return as_bytes(hdr);
 }
 
+inline Bytes handle_present() { return repeat(0xff).times(4); }
+inline Bytes handle_absent() { return repeat(0x00).times(4); }
+
+inline Bytes pointer_present() { return repeat(0xff).times(8); }
+inline Bytes pointer_absent() { return repeat(0x00).times(8); }
+
 inline Bytes union_ordinal(uint64_t ordinal) { return u64(ordinal); }
 inline Bytes table_max_ordinal(uint64_t ordinal) { return u64(ordinal); }
 inline Bytes string_length(uint64_t length) { return u64(length); }
+inline Bytes vector_length(uint64_t length) { return u64(length); }
+
+inline Bytes string_header(uint64_t length) {
+  return {
+      string_length(length),
+      pointer_present(),
+  };
+}
+inline Bytes vector_header(uint64_t length) {
+  return {
+      vector_length(length),
+      pointer_present(),
+  };
+}
 
 inline Bytes out_of_line_envelope(uint16_t num_bytes, uint8_t num_handles) {
   return {u32(num_bytes), u16(num_handles), u16(0)};
@@ -114,12 +134,6 @@ inline Bytes inline_envelope(const Bytes& value, bool has_handles) {
   ZX_ASSERT_MSG(value.size() <= 4, "inline envelope values are <= 4 bytes in size");
   return {value, padding(4 - value.size()), u16(has_handles), u16(1)};
 }
-
-inline Bytes handle_present() { return repeat(0xff).times(4); }
-inline Bytes handle_absent() { return repeat(0x00).times(4); }
-
-inline Bytes pointer_present() { return repeat(0xff).times(8); }
-inline Bytes pointer_absent() { return repeat(0x00).times(8); }
 
 }  // namespace channel_util
 

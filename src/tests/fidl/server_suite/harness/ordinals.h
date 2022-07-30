@@ -30,6 +30,10 @@ static const uint64_t kOrdinalGetHandleRights = 3148800032398744921lu;
 static const uint64_t kOrdinalGetSignalableEventRights = 3631219818281166758lu;
 static const uint64_t kOrdinalEchoAsTransferableSignalableEvent = 4125688742220565241lu;
 static const uint64_t kOrdinalCloseWithEpitaph = 1984795898489927722lu;
+static const uint64_t kOrdinalByteVectorSize = 8245646720506823661lu;
+static const uint64_t kOrdinalHandleVectorSize = 2764861973611717871lu;
+static const uint64_t kOrdinalCreateNByteVector = 2839580799346827533lu;
+static const uint64_t kOrdinalCreateNHandleVector = 6926497579720970001lu;
 
 static const uint64_t kOrdinalEpitaph = 0xffffffffffffffffu;
 

@@ -94,6 +94,30 @@ func (t *targetImpl) CloseWithEpitaph(_ fidl.Context, status int32) error {
 	panic("unimplemented")
 }
 
+func (t *targetImpl) ByteVectorSize(_ fidl.Context, v []uint8) (uint32, error) {
+	return uint32(len(v)), nil
+}
+
+func (t *targetImpl) HandleVectorSize(_ fidl.Context, v []zx.Event) (uint32, error) {
+	return uint32(len(v)), nil
+}
+
+func (t *targetImpl) CreateNByteVector(_ fidl.Context, n uint32) ([]uint8, error) {
+	return make([]uint8, n), nil
+}
+
+func (t *targetImpl) CreateNHandleVector(_ fidl.Context, n uint32) ([]zx.Event, error) {
+	out := make([]zx.Event, n)
+	for i := range out {
+		var err error
+		out[i], err = zx.NewEvent(0)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
 type runnerImpl struct{}
 
 var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)

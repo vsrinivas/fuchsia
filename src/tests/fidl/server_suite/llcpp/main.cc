@@ -90,6 +90,31 @@ class TargetServer : public fidl::WireServer<fidl_serversuite::Target> {
     completer.Close(request->epitaph_status);
   }
 
+  void ByteVectorSize(ByteVectorSizeRequestView request,
+                      ByteVectorSizeCompleter::Sync& completer) override {
+    completer.Reply(static_cast<uint32_t>(request->vec.count()));
+  }
+
+  void HandleVectorSize(HandleVectorSizeRequestView request,
+                        HandleVectorSizeCompleter::Sync& completer) override {
+    completer.Reply(static_cast<uint32_t>(request->vec.count()));
+  }
+
+  void CreateNByteVector(CreateNByteVectorRequestView request,
+                         CreateNByteVectorCompleter::Sync& completer) override {
+    std::vector<uint8_t> bytes(request->n);
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(bytes));
+  }
+
+  void CreateNHandleVector(CreateNHandleVectorRequestView request,
+                           CreateNHandleVectorCompleter::Sync& completer) override {
+    std::vector<zx::event> handles(request->n);
+    for (auto& handle : handles) {
+      ZX_ASSERT(ZX_OK == zx::event::create(0, &handle));
+    }
+    completer.Reply(fidl::VectorView<zx::event>::FromExternal(handles));
+  }
+
  private:
   fidl::WireSyncClient<fidl_serversuite::Reporter> reporter_;
 };

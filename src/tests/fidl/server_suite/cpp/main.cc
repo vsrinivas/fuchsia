@@ -87,6 +87,31 @@ class TargetServer : public fidl::Server<fidl_serversuite::Target> {
     completer.Close(request.epitaph_status());
   }
 
+  void ByteVectorSize(ByteVectorSizeRequest& request,
+                      ByteVectorSizeCompleter::Sync& completer) override {
+    completer.Reply(static_cast<uint32_t>(request.vec().size()));
+  }
+
+  void HandleVectorSize(HandleVectorSizeRequest& request,
+                        HandleVectorSizeCompleter::Sync& completer) override {
+    completer.Reply(static_cast<uint32_t>(request.vec().size()));
+  }
+
+  void CreateNByteVector(CreateNByteVectorRequest& request,
+                         CreateNByteVectorCompleter::Sync& completer) override {
+    std::vector<uint8_t> bytes(request.n());
+    completer.Reply(std::move(bytes));
+  }
+
+  void CreateNHandleVector(CreateNHandleVectorRequest& request,
+                           CreateNHandleVectorCompleter::Sync& completer) override {
+    std::vector<zx::event> handles(request.n());
+    for (auto& handle : handles) {
+      ZX_ASSERT(ZX_OK == zx::event::create(0, &handle));
+    }
+    completer.Reply(std::move(handles));
+  }
+
  private:
   fidl::SyncClient<fidl_serversuite::Reporter> reporter_;
 };

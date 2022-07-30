@@ -85,6 +85,30 @@ protocol Target {
     CloseWithEpitaph(struct {
         epitaph_status int32;
     });
+
+    ByteVectorSize(struct {
+        vec vector<uint8>;
+    }) -> (struct {
+        n uint32;
+    });
+
+    HandleVectorSize(resource struct {
+        vec vector<zx.handle:EVENT>;
+    }) -> (struct {
+        n uint32;
+    });
+
+    CreateNByteVector(struct {
+        n uint32;
+    }) -> (struct {
+        vec vector<uint8>;
+    });
+
+    CreateNHandleVector(resource struct {
+        n uint32;
+    }) -> (resource struct {
+        vec vector<zx.handle:EVENT>;
+    });
 };
 
 // The Reporter sends results of the test to the test harness.
@@ -126,4 +150,12 @@ type Test = flexible enum : uint32 {
     // epitaph_tests.cc
     SERVER_SENDS_EPITAPH = 5001;
     SERVER_RECEIVES_EPITAPH_INVALID = 5002;
+
+    // limit_tests.cc
+    REQUEST_MATCHES_BYTE_LIMIT = 6001;
+    REQUEST_MATCHES_HANDLE_LIMIT = 6002;
+    RESPONSE_MATCHES_BYTE_LIMIT = 6003;
+    RESPONSE_MATCHES_HANDLE_LIMIT = 6004;
+    RESPONSE_EXCEEDS_BYTE_LIMIT = 6005;
+    RESPONSE_EXCEEDS_HANDLE_LIMIT = 6006;
 };
