@@ -310,7 +310,9 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
                 let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
 
                 if let Some(path) = path {
-                    if path != daemon_path {
+                    let canonical_path = std::fs::canonicalize(path.clone())?;
+                    let canonical_daemon_path = std::fs::canonicalize(daemon_path.clone())?;
+                    if canonical_path != canonical_daemon_path {
                         eprintln!(
                             "Warning: Found a running daemon ({}) that is from a different copy of ffx.",
                         daemon_path);
