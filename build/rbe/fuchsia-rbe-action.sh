@@ -24,7 +24,8 @@ then
   function relpath() {
     local -r from="$1"
     local -r to="$2"
-    realpath --relative-to="$from" "$to"
+    # Preserve symlinks.
+    realpath -s --relative-to="$from" "$to"
   }
 else
   # Point to our prebuilt python3.

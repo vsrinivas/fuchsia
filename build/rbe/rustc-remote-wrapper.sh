@@ -133,8 +133,33 @@ do
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
-build_subdir="$(realpath --relative-to="$project_root" . )"
-project_root_rel="$(realpath --relative-to=. "$project_root")"
+# realpath doesn't ship with Mac OS X (provided by coreutils package).
+# We only want it for calculating relative paths.
+# Work around this using Python.
+if which realpath 2>&1 > /dev/null
+then
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    # -s: preserve symlinks, do not follow them
+    # We want rewrapper to treat symlinks as inputs and set them up remotely.
+    realpath -s --relative-to="$from" "$to"
+  }
+else
+  # Point to our prebuilt python3.
+  python="$(ls "$project_root"/prebuilt/third_party/python3/*/bin/python3)" || {
+    echo "*** Python interpreter not found under $project_root/prebuilt/third_party/python3."
+    exit 1
+  }
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    "$python" -c "import os; print(os.path.relpath('$to', start='$from'))"
+  }
+fi
+
+build_subdir="$(relpath "$project_root" . )"
+project_root_rel="$(relpath . "$project_root")"
 
 # For debugging, trace the files accessed.
 fsatrace="$project_root_rel"/prebuilt/fsatrace/fsatrace
@@ -365,13 +390,13 @@ EOF
     # --crate-type cdylib needs rust-lld (hard-coding this is a hack)
     cdylib)
       _rust_lld_rel="$(dirname "$rustc")"/../lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld
-      rust_lld=("$(realpath --relative-to="$project_root" "$_rust_lld_rel")")
+      rust_lld=("$(relpath "$project_root" "$_rust_lld_rel")")
       ;;
 
-    # Detect custom linker, preserve symlinks
+    # Detect custom linker, preserve symlinks: clang++ -> clang -> clang-XX
     -Clinker=*)
         linker_local="$optarg"
-        linker=("$(realpath -s --relative-to="$project_root" "$linker_local")")
+        linker=( "$(relpath "$project_root" "$linker_local")" )
         debug_var "[from -Clinker]" "${linker[@]}"
         ;;
 
@@ -380,7 +405,7 @@ EOF
           # sysroot is a directory with system libraries
           --sysroot=* )
             sysroot="$(expr "X$optarg" : '[^=]*=\(.*\)')"
-            sysroot_relative="$(realpath --relative-to="$project_root" "$sysroot")"
+            sysroot_relative="$(relpath "$project_root" "$sysroot")"
             debug_var "[from -Clink-arg=--sysroot]" "$sysroot_relative"
             link_sysroot=("$sysroot_relative")
             ;;
@@ -486,7 +511,7 @@ test "$trace" = 0 || {
 }
 
 # Specify the rustc binary to be uploaded.
-rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
+rustc_relative="$(relpath "$project_root" "$rustc")"
 
 # Collect extra inputs to upload for remote execution.
 # Note: these paths are relative to the current working dir ($build_subdir),
@@ -506,7 +531,9 @@ function nonsystem_shlibs() {
   # $1 is a binary
   ldd "$1" | grep "=>" | cut -d\  -f3 | \
     grep -v -e '^/lib' -e '^/usr/lib' | \
-    xargs -n 1 realpath --relative-to="$project_root"
+    while read line
+    do relpath "$project_root" "$line"
+    done
 }
 
 function depfile_inputs_by_line() {
@@ -540,7 +567,7 @@ fi
 # If --source was not specified, infer it from the command-line.
 # This source file is likely to appear as the first input in the depfile.
 test -n "$top_source" || top_source="$first_source"
-top_source="$(realpath --relative-to="$project_root" "$top_source")"
+top_source="$(relpath "$project_root" "$top_source")"
 
 # Locally generate a depfile only and read it as list of files to upload.
 # These inputs appear relative to the build/output directory, but need to be
@@ -578,7 +605,10 @@ sed -i -e "s|$PWD/||g" "$depfile.nolink"
 
 # Convert depfile absolute paths to relative.
 mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
-  xargs -n 1 realpath --relative-to="$project_root" )
+  while read line
+    do relpath "$project_root" "$line"
+    done
+  )
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
 
@@ -669,13 +699,13 @@ test "${#linker[@]}" = 0 || {
   # * is a version number like 14.0.0.
   # For now, we upload the entire rt lib dir.
   rt_libdir_local=( "$clang_dir_local"/lib/clang/*/lib/"$clang_lib_triple" )
-  rt_libdir=( "$(realpath --relative-to="$project_root" "${rt_libdir_local[@]}" )" )
+  rt_libdir=( "$(relpath "$project_root" "${rt_libdir_local[@]}" )" )
 }
 
 extra_inputs_rel_project_root=()
 for f in "${extra_inputs[@]}"
 do
-  extra_inputs_rel_project_root+=( "$(realpath --relative-to="$project_root" "$f" )" )
+  extra_inputs_rel_project_root+=( "$(relpath "$project_root" "$f" )" )
 done
 
 case "$target_triple" in

@@ -87,8 +87,32 @@ do
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
-build_subdir="$(realpath --relative-to="$project_root" . )"
-project_root_rel="$(realpath --relative-to=. "$project_root")"
+# realpath doesn't ship with Mac OS X (provided by coreutils package).
+# We only want it for calculating relative paths.
+# Work around this using Python.
+if which realpath 2>&1 > /dev/null
+then
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    # Preserve symlinks.
+    realpath -s --relative-to="$from" "$to"
+  }
+else
+  # Point to our prebuilt python3.
+  python="$(ls "$project_root"/prebuilt/third_party/python3/*/bin/python3)" || {
+    echo "*** Python interpreter not found under $project_root/prebuilt/third_party/python3."
+    exit 1
+  }
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    "$python" -c "import os; print(os.path.relpath('$to', start='$from'))"
+  }
+fi
+
+build_subdir="$(relpath "$project_root" . )"
+project_root_rel="$(relpath . "$project_root")"
 
 cc=
 cc_command=()
@@ -243,7 +267,7 @@ then
 fi
 
 # Specify the compiler binary to be uploaded.
-cc_relative="$(realpath --relative-to="$project_root" "$cc")"
+cc_relative="$(relpath "$project_root" "$cc")"
 
 # Remove these temporary files on exit.
 cleanup_files=()
@@ -273,7 +297,7 @@ test -z "$profile_list" || {
 extra_inputs_rel_project_root=()
 for f in "${extra_inputs[@]}"
 do
-  extra_inputs_rel_project_root+=( "$(realpath --relative-to="$project_root" "$f" )" )
+  extra_inputs_rel_project_root+=( "$(relpath "$project_root" "$f" )" )
 done
 
 remote_inputs=(
