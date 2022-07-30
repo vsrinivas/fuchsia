@@ -27,8 +27,7 @@ int main(int argc, char **argv) {
   auto client = fidl::BindSyncClient(std::move(*client_end));
 
   // Start the DriverTestRealm with correct arguments.
-  fidl::Arena arena;
-  auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs(arena));
+  auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs());
   if (wire_result.status() != ZX_OK) {
     FX_SLOG(ERROR, "Failed to call to Realm:Start", KV("status", wire_result.status()));
     return 1;
