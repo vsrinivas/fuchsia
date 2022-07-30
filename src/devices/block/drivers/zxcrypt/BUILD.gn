@@ -53,13 +53,13 @@ fuchsia_driver("zxcrypt-driver") {
   # Make sure we don't accidentally pull in a couple of easily-added dynamic
   # library dependencies.
   assert_no_deps = [
-    # This seems to get pulled in by //zircon/public/lib/driver, which is
+    # This seems to get pulled in by //src/devices/lib/driver, which is
     # needed by //src/security/zxcrypt:zxcrypt-dev.  But happily it doesn't show
     # up in our dynamically-linked shared libraries, so we're okay.
     #"//zircon/system/ulib/trace-engine",
 
     # Some day, we'd also like to be able to assert we don't pull in fdio here,
-    # but it is pulled in transitively by //zircon/public/lib/driver, which is
+    # but it is pulled in transitively by //src/devices/lib/driver, which is
     # needed by //src/security/zxcrypt:zxcrypt-dev for the symbol
     # |device_get_protocol|.
     #"//sdk/lib/fdio",

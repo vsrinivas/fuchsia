@@ -33,14 +33,14 @@ driver_module("as370-pdm-input") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-audio-stream",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/audio-driver-proto",
     "//zircon/system/ulib/audio-proto-utils",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
   ]
 }
 
