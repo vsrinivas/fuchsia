@@ -354,8 +354,8 @@ mod tests {
     use fuchsia_inspect::Inspector;
     use fuchsia_zircon as zx;
     use ieee80211::MacAddr;
-    use itertools;
-    use std::convert::TryFrom;
+    use regex::bytes::Regex;
+    use std::{convert::TryFrom, fmt::Write};
     use test_case::test_case;
     use wlan_common::{
         assert_variant, fake_bss_description, fake_fidl_bss_description,
@@ -583,9 +583,28 @@ mod tests {
     }
 
     fn slice_contains(slice: &[u8], subslice: &[u8]) -> bool {
-        let slice_str = itertools::join(slice, ",");
-        let subslice_str = itertools::join(subslice, ",");
-        slice_str.contains(&subslice_str)
+        // https://github.com/rust-lang/regex/issues/451#issuecomment-367987989
+        let re = {
+            let mut re_string = String::with_capacity(6 + subslice.len() * 4);
+            re_string += "(?-u:";
+            for b in subslice {
+                write!(re_string, "\\x{:02X}", b).unwrap();
+            }
+            re_string += ")";
+            Regex::new(&re_string).unwrap()
+        };
+        re.is_match(slice)
+    }
+
+    #[test_case(&[1, 2, 3], &[] => true; "vacuous")]
+    #[test_case(&[1, 2, 3], &[1u8] => true; "one byte")]
+    #[test_case(&[1, 2, 3], &[2u8, 3] => true; "multiple bytes")]
+    #[test_case(&[1, 1, 1], &[1u8, 1] => true; "multiple matches")]
+    #[test_case(&[1, 2, 3], &[0u8] => false; "no match")]
+    #[test_case(&[1, 2, 3], &[1u8, 2, 3, 4] => false; "too large")]
+    #[test_case(&[0x87, 0x77, 0x78], &[0x77, 0x77] => false; "misaligned match")]
+    fn slice_contains_test(slice: &[u8], subslice: &[u8]) -> bool {
+        slice_contains(slice, subslice)
     }
 
     #[test]
