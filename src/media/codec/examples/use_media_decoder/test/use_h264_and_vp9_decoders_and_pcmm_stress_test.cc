@@ -32,21 +32,25 @@ namespace {
 
 constexpr char kH264InputFilePath[] = "/pkg/data/bear.h264";
 constexpr int kH264InputFileFrameCount = 30;
-const char* kH264GoldenSha256 = "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8cd0b0aa5f152e1";
+// const char* kH264GoldenSha256 =
+// "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8cd0b0aa5f152e1";
 
 constexpr char kVp9InputFilePath[] = "/pkg/data/bear-vp9.ivf";
 constexpr int kVp9InputFileFrameCount = 82;
-const char* kVp9GoldenSha256 = "8317a8c078a0c27b7a524a25bf9964ee653063237698411361b415a449b23014";
+// const char* kVp9GoldenSha256 =
+// "8317a8c078a0c27b7a524a25bf9964ee653063237698411361b415a449b23014";
 
 constexpr uint32_t kThreadCount = 3;
 
 constexpr uint32_t kAllocationChunkSize = 128 * 1024;
 constexpr uint32_t kMaxChunksPerBuffer = 4;
-constexpr uint32_t kMaxProtectedSpaceUsageMiB = 32;
+constexpr uint32_t kMaxProtectedSpaceUsageMiB = 16;
 constexpr uint32_t kMaxVmos =
     kMaxProtectedSpaceUsageMiB * 1024 * 1024 / kAllocationChunkSize / kMaxChunksPerBuffer;
 
 }  // namespace
+
+bool is_board_with_amlogic_secure();
 
 void stress_pcmm(std::vector<zx::vmo>& vmos, std::mutex& vmos_lock,
                  std::function<uint32_t()> get_random);
@@ -77,12 +81,14 @@ int main(int argc, char* argv[]) {
 
   const UseVideoDecoderTestParams h264_test_params{
       .mime_type = "video/h264",
-      .golden_sha256 = kH264GoldenSha256,
+      //.golden_sha256 = kH264GoldenSha256,
+      .skip_formatting_output_pixels = true,
   };
 
   const UseVideoDecoderTestParams vp9_test_params{
       .mime_type = "video/vp9",
-      .golden_sha256 = kVp9GoldenSha256,
+      //.golden_sha256 = kVp9GoldenSha256,
+      .skip_formatting_output_pixels = true,
   };
 
   std::atomic_bool passing = true;
@@ -98,14 +104,16 @@ int main(int argc, char* argv[]) {
         int result = 0;
         switch (get_random() % 3) {
           case 0:
-            result = use_video_decoder_test(kVp9InputFilePath, kVp9InputFileFrameCount,
-                                            use_vp9_decoder, /*is_secure_output=*/false,
-                                            /*is_secure_input=*/false,
-                                            /*min_output_buffer_count=*/0, &vp9_test_params);
+            result =
+                use_video_decoder_test(kVp9InputFilePath, kVp9InputFileFrameCount, use_vp9_decoder,
+                                       /*is_secure_output=*/is_board_with_amlogic_secure(),
+                                       /*is_secure_input=*/false,
+                                       /*min_output_buffer_count=*/0, &vp9_test_params);
             break;
           case 1:
             result = use_video_decoder_test(kH264InputFilePath, kH264InputFileFrameCount,
-                                            use_h264_decoder, /*is_secure_output=*/false,
+                                            use_h264_decoder,
+                                            /*is_secure_output=*/is_board_with_amlogic_secure(),
                                             /*is_secure_input=*/false,
                                             /*min_output_buffer_count=*/0, &h264_test_params);
             break;
