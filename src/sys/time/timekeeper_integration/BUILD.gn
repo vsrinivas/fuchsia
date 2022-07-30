@@ -113,14 +113,14 @@ fuchsia_component("faketime_integration_test") {
 fuchsia_component("timekeeper_for_integration") {
   testonly = true
   component_name = "timekeeper_for_integration"
-  manifest = "meta/timekeeper_for_integration.cmx"
+  manifest = "meta/timekeeper_for_integration.cml"
   deps = [ "//src/sys/time/timekeeper:bin" ]
 }
 
 fuchsia_component("timekeeper_with_fake_time") {
   testonly = true
   component_name = "timekeeper_with_fake_time"
-  manifest = "meta/timekeeper_with_fake_time.cmx"
+  manifest = "meta/timekeeper_with_fake_time.cml"
   deps = [ "//src/sys/time/timekeeper:bin_with_fake_time" ]
 }
 

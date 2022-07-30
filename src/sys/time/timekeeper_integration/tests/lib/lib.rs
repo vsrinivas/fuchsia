@@ -37,10 +37,10 @@ use {
 
 /// URL for timekeeper.
 const TIMEKEEPER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_for_integration.cmx";
+    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_for_integration.cm";
 /// URL for timekeeper with fake time.
 const TIMEKEEPER_FAKE_TIME_URL: &str =
-    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_with_fake_time.cmx";
+    "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/timekeeper_with_fake_time.cm";
 /// URL for fake cobalt.
 const COBALT_URL: &str = "#meta/mock_cobalt.cm";
 /// URL for the fake clock component.
@@ -73,7 +73,7 @@ impl NestedTimekeeper {
 
         let timekeeper_url = if use_fake_clock { TIMEKEEPER_FAKE_TIME_URL } else { TIMEKEEPER_URL };
         let timekeeper = builder
-            .add_legacy_child("timekeeper_test", timekeeper_url, ChildOptions::new().eager())
+            .add_child("timekeeper_test", timekeeper_url, ChildOptions::new().eager())
             .await
             .unwrap();
 

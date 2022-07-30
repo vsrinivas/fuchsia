@@ -3,12 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 
 timekeeper_deps = [
+  "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+  "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+  "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc-rustc",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_rust",
+  "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
   "//sdk/fidl/fuchsia.time:fuchsia.time_rust",
+  "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
   "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
   "//src/lib/cobalt/rust:fuchsia-cobalt",
   "//src/lib/diagnostics/inspect/runtime/rust",
@@ -81,21 +85,12 @@ rustc_binary("bin_with_fake_time") {
 
 fuchsia_component("service") {
   component_name = "timekeeper"
-  manifest = "meta/service.cmx"
-  deps = [
-    ":bin",
-    ":timekeeper_config",
-  ]
+  manifest = "meta/service.cml"
+  deps = [ ":bin" ]
 }
 
 fuchsia_package("timekeeper") {
   deps = [ ":service" ]
-}
-
-config_data("timekeeper_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "timekeeper.config" ]
-  sources = [ "service.config" ]
 }
 
 resource("testdata") {

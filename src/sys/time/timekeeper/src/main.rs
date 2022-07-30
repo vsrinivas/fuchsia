@@ -48,14 +48,14 @@ struct TimeSourceUrls {
 /// The time sources to install in the default (i.e. non-test) case. In the future, these values
 /// belong in a config file.
 const DEFAULT_SOURCES: TimeSourceUrls = TimeSourceUrls {
-    primary: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cmx",
+    primary: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cm",
     monitor: None,
 };
 
 /// The time sources to install when the dev_time_sources flag is set. In the future, these values
 /// belong in a config file.
 const DEV_TEST_SOURCES: TimeSourceUrls = TimeSourceUrls {
-    primary: "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cmx",
+    primary: "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cm",
     monitor: None,
 };
 

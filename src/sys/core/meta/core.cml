@@ -67,6 +67,11 @@
             url: "fuchsia-pkg://fuchsia.com/cobalt_system_metrics#meta/cobalt_system_metrics.cm",
             startup: "eager",
         },
+        {
+            name: "timekeeper",
+            url: "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cm",
+            startup: "eager",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -267,6 +272,7 @@
                 "#feedback",
                 "#mdns",
                 "#remote-control",
+                "#timekeeper",
             ],
         },
         {
@@ -280,6 +286,7 @@
                 "#mdns",
                 "#pkg-resolver",
                 "#session-manager",
+                "#timekeeper",
             ],
         },
         {
@@ -430,6 +437,7 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
+                "#timekeeper",
                 "#universe-resolver",
                 "#vulkan_loader",
             ],
@@ -681,6 +689,7 @@
                 "#network",
                 "#pkg-resolver",
                 "#session-manager",
+                "#timekeeper",
             ],
         },
         {
@@ -887,6 +896,13 @@
             to: "#bluetooth-core",
         },
         {
+            directory: "dev",
+            from: "parent",
+            as: "dev-rtc",
+            to: "#timekeeper",
+            subdir: "class/rtc",
+        },
+        {
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: [
@@ -897,6 +913,7 @@
                 // Cobalt 1.1.
                 "#session-manager",
                 "#sysmem_connector",
+                "#timekeeper",
             ],
         },
         {
@@ -985,6 +1002,11 @@
             from: "parent",
             to: "#mdns",
             subdir: "mdns",
+        },
+        {
+            protocol: [ "fuchsia.time.Maintenance" ],
+            from: "parent",
+            to: [ "#timekeeper" ],
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],

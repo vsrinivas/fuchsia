@@ -59,7 +59,7 @@ rustc_binary("bin") {
 
 fuchsia_component("service") {
   component_name = "httpsdate_time_source"
-  manifest = "meta/service.cmx"
+  manifest = "meta/service.cml"
   deps = [ ":bin" ]
 }
 

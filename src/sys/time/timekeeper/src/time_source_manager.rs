@@ -116,7 +116,7 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
             // Extract the event stream from self if one exists and attempt to start one if not.
             let mut event_stream = match self.event_stream.take() {
                 Some(event_stream) => event_stream,
-                None => match self.time_source.launch() {
+                None => match self.time_source.launch().await {
                     Err(err) => {
                         error!("Error launching {:?} time source: {:?}", self.role, err);
                         self.record_time_source_failure(TimeSourceError::LaunchFailed);

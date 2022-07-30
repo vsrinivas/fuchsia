@@ -1,0 +1,55 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/timekeeper",
+        args: [
+            "--dev-time-sources",
+            "--disable-delays",
+        ],
+    },
+    collections: [
+        {
+            name: "timesource",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.time.Maintenance",
+                "test.time.TimeSourceControl",
+            ],
+        },
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#timesource",
+        },
+        {
+            protocol: "test.time.TimeSourceControl",
+            from: "parent",
+            to: "#timesource",
+        },
+        {
+            protocol: "fuchsia.time.external.PushSource",
+            from: "parent",
+            to: "#timesource",
+        },
+    ],
+}

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 {
     include: [
-        // TODO(fxb/101837): next line is required to work around test_manager crashing
-        "//sdk/lib/sys/testing/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
@@ -13,4 +11,14 @@
     program: {
         binary: "bin/timekeeper_integration_test",
     },
+    offer: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.time.external.PushSource",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
 }

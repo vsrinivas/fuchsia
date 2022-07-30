@@ -4,8 +4,11 @@
 
 use {
     anyhow::{anyhow, Context as _, Error},
+    async_trait::async_trait,
+    fidl_fuchsia_component::{CreateChildArgs, RealmMarker},
+    fidl_fuchsia_component_decl::{Child, ChildRef, CollectionRef, StartupMode},
     fidl_fuchsia_time_external::{self as ftexternal, PushSourceProxy, Status},
-    fuchsia_component::client::{launch, launcher, App},
+    fuchsia_component::client,
     fuchsia_zircon as zx,
     futures::{
         stream::{Select, Stream},
@@ -14,6 +17,9 @@ use {
     std::{fmt::Debug, pin::Pin, sync::Arc},
     tracing::info,
 };
+
+const TIMESOURCE_COLLECTION_NAME: &str = "timesource";
+const PRIMARY_TIMESOURCE_NAME: &str = "primary";
 
 /// A time sample received from a source of time.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -54,13 +60,14 @@ impl From<Sample> for Event {
 
 /// A definition of a time source that may subsequently be launched to create a stream of update
 /// events.
+#[async_trait]
 pub trait TimeSource: Send + Sync + Debug {
     /// The type of `Stream` produced when launching the `TimeSource`.
     type EventStream: Stream<Item = Result<Event, Error>> + Unpin + Send;
 
     /// Attempts to launch the time source and return a stream of its time output and status
     /// change events.
-    fn launch(&self) -> Result<Self::EventStream, Error>;
+    async fn launch(&self) -> Result<Self::EventStream, Error>;
 }
 
 /// A time source that communicates using the `fuchsia.time.external.PushSource` protocol.
@@ -84,21 +91,18 @@ impl PushTimeSource {
 
     /// Returns a stream of time output and status change events received using the supplied
     /// `PushSourceProxy`, retaining the optional `App` for the same lifetime.
-    fn events_from_proxy(app: Option<App>, proxy: PushSourceProxy) -> PushTimeSourceEventStream {
-        // Store the App in a tuple with the PushSourceProxy to ensure it remains in scope.
-        let app_and_proxy = Arc::new((app, proxy));
-        let app_and_proxy_clone = Arc::clone(&app_and_proxy);
+    fn events_from_proxy(proxy: PushSourceProxy) -> PushTimeSourceEventStream {
+        let proxy = Arc::new(proxy);
 
-        let status_stream = futures::stream::try_unfold(app_and_proxy, |app_and_proxy| {
-            app_and_proxy
-                .1
+        let status_stream = futures::stream::try_unfold(Arc::clone(&proxy), |proxy| {
+            proxy
                 .watch_status()
-                .map_ok(move |status| Some((Event::StatusChange { status }, app_and_proxy)))
+                .map_ok(move |status| Some((Event::StatusChange { status }, proxy)))
                 .err_into()
         });
 
-        let sample_stream = futures::stream::try_unfold(app_and_proxy_clone, |app_and_proxy| {
-            app_and_proxy.1.watch_sample().map(move |result| match result {
+        let sample_stream = futures::stream::try_unfold(proxy, |proxy| {
+            proxy.watch_sample().map(move |result| match result {
                 Ok(sample) => match (sample.utc, sample.monotonic, sample.standard_deviation) {
                     (None, _, _) => Err(anyhow!("sample missing utc")),
                     (_, None, _) => Err(anyhow!("sample missing monotonic")),
@@ -109,7 +113,7 @@ impl PushTimeSource {
                             monotonic: zx::Time::from_nanos(monotonic),
                             std_dev: zx::Duration::from_nanos(std_dev),
                         }),
-                        app_and_proxy,
+                        proxy,
                     ))),
                 },
                 Err(err) => Err(err.into()),
@@ -120,16 +124,50 @@ impl PushTimeSource {
     }
 }
 
+#[async_trait]
 impl TimeSource for PushTimeSource {
     type EventStream = PushTimeSourceEventStream;
 
-    fn launch(&self) -> Result<Self::EventStream, Error> {
-        let launcher = launcher().context("starting launcher")?;
+    async fn launch(&self) -> Result<Self::EventStream, Error> {
         info!("Launching PushTimeSource at {}", self.component);
-        let app = launch(&launcher, self.component.clone(), None)
-            .context(format!("launching push source {}", self.component))?;
-        let proxy = app.connect_to_protocol::<ftexternal::PushSourceMarker>()?;
-        Ok(PushTimeSource::events_from_proxy(Some(app), proxy))
+        let realm = client::connect_to_protocol::<RealmMarker>()
+            .context("failed to connect to fuchsia.component.Realm")?;
+
+        let mut collection_ref = CollectionRef { name: String::from(TIMESOURCE_COLLECTION_NAME) };
+
+        // Destroy the previously launched timesource.
+        let mut child_ref = ChildRef {
+            name: String::from(PRIMARY_TIMESOURCE_NAME),
+            collection: Some(String::from(TIMESOURCE_COLLECTION_NAME)),
+        };
+
+        let _ = realm.destroy_child(&mut child_ref).await;
+
+        let child_decl = Child {
+            name: Some(String::from(PRIMARY_TIMESOURCE_NAME)),
+            url: Some(self.component.clone()),
+            startup: Some(StartupMode::Lazy),
+            ..Child::EMPTY
+        };
+
+        realm
+            .create_child(&mut collection_ref, child_decl, CreateChildArgs::EMPTY)
+            .await
+            .context("realm.create_child failed")?
+            .map_err(|e| anyhow!("failed to create child: {:?}", e))?;
+
+        let exposed_dir = client::open_childs_exposed_directory(
+            String::from(PRIMARY_TIMESOURCE_NAME),
+            Some(String::from(TIMESOURCE_COLLECTION_NAME)),
+        )
+        .await
+        .context("failed to open exposed directory")?;
+
+        let proxy =
+            client::connect_to_protocol_at_dir_root::<ftexternal::PushSourceMarker>(&exposed_dir)
+                .context("failed to connect to the fuchsia.time.external.PushSource")?;
+
+        Ok(PushTimeSource::events_from_proxy(proxy))
     }
 }
 
@@ -190,10 +228,11 @@ impl Debug for FakeTimeSource {
 }
 
 #[cfg(test)]
+#[async_trait]
 impl TimeSource for FakeTimeSource {
     type EventStream = Pin<Box<dyn Stream<Item = Result<Event, Error>> + Send>>;
 
-    fn launch(&self) -> Result<Self::EventStream, Error> {
+    async fn launch(&self) -> Result<Self::EventStream, Error> {
         let mut lock = self.collections.lock();
         if lock.is_empty() {
             return Err(anyhow!("FakeTimeSource sent all supplied event collections"));
@@ -234,13 +273,13 @@ mod test {
     #[fuchsia::test(allow_stalls = false)]
     async fn single_event_set() -> Result<(), Error> {
         let fake = FakeTimeSource::events(vec![*STATUS_EVENT_1, *SAMPLE_EVENT_1, *SAMPLE_EVENT_2]);
-        let mut events = fake.launch().context("Fake should launch without error")?;
+        let mut events = fake.launch().await.context("Fake should launch without error")?;
         assert_eq!(events.next().await.unwrap().unwrap(), *STATUS_EVENT_1);
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_1);
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_2);
         // Making another call should lead to a stall and hence panic. We don't test this to
         // avoid a degenerate test, but do in fake_no_events_then_pending.
-        assert!(fake.launch().is_err());
+        assert!(fake.launch().await.is_err());
         Ok(())
     }
 
@@ -250,15 +289,15 @@ mod test {
             vec![*STATUS_EVENT_1, *SAMPLE_EVENT_1],
             vec![*SAMPLE_EVENT_2],
         ]);
-        let mut events = fake.launch().context("Fake should launch without error")?;
+        let mut events = fake.launch().await.context("Fake should launch without error")?;
         assert_eq!(events.next().await.unwrap().unwrap(), *STATUS_EVENT_1);
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_1);
         assert!(events.next().await.is_none());
-        let mut events = fake.launch().context("Fake should relaunch without error")?;
+        let mut events = fake.launch().await.context("Fake should relaunch without error")?;
         assert_eq!(events.next().await.unwrap().unwrap(), *SAMPLE_EVENT_2);
         // Making another call should lead to a stall and hence panic. We don't test this to
         // avoid a degenerate test, but do in fake_no_events_then_pending.
-        assert!(fake.launch().is_err());
+        assert!(fake.launch().await.is_err());
         Ok(())
     }
 
@@ -266,15 +305,15 @@ mod test {
     #[should_panic]
     async fn fake_no_events_then_pending() {
         let fake = FakeTimeSource::events(vec![]);
-        let mut events = fake.launch().unwrap();
+        let mut events = fake.launch().await.unwrap();
         // Getting an event from the last collection should never complete, leading to a stall.
         events.next().await;
     }
 
     #[fuchsia::test]
-    fn fake_failing() {
+    async fn fake_failing() {
         let fake = FakeTimeSource::failing();
-        assert!(fake.launch().is_err());
+        assert!(fake.launch().await.is_err());
     }
 
     #[fuchsia::test]
@@ -309,7 +348,7 @@ mod test {
             }
         });
 
-        let mut events = PushTimeSource::events_from_proxy(None, proxy);
+        let mut events = PushTimeSource::events_from_proxy(proxy);
         // We expect to receive both events but the ordering is not deterministic.
         let event1 = events.next().await.unwrap().unwrap();
         let event2 = events.next().await.unwrap().unwrap();
@@ -342,7 +381,7 @@ mod test {
             }
         });
 
-        let mut events = PushTimeSource::events_from_proxy(None, proxy);
+        let mut events = PushTimeSource::events_from_proxy(proxy);
         assert!(events.next().await.unwrap().is_err());
     }
 }
