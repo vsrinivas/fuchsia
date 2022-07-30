@@ -6,7 +6,7 @@ use {
     crate::repo_keys::RepoKeys,
     anyhow::{Context as _, Result},
     chrono::{DateTime, Duration, NaiveDateTime, Utc},
-    tuf::{interchange::Json, repository::RepositoryStorageProvider},
+    tuf::{interchange::Json, metadata::MetadataPath, repository::RepositoryStorageProvider},
 };
 
 /// Number of days from now before the root metadata is expired.
@@ -35,6 +35,7 @@ pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) ->
     // expired metadata.
     let start_time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
     tuf_client.update_with_start_time(&start_time).await?;
+
     let parts = tuf_client.into_parts();
 
     // Create a repo builder for the metadata, and initialize it with our repository keys.
@@ -71,7 +72,19 @@ pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) ->
         repo_builder.skip_targets()
     } else {
         repo_builder.stage_targets_with_builder(|b| {
-            b.expires(now + Duration::days(DEFAULT_TARGETS_EXPIRATION))
+            let mut b = b.expires(now + Duration::days(DEFAULT_TARGETS_EXPIRATION));
+
+            if let Some(trusted_targets) = parts.database.trusted_targets() {
+                for (target_path, target_desc) in trusted_targets.targets() {
+                    b = b.insert_target_description(target_path.clone(), target_desc.clone());
+                }
+
+                if let Some(delegations) = trusted_targets.delegations() {
+                    b = b.delegations(delegations.clone());
+                }
+            }
+
+            b
         })?
     };
 
@@ -79,7 +92,20 @@ pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) ->
         repo_builder.skip_snapshot()
     } else {
         repo_builder.stage_snapshot_with_builder(|b| {
-            b.expires(now + Duration::days(DEFAULT_SNAPSHOT_EXPIRATION))
+            let mut b = b.expires(now + Duration::days(DEFAULT_SNAPSHOT_EXPIRATION));
+
+            if let Some(trusted_snapshot) = parts.database.trusted_snapshot() {
+                for (meta_path, meta_desc) in trusted_snapshot.meta() {
+                    // The builder automatically updates the targets metadata entry.
+                    if meta_path == &MetadataPath::targets() {
+                        continue;
+                    }
+
+                    b = b.insert_metadata_description(meta_path.clone(), meta_desc.clone());
+                }
+            }
+
+            b
         })?
     };
 
@@ -101,22 +127,22 @@ mod tests {
     use {
         super::*,
         crate::{
-            repository::{get_tuf_client, PmRepository, RepositoryBackend as _},
+            repository::{get_tuf_client, RepositoryBackend as _},
             test_utils,
         },
         assert_matches::assert_matches,
         camino::Utf8Path,
+        std::collections::HashMap,
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_refresh_metadata_with_all_keys() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Load up the test metadata, which was created some time ago, and has a different
         // expiration date.
-        test_utils::make_repo_dir(&dir).unwrap();
-        let repo = PmRepository::new(dir.to_path_buf());
+        let repo = test_utils::make_pm_repository(dir).await;
 
         // Download the older metadata before we refresh it.
         let tuf_repo = repo.get_tuf_repo().unwrap();
@@ -145,16 +171,33 @@ mod tests {
         assert_ne!(targets1, targets2);
         assert_ne!(snapshot1, snapshot2);
         assert_ne!(timestamp1, timestamp2);
+
+        // We should have kept our old snapshot entries (except the target should have changed).
+        assert_eq!(
+            snapshot1
+                .meta()
+                .iter()
+                .filter(|(k, _)| **k != MetadataPath::targets())
+                .collect::<HashMap<_, _>>(),
+            snapshot2
+                .meta()
+                .iter()
+                .filter(|(k, _)| **k != MetadataPath::targets())
+                .collect::<HashMap<_, _>>(),
+        );
+
+        // We should have kept our targets and delegations.
+        assert_eq!(targets1.targets(), targets2.targets());
+        assert_eq!(targets1.delegations(), targets2.delegations());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_refresh_metadata_with_some_keys() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Load the repo.
-        test_utils::make_repo_dir(&dir).unwrap();
-        let repo = PmRepository::new(dir.to_path_buf());
+        let repo = test_utils::make_pm_repository(dir).await;
 
         // Download the older metadata before we refresh it.
         let tuf_repo = repo.get_tuf_repo().unwrap();
@@ -187,16 +230,33 @@ mod tests {
         assert_ne!(targets1, targets2);
         assert_ne!(snapshot1, snapshot2);
         assert_ne!(timestamp1, timestamp2);
+
+        // We should have kept our old snapshot entries (except the target should have changed).
+        assert_eq!(
+            snapshot1
+                .meta()
+                .iter()
+                .filter(|(k, _)| **k != MetadataPath::targets())
+                .collect::<HashMap<_, _>>(),
+            snapshot2
+                .meta()
+                .iter()
+                .filter(|(k, _)| **k != MetadataPath::targets())
+                .collect::<HashMap<_, _>>(),
+        );
+
+        // We should have kept our targets and delegations.
+        assert_eq!(targets1.targets(), targets2.targets());
+        assert_eq!(targets1.delegations(), targets2.delegations());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_refresh_metadata_with_no_keys() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         // Load the repo.
-        test_utils::make_repo_dir(&dir).unwrap();
-        let repo = PmRepository::new(dir.to_path_buf());
+        let repo = test_utils::make_pm_repository(dir).await;
 
         // Download the older metadata before we refresh it.
         let tuf_repo = repo.get_tuf_repo().unwrap();

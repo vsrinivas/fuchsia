@@ -752,7 +752,8 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_pm_repository(REPO_NAME, &dir).await;
+        let repo =
+            Repository::new(REPO_NAME, Box::new(make_pm_repository(&dir).await)).await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
         let pkg1_modified = get_modtime(dir.join("repository").join("blobs").join(PKG1_HASH));
@@ -791,7 +792,8 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_pm_repository(REPO_NAME, &dir).await;
+        let backend = Box::new(make_pm_repository(&dir).await);
+        let repo = Repository::new(REPO_NAME, backend).await.unwrap();
 
         // Look up the timestamp for the meta.far for the modified setting.
         let pkg1_modified = get_modtime(dir.join("repository").join("blobs").join(PKG1_HASH));
@@ -904,7 +906,8 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let repo = make_pm_repository(REPO_NAME, &dir).await;
+        let backend = Box::new(make_pm_repository(&dir).await);
+        let repo = Repository::new(REPO_NAME, backend).await.unwrap();
 
         // Look up the timestamps for the blobs.
         let blob_dir = dir.join("repository").join("blobs");

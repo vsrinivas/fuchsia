@@ -78,7 +78,8 @@ mod tests {
         let output_path = dir.join("pkg");
 
         // Create a server.
-        let repo = make_pm_repository("tuf", &repo_path).await;
+        let backend = Box::new(make_pm_repository(&repo_path).await);
+        let repo = Repository::new("tuf", backend).await.unwrap();
         let manager = RepositoryManager::new();
         manager.add(Arc::new(repo));
 

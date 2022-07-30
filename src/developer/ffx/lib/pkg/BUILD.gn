@@ -81,6 +81,7 @@ rustc_library("pkg") {
     ":empty-repo-keys",
     ":empty-repo-metadata",
     "//src/developer/ffx/lib/timeout:lib",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-hyper",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:assert_matches",

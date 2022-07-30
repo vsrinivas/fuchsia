@@ -193,7 +193,9 @@ mod tests {
     use {
         super::*,
         crate::{
-            manager::RepositoryManager, repository::repo_tests, server::RepositoryServer,
+            manager::RepositoryManager,
+            repository::{repo_tests, Repository},
+            server::RepositoryServer,
             test_utils::make_pm_repository,
         },
         assert_matches::assert_matches,
@@ -216,7 +218,8 @@ mod tests {
             let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
             // Create a repository and serve it with the server.
-            let remote_repo = make_pm_repository("tuf", dir.to_path_buf()).await;
+            let remote_backend = Box::new(make_pm_repository(&dir).await);
+            let remote_repo = Repository::new("tuf", remote_backend).await.unwrap();
 
             let manager = RepositoryManager::new();
             manager.add(Arc::new(remote_repo));

@@ -3,19 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::{FileSystemRepository, PmRepository, Repository, RepositoryKeyConfig},
+    crate::{
+        repo_keys::RepoKeys,
+        repository::{FileSystemRepository, PmRepository, Repository, RepositoryKeyConfig},
+    },
     anyhow::{anyhow, Context, Result},
     camino::{Utf8Path, Utf8PathBuf},
     fuchsia_pkg::PackageBuilder,
     futures::io::AllowStdIo,
     maplit::hashmap,
     std::{
+        collections::HashSet,
         fs::{copy, create_dir, create_dir_all, File},
         path::{Path, PathBuf},
     },
     tuf::{
-        crypto::Ed25519PrivateKey, interchange::Json, metadata::TargetPath,
-        repo_builder::RepoBuilder, repository::FileSystemRepositoryBuilder,
+        crypto::{Ed25519PrivateKey, HashAlgorithm},
+        interchange::Json,
+        metadata::{Delegation, Delegations, MetadataDescription, MetadataPath, TargetPath},
+        repo_builder::RepoBuilder,
+        repository::FileSystemRepositoryBuilder,
     },
     walkdir::WalkDir,
 };
@@ -76,6 +83,11 @@ fn copy_dir(from: &Path, to: &Path) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn make_repo_keys() -> RepoKeys {
+    let keys_dir = Utf8PathBuf::from(EMPTY_REPO_PATH).join("keys");
+    RepoKeys::from_dir(keys_dir.as_std_path()).unwrap()
 }
 
 pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
@@ -164,12 +176,17 @@ pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
         .build()
         .unwrap();
 
-    let key = repo_private_key();
+    let repo_keys = make_repo_keys();
+    let root_keys = repo_keys.root_keys().iter().map(|k| &**k).collect::<Vec<_>>();
+    let targets_keys = repo_keys.targets_keys().iter().map(|k| &**k).collect::<Vec<_>>();
+    let snapshot_keys = repo_keys.snapshot_keys().iter().map(|k| &**k).collect::<Vec<_>>();
+    let timestamp_keys = repo_keys.timestamp_keys().iter().map(|k| &**k).collect::<Vec<_>>();
+
     let mut builder = RepoBuilder::create(repo)
-        .trusted_root_keys(&[&key])
-        .trusted_targets_keys(&[&key])
-        .trusted_snapshot_keys(&[&key])
-        .trusted_timestamp_keys(&[&key])
+        .trusted_root_keys(&root_keys)
+        .trusted_targets_keys(&targets_keys)
+        .trusted_snapshot_keys(&snapshot_keys)
+        .trusted_timestamp_keys(&timestamp_keys)
         .stage_root()
         .unwrap();
 
@@ -185,17 +202,53 @@ pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
             .unwrap();
     }
 
-    builder.commit().await.unwrap();
+    // Even though we don't use delegations, add a simple one to make sure we at least preserve them
+    // when we modify repositories.
+    let delegations_keys = targets_keys.clone();
+    let delegations = Delegations::new(
+        delegations_keys
+            .iter()
+            .map(|k| (k.public().key_id().clone(), k.public().clone()))
+            .collect(),
+        vec![Delegation::new(
+            MetadataPath::new("delegation").unwrap(),
+            false,
+            1,
+            delegations_keys.iter().map(|k| k.public().key_id().clone()).collect(),
+            HashSet::from([TargetPath::new("some-delegated-target").unwrap()]),
+        )
+        .unwrap()],
+    )
+    .unwrap();
+
+    builder
+        .stage_targets_with_builder(|b| b.delegations(delegations))
+        .unwrap()
+        .stage_snapshot_with_builder(|b| {
+            b.insert_metadata_description(
+                MetadataPath::new("delegation").unwrap(),
+                MetadataDescription::from_slice(&[0u8], 1, &[HashAlgorithm::Sha256]).unwrap(),
+            )
+        })
+        .unwrap()
+        .commit()
+        .await
+        .unwrap();
 }
 
-pub async fn make_pm_repository(name: &str, dir: impl Into<Utf8PathBuf>) -> Repository {
+pub async fn make_pm_repository(dir: impl Into<Utf8PathBuf>) -> PmRepository {
     let dir = dir.into();
     let metadata_dir = dir.join("repository");
     let blobs_dir = metadata_dir.join("blobs");
     make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
-    let backend = PmRepository::new(dir);
-    Repository::new(name, Box::new(backend)).await.unwrap()
+    let keys_dir = dir.join("keys");
+    create_dir(&keys_dir).unwrap();
+
+    let empty_repo_dir = PathBuf::from(EMPTY_REPO_PATH).canonicalize().unwrap();
+    copy_dir(&empty_repo_dir.join("keys"), keys_dir.as_std_path()).unwrap();
+
+    PmRepository::new(dir)
 }
 
 pub async fn make_file_system_repository(
