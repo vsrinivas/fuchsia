@@ -63,11 +63,12 @@ pub fn read_control_and_response<C: Default + AsBytes + FromBytes, R: Default>(
 pub fn create_drm_image(
     physical_device_index: u32,
     create_info: &magma_image_create_info_t,
-) -> Result<(zx::Vmo, fuicomp::BufferCollectionImportToken, magma_image_info_t), magma_status_t> {
+) -> Result<
+    (zx::Vmo, Option<fuicomp::BufferCollectionImportToken>, magma_image_info_t),
+    magma_status_t,
+> {
     let flags = create_info.flags as u32;
-    if flags & !MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE != 0 {
-        return Err(MAGMA_STATUS_INVALID_ARGS);
-    }
+    let use_scenic = (flags & MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) != 0;
 
     let vk_format = drm_format_to_vulkan_format(create_info.drm_format as u32)
         .map_err(|_| MAGMA_STATUS_INVALID_ARGS)?;
@@ -96,9 +97,8 @@ pub fn create_drm_image(
     let loader = Loader::new(physical_device_index).map_err(|_| MAGMA_STATUS_INVALID_ARGS)?;
 
     // TODO: verify physical device limits
-    // TODO: Handle the case when MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE is not set and the scenic
-    //       allocator is not intended to be used.
-    let scenic_allocator = init_scenic().map_err(|_| MAGMA_STATUS_INVALID_ARGS)?;
+    let scenic_allocator =
+        if use_scenic { Some(init_scenic().map_err(|_| MAGMA_STATUS_INVALID_ARGS)?) } else { None };
 
     let image_create_info = vk::ImageCreateInfo {
         sType: vk::STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -123,7 +123,9 @@ pub fn create_drm_image(
         initialLayout: vk::IMAGE_LAYOUT_UNDEFINED,
     };
 
-    let (tokens, sysmem_allocator) = init_sysmem().map_err(|_| MAGMA_STATUS_INVALID_ARGS)?;
+    let (tokens, sysmem_allocator) =
+        init_sysmem(use_scenic).map_err(|_| MAGMA_STATUS_INVALID_ARGS)?;
+
     let (scenic_import_token, buffer_collection) = loader
         .create_collection(
             &image_create_info,
@@ -155,8 +157,9 @@ pub fn init_scenic() -> Result<fuicomp::AllocatorSynchronousProxy, Errno> {
 ///
 /// The returned `BufferCollectionTokens` contains a proxy to the shared collection, as well as a
 /// duplicate token to use for both Scenic and Vulkan.
-pub fn init_sysmem() -> Result<(BufferCollectionTokens, fsysmem::AllocatorSynchronousProxy), Errno>
-{
+pub fn init_sysmem(
+    use_scenic: bool,
+) -> Result<(BufferCollectionTokens, fsysmem::AllocatorSynchronousProxy), Errno> {
     let (server_end, client_end) = zx::Channel::create().map_err(|_| errno!(ENOENT))?;
     connect_channel_to_protocol::<fsysmem::AllocatorMarker>(server_end)
         .map_err(|_| errno!(ENOENT))?;
@@ -171,11 +174,16 @@ pub fn init_sysmem() -> Result<(BufferCollectionTokens, fsysmem::AllocatorSynchr
     let buffer_token_proxy =
         fsysmem::BufferCollectionTokenSynchronousProxy::new(client.into_channel());
 
-    let (scenic_token, remote) =
-        fidl::endpoints::create_endpoints::<fsysmem::BufferCollectionTokenMarker>()
-            .map_err(|_| errno!(EINVAL))?;
+    let scenic_token = if use_scenic {
+        let (token, remote) =
+            fidl::endpoints::create_endpoints::<fsysmem::BufferCollectionTokenMarker>()
+                .map_err(|_| errno!(EINVAL))?;
 
-    buffer_token_proxy.duplicate(!0, remote).map_err(|_| errno!(EINVAL))?;
+        buffer_token_proxy.duplicate(!0, remote).map_err(|_| errno!(EINVAL))?;
+        Some(token)
+    } else {
+        None
+    };
 
     let (vulkan_token, remote) =
         fidl::endpoints::create_endpoints::<fsysmem::BufferCollectionTokenMarker>()
@@ -203,9 +211,11 @@ pub fn get_image_info(
     width: u32,
     height: u32,
 ) -> Result<(zx::Vmo, magma_image_info_t), Errno> {
-    let (_, mut collection_info) = buffer_collection
-        .wait_for_buffers_allocated(zx::Time::INFINITE)
-        .map_err(|_| errno!(EINVAL))?;
+    let (_, mut collection_info) =
+        buffer_collection.wait_for_buffers_allocated(zx::Time::INFINITE).map_err(|err| {
+            tracing::warn!("wait_for_buffers_allocated failed: {}", err);
+            errno!(EINVAL)
+        })?;
     let _ = buffer_collection.close();
 
     let image_format =

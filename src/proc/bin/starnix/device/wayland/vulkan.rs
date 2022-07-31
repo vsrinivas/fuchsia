@@ -21,7 +21,7 @@ pub struct BufferCollectionTokens {
     pub buffer_token_proxy: fsysmem::BufferCollectionTokenSynchronousProxy,
 
     /// The buffer collection token that is handed off to scenic.
-    pub scenic_token: ClientEnd<fsysmem::BufferCollectionTokenMarker>,
+    pub scenic_token: Option<ClientEnd<fsysmem::BufferCollectionTokenMarker>>,
 
     /// The buffer collection token that is handed off to vulkan.
     pub vulkan_token: ClientEnd<fsysmem::BufferCollectionTokenMarker>,
@@ -185,14 +185,20 @@ impl Loader {
         pixel_format: fsysmem::PixelFormatType,
         modifiers: &[u64],
         tokens: BufferCollectionTokens,
-        scenic_allocator: &fuicomp::AllocatorSynchronousProxy,
+        scenic_allocator: &Option<fuicomp::AllocatorSynchronousProxy>,
         sysmem_allocator: &fsysmem::AllocatorSynchronousProxy,
     ) -> Result<
-        (fuicomp::BufferCollectionImportToken, fsysmem::BufferCollectionSynchronousProxy),
+        (Option<fuicomp::BufferCollectionImportToken>, fsysmem::BufferCollectionSynchronousProxy),
         vk::Result,
     > {
-        let scenic_import_token =
-            register_buffer_collection_with_scenic(tokens.scenic_token, scenic_allocator)?;
+        let scenic_import_token = if let Some(allocator) = &scenic_allocator {
+            Some(register_buffer_collection_with_scenic(
+                tokens.scenic_token.ok_or(vk::ERROR_INITIALIZATION_FAILED).unwrap(),
+                allocator,
+            )?)
+        } else {
+            None
+        };
 
         let vk_ext = FuchsiaExtensionPointers::load(|name| unsafe {
             self.instance_pointers.GetDeviceProcAddr(self.device, name.as_ptr()) as *const _

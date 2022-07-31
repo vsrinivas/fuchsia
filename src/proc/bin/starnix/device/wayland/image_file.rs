@@ -18,22 +18,22 @@ pub struct ImageInfo {
     pub info: magma_image_info_t,
 
     /// The `BufferCollectionImportToken` associated with this file.
-    pub token: fuicomp::BufferCollectionImportToken,
+    pub token: Option<fuicomp::BufferCollectionImportToken>,
 }
 
 impl Clone for ImageInfo {
     fn clone(&self) -> Self {
         ImageInfo {
             info: self.info.clone(),
-            token: fuicomp::BufferCollectionImportToken {
+            token: self.token.as_ref().map(|token| fuicomp::BufferCollectionImportToken {
                 value: fidl::EventPair::from_handle(
-                    self.token
+                    token
                         .value
                         .as_handle_ref()
                         .duplicate(zx::Rights::SAME_RIGHTS)
                         .expect("Failed to duplicate the buffer token."),
                 ),
-            },
+            }),
         }
     }
 }

@@ -37,7 +37,7 @@ class MagmaImageTest : public ::testing::Test {
 
 constexpr uint32_t kWidth = 1920;
 constexpr uint32_t kHeight = 1080;
-constexpr uint64_t kFormat = DRM_FORMAT_BGRA8888;
+constexpr uint64_t kFormat = DRM_FORMAT_ARGB8888;
 
 TEST_F(MagmaImageTest, CreateInvalidFormat) {
   magma_image_create_info_t create_info = {
@@ -149,7 +149,6 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
 
   void ImportExportTest(uint32_t flags, uint64_t specified_modifier, uint64_t expected_modifier) {
     int fd = 0;
-    uint64_t buffer_id = 0;
 
     {
       magma_image_create_info_t create_info = {
@@ -176,8 +175,6 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
       } else {
         EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
       }
-
-      buffer_id = magma_get_buffer_id(image);
 
       MapAndWrite(image);
 
@@ -214,8 +211,6 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
       } else {
         EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_CPU, image_info.coherency_domain);
       }
-
-      EXPECT_EQ(buffer_id, magma_get_buffer_id(image));
 
       MapAndCompare(image);
 

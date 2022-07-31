@@ -204,14 +204,16 @@ fn handle_client_data(
                                 .expect("Failed to duplicate buffer collection import token.");
                             handles.push(import_token);
                         } else if let Some(image_file) = file.downcast_file::<ImageFile>() {
-                            let import_token = image_file
-                                .info
-                                .token
-                                .value
-                                .as_handle_ref()
-                                .duplicate(zx::Rights::SAME_RIGHTS)
-                                .expect("Failed to duplicate buffer collection import token.");
-                            handles.push(import_token);
+                            if let Some(token) = &image_file.info.token {
+                                let import_token = token
+                                    .value
+                                    .as_handle_ref()
+                                    .duplicate(zx::Rights::SAME_RIGHTS)
+                                    .expect("Failed to duplicate buffer collection import token.");
+                                handles.push(import_token);
+                            } else {
+                                tracing::error!("No image file token.");
+                            }
                         } else {
                             tracing::error!(
                                 "Trying to parse buffre collection token from invalid file type."

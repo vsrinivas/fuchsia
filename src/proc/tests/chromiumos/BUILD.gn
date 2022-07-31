@@ -50,8 +50,17 @@ starnix_linux_test_component("virtmagma_conformance_tests") {
       "//src/graphics/lib/magma/tests/integration:virtmagma_conformance_tests"
 }
 
+starnix_linux_test_component("virtmagma_image_tests") {
+  test_label =
+      "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_image_tests"
+}
+
 starmium_test_package("test_starnix_magma") {
-  test_components = [ ":virtmagma_conformance_tests" ]
+  test_components = [
+    ":virtmagma_conformance_tests",
+    # TODO(fxbug.dev/104611) - enable this when all tests passing
+    #":virtmagma_image_tests",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
