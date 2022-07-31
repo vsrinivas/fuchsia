@@ -12,6 +12,7 @@
 #include <arch/arm64/mmu.h>
 #include <ktl/optional.h>
 #include <vm/vm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 
 #include <ktl/enforce.h>
@@ -319,13 +320,17 @@ zx_status_t add_periph_range(paddr_t base_phys, size_t length) {
 }
 
 void reserve_periph_ranges() {
+  fbl::RefPtr<VmAddressRegion> vmar = VmAspace::kernel_aspace()->RootVmar();
+  // Peripheral ranges are read/write device mappings.
+  const uint arch_mmu_flags =
+      ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
   for (auto& range : periph_ranges) {
     if (range.length == 0) {
       break;
     }
 
     zx_status_t status =
-        VmAspace::kernel_aspace()->ReserveSpace("periph", range.length, range.base_virt);
+        vmar->ReserveSpace("periph", range.base_virt, range.length, arch_mmu_flags);
     ASSERT_MSG(status == ZX_OK, "status %d\n", status);
 
 #if __has_feature(address_sanitizer)

@@ -66,10 +66,6 @@ lazy_init::LazyInit<VmAddressRegion, lazy_init::CheckType::None, lazy_init::Dest
     g_kernel_root_vmar;
 
 // simple test routines
-inline bool is_inside(VmAspace& aspace, vaddr_t vaddr) {
-  return (vaddr >= aspace.base() && vaddr <= aspace.base() + aspace.size() - 1);
-}
-
 // Returns true if the base + size is valid for the given |type|.
 inline bool is_valid_for_type(vaddr_t base, size_t size, VmAspace::Type type) {
   if (base + size < base) {
@@ -99,33 +95,6 @@ inline bool is_valid_for_type(vaddr_t base, size_t size, VmAspace::Type type) {
       panic("Invalid aspace type");
   }
   return base >= min && base + size <= max;
-}
-
-inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size) {
-  DEBUG_ASSERT(is_inside(aspace, vaddr));
-
-  if (size == 0) {
-    return size;
-  }
-
-  size_t offset = vaddr - aspace.base();
-
-  // LTRACEF("vaddr 0x%lx size 0x%zx offset 0x%zx aspace base 0x%lx aspace size 0x%zx\n",
-  //        vaddr, size, offset, aspace.base(), aspace.size());
-
-  if (offset + size < offset) {
-    size = ULONG_MAX - offset - 1;
-  }
-
-  // LTRACEF("size now 0x%zx\n", size);
-
-  if (offset + size >= aspace.size() - 1) {
-    size = aspace.size() - offset;
-  }
-
-  // LTRACEF("size now 0x%zx\n", size);
-
-  return size;
 }
 
 uint arch_aspace_flags_from_type(VmAspace::Type type) {
@@ -404,56 +373,6 @@ zx_status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* n
   }
 
   return ZX_OK;
-}
-
-zx_status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
-  canary_.Assert();
-  LTRACEF("aspace %p name '%s' size %#zx vaddr %#" PRIxPTR "\n", this, name, size, vaddr);
-
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-
-  size = ROUNDUP_PAGE_SIZE(size);
-  if (size == 0) {
-    return ZX_OK;
-  }
-  if (!IS_PAGE_ALIGNED(vaddr)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (!is_inside(*this, vaddr)) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  // trim the size
-  size = trim_to_aspace(*this, vaddr, size);
-
-  // allocate a zero length vm object to back it
-  // TODO: decide if a null vmo object is worth it
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 0, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  vmo->set_name(name, strlen(name));
-
-  // lookup how it's already mapped
-  uint arch_mmu_flags = 0;
-  auto err = arch_aspace_.Query(vaddr, nullptr, &arch_mmu_flags);
-  if (err) {
-    // if it wasn't already mapped, use some sort of strict default
-    arch_mmu_flags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ;
-  }
-  if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0) {
-    status = vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  // map it, creating a new region
-  void* ptr = reinterpret_cast<void*>(vaddr);
-  return MapObjectInternal(ktl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
-                           arch_mmu_flags);
 }
 
 zx_status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint8_t align_pow2,

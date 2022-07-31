@@ -150,8 +150,9 @@ void arch_asan_early_init() {
 }
 
 void arch_asan_late_init() {
-  auto status =
-      VmAspace::kernel_aspace()->ReserveSpace("kasan-shadow", kAsanShadowSize, KASAN_SHADOW_OFFSET);
+  auto status = VmAspace::kernel_aspace()->RootVmar()->ReserveSpace(
+      "kasan-shadow", KASAN_SHADOW_OFFSET, kAsanShadowSize,
+      ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
   ZX_ASSERT(status == ZX_OK);
   g_asan_can_map_shadow_for = false;
 }
