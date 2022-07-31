@@ -246,8 +246,10 @@ void doSingleIteration() {
 void main(List<String> args) {
   final context = ComponentContext.createAndServe();
 
+  // Component v2 doesn't support component runtime args, so for now the default
+  // should match the expected number of iterations (currently 1000).
   var parser = ArgParser()
-    ..addOption('iterations', defaultsTo: '500', valueHelp: 'iterations');
+    ..addOption('iterations', defaultsTo: '1000', valueHelp: 'iterations');
 
   int iterations;
   try {

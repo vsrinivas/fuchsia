@@ -36,6 +36,7 @@
             ],
             from: "self",
             to: [ "#dart_aot_product_runner" ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: [

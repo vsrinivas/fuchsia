@@ -38,6 +38,16 @@ legacy_cache_package_labels += [
   "//src/ui/bin/hardware_display_controller_provider",
 ]
 
+# End to end (E2E) `dart_inspect_benchmarks` test requires the dart runner.
+core_realm_shards += [ "//src/dart:dart_runner_core_shard" ]
+
+# Build with both JIT and AOT non-product dart runners. JIT is used for debug
+# builds, and AOT is used for release builds.
+legacy_base_package_labels += [
+  "//src/dart:dart_jit",
+  "//src/dart:dart_aot",
+]
+
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
 # not universe, so the test can run on bots where there is no package server.
 #

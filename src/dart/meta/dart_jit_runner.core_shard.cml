@@ -36,6 +36,7 @@
             ],
             from: "self",
             to: [ "#dart_jit_runner" ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: [

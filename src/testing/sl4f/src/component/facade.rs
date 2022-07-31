@@ -6,17 +6,25 @@ use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use crate::component::types::{
     ComponentLaunchRequest, ComponentLaunchResponse, ComponentSearchRequest, ComponentSearchResult,
 };
-use anyhow::Error;
+use anyhow::{format_err, Context as _, Error};
+use component_events::events::Event;
+use component_events::{events::*, matcher::*};
 use component_hub::{
     list::{get_all_instances, ListFilter},
     show::find_instances,
 };
+use fidl_fuchsia_component as fcomponent;
+use fidl_fuchsia_component_decl as fcdecl;
+use fidl_fuchsia_io as fio;
 use fidl_fuchsia_sys::ComponentControllerEvent;
 use fidl_fuchsia_sys2 as fsys;
 use fuchsia_component::client;
 use futures::StreamExt;
 use serde_json::{from_value, Value};
 use tracing::info;
+
+// CFv2 components will be launched in the collection with this name.
+static LAUNCHED_COMPONENTS_COLLECTION_NAME: &'static str = "launched_components";
 
 /// Perform operations related to Component.
 ///
@@ -30,12 +38,14 @@ impl ComponentFacade {
         ComponentFacade {}
     }
 
-    /// Parse component url and return app created by launch function
+    /// Launch component with url and optional arguments and detach directly
     /// # Arguments
-    /// * `args`: will be parsed to ComponentLaunchRequest
-    /// * `url`: full url of the component
-    /// * `arguments`: optional arguments for the component
-    async fn create_launch_app(&self, args: Value) -> Result<client::App, Error> {
+    /// * `args`: will be parsed to ComponentLaunchRequest in create_launch_app
+    ///   with fields:
+    ///   - `url`: url of the component (ending in `.cmx` for CFv1 or `.cm` for
+    ///     CFv2)
+    ///   - `arguments`: optional arguments for the component (CFv1 only)
+    pub async fn launch(&self, args: Value) -> Result<ComponentLaunchResponse, Error> {
         let tag = "ComponentFacade::create_launch_app";
         let req: ComponentLaunchRequest = from_value(args)?;
         // check if it's full url
@@ -52,6 +62,29 @@ impl ComponentFacade {
             }
             None => return Err(format_err!("Need full component url to launch")),
         };
+        if component_url.ends_with(".cmx") {
+            self.launch_v1(tag, &component_url, req.arguments).await
+        } else {
+            if req.arguments.is_some() {
+                return Err(format_err!(
+                    "CFv2 components currently don't support command line arguments"
+                ));
+            }
+            self.launch_v2(tag, &component_url).await
+        }
+    }
+
+    /// Return app created by launch function
+    /// # Arguments
+    /// * `tag`: the sl4f command tag/name
+    /// * `url`: full url of the component
+    /// * `arguments`: optional arguments for the component
+    async fn create_launch_app(
+        &self,
+        tag: &str,
+        url: &str,
+        arguments: Option<Vec<String>>,
+    ) -> Result<client::App, Error> {
         let launcher = match client::launcher() {
             Ok(r) => r,
             Err(err) => fx_err_and_bail!(
@@ -59,18 +92,22 @@ impl ComponentFacade {
                 format_err!("Failed to get launcher service: {}", err)
             ),
         };
-        let app = client::launch(&launcher, component_url.to_string(), req.arguments)?;
+        let app = client::launch(&launcher, url.to_string(), arguments)?;
         Ok(app)
     }
 
     /// Launch component with url and optional arguments and detach directly
     /// # Arguments
-    /// * `args`: will be parsed to ComponentLaunchRequest in create_launch_app
+    /// * `tag`: the sl4f command tag/name
     /// * `url`: url of the component
     /// * `arguments`: optional arguments for the component
-    pub async fn launch(&self, args: Value) -> Result<ComponentLaunchResponse, Error> {
-        let tag = "ComponentFacade::launch";
-        let launch_app = Some(self.create_launch_app(args).await?);
+    async fn launch_v1(
+        &self,
+        tag: &str,
+        url: &str,
+        arguments: Option<Vec<String>>,
+    ) -> Result<ComponentLaunchResponse, Error> {
+        let launch_app = Some(self.create_launch_app(tag, url, arguments).await?);
         let app = match launch_app {
             Some(p) => p,
             None => fx_err_and_bail!(&with_line!(tag), "Failed to launch component."),
@@ -100,6 +137,92 @@ impl ComponentFacade {
         match code {
             0 => Ok(ComponentLaunchResponse::Success),
             _ => Ok(ComponentLaunchResponse::Fail(code)),
+        }
+    }
+
+    /// Launch component with url and optional arguments and detach directly
+    /// # Arguments
+    /// * `tag`: the sl4f command tag/name
+    /// * `url`: url of the component
+    /// * `arguments`: optional arguments for the component
+    async fn launch_v2(&self, tag: &str, url: &str) -> Result<ComponentLaunchResponse, Error> {
+        let collection_name = LAUNCHED_COMPONENTS_COLLECTION_NAME;
+        let child_name =
+            if let (Some(last_dot), Some(last_slash)) = (url.rfind('.'), (url.rfind('/'))) {
+                &url[last_slash + 1..last_dot]
+            } else {
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("Component URL must end with a manifest file name: {url}")
+                )
+            };
+        let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()?;
+        let mut collection_ref = fcdecl::CollectionRef { name: collection_name.to_string() };
+        let child_decl = fcdecl::Child {
+            name: Some(child_name.to_string()),
+            url: Some(url.to_string()),
+            startup: Some(fcdecl::StartupMode::Lazy), // Dynamic children can only be started lazily.
+            environment: None,
+            ..fcdecl::Child::EMPTY
+        };
+        let child_args = fcomponent::CreateChildArgs {
+            numbered_handles: None,
+            ..fcomponent::CreateChildArgs::EMPTY
+        };
+        if let Err(err) = realm.create_child(&mut collection_ref, child_decl, child_args).await? {
+            fx_err_and_bail!(&with_line!(tag), format_err!("Failed to create CFv2 child: {err:?}"));
+        }
+
+        // Subscribe to stopped events for child components and then
+        // wait for the component's `Stopped` event, and exit this command.
+        let event_source = EventSource::new().unwrap();
+        let mut event_stream = event_source
+            .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
+            .await
+            .context("failed to subscribe to EventSource")?;
+
+        let mut child_ref = fcdecl::ChildRef {
+            name: child_name.to_string(),
+            collection: Some(collection_name.to_string()),
+        };
+
+        let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        if let Err(err) = realm.open_exposed_dir(&mut child_ref, server_end).await? {
+            fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("Failed to open exposed directory for CFv2 child: {err:?}")
+            );
+        }
+
+        // Connect to the Binder protocol to start the component.
+        let _ = client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)?;
+
+        // Important! The `moniker_regex` must end with `$` to ensure the
+        // `EventMatcher` does not observe stopped events of child components of
+        // the launched component.
+        info!("Waiting for Stopped events for child {child_name}");
+        let stopped_event = EventMatcher::ok()
+            .moniker_regex(format!("./{LAUNCHED_COMPONENTS_COLLECTION_NAME}:{child_name}$"))
+            .wait::<Stopped>(&mut event_stream)
+            .await
+            .context(format!("failed to observe {child_name} Stopped event"))?;
+
+        if let Err(err) = realm.destroy_child(&mut child_ref).await? {
+            fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("Failed to destroy CFv2 child: {err:?}")
+            );
+        }
+
+        let stopped_payload =
+            stopped_event.result().map_err(|err| anyhow!("StoppedError: {err:?}"))?;
+        info!("Returning {stopped_payload:?} event for child {child_name}");
+        match stopped_payload.status {
+            ExitStatus::Crash(status) => {
+                info!("Component terminated unexpectedly. Status: {status}");
+                Ok(ComponentLaunchResponse::Fail(status as i64))
+            }
+            ExitStatus::Clean => Ok(ComponentLaunchResponse::Success),
         }
     }
 

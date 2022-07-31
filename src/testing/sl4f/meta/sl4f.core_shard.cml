@@ -8,7 +8,7 @@
         {
             name: "sl4f",
             url: "fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cm",
-            environment: "#full-resolver-env",
+            environment: "#laboratory-env",
         },
         {
             name: "data_proxy",
@@ -178,6 +178,7 @@
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.logger.LogSink",
                 "fuchsia.paver.Paver",
+                "fuchsia.sys2.EventSource",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
                 "fuchsia.sysmem.Allocator",
@@ -191,13 +192,19 @@
                 "fuchsia.developer.tiles.Controller", // test-only
                 "fuchsia.lowpan.device.Lookup", // #appmgr
                 "fuchsia.sys.Launcher", // #appmgr
-                "fuchsia.tracing.controller.Controller", // #appmgr
-                "fuchsia.tracing.provider.Registry", // #appmgr
                 "fuchsia.weave.FactoryDataManager", // #appmgr
             ],
             from: "self",
             to: "#sl4f",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#trace_manager",
+            to: [ "#sl4f" ],
         },
         {
             protocol: [ "fuchsia.media.ProfileProvider" ],

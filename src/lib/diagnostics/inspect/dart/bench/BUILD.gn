@@ -4,29 +4,27 @@
 
 import("//build/dart/dart_app.gni")
 
-dart_app("dart-inspect-benchmarks") {
-  components = [
-    {
-      component_name = "dart-inspect-benchmarks"
-      component_type = "dart"
-      package_root = "."
-      main_dart = "lib/dart_inspect_benchmarks.dart"
-      sources = [ "dart_inspect_benchmarks.dart" ]
-      deps = [
-        "//sdk/dart/fuchsia",
-        "//sdk/dart/fuchsia_inspect",
-        "//sdk/dart/fuchsia_services",
-        "//third_party/dart-pkg/pub/args",
-      ]
-    },
+dart_library("lib") {
+  package_name = "dart_inspect_benchmarks"
+  sources = [ "dart_inspect_benchmarks.dart" ]
+  deps = [
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
+    "//third_party/dart-pkg/pub/args",
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/dart-inspect-benchmarks.cmx")
-      dest = "dart-inspect-benchmarks.cmx"
-    },
-  ]
+dart_component("dart-inspect-benchmarks-component") {
+  component_name = "dart-inspect-benchmarks"
+  manifest = "meta/dart-inspect-benchmarks.cml"
+  main_dart = "dart_inspect_benchmarks.dart"
+
+  deps = [ ":lib" ]
+}
+
+fuchsia_package("dart-inspect-benchmarks") {
+  deps = [ ":dart-inspect-benchmarks-component" ]
 }
 
 group("benchmarks") {

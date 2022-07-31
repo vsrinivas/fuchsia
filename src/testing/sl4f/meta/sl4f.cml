@@ -7,6 +7,13 @@
         runner: "elf",
         binary: "bin/sl4f",
     },
+    collections: [
+        // Holds components launched via sl4f command.
+        {
+            name: "launched_components",
+            durability: "transient",
+        },
+    ],
     use: [
         // TODO(https://fxbug.dev/98760): Remove once fixed.
         {
@@ -80,6 +87,7 @@
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Setup",
                 "fuchsia.sys.Launcher",
+                "fuchsia.sys2.EventSource",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.systemmetrics.test.SystemMetricsLogger",
                 "fuchsia.test.audio.recording.AudioRecordingControl",
@@ -122,6 +130,14 @@
         {
             protocol: "fuchsia.sys2.RealmQuery.root",
             path: "/svc/fuchsia.sys2.RealmQuery",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+        {
+            event: "stopped",
+            from: "framework",
         },
     ],
     expose: [
