@@ -44,9 +44,12 @@ zx::status<bool> VmoNode::CreateAndLockVmo(pgoff_t offset) {
       // are cleared too.
       zx_vmo_lock_state_t lock_state;
       status = vmo_.op_range(ZX_VMO_OP_LOCK, 0, vmo_size, &lock_state, sizeof(lock_state));
-      auto discarded_offset = AddressToPageIndex(lock_state.discarded_offset);
-      auto end = offset + AddressToPageIndex(fbl::round_up(lock_state.discarded_size, kPageSize));
-      for (; discarded_offset < end; ++discarded_offset) {
+      uint64_t discarded_offset = AddressToPageIndex(lock_state.discarded_offset);
+      uint64_t end_offset =
+          safemath::CheckAdd<uint64_t>(lock_state.discarded_offset, lock_state.discarded_size)
+              .ValueOrDie();
+      end_offset = AddressToPageIndex(fbl::round_up(end_offset, kPageSize));
+      for (; discarded_offset < end_offset; ++discarded_offset) {
         page_bitmap_.set(discarded_offset, false);
       }
     }
