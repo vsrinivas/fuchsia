@@ -884,6 +884,17 @@ async fn launch_non_hermetic_test() {
 
 #[ignore] // TODO(fxbug.dev/104246): reenable
 #[fuchsia::test]
+async fn capability_access_test() {
+    let test_url =
+        "fuchsia-pkg://fuchsia.com/test_manager_test#meta/nonhermetic_capability_test.cm";
+    let (events, _) = run_single_test(test_url, default_run_option()).await.unwrap();
+
+    let failed_suite = RunEvent::suite_stopped(SuiteStatus::Failed);
+
+    assert!(events.contains(&failed_suite));
+}
+
+#[fuchsia::test]
 async fn launch_chromium_test() {
     // TODO(91934): This test is launched in the chromium realm. Once we support out of tree realm
     // definitions we should move the definition and test to chromium.

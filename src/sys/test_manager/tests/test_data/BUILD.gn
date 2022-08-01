@@ -198,6 +198,27 @@ fuchsia_component("logging-component") {
   deps = [ ":logging-component-bin" ]
 }
 
+rustc_test("nonhermetic_capability_test_bin") {
+  edition = "2021"
+  testonly = true
+  name = "nonhermetic_capability_test"
+  source_root = "nonhermetic_capability_test.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+  ]
+
+  sources = [ "nonhermetic_capability_test.rs" ]
+}
+
+fuchsia_component("nonhermetic_capability_test") {
+  testonly = true
+  manifest = "meta/nonhermetic_capability_test.cml"
+  deps = [ ":nonhermetic_capability_test_bin" ]
+}
+
 group("test_data") {
   testonly = true
   public_deps = [
@@ -209,6 +230,7 @@ group("test_data") {
     ":hanging_test",
     ":logging-component",
     ":no_suite_service",
+    ":nonhermetic_capability_test",
     ":simple_chromium_realm_test",
     ":simple_system_realm_test",
     ":v2_test_runs_v1_component",
