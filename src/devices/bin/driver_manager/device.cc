@@ -251,9 +251,10 @@ zx_status_t Device::CreateProxy() {
     }
   }
 
-  auto dev = fbl::MakeRefCounted<Device>(this->coordinator, name_, std::move(driver_path),
-                                         fbl::String(), fbl::RefPtr(this), protocol_id_, zx::vmo(),
-                                         zx::channel(), fidl::ClientEnd<fio::Directory>());
+  auto dev = fbl::MakeRefCounted<Device>(this->coordinator, fbl::String::Concat({name_, "-proxy"}),
+                                         std::move(driver_path), fbl::String(), fbl::RefPtr(this),
+                                         protocol_id_, zx::vmo(), zx::channel(),
+                                         fidl::ClientEnd<fio::Directory>());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -270,9 +271,9 @@ zx_status_t Device::CreateProxy() {
 zx_status_t Device::CreateNewProxy() {
   ZX_ASSERT(new_proxy_ == nullptr);
 
-  auto dev = fbl::MakeRefCounted<Device>(this->coordinator, name_, fbl::String(), fbl::String(),
-                                         fbl::RefPtr(this), 0, zx::vmo(), zx::channel(),
-                                         fidl::ClientEnd<fio::Directory>());
+  auto dev = fbl::MakeRefCounted<Device>(
+      this->coordinator, fbl::String::Concat({name_, "-new-proxy"}), fbl::String(), fbl::String(),
+      fbl::RefPtr(this), 0, zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
