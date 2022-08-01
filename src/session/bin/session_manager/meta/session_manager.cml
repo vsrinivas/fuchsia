@@ -65,6 +65,8 @@
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
+                "fuchsia.media.drm.PlayReady",
+                "fuchsia.media.drm.Widevine",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.ActiveSession",
                 "fuchsia.media.sessions2.Discovery",
@@ -114,14 +116,6 @@
             ],
             from: "parent",
             to: "#session",
-        },
-        {
-            protocol: [
-                "fuchsia.media.drm.PlayReady",
-                "fuchsia.media.drm.Widevine",
-            ],
-            from: "parent",
-            to: "#session",
             availability: "same_as_target",
         },
         {
@@ -136,18 +130,21 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via build_info.core_shard.cml.
             protocol: [ "fuchsia.buildinfo.Provider" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via codec_factory.core_shard.cml.
             protocol: [ "fuchsia.mediacodec.CodecFactory" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via wlancfg.core_shard.cml.
@@ -159,6 +156,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via memory_monitor.core_shard.cml.
@@ -168,6 +166,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via omaha_client_service.core_shard.cml or
@@ -179,30 +178,35 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via emergency.core_shard.cml
             protocol: [ "fuchsia.location.position.EmergencyProvider" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via bt-a2dp-common.core_shard.cml
             protocol: [ "fuchsia.bluetooth.a2dp.AudioMode" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via bt-hfp-audio-gateway.core_shard.cml
             protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via bt-bootstrap.core_shard.cml
             protocol: [ "fuchsia.bluetooth.sys.Bootstrap" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via weavestack.core_shard.cml
@@ -213,6 +217,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via lowpanservice.core_shard.cml
@@ -227,12 +232,14 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via account.core_shard.cml
             protocol: [ "fuchsia.identity.account.AccountManager" ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via activity.core_shard.cml
@@ -243,6 +250,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via ui.core_shard.cml
@@ -276,6 +284,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via ui.core_shard.cml
@@ -286,7 +295,7 @@
             ],
             from: "parent",
             to: "#session",
-            availability: "optional",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager via audio_core
@@ -302,6 +311,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             // Routed to session-manager from core.cml in all products.
@@ -327,6 +337,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             storage: [
@@ -336,6 +347,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
         {
             directory: [
@@ -347,6 +359,7 @@
             ],
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
 
         // Allow components in the session to restart it (the session).
@@ -359,6 +372,7 @@
             resolver: "full-resolver",
             from: "parent",
             to: "#session",
+            availability: "same_as_target",
         },
     ],
     expose: [
