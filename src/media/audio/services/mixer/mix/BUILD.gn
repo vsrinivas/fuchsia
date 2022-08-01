@@ -28,6 +28,8 @@ source_set("mix") {
     "mix_job_subtask.h",
     "mix_thread.cc",
     "mix_thread.h",
+    "mixer_gain_controls.cc",
+    "mixer_gain_controls.h",
     "packet_queue_producer_stage.cc",
     "packet_queue_producer_stage.h",
     "packet_view.cc",
@@ -69,6 +71,7 @@ executable("mix_unittests") {
   sources = [
     "custom_stage_unittest.cc",
     "gain_control_unittest.cc",
+    "mixer_gain_controls_unittest.cc",
     "packet_queue_producer_stage_unittest.cc",
     "packet_view_unittest.cc",
     "pipeline_stage_unittest.cc",
