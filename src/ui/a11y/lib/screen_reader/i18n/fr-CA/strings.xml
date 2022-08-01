@@ -22,7 +22,7 @@
   <string name="role_table_cell">Cellule</string>
   <string name="set_size">{num_items} éléments</string>
   <string name="entered_list">Vous avez ouvert une liste</string>
-  <string name="entered_list_detail">A entré une liste avec {num_items,plural, =0{aucun élément}=1{un élément}one{# élément}other{# éléments}}</string>
+  <string name="entered_list_detail">{num_items,plural, =0{Liste entrée sans aucun élément}=1{Liste entrée avec un élément}one{Liste entrée avec # élément}other{Liste entrée avec # éléments}}</string>
   <string name="exited_list">Vous avez fermé une liste</string>
   <string name="table_summary">{table_name},        {table_rows} sur {table_columns}</string>
   <string name="cell_summary">Ligne {row_index} colonne {column_index}</string>
@@ -36,6 +36,7 @@
   <string name="element_checked">Coché</string>
   <string name="element_not_checked">Non coché</string>
   <string name="element_partially_checked">Partiellement coché</string>
+  <string name="element_selected">Selected</string>
   <string name="element_disabled">Désactivé</string>
   <string name="element_expanded">Développé</string>
   <string name="element_collapsed">Réduit</string>
@@ -94,6 +95,10 @@
   <string name="vertical_line_symbol_name">barre verticale</string>
   <string name="square_root_symbol_name">racine carrée</string>
   <string name="bullet_symbol_name">puce</string>
+  <string name="white_bullet_symbol_name">puce blanche</string>
+  <string name="black_square_symbol_name">carré noir</string>
+  <string name="triangular_bullet_symbol_name">puce triangulaire</string>
+  <string name="hyphen_bullet_symbol_name">trait d\'union</string>
   <string name="multiplication_symbol_name">symbole de multiplication</string>
   <string name="division_symbol_name">symbole de division</string>
   <string name="pilcrow_symbol_name">symbole du paragraphe</string>

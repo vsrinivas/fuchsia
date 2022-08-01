@@ -22,7 +22,7 @@
   <string name="role_table_cell">Cella</string>
   <string name="set_size">{num_items} elementi</string>
   <string name="entered_list">Elenco aperto</string>
-  <string name="entered_list_detail">Elenco aperto con {num_items,plural, =0{nessun elemento}=1{un elemento}other{# elementi}}</string>
+  <string name="entered_list_detail">{num_items,plural, =0{Hai inserito l\'elenco senza elementi}=1{Hai inserito l\'elenco con un elemento}other{Hai inserito l\'elenco con # elementi}}</string>
   <string name="exited_list">Elenco chiuso</string>
   <string name="table_summary">{table_name},        {table_rows} per {table_columns}</string>
   <string name="cell_summary">Riga {row_index} colonna {column_index}</string>
@@ -36,6 +36,7 @@
   <string name="element_checked">Elemento selezionato</string>
   <string name="element_not_checked">Elemento non selezionato</string>
   <string name="element_partially_checked">Elemento parzialmente selezionato</string>
+  <string name="element_selected">Selected</string>
   <string name="element_disabled">Elemento non attivo</string>
   <string name="element_expanded">Elemento espanso</string>
   <string name="element_collapsed">Elemento compresso</string>
@@ -94,6 +95,10 @@
   <string name="vertical_line_symbol_name">linea verticale</string>
   <string name="square_root_symbol_name">radice quadrata</string>
   <string name="bullet_symbol_name">punto elenco</string>
+  <string name="white_bullet_symbol_name">punto elenco bianco</string>
+  <string name="black_square_symbol_name">quadrato nero</string>
+  <string name="triangular_bullet_symbol_name">punto elenco triangolare</string>
+  <string name="hyphen_bullet_symbol_name">punto elenco trattino</string>
   <string name="multiplication_symbol_name">segno di moltiplicazione</string>
   <string name="division_symbol_name">segno di divisione</string>
   <string name="pilcrow_symbol_name">segno di paragrafo</string>

@@ -22,7 +22,7 @@
   <string name="role_table_cell">Cel</string>
   <string name="set_size">{num_items} items</string>
   <string name="entered_list">Lijst geopend</string>
-  <string name="entered_list_detail">Lijst opgegeven met {num_items,plural, =0{nul items}=1{één item}other{# items}}</string>
+  <string name="entered_list_detail">{num_items,plural, =0{Lijst zonder items geopend}=1{Lijst met 1 item geopend}other{Lijst met # items geopend}}</string>
   <string name="exited_list">Lijst gesloten</string>
   <string name="table_summary">{table_name}, {table_rows} bij {table_columns}</string>
   <string name="cell_summary">Rij {row_index}, kolom {column_index}</string>
@@ -36,6 +36,7 @@
   <string name="element_checked">Aangevinkt</string>
   <string name="element_not_checked">Uitgevinkt</string>
   <string name="element_partially_checked">Gedeeltelijk aangevinkt</string>
+  <string name="element_selected">Selected</string>
   <string name="element_disabled">Uitgezet</string>
   <string name="element_expanded">Uitgevouwen</string>
   <string name="element_collapsed">Samengevouwen</string>
@@ -94,6 +95,10 @@
   <string name="vertical_line_symbol_name">verticale lijn</string>
   <string name="square_root_symbol_name">vierkantswortel</string>
   <string name="bullet_symbol_name">opsommingsteken</string>
+  <string name="white_bullet_symbol_name">wit opsommingsteken</string>
+  <string name="black_square_symbol_name">zwart vierkant</string>
+  <string name="triangular_bullet_symbol_name">driehoekig opsommingsteken</string>
+  <string name="hyphen_bullet_symbol_name">koppelteken als opsommingsteken</string>
   <string name="multiplication_symbol_name">vermenigvuldigingsteken</string>
   <string name="division_symbol_name">deelteken</string>
   <string name="pilcrow_symbol_name">alineateken</string>

@@ -22,7 +22,7 @@
   <string name="role_table_cell">Zelle</string>
   <string name="set_size">{num_items} Elemente</string>
   <string name="entered_list">Liste aufgerufen</string>
-  <string name="entered_list_detail">Liste eingegeben mit {num_items,plural, =0{keinen Artikeln}=1{einem Artikel}other{# Artikeln}}</string>
+  <string name="entered_list_detail">{num_items,plural, =0{Liste ohne Einträge eingegeben}=1{Liste mit einem Eintrag eingegeben}other{Liste mit # Einträgen eingegeben}}</string>
   <string name="exited_list">Liste verlassen</string>
   <string name="table_summary">{table_name}, {table_rows} und {table_columns}</string>
   <string name="cell_summary">Zeile {row_index}, Spalte {column_index}</string>
@@ -36,6 +36,7 @@
   <string name="element_checked">Aktiviert</string>
   <string name="element_not_checked">Nicht aktiviert</string>
   <string name="element_partially_checked">Teilweise aktiviert</string>
+  <string name="element_selected">Selected</string>
   <string name="element_disabled">Deaktiviert</string>
   <string name="element_expanded">Maximiert</string>
   <string name="element_collapsed">Minimiert</string>
@@ -94,6 +95,10 @@
   <string name="vertical_line_symbol_name">Senkrechter Strich</string>
   <string name="square_root_symbol_name">Quadratwurzel</string>
   <string name="bullet_symbol_name">Aufzählungszeichen</string>
+  <string name="white_bullet_symbol_name">weisser Aufzählungspunkt</string>
+  <string name="black_square_symbol_name">schwarzes Quadrat</string>
+  <string name="triangular_bullet_symbol_name">dreieckiges Aufzählungszeichen</string>
+  <string name="hyphen_bullet_symbol_name">Bindestrich-Aufzählungszeichen</string>
   <string name="multiplication_symbol_name">Multiplikationszeichen</string>
   <string name="division_symbol_name">Divisionszeichen</string>
   <string name="pilcrow_symbol_name">Absatzzeichen</string>
