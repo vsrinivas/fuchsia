@@ -24,7 +24,7 @@ fuchsia_driver("fake-ot-radio-driver-driver") {
 
   deps = [
     ":fake_ot_radio_bind",
-    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
+    "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_cpp_wire",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

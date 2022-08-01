@@ -97,8 +97,8 @@ test("usb-cdc-acm-integration") {
   output_name = "usb-cdc-acm-integration-test"
   sources = [ "usb-cdc-acm-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",

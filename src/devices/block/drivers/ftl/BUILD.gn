@@ -61,7 +61,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/lib/ddk",

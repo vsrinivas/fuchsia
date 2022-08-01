@@ -46,10 +46,10 @@ executable("magma_conformance_tests") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
-      "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
       "//sdk/fidl/fuchsia.sysmem",
-      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_llcpp",
+      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_cpp_wire",
       "//sdk/lib/fdio",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",
       "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
@@ -83,10 +83,10 @@ executable("magma_conformance_tests_hermetic") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
-      "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
       "//sdk/fidl/fuchsia.sysmem",
-      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_llcpp",
+      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_cpp_wire",
       "//sdk/lib/fdio",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",
       "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",

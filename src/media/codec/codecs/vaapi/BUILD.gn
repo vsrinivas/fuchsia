@@ -70,7 +70,7 @@ source_set("codec_runner_vaapi") {
     ":vaapi_utils",
     "third_party/chromium",
     "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/graphics/lib/magma/include:magma",

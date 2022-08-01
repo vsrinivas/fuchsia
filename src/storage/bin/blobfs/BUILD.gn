@@ -5,7 +5,7 @@
 executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/block_client/cpp",

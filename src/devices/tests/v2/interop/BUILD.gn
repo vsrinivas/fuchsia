@@ -93,7 +93,7 @@ fuchsia_driver("leaf_driver") {
   output_name = "interop_leaf"
   sources = [ "leaf_driver.cc" ]
   deps = [
-    ":fuchsia.interop.test_llcpp",
+    ":fuchsia.interop.test_cpp_wire",
     ":interop_leaf_bind",
     "//sdk/lib/driver2:llcpp",
     "//src/devices/lib/driver:driver_runtime",

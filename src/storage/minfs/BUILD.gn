@@ -141,22 +141,22 @@ static_library("minfs") {
       "//zircon/system/ulib/async-loop:async-loop-cpp",
 
       # mount.h includes fidl/fuchsia.process.lifecycle/cpp/wire.h
-      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
 
       # minfs_private.h includes fidl/fuchsia.minfs/cpp/wire.h
-      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     ]
     deps += [
       "//sdk/fidl/fuchsia.device:fuchsia.device_c",
-      "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+      "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/inspect/service/cpp:cpp",
       "//sdk/lib/sys/cpp:cpp",
       "//sdk/lib/syslog/cpp",
-      "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+      "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
       "//src/storage/fvm",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",

@@ -11,5 +11,5 @@ source_set("topological_path") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxc",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp" ]
+  public_deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire" ]
 }

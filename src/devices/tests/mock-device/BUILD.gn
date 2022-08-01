@@ -21,7 +21,7 @@ fuchsia_driver("mock-device-driver") {
     "fidl.cc",
   ]
   deps = [
-    ":fuchsia.device.mock_llcpp",
+    ":fuchsia.device.mock_cpp_wire",
     ":mock-device-bind",
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/lib/fdio",

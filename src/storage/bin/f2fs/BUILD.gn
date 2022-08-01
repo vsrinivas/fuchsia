@@ -6,7 +6,7 @@ executable("f2fs") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",

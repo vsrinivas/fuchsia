@@ -42,8 +42,8 @@ source_set("common_srcs") {
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.intelgpucore:fuchsia.hardware.intelgpucore_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/stdcompat",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -101,7 +101,7 @@ test("intel-i915-test") {
   ]
   deps = [
     ":common_srcs",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp_testing",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire_testing",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/mock-ddk",

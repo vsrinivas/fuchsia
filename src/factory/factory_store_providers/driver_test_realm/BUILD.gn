@@ -20,7 +20,7 @@ executable("bin") {
   output_name = "factory_driver_test_realm"
   sources = [ "ram_disk_setup.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files:files",

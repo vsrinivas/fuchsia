@@ -22,9 +22,9 @@ driver_bind_rules("goldfish_sensor-bind") {
 
 common_deps = [
   ":goldfish_sensor-bind",
-  "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
-  "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
-  "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+  "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
+  "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_cpp_wire",
+  "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
   "//sdk/lib/input_report_reader:input_report_reader_sdk",
   "//sdk/lib/syslog/cpp:backend",
   "//src/devices/lib/driver",

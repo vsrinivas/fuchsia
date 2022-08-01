@@ -57,7 +57,7 @@ test("tas5720-test-bin") {
     ":ti_tas5720-bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/mock-ddk",

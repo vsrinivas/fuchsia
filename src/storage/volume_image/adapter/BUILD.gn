@@ -361,7 +361,7 @@ test("adapter-integration-test") {
     ":blobfs-partition",
     ":empty-partition",
     ":minfs-partition",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management/cpp:fs-management",

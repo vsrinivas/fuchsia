@@ -140,7 +140,7 @@ source_set("lib") {
     ":bits",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_llcpp",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",

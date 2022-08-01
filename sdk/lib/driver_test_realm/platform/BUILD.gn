@@ -30,7 +30,7 @@ executable("bin") {
   output_name = "platform_driver_test_realm"
   sources = [ "platform.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]

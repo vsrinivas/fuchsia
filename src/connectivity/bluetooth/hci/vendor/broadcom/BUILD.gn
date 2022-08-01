@@ -45,7 +45,7 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_llcpp",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_cpp_wire",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

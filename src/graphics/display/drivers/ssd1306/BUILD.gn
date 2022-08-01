@@ -24,7 +24,7 @@ fuchsia_driver("ssd1306_driver-driver") {
   deps = [
     ":ssd1306-bind",
     "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_llcpp",
+    "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_cpp_wire",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -60,7 +60,7 @@ test("ssd1306-test") {
   deps = [
     ":ssd1306-bind",
     "//sdk/banjo/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_llcpp",
+    "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_cpp_wire",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/lib/driver",

@@ -13,7 +13,7 @@ test("bin") {
   ]
 
   deps = [
-    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_llcpp",
+    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync_cpp_wire",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
   ]

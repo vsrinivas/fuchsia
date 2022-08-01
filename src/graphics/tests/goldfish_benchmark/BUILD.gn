@@ -12,7 +12,7 @@ executable("goldfish_benchmark_bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",

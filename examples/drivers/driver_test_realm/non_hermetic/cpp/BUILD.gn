@@ -14,7 +14,7 @@ group("tests") {
 test("driver_test_realm_example_non_hermetic_cpp") {
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm",
     "//sdk/lib/syslog/cpp",

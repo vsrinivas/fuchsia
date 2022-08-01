@@ -11,10 +11,10 @@ executable("display_detect") {
   sources = [ "display-detect.cc" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
-    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_cpp_wire",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//src/graphics/display/testing",

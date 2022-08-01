@@ -24,7 +24,7 @@ fuchsia_driver("ethertap-driver") {
   deps = [
     ":ethertap_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_cpp_wire",
     "//sdk/lib/fidl",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/dev-operation",
@@ -54,7 +54,7 @@ test("ethertap-unittest") {
   deps = [
     ":ethertap_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_cpp_wire",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/fidl_base",
     "//src/devices/lib/dev-operation",

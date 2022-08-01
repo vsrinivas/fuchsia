@@ -102,10 +102,10 @@ test("fdio-test") {
       "fdio_watcher.cc",
     ]
     deps += [
-      "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp_testing",
-      "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
+      "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire_testing",
+      "//sdk/fidl/fuchsia.process:fuchsia.process_cpp_wire",
       "//sdk/lib/driver_test_realm/simple",
       "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",

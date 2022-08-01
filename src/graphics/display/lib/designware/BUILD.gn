@@ -13,7 +13,7 @@ source_set("hdmi-dw") {
   public_deps = [ ":hdmi-dw-headers" ]
   deps = [
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_cpp_wire",
     "//src/graphics/display/lib/hdmi",
     "//src/lib/ddk",
   ]

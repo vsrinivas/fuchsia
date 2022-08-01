@@ -75,7 +75,7 @@ test("ftl-integration") {
   include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
     "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",

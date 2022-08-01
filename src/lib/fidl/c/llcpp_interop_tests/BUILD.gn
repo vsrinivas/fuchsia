@@ -17,11 +17,11 @@ executable("bin") {
 
   deps = [
     ":fidl.test.llcpp.basictypes_c",
-    ":fidl.test.llcpp.basictypes_llcpp",
+    ":fidl.test.llcpp.basictypes_cpp_wire",
     ":fidl.test.llcpp.controlflow_c",
-    ":fidl.test.llcpp.controlflow_llcpp",
+    ":fidl.test.llcpp.controlflow_cpp_wire",
     ":fidl.test.llcpp.dirent_c",
-    ":fidl.test.llcpp.dirent_llcpp",
+    ":fidl.test.llcpp.dirent_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//zircon/system/ulib/async:async-cpp",

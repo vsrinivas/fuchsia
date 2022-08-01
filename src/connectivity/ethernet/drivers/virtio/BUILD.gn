@@ -105,7 +105,7 @@ source_set("virtio_netdevice_lib") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_wire",
     "//src/connectivity/network/drivers/network-device/device:shared_lock",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/dev-operation",

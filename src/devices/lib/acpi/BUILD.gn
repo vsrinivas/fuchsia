@@ -10,7 +10,7 @@ source_set("acpi") {
   ]
 
   public_deps =
-      [ "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp" ]
+      [ "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire" ]
 
   include_dirs = [ "." ]
   sources = [ "client.cc" ]

@@ -91,7 +91,7 @@ source_set("test-tool-process") {
   if (is_fuchsia) {
     public_deps += [ "//zircon/system/ulib/zx" ]
     deps += [
-      "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+      "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/service:service-llcpp",

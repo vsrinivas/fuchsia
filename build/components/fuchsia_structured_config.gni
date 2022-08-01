@@ -518,7 +518,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
                            ])
     sources = [ cpp_elf_cc_source_file ]
     deps = [
-      ":${fidl_library_target}_llcpp",
+      ":${fidl_library_target}_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/sys/cpp",
     ]
@@ -707,8 +707,8 @@ template("fuchsia_structured_config_cpp_driver_lib") {
                            ])
     sources = [ cpp_driver_cc_source_file ]
     deps = [
-      ":${fidl_library_target}_llcpp",
-      "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+      ":${fidl_library_target}_cpp_wire",
+      "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/sys/cpp",
     ]

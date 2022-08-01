@@ -23,7 +23,7 @@ zx_library("devmgr-launcher") {
   sources = [ "launcher.cc" ]
   public_deps = [ "//sdk/lib/fit" ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
     "//sdk/lib/fit",

@@ -27,8 +27,8 @@ group("tests") {
 
 common_deps = [
   ":i8042_bind_header",
-  "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
-  "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+  "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_cpp_wire",
+  "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
   "//sdk/lib/input_report_reader",
   "//src/devices/lib/driver",
   "//src/lib/ddk",

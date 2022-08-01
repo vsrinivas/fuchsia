@@ -9,7 +9,7 @@ executable("bin") {
   output_name = "fidl_echo_cpp_wire_server"
   sources = [ "main.cc" ]
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp_wire",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

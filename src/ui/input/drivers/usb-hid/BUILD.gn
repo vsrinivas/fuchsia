@@ -139,10 +139,10 @@ group("fake") {
 test("usb-hid-test") {
   sources = [ "usb-hid-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",

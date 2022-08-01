@@ -9,8 +9,8 @@ library_headers("devmgr-integration-test-shim-headers") {
   headers = [ "lib/devmgr-integration-test/fixture.h" ]
   public_deps = [
     "//sdk/fidl/fuchsia.driver.test",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
@@ -29,7 +29,7 @@ source_set("devmgr-integration-test-shim") {
   sources = [ "fixture.cc" ]
   public_deps = [ ":devmgr-integration-test-shim-headers" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
     "//sdk/fidl/fuchsia.driver.test",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",

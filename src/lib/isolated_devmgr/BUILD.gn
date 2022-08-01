@@ -43,7 +43,7 @@ executable("isolated_devmgr") {
 
   deps = [
     ":src",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
@@ -104,8 +104,8 @@ static_library("usb-virtual-bus") {
     "usb-virtual-bus.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//src/lib/testing/loop_fixture",
   ]
   deps = [

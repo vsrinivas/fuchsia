@@ -11,8 +11,8 @@ source_set("src") {
 
   sources = [ "icd_conformance.cc" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/elflib",
     "//src/lib/files",

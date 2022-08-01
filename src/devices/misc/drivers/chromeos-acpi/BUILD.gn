@@ -32,7 +32,7 @@ driver_bind_rules("chromeos_acpi_bind") {
 
 common_deps = [
   ":chromeos_acpi_bind",
-  "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_llcpp",
+  "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_cpp_wire",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
   "//src/lib/ddktl",

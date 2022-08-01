@@ -11,7 +11,7 @@ executable("sdio") {
     "sdio.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.sdio:fuchsia.hardware.sdio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.sdio:fuchsia.hardware.sdio_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
@@ -31,7 +31,7 @@ test("sdio-test-bin") {
   ]
   include_dirs = [ "." ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.sdio:fuchsia.hardware.sdio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.sdio:fuchsia.hardware.sdio_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

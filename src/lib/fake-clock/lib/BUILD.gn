@@ -27,7 +27,7 @@ shared_library("lib") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//src/lib/fake-clock/fidl:fidl_llcpp",
+    "//src/lib/fake-clock/fidl:fidl_cpp_wire",
     "//src/lib/fake-clock/named-timer:named-timer-headers",
     "//src/lib/fxl",
   ]

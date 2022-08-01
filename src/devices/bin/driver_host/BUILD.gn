@@ -45,15 +45,15 @@ source_set("common") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/devices/lib/driver:driver_runtime",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/fdio",
@@ -113,7 +113,7 @@ fuchsia_driver("driver-host-test-driver-driver") {
   output_name = "driver-host-test-driver"
   sources = [ "test-driver.cc" ]
   deps = [
-    ":fuchsia.device.restarttest_llcpp",
+    ":fuchsia.device.restarttest_cpp_wire",
     ":test-devhost-parent-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
@@ -175,7 +175,7 @@ fuchsia_driver("driver-host-restart-driver-driver") {
   sources = [ "host-restart-test-driver.cc" ]
   deps = [
     ":driver-host-restart-bind",
-    ":fuchsia.device.restarttest_llcpp",
+    ":fuchsia.device.restarttest_cpp_wire",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -208,8 +208,8 @@ test("driver_host_test") {
 
   deps = [
     ":common",
-    ":fuchsia.device.restarttest_llcpp",
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
+    ":fuchsia.device.restarttest_cpp_wire",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//sdk/fidl/fuchsia.driver.development",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//sdk/lib/sys/cpp",

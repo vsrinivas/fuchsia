@@ -27,7 +27,7 @@ fuchsia_driver("ddk-power-test-driver") {
   ]
   sources = [ "test-driver.cc" ]
   deps = [
-    ":fuchsia.device.power.test_llcpp",
+    ":fuchsia.device.power.test_cpp_wire",
     ":test-power-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
@@ -58,7 +58,7 @@ fuchsia_driver("ddk-power-test-child-driver") {
   ]
   sources = [ "test-driver-child.cc" ]
   deps = [
-    ":fuchsia.device.power.test_llcpp",
+    ":fuchsia.device.power.test_cpp_wire",
     ":test-power-child-bind",
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/lib/fdio",
@@ -83,11 +83,11 @@ fuchsia_driver_component("ddk-power-test-child") {
 test("ddk-power") {
   sources = [ "test.cc" ]
   deps = [
-    ":fuchsia.device.power.test_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    ":fuchsia.device.power.test_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",

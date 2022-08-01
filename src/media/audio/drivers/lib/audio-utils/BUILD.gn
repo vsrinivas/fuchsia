@@ -18,9 +18,9 @@ zx_library("audio-utils") {
     "audio-output.cc",
   ]
   public_deps =
-      [ "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp" ]
+      [ "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//sdk/lib/fdio",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//zircon/system/ulib/affine",

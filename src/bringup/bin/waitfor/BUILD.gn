@@ -5,7 +5,7 @@
 executable("waitfor") {
   sources = [ "waitfor.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/lib/fdio",
     "//src/storage/gpt",

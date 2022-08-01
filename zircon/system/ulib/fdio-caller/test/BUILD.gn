@@ -20,7 +20,7 @@ test("fdio-caller") {
   }
   sources = [ "fdio.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/storage/memfs:cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

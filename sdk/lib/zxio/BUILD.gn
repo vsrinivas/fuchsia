@@ -26,10 +26,10 @@ library_headers("create_with_type") {
 
   public_deps = [
     ":zxio",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
-    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -44,16 +44,16 @@ library_headers("inception") {
     ":headers",
 
     # <lib/zxio/cpp/inception.h> has #include <fidl/fuchsia.io/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
 
     # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
 
     # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
 
     # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
   ]
 
   visibility = [
@@ -89,9 +89,9 @@ source_set("zxio") {
   public_deps = [ ":headers" ]
   public_configs = [ ":zxio_config" ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/zxio:inception",
     "//zircon/system/ulib/fbl",

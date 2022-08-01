@@ -12,8 +12,8 @@ executable("startup") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//src/session/fidl/fuchsia.sessionmanager:fuchsia.sessionmanager_llcpp",
-    "//src/sys/appmgr/fidl/fuchsia.appmgr:fuchsia.appmgr_llcpp",
+    "//src/session/fidl/fuchsia.sessionmanager:fuchsia.sessionmanager_cpp_wire",
+    "//src/sys/appmgr/fidl/fuchsia.appmgr:fuchsia.appmgr_cpp_wire",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",

@@ -43,7 +43,7 @@ template("ot_radio_driver") {
     deps = [
       "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
-      "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
+      "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_cpp_wire",
       "//src/connectivity/openthread/drivers/ot-radio:ot_radio_bind",
       "//src/connectivity/openthread/third_party/openthread:spinel-framer",
       "//src/devices/lib/driver",

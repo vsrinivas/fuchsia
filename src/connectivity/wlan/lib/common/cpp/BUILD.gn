@@ -57,7 +57,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_llcpp",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_cpp_wire",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",

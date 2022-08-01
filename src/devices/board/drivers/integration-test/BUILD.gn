@@ -26,7 +26,7 @@ fuchsia_driver("integration-test-driver") {
   # TODO: testonly = true
   sources = [ "test.cc" ]
   deps = [
-    ":fuchsia.board.test_llcpp",
+    ":fuchsia.board.test_cpp_wire",
     ":test-bus-bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",

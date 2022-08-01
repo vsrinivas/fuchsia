@@ -16,10 +16,10 @@ source_set("integration_test_fixture") {
     "mock-block-device.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fshost:headers",

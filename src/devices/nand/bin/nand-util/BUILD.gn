@@ -43,7 +43,7 @@ source_set("common") {
   deps = [ "//zircon/system/ulib/pretty" ]
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//sdk/lib/fdio",

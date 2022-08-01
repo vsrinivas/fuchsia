@@ -40,7 +40,7 @@ static_library("shell_server_lib") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/shell/common",
-    "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
+    "//src/developer/shell/fidl/fuchsia.shell:shell_cpp_wire",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

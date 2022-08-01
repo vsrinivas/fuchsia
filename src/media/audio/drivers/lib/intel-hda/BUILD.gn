@@ -31,7 +31,7 @@ zx_library("intel-hda") {
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <fuchsia/hardware/intelhda/codec/c/banjo.h>.
     "//sdk/banjo/fuchsia.hardware.intelhda.codec:fuchsia.hardware.intelhda.codec_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/async:async-cpp",
@@ -41,7 +41,7 @@ zx_library("intel-hda") {
     "//zircon/system/ulib/zx",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//src/lib/ddk",
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/drivers/lib/audio-proto-utils",

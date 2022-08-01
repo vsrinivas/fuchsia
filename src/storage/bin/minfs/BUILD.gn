@@ -9,8 +9,8 @@ import("//src/storage/testing/driver_test_realm.gni")
 executable("minfs") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/block_client/cpp",
@@ -32,11 +32,11 @@ fuchsia_component("minfs-component") {
 test("minfs_component_test") {
   sources = [ "minfs_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
     "//src/storage/testing:storage_driver_test_support",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

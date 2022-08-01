@@ -40,8 +40,8 @@ fuchsia_driver("driver") {
   ]
   deps = [
     ":bind",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
     "//src/devices/lib/acpi",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
@@ -73,7 +73,7 @@ test("da7219-unit-tests") {
   ]
   deps = [
     ":bind",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/acpi",

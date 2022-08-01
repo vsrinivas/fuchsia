@@ -17,7 +17,7 @@ source_set("hid-input-report") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
     "//src/ui/lib/key_util",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
@@ -50,7 +50,7 @@ test("lib-hid-input-report-test") {
 
   deps = [
     "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/ui/lib/key_util",

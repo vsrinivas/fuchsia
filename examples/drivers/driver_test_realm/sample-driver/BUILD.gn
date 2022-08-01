@@ -24,7 +24,7 @@ fuchsia_driver("driver") {
   sources = [ "sample_driver.cc" ]
   deps = [
     ":bind",
-    ":fuchsia.hardware.sample_llcpp",
+    ":fuchsia.hardware.sample_cpp_wire",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",

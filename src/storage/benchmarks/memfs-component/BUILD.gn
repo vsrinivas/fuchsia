@@ -7,12 +7,12 @@ import("//build/components.gni")
 executable("memfs-component-bin") {
   testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/sys/component/llcpp",
     "//sdk/lib/syslog/cpp",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
     "//src/storage/memfs:cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

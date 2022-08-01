@@ -20,7 +20,7 @@ driver_bind_rules("shtv3-bind") {
 source_set("common") {
   public_deps = [
     ":shtv3-bind",
-    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
+    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_cpp_wire",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

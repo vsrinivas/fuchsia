@@ -27,7 +27,7 @@ fuchsia_driver("fuchsia_driver") {
 
   sources = [ "test-driver.cc" ]
   deps = [
-    ":fuchsia.device.inspect.test_llcpp",
+    ":fuchsia.device.inspect.test_cpp_wire",
     ":inspect-test-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
@@ -56,8 +56,8 @@ test("tests") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
-    ":fuchsia.device.inspect.test_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    ":fuchsia.device.inspect.test_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/lib/fdio",
     "//sdk/lib/inspect/testing/cpp:zxtest",

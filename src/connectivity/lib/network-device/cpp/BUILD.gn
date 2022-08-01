@@ -13,7 +13,7 @@ source_set("cpp") {
   deps = [ "//sdk/lib/fit-promise" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_wire",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
@@ -34,7 +34,7 @@ executable("cpp-test") {
 
   deps = [
     ":cpp",
-    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_llcpp",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_cpp_wire",
     "//sdk/lib/fit-promise",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

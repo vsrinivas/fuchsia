@@ -9,7 +9,7 @@ test("miscsvc") {
   output_name = "miscsvc-test"
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

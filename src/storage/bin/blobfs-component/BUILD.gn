@@ -12,9 +12,9 @@ import("//src/storage/testing/driver_test_realm.gni")
 executable("blobfs-component") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/syslog/cpp",
     "//src/storage/blobfs",
     "//src/storage/blobfs:decompressor-sandbox",
@@ -33,11 +33,11 @@ component_manifest_resources("meta") {
 test("blobfs_component_test") {
   sources = [ "blobfs_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
     "//src/storage/testing:storage_driver_test_support",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

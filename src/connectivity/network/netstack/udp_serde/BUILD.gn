@@ -9,7 +9,7 @@ import("//build/test.gni")
 import("udp_serde_include_dirs.gni")
 
 udp_serde_public_deps =
-    [ "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp" ]
+    [ "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire" ]
 
 # Source set for use by targets in the SDK, which can't depend on a
 # shared library defined outside the SDK.
@@ -40,7 +40,7 @@ source_set("udp_serde_test_util") {
 
   public_deps = [
     ":udp_serde",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
   ]
 }
 

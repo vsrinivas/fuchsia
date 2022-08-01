@@ -14,7 +14,7 @@ test("ftdi-i2c-test") {
     "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_cpp_wire",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
@@ -40,8 +40,8 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
-    "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_cpp_wire",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
@@ -64,8 +64,8 @@ test("ftdi-integration") {
   output_name = "ftdi-integration-test"
   sources = [ "ftdi-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",

@@ -15,7 +15,7 @@ test("fidl-async-test") {
   }
   sources = [ "llcpp_bind_test.cc" ]
   deps = [
-    ":fidl.test.simple_llcpp",
+    ":fidl.test.simple_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -5,8 +5,8 @@
 executable("temperature-cli") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_llcpp",
-    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
+    "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

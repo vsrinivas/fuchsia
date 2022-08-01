@@ -12,7 +12,7 @@ source_set("simple-audio-stream") {
   sources = [ "simple-audio-stream.cc" ]
   public_deps = [
     ":headers",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//sdk/lib/fidl",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async",

@@ -10,7 +10,7 @@ test("hdmi-dw") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_cpp_wire",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",

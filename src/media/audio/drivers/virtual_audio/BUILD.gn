@@ -38,7 +38,7 @@ fuchsia_driver("virtual_audio_driver-driver") {
 
   deps = [
     ":virtual_audio_bind",
-    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_llcpp",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",

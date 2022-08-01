@@ -45,7 +45,7 @@ test("msd_vsi_vip_integration_tests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
     "//src/graphics/drivers/msd-vsi-vip/include",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util/platform:buffer",

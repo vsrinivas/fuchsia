@@ -13,7 +13,7 @@ test("device-enumeration") {
     "main.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",

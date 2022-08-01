@@ -25,8 +25,8 @@ sdk_shared_library("cpp") {
     "//zircon/system/ulib/zxc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
   ]
 }
@@ -36,7 +36,7 @@ test("test") {
   sources = [ "test.cc" ]
   deps = [
     ":cpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/lib/driver_test_realm/simple",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

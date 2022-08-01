@@ -26,7 +26,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
@@ -37,10 +37,10 @@ source_set("lib") {
 
   public_deps = [
     # console_launcher.h has #include <fidl/fuchsia.boot/cpp/wire.h>
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
 
     # console_launcher.h has #include <fidl/fuchsia.io/cpp/wire.h>
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
 
     # console_launcher.h has #include <fbl/unique_fd.h>
     "//zircon/system/ulib/fbl",
@@ -54,8 +54,8 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
-    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
+    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_cpp_wire",
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

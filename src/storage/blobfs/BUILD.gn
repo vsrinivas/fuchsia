@@ -165,20 +165,20 @@ static_library("blobfs") {
     ]
     public_deps += [
       ":fuchsia.blobfs.internal",
-      ":fuchsia.blobfs.internal_llcpp",
-      "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
-      "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-      "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+      ":fuchsia.blobfs.internal_cpp_wire",
+      "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_cpp_wire",
+      "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
+      "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
       "//src/lib/storage/block_client/cpp",
       "//src/lib/storage/vfs/cpp/inspect",
-      "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
-      "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
+      "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
+      "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_cpp_wire",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
     ]
     deps += [
-      "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_cpp_wire",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/fidl/fuchsia.scheduler",
       "//sdk/lib/fdio",
       "//sdk/lib/sys/inspect/cpp",
@@ -246,7 +246,7 @@ source_set("decompressor_impl") {
   ]
   public_deps = [
     # Used by decompressor_impl.h
-    ":fuchsia.blobfs.internal_llcpp",
+    ":fuchsia.blobfs.internal_cpp_wire",
   ]
   deps = [
     ":blobfs",

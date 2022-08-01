@@ -31,7 +31,7 @@ driver_bind_rules("tpm-lpc_bind") {
 common_deps = [
   ":tpm-lpc_bind",
   "//sdk/banjo/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_banjo_cpp",
-  "//sdk/fidl/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_llcpp",
+  "//sdk/fidl/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_cpp_wire",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
   "//src/devices/lib/mmio",

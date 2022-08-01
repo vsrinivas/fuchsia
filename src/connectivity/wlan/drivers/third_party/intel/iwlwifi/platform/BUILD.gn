@@ -122,7 +122,7 @@ source_set("fuchsia_device") {
     ":rcu_manager",
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
-    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_llcpp",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_cpp_wire",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",

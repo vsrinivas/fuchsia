@@ -32,7 +32,7 @@ fuchsia_driver("fuchsia_driver") {
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/fidl/fuchsia.bluetooth.test",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
-    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_llcpp",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_cpp_wire",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp:backend",
     "//src/connectivity/bluetooth/core/bt-host/fidl:helpers",

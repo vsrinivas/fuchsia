@@ -30,7 +30,7 @@ fuchsia_driver("test-driver") {
   deps = [
     ":test_bind",
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",

@@ -24,7 +24,7 @@ group("common") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spiimpl:fuchsia.hardware.spiimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
+    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_cpp_wire",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",

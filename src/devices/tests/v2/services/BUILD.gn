@@ -26,9 +26,9 @@ fuchsia_driver("root_driver") {
   output_name = "services_root"
   sources = [ "root_driver.cc" ]
   deps = [
-    ":fuchsia.services.test_llcpp",
+    ":fuchsia.services.test_cpp_wire",
     ":root_bind",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",

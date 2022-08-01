@@ -9,7 +9,7 @@ test("devmgr-integration") {
   sources = [ "launcher_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",

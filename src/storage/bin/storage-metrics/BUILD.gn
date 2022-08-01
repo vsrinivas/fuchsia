@@ -6,9 +6,9 @@ executable("storage-metrics") {
   configs += [ "//build/config:all_source" ]
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     "//sdk/lib/fdio",
     "//src/storage/fshost:headers",
     "//src/storage/minfs",

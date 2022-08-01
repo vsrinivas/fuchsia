@@ -5,7 +5,7 @@
 executable("i2cutil") {
   sources = [ "i2cutil.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",

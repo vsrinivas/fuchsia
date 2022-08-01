@@ -45,7 +45,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.hardware.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_llcpp",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",

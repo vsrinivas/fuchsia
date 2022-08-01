@@ -40,8 +40,8 @@ source_set("common") {
     "pty-server.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
@@ -51,7 +51,7 @@ source_set("common") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
@@ -71,7 +71,7 @@ test("ptysvc-test") {
   sources = [ "pty-tests.cc" ]
   deps = [
     ":common",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",

@@ -98,8 +98,8 @@ static_library("cpp") {
       "watcher.cc",
     ]
     public_deps += [
-      "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/lib/file-lock:cpp",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -112,8 +112,8 @@ static_library("cpp") {
       "//zircon/system/ulib/trace",
     ]
     deps += [
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+      "//sdk/fidl/fuchsia.mem:fuchsia.mem_cpp_wire",
       "//sdk/lib/fdio",
       "//sdk/lib/fidl",
       "//sdk/lib/fit",
@@ -195,8 +195,8 @@ test("fs-vnode-test") {
   ]
   deps = [
     ":test_support",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//src/lib/storage/vfs/cpp",
@@ -230,9 +230,9 @@ test("fs-connection-test") {
     "paging_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
-    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//sdk/lib/zxio",
@@ -257,7 +257,7 @@ test("fs-inotify-test") {
   sources = [ "inotify_tests.cc" ]
   deps = [
     ":inotify_test_base",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//src/lib/fxl",

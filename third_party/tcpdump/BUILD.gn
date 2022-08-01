@@ -207,7 +207,7 @@ executable("bin") {
   configs += [ ":suppress_warnings" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
     "//sdk/lib/vfs/cpp",
     "//third_party/libpcap",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

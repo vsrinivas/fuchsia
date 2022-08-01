@@ -13,8 +13,8 @@ test("test") {
   sources = [ "string-bind-test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//sdk/fidl/fuchsia.driver.development",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/simple",

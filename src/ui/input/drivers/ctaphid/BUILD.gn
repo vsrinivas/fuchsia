@@ -28,7 +28,7 @@ source_set("driver-internals") {
   public_deps = [
     ":ctaphid_bind",
     "//sdk/banjo/fuchsia.hardware.hiddevice:fuchsia.hardware.hiddevice_banjo_cpp",
-    "//sdk/fidl/fuchsia.fido.report:fuchsia.fido.report_llcpp",
+    "//sdk/fidl/fuchsia.fido.report:fuchsia.fido.report_cpp_wire",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

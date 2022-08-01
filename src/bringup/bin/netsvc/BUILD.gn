@@ -40,8 +40,8 @@ executable("netsvc") {
     ":args",
     ":inet6",
     ":netsvc_common",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//sdk/lib/fdio",
     "//src/sys/lib/stdout-to-debuglog/cpp",
@@ -63,8 +63,8 @@ executable("netsvc") {
 source_set("args") {
   sources = [ "args.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }
@@ -82,13 +82,13 @@ source_set("netsvc_common") {
     "zbi.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
     "//src/bringup/lib/mexec",
     "//src/lib/zbitl",
@@ -103,8 +103,8 @@ source_set("netsvc_common") {
   ]
   public_deps = [
     ":inet6",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//src/storage/testing:fake-paver",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
@@ -126,9 +126,9 @@ test("netsvc-test") {
     ":args",
     ":netsvc",
     ":netsvc_common",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
     "//src/devices/testing/devmgr-integration-test-shim",
     "//src/lib/storage/ramdevice_client/cpp",
@@ -147,8 +147,8 @@ test("netsvc-stress-test") {
   sources = [ "test/paver-stress-test.cc" ]
   deps = [
     ":netsvc_common",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
     "//src/devices/testing/devmgr-integration-test-shim",
     "//src/lib/storage/ramdevice_client/cpp",
@@ -221,8 +221,8 @@ source_set("inet6") {
   ]
   deps = [
     ":netifc-discover",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
@@ -242,7 +242,7 @@ source_set("netifc-discover") {
     "netifc-discover.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -250,8 +250,8 @@ source_set("netifc-discover") {
     "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_wire",
     "//zircon/system/ulib/zx",
   ]
 

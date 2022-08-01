@@ -11,7 +11,7 @@ executable("gpioutil") {
     "main.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
@@ -32,7 +32,7 @@ test("gpioutil-test-bin") {
   ]
   include_dirs = [ "." ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

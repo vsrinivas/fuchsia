@@ -44,7 +44,7 @@ test("test") {
   output_name = "ddk-fallback-test"
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",

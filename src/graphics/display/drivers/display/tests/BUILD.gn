@@ -20,8 +20,8 @@ test("display-core-unittests") {
     ":base",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp_testing",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire_testing",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/fbl",
@@ -49,8 +49,8 @@ static_library("base") {
     "//src/lib/fsl",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
     "//src/graphics/display/drivers/display:shared",
     "//src/graphics/display/drivers/fake:fake-display-device-tree",

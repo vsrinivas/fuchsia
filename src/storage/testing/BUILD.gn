@@ -38,7 +38,7 @@ source_set("storage_driver_test_support") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.device",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -61,9 +61,9 @@ source_set("storage_driver_test_support") {
 source_set("fake-paver") {
   sources = [ "fake-paver.cc" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

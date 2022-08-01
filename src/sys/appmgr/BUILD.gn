@@ -71,7 +71,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.internal",
@@ -130,7 +130,7 @@ source_set("appmgr_for_test") {
     ":lib",
     "fidl/fuchsia.appmgr",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
@@ -167,7 +167,7 @@ executable("bin") {
     ":lib",
     "fidl/fuchsia.appmgr",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
     "//sdk/lib/sys/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",

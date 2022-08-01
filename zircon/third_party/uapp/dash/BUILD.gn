@@ -55,7 +55,7 @@ executable("dash") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_c",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_c",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",

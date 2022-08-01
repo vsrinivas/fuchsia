@@ -28,7 +28,7 @@ static_library("blobfs_integration_fixtures") {
     "fdio_test.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
     "//zircon/system/ulib/fdio-caller",
@@ -54,7 +54,7 @@ test("external_decompressor_integration") {
   sources = [ "external_decompressor_test.cc" ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
@@ -98,8 +98,8 @@ test("blobfs_integration") {
   deps = [
     ":blobfs_integration_fixtures",
     "//sdk/fidl/fuchsia.blobfs",
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/inspect/cpp",
@@ -150,7 +150,7 @@ test("blobfs_mount") {
   sources = [ "mount_test.cc" ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
@@ -188,8 +188,8 @@ test("blobfs_component_runner_test") {
   output_name = "blobfs_component_runner_test"
   sources = [ "blobfs_component_runner_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
@@ -294,7 +294,7 @@ test("blobfs_verifier_service") {
   sources = [ "verifier_service_test.cc" ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.update:fuchsia.update_llcpp",
+    "//sdk/fidl/fuchsia.update:fuchsia.update_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/service:service-llcpp",
@@ -331,7 +331,7 @@ test("executable_mount") {
   sources = [ "executable_mount_test.cc" ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
@@ -370,7 +370,7 @@ template("blobfs_large_integration_test") {
 
     deps = [
       ":blobfs_integration_fixtures",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/lib/fdio",
       "//src/lib/fxl/test:gtest_main",
       "//src/storage/blobfs",

@@ -11,9 +11,9 @@ import("//build/test.gni")
 executable("provider") {
   sources = [ "provider.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

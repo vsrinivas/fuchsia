@@ -36,8 +36,8 @@ source_set("test_sources") {
     "validating_tests.cc",
   ]
   public_deps = [
-    ":fidl.test.coding.fuchsia_llcpp",
-    ":fidl.test.coding_llcpp",
+    ":fidl.test.coding.fuchsia_cpp_wire",
+    ":fidl.test.coding_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//sdk/lib/fidl/cpp:cpp_base",
@@ -111,8 +111,8 @@ if (is_fuchsia) {
     output_name = "run_with_handle_policy_tests"
     sources = [ "run_with_handle_policy_tests.cc" ]
     deps = [
-      ":fidl.test.coding.fuchsia_llcpp",
-      ":fidl.test.coding_llcpp",
+      ":fidl.test.coding.fuchsia_cpp_wire",
+      ":fidl.test.coding_cpp_wire",
       ":tests_to_run_under_handle_policy",
       "//sdk/lib/fdio",
       "//src/lib/fxl/test:gtest_main",
@@ -138,7 +138,7 @@ source_set("host_test_sources") {
     "validating_tests.cc",
   ]
   public_deps = [
-    ":fidl.test.coding_llcpp",
+    ":fidl.test.coding_cpp_wire",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/fidl_base",
     "//zircon/system/ulib/zxtest",

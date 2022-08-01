@@ -14,7 +14,7 @@ zx_library("fdio-caller") {
     "//zircon/system/ulib/zx",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

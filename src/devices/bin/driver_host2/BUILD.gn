@@ -55,7 +55,7 @@ fuchsia_driver("test_driver_driver") {
 
   deps = [
     ":bind",
-    ":fuchsia.driverhost.test_llcpp",
+    ":fuchsia.driverhost.test_cpp_wire",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
@@ -91,7 +91,7 @@ executable("unittests") {
   sources = [ "driver_host_test.cc" ]
 
   deps = [
-    ":fuchsia.driverhost.test_llcpp",
+    ":fuchsia.driverhost.test_cpp_wire",
     ":lib",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
@@ -130,7 +130,7 @@ executable("bin") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/syslog/cpp",

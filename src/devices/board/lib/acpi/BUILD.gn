@@ -18,8 +18,8 @@ group("tests") {
 }
 
 shared_public_deps = [
-  "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
-  "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_llcpp",
+  "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_cpp_wire",
+  "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_cpp_wire",
   "//src/devices/bind/fuchsia.acpi:fuchsia.acpi_cpp",
   "//src/devices/lib/iommu",
   "//src/lib/ddk:ddk-deprecated-binding-headers",
@@ -40,7 +40,7 @@ shared_deps = [
 shared_fuchsia_deps = [
   "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-  "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+  "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
   "//src/devices/lib/acpi",
   "//src/devices/pci/lib/pci",
   "//zircon/system/ulib/fidl-async:fidl-async-cpp",

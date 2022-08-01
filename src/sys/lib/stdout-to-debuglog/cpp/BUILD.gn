@@ -9,7 +9,7 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zx",
   ]

@@ -31,7 +31,7 @@ source_set("driver-internals") {
   deps = [
     ":hid_input_report_bind",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input_c",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_cpp_wire",
     "//sdk/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",

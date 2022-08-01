@@ -24,7 +24,7 @@ fuchsia_driver("fidl-llcpp-driver-driver") {
   deps = [
     ":ddk-fidl-bind",
     "//src/devices/lib/driver",
-    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_cpp_wire",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
@@ -58,7 +58,7 @@ fuchsia_driver("fidl-async-llcpp-driver-driver") {
   deps = [
     ":ddk-fidl-async-bind",
     "//src/devices/lib/driver",
-    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_cpp_wire",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async:async-cpp",
@@ -85,7 +85,7 @@ test("ddk-fidl-test") {
     "//sdk/lib/fidl",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_c",
-    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_cpp_wire",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

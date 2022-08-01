@@ -20,9 +20,9 @@ source_set("start-storage-benchmark-lib") {
     "memfs.cc",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_cpp_wire",
     "//src/lib/fxl",
     "//src/lib/storage/fs_management",
     "//src/storage/memfs:cpp",
@@ -38,7 +38,7 @@ source_set("start-storage-benchmark-lib") {
     "//src/lib/uuid",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/fs_test:crypt_service",
-    "//src/storage/fxfs:fuchsia.fxfs_llcpp",
+    "//src/storage/fxfs:fuchsia.fxfs_cpp_wire",
     "//src/storage/lib/utils:topological_path",
     "//zircon/system/public",
     "//zircon/system/ulib/service:service-llcpp",
@@ -58,7 +58,7 @@ executable("start-storage-benchmark-bin") {
   sources = [ "main.cc" ]
   deps = [
     ":start-storage-benchmark-lib",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/fxl/test:test_settings",
     "//src/storage/bin/odu:libodu",
     "//zircon/system/ulib/service:service-llcpp",
@@ -90,7 +90,7 @@ test("start-storage-benchmark-unittests") {
   ]
   deps = [
     ":start-storage-benchmark-lib",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",

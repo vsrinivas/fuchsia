@@ -16,8 +16,8 @@ source_set("pipe_io") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
-    "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_llcpp",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_cpp_wire",
     "//src/devices/lib/goldfish/pipe_headers",
     "//src/lib/ddk",
     "//src/lib/ddktl",

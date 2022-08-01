@@ -17,7 +17,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.midi:fuchsia.hardware.midi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.midi:fuchsia.hardware.midi_cpp_wire",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fit",
     "//sdk/lib/media/cpp",

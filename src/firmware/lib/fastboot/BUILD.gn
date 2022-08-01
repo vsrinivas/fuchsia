@@ -29,8 +29,8 @@ source_set("lib") {
   public_configs = [ ":include" ]
   public_deps = [
     ":fastboot-base",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//src/developer/sshd-host:sshd_constants",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxc",

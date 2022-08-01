@@ -11,7 +11,7 @@ zx_library("hwreg-i2c") {
 
   public_deps = [
     # <hwreg/i2c.h> has #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
 
     # <hwreg/i2c.h> has #include <hwreg/bitfields.h>
     "//zircon/system/ulib/hwreg",

@@ -30,7 +30,7 @@ fuchsia_driver("fuchsia_driver") {
     "test-driver.cc",
   ]
   deps = [
-    ":fuchsia.device.instancelifecycle.test_llcpp",
+    ":fuchsia.device.instancelifecycle.test_cpp_wire",
     ":test-lifecycle-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
@@ -59,7 +59,7 @@ test("tests") {
   testonly = true
   sources = [ "test.cc" ]
   deps = [
-    ":fuchsia.device.instancelifecycle.test_llcpp",
+    ":fuchsia.device.instancelifecycle.test_cpp_wire",
     "//sdk/lib/fdio",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",

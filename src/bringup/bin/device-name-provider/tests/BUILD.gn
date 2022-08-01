@@ -8,7 +8,7 @@ import("//build/test.gni")
 test("device-name-provider-test") {
   sources = [ "args-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//src/bringup/bin/device-name-provider:args",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -28,7 +28,7 @@ test("integration-test") {
   sources = [ "integration-test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//zircon/system/ulib/service:service-llcpp",

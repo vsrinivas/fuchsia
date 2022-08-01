@@ -44,7 +44,7 @@ executable("common_unittests") {
 
   deps = [
     ":common",
-    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_llcpp",
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/sync:sync-cpp",

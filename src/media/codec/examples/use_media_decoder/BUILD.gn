@@ -187,8 +187,8 @@ test("use_h264_and_vp9_decoders_and_pcmm_stress_test") {
 
   deps = [
     ":use_media_decoder_source_set",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/service:service-llcpp",
   ]

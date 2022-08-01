@@ -7,7 +7,7 @@ import("//build/cpp/library_headers.gni")
 library_headers("ot-stack-callback") {
   headers = [ "lib/ot-stack/ot-stack-callback.h" ]
   public_deps =
-      [ "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp" ]
+      [ "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_cpp_wire" ]
 
   configs = [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

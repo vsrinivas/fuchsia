@@ -31,7 +31,7 @@ test("netstack_bsdsocket_c_api_test") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
       "//src/lib/testing/predicates",
     ]
   }
@@ -52,7 +52,7 @@ test("netstack_dgramsocket_c_api_test") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
       "//src/connectivity/network/netstack/udp_serde",
       "//src/lib/testing/predicates",
     ]
@@ -74,7 +74,7 @@ test("netstack_streamsocket_c_api_test") {
 
   if (is_fuchsia) {
     deps += [
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
       "//src/lib/testing/predicates",
     ]
   }
@@ -88,7 +88,7 @@ test("netstack_fuchsia_c_api_test") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",

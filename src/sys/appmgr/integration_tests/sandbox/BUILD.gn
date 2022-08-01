@@ -24,7 +24,7 @@ source_set("namespace_test") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
@@ -47,7 +47,7 @@ test("path_traversal_escape") {
   sources = [ "path_traversal_escape.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_llcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_cpp_wire",
     "//sdk/lib/fidl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

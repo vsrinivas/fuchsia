@@ -42,7 +42,7 @@ source_set("common") {
     ":serial_async_bind",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async:fuchsia.hardware.serialimpl.async_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_llcpp",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_cpp_wire",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async",

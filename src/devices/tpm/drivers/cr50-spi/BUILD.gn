@@ -17,8 +17,8 @@ driver_bind_rules("cr50-spi_bind") {
 common_deps = [
   ":cr50-spi_bind",
   "//sdk/banjo/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_banjo_cpp",
-  "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
-  "//sdk/fidl/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_llcpp",
+  "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_cpp_wire",
+  "//sdk/fidl/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_cpp_wire",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
   "//src/lib/ddktl",

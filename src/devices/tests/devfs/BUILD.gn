@@ -11,7 +11,7 @@ test("devfs") {
     "fidl-tests.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//sdk/lib/driver_test_realm/simple",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",

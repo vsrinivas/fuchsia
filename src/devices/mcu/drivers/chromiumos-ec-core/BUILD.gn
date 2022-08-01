@@ -35,7 +35,7 @@ source_set("core") {
   ]
   public_deps = [
     ":bind",
-    "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_llcpp",
+    "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_cpp_wire",
     "//sdk/lib/fit-promise",
     "//src/devices/lib/acpi",
     "//src/devices/lib/driver",
@@ -57,7 +57,7 @@ source_set("test-common") {
 
   public_deps = [
     ":core",
-    "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_llcpp_testing",
+    "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_cpp_wire_testing",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/devices/testing/mock-ddk",
@@ -90,7 +90,7 @@ source_set("usb-pd") {
 
   public_deps = [
     ":core",
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_cpp_wire",
   ]
 }
 
@@ -103,7 +103,7 @@ source_set("power-sensor") {
 
   public_deps = [
     ":core",
-    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_cpp_wire",
   ]
 }
 

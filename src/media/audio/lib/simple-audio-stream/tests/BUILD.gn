@@ -10,8 +10,8 @@ test("sa-unittest-bin") {
   testonly = true
   sources = [ "sas-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_cpp_wire",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",

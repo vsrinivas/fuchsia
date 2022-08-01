@@ -15,6 +15,6 @@ source_set("common") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
+    "//src/developer/shell/fidl/fuchsia.shell:shell_cpp_wire",
   ]
 }

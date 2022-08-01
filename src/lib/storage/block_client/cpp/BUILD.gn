@@ -47,7 +47,7 @@ static_library("cpp") {
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
 
@@ -58,10 +58,10 @@ static_library("cpp") {
     "//zircon/system/ulib/fzl",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/ddk",
@@ -131,7 +131,7 @@ test("block_client_unit_test") {
   deps = [
     ":cpp",
     ":fake_device",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fvm",

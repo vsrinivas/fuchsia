@@ -19,7 +19,7 @@ group("common") {
     ":aml-pwm-regulator-bind",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.vreg:fuchsia.hardware.vreg_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.vreg:fuchsia.hardware.vreg_llcpp",
+    "//sdk/fidl/fuchsia.hardware.vreg:fuchsia.hardware.vreg_cpp_wire",
     "//src/devices/lib/amlogic",
     "//src/lib/ddk",
     "//src/lib/ddktl",

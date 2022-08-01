@@ -220,7 +220,7 @@ group("goldens") {
   foreach(info, fidl_testdata_info) {
     if (info[denylist_key] + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
         info[denylist_key]) {
-      deps += [ "${info.target}_llcpp" ]
+      deps += [ "${info.target}_cpp_wire" ]
       if (is_fuchsia) {
         deps += [
           "${info.target}_cpp",

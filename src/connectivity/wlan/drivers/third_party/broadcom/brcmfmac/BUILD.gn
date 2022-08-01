@@ -193,7 +193,7 @@ source_set("core") {
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_llcpp",
+    "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_cpp_wire",
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/lib/stdcompat",
     "//src/connectivity/wlan/drivers/lib/components:cpp",

@@ -29,15 +29,15 @@ source_set("driver_runner") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_cpp_wire",
     "//sdk/fidl/fuchsia.device.composite:fuchsia.device.composite_cpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp",
-    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_llcpp",
-    "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_llcpp",
-    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_llcpp",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_cpp_wire",
+    "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp_wire",
+    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_cpp_wire",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/inspect",

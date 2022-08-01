@@ -38,7 +38,7 @@ test("rtc-lib-llcpp-test-bin") {
   output_name = "rtc-lib-llcpp-test"
   sources = [ "rtc_llcpp_unittest.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_cpp_wire",
     "//src/devices/rtc/lib/rtc:rtc_llcpp",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/zxtest",

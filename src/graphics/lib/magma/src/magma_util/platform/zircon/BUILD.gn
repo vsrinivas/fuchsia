@@ -54,7 +54,7 @@ source_set("performance_counter_device") {
   ]
   deps = [ "//src/graphics/lib/magma/src/magma_util:macros" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
@@ -70,7 +70,7 @@ source_set("dependency_injection_device") {
   ]
   public_deps = [
     "$magma_build_root/src/magma_util:macros",
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
     "//src/devices/lib/driver",
     "//src/graphics/lib/magma/include:msd",
     "//src/lib/ddk",
@@ -89,7 +89,7 @@ entry_deps = [
   "..:trace_provider",
   "..:trace_provider_with_fdio",
   "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-  "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+  "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
   "//src/devices/lib/driver",
   "//src/graphics/lib/magma/src/magma_util:macros",
   "//src/graphics/lib/magma/src/sys_driver",
@@ -173,7 +173,7 @@ source_set("connection_client") {
     "$magma_build_root/src/magma_util:macros",
     "..:connection_client_header",
     "..:trace",
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -196,7 +196,7 @@ source_set("connection") {
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "..:connection_header",
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -214,7 +214,7 @@ source_set("device_client") {
 
   deps = [
     "..:device_client_header",
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_cpp_wire",
     "//src/graphics/lib/magma/include:msd",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:status",
@@ -232,7 +232,7 @@ source_set("sysmem_connection") {
     "..:sysmem_connection_header",
     "..:thread",
     "..:trace",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/zx",
@@ -313,7 +313,7 @@ source_set("logger") {
 
   deps = [
     ":handle",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
     "//zircon/system/ulib/syslog:syslog-static",
     "//zircon/system/ulib/zx",
   ]

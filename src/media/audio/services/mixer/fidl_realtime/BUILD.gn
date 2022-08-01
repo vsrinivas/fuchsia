@@ -21,9 +21,9 @@ source_set("fidl_realtime") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_llcpp",
-    "//sdk/fidl/fuchsia.media2:fuchsia.media2_llcpp",
-    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_llcpp",
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_wire",
+    "//sdk/fidl/fuchsia.media2:fuchsia.media2_cpp_wire",
+    "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_cpp_wire",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//src/media/audio/services/common",

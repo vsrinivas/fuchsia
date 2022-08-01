@@ -6,7 +6,7 @@ import("//build/test.gni")
 
 test("acpi-unittest") {
   deps = [
-    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
     "//src/devices/lib/acpi",
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/lib/ddk",

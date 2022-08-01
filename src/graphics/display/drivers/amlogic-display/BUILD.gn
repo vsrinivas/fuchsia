@@ -44,8 +44,8 @@ source_set("common_srcs") {
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
@@ -105,7 +105,7 @@ test("amlogic-display-test") {
   ]
   deps = [
     ":common_srcs",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp_testing",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire_testing",
     "//src/devices/testing/no_ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

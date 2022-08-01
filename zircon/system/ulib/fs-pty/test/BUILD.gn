@@ -20,7 +20,7 @@ test("libfs-pty-test") {
   }
   sources = [ "service-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async:async-cpp",

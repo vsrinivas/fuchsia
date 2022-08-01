@@ -33,7 +33,7 @@ loadable_module("swapchain") {
   ]
   deps = [
     ":surface_header",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//third_party/Vulkan-ValidationLayers:micro_layer_common",

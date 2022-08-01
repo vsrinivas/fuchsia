@@ -19,7 +19,7 @@ executable("sysinfo") {
     "sysinfo.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
@@ -39,7 +39,7 @@ test("test") {
   output_name = "sysinfo-test"
   sources = [ "sysinfo-test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

@@ -22,7 +22,7 @@ fuchsia_driver("pl031-rtc-driver") {
   deps = [
     ":pl031_rtc_bind",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_cpp_wire",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",

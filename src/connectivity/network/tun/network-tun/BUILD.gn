@@ -30,8 +30,8 @@ source_set("src") {
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
-    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_llcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_wire",
+    "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_cpp_wire",
     "//sdk/lib/fit",
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/drivers/network-device/mac",

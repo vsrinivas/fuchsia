@@ -24,7 +24,7 @@ source_set("coverage-source") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
@@ -38,7 +38,7 @@ executable("app") {
   sources = [ "main.cc" ]
   deps = [
     ":coverage-source",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -54,8 +54,8 @@ test("coverage-source-test") {
   sources = [ "coverage_source_test.cc" ]
   deps = [
     ":coverage-source",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

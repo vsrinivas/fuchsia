@@ -70,7 +70,7 @@ executable("echo_service_server_bin") {
   sources = [ "echo_service_server.cc" ]
 
   deps = [
-    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp_wire",
     "//sdk/lib/fidl",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
@@ -243,7 +243,7 @@ executable("cpp_outgoing_directory_test_bin") {
 
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fidl/cpp",
     "//src/lib/fxl/test:gtest_main",

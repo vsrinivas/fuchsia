@@ -11,8 +11,8 @@ executable("goldfish_test_bin") {
   sources = [ "goldfish_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//src/lib/fsl",

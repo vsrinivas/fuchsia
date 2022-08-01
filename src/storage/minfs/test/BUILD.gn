@@ -36,7 +36,7 @@ test("minfs_unit") {
     "unit/vnode_mapper_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/block_client/cpp:fake_device",
@@ -64,8 +64,8 @@ test("minfs-integration") {
     "integration/power_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/storage/fs_test",
@@ -89,8 +89,8 @@ test("minfs_dirty_cache_integration") {
   sources = [ "integration/dirty_cache_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.fs",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",
     "//src/storage/minfs",
@@ -106,7 +106,7 @@ test("minfs_dirty_cache_integration") {
 test("minfs-power") {
   sources = [ "integration/power_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",
     "//src/storage/memfs",
@@ -126,8 +126,8 @@ test("minfs-power") {
 test("fs_tests") {
   sources = [ "integration/fs_tests.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
@@ -143,12 +143,12 @@ test("minfs_component_runner_test") {
   output_name = "minfs_component_runner_test"
   sources = [ "integration/minfs_component_runner_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
+    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
     "//src/storage/minfs",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -166,7 +166,7 @@ storage_driver_test_realm_v2_component("minfs-integration-fs-tests") {
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     "//src/lib/storage/block_client/cpp:fake_device",
     "//src/storage/minfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

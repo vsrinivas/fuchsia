@@ -18,7 +18,7 @@ sdk_source_set("service") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect:tree_service_common",
     "//zircon/system/ulib/async:async-cpp",

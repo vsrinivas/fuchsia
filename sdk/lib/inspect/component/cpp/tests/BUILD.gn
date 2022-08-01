@@ -10,11 +10,11 @@ executable("inspect_service_llcpp_unittests_bin") {
   testonly = true
   sources = [ "service_unittests.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
     "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/inspect/component/cpp:service",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/inspect/testing/cpp",

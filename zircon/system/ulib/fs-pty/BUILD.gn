@@ -18,8 +18,8 @@ zx_library("fs-pty") {
   ]
   include_dirs = [ "include" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
@@ -27,7 +27,7 @@ zx_library("fs-pty") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]

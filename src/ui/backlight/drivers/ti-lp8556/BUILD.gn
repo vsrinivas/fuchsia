@@ -25,8 +25,8 @@ fuchsia_driver("ti-lp8556-driver") {
   deps = [
     ":ti-lp8556-bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
-    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_cpp_wire",
     "//sdk/lib/fidl",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
@@ -66,9 +66,9 @@ test("ti-lp8556-test") {
   ]
   deps = [
     ":ti-lp8556-bind",
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
-    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_cpp_wire",
     "//sdk/lib/fidl",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/lib/device-protocol-pdev",

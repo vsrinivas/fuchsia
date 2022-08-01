@@ -22,7 +22,7 @@ sdk_shared_library("svc") {
   public_deps = [ "//zircon/system/ulib/async" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
   ]

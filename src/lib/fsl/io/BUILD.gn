@@ -22,7 +22,7 @@ source_set("io") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fit",
     "//src/lib/files",
     "//src/lib/fxl:common",

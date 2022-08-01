@@ -28,7 +28,7 @@ source_set("perf-mon") {
 
   deps = [
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_llcpp",
+    "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_cpp_wire",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",
   ]
@@ -58,7 +58,7 @@ fuchsia_driver("cpu-trace-driver") {
     ":cpu_trace_bind",
     ":perf-mon",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.cpu.insntrace:fuchsia.hardware.cpu.insntrace_llcpp",
+    "//sdk/fidl/fuchsia.hardware.cpu.insntrace:fuchsia.hardware.cpu.insntrace_cpp_wire",
     "//sdk/lib/fidl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -90,7 +90,7 @@ test("perf-mon-tests-bin") {
   sources = [ "tests/perf-mon-tests.cc" ]
   deps = [
     ":perf-mon",
-    "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_llcpp",
+    "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/devices/lib/driver",

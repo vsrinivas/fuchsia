@@ -16,8 +16,8 @@ executable("aml-thermistor-test-bin") {
   ]
   deps = [
     "../:aml-thermistor-bind",
-    "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_llcpp",
-    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
+    "//sdk/fidl/fuchsia.hardware.adc:fuchsia.hardware.adc_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_cpp_wire",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",

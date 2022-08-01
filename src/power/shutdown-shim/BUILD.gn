@@ -8,10 +8,10 @@ executable("shutdown-shim") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_llcpp",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",

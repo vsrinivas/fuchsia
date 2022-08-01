@@ -98,8 +98,8 @@ test("factory_reset_unittests") {
 
   deps = [
     ":lib",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/fxl/test:gtest_main",

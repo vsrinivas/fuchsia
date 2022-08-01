@@ -7,7 +7,7 @@ executable("usb-fwloader") {
   sources = [ "usb-fwloader.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_c",

@@ -87,7 +87,7 @@ if (target_cpu == "arm64") {
       ":sources",
       ":test_sources",
       ":test_support",
-      "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
+      "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_cpp_wire",
       "//sdk/lib/fdio",
       "//sdk/lib/syslog/cpp:backend",
     ]
@@ -182,7 +182,7 @@ if (target_cpu == "arm64") {
       "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.tee:fuchsia.hardware.tee_banjo_cpp",
-      "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
+      "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_cpp_wire",
       "//sdk/fidl/fuchsia.tee",
       "//sdk/lib/fit",
       "//sdk/lib/fit-promise",

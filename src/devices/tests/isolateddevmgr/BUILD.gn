@@ -22,7 +22,7 @@ fuchsia_driver("isolateddevmgr-test-driver-driver") {
   output_name = "isolateddevmgr-test-driver"
   sources = [ "test-driver.cc" ]
   deps = [
-    ":fuchsia.device.manager.test_llcpp",
+    ":fuchsia.device.manager.test_cpp_wire",
     ":metadata-test-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",

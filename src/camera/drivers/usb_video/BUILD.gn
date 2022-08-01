@@ -50,7 +50,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/fidl/fuchsia.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_llcpp",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_cpp_wire",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",

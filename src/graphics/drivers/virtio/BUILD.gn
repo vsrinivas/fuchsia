@@ -28,7 +28,7 @@ source_set("gpu_lib") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//src/devices/bus/lib/virtio",
     "//src/lib/ddktl",
     "//zircon/system/ulib/image-format",
@@ -78,7 +78,7 @@ test("virtio-gpu-test") {
   sources = [ "gpu_test.cc" ]
   deps = [
     ":gpu_lib",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp_testing",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire_testing",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
