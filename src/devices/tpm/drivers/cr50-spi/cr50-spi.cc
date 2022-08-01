@@ -5,7 +5,6 @@
 #include "src/devices/tpm/drivers/cr50-spi/cr50-spi.h"
 
 #include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
-#include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -36,13 +35,13 @@ zx_status_t Cr50SpiDevice::Create(void *ctx, zx_device_t *parent) {
     return endpoints.error_value();
   }
 
-  ddk::SpiProtocolClient spi(parent, "spi000");
-  if (!spi.is_valid()) {
-    zxlogf(ERROR, "Could not find SPI fragment");
-    return ZX_ERR_NOT_FOUND;
+  zx_status_t status = device_connect_fragment_fidl_protocol(
+      parent, "spi000", fidl::DiscoverableProtocolName<fuchsia_hardware_spi::Device>,
+      endpoints->server.TakeChannel().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not connect to SPI FIDL protocol: %s", zx_status_get_string(status));
+    return status;
   }
-
-  spi.ConnectServer(endpoints->server.TakeChannel());
 
   fidl::WireSyncClient<fuchsia_hardware_spi::Device> client(std::move(endpoints->client));
   auto dev = std::make_unique<Cr50SpiDevice>(parent, std::move(acpi.value()), std::move(client));

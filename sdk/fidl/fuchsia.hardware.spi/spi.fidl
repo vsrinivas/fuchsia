@@ -7,6 +7,7 @@ using fuchsia.hardware.sharedmemory;
 using zx;
 
 const MAX_TRANSFER_SIZE uint32 = 8196; // arbitrary - to be removed
+@discoverable
 protocol Device {
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     TransmitVector(struct {

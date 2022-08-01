@@ -34,7 +34,7 @@ class SpiDevice : public SpiDeviceType {
   void ConnectServer(zx::channel server, fbl::RefPtr<SpiChild> child);
 
  private:
-  void AddChildren(const ddk::SpiImplProtocolClient& spi);
+  void AddChildren(const ddk::SpiImplProtocolClient& spi, async_dispatcher_t* dispatcher);
   void Shutdown();
 
   fbl::Mutex lock_;

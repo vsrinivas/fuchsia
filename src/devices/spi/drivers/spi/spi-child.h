@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
@@ -78,6 +79,54 @@ class SpiChild : public SpiChildType,
   fbl::Mutex lock_;
   bool connected_ TA_GUARDED(lock_) = false;
   bool shutdown_ = false;
+};
+
+class SpiFidlChild;
+using SpiFidlChildType =
+    ddk::Device<SpiFidlChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin,
+                ddk::Unbindable>;
+
+// An SPI child device that serves the fuchsia.hardware.spi/Device FIDL
+// protocol. Note that while SpiChild also serves this protocol, it does not
+// expose it in its outgoing directory for its children to use, while
+// SpiFidlChild does. Otherwise, it simply delegates all its FIDL methods to
+// SpiChild.
+class SpiFidlChild : public SpiFidlChildType {
+ public:
+  SpiFidlChild(zx_device_t* parent, SpiChild* spi, async_dispatcher_t* dispatcher)
+      : SpiFidlChildType(parent),
+        spi_(spi),
+        outgoing_(component::OutgoingDirectory::Create(dispatcher)) {}
+
+  void DdkUnbind(ddk::UnbindTxn txn);
+  void DdkRelease() { delete this; }
+
+  void TransmitVector(TransmitVectorRequestView request,
+                      TransmitVectorCompleter::Sync& completer) override;
+  void ReceiveVector(ReceiveVectorRequestView request,
+                     ReceiveVectorCompleter::Sync& completer) override;
+  void ExchangeVector(ExchangeVectorRequestView request,
+                      ExchangeVectorCompleter::Sync& completer) override;
+
+  void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
+  void UnregisterVmo(UnregisterVmoRequestView request,
+                     UnregisterVmoCompleter::Sync& completer) override;
+
+  void Transmit(TransmitRequestView request, TransmitCompleter::Sync& completer) override;
+  void Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) override;
+  void Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) override;
+
+  void CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) override;
+  void AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) override;
+  void DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) override;
+
+  zx_status_t SetUpOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> server_end);
+
+ private:
+  // SpiChild is the parent of SpiFidlChild so it is guaranteed to outlive it,
+  // and this pointer will always remain valid.
+  SpiChild* spi_;
+  component::OutgoingDirectory outgoing_;
 };
 
 }  // namespace spi

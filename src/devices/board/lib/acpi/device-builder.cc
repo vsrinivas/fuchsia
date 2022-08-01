@@ -386,7 +386,7 @@ std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForChild(size_t c
       // No Banjo protocol needed for I2C.
       break;
     case BusType::kSpi:
-      ret.push_back(BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SPI));
+      ret.push_back(BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_SPI));
       break;
     case BusType::kUnknown:
       ZX_ASSERT(bus_type_ != BusType::kUnknown);

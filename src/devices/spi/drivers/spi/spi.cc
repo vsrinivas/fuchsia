@@ -59,14 +59,16 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  device->AddChildren(spi);
+  async_dispatcher_t* dispatcher =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  device->AddChildren(spi, dispatcher);
 
   __UNUSED auto* dummy = device.release();
 
   return ZX_OK;
 }
 
-void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
+void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi, async_dispatcher_t* dispatcher) {
   auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
       parent(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
@@ -104,6 +106,10 @@ void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
 
     char name[20];
     snprintf(name, sizeof(name), "spi-%u-%u", bus_id, cs);
+
+    char fidl_name[25];
+    snprintf(fidl_name, sizeof(fidl_name), "spi-fidl-%u-%u", bus_id, cs);
+
     zx_status_t status;
     if (vid || pid || did) {
       zx_device_prop_t props[] = {
@@ -123,9 +129,40 @@ void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "DdkAdd failed %d", status);
+      zxlogf(ERROR, "DdkAdd failed for Banjo device: %s", zx_status_get_string(status));
       return;
     }
+
+    auto fidl_dev = std::make_unique<SpiFidlChild>(dev->zxdev(), dev.get(), dispatcher);
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      zxlogf(ERROR, "could not create fuchsia.io endpoints: %s", endpoints.status_string());
+      return;
+    }
+
+    status = fidl_dev->SetUpOutgoingDirectory(std::move(endpoints->server));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "could not set up outgoing directory: %s", zx_status_get_string(status));
+      return;
+    }
+
+    std::array offers = {
+        fidl::DiscoverableProtocolName<fuchsia_hardware_spi::Device>,
+    };
+
+    status = fidl_dev->DdkAdd(ddk::DeviceAddArgs(fidl_name)
+                                  .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                                  .set_fidl_protocol_offers(offers)
+                                  .set_outgoing_dir(endpoints->client.TakeChannel()));
+
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "DdkAdd failed for FIDL device: %s", zx_status_get_string(status));
+      return;
+    }
+
+    // Owned by the framework now.
+    __UNUSED auto ptr = fidl_dev.release();
 
     dev->AddRef();  // DdkAdd succeeded -- increment the counter now that the DDK has a reference.
 

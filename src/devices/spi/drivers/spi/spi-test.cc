@@ -195,7 +195,7 @@ class FakeDdkSpiImpl : public ddk::SpiImplProtocol<FakeDdkSpiImpl, ddk::base_pro
 
 class SpiDeviceTest : public zxtest::Test {
  public:
-  SpiDeviceTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
+  SpiDeviceTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
     parent_ = MockDevice::FakeRootParent();

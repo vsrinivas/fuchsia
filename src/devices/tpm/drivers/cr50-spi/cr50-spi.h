@@ -6,7 +6,6 @@
 
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
-#include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/tpmimpl/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>

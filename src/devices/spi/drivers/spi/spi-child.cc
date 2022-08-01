@@ -242,4 +242,67 @@ zx_status_t SpiChild::DdkClose(uint32_t flags) {
   return ZX_OK;
 }
 
+void SpiFidlChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+
+void SpiFidlChild::TransmitVector(TransmitVectorRequestView request,
+                                  TransmitVectorCompleter::Sync& completer) {
+  spi_->TransmitVector(request, completer);
+}
+
+void SpiFidlChild::ReceiveVector(ReceiveVectorRequestView request,
+                                 ReceiveVectorCompleter::Sync& completer) {
+  spi_->ReceiveVector(request, completer);
+}
+
+void SpiFidlChild::ExchangeVector(ExchangeVectorRequestView request,
+                                  ExchangeVectorCompleter::Sync& completer) {
+  spi_->ExchangeVector(request, completer);
+}
+
+void SpiFidlChild::RegisterVmo(RegisterVmoRequestView request,
+                               RegisterVmoCompleter::Sync& completer) {
+  spi_->RegisterVmo(request, completer);
+}
+
+void SpiFidlChild::UnregisterVmo(UnregisterVmoRequestView request,
+                                 UnregisterVmoCompleter::Sync& completer) {
+  spi_->UnregisterVmo(request, completer);
+}
+
+void SpiFidlChild::Transmit(TransmitRequestView request, TransmitCompleter::Sync& completer) {
+  spi_->Transmit(request, completer);
+}
+
+void SpiFidlChild::Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) {
+  spi_->Receive(request, completer);
+}
+
+void SpiFidlChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) {
+  spi_->Exchange(request, completer);
+}
+
+void SpiFidlChild::CanAssertCs(CanAssertCsRequestView request,
+                               CanAssertCsCompleter::Sync& completer) {
+  spi_->CanAssertCs(request, completer);
+}
+
+void SpiFidlChild::AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) {
+  spi_->AssertCs(request, completer);
+}
+
+void SpiFidlChild::DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) {
+  spi_->DeassertCs(request, completer);
+}
+
+zx_status_t SpiFidlChild::SetUpOutgoingDirectory(
+    fidl::ServerEnd<fuchsia_io::Directory> server_end) {
+  zx::status status =
+      outgoing_.AddProtocol(this, fidl::DiscoverableProtocolName<fuchsia_hardware_spi::Device>);
+  if (status.is_error()) {
+    return status.status_value();
+  }
+
+  return outgoing_.Serve(std::move(server_end)).status_value();
+}
+
 }  // namespace spi
