@@ -61,9 +61,11 @@ to your `fx set` invocation:
    Note: Replace `workstation.x64` with your preferred product and board configuration.
 
    ```
-   fx set workstation_eng.x64
-   --with //examples/diagnostics/inspect/codelab/dart \
-   --with //examples/diagnostics/inspect/codelab/dart:tests
+   fx set core.x64
+       --with //examples/diagnostics/inspect/codelab/dart \
+       --with //examples/diagnostics/inspect/codelab/dart:tests \
+       --with-base //src/dart \
+       --args='core_realm_shards += [ "//src/dart:dart_runner_core_shard" ]'
    ```
 
 ## Part 1: A buggy component
@@ -107,8 +109,7 @@ command line arguments as strings to Reverse:
    * {Dart}
 
       ```
-      ffx component create /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
-      ffx component start /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
       ```
 
 2. Run part 1 code, and reverse the string "Hello"
@@ -157,10 +158,7 @@ command line arguments as strings to Reverse:
       [client main][dart-client-main].
 
       ```
-      ffx component destroy /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
-      ffx component create /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
-      ffx component start /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
-      ffx log --tags inspect_dart_codelab
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ```
 
       To see the command output take a look at the logs:
@@ -234,9 +232,7 @@ command line arguments as strings to Reverse:
       Build and run the following:
 
       ```
-      ffx component destroy /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
-      ffx component create /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
-      ffx component start /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ```
 
    We can see that the component printed the first input, but we don't see the
@@ -569,9 +565,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      ffx component destroy /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
-      ffx component create /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
-      ffx component start /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ffx log --tags inspect_dart_codelab
       ```
 
@@ -986,9 +980,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```
-      ffx component destroy /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
-      ffx component create /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
-      ffx component start /core/session-manager/session:session/workstation_session/ffx-laboratory:part_1
+      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ffx log --tags inspect_dart_codelab
       [00039.129068][39163][39165][inspect_rust_codelab, client] INFO: Input: Hello
       [00039.194151][39163][39165][inspect_rust_codelab, client] INFO: Output: olleH
@@ -1078,9 +1070,7 @@ You will need to diagnose and solve this problem.
    * {Dart}
 
       ```
-      $ ffx component destroy /core/session-manager/session:session/workstation_session/ffx-laboratory:part_2
-      $ ffx component create /core/session-manager/session:session/workstation_session/ffx-laboratory:part_2 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
-      $ ffx component start /core/session-manager/session:session/workstation_session/ffx-laboratory:part_2
+      ffx component run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
       ```
 
    Fortunately the FizzBuzz team instrumented their component using Inspect.
