@@ -290,9 +290,6 @@ class VmObject : public VmHierarchyBase,
   // VMOs).
   virtual void mark_modified_locked() TA_REQ(lock_) {}
 
-  // Returns true if the vmo is a hidden paged vmo.
-  virtual bool is_hidden() const { return false; }
-
   // Returns the number of physical pages currently attributed to the
   // object where (offset <= page_offset < offset+len).
   // |offset| and |len| are in bytes.
