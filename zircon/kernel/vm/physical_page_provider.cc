@@ -285,9 +285,8 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
     // We want to use VmCowPages::SupplyPages() to avoid a proliferation of VmCowPages code that
     // calls OnPagesSupplied() / OnPagesFailed(), so to call SupplyPages() we need a
     // VmPageSpliceList.  We put all the pages in the "head" portion of the VmPageSpliceList since
-    // there are no VmPageListNode(s) involved in this path.  We also zero the pages here, and mark
-    // the pages as being in OBJECT state, since SupplyPages() doesn't do that (alternately we
-    // could create a wrapper of SupplyPages() that does those things, but this works for now.)
+    // there are no VmPageListNode(s) involved in this path.  We also zero the pages here, since
+    // SupplyPages() doesn't do that.
     //
     // We can zero the pages before we supply them, which avoids holding the VmCowPages::lock_ while
     // zeroing, and also allows us to flush the zeroes to RAM here just in case any client is
@@ -302,6 +301,8 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
     }
     auto splice_list =
         VmPageSpliceList::CreateFromPageList(request_offset, request_length, &pages_in_transit);
+    // The pages have now been moved to splice_list and pages_in_transit should be empty.
+    DEBUG_ASSERT(list_is_empty(&pages_in_transit));
     zx_status_t supply_result = cow_pages_->SupplyPages(request_offset, request_length,
                                                         &splice_list, /*new_zeroed_pages=*/true);
     if (supply_result != ZX_OK) {
@@ -309,8 +310,16 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
       DEBUG_ASSERT(PageSource::IsValidInternalFailureCode(supply_result));
       // Since supplying pages didn't work, give up on this whole request and fail the whole range.
       // This also fails any current requests that overlap any part of this range.  Any page that
-      // wasn't consumed by SupplyNonZeroedPhysicalPages() can be re-loaned to keep the invariant
-      // that absent pages in cow_pages_ are loaned.
+      // wasn't consumed by SupplyPages() can be re-loaned to keep the invariant that absent pages
+      // in cow_pages_ are loaned.
+      while (!splice_list.IsDone()) {
+        VmPageOrMarker page_or_marker = splice_list.Pop();
+        DEBUG_ASSERT(page_or_marker.IsPage());
+        vm_page_t* p = page_or_marker.ReleasePage();
+        DEBUG_ASSERT(!list_in_list(&p->queue_node));
+        // Add the page back to pages_in_transit, which was empty before we entered this loop.
+        list_add_tail(&pages_in_transit, &p->queue_node);
+      }
       pmm_begin_loan(&pages_in_transit);
       page_source_->OnPagesFailed(request_offset, request_length, supply_result);
       // next request
