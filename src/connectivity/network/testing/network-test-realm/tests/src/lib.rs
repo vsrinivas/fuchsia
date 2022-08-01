@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use anyhow::Result;
 use component_events::events::Event as _;
@@ -330,7 +330,11 @@ where
     add_interface_to_devfs::<E>(interface_name, interface.endpoint(), &realm).await;
 
     network_test_realm
-        .add_interface(&mut mac_address.clone(), interface_name)
+        .add_interface(
+            &mut mac_address.clone(),
+            interface_name,
+            /* wait_any_ip_address= */ false,
+        )
         .await
         .expect("add_interface failed")
         .expect("add_interface error");
@@ -382,7 +386,11 @@ async fn start_hermetic_network_realm_replaces_existing_realm<E: netemul::Endpoi
     .await;
 
     network_test_realm
-        .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), EXPECTED_INTERFACE_NAME)
+        .add_interface(
+            &mut INTERFACE1_MAC_ADDRESS.clone(),
+            EXPECTED_INTERFACE_NAME,
+            /* wait_any_ip_address= */ false,
+        )
         .await
         .expect("add_interface failed")
         .expect("add_interface error");
@@ -417,9 +425,16 @@ async fn start_hermetic_network_realm_replaces_existing_realm<E: netemul::Endpoi
 }
 
 #[variants_test]
-async fn add_interface<E: netemul::Endpoint>(name: &str) {
+#[test_case("no_wait_any_ip_address", false)]
+#[test_case("wait_any_ip_address", true)]
+async fn add_interface<E: netemul::Endpoint>(
+    name: &str,
+    sub_name: &str,
+    wait_any_ip_address: bool,
+) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = create_netstack_realm(name, &sandbox).expect("failed to create netstack realm");
+    let realm = create_netstack_realm(format!("{}_{}", name, sub_name), &sandbox)
+        .expect("failed to create netstack realm");
 
     let network_test_realm = realm
         .connect_to_protocol::<fntr::ControllerMarker>()
@@ -447,11 +462,40 @@ async fn add_interface<E: netemul::Endpoint>(name: &str) {
     )
     .await;
 
+    let hermetic_network_state_proxy =
+        connect_to_hermetic_network_realm_protocol::<fnet_interfaces::StateMarker>(&realm).await;
+
     network_test_realm
-        .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), EXPECTED_INTERFACE_NAME)
+        .add_interface(
+            &mut INTERFACE1_MAC_ADDRESS.clone(),
+            EXPECTED_INTERFACE_NAME,
+            wait_any_ip_address,
+        )
         .await
         .expect("add_interface failed")
         .expect("add_interface error");
+
+    if wait_any_ip_address {
+        let ifaces_state = fnet_interfaces_ext::existing(
+            fnet_interfaces_ext::event_stream_from_state(&hermetic_network_state_proxy)
+                .expect("failed getting interfaces event stream"),
+            HashMap::new(),
+        )
+        .await
+        .expect("failed getting existing interfaces state");
+
+        let iface = ifaces_state
+            .values()
+            .find(|iface| iface.name == EXPECTED_INTERFACE_NAME)
+            .expect(&format!("no interface with name {}", EXPECTED_INTERFACE_NAME));
+
+        assert!(
+            !iface.addresses.is_empty(),
+            "interface {:?} has no IP addresses; expected to have waited for autoconfigured IP \
+             address",
+            iface
+        );
+    }
 
     let system_state_proxy = realm
         .connect_to_protocol::<fnet_interfaces::StateMarker>()
@@ -465,9 +509,6 @@ async fn add_interface<E: netemul::Endpoint>(name: &str) {
         &system_state_proxy,
     )
     .await;
-
-    let hermetic_network_state_proxy =
-        connect_to_hermetic_network_realm_protocol::<fnet_interfaces::StateMarker>(&realm).await;
 
     // An interface with a name of `EXPECTED_INTERFACE_NAME` should be enabled and
     // present in the hermetic Netstack.
@@ -511,14 +552,22 @@ async fn add_interface_already_exists<E: netemul::Endpoint>(name: &str) {
     .await;
 
     network_test_realm
-        .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), INTERFACE1_NAME)
+        .add_interface(
+            &mut INTERFACE1_MAC_ADDRESS.clone(),
+            INTERFACE1_NAME,
+            /* wait_any_ip_address= */ false,
+        )
         .await
         .expect("add_interface failed")
         .expect("add_interface error");
 
     assert_eq!(
         network_test_realm
-            .add_interface(&mut INTERFACE2_MAC_ADDRESS.clone(), INTERFACE1_NAME)
+            .add_interface(
+                &mut INTERFACE2_MAC_ADDRESS.clone(),
+                INTERFACE1_NAME,
+                /* wait_any_ip_address= */ false
+            )
             .await
             .expect("add_interface failed"),
         Err(fntr::Error::AlreadyExists)
@@ -555,7 +604,11 @@ async fn add_interface_with_no_matching_interface<E: netemul::Endpoint>(name: &s
     let mut non_matching_mac_address = fidl_mac!("aa:bb:cc:dd:ee:ff");
     assert_eq!(
         network_test_realm
-            .add_interface(&mut non_matching_mac_address, EXPECTED_INTERFACE_NAME)
+            .add_interface(
+                &mut non_matching_mac_address,
+                EXPECTED_INTERFACE_NAME,
+                /* wait_any_ip_address= */ false
+            )
             .await
             .expect("failed to add interface to hermetic netstack"),
         Err(fntr::Error::InterfaceNotFound)
@@ -588,7 +641,11 @@ async fn add_interface_with_no_matching_interface_in_devfs<E: netemul::Endpoint>
     // the system's Netstack.
     assert_eq!(
         network_test_realm
-            .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), EXPECTED_INTERFACE_NAME)
+            .add_interface(
+                &mut INTERFACE1_MAC_ADDRESS.clone(),
+                EXPECTED_INTERFACE_NAME,
+                /* wait_any_ip_address= */ false
+            )
             .await
             .expect("failed to add interface to hermetic netstack"),
         Err(fntr::Error::InterfaceNotFound)
@@ -626,7 +683,11 @@ async fn add_interface_with_no_matching_interface_in_netstack<E: netemul::Endpoi
     // devfs.
     assert_eq!(
         network_test_realm
-            .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), EXPECTED_INTERFACE_NAME)
+            .add_interface(
+                &mut INTERFACE1_MAC_ADDRESS.clone(),
+                EXPECTED_INTERFACE_NAME,
+                /* wait_any_ip_address= */ false
+            )
             .await
             .expect("failed to add interface to hermetic netstack"),
         Err(fntr::Error::InterfaceNotFound)
@@ -657,7 +718,11 @@ async fn stop_hermetic_network_realm<E: netemul::Endpoint>(name: &str) {
     .await;
 
     network_test_realm
-        .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), EXPECTED_INTERFACE_NAME)
+        .add_interface(
+            &mut INTERFACE1_MAC_ADDRESS.clone(),
+            EXPECTED_INTERFACE_NAME,
+            /* wait_any_ip_address= */ false,
+        )
         .await
         .expect("add_interface failed")
         .expect("add_interface error");
@@ -1247,7 +1312,11 @@ async fn ping<E: netemul::Endpoint>(
         .expect("start_hermetic_network_realm error");
 
     network_test_realm
-        .add_interface(&mut INTERFACE1_MAC_ADDRESS.clone(), INTERFACE1_NAME)
+        .add_interface(
+            &mut INTERFACE1_MAC_ADDRESS.clone(),
+            INTERFACE1_NAME,
+            /* wait_any_ip_address= */ false,
+        )
         .await
         .expect("add_interface failed")
         .expect("add_interface error");

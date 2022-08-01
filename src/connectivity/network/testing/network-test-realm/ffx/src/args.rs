@@ -83,6 +83,12 @@ pub struct AddInterface {
     #[argh(positional)]
     /// the name to assign to the new interface.
     pub name: String,
+
+    #[argh(switch)]
+    /// whether to wait for any IP address to be assigned to the interface before returning. This is
+    /// helpful for tests that want to ensure the autoconfigured IP address is assigned and has
+    /// completed duplicate address detection before proceeding.
+    pub wait_any_ip_address: bool,
 }
 
 #[derive(argh::FromArgs, Debug, PartialEq)]

@@ -97,6 +97,10 @@ protocol Controller {
     /// + request `mac_address` address of the interface to be added to the
     ///     hermetic Netstack.
     /// + request `name` the name to assign to the new interface.
+    /// + request `wait_any_ip_address` whether to wait for any IP address to be
+    ///     assigned to the interface before returning. This is helpful for
+    ///     tests that want to ensure the autoconfigured IP address is assigned
+    ///     and has completed duplicate address detection before proceeding.
     /// * error `ALREADY_EXISTS` if an interface with `name` already exists on
     ///     the hermetic Netstack.
     /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
@@ -108,6 +112,7 @@ protocol Controller {
     AddInterface(struct {
         mac_address fuchsia.net.MacAddress;
         name fuchsia.net.interfaces.name;
+        wait_any_ip_address bool;
     }) -> (struct {}) error Error;
 
     /// Starts a test stub.

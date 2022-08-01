@@ -53,9 +53,14 @@ async fn handle_command(
     command: ntr_args::Subcommand,
 ) -> anyhow::Result<()> {
     let (result, method_name) = match command {
-        ntr_args::Subcommand::AddInterface(ntr_args::AddInterface { mac_address, name }) => {
-            (controller.add_interface(&mut mac_address.into(), &name).await, "add_interface")
-        }
+        ntr_args::Subcommand::AddInterface(ntr_args::AddInterface {
+            mac_address,
+            name,
+            wait_any_ip_address,
+        }) => (
+            controller.add_interface(&mut mac_address.into(), &name, wait_any_ip_address).await,
+            "add_interface",
+        ),
         ntr_args::Subcommand::JoinMulticastGroup(ntr_args::JoinMulticastGroup {
             address,
             interface_id,
@@ -177,12 +182,14 @@ mod test {
             ntr_args::Subcommand::AddInterface(ntr_args::AddInterface {
                 mac_address: MAC_ADDRESS.into(),
                 name: INTERFACE_NAME.to_string(),
+                wait_any_ip_address: false,
             }),
             |request| {
-                let (mac_address, name, responder) =
+                let (mac_address, name, wait_ip_address, responder) =
                     request.into_add_interface().expect("expected request of type AddInterface");
                 assert_eq!(MAC_ADDRESS, mac_address);
                 assert_eq!(INTERFACE_NAME.to_string(), name);
+                assert_eq!(wait_ip_address, false);
                 responder.send(&mut Ok(())).expect("failed to send AddInterface response");
             },
         )

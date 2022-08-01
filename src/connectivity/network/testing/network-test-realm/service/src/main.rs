@@ -23,7 +23,7 @@ use fuchsia_async::{self as fasync, TimeoutExt as _};
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use futures_lite::FutureExt as _;
-use log::{error, warn};
+use log::{error, info, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom as _;
 use std::path;
@@ -172,6 +172,7 @@ async fn install_netdevice(
     name: &str,
     mut port_id: fhwnet::PortId,
     device_proxy: fhwnet::DeviceProxy,
+    wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<(), fntr::Error> {
     let installer = connector.connect_to_protocol::<fnet_interfaces_admin::InstallerMarker>()?;
@@ -247,6 +248,17 @@ async fn install_netdevice(
             fntr::Error::Internal
         })?;
 
+    if wait_any_ip_address {
+        wait_for_any_ip_address(
+            control.get_id().await.map_err(|e| {
+                error!("error getting ID of added interface: {:?}", e);
+                fntr::Error::Internal
+            })?,
+            connector,
+        )
+        .await?;
+    }
+
     // Extend the lifetime of the created interface beyond that of the `control`
     // and `device_control` types. Note that the lifetime of the created
     // interface is tied to the hermetic Netstack. That is, the interface will
@@ -269,6 +281,7 @@ async fn install_netdevice(
 async fn try_install_netdevice(
     name: &str,
     expected_mac_address: fnet_ext::MacAddress,
+    wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<bool, fntr::Error> {
     const NETDEV_DIRECTORY_PATH: &'static str = "/dev/class/network";
@@ -298,7 +311,7 @@ async fn try_install_netdevice(
 
     match results.next().await {
         Some((port_id, device_proxy)) => {
-            install_netdevice(name, port_id, device_proxy, connector).await?;
+            install_netdevice(name, port_id, device_proxy, wait_any_ip_address, connector).await?;
             Ok(true)
         }
         None => Ok(false),
@@ -310,6 +323,7 @@ async fn try_install_netdevice(
 async fn install_eth_device(
     name: &str,
     device_proxy: fethernet::DeviceProxy,
+    wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<(), fntr::Error> {
     let device_client_end = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(
@@ -352,7 +366,12 @@ async fn install_eth_device(
 
     // Enable the interface that was newly added to the hermetic Netstack.
     // It is not enabled by default.
-    enable_interface(id.into(), connector).await
+    enable_interface(id.into(), connector).await?;
+
+    if wait_any_ip_address {
+        wait_for_any_ip_address(id.into(), connector).await?;
+    }
+    Ok(())
 }
 
 /// Attempts to install an ethernet device on the hermetic Netstack.
@@ -363,6 +382,7 @@ async fn install_eth_device(
 async fn try_install_eth_device(
     name: &str,
     expected_mac_address: fnet_ext::MacAddress,
+    wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<bool, fntr::Error> {
     const ETHERNET_DIRECTORY_PATH: &'static str = "/dev/class/ethernet";
@@ -382,11 +402,34 @@ async fn try_install_eth_device(
 
     match results.next().await {
         Some(device_proxy) => {
-            install_eth_device(name, device_proxy, connector).await?;
+            install_eth_device(name, device_proxy, wait_any_ip_address, connector).await?;
             Ok(true)
         }
         None => Ok(false),
     }
+}
+
+async fn wait_for_any_ip_address(
+    id: u64,
+    connector: &HermeticNetworkConnector,
+) -> Result<(), fntr::Error> {
+    let state_proxy = connector.connect_to_protocol::<fnet_interfaces::StateMarker>()?;
+    let stream = fnet_interfaces_ext::event_stream_from_state(&state_proxy).map_err(|e| {
+        error!("failed to read interface stream: {:?}", e);
+        fntr::Error::Internal
+    })?;
+    let addr = fnet_interfaces_ext::wait_interface_with_id(
+        stream,
+        &mut fnet_interfaces_ext::InterfaceState::Unknown(id),
+        |properties| properties.addresses.iter().next().cloned(),
+    )
+    .await
+    .map_err(|e| {
+        error!("error while waiting for autoconf IP address: {:?}", e);
+        fntr::Error::Internal
+    })?;
+    info!("finished waiting for autoconf IP address once we saw {:?}", addr);
+    Ok(())
 }
 
 /// Adds an interface with the provided `name` to the hermetic Netstack.
@@ -397,14 +440,15 @@ async fn try_install_eth_device(
 async fn install_interface(
     name: &str,
     mac_address: fnet_ext::MacAddress,
+    wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<(), fntr::Error> {
     // TODO(https://fxbug.dev/89648): Replace this with fuchsia.net.debug, which
     // should ideally provide direct access to the matching interface. As an
     // intermediate solution, interfaces are read directly from devfs (for
     // ethernet and netdevice).
-    (try_install_eth_device(name, mac_address, connector).await?
-        || try_install_netdevice(name, mac_address, connector).await?)
+    (try_install_eth_device(name, mac_address, wait_any_ip_address, connector).await?
+        || try_install_netdevice(name, mac_address, wait_any_ip_address, connector).await?)
         .then(|| ())
         .ok_or(fntr::Error::InterfaceNotFound)
 }
@@ -966,9 +1010,14 @@ impl Controller {
                 let mut result = self.stop_hermetic_network_realm().await;
                 responder.send(&mut result)?;
             }
-            fntr::ControllerRequest::AddInterface { mac_address, name, responder } => {
+            fntr::ControllerRequest::AddInterface {
+                mac_address,
+                name,
+                responder,
+                wait_any_ip_address,
+            } => {
                 let mac_address = fnet_ext::MacAddress::from(mac_address);
-                let mut result = self.add_interface(mac_address, &name).await;
+                let mut result = self.add_interface(mac_address, &name, wait_any_ip_address).await;
                 responder.send(&mut result)?;
             }
             fntr::ControllerRequest::StartStub { component_url, responder } => {
@@ -1331,6 +1380,7 @@ impl Controller {
         &mut self,
         mac_address: fnet_ext::MacAddress,
         name: &str,
+        wait_any_ip_address: bool,
     ) -> Result<(), fntr::Error> {
         // A hermetic Netstack must be running for an interface to be
         // added.
@@ -1340,7 +1390,8 @@ impl Controller {
             .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
 
         let interface_id_to_disable = find_enabled_interface_id(mac_address).await?;
-        install_interface(name, mac_address, hermetic_network_connector).await?;
+        install_interface(name, mac_address, wait_any_ip_address, hermetic_network_connector)
+            .await?;
 
         if let Some(interface_id_to_disable) = interface_id_to_disable {
             // Disable the matching interface on the system's Netstack.
