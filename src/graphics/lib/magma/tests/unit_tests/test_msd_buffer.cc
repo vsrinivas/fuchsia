@@ -98,10 +98,10 @@ TEST(MsdBuffer, Map) {
   constexpr uint64_t kGpuAddress = (1ull << 31) / 2;  // Centered in 31 bit space
 
   EXPECT_EQ(MAGMA_STATUS_OK,
-            msd_connection_map_buffer_gpu(test.connection(), buffer, kGpuAddress,
-                                          0,                   // page offset
-                                          kBufferSizeInPages,  // page count
-                                          MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
+            msd_connection_map_buffer(test.connection(), buffer, kGpuAddress,
+                                      0,                                 // page offset
+                                      kBufferSizeInPages * page_size(),  // page count
+                                      MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
 
   msd_buffer_destroy(buffer);
 }
@@ -145,11 +145,11 @@ TEST(MsdBuffer, MapAndUnmap) {
   // Mapping should keep alive the msd buffer.
   for (uint32_t i = 0; i < gpu_addr.size(); i++) {
     EXPECT_EQ(MAGMA_STATUS_OK,
-              msd_connection_map_buffer_gpu(connection, buffer,
-                                            gpu_addr[i],         // gpu addr
-                                            0,                   // page offset
-                                            kBufferSizeInPages,  // page count
-                                            MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
+              msd_connection_map_buffer(connection, buffer,
+                                        gpu_addr[i],                       // gpu addr
+                                        0,                                 // page offset
+                                        kBufferSizeInPages * page_size(),  // page count
+                                        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
   }
 
   // Verify we haven't lost any handles.
@@ -157,13 +157,12 @@ TEST(MsdBuffer, MapAndUnmap) {
   EXPECT_GE(2u, handle_count);
 
   // Try to unmap a region that doesn't exist.
-  EXPECT_NE(MAGMA_STATUS_OK,
-            msd_connection_unmap_buffer_gpu(connection, buffer, page_size() * 2048));
+  EXPECT_NE(MAGMA_STATUS_OK, msd_connection_unmap_buffer(connection, buffer, page_size() * 2048));
 
   // Unmap the valid regions.
   magma_status_t status;
   for (uint32_t i = 0; i < gpu_addr.size(); i++) {
-    status = msd_connection_unmap_buffer_gpu(connection, buffer, gpu_addr[i]);
+    status = msd_connection_unmap_buffer(connection, buffer, gpu_addr[i]);
     EXPECT_TRUE(status == MAGMA_STATUS_UNIMPLEMENTED || status == MAGMA_STATUS_OK);
   }
 
@@ -175,11 +174,11 @@ TEST(MsdBuffer, MapAndUnmap) {
   // Mapping should keep alive the msd buffer.
   for (uint32_t i = 0; i < gpu_addr.size(); i++) {
     EXPECT_EQ(MAGMA_STATUS_OK,
-              msd_connection_map_buffer_gpu(connection, buffer,
-                                            gpu_addr[i],         // gpu addr
-                                            0,                   // page offset
-                                            kBufferSizeInPages,  // page count
-                                            MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
+              msd_connection_map_buffer(connection, buffer,
+                                        gpu_addr[i],                       // gpu addr
+                                        0,                                 // page offset
+                                        kBufferSizeInPages * page_size(),  // page count
+                                        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
   }
 
   msd_buffer_destroy(buffer);
@@ -224,11 +223,11 @@ TEST(MsdBuffer, MapAndAutoUnmap) {
 
   // Mapping should keep alive the msd buffer.
   EXPECT_EQ(MAGMA_STATUS_OK,
-            msd_connection_map_buffer_gpu(connection, buffer,
-                                          0,                   // gpu addr
-                                          0,                   // page offset
-                                          kBufferSizeInPages,  // page count
-                                          MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
+            msd_connection_map_buffer(connection, buffer,
+                                      0,                                 // gpu addr
+                                      0,                                 // offset
+                                      kBufferSizeInPages * page_size(),  // length
+                                      MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE));
 
   // Verify we haven't lost any handles.
   EXPECT_TRUE(buffer_handle->GetCount(&handle_count));
@@ -260,11 +259,11 @@ TEST(MsdBuffer, MapDoesntFit) {
   ASSERT_TRUE(test.CreateBuffer(kBufferSizeInPages, &buffer));
 
   constexpr uint64_t kGpuAddressSpaceSize = 1ull << 48;
-  magma_status_t status = msd_connection_map_buffer_gpu(
+  magma_status_t status = msd_connection_map_buffer(
       test.connection(), buffer,
       kGpuAddressSpaceSize - kBufferSizeInPages / 2 * page_size(),  // gpu addr
-      0,                                                            // page offset
-      kBufferSizeInPages,                                           // page count
+      0,                                                            // offset
+      kBufferSizeInPages * page_size(),                             // length
       MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE);
   EXPECT_TRUE(status == MAGMA_STATUS_INVALID_ARGS || status == MAGMA_STATUS_INTERNAL_ERROR);
 

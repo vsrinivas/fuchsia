@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Magma is the GPU driver design for Fuchsia.
+/// Magma is the driver model for GPUs/NPUs on Fuchsia.
 ///
 /// Magma has two driver components: a hardware-specific library loaded into each application’s
 /// address space ("client driver", sometimes known as "Installable client driver" or "ICD");
 /// and the Magma system driver that interfaces with the hardware.
 /// The communication protocols between the two driver pieces are defined here.
 ///
-/// Some names have a numeric suffix (eg, Query2); the number is a detail of how the protocols
-/// have evolved, and can be ignored.
+/// Some names have a numeric suffix (eg, BufferRangeOp2); the number is a detail of how the
+/// protocols have evolved, and can be ignored.
 library fuchsia.gpu.magma;
 
 using fuchsia.url;
@@ -20,8 +20,8 @@ using fuchsia.memorypressure;
 /// Types of information about the hardware and driver that can be queried from the Magma system
 /// driver. Vendor-specific ID numbers may be used, but those IDs will be listed elsewhere.
 type QueryId = flexible enum : uint64 {
-    /// Returns the hardware vendor ID (simple result) - should be the PCI ID of the GPU vendor
-    /// if possible, or the Khronos vendor ID otherwise.
+    /// Returns the hardware vendor ID (simple result) - should be the PCI ID of the hardware
+    /// vendor if possible, or the Khronos vendor ID otherwise.
     VENDOR_ID = 0;
 
     /// Returns the hardware device ID (simple result)
@@ -135,12 +135,12 @@ type ObjectType = flexible enum : uint32 {
 };
 
 type BufferOp = flexible enum : uint32 {
-    /// Populate the GPU page tables with the pages mapping in this range, committing pages as
-    /// needed. This is not needed for allocations mapped GROWABLE, since the page tables will
+    /// Populate the hardware page tables with the pages mapped in this range, committing pages
+    /// as needed. This is not needed for allocations mapped GROWABLE, since the page tables will
     /// be populated on demand.
     POPULATE_TABLES = 1;
 
-    /// Depopulate GPU page table mappings for this range. This prevents the GPU from accessing
+    /// Depopulate page table mappings for this range. This prevents the hardware from accessing
     /// pages in that range, but the pages retain their contents.
     DEPOPULATE_TABLES = 2;
 };
@@ -152,7 +152,7 @@ type MapFlags = flexible bits : uint64 {
     READ = 0x1;
     WRITE = 0x2;
     EXECUTE = 0x4;
-    /// Uncommitted pages may be comitted on fault by the GPU. If this flag is not set, access
+    /// Uncommitted pages may be comitted on a hardware fault. If this flag is not set, access
     /// faults should cause an error.
     GROWABLE = 0x8;
 
@@ -165,7 +165,7 @@ type CommandBufferFlags = flexible bits : uint64 {
     VENDOR_FLAG_0 = 0x10000;
 };
 
-/// A command buffer may be used to pass GPU instructions in a shared buffer (VMO).
+/// A command buffer may be used to pass hardware instructions in a shared buffer (VMO).
 type CommandBuffer = struct {
     /// Index of the resource containing instructions to start the command buffer.
     resource_index uint32;
@@ -182,7 +182,7 @@ alias PerformanceCounterPoolId = uint64;
 
 type ResultFlags = flexible bits {
     /// This bit is set in result_flags if the performance counters missed some samples, e.g. due to
-    /// the GPU being in protected mode for part of the time.
+    /// the hardware being in protected mode for part of the time.
     DISCONTINUITY = 1;
 };
 
@@ -198,8 +198,8 @@ alias ContextId = uint32;
 
 alias PerformanceCounterTriggerId = uint32;
 
-/// Describes a set of performance counters. The exact meaning depends on the GPU driver, but will
-/// often be a bitvector representing whether each performance counter is enabled or disabled.
+/// Describes a set of performance counters. The exact meaning depends on the specific driver, but
+/// often is a bitvector representing whether each performance counter is enabled or disabled.
 alias PerformanceCounterSet = vector<uint64>:64;
 
 /// If a system driver error occurs, or if the client sends a message that the client should have
@@ -235,7 +235,7 @@ protocol Primary {
         context_id ContextId;
     });
 
-    /// Submits command buffers for execution on the GPU, with associated `resources`.
+    /// Submits command buffers for execution on the hardware, with associated `resources`.
     /// `resources` must refer to buffers that have been imported.
     /// `wait_semaphores` and `signal_semaphores` must refer to events that have been imported.
     /// `wait_semaphores` must all be signaled before execution begins, then are reset.
@@ -249,7 +249,7 @@ protocol Primary {
         flags CommandBufferFlags;
     });
 
-    /// Submits a series of commands for execution on the GPU without using a command buffer.
+    /// Submits a series of commands for execution on the hardware without using a command buffer.
     /// `semaphores` must refer to events that have been imported, and will be signaled after
     /// the commands are completed.
     ExecuteImmediateCommands(struct {
@@ -262,9 +262,7 @@ protocol Primary {
     /// observed, but not necessarily completed.
     Flush() -> ();
 
-    /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
-    /// address space at `gpu_va`.  `flags` is a set of flags from MapFlags that specify how the
-    /// GPU can access the buffer.
+    /// DEPRECATED.
     MapBufferGpu(struct {
         buffer_id ObjectId;
         gpu_va uint64;
@@ -273,20 +271,46 @@ protocol Primary {
         flags MapFlags;
     });
 
-    /// Releases the mapping at `gpu_va` from the GPU for the given `buffer_id`.
-    /// Buffers will also be implicitly unmapped when released.
+    /// Maps a page range onto the hardware in the connection's address space at address `hw_va`.
+    /// `flags` is a set of flags from MapFlags that specify how the hardware can access the buffer.
+    MapBuffer(table {
+        /// Required.
+        1: hw_va uint64;
+
+        /// Required.
+        2: range BufferRange;
+
+        3: flags MapFlags;
+    });
+
+    /// DEPRECATED.
     UnmapBufferGpu(struct {
         buffer_id ObjectId;
         gpu_va uint64;
     });
 
-    /// Perform an operation on a range of the buffer, starting at `offset` and `length` bytes
-    /// long.
+    /// Releases the mapping at address `hw_va` from the hardware for the given `buffer_id`.
+    /// Buffers will also be implicitly unmapped when released.
+    UnmapBuffer(table {
+        /// Required.
+        1: hw_va uint64;
+
+        /// Required.
+        2: buffer_id ObjectId;
+    });
+
+    /// DEPRECATED.
     BufferRangeOp(struct {
         buffer_id ObjectId;
         op BufferOp;
         offset uint64;
         length uint64;
+    });
+
+    /// Perform an operation on a range of the buffer.
+    BufferRangeOp2(struct {
+        op BufferOp;
+        range BufferRange;
     });
 
     /// Enables the events OnNotifyMessagesConsumed and OnNotifyMemoryImported.

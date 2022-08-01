@@ -132,15 +132,14 @@ void msd_semaphore_release(msd_semaphore_t* semaphore) {
 
 void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer) {}
 
-magma_status_t msd_connection_map_buffer_gpu(struct msd_connection_t* connection,
-                                             struct msd_buffer_t* buffer, uint64_t gpu_va,
-                                             uint64_t page_offset, uint64_t page_count,
-                                             uint64_t flags) {
+magma_status_t msd_connection_map_buffer(struct msd_connection_t* connection,
+                                         struct msd_buffer_t* buffer, uint64_t hw_va,
+                                         uint64_t offset, uint64_t length, uint64_t flags) {
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_unmap_buffer_gpu(struct msd_connection_t* connection,
-                                               struct msd_buffer_t* buffer, uint64_t gpu_va) {
+magma_status_t msd_connection_unmap_buffer(struct msd_connection_t* connection,
+                                           struct msd_buffer_t* buffer, uint64_t hw_va) {
   return MAGMA_STATUS_OK;
 }
 

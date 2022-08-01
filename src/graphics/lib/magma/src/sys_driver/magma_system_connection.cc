@@ -167,39 +167,38 @@ magma::Status MagmaSystemConnection::ReleaseBuffer(uint64_t id) {
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va,
-                                                  uint64_t page_offset, uint64_t page_count,
-                                                  uint64_t flags) {
+magma::Status MagmaSystemConnection::MapBuffer(uint64_t id, uint64_t hw_va, uint64_t offset,
+                                               uint64_t length, uint64_t flags) {
   auto iter = buffer_map_.find(id);
   if (iter == buffer_map_.end())
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to gpu map invalid buffer id %lu", id);
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to map invalid buffer id %lu", id);
 
-  if (page_count + page_offset < page_count)
+  if (length + offset < length)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Offset overflows");
 
-  if (page_count + page_offset > iter->second.buffer->size() / magma::page_size())
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Page offset + length too large for buffer");
+  if (length + offset > iter->second.buffer->size())
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Offset + length too large for buffer");
 
   if (!flags)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Flags must be nonzero");
 
-  magma::Status status = msd_connection_map_buffer_gpu(
-      msd_connection(), iter->second.buffer->msd_buf(), gpu_va, page_offset, page_count, flags);
+  magma::Status status = msd_connection_map_buffer(msd_connection(), iter->second.buffer->msd_buf(),
+                                                   hw_va, offset, length, flags);
   if (!status.ok())
-    return DRET_MSG(status.get(), "msd_connection_map_buffer_gpu failed");
+    return DRET_MSG(status.get(), "msd_connection_map_buffer failed");
 
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MagmaSystemConnection::UnmapBufferGpu(uint64_t id, uint64_t gpu_va) {
+magma::Status MagmaSystemConnection::UnmapBuffer(uint64_t id, uint64_t hw_va) {
   auto iter = buffer_map_.find(id);
   if (iter == buffer_map_.end())
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to gpu unmap invalid buffer id");
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to unmap invalid buffer id");
 
   magma::Status status =
-      msd_connection_unmap_buffer_gpu(msd_connection(), iter->second.buffer->msd_buf(), gpu_va);
+      msd_connection_unmap_buffer(msd_connection(), iter->second.buffer->msd_buf(), hw_va);
   if (!status.ok())
-    return DRET_MSG(status.get(), "msd_connection_unmap_buffer_gpu failed");
+    return DRET_MSG(status.get(), "msd_connection_unmap_buffer failed");
 
   return MAGMA_STATUS_OK;
 }

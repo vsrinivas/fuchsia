@@ -46,12 +46,18 @@ void msd_connection_set_notification_callback(struct msd_connection_t* connectio
   MsdIntelAbiConnection::cast(connection)->ptr()->SetNotificationCallback(callback, token);
 }
 
-magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
-                                             msd_buffer_t* abi_buffer, uint64_t gpu_addr,
-                                             uint64_t page_offset, uint64_t page_count,
-                                             uint64_t flags) {
+magma_status_t msd_connection_map_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
+                                         uint64_t gpu_addr, uint64_t offset, uint64_t length,
+                                         uint64_t flags) {
+  if (!magma::is_page_aligned(offset) || !magma::is_page_aligned(length))
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Offset or length not page aligned");
+
+  uint64_t page_offset = offset / magma::page_size();
+  uint64_t page_count = length / magma::page_size();
+
   auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
   auto buffer = MsdIntelAbiBuffer::cast(abi_buffer)->ptr();
+
   magma::Status status = connection->MapBufferGpu(buffer, gpu_addr, page_offset, page_count);
   return status.get();
 }
@@ -105,8 +111,8 @@ magma::Status MsdIntelConnection::MapBufferGpu(std::shared_ptr<MsdIntelBuffer> b
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection,
-                                               msd_buffer_t* abi_buffer, uint64_t gpu_va) {
+magma_status_t msd_connection_unmap_buffer(msd_connection_t* abi_connection,
+                                           msd_buffer_t* abi_buffer, uint64_t gpu_va) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 

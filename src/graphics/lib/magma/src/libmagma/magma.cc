@@ -206,7 +206,8 @@ magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   uint64_t buffer_id = platform_buffer->id();
   return magma::PlatformConnectionClient::cast(connection)
-      ->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, map_flags);
+      ->MapBuffer(buffer_id, gpu_va, page_offset * magma::page_size(),
+                  page_count * magma::page_size(), map_flags);
 }
 
 magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
@@ -218,26 +219,30 @@ magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
 void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   uint64_t buffer_id = platform_buffer->id();
-  magma::PlatformConnectionClient::cast(connection)->UnmapBufferGpu(buffer_id, gpu_va);
+  magma::PlatformConnectionClient::cast(connection)->UnmapBuffer(buffer_id, gpu_va);
 }
 
 magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer_t buffer,
                                      uint32_t options, uint64_t start_offset, uint64_t length) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-  uint64_t buffer_id = platform_buffer->id();
+
+  switch (options) {
+    case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES:
+    case MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES: {
+      magma::PlatformConnectionClient::cast(connection)
+          ->BufferRangeOp(platform_buffer->id(), options, start_offset, length);
+      return MAGMA_STATUS_OK;
+    }
+  }
+
   if (start_offset % magma::page_size() != 0) {
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer offset %ld", start_offset);
   }
   if (length % magma::page_size() != 0) {
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer length %ld", length);
   }
+
   switch (options) {
-    case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES:
-    case MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES: {
-      magma::PlatformConnectionClient::cast(connection)
-          ->BufferRangeOp(buffer_id, options, start_offset, length);
-      return MAGMA_STATUS_OK;
-    }
     case MAGMA_BUFFER_RANGE_OP_COMMIT: {
       if (!platform_buffer->CommitPages(start_offset / magma::page_size(),
                                         length / magma::page_size()))

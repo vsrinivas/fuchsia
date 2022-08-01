@@ -272,23 +272,34 @@ magma_status_t PrimaryWrapper::ExecuteImmediateCommands(uint32_t context_id,
   return magma::FromZxStatus(status).get();
 }
 
-magma_status_t PrimaryWrapper::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
-                                            uint64_t page_offset, uint64_t page_count,
-                                            fuchsia_gpu_magma::wire::MapFlags flags) {
+magma_status_t PrimaryWrapper::MapBuffer(uint64_t buffer_id, uint64_t hw_va, uint64_t offset,
+                                         uint64_t length, fuchsia_gpu_magma::wire::MapFlags flags) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status =
-      client_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags).status();
+
+  fuchsia_gpu_magma::wire::BufferRange range = {
+      .buffer_id = buffer_id, .offset = offset, .size = length};
+
+  fidl::Arena allocator;
+  auto builder = fuchsia_gpu_magma::wire::PrimaryMapBufferRequest::Builder(allocator);
+  builder.hw_va(hw_va).range(range).flags(flags);
+
+  zx_status_t status = client_->MapBuffer(builder.Build()).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
   return magma::FromZxStatus(status).get();
 }
 
-magma_status_t PrimaryWrapper::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) {
+magma_status_t PrimaryWrapper::UnmapBuffer(uint64_t buffer_id, uint64_t hw_va) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_->UnmapBufferGpu(buffer_id, gpu_va).status();
+
+  fidl::Arena allocator;
+  auto builder = fuchsia_gpu_magma::wire::PrimaryUnmapBufferRequest::Builder(allocator);
+  builder.hw_va(hw_va).buffer_id(buffer_id);
+
+  zx_status_t status = client_->UnmapBuffer(builder.Build()).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -296,11 +307,15 @@ magma_status_t PrimaryWrapper::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_v
 }
 
 magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
-                                             fuchsia_gpu_magma::wire::BufferOp op, uint64_t start,
+                                             fuchsia_gpu_magma::wire::BufferOp op, uint64_t offset,
                                              uint64_t length) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_->BufferRangeOp(buffer_id, op, start, length).status();
+
+  fuchsia_gpu_magma::wire::BufferRange range = {
+      .buffer_id = buffer_id, .offset = offset, .size = length};
+
+  zx_status_t status = client_->BufferRangeOp2(op, range).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -661,12 +676,11 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return client_.Flush();
   }
 
-  magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
-                              uint64_t page_count, uint64_t flags) override {
-    DLOG("ZirconPlatformConnectionClient: MapBufferGpu");
-    magma_status_t result =
-        client_.MapBufferGpu(buffer_id, gpu_va, page_offset, page_count,
-                             static_cast<fuchsia_gpu_magma::wire::MapFlags>(flags));
+  magma_status_t MapBuffer(uint64_t buffer_id, uint64_t hw_va, uint64_t offset, uint64_t length,
+                           uint64_t flags) override {
+    DLOG("ZirconPlatformConnectionClient: MapBuffer");
+    magma_status_t result = client_.MapBuffer(
+        buffer_id, hw_va, offset, length, static_cast<fuchsia_gpu_magma::wire::MapFlags>(flags));
 
     if (result != MAGMA_STATUS_OK)
       return DRET_MSG(result, "failed to write to channel");
@@ -674,9 +688,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
-  magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
-    DLOG("ZirconPlatformConnectionClient: UnmapBufferGpu");
-    magma_status_t result = client_.UnmapBufferGpu(buffer_id, gpu_va);
+  magma_status_t UnmapBuffer(uint64_t buffer_id, uint64_t hw_va) override {
+    DLOG("ZirconPlatformConnectionClient: UnmapBuffer");
+    magma_status_t result = client_.UnmapBuffer(buffer_id, hw_va);
 
     if (result != MAGMA_STATUS_OK)
       return DRET_MSG(result, "failed to write to channel");
@@ -684,7 +698,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
-  magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t start,
+  magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t offset,
                                uint64_t length) override {
     DLOG("ZirconPlatformConnectionClient::BufferOpRange");
     fuchsia_gpu_magma::wire::BufferOp op;
@@ -699,7 +713,7 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
         return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer op %d", options);
     }
 
-    magma_status_t result = client_.BufferRangeOp(buffer_id, op, start, length);
+    magma_status_t result = client_.BufferRangeOp(buffer_id, op, offset, length);
 
     if (result != MAGMA_STATUS_OK)
       return DRET_MSG(result, "failed to write to channel");

@@ -54,12 +54,11 @@ struct msd_connection_t* msd_device_open(struct msd_device_t* dev, msd_client_id
 // Closes the given connection to the device.
 void msd_connection_close(struct msd_connection_t* connection);
 
-magma_status_t msd_connection_map_buffer_gpu(struct msd_connection_t* connection,
-                                             struct msd_buffer_t* buffer, uint64_t gpu_va,
-                                             uint64_t page_offset, uint64_t page_count,
-                                             uint64_t flags);
-magma_status_t msd_connection_unmap_buffer_gpu(struct msd_connection_t* connection,
-                                               struct msd_buffer_t* buffer, uint64_t gpu_va);
+magma_status_t msd_connection_map_buffer(struct msd_connection_t* connection,
+                                         struct msd_buffer_t* buffer, uint64_t gpu_va,
+                                         uint64_t offset, uint64_t length, uint64_t flags);
+magma_status_t msd_connection_unmap_buffer(struct msd_connection_t* connection,
+                                           struct msd_buffer_t* buffer, uint64_t gpu_va);
 
 magma_status_t msd_connection_buffer_range_op(struct msd_connection_t* connection,
                                               struct msd_buffer_t* buffer, uint32_t options,

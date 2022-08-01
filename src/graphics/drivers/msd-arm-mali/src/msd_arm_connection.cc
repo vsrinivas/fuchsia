@@ -1104,11 +1104,16 @@ magma_status_t MsdArmConnection::RemovePerformanceCounterBufferFromPool(
   return reply->Wait().get();
 }
 
-magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
-                                             msd_buffer_t* abi_buffer, uint64_t gpu_va,
-                                             uint64_t page_offset, uint64_t page_count,
-                                             uint64_t flags) {
-  TRACE_DURATION("magma", "msd_connection_map_buffer_gpu", "page_count", page_count);
+magma_status_t msd_connection_map_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
+                                         uint64_t gpu_va, uint64_t offset, uint64_t length,
+                                         uint64_t flags) {
+  if (!magma::is_page_aligned(offset) || !magma::is_page_aligned(length))
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Offset or length not page aligned");
+
+  uint64_t page_offset = offset / magma::page_size();
+  uint64_t page_count = length / magma::page_size();
+
+  TRACE_DURATION("magma", "msd_connection_map_buffer", "page_count", page_count);
   MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
 
   auto mapping =
@@ -1119,9 +1124,9 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection,
-                                               msd_buffer_t* buffer, uint64_t gpu_va) {
-  TRACE_DURATION("magma", "msd_connection_unmap_buffer_gpu");
+magma_status_t msd_connection_unmap_buffer(msd_connection_t* abi_connection, msd_buffer_t* buffer,
+                                           uint64_t gpu_va) {
+  TRACE_DURATION("magma", "msd_connection_unmap_buffer");
   if (!MsdArmAbiConnection::cast(abi_connection)->ptr()->RemoveMapping(gpu_va))
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "RemoveMapping failed");
   return MAGMA_STATUS_OK;

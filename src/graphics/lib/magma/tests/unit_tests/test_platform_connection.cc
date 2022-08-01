@@ -288,11 +288,11 @@ class TestPlatformConnection {
     EXPECT_TRUE(buf->duplicate_handle(&handle));
     EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::BUFFER, buf->id()),
               MAGMA_STATUS_OK);
-    EXPECT_EQ(
-        client_connection_->MapBufferGpu(buf->id(), page_size() * 1000 /* address */,
-                                         1u /* page_offset */, 2u /* page_count */, 5 /* flags */),
-        MAGMA_STATUS_OK);
-    EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), page_size() * 1000), MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->MapBuffer(buf->id(), /*address=*/page_size() * 1000,
+                                            /*offset=*/1u * page_size(),
+                                            /*length=*/2u * page_size(), /*flags=*/5),
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->UnmapBuffer(buf->id(), page_size() * 1000), MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->BufferRangeOp(buf->id(), MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES,
                                                 1000, 2000),
               MAGMA_STATUS_OK);
@@ -555,18 +555,18 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     return MAGMA_STATUS_OK;
   }
 
-  magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
-                             uint64_t page_count, uint64_t flags) override {
+  magma::Status MapBuffer(uint64_t buffer_id, uint64_t gpu_va, uint64_t offset, uint64_t length,
+                          uint64_t flags) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);
-    EXPECT_EQ(1u, page_offset);
-    EXPECT_EQ(2u, page_count);
+    EXPECT_EQ(page_size() * 1lu, offset);
+    EXPECT_EQ(page_size() * 2lu, length);
     EXPECT_EQ(5u, flags);
     return MAGMA_STATUS_OK;
   }
 
-  magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
+  magma::Status UnmapBuffer(uint64_t buffer_id, uint64_t gpu_va) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     EXPECT_EQ(shared_data_->test_buffer_id, buffer_id);
     EXPECT_EQ(page_size() * 1000lu, gpu_va);

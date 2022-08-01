@@ -423,9 +423,28 @@ void ZirconPlatformConnection::MapBufferGpu(MapBufferGpuRequestView request,
   DLOG("ZirconPlatformConnection: MapBufferGpuFIDL");
   FlowControl();
 
+  magma::Status status = delegate_->MapBuffer(
+      request->buffer_id, request->gpu_va, request->page_offset * magma::page_size(),
+      request->page_count * magma::page_size(), static_cast<uint64_t>(request->flags));
+  if (!status.ok())
+    SetError(&completer, status.get());
+}
+
+void ZirconPlatformConnection::MapBuffer(MapBufferRequestView request,
+                                         MapBufferCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection: MapBufferFIDL");
+  FlowControl();
+
+  if (!request->has_range() || !request->has_hw_va()) {
+    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+    return;
+  }
+
+  auto flags = request->has_flags() ? static_cast<uint64_t>(request->flags()) : 0;
+
   magma::Status status =
-      delegate_->MapBufferGpu(request->buffer_id, request->gpu_va, request->page_offset,
-                              request->page_count, static_cast<uint64_t>(request->flags));
+      delegate_->MapBuffer(request->range().buffer_id, request->hw_va(), request->range().offset,
+                           request->range().size, flags);
   if (!status.ok())
     SetError(&completer, status.get());
 }
@@ -435,14 +454,29 @@ void ZirconPlatformConnection::UnmapBufferGpu(UnmapBufferGpuRequestView request,
   DLOG("ZirconPlatformConnection: UnmapBufferGpuFIDL");
   FlowControl();
 
-  magma::Status status = delegate_->UnmapBufferGpu(request->buffer_id, request->gpu_va);
+  magma::Status status = delegate_->UnmapBuffer(request->buffer_id, request->gpu_va);
+  if (!status.ok())
+    SetError(&completer, status.get());
+}
+
+void ZirconPlatformConnection::UnmapBuffer(UnmapBufferRequestView request,
+                                           UnmapBufferCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection: UnmapBufferFIDL");
+  FlowControl();
+
+  if (!request->has_buffer_id() || !request->has_hw_va()) {
+    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+    return;
+  }
+
+  magma::Status status = delegate_->UnmapBuffer(request->buffer_id(), request->hw_va());
   if (!status.ok())
     SetError(&completer, status.get());
 }
 
 void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
                                              BufferRangeOpCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection:::BufferOp");
+  DLOG("ZirconPlatformConnection:::BufferRangeOp");
   FlowControl();
 
   std::optional<int> buffer_op = GetBufferOp(request->op);
@@ -453,6 +487,25 @@ void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
 
   magma::Status status =
       delegate_->BufferRangeOp(request->buffer_id, *buffer_op, request->offset, request->length);
+
+  if (!status) {
+    SetError(&completer, status.get());
+  }
+}
+
+void ZirconPlatformConnection::BufferRangeOp2(BufferRangeOp2RequestView request,
+                                              BufferRangeOp2Completer::Sync& completer) {
+  DLOG("ZirconPlatformConnection:::BufferRangeOp2");
+  FlowControl();
+
+  std::optional<int> buffer_op = GetBufferOp(request->op);
+  if (!buffer_op) {
+    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+    return;
+  }
+
+  magma::Status status = delegate_->BufferRangeOp(request->range.buffer_id, *buffer_op,
+                                                  request->range.offset, request->range.size);
 
   if (!status) {
     SetError(&completer, status.get());

@@ -54,12 +54,12 @@ class PlatformConnectionClient {
   virtual magma_status_t GetError() = 0;
   virtual magma_status_t Flush() = 0;
 
-  virtual magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
-                                      uint64_t page_count, uint64_t flags) = 0;
+  virtual magma_status_t MapBuffer(uint64_t buffer_id, uint64_t gpu_va, uint64_t offset,
+                                   uint64_t length, uint64_t flags) = 0;
 
-  virtual magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
+  virtual magma_status_t UnmapBuffer(uint64_t buffer_id, uint64_t gpu_va) = 0;
 
-  virtual magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t start,
+  virtual magma_status_t BufferRangeOp(uint64_t buffer_id, uint32_t options, uint64_t offset,
                                        uint64_t length) = 0;
 
   virtual uint32_t GetNotificationChannelHandle() = 0;

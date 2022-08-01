@@ -267,7 +267,7 @@ TEST_F(TestMagmaFidl, CreateDestroyContext) {
   }
 }
 
-TEST_F(TestMagmaFidl, MapUnmap) {
+TEST_F(TestMagmaFidl, MapUnmapGpu) {
   uint64_t buffer_id;
 
   {
@@ -304,6 +304,55 @@ TEST_F(TestMagmaFidl, MapUnmap) {
   }
 }
 
+TEST_F(TestMagmaFidl, MapUnmap) {
+  fuchsia_gpu_magma::wire::BufferRange range;
+
+  {
+    zx::vmo vmo;
+    ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
+
+    uint64_t length;
+    ASSERT_EQ(ZX_OK, vmo.get_size(&length));
+
+    range = {.buffer_id = fsl::GetKoid(vmo.get()), .offset = 0, .size = length};
+
+    auto wire_result =
+        primary_->ImportObject(std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+    EXPECT_TRUE(wire_result.ok());
+    EXPECT_FALSE(CheckForUnbind());
+  }
+
+  constexpr uint64_t kGpuAddress = 0x1000;
+
+  {
+    constexpr fuchsia_gpu_magma::wire::MapFlags flags =
+        fuchsia_gpu_magma::wire::MapFlags::kRead | fuchsia_gpu_magma::wire::MapFlags::kWrite |
+        fuchsia_gpu_magma::wire::MapFlags::kExecute | fuchsia_gpu_magma::wire::MapFlags::kGrowable;
+
+    fidl::Arena allocator;
+    auto builder = fuchsia_gpu_magma::wire::PrimaryMapBufferRequest::Builder(allocator);
+    builder.hw_va(kGpuAddress).range(range).flags(flags);
+
+    auto wire_result = primary_->MapBuffer(builder.Build());
+    EXPECT_TRUE(wire_result.ok());
+    EXPECT_FALSE(CheckForUnbind());
+  }
+
+  {
+    fidl::Arena allocator;
+    auto builder = fuchsia_gpu_magma::wire::PrimaryUnmapBufferRequest::Builder(allocator);
+    builder.hw_va(kGpuAddress).buffer_id(range.buffer_id);
+
+    auto wire_result = primary_->UnmapBuffer(builder.Build());
+    EXPECT_TRUE(wire_result.ok());
+    // Unmap not implemented on Intel
+    if (vendor_id() == 0x8086) {
+      EXPECT_TRUE(CheckForUnbind());
+    } else {
+      EXPECT_FALSE(CheckForUnbind());
+    }
+  }
+}
 // Sends a bunch of zero command bytes
 TEST_F(TestMagmaFidl, ExecuteCommand) {
   uint32_t context_id = 10;

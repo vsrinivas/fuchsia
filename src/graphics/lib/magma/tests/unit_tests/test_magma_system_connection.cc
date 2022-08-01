@@ -284,7 +284,8 @@ TEST(MagmaSystemConnection, MapBufferGpu) {
       MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
 
   // Bad id
-  EXPECT_FALSE(connection.MapBufferGpu(kBogusId, kGpuVa, 0 /*page_offset*/, kPageCount, kFlags));
+  EXPECT_FALSE(
+      connection.MapBuffer(kBogusId, kGpuVa, /*offset=*/0, kPageCount * page_size(), kFlags));
 
   uint32_t buffer_handle;
   ASSERT_TRUE(buffer->duplicate_handle(&buffer_handle));
@@ -292,19 +293,21 @@ TEST(MagmaSystemConnection, MapBufferGpu) {
   EXPECT_TRUE(connection.ImportBuffer(buffer_handle, buffer->id()));
 
   // Bad page offset
-  EXPECT_FALSE(connection.MapBufferGpu(buffer->id(), kGpuVa, kPageCount /*page_offset*/, kPageCount,
-                                       kFlags));
+  EXPECT_FALSE(connection.MapBuffer(buffer->id(), kGpuVa, /*offset=*/kPageCount * page_size(),
+                                    kPageCount * page_size(), kFlags));
 
   // Bad page count
-  EXPECT_FALSE(
-      connection.MapBufferGpu(buffer->id(), kGpuVa, 0 /*page_offset*/, kPageCount + 1, kFlags));
+  EXPECT_FALSE(connection.MapBuffer(buffer->id(), kGpuVa, /*offset=*/0,
+                                    (kPageCount + 1) * page_size(), kFlags));
 
   // Page offset + page count overflows
-  EXPECT_FALSE(connection.MapBufferGpu(buffer->id(), kGpuVa,
-                                       std::numeric_limits<uint64_t>::max() - 1 /* page_offset */,
-                                       kPageCount + 1, kFlags));
+  EXPECT_FALSE(
+      connection.MapBuffer(buffer->id(), kGpuVa,
+                           /*offset=*/(std::numeric_limits<uint64_t>::max() - 1) * page_size(),
+                           (kPageCount + 1) * page_size(), kFlags));
 
-  EXPECT_TRUE(connection.MapBufferGpu(buffer->id(), kGpuVa, 0 /*page_offset*/, kPageCount, kFlags));
+  EXPECT_TRUE(
+      connection.MapBuffer(buffer->id(), kGpuVa, /*offset=*/0, kPageCount * page_size(), kFlags));
 }
 
 TEST(MagmaSystemConnection, PerformanceCounters) {
