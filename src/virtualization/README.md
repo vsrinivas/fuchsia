@@ -36,7 +36,7 @@ fx set core.x64 \
     --args='core_realm_shards += [ "//src/virtualization/bundles:termina_core_shards" ]'
 ```
 
-To include support for all the guest packges, you can use the `all_guests` and `all_core_shards`
+To include support for all the guest packages, you can use the `all_guests` and `all_core_shards`
 labels:
 ```sh
 fx set core.x64 \
