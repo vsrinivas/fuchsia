@@ -208,33 +208,6 @@ zx_status_t Fragment::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Fragment::RpcMailbox(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                 uint32_t* out_resp_size, zx::handle* req_handles,
-                                 uint32_t req_handle_count, zx::handle* resp_handles,
-                                 uint32_t* resp_handle_count) {
-  if (!mailbox_client_.proto_client().is_valid()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  auto* req = reinterpret_cast<const MailboxProxyRequest*>(req_buf);
-  if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "received %u, expecting %zu", req_size, sizeof(*req));
-    return ZX_ERR_INTERNAL;
-  }
-  auto* resp = reinterpret_cast<MailboxProxyResponse*>(resp_buf);
-  *out_resp_size = sizeof(*resp);
-
-  mailbox_channel_t new_channels = {req->mailbox, resp->rx_buffer, resp->rx_size};
-  mailbox_data_buf_t new_data = {req->cmd, req->tx_buffer, req->tx_size};
-
-  switch (req->op) {
-    case MailboxOp::SENDCOMMAND:
-      return mailbox_client_.proto_client().SendCommand(&new_channels, &new_data);
-    default:
-      zxlogf(ERROR, "unknown MailBox op %u", static_cast<uint32_t>(req->op));
-      return ZX_ERR_INTERNAL;
-  }
-}
-
 zx_status_t Fragment::RpcHdmi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                               uint32_t* out_resp_size, zx::handle* req_handles,
                               uint32_t req_handle_count, zx::handle* resp_handles,
@@ -788,10 +761,6 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_GPIO:
       status = RpcGpio(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                        resp_handles, &resp_handle_count);
-      break;
-    case ZX_PROTOCOL_MAILBOX:
-      status = RpcMailbox(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
-                          resp_handles, &resp_handle_count);
       break;
     case ZX_PROTOCOL_HDMI:
       status = RpcHdmi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,

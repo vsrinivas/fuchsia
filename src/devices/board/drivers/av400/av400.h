@@ -82,7 +82,6 @@ class Av400 : public Av400Type {
   zx_status_t AudioInit();
   zx_status_t UsbInit();
   zx_status_t ThermalInit();
-  zx_status_t MailboxInit();
 
   int Thread();
 
