@@ -544,7 +544,7 @@ generated_file("fastboot_manifest_archive") {
 ## read a flash.json rather than taking the GN object.
 
 # We shouldn't generate a product metadata if we are building an SDK.
-if (!use_bringup_assembly && !build_sdk_archives) {
+if (!use_bringup_assembly) {
   compatible_devices = []
 
   # Virtual device manifest should only be generated for emu compatible boards.

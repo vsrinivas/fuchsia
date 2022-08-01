@@ -303,9 +303,7 @@ group("default-images") {
       "//build/images/updates",
     ]
 
-    if (!build_sdk_archives) {
-      deps += [ "//build/images/flash:product_metadata" ]
-    }
+    deps += [ "//build/images/flash:product_metadata" ]
   } else {
     deps += [ "//build/images/archive:fastboot-boot-script" ]
   }
