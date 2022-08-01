@@ -30,7 +30,8 @@ mod style;
 use layer_workbench::{Context, LayerPainter, LayerWorkbench};
 
 pub use style::{
-    BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Image, Style, Texture,
+    BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Image, ImageId, Style,
+    Texture,
 };
 
 pub use self::style::{Channel, Color, BGR0, BGR1, BGRA, RGB0, RGB1, RGBA};
@@ -174,6 +175,9 @@ impl Rect {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Func {
     Draw(Style),
+    // Clips the subsequent layer with this one.
+    // From this order up to to order + n included are affected, if
+    // their `is_clipped` property is `true`.
     Clip(usize),
 }
 

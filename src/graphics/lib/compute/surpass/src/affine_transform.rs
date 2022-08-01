@@ -37,6 +37,10 @@ impl AffineTransform {
     pub(crate) fn is_identity(&self) -> bool {
         *self == Self::default()
     }
+
+    pub fn to_array(&self) -> [f32; 6] {
+        [self.ux, self.uy, self.vx, self.vy, self.tx, self.ty]
+    }
 }
 
 impl Eq for AffineTransform {}

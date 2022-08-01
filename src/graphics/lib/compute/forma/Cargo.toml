@@ -8,6 +8,7 @@ renderer = { path = "../gpu/renderer", optional = true }
 rustc-hash = "1.0.1"
 surpass = { path = "../surpass" }
 wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "c226a10", optional = true }
+etagere = "0.2.7"
 
 [features]
 gpu = ["renderer", "wgpu"]

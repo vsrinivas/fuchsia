@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{fmt, hash, sync::Arc};
+use std::{
+    fmt, hash,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 
 use crate::{
     simd::{f32x8, u32x8},
@@ -359,22 +365,30 @@ impl fmt::Display for ImageError {
     }
 }
 
-/// Floating point value with  bits of sign, 5 bits of exponent, and
-/// 11 bits of mantissa.
+/// f16 value without denormals and within 0 and one.
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
-struct cf16(u16);
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct f16(u16);
 
-impl cf16 {
+impl f16 {
     #[inline]
     fn to_f32(self) -> f32 {
-        f32::from_bits(((((self.0 as i32) << 16) >> 2) as u32) >> 2)
+        if self.0 != 0 {
+            f32::from_bits(0x38000000 + ((self.0 as u32) << 13))
+        } else {
+            0.0
+        }
     }
 }
 
-impl From<f32> for cf16 {
+impl From<f32> for f16 {
     fn from(val: f32) -> Self {
-        Self((f32::to_bits(val) >> 12) as u16)
+        if val != 0.0 {
+            f16(((val.to_bits() - 0x38000000) >> 13) as u16)
+        } else {
+            f16(0)
+        }
     }
 }
 
@@ -388,16 +402,27 @@ fn to_linear(l: u8) -> f32 {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct ImageId(usize);
+impl ImageId {
+    fn new() -> ImageId {
+        static GENERATOR: AtomicUsize = AtomicUsize::new(0);
+        return ImageId(GENERATOR.fetch_add(1, Ordering::SeqCst));
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Image {
     /// Pixels RGBA.
-    data: Box<[[cf16; 4]]>,
+    data: Box<[[f16; 4]]>,
     /// Largest x coordinate within the Image.
     max_x: f32,
     /// Largest y coordinate within the Image.
     max_y: f32,
     /// Width of the image in pixels.
     width: u32,
+    /// Unique identifier for this image.
+    id: ImageId,
 }
 
 impl Eq for Image {}
@@ -426,7 +451,7 @@ impl Image {
         let data = data
             .iter()
             .map(|c| {
-                [to_linear(c[0]), to_linear(c[1]), to_linear(c[2]), to_alpha(c[3])].map(cf16::from)
+                [to_linear(c[0]), to_linear(c[1]), to_linear(c[2]), to_alpha(c[3])].map(f16::from)
             })
             .collect();
         Self::new(data, width, height)
@@ -437,11 +462,11 @@ impl Image {
         width: usize,
         height: usize,
     ) -> Result<Self, ImageError> {
-        let data = data.iter().map(|c| c.map(cf16::from)).collect();
+        let data = data.iter().map(|c| c.map(f16::from)).collect();
         Self::new(data, width, height)
     }
 
-    fn new(data: Box<[[cf16; 4]]>, width: usize, height: usize) -> Result<Self, ImageError> {
+    fn new(data: Box<[[f16; 4]]>, width: usize, height: usize) -> Result<Self, ImageError> {
         match width * height {
             len if len > u32::MAX as usize => Err(ImageError::TooLarge),
             len if len != data.len() => {
@@ -452,8 +477,25 @@ impl Image {
                 max_x: width as f32 - 1.0,
                 max_y: height as f32 - 1.0,
                 width: width as u32,
+                id: ImageId::new(),
             }),
         }
+    }
+
+    pub fn id(&self) -> ImageId {
+        self.id
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.max_y as u32 + 1
+    }
+
+    pub fn data(&self) -> &[[f16; 4]] {
+        self.data.as_ref()
     }
 }
 
@@ -1349,37 +1391,47 @@ mod tests {
     }
 
     #[test]
-    fn cf16_error() {
+    fn f16_error() {
         // Error for the 256 values of u8 alpha is low.
         let alpha_mse = (0u8..=255u8)
             .map(|u| u as f32 / 255.0)
-            .map(|v| (v - cf16::from(v).to_f32()))
+            .map(|v| (v - f16::from(v).to_f32()))
             .map(|d| d * d)
             .sum::<f32>()
             / 256.0;
-        assert!(alpha_mse < 2e-8, "alpha_mse: {}", alpha_mse);
+        assert!(alpha_mse < 5e-8, "alpha_mse: {}", alpha_mse);
 
         // Values for 256 values of u8 alpha are distinct.
         let alpha_distinct =
-            (0u8..=255u8).map(|a| cf16::from(a as f32 / 255.0)).collect::<HashSet<cf16>>().len();
+            (0u8..=255u8).map(|a| f16::from(a as f32 / 255.0)).collect::<HashSet<f16>>().len();
         assert_eq!(alpha_distinct, 256);
 
         // Error for the 256 value of u8 sRGB is low.
         let component_mse = (0u8..=255u8)
             .map(to_linear)
-            .map(|v| (v - cf16::from(v).to_f32()))
+            .map(|v| (v - f16::from(v).to_f32()))
             .map(|d| d * d)
             .sum::<f32>()
             / 256.0;
-        assert!(component_mse < 6e-9, "component_mse: {}", component_mse);
+        assert!(component_mse < 3e-8, "component_mse: {}", component_mse);
 
         // Values for 256 values of u8 sRGB are distinct.
         let component_distinct =
-            (0u8..=255u8).map(|c| cf16::from(to_linear(c))).collect::<HashSet<cf16>>().len();
+            (0u8..=255u8).map(|c| f16::from(to_linear(c))).collect::<HashSet<f16>>().len();
         assert_eq!(component_distinct, 256);
 
         // Min and max values are intact.
-        assert_eq!(cf16::from(0.0).to_f32(), 0.0);
-        assert_eq!(cf16::from(1.0).to_f32(), 1.0);
+        assert_eq!(f16::from(0.0).to_f32(), 0.0);
+        assert_eq!(f16::from(1.0).to_f32(), 1.0);
+    }
+
+    #[test]
+    fn f16_conversion() {
+        for i in 0..255 {
+            let value = (i as f32) / 255.0;
+            let value_f16 = f16::from(value);
+            assert!(half::f16::from_f32(value).to_bits().abs_diff(value_f16.0) <= 1);
+            assert_eq!(half::f16::from_bits(value_f16.0).to_f32(), value_f16.to_f32());
+        }
     }
 }

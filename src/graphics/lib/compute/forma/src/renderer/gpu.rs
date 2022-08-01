@@ -2,20 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
+
+use etagere::{size2, AllocId, Allocation, AtlasAllocator};
 use renderer::{Renderer, Timings};
 use rustc_hash::FxHashMap;
 use surpass::{
-    painter::{Color, Fill, Func, GradientType, Props},
+    painter::{Color, Fill, Func, GradientType, Image, ImageId, Props},
     Order,
 };
 
 use crate::{Composition, Layer};
 
-#[derive(Debug, Default)]
+struct ImageAllocator {
+    allocator: AtlasAllocator,
+    image_to_alloc: HashMap<ImageId, Allocation>,
+    unused_allocs: HashSet<AllocId>,
+    new_allocs: Vec<(Arc<Image>, [u32; 4])>,
+}
+
 pub struct StyleMap {
     // Position of the style in the u32 buffer, by order value.
     style_offsets: Vec<u32>,
     styles: Vec<u32>,
+    image_allocator: ImageAllocator,
 }
 
 #[derive(Default)]
@@ -54,7 +67,56 @@ impl PropHeader {
     }
 }
 
+impl ImageAllocator {
+    fn new() -> ImageAllocator {
+        ImageAllocator {
+            allocator: AtlasAllocator::new(size2(4096, 4096)),
+            image_to_alloc: HashMap::new(),
+            unused_allocs: HashSet::new(),
+            new_allocs: Vec::new(),
+        }
+    }
+
+    fn start_populate(&mut self) {
+        self.new_allocs.clear();
+        self.unused_allocs = self.allocator.iter().map(|alloc| alloc.id).collect();
+    }
+
+    fn end_populate(&mut self) {
+        for alloc_id in self.unused_allocs.iter() {
+            self.allocator.deallocate(*alloc_id);
+        }
+    }
+
+    fn get_or_create_alloc(&mut self, image: &Arc<Image>) -> &Allocation {
+        let new_allocs = &mut self.new_allocs;
+        let allocator = &mut self.allocator;
+        let allocation = self.image_to_alloc.entry(image.id()).or_insert_with(|| {
+            let allocation = allocator
+                .allocate(size2(image.width() as i32, image.height() as i32))
+                .expect("Texture does not fit in the atlas");
+
+            let rect = allocation.rectangle.to_u32();
+            new_allocs.push((
+                image.clone(),
+                [rect.min.x, rect.min.y, rect.min.x + image.width(), rect.min.y + image.height()],
+            ));
+            allocation
+        });
+        self.unused_allocs.remove(&allocation.id);
+        allocation
+    }
+}
+
 impl StyleMap {
+    fn new() -> StyleMap {
+        StyleMap {
+            style_offsets: Vec::new(),
+            styles: Vec::new(),
+            image_allocator: ImageAllocator::new(),
+        }
+    }
+
     fn push(&mut self, props: &Props) {
         let style = match &props.func {
             Func::Clip(order) => {
@@ -99,13 +161,25 @@ impl StyleMap {
                     self.styles.push(stop.to_bits());
                 });
             }
-            _ => {}
+            Fill::Texture(texture) => {
+                self.styles.extend(texture.transform.to_array().map(f32::to_bits));
+
+                let image = &texture.image;
+                let alloc = self.image_allocator.get_or_create_alloc(image);
+
+                let min = alloc.rectangle.min.cast::<f32>();
+                self.styles.extend(
+                    [min.x, min.y, min.x + image.width() as f32, min.y + image.height() as f32]
+                        .map(f32::to_bits),
+                );
+            }
         }
     }
 
     pub fn populate(&mut self, layers: &FxHashMap<Order, Layer>) {
         self.style_offsets.clear();
         self.styles.clear();
+        self.image_allocator.start_populate();
 
         let mut props_set = FxHashMap::default();
 
@@ -125,6 +199,8 @@ impl StyleMap {
 
             self.style_offsets[order as usize] = offset;
         }
+
+        self.image_allocator.end_populate();
     }
 
     pub fn style_offsets(&self) -> &[u32] {
@@ -134,9 +210,12 @@ impl StyleMap {
     pub fn styles(&self) -> &[u32] {
         &self.styles
     }
+
+    pub fn new_allocs(&self) -> &[(Arc<Image>, [u32; 4])] {
+        self.image_allocator.new_allocs.as_ref()
+    }
 }
 
-#[derive(Debug)]
 pub struct GpuRenderer {
     pub(crate) style_map: StyleMap,
     pub(crate) renderer: Renderer,
@@ -149,7 +228,7 @@ impl GpuRenderer {
         has_timestamp_query: bool,
     ) -> Self {
         Self {
-            style_map: StyleMap::default(),
+            style_map: StyleMap::new(),
             renderer: Renderer::new(device, swap_chain_format, has_timestamp_query),
         }
     }
@@ -218,6 +297,7 @@ impl GpuRenderer {
                 &lines,
                 self.style_map.style_offsets(),
                 self.style_map.styles(),
+                self.style_map.new_allocs(),
                 renderer::Color {
                     r: clear_color.r,
                     g: clear_color.g,
