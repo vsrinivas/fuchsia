@@ -27,6 +27,7 @@ group("drivers") {
     "//src/devices/internal/drivers/fragment:fragment",
     "//src/devices/internal/drivers/fragment:fragment.proxy",
     "//src/devices/light-sensor:drivers",
+    "//src/devices/mailbox:drivers",
     "//src/devices/mcu:drivers",
     "//src/devices/misc:drivers",
     "//src/devices/ml:drivers",

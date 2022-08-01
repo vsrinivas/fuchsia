@@ -80,6 +80,7 @@
 //src/devices/block/drivers/ramdisk:ramdisk-driver
 //src/devices/block/drivers/sdhci:sdhci-driver
 //src/devices/block/drivers/sdmmc:sdmmc-driver
+//src/devices/mailbox/drivers/aml-mailbox:aml-mailbox-driver
 //src/devices/block/drivers/ums-function:ums-function-driver
 //src/devices/block/drivers/usb-mass-storage:usb-mass-storage-driver
 //src/devices/block/drivers/virtio:virtio_block-driver

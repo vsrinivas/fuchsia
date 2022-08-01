@@ -88,6 +88,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_POWER_SENSOR:
       proto->ops = &power_sensor_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_MAILBOX:
+      proto->ops = &mailbox_protocol_ops_;
+      return ZX_OK;
     default:
       zxlogf(ERROR, "%s unsupported protocol \'%u\'", __func__, proto_id);
       return ZX_ERR_NOT_SUPPORTED;
@@ -802,6 +805,29 @@ zx_status_t FragmentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdata
   }
 
   return ZX_OK;
+}
+
+zx_status_t FragmentProxy::MailboxSendCommand(const mailbox_channel_t* channel,
+                                              const mailbox_data_buf_t* mdata) {
+  mailbox_channel_t* new_channel = const_cast<mailbox_channel_t*>(channel);
+  MailboxProxyRequest req = {
+      .header = {.proto_id = ZX_PROTOCOL_MAILBOX},
+      .op = MailboxOp::SENDCOMMAND,
+      .mailbox = static_cast<mailbox_type_t>(new_channel->mailbox),
+      .cmd = static_cast<uint32_t>(mdata->cmd),
+      .tx_buffer = reinterpret_cast<const uint8_t*>(mdata->tx_buffer),
+      .tx_size = static_cast<size_t>(mdata->tx_size),
+  };
+
+  MailboxProxyResponse resp = {};
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+  if (status != ZX_OK) {
+    return status;
+  }
+  new_channel->rx_size = static_cast<size_t>(resp.rx_size);
+  new_channel->rx_buffer = reinterpret_cast<const uint8_t*>(resp.rx_buffer);
+  return status;
 }
 
 void FragmentProxy::SpiConnectServer(zx::channel server) {

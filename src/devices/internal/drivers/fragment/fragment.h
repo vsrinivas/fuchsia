@@ -17,6 +17,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
 #include <fuchsia/hardware/isp/cpp/banjo.h>
+#include <fuchsia/hardware/mailbox/cpp/banjo.h>
 #include <fuchsia/hardware/mipicsi/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
@@ -93,6 +94,7 @@ class Fragment : public FragmentBase {
         shared_dma_client_(parent, ZX_PROTOCOL_SHARED_DMA),
         usb_phy_client_(parent, ZX_PROTOCOL_USB_PHY),
         mipi_csi_client_(parent, ZX_PROTOCOL_MIPI_CSI),
+        mailbox_client_(parent, ZX_PROTOCOL_MAILBOX),
         camera_sensor2_client_(parent, ZX_PROTOCOL_CAMERA_SENSOR2),
         gdc_client_(parent, ZX_PROTOCOL_GDC),
         ge2d_client_(parent, ZX_PROTOCOL_GE2D),
@@ -129,6 +131,10 @@ class Fragment : public FragmentBase {
   zx_status_t RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcMailbox(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                         uint32_t* out_resp_size, zx::handle* req_handles,
+                         uint32_t req_handle_count, zx::handle* resp_handles,
+                         uint32_t* resp_handle_count);
   zx_status_t RpcHdmi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                       uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                       zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -199,6 +205,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::SharedDmaProtocolClient, shared_dma_protocol_t> shared_dma_client_;
   ProtocolClient<ddk::UsbPhyProtocolClient, usb_phy_protocol_t> usb_phy_client_;
   ProtocolClient<ddk::MipiCsiProtocolClient, mipi_csi_protocol_t> mipi_csi_client_;
+  ProtocolClient<ddk::MailboxProtocolClient, mailbox_protocol_t> mailbox_client_;
   ProtocolClient<ddk::CameraSensor2ProtocolClient, camera_sensor2_protocol_t>
       camera_sensor2_client_;
   ProtocolClient<ddk::GdcProtocolClient, gdc_protocol_t> gdc_client_;

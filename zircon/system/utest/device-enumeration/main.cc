@@ -164,6 +164,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:2e/aml-rtc",
       "av400-i2s-audio-out",
       "sys/platform/05:07:13/av400-audio-pdm-in",
+      "sys/platform/05:07:b/aml-mailbox",
 
       // USB
       "aml-usb-crg-phy-v2",

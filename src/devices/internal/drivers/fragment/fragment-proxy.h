@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/ethernet/board/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/cpp/banjo.h>
+#include <fuchsia/hardware/mailbox/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/power/sensor/cpp/banjo.h>
@@ -55,6 +56,7 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::UsbModeSwitchProtocol<FragmentProxy>,
                       public ddk::VregProtocol<FragmentProxy>,
                       public ddk::DsiProtocol<FragmentProxy>,
+                      public ddk::MailboxProtocol<FragmentProxy>,
                       // TODO(fxbug.dev/32978): PciProxyBase implements
                       // ddk::PciProtocol so it can be shared between the two
                       // PCI drivers until migration is complete.
@@ -140,6 +142,7 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t SysmemUnregisterSecureMem();
   zx_status_t TeeConnectToApplication(const uuid_t* application_uuid, zx::channel tee_app_request,
                                       zx::channel service_provider);
+  zx_status_t MailboxSendCommand(const mailbox_channel_t* channel, const mailbox_data_buf_t* mdata);
   zx_status_t VregSetVoltageStep(uint32_t step);
   uint32_t VregGetVoltageStep();
   void VregGetRegulatorParams(vreg_params_t* out_params);

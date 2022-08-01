@@ -317,6 +317,26 @@ struct SpiProxyResponse {
   ProxyResponse header;
 };
 
+// ZX_PROTOCOL_MAILBOX proxy support.
+enum class MailboxOp {
+  SENDCOMMAND,
+};
+
+struct MailboxProxyRequest {
+  ProxyRequest header;
+  MailboxOp op;
+  mailbox_type_t mailbox;
+  uint32_t cmd;
+  const uint8_t* tx_buffer;
+  size_t tx_size;
+};
+
+struct MailboxProxyResponse {
+  ProxyResponse header;
+  uint8_t* rx_buffer;
+  size_t rx_size;
+};
+
 // ZX_PROTOCOL_USB_MODE_SWITCH proxy support.
 enum class UsbModeSwitchOp {
   SET_MODE,
