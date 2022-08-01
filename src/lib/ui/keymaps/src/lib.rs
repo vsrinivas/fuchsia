@@ -459,34 +459,68 @@ impl LockStateKeys {
 
 /// Tracks the current state of all the keyboard keys.
 ///
-/// This is repetitive code, so perhaps better handle it here.
+/// This is repetitive code, so perhaps better handle it here.  You can feed
+/// the keyboard events into its [KeyState::update] method.
+///
+/// [KeyState] keeps track of the ordering the keys were pressed, and you can
+/// call [KeyState::get_ordered_keys] to get a sequence of currently pressed
+/// keys, in the order they were pressed.  This is useful for emitting keyboard
+/// events that must happen in a very particular ordering.
 #[derive(Debug, Clone, Default)]
 pub struct KeyState {
     // Using BTreeSet for deterministic key iteration ordering.
-    pressed_keys: collections::BTreeSet<Key>,
+    /// A collection that predictably iterates over all the keys in the order
+    /// they were pressed.
+    // Must iterate through key-value pairs in the order of increasing keys.
+    ordinal_to_key: collections::BTreeMap<u64, Key>,
+    /// Backwards map for quickly finding the ordinal of a specific key.
+    // A bidirectional map could work here, but we don't use one yet on Fuchsia,
+    // avoiding a new dependency with two maps.
+    key_to_ordinal: collections::HashMap<Key, u64>,
+    /// The next new pressed key will get this ordinal.
+    // The ordinal increments with each unique key, but is reset back to zero
+    // when no keys are pressed.  This should be enough to not overflow in any
+    // realistic scenarios.
+    next_ordinal: u64,
 }
 
 impl KeyState {
     /// Creates a new [KeyState]
     pub fn new() -> Self {
-        KeyState { pressed_keys: collections::BTreeSet::new() }
+        KeyState {
+            next_ordinal: 0,
+            key_to_ordinal: collections::HashMap::new(),
+            ordinal_to_key: collections::BTreeMap::new(),
+        }
     }
 
     /// Updates the key tracking state with the given key event pair.
     pub fn update(&mut self, event: KeyEventType, key: Key) {
         match event {
             KeyEventType::Pressed | KeyEventType::Sync => {
-                self.pressed_keys.insert(key);
+                if let None = self.key_to_ordinal.insert(key, self.next_ordinal) {
+                    // Only if the inserted key was not in the set of pressed
+                    // keys.
+                    self.ordinal_to_key.insert(self.next_ordinal, key);
+                    self.next_ordinal = self.next_ordinal + 1;
+                }
             }
             KeyEventType::Released | KeyEventType::Cancel => {
-                self.pressed_keys.remove(&key);
+                if let Some(ordinal) = self.key_to_ordinal.remove(&key) {
+                    self.ordinal_to_key.remove_entry(&ordinal);
+                }
+                //  If no keys remain in the pressed set, reset the ordinal.
+                if self.key_to_ordinal.is_empty() {
+                    assert!(self.ordinal_to_key.is_empty());
+                    self.next_ordinal = 0;
+                }
             }
         }
     }
 
     /// Returns true if `key` is noted as pressed.
     pub fn is_pressed(&self, key: &Key) -> bool {
-        self.pressed_keys.contains(key)
+        self.key_to_ordinal.contains_key(key)
     }
 
     /// Returns `true` if at least one key from `keys` is pressed.
@@ -501,7 +535,25 @@ impl KeyState {
 
     /// Gets all the keys from the set.
     pub fn get_set(&self) -> collections::BTreeSet<Key> {
-        self.pressed_keys.clone()
+        let mut ret = collections::BTreeSet::new();
+        let _k = self.key_to_ordinal.keys().for_each(|k| {
+            ret.insert(*k);
+        });
+        ret
+    }
+
+    /// Gets the list of all currently pressed keys, in the order they were
+    /// pressed.
+    pub fn get_ordered_keys(&mut self) -> Vec<Key> {
+        // Iteration MUST produce keys in a strictly increasing sequence.
+        self.ordinal_to_key.iter().map(|(_, key)| *key).collect()
+    }
+
+    /// Clears the state of [Self], and expunges any stored key presses.
+    pub fn clear(&mut self) {
+        self.next_ordinal = 0;
+        self.ordinal_to_key.clear();
+        self.key_to_ordinal.clear();
     }
 }
 
@@ -917,5 +969,83 @@ mod tests {
     ) {
         let actual = US_QWERTY.apply(key, &modifier_state, &lock_state);
         assert_eq!(expected, actual, "expected: {:?}, actual: {:?}", expected, actual);
+    }
+
+    // Test that the keys are ordered in the sequence they were pressed.
+    //
+    // A ____/"""""""""""""""
+    // B _______/"""""""\____
+    // C __/"""""""""""""""""
+    // D __________/"""""""""
+    //
+    // KeyState::get_ordered_keys() => [C, A, D]
+    //
+    // since out of the keys that are still pressed, C, A and D were actuated
+    // in that order.
+    #[test]
+    fn key_ordering() {
+        let mut t = KeyState::new();
+
+        t.update(KeyEventType::Pressed, Key::C);
+        t.update(KeyEventType::Pressed, Key::A);
+        t.update(KeyEventType::Pressed, Key::B);
+        t.update(KeyEventType::Pressed, Key::D);
+        // Repeated
+        t.update(KeyEventType::Pressed, Key::A);
+
+        t.update(KeyEventType::Released, Key::B);
+
+        assert_eq!(vec![Key::C, Key::A, Key::D], t.get_ordered_keys());
+
+        t.clear();
+        let expected: Vec<Key> = vec![];
+        assert_eq!(expected, t.get_ordered_keys());
+    }
+
+    #[test]
+    fn key_ordering_with_reset() {
+        let mut t = KeyState::new();
+
+        t.update(KeyEventType::Pressed, Key::A);
+        t.update(KeyEventType::Pressed, Key::B);
+        t.update(KeyEventType::Released, Key::B);
+        t.update(KeyEventType::Released, Key::A);
+
+        let expected: Vec<Key> = vec![];
+        assert_eq!(expected, t.get_ordered_keys());
+
+        t.update(KeyEventType::Pressed, Key::C);
+
+        assert_eq!(vec![Key::C], t.get_ordered_keys());
+
+        t.update(KeyEventType::Pressed, Key::A);
+
+        assert_eq!(vec![Key::C, Key::A], t.get_ordered_keys());
+    }
+
+    #[test]
+    fn key_ordering_misuse() {
+        let mut t = KeyState::new();
+
+        t.update(KeyEventType::Released, Key::B);
+        t.update(KeyEventType::Pressed, Key::A);
+        t.update(KeyEventType::Released, Key::A);
+
+        let expected: Vec<Key> = vec![];
+        assert_eq!(expected, t.get_ordered_keys());
+
+        t.update(KeyEventType::Pressed, Key::C);
+
+        assert_eq!(vec![Key::C], t.get_ordered_keys());
+
+        t.update(KeyEventType::Pressed, Key::A);
+
+        assert_eq!(vec![Key::C, Key::A], t.get_ordered_keys());
+
+        t.update(KeyEventType::Pressed, Key::A);
+        t.update(KeyEventType::Pressed, Key::B);
+        t.update(KeyEventType::Pressed, Key::C);
+
+        assert_eq!(vec![Key::C, Key::A, Key::B], t.get_ordered_keys());
     }
 }
