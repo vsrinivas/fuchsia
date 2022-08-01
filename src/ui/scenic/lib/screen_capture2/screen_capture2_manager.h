@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "screen_capture2.h"
+#include "src/ui/scenic/lib/flatland/engine/engine.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture_buffer_collection_importer.h"

@@ -37,7 +37,6 @@ void ScreenCapture2Manager::CreateClient(
   std::unique_ptr<ScreenCapture> instance = std::make_unique<ScreenCapture>(
       screen_capture_buffer_collection_importer_, renderer_,
       /*get_renderables=*/[this]() { return get_renderables_callback_(); });
-
   client_bindings_.AddBinding(std::move(instance), std::move(request));
 }
 

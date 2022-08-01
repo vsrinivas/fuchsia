@@ -573,6 +573,29 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     FX_DCHECK(status == ZX_OK);
   }
 
+  // Make ScreenCapture2Manager.
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[screen_capture2_manager]");
+
+    // Capture flatland_manager since the primary display may not have been initialized yet.
+    screen_capture2_manager_ = std::make_shared<screen_capture2::ScreenCapture2Manager>(
+        flatland_renderer, screen_capture_buffer_collection_importer, [this]() {
+          FX_DCHECK(flatland_manager_);
+          FX_DCHECK(flatland_engine_);
+
+          auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
+          FX_DCHECK(display);
+
+          return flatland_engine_->GetRenderables(*display);
+        });
+
+    fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::internal::ScreenCapture>)>
+        handler = fit::bind_member(screen_capture2_manager_.get(),
+                                   &screen_capture2::ScreenCapture2Manager::CreateClient);
+    zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+    FX_DCHECK(status == ZX_OK);
+  }
+
   // Make ScreenshotManager for the client-friendly screenshot protocol.
   {
     TRACE_DURATION("gfx", "App::InitializeServices[screenshot_manager]");
@@ -714,8 +737,8 @@ void App::InitializeHeartbeat() {
   // |session_updaters| will be updated in submission order.
   frame_scheduler_->Initialize(
       /*frame_renderer*/ frame_renderer_,
-      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_, flatland_presenter_,
-                            view_tree_snapshotter_});
+      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_,
+                            screen_capture2_manager_, flatland_presenter_, view_tree_snapshotter_});
 }
 
 }  // namespace scenic_impl

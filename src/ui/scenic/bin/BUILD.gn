@@ -32,6 +32,7 @@ executable("bin") {
     "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/scheduling:frame_metrics_registry",
     "//src/ui/scenic/lib/screen_capture",
+    "//src/ui/scenic/lib/screen_capture2",
     "//src/ui/scenic/lib/screenshot",
     "//src/ui/scenic/lib/shutdown",
     "//src/ui/scenic/lib/shutdown:lifecycle_controller",

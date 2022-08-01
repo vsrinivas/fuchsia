@@ -71,17 +71,20 @@ class ScreenCapture : public fuchsia::ui::composition::internal::ScreenCapture {
   // Holds all server tokens associated with the buffer index.
   std::unordered_map<uint32_t, zx::eventpair> buffer_server_tokens_;
 
+  // Holds the events passed into Render() during the current call of MaybeRenderFrame().
+  std::vector<zx::event> current_release_fences_;
+
   // Used as state for calls to GetNextFrame() to ensure two calls cannot overlap.
   std::optional<ScreenCapture::GetNextFrameCallback> current_callback_;
 
   // The last frame produced according to the system has been rendered into a client buffer. Used to
   // correctly return a new frame immediately or wait for the next frame to be produced.
-  bool client_received_last_frame_;
+  bool client_received_last_frame_ = false;
 
   // Acts as a lock to MaybeRenderFrame() so it can not be used while it is still on a previous
   // call.
   // TODO(fxbug.dev/104367): If we make ScreenCapture multi-threaded, this will need to be a mutex.
-  bool render_frame_in_progress_;
+  bool render_frame_in_progress_ = false;
 
   GetRenderables get_renderables_;
 

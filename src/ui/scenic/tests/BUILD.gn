@@ -69,6 +69,21 @@ source_set("scenic_realm_builder") {
   ]
 }
 
+source_set("screen_capture_utils") {
+  testonly = true
+  sources = [
+    "utils/screen_capture_utils.cc",
+    "utils/screen_capture_utils.h",
+  ]
+  public_deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//src/ui/scenic/lib/allocation:allocation",
+    "//src/ui/scenic/lib/flatland/engine",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
 source_set("gfx_pixel_test") {
   testonly = true
   sources = [
@@ -292,6 +307,7 @@ executable("screen_capture_integration_test_bin") {
   sources = [ "flatland_integration_tests/screen_capture_integration_test.cc" ]
   deps = [
     ":common_deps",
+    ":screen_capture_utils",
     "//sdk//fidl/fuchsia.ui.composition",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/screen_capture:screen_capture",
@@ -304,6 +320,30 @@ fuchsia_test_component("screen_capture_integration_test") {
   component_name = "screen_capture_integration_test"
   manifest = "meta/screen_capture_integration_test.cml"
   deps = [ ":screen_capture_integration_test_bin" ]
+}
+
+executable("screen_capture2_integration_test_bin") {
+  testonly = true
+  sources = [ "flatland_integration_tests/screen_capture2_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    ":screen_capture_utils",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk//fidl/fuchsia.ui.composition.internal",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//src/ui/lib/escher",
+    "//src/ui/scenic/lib/allocation:allocation",
+    "//src/ui/scenic/lib/flatland/engine",
+    "//src/ui/scenic/lib/screen_capture2:screen_capture2",
+    "//src/ui/scenic/lib/utils:utils",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("screen_capture2_integration_test") {
+  component_name = "screen_capture2_integration_test"
+  manifest = "meta/screen_capture2_integration_test.cml"
+  deps = [ ":screen_capture2_integration_test_bin" ]
 }
 
 executable("singleton_display_integration_test_bin") {
@@ -369,6 +409,7 @@ fuchsia_test_package("flatland_integration_tests") {
     ":flatland_focus_integration_test",
     ":flatland_mouse_integration_test",
     ":screen_capture_integration_test",
+    ":screen_capture2_integration_test",
   ]
   test_specs = {
     environments = vulkan_envs

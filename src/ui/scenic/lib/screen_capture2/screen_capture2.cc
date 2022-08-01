@@ -25,7 +25,7 @@ ScreenCapture::ScreenCapture(std::shared_ptr<screen_capture::ScreenCaptureBuffer
                              std::shared_ptr<flatland::Renderer> renderer,
                              GetRenderables get_renderables)
     : screen_capture_buffer_collection_importer_(screen_capture_buffer_collection_importer),
-      renderer_(std::move(renderer)),
+      renderer_(renderer),
       get_renderables_(std::move(get_renderables)),
       weak_factory_(this) {}
 
@@ -105,7 +105,6 @@ void ScreenCapture::Configure(ScreenCaptureConfig args, ConfigureCallback callba
   client_received_last_frame_ = false;
   render_frame_in_progress_ = false;
   current_callback_ = std::nullopt;
-
   callback(fpromise::ok());
 }
 
@@ -171,10 +170,11 @@ void ScreenCapture::MaybeRenderFrame() {
                        });
   FX_DCHECK(status == ZX_OK);
 
-  std::vector<zx::event> fences;
-  fences.push_back(std::move(release_fence));
+  // TODO(fxbug.dev/93069): Clean up current_release_fences_ once bug is fixed.
+  FX_DCHECK(current_release_fences_.empty());
+  current_release_fences_.push_back(std::move(release_fence));
   // Render content into user-provided buffer, which will signal the release_fence.
-  renderer_->Render(metadata, rects, image_metadatas, fences);
+  renderer_->Render(metadata, rects, image_metadatas, current_release_fences_);
 }
 
 void ScreenCapture::HandleRender(uint32_t buffer_index, uint64_t timestamp) {
@@ -206,6 +206,7 @@ void ScreenCapture::HandleRender(uint32_t buffer_index, uint64_t timestamp) {
   GetNextFrameCallback callback = std::move(current_callback_.value());
   callback(fpromise::ok(std::move(frame_info)));
 
+  current_release_fences_.clear();
   current_callback_ = std::nullopt;
   client_received_last_frame_ = true;
   render_frame_in_progress_ = false;
