@@ -845,14 +845,15 @@ TEST_F(FastbootFlashTest, AndroidSparseImageNotSupported) {
 
 TEST(FastbootBase, ExtractCommandArgsMultipleArgs) {
   FastbootBase::CommandArgs args;
-  FastbootBase::ExtractCommandArgs("cmd:arg1:arg2:arg3", ":", args);
+  FastbootBase::ExtractCommandArgs("cmd:arg1:arg2:arg3:a", ":", args);
 
-  EXPECT_EQ(args.num_args, 4);
+  EXPECT_EQ(args.num_args, 5);
   EXPECT_EQ(args.args[0], "cmd");
   EXPECT_EQ(args.args[1], "arg1");
   EXPECT_EQ(args.args[2], "arg2");
   EXPECT_EQ(args.args[3], "arg3");
-  EXPECT_EQ(args.args[4], "");
+  EXPECT_EQ(args.args[4], "a");
+  EXPECT_EQ(args.args[5], "");
 }
 
 TEST(FastbootBase, ExtractCommandArgsNoArgs) {

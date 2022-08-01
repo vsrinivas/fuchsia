@@ -124,7 +124,7 @@ void FastbootBase::ExtractCommandArgs(std::string_view cmd, const char* delimete
     find_pos = cmd.find(delimeter, start);
   }
 
-  if (start + 1 < cmd.size()) {
+  if (start < cmd.size()) {
     ret.args[ret.num_args++] = cmd.substr(start);
   }
 }
