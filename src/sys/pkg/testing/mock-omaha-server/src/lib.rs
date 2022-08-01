@@ -44,7 +44,7 @@ pub struct ResponseAndMetadata {
     pub response: OmahaResponse,
     pub merkle: Hash,
     pub check_assertion: UpdateCheckAssertion,
-    pub version: String,
+    pub version: Option<String>,
     pub cohort_assertion: Option<String>,
     pub codebase: String,
     pub package_path: String,
@@ -59,7 +59,7 @@ impl Default for ResponseAndMetadata {
             )
             .unwrap(),
             check_assertion: UpdateCheckAssertion::UpdatesEnabled,
-            version: "0.1.2.3".to_string(),
+            version: Some("0.1.2.3".to_string()),
             cohort_assertion: None,
             codebase: "fuchsia-pkg://integration.test.fuchsia.com/".to_string(),
             package_path: "update".to_string(),
@@ -268,8 +268,10 @@ pub async fn handle_omaha_request(
             let appid = app.get("appid").unwrap();
             let expected = &omaha_server.responses_by_appid[appid.as_str().unwrap()];
 
-            let version = app.get("version").unwrap();
-            assert_eq!(version, &expected.version);
+            if let Some(expected_version) = &expected.version {
+                let version = app.get("version").unwrap();
+                assert_eq!(version, expected_version);
+            }
 
             let package_name = format!("{}?hash={}", expected.package_path, expected.merkle);
             let app = if let Some(expected_update_check) = app.get("updatecheck") {
@@ -427,6 +429,54 @@ mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_no_validate_version() -> Result<(), Error> {
+        // Send a request with no specified version and assert that we don't check.
+        // See 0.0.0.1 vs 9.9.9.9 below.
+        let server = OmahaServer::start(Arc::new(Mutex::new(
+            OmahaServerBuilder::default()
+                .responses_by_appid([(
+                    "integration-test-appid-1".to_string(),
+                    ResponseAndMetadata {
+                        response: OmahaResponse::NoUpdate,
+                        version: None,
+                        ..Default::default()
+                    },
+                )])
+                .build()
+                .unwrap(),
+        )))
+        .context("starting server")?;
+
+        let client = fuchsia_hyper::new_client();
+        let body = json!({
+            "request": {
+                "app": [
+                    {
+                        "appid": "integration-test-appid-1",
+                        "version": "9.9.9.9",
+                        "updatecheck": { "updatedisabled": false }
+                    },
+                ]
+            }
+        });
+        let request = Request::post(&server).body(Body::from(body.to_string())).unwrap();
+
+        let response = client.request(request).await?;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = hyper::body::to_bytes(response).await.context("reading response body")?;
+        let obj: serde_json::Value =
+            serde_json::from_slice(&body).context("parsing response json")?;
+
+        let response = obj.get("response").unwrap();
+        let apps = response.get("app").unwrap().as_array().unwrap();
+        assert_eq!(apps.len(), 1);
+        let status = apps[0].get("updatecheck").unwrap().get("status").unwrap();
+        assert_eq!(status, "noupdate");
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_server_replies() -> Result<(), Error> {
         let server_url = OmahaServer::start(Arc::new(Mutex::new(
             OmahaServerBuilder::default()
@@ -435,7 +485,7 @@ mod tests {
                         "integration-test-appid-1".to_string(),
                         ResponseAndMetadata {
                             response: OmahaResponse::NoUpdate,
-                            version: "0.0.0.1".to_string(),
+                            version: Some("0.0.0.1".to_string()),
                             ..Default::default()
                         },
                     ),
@@ -443,7 +493,7 @@ mod tests {
                         "integration-test-appid-2".to_string(),
                         ResponseAndMetadata {
                             response: OmahaResponse::NoUpdate,
-                            version: "0.0.0.2".to_string(),
+                            version: Some("0.0.0.2".to_string()),
                             ..Default::default()
                         },
                     ),

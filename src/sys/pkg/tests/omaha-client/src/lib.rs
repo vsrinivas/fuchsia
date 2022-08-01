@@ -940,7 +940,7 @@ async fn test_omaha_client_update_multi_app() {
                 "foo".to_string(),
                 ResponseAndMetadata {
                     response: OmahaResponse::NoUpdate,
-                    version: "0.0.4.1".to_string(),
+                    version: Some("0.0.4.1".to_string()),
                     ..Default::default()
                 },
             ),
@@ -948,7 +948,7 @@ async fn test_omaha_client_update_multi_app() {
                 "bar".to_string(),
                 ResponseAndMetadata {
                     response: OmahaResponse::NoUpdate,
-                    version: "0.0.4.2".to_string(),
+                    version: Some("0.0.4.2".to_string()),
                     ..Default::default()
                 },
             ),
@@ -1044,7 +1044,7 @@ async fn test_omaha_client_update_eager_package() {
                 "foo".to_string(),
                 ResponseAndMetadata {
                     response: OmahaResponse::Update,
-                    version: "0.0.4.1".to_string(),
+                    version: Some("0.0.4.1".to_string()),
                     ..Default::default()
                 },
             ),
@@ -1052,7 +1052,7 @@ async fn test_omaha_client_update_eager_package() {
                 "bar".to_string(),
                 ResponseAndMetadata {
                     response: OmahaResponse::NoUpdate,
-                    version: "0.0.4.2".to_string(),
+                    version: Some("0.0.4.2".to_string()),
                     ..Default::default()
                 },
             ),
