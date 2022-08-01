@@ -152,3 +152,29 @@ func TestSingleRequest(t *testing.T) {
 		t.Fatalf("Server was shutdown, get request should have failed.")
 	}
 }
+
+func TestSetPkgUrlOnServer(t *testing.T) {
+	ctx := context.Background()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	args := argsForTest()
+	if err := args.SetUpdatePkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
+		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
+	}
+
+	o, err := NewOmahaServer(ctx, args, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("failed to create omaha server: %v", err)
+	}
+	defer o.Shutdown()
+
+	req := getTestOmahaRequest(t)
+	if _, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req)); err != nil {
+		t.Fatalf("Get request shouldn't fail. err: %s", err)
+	}
+
+	if err := o.SetPkgURL(ctx, "fuchsia-pkg://other-domain.com/update/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"); err != nil {
+		t.Fatalf("Setting Pkg URL on a running server shouldn't fail. err: %s\nstdout: %s\n stderr: %s\n", err, stdout.String(), stderr.String())
+	}
+}

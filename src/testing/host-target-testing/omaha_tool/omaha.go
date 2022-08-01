@@ -6,12 +6,14 @@ package omaha_tool
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -69,8 +71,8 @@ type OmahaTool struct {
 	cmd       *exec.Cmd
 }
 
-func makeResponsesByAppid(appId string, merkle string, packagePath string) (string, error) {
-	responsesByAppid := map[string]responseAndMetadata{
+func makeResponsesByAppIDSerialized(appId string, merkle string, packagePath string) (string, error) {
+	responsesByAppID := map[string]responseAndMetadata{
 		appId: {
 			Response:       "Update",
 			Merkle:         merkle,
@@ -80,8 +82,7 @@ func makeResponsesByAppid(appId string, merkle string, packagePath string) (stri
 			PackagePath:    packagePath,
 		},
 	}
-
-	responsesByAppidSerialized, err := json.Marshal(responsesByAppid)
+	responsesByAppidSerialized, err := json.Marshal(responsesByAppID)
 	if err != nil {
 		return "", err
 	}
@@ -104,7 +105,7 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, stdout io.Writer, s
 		return nil, err
 	}
 
-	responsesByAppid, err := makeResponsesByAppid(args.AppId, args.merkle, args.packagePath)
+	responsesByAppid, err := makeResponsesByAppIDSerialized(args.AppId, args.merkle, args.packagePath)
 	if err != nil {
 		return nil, err
 	}
@@ -212,4 +213,20 @@ func (o *OmahaTool) Shutdown() error {
 
 func (o *OmahaTool) URL() string {
 	return o.serverURL
+}
+
+func (o *OmahaTool) SetPkgURL(ctx context.Context, updatePkgURL string) error {
+	newArgs := o.Args
+	if err := newArgs.SetUpdatePkgURL(ctx, updatePkgURL); err != nil {
+		return err
+	}
+	o.Args = newArgs
+
+	req, err := makeResponsesByAppIDSerialized(o.Args.AppId, o.Args.merkle, o.Args.packagePath)
+	if err != nil {
+		return err
+	}
+
+	_, err = http.Post(o.URL()+"/set_responses_by_appid", "application/json", bytes.NewBuffer([]byte(req)))
+	return err
 }
