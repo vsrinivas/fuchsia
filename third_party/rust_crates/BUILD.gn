@@ -328,6 +328,10 @@ group("gpt") {
   public_deps = [ ":gpt-v3_0_0" ]
 }
 
+group("half") {
+  public_deps = [ ":half-v1_6_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("handlebars") {
     public_deps = [ ":handlebars-v4_2_1" ]

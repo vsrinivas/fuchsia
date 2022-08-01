@@ -103,6 +103,7 @@ futures-util = "=0.3.19"
 getrandom = { features = ["js"] }
 glob = "0.3.0"
 gpt = "3.0.0"
+half = "1.6.0"
 heck = "0.3.1"
 hex = "0.3.2"
 hmac = "0.11.0"
