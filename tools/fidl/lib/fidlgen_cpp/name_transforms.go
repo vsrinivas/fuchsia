@@ -1019,7 +1019,6 @@ func init() {
 	}
 	nsComponentContext.ReserveNames(cppKeywords)
 	nsComponentContext.ReserveNames(errnos)
-	nsComponentContext.ReserveNames(fidlNames)
 	nsComponentContext.ReserveNames(miscNames)
 	nsComponentContext.ReserveNames(zxNames)
 	nsComponentContext.ReserveNames(macroNames)

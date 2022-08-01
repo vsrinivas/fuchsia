@@ -18,7 +18,7 @@
 #include <zxtest/zxtest.h>
 
 namespace {
-namespace test = ::test::unknown_::interactions;
+namespace test = ::test::unknown::interactions;
 
 class UnknownInteractionsImpl : public test::testing::UnknownInteractionsProtocol_TestBase {
   void NotImplemented_(const std::string& name) override {
