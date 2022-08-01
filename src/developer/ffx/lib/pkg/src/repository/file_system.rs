@@ -332,18 +332,6 @@ mod tests {
             true
         }
 
-        async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
-        async fn read_blob(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_blob(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
         fn write_metadata(&self, path: &str, bytes: &[u8]) {
             let file_path = self.metadata_path.join(path);
             let mut f = File::create(file_path).unwrap();
@@ -355,48 +343,15 @@ mod tests {
             let mut f = File::create(file_path).unwrap();
             f.write_all(bytes).unwrap();
         }
+
+        fn repo(&self) -> &dyn RepositoryBackend {
+            &self.repo
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_missing() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch_missing(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_empty() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch_empty(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_small() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch_small(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range_small() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch_range_small(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch_range(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range_not_satisifiable() {
-        let env = TestEnv::new();
-        repo_tests::check_fetch_range_not_satisfiable(&env).await;
+    repo_tests::repo_test_suite! {
+        env = TestEnv::new();
+        chunk_size = CHUNK_SIZE;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -418,9 +373,8 @@ mod tests {
         let env = TestEnv::new();
         env.write_metadata("empty", b"");
 
-        assert_matches!(env.read_metadata("empty", Range::Full).await, Ok(body) if body == b"");
-        assert_matches!(
-            env.read_metadata("subdir/../empty", Range::Full).await,
+        assert_matches!(repo_tests::read_metadata(&env, "empty", Range::Full).await, Ok(body) if body == b"");
+        assert_matches!(repo_tests::read_metadata(&env, "subdir/../empty", Range::Full).await,
             Err(Error::InvalidPath(path)) if path == Utf8Path::new("subdir/../empty")
         );
     }

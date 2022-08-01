@@ -26,7 +26,7 @@ pub enum Error {
 /// only support a single range request, rather than multiple requests.
 ///
 /// [RFC-7233]: https://httpwg.org/specs/rfc7233.html#range.requests
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Range {
     /// A range that requests the full range of bytes from a resource.
     Full,

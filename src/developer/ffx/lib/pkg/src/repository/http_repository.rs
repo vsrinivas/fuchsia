@@ -194,7 +194,11 @@ mod tests {
         super::*,
         crate::{
             manager::RepositoryManager,
-            repository::{repo_tests, Repository},
+            repository::{
+                file_system::CHUNK_SIZE,
+                repo_tests::{self, TestEnv as _},
+                Repository,
+            },
             server::RepositoryServer,
             test_utils::make_pm_repository,
         },
@@ -202,7 +206,7 @@ mod tests {
         camino::Utf8Path,
         fuchsia_async as fasync,
         fuchsia_hyper::{new_client, HyperConnector},
-        std::{net::Ipv4Addr, sync::Arc},
+        std::{fs::File, io::Write, net::Ipv4Addr, sync::Arc},
     };
 
     struct TestEnv {
@@ -242,6 +246,29 @@ mod tests {
 
             TestEnv { tmp, repo, server, task }
         }
+    }
+
+    #[async_trait::async_trait]
+    impl repo_tests::TestEnv for TestEnv {
+        fn supports_range(&self) -> bool {
+            true
+        }
+
+        fn repo(&self) -> &dyn RepositoryBackend {
+            &self.repo
+        }
+
+        fn write_metadata(&self, path: &str, bytes: &[u8]) {
+            let file_path = self.tmp.path().join("repository").join(path);
+            let mut f = File::create(file_path).unwrap();
+            f.write_all(bytes).unwrap();
+        }
+
+        fn write_blob(&self, path: &str, bytes: &[u8]) {
+            let file_path = self.tmp.path().join("repository").join("blobs").join(path);
+            let mut f = File::create(file_path).unwrap();
+            f.write_all(bytes).unwrap();
+        }
 
         async fn stop(self) {
             let TestEnv { tmp: _tmp, repo, server, task } = self;
@@ -255,81 +282,9 @@ mod tests {
         }
     }
 
-    #[async_trait::async_trait]
-    impl repo_tests::TestEnv for TestEnv {
-        fn supports_range(&self) -> bool {
-            true
-        }
-
-        async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
-        async fn read_blob(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_blob(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
-        fn write_metadata(&self, path: &str, bytes: &[u8]) {
-            std::fs::write(self.tmp.path().join("repository").join(path), bytes).unwrap();
-        }
-
-        fn write_blob(&self, path: &str, bytes: &[u8]) {
-            std::fs::write(self.tmp.path().join("repository").join("blobs").join(path), bytes)
-                .unwrap();
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_missing() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_missing(&env).await;
-        env.stop().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_empty() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_empty(&env).await;
-        env.stop().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_small() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_small(&env).await;
-        env.stop().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range_small() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_range_small(&env).await;
-        env.stop().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch(&env).await;
-        env.stop().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_range(&env).await;
-        env.stop().await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_range_fetch_not_satisifiable() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_range_not_satisfiable(&env).await;
-        env.stop().await;
+    repo_tests::repo_test_suite! {
+        env = TestEnv::new().await;
+        chunk_size = CHUNK_SIZE;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

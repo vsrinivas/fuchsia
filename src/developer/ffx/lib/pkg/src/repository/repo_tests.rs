@@ -2,192 +2,307 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        range::Range,
-        repository::{file_system::CHUNK_SIZE, Error},
-    },
-    assert_matches::assert_matches,
+use crate::{
+    range::Range,
+    repository::{Error, RepositoryBackend},
 };
 
 #[async_trait::async_trait]
-pub(crate) trait TestEnv {
+pub(crate) trait TestEnv: Sized {
     /// Whether or not the repository backend supports Range requests.
     fn supports_range(&self) -> bool;
 
+    /// Write a test metadata at this path with these bytes.
     fn write_metadata(&self, path: &str, bytes: &[u8]);
 
+    /// Write a test blob at this path with these bytes.
     fn write_blob(&self, path: &str, bytes: &[u8]);
 
-    async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error>;
+    /// The repository under test.
+    fn repo(&self) -> &dyn RepositoryBackend;
 
-    async fn read_blob(&self, path: &str, range: Range) -> Result<Vec<u8>, Error>;
+    /// Shut down the test environment.
+    async fn stop(self) {}
 }
 
-// Helper to check that fetching a non-existing file returns a NotFound.
-pub(crate) async fn check_fetch_missing(env: &impl TestEnv) {
-    assert_matches!(
-        env.read_metadata("meta-does-not-exist", Range::Full).await,
-        Err(Error::NotFound)
-    );
-    assert_matches!(env.read_blob("blob-does-not-exist", Range::Full).await, Err(Error::NotFound));
-}
+/// Helper to read a metadata resource into a vector.
+pub(crate) async fn read_metadata(
+    env: &impl TestEnv,
+    path: &str,
+    range: Range,
+) -> Result<Vec<u8>, Error> {
+    let mut body = vec![];
+    let mut resource = env.repo().fetch_metadata(path, range).await?;
+    resource.read_to_end(&mut body).await?;
 
-// Helper to check that fetching an empty file succeeds.
-pub(crate) async fn check_fetch_empty(env: &impl TestEnv) {
-    env.write_metadata("empty-meta", b"");
-    env.write_blob("empty-blob", b"");
+    assert_eq!(resource.content_len(), body.len() as u64);
 
-    assert_eq!(env.read_metadata("empty-meta", Range::Full).await.unwrap(), b"");
-    assert_eq!(env.read_blob("empty-blob", Range::Full).await.unwrap(), b"");
-}
-
-// Helper to check that we can fetch a small file, which fits in a single chunk.
-pub(crate) async fn check_fetch_small(env: &impl TestEnv) {
-    let meta_body = "hello meta";
-    let blob_body = "hello blob";
-    env.write_metadata("small-meta", meta_body.as_bytes());
-    env.write_blob("small-blob", blob_body.as_bytes());
-
-    let actual = env.read_metadata("small-meta", Range::Full).await.unwrap();
-    assert_eq!(String::from_utf8(actual).unwrap(), meta_body);
-
-    let actual = env.read_blob("small-blob", Range::Full).await.unwrap();
-    assert_eq!(String::from_utf8(actual).unwrap(), blob_body);
-}
-
-// Helper to check that we can fetch a range from a small file, which fits in a single chunk.
-pub(crate) async fn check_fetch_range_small(env: &impl TestEnv) {
-    let meta_body = "hello meta";
-    let blob_body = "hello blob";
-    env.write_metadata("small-meta", meta_body.as_bytes());
-    env.write_blob("small-blob", blob_body.as_bytes());
-
-    let actual = env
-        .read_metadata("small-meta", Range::Inclusive { first_byte_pos: 1, last_byte_pos: 7 })
-        .await
-        .unwrap();
-
-    assert_eq!(
-        String::from_utf8(actual).unwrap(),
-        if env.supports_range() { &meta_body[1..=7] } else { &meta_body[..] }
-    );
-
-    let actual = env
-        .read_blob("small-blob", Range::Inclusive { first_byte_pos: 1, last_byte_pos: 7 })
-        .await
-        .unwrap();
-
-    assert_eq!(
-        String::from_utf8(actual).unwrap(),
-        if env.supports_range() { &blob_body[1..=7] } else { &blob_body[..] }
-    );
-}
-
-// Helper to check that we can fetch a variety of ranges that cross the chunk boundary size.
-pub(crate) async fn check_fetch(env: &impl TestEnv) {
-    for size in [20, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1] {
-        let path = format!("{}", size);
-        let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
-
-        env.write_metadata(&path, &body);
-        env.write_blob(&path, &body);
-
-        let actual = env.read_metadata(&path, Range::Full).await.unwrap();
-        assert_eq!(&actual, &body[..], "size: {size}");
-
-        let actual = env.read_blob(&path, Range::Full).await.unwrap();
-        assert_eq!(&actual, &body[..], "size: {size}");
+    if range == Range::Full {
+        assert_eq!(resource.total_len(), body.len() as u64);
+    } else {
+        assert!(body.len() as u64 <= resource.total_len());
     }
+
+    Ok(body)
 }
 
-pub(crate) async fn check_fetch_range(env: &impl TestEnv) {
-    for size in [20, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1] {
-        let path = format!("{}", size);
-        let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
+/// Helper to read a blob resource into a vector.
+pub(crate) async fn read_blob(
+    env: &impl TestEnv,
+    path: &str,
+    range: Range,
+) -> Result<Vec<u8>, Error> {
+    let mut body = vec![];
+    let mut resource = env.repo().fetch_blob(path, range).await?;
+    resource.read_to_end(&mut body).await?;
 
-        env.write_metadata(&path, &body);
-        env.write_blob(&path, &body);
+    assert_eq!(resource.content_len(), body.len() as u64);
 
-        for (range, expected) in [
-            (Range::From { first_byte_pos: 0 }, &body[..]),
-            (Range::From { first_byte_pos: 5 }, &body[5..]),
-            (Range::From { first_byte_pos: size as u64 - 1 }, &body[size - 1..]),
-            (Range::Inclusive { first_byte_pos: 0, last_byte_pos: 0 }, &body[0..=0]),
-            (Range::Inclusive { first_byte_pos: 0, last_byte_pos: size as u64 - 1 }, &body[..]),
-            (Range::Inclusive { first_byte_pos: 5, last_byte_pos: 5 }, &body[5..=5]),
-            (Range::Inclusive { first_byte_pos: 5, last_byte_pos: 15 }, &body[5..=15]),
-            (
-                Range::Inclusive { first_byte_pos: 5, last_byte_pos: size as u64 - 5 },
-                &body[5..=size - 5],
-            ),
-            (
-                Range::Inclusive {
-                    first_byte_pos: size as u64 - 1,
-                    last_byte_pos: size as u64 - 1,
+    if range == Range::Full {
+        assert_eq!(resource.total_len(), body.len() as u64);
+    } else {
+        assert!(body.len() as u64 <= resource.total_len());
+    }
+
+    Ok(body)
+}
+
+macro_rules! repo_test_suite {
+    (
+        env = $create_env:expr;
+        chunk_size = $chunk_size:expr;
+    ) => {
+        #[cfg(test)]
+        mod repo_test_suite {
+            use {
+                super::*,
+                assert_matches::assert_matches,
+                $crate::{
+                    range::Range,
+                    repository::{
+                        repo_tests::{read_blob, read_metadata},
+                        Error,
+                    },
                 },
-                &body[size - 1..=size - 1],
-            ),
-            (Range::Suffix { len: 0 }, &[]),
-            (Range::Suffix { len: 5 }, &body[size - 5..]),
-            (Range::Suffix { len: size as u64 }, &body[..]),
-        ] {
-            if env.supports_range() {
-                let actual = env.read_metadata(&path, range.clone()).await.unwrap();
-                assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+            };
 
-                let actual = env.read_blob(&path, range.clone()).await.unwrap();
-                assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
-            } else {
-                println!("{:?} {:?}", range, expected);
-                let actual = env.read_metadata(&path, range.clone()).await.unwrap();
-                assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+            // Test to check that fetching a non-existing file returns a NotFound.
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch_missing() {
+                let env = $create_env;
 
-                let actual = env.read_blob(&path, range.clone()).await.unwrap();
-                assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+                assert_matches!(
+                    read_metadata(&env, "meta-does-not-exist", Range::Full).await,
+                    Err(Error::NotFound)
+                );
+                assert_matches!(
+                    read_blob(&env, "blob-does-not-exist", Range::Full).await,
+                    Err(Error::NotFound)
+                );
+
+                env.stop().await;
+            }
+
+            // Test to check that fetching an empty file succeeds.
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch_empty() {
+                let env = $create_env;
+
+                env.write_metadata("empty-meta", b"");
+                env.write_blob("empty-blob", b"");
+
+                assert_eq!(read_metadata(&env, "empty-meta", Range::Full).await.unwrap(), b"");
+                assert_eq!(read_blob(&env, "empty-blob", Range::Full).await.unwrap(), b"");
+
+                env.stop().await;
+            }
+
+            // Test to check that we can fetch a small file, which fits in a single chunk.
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch_small() {
+                let env = $create_env;
+
+                let meta_body = "hello meta";
+                let blob_body = "hello blob";
+                env.write_metadata("small-meta", meta_body.as_bytes());
+                env.write_blob("small-blob", blob_body.as_bytes());
+
+                let actual = read_metadata(&env, "small-meta", Range::Full).await.unwrap();
+                assert_eq!(String::from_utf8(actual).unwrap(), meta_body);
+
+                let actual = read_blob(&env, "small-blob", Range::Full).await.unwrap();
+                assert_eq!(String::from_utf8(actual).unwrap(), blob_body);
+
+                env.stop().await;
+            }
+
+            // Test to check that we can fetch a range from a small file, which fits in a single chunk.
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch_range_small() {
+                let env = $create_env;
+
+                let meta_body = "hello meta";
+                let blob_body = "hello blob";
+                env.write_metadata("small-meta", meta_body.as_bytes());
+                env.write_blob("small-blob", blob_body.as_bytes());
+
+                let actual = read_metadata(
+                    &env,
+                    "small-meta",
+                    Range::Inclusive { first_byte_pos: 1, last_byte_pos: 7 },
+                )
+                .await
+                .unwrap();
+
+                assert_eq!(
+                    String::from_utf8(actual).unwrap(),
+                    if env.supports_range() { &meta_body[1..=7] } else { &meta_body[..] }
+                );
+
+                let actual = read_blob(
+                    &env,
+                    "small-blob",
+                    Range::Inclusive { first_byte_pos: 1, last_byte_pos: 7 },
+                )
+                .await
+                .unwrap();
+
+                assert_eq!(
+                    String::from_utf8(actual).unwrap(),
+                    if env.supports_range() { &blob_body[1..=7] } else { &blob_body[..] }
+                );
+
+                env.stop().await;
+            }
+
+            // Test to check that we can fetch a variety of ranges that cross the chunk boundary size.
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch() {
+                let env = $create_env;
+
+                for size in [20, $chunk_size - 1, $chunk_size, $chunk_size + 1, $chunk_size * 2 + 1]
+                {
+                    let path = format!("{}", size);
+                    let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
+
+                    env.write_metadata(&path, &body);
+                    env.write_blob(&path, &body);
+
+                    let actual = read_metadata(&env, &path, Range::Full).await.unwrap();
+                    assert_eq!(&actual, &body[..], "size: {size}");
+
+                    let actual = read_blob(&env, &path, Range::Full).await.unwrap();
+                    assert_eq!(&actual, &body[..], "size: {size}");
+                }
+
+                env.stop().await;
+            }
+
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch_range() {
+                let env = $create_env;
+
+                for size in [20, $chunk_size - 1, $chunk_size, $chunk_size + 1, $chunk_size * 2 + 1]
+                {
+                    let path = format!("{}", size);
+                    let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
+
+                    env.write_metadata(&path, &body);
+                    env.write_blob(&path, &body);
+
+                    for (range, expected) in [
+                        (Range::From { first_byte_pos: 0 }, &body[..]),
+                        (Range::From { first_byte_pos: 5 }, &body[5..]),
+                        (Range::From { first_byte_pos: size as u64 - 1 }, &body[size - 1..]),
+                        (Range::Inclusive { first_byte_pos: 0, last_byte_pos: 0 }, &body[0..=0]),
+                        (
+                            Range::Inclusive { first_byte_pos: 0, last_byte_pos: size as u64 - 1 },
+                            &body[..],
+                        ),
+                        (Range::Inclusive { first_byte_pos: 5, last_byte_pos: 5 }, &body[5..=5]),
+                        (Range::Inclusive { first_byte_pos: 5, last_byte_pos: 15 }, &body[5..=15]),
+                        (
+                            Range::Inclusive { first_byte_pos: 5, last_byte_pos: size as u64 - 5 },
+                            &body[5..=size - 5],
+                        ),
+                        (
+                            Range::Inclusive {
+                                first_byte_pos: size as u64 - 1,
+                                last_byte_pos: size as u64 - 1,
+                            },
+                            &body[size - 1..=size - 1],
+                        ),
+                        (Range::Suffix { len: 0 }, &[]),
+                        (Range::Suffix { len: 5 }, &body[size - 5..]),
+                        (Range::Suffix { len: size as u64 }, &body[..]),
+                    ] {
+                        if env.supports_range() {
+                            let actual = read_metadata(&env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+
+                            let actual = read_blob(&env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+                        } else {
+                            let actual = read_metadata(&env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+
+                            let actual = read_blob(&env, &path, range.clone()).await.unwrap();
+                            assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+                        }
+                    }
+                }
+
+                env.stop().await;
+            }
+
+            // Helper to check that fetching an invalid range returns a NotSatisfiable error.
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn test_fetch_range_not_satisfiable() {
+                let env = $create_env;
+
+                for size in [20, $chunk_size - 1, $chunk_size, $chunk_size + 1, $chunk_size * 2 + 1]
+                {
+                    let path = format!("{}", size);
+                    let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
+
+                    env.write_metadata(&path, &body);
+                    env.write_blob(&path, &body);
+
+                    let size = size as u64;
+                    for range in [
+                        Range::From { first_byte_pos: size },
+                        Range::From { first_byte_pos: size + 1 },
+                        Range::From { first_byte_pos: size + 5 },
+                        Range::Inclusive { first_byte_pos: 0, last_byte_pos: size },
+                        Range::Inclusive { first_byte_pos: 5, last_byte_pos: size },
+                        Range::Inclusive { first_byte_pos: size, last_byte_pos: size },
+                        Range::Inclusive { first_byte_pos: size, last_byte_pos: size + 5 },
+                        Range::Inclusive { first_byte_pos: 4, last_byte_pos: 3 },
+                        Range::Inclusive { first_byte_pos: size + 3, last_byte_pos: size + 5 },
+                        Range::Suffix { len: size + 1 },
+                        Range::Suffix { len: size + 5 },
+                    ] {
+                        assert_matches!(
+                            read_metadata(&env, &path, range.clone()).await,
+                            Err(Error::RangeNotSatisfiable),
+                            "size: {} range: {:?}",
+                            size,
+                            range
+                        );
+
+                        assert_matches!(
+                            read_blob(&env, &path, range.clone()).await,
+                            Err(Error::RangeNotSatisfiable),
+                            "size: {} range: {:?}",
+                            size,
+                            range
+                        );
+                    }
+                }
+
+                env.stop().await;
             }
         }
-    }
+    };
 }
-
-// Helper to check that fetching an invalid range returns a NotSatisfiable error.
-pub(crate) async fn check_fetch_range_not_satisfiable(env: &impl TestEnv) {
-    for size in [20, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1] {
-        let path = format!("{}", size);
-        let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
-
-        env.write_metadata(&path, &body);
-        env.write_blob(&path, &body);
-
-        let size = size as u64;
-        for range in [
-            Range::From { first_byte_pos: size },
-            Range::From { first_byte_pos: size + 1 },
-            Range::From { first_byte_pos: size + 5 },
-            Range::Inclusive { first_byte_pos: 0, last_byte_pos: size },
-            Range::Inclusive { first_byte_pos: 5, last_byte_pos: size },
-            Range::Inclusive { first_byte_pos: size, last_byte_pos: size },
-            Range::Inclusive { first_byte_pos: size, last_byte_pos: size + 5 },
-            Range::Inclusive { first_byte_pos: 4, last_byte_pos: 3 },
-            Range::Inclusive { first_byte_pos: size + 3, last_byte_pos: size + 5 },
-            Range::Suffix { len: size + 1 },
-            Range::Suffix { len: size + 5 },
-        ] {
-            assert_matches!(
-                env.read_metadata(&path, range.clone()).await,
-                Err(Error::RangeNotSatisfiable),
-                "size: {} range: {:?}",
-                size,
-                range
-            );
-
-            assert_matches!(
-                env.read_blob(&path, range.clone()).await,
-                Err(Error::RangeNotSatisfiable),
-                "size: {} range: {:?}",
-                size,
-                range
-            );
-        }
-    }
-}
+pub(crate) use repo_test_suite;

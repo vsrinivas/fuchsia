@@ -288,7 +288,11 @@ mod tests {
     use {
         super::*,
         crate::{
-            repository::{repo_tests, FileSystemRepository},
+            repository::{
+                file_system::CHUNK_SIZE,
+                repo_tests::{self, TestEnv as _},
+                FileSystemRepository,
+            },
             test_utils::make_repository,
         },
         assert_matches::assert_matches,
@@ -379,21 +383,8 @@ mod tests {
             false
         }
 
-        async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
-        async fn read_blob(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_blob(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
         fn write_metadata(&self, path: &str, bytes: &[u8]) {
             let file_path = self.metadata_repo_path.join(path);
-            println!("{:?} {:?}", self.metadata_repo_path, file_path);
             let mut f = File::create(file_path).unwrap();
             f.write_all(bytes).unwrap();
         }
@@ -403,48 +394,15 @@ mod tests {
             let mut f = File::create(file_path).unwrap();
             f.write_all(bytes).unwrap();
         }
+
+        fn repo(&self) -> &dyn RepositoryBackend {
+            &self.repo
+        }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_missing() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_missing(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_empty() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_empty(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_small() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_small(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range_small() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_range_small(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_range(&env).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range_not_satisifiable() {
-        let env = TestEnv::new().await;
-        repo_tests::check_fetch_range_not_satisfiable(&env).await;
+    repo_tests::repo_test_suite! {
+        env = TestEnv::new().await;
+        chunk_size = CHUNK_SIZE;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
