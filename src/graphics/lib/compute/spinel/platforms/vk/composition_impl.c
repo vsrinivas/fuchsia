@@ -1303,12 +1303,18 @@ spinel_composition_impl_create(struct spinel_device *       device,
     }
 
   //
+  // Get radix sort memory requirements
+  //
+  struct radix_sort_vk_memory_requirements rs_mr;
+
+  radix_sort_vk_get_memory_requirements(device->ti.rs, config->composition.size.ttcks, &rs_mr);
+
+  assert(SPN_MEMBER_ALIGN_LIMIT >= rs_mr.keyvals_alignment);
+
+  //
   // Allocate ttcks extent
   //
-  // clang-format off
-  VkDeviceSize const ttck_keyvals_size = config->composition.size.ttcks * sizeof(SPN_TYPE_U32VEC2);
-  VkDeviceSize const ttcks_size        = sizeof(SPN_BUFFER_TYPE(ttcks)) + ttck_keyvals_size;
-  // clang-format on
+  VkDeviceSize const ttcks_size = sizeof(SPN_BUFFER_TYPE(ttcks)) + rs_mr.keyvals_size;
 
   spinel_allocator_alloc_dbi_dm_devaddr(&device->allocator.device.perm.drw,
                                         device->vk.pd,
@@ -1325,18 +1331,9 @@ spinel_composition_impl_create(struct spinel_device *       device,
                                 device->vk.pd,
                                 device->vk.d,
                                 device->vk.ac,
-                                ttck_keyvals_size,
+                                rs_mr.keyvals_size,
                                 NULL,
                                 &impl->vk.ttck_keyvals_odd);
-
-  //
-  // Get radix sort memory requirements
-  //
-  struct radix_sort_vk_memory_requirements rs_mr;
-
-  radix_sort_vk_get_memory_requirements(device->ti.rs, config->composition.size.ttcks, &rs_mr);
-
-  assert(SPN_MEMBER_ALIGN_LIMIT >= rs_mr.keyvals_alignment);
 
   //
   // Allocate radix sort internal and indirect buffers
