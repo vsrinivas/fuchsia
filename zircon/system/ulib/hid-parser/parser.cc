@@ -12,6 +12,11 @@
 
 namespace {
 
+// The maximum size in bytes for all the HID descriptor data. While in theory
+// we can support much more, our memory use checkers are not happy with more.
+// See http://fxbug.dev/64791.
+constexpr size_t kMaxTotalDescriptorByteCount = 1 << 30;  // 1GB
+
 #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 
 // Temporary structure to keep report id data.
@@ -167,7 +172,13 @@ class ParseState {
     size_t fields_sz = fields_.size() * sizeof(ReportField);
     size_t collect_sz = coll_size_ * sizeof(Collection);
 
-    auto mem = Alloc(device_sz + fields_sz + collect_sz);
+    size_t total_sz = device_sz + fields_sz + collect_sz;
+    // Don't try to allocate more than a reasonable number of bytes for the
+    // device descriptor, even if we could.
+    if (total_sz > kMaxTotalDescriptorByteCount) {
+      return kParseNoMemory;
+    }
+    auto mem = Alloc(total_sz);
     if (mem == nullptr)
       return kParseNoMemory;
 
