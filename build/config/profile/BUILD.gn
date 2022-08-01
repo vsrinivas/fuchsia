@@ -12,13 +12,6 @@ _coverage_common_flags = [
   "-fcoverage-mapping",
 ]
 
-if (is_linux) {
-  _coverage_common_flags += [
-    "-mllvm",
-    "-runtime-counter-relocation",
-  ]
-}
-
 if (profile_source_files != []) {
   _profile_source_files_lines = []
   foreach(file, profile_source_files) {
@@ -59,6 +52,14 @@ variant("coverage") {
     # the compiler issue, see the bug for more details.
     libs = [ "./llvm_profile_counter_bias.ld" ]
   }
+
+  # Enable runtime counter relocation in Linux.
+  if (is_linux) {
+    cflags = [
+      "-mllvm",
+      "-runtime-counter-relocation",
+    ]
+  }
 }
 
 # This variant is similar to `coverage` but only instruments sources that are
@@ -83,6 +84,14 @@ variant("coverage-cts") {
     # TODO(fxbug.dev/83653): Remove this workaround after we diagnose and address
     # the compiler issue, see the bug for more details.
     libs = [ "./llvm_profile_counter_bias.ld" ]
+  }
+
+  # Enable runtime counter relocation in Linux.
+  if (is_linux) {
+    cflags = [
+      "-mllvm",
+      "-runtime-counter-relocation",
+    ]
   }
 }
 
