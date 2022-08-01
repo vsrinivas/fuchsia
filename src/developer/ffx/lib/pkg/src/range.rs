@@ -75,6 +75,44 @@ impl Range {
     }
 }
 
+/// [ContentLength] denotes the size of a [Resource].
+///
+/// This matches the semantics of the http Content-Length header according to [RFC-7230].
+///
+/// [RFC-7230]: https://httpwg.org/specs/rfc7230.html#header.content-length
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct ContentLength(u64);
+
+impl ContentLength {
+    pub fn new(content_len: u64) -> Self {
+        Self(content_len)
+    }
+
+    /// Parse an HTTP Content-Length header according to [RFC-7230].
+    ///
+    /// [RFC-7230]: https://httpwg.org/specs/rfc7230.html#header.content-length
+    pub fn from_http_content_length_header(header: &HeaderValue) -> Result<Self, Error> {
+        let content_len = parse_integer(header.as_ref())?;
+        Ok(ContentLength(content_len))
+    }
+
+    /// Return the content length as a [u64].
+    pub fn as_u64(&self) -> u64 {
+        self.0
+    }
+
+    pub fn contains_range(&self, range: Range) -> bool {
+        match range {
+            Range::Full => true,
+            Range::From { first_byte_pos } => first_byte_pos < self.0,
+            Range::Inclusive { first_byte_pos, last_byte_pos } => {
+                first_byte_pos <= last_byte_pos && first_byte_pos < self.0 && last_byte_pos < self.0
+            }
+            Range::Suffix { len } => len <= self.0,
+        }
+    }
+}
+
 /// [ContentRange] denotes the size of a [Resource].
 ///
 /// This mostly matches the semantics of the http Content-Range header according to [RFC-7233], but
@@ -96,8 +134,7 @@ impl ContentRange {
     ///
     /// [RFC-7230]: https://httpwg.org/specs/rfc7230.html#header.content-length
     pub fn from_http_content_length_header(header: &HeaderValue) -> Result<Self, Error> {
-        let complete_len = parse_integer(header.as_ref())?;
-        Ok(ContentRange::Full { complete_len })
+        Ok(ContentLength::from_http_content_length_header(header)?.into())
     }
 
     /// Parse an HTTP Content-Range header according to [RFC-7233].
@@ -147,6 +184,12 @@ impl ContentRange {
                 Some(header)
             }
         }
+    }
+}
+
+impl From<ContentLength> for ContentRange {
+    fn from(content_len: ContentLength) -> Self {
+        Self::Full { complete_len: content_len.0 }
     }
 }
 
@@ -450,5 +493,52 @@ mod tests {
         ] {
             assert_eq!(range.to_http_content_range_header(), expected, "{:?}", range);
         }
+    }
+
+    #[test]
+    fn test_content_length_contains_range_full() {
+        assert!(ContentLength::new(0).contains_range(Range::Full));
+        assert!(ContentLength::new(100).contains_range(Range::Full));
+    }
+
+    #[test]
+    fn test_content_length_contains_range_from() {
+        assert!(ContentLength::new(1).contains_range(Range::From { first_byte_pos: 0 }));
+        assert!(ContentLength::new(100).contains_range(Range::From { first_byte_pos: 50 }));
+        assert!(ContentLength::new(100).contains_range(Range::From { first_byte_pos: 99 }));
+
+        assert!(!ContentLength::new(0).contains_range(Range::From { first_byte_pos: 0 }));
+        assert!(!ContentLength::new(100).contains_range(Range::From { first_byte_pos: 100 }),);
+        assert!(!ContentLength::new(100).contains_range(Range::From { first_byte_pos: 150 }),);
+    }
+
+    #[test]
+    fn test_content_length_contains_range_inclusive() {
+        assert!(ContentLength::new(1)
+            .contains_range(Range::Inclusive { first_byte_pos: 0, last_byte_pos: 0 }));
+        assert!(ContentLength::new(100)
+            .contains_range(Range::Inclusive { first_byte_pos: 0, last_byte_pos: 99 }));
+        assert!(ContentLength::new(100)
+            .contains_range(Range::Inclusive { first_byte_pos: 50, last_byte_pos: 60 }));
+
+        assert!(!ContentLength::new(0)
+            .contains_range(Range::Inclusive { first_byte_pos: 0, last_byte_pos: 0 }));
+        assert!(!ContentLength::new(100)
+            .contains_range(Range::Inclusive { first_byte_pos: 0, last_byte_pos: 100 }));
+        assert!(!ContentLength::new(100)
+            .contains_range(Range::Inclusive { first_byte_pos: 95, last_byte_pos: 105 }));
+        assert!(!ContentLength::new(100)
+            .contains_range(Range::Inclusive { first_byte_pos: 95, last_byte_pos: 105 }));
+        assert!(!ContentLength::new(100)
+            .contains_range(Range::Inclusive { first_byte_pos: 105, last_byte_pos: 115 }));
+    }
+
+    #[test]
+    fn test_content_contains_range_suffix() {
+        assert!(ContentLength::new(0).contains_range(Range::Suffix { len: 0 }),);
+        assert!(ContentLength::new(100).contains_range(Range::Suffix { len: 50 }),);
+        assert!(ContentLength::new(100).contains_range(Range::Suffix { len: 100 }),);
+
+        assert!(!ContentLength::new(100).contains_range(Range::Suffix { len: 150 }),);
     }
 }

@@ -195,12 +195,12 @@ mod tests {
         crate::{
             manager::RepositoryManager,
             repository::{
-                file_system::CHUNK_SIZE,
                 repo_tests::{self, TestEnv as _},
                 Repository,
             },
             server::RepositoryServer,
             test_utils::make_pm_repository,
+            util::CHUNK_SIZE,
         },
         assert_matches::assert_matches,
         camino::Utf8Path,

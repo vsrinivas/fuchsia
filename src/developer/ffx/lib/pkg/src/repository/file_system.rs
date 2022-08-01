@@ -7,29 +7,22 @@ use {
         range::{ContentRange, Range},
         repo_storage::RepoStorage,
         repository::{Error, RepositoryBackend, Resource},
+        util::file_stream,
     },
     anyhow::Result,
-    bytes::{Bytes, BytesMut},
     camino::{Utf8Component, Utf8Path, Utf8PathBuf},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
-    futures::{
-        io::SeekFrom,
-        ready,
-        stream::{self, BoxStream},
-        AsyncRead, AsyncSeekExt, Stream, StreamExt,
-    },
+    futures::{io::SeekFrom, stream::BoxStream, AsyncSeekExt, Stream, StreamExt},
     notify::{immediate_watcher, RecursiveMode, Watcher as _},
     parking_lot::Mutex,
     std::{
-        cmp::min,
         ffi::OsStr,
-        io,
         pin::Pin,
         sync::Arc,
         task::{Context, Poll},
         time::SystemTime,
     },
-    tracing::{error, warn},
+    tracing::warn,
     tuf::{
         interchange::Json,
         repository::{
@@ -38,10 +31,6 @@ use {
         },
     },
 };
-
-/// Read files in chunks of this size off the local storage.
-// Note: this is internally public to allow repository tests to check they work across chunks.
-pub(crate) const CHUNK_SIZE: usize = 8_192;
 
 /// Serve a repository from the file system.
 #[derive(Debug, Clone)]
@@ -110,7 +99,7 @@ impl FileSystemRepository {
 
         let content_len = content_range.content_len();
 
-        Ok(Resource { content_range, stream: Box::pin(file_stream(file_path, content_len, file)) })
+        Ok(Resource { content_range, stream: Box::pin(file_stream(content_len, file)) })
     }
 }
 
@@ -247,55 +236,14 @@ fn sanitize_path(repo_path: &Utf8Path, resource_path: &str) -> Result<Utf8PathBu
     Ok(repo_path.join(path))
 }
 
-/// Read a file and return a stream of [Bytes].
-fn file_stream(
-    path: Utf8PathBuf,
-    mut len: u64,
-    mut file: async_fs::File,
-) -> impl Stream<Item = io::Result<Bytes>> {
-    let mut buf = BytesMut::new();
-
-    stream::poll_fn(move |cx| {
-        if len == 0 {
-            return Poll::Ready(None);
-        }
-
-        buf.resize(min(CHUNK_SIZE, len as usize), 0);
-
-        // Read a chunk from the file.
-        let n = match ready!(Pin::new(&mut file).poll_read(cx, &mut buf)) {
-            Ok(n) => n as u64,
-            Err(err) => {
-                return Poll::Ready(Some(Err(err)));
-            }
-        };
-
-        // If we read zero bytes, then the file changed size while we were streaming it.
-        if n == 0 {
-            error!("file ended before expected: {}", path);
-            return Poll::Ready(None);
-        }
-
-        // Return the chunk read from the file. The file may have changed size during streaming, so
-        // it's possible we could have read more than expected. If so, truncate the result to the
-        // limited size.
-        let mut chunk = buf.split_to(n as usize).freeze();
-        if n > len {
-            chunk = chunk.split_to(len as usize);
-            len = 0;
-        } else {
-            len -= n;
-        }
-
-        Poll::Ready(Some(Ok(chunk)))
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::repository::repo_tests::{self, TestEnv as _},
+        crate::{
+            repository::repo_tests::{self, TestEnv as _},
+            util::CHUNK_SIZE,
+        },
         assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::{FutureExt, StreamExt},

@@ -144,6 +144,8 @@ pub enum Error {
     #[error(transparent)]
     Meta(#[from] fuchsia_pkg::MetaContentsError),
     #[error(transparent)]
+    Hyper(#[from] hyper::Error),
+    #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
     #[error(transparent)]
     ToStr(#[from] hyper::header::ToStrError),

@@ -6,6 +6,7 @@ use {
     crate::{
         range::ContentRange,
         repository::{Error, RepositoryConfig},
+        util::read_stream_to_end,
     },
     bytes::Bytes,
     futures::{
@@ -39,10 +40,7 @@ impl Resource {
 
     pub async fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<(), Error> {
         buf.reserve(self.content_len() as usize);
-        while let Some(chunk) = self.stream.next().await.transpose()? {
-            buf.extend_from_slice(&chunk);
-        }
-        Ok(())
+        Ok(read_stream_to_end(&mut self.stream, buf).await?)
     }
 }
 

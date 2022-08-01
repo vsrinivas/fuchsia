@@ -10,7 +10,8 @@
 
 use {
     crate::{
-        range::{ContentRange, Range},
+        async_spooled::AsyncSpooledTempFile,
+        range::{ContentLength, Range},
         repository::{Error, RepositoryBackend, RepositorySpec},
         resource::Resource,
     },
@@ -25,6 +26,9 @@ use {
     },
     url::Url,
 };
+
+const X_GOOG_STORED_CONTENT_LENGTH: &str = "x-goog-stored-content-length";
+const UNKNOWN_CONTENT_LEN_BUF_SIZE: usize = 8_196;
 
 /// Helper trait that lets us mock gcs::client::Client for testing.
 #[doc(hidden)]
@@ -96,81 +100,92 @@ where
         // always fetch the full range.
         let resp = self.client.stream(bucket, object).await?;
 
-        let content_range = match resp.status() {
+        match resp.status() {
             StatusCode::OK => {
-                // The package resolver currently requires a 'Content-Length' header, so error out
-                // if one wasn't provided.
-                let content_length = resp.headers().get(CONTENT_LENGTH).ok_or_else(|| {
-                    Error::Other(anyhow!("response missing Content-Length header: {}", url))
-                })?;
+                // `Resource` requires us to know the exact length of the artifact. That's the case
+                // if we get a `Content-Length` header.
+                if let Some(content_len) = resp.headers().get(CONTENT_LENGTH) {
+                    let content_len =
+                        ContentLength::from_http_content_length_header(content_len)
+                            .with_context(|| format!("parsing Content-Length header: {}", url))?;
 
-                ContentRange::from_http_content_length_header(content_length)
-                    .with_context(|| format!("parsing Content-Length header: {}", url))?
+                    // Make sure we didn't try to fetch data that's out of bounds.
+                    if !content_len.contains_range(range) {
+                        return Err(Error::RangeNotSatisfiable);
+                    }
+
+                    let body = resp.into_body();
+
+                    return Ok(Resource {
+                        content_range: content_len.into(),
+                        stream: Box::pin(
+                            body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+                        ),
+                    });
+                }
+
+                // If we didn't get a `Content-Length`, then maybe the artifact was stored
+                // compressed, and sent to us uncompressed. When this happens, we instead get a
+                // `x-goog-stored-content-length` header.
+                //
+                // See https://cloud.google.com/storage/docs/transcoding for more details.
+                if resp.headers().contains_key(X_GOOG_STORED_CONTENT_LENGTH) {
+                    return self.get_with_stored_content_len(resp.into_body(), range).await;
+                }
+
+                Err(Error::Other(anyhow!(
+                    "response missing Content-Length or x-goog-stored-content-length headers: {}",
+                    url
+                )))
             }
-            StatusCode::NOT_FOUND => {
-                return Err(Error::NotFound);
-            }
-            StatusCode::RANGE_NOT_SATISFIABLE => {
-                return Err(Error::RangeNotSatisfiable);
-            }
+            StatusCode::NOT_FOUND => Err(Error::NotFound),
+            StatusCode::RANGE_NOT_SATISFIABLE => Err(Error::RangeNotSatisfiable),
             status => {
                 if status.is_success() {
-                    return Err(Error::Other(anyhow!(
-                        "unexpected status code {}: {}",
-                        url,
-                        status
-                    )));
+                    Err(Error::Other(anyhow!("unexpected status code {}: {}", url, status)))
                 } else {
                     // GCS may return a more detailed error description in the body.
                     if let Ok(body) = hyper::body::to_bytes(resp.into_body()).await {
                         let body_str = String::from_utf8_lossy(&body);
-                        return Err(Error::Other(anyhow!(
+                        Err(Error::Other(anyhow!(
                             "error downloading resource {}: {}\n{}",
                             url,
                             status,
                             body_str
-                        )));
+                        )))
                     } else {
-                        return Err(Error::Other(anyhow!(
-                            "error downloading resource {}: {}",
-                            url,
-                            status
-                        )));
+                        Err(Error::Other(anyhow!("error downloading resource {}: {}", url, status)))
                     }
                 }
             }
-        };
+        }
+    }
 
-        // Since we fetched the full length, validate that the range request is inbounds, or error
-        // out.
-        match range {
-            Range::Full => {}
-            Range::From { first_byte_pos } => {
-                if first_byte_pos >= content_range.total_len() {
-                    return Err(Error::RangeNotSatisfiable);
-                }
-            }
-            Range::Inclusive { first_byte_pos, last_byte_pos } => {
-                if first_byte_pos > last_byte_pos
-                    || first_byte_pos >= content_range.total_len()
-                    || last_byte_pos >= content_range.total_len()
-                {
-                    return Err(Error::RangeNotSatisfiable);
-                }
-            }
-            Range::Suffix { len } => {
-                if len > content_range.total_len() {
-                    return Err(Error::RangeNotSatisfiable);
-                }
-            }
+    /// Handles a response that contains a `x-goog-stored-content-length` header.
+    ///
+    /// Since we don't know the size of the resource, we'll buffer up to a certain size, then
+    /// transition over into a temporary file. Once the file has been fully downloaded, we will
+    /// compute the actual length, then return it.
+    async fn get_with_stored_content_len(
+        &self,
+        mut body: Body,
+        range: Range,
+    ) -> Result<Resource, Error> {
+        let mut tmp = AsyncSpooledTempFile::new(UNKNOWN_CONTENT_LEN_BUF_SIZE);
+
+        while let Some(chunk) = body.try_next().await? {
+            tmp.write_all(&chunk).await?;
         }
 
-        let body = resp.into_body();
+        let (len, stream) = tmp.into_stream().await?;
 
-        Ok(Resource {
-            content_range,
-            stream: Box::pin(body.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))),
-        })
+        // Make sure we didn't try to fetch data that's out of bounds.
+        let content_len = ContentLength::new(len);
+        if !content_len.contains_range(range) {
+            return Err(Error::RangeNotSatisfiable);
+        }
+
+        Ok(Resource { content_range: content_len.into(), stream })
     }
 }
 
@@ -289,11 +304,11 @@ mod tests {
         super::*,
         crate::{
             repository::{
-                file_system::CHUNK_SIZE,
                 repo_tests::{self, TestEnv as _},
                 FileSystemRepository,
             },
             test_utils::make_repository,
+            util::CHUNK_SIZE,
         },
         assert_matches::assert_matches,
         camino::{Utf8Path, Utf8PathBuf},
@@ -304,6 +319,7 @@ mod tests {
     #[derive(Debug, Clone)]
     struct MockGcsClient {
         repo: FileSystemRepository,
+        content_length_header: &'static str,
     }
 
     #[async_trait::async_trait]
@@ -328,7 +344,7 @@ mod tests {
 
                     Ok(Response::builder()
                         .status(StatusCode::OK)
-                        .header("Content-Length", resource.content_len())
+                        .header(self.content_length_header, resource.content_len())
                         .body(Body::wrap_stream(resource.stream))
                         .unwrap())
                 }
@@ -350,6 +366,10 @@ mod tests {
 
     impl TestEnv {
         async fn new() -> Self {
+            Self::with_content_length_header("Content-Length").await
+        }
+
+        async fn with_content_length_header(content_length_header: &'static str) -> Self {
             let tmp = tempfile::tempdir().unwrap();
             let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
@@ -367,7 +387,7 @@ mod tests {
             let blob_url = "gs://my-blob-repo/";
 
             let repo = GcsRepository::new(
-                MockGcsClient { repo: remote_repo },
+                MockGcsClient { repo: remote_repo, content_length_header },
                 Url::parse(&tuf_url).unwrap(),
                 Url::parse(&blob_url).unwrap(),
             )
@@ -400,9 +420,22 @@ mod tests {
         }
     }
 
-    repo_tests::repo_test_suite! {
-        env = TestEnv::new().await;
-        chunk_size = CHUNK_SIZE;
+    mod content_length {
+        use super::*;
+
+        repo_tests::repo_test_suite! {
+            env = TestEnv::new().await;
+            chunk_size = CHUNK_SIZE;
+        }
+    }
+
+    mod goog_stored_content_length {
+        use super::*;
+
+        repo_tests::repo_test_suite! {
+            env = TestEnv::with_content_length_header(X_GOOG_STORED_CONTENT_LENGTH).await;
+            chunk_size = UNKNOWN_CONTENT_LEN_BUF_SIZE;
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
