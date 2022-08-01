@@ -28,6 +28,12 @@ impl std::str::FromStr for RelativePackageUrl {
     }
 }
 
+impl From<PackageName> for RelativePackageUrl {
+    fn from(path: PackageName) -> Self {
+        Self { path }
+    }
+}
+
 impl std::convert::TryFrom<&str> for RelativePackageUrl {
     type Error = ParseError;
 

@@ -18,6 +18,7 @@ mod package_manifest;
 mod package_manifest_list;
 mod path;
 mod path_to_string;
+mod subpackages_manifest;
 
 pub use {
     crate::{
@@ -36,6 +37,9 @@ pub use {
         package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder, RelativeTo},
         package_manifest_list::PackageManifestList,
         path::{PackageName, PackagePath, PackageVariant},
+        subpackages_manifest::{
+            SubpackagesManifest, SubpackagesManifestEntry, SubpackagesManifestEntryKind,
+        },
     },
     fuchsia_url::errors::PackagePathSegmentError,
     path_to_string::PathToStringExt,

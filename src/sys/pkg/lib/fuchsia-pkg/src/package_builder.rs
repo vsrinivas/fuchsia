@@ -4,9 +4,12 @@
 
 use {
     crate::{
-        path_to_string::PathToStringExt, CreationManifest, MetaPackage, PackageManifest, RelativeTo,
+        path_to_string::PathToStringExt, CreationManifest, MetaPackage, MetaSubpackages,
+        PackageManifest, RelativeTo,
     },
     anyhow::{anyhow, bail, ensure, Context, Result},
+    fuchsia_merkle::Hash,
+    fuchsia_url::RelativePackageUrl,
     std::{
         collections::BTreeMap,
         convert::{TryFrom, TryInto},
@@ -51,6 +54,9 @@ pub struct PackageBuilder {
 
     /// Optional package repository.
     repository: Option<String>,
+
+    /// Metafile of subpackages.
+    subpackages: BTreeMap<RelativePackageUrl, Hash>,
 }
 
 impl PackageBuilder {
@@ -65,6 +71,7 @@ impl PackageBuilder {
             blob_sources_relative: RelativeTo::default(),
             published_name: None,
             repository: None,
+            subpackages: BTreeMap::default(),
         }
     }
 
@@ -330,6 +337,15 @@ impl PackageBuilder {
         Ok(file_path)
     }
 
+    /// Helper fn to include a subpackage into this package.
+    pub fn add_subpackage(&mut self, url: RelativePackageUrl, package_hash: Hash) -> Result<()> {
+        if self.subpackages.contains_key(&url) {
+            return Err(anyhow!("dupicate entry for {:?}", url));
+        }
+        self.subpackages.insert(url, package_hash);
+        Ok(())
+    }
+
     /// Set the API Level that should be included in the package. This will return an error if there
     /// is no ABI revision that corresponds with this API Level.
     pub fn api_level(&mut self, api_level: u64) -> Result<()> {
@@ -383,6 +399,9 @@ impl PackageBuilder {
         gendir: impl AsRef<Path>,
         metafar_path: impl AsRef<Path>,
     ) -> Result<PackageManifest> {
+        let gendir = gendir.as_ref();
+        let metafar_path = metafar_path.as_ref();
+
         let PackageBuilder {
             name,
             abi_revision,
@@ -392,34 +411,45 @@ impl PackageBuilder {
             blob_sources_relative,
             published_name,
             repository,
+            subpackages,
         } = self;
 
         far_contents.insert(
             META_PACKAGE_PATH.to_string(),
-            create_meta_package_file(gendir.as_ref(), &name)
-                .context(format!("Writing the {} file", META_PACKAGE_PATH))?,
+            create_meta_package_file(gendir, &name)
+                .with_context(|| format!("Writing the {} file", META_PACKAGE_PATH))?,
         );
 
         let abi_revision = abi_revision.unwrap_or(version_history::LATEST_VERSION.abi_revision);
 
         let abi_revision_file =
             Self::write_contents_to_file(gendir, ABI_REVISION_FILE_PATH, abi_revision.as_bytes())
-                .context(format!("Writing the {} file", ABI_REVISION_FILE_PATH))?;
+                .with_context(|| format!("Writing the {} file", ABI_REVISION_FILE_PATH))?;
 
         far_contents.insert(
             ABI_REVISION_FILE_PATH.to_string(),
-            abi_revision_file
-                .path_to_string()
-                .context(format!("Adding the {} file to the package", ABI_REVISION_FILE_PATH))?,
+            abi_revision_file.path_to_string().with_context(|| {
+                format!("Adding the {} file to the package", ABI_REVISION_FILE_PATH)
+            })?,
         );
+
+        // Only add the subpackages file if we were configured with any subpackages.
+        if !subpackages.is_empty() {
+            far_contents.insert(
+                MetaSubpackages::PATH.to_string(),
+                create_meta_subpackages_file(gendir, subpackages).with_context(|| {
+                    format!("Adding the {} file to the package", MetaSubpackages::PATH)
+                })?,
+            );
+        }
 
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(blobs, far_contents)?;
 
         let package_manifest = crate::build::build(
             &creation_manifest,
-            metafar_path.as_ref(),
-            published_name.as_ref().unwrap_or(&name),
+            metafar_path,
+            published_name.unwrap_or(name),
             repository,
         )?;
 
@@ -455,9 +485,9 @@ impl PackageBuilder {
 /// Construct a meta/package file in `gendir`.
 ///
 /// Returns the path that the file was created at.
-fn create_meta_package_file(gendir: impl AsRef<Path>, name: impl Into<String>) -> Result<String> {
+fn create_meta_package_file(gendir: &Path, name: impl Into<String>) -> Result<String> {
     let package_name = name.into();
-    let meta_package_path = gendir.as_ref().join(META_PACKAGE_PATH);
+    let meta_package_path = gendir.join(META_PACKAGE_PATH);
     if let Some(parent_dir) = meta_package_path.parent() {
         std::fs::create_dir_all(parent_dir)?;
     }
@@ -532,18 +562,38 @@ impl PackagedMetaFar {
     }
 }
 
+/// Construct a meta/fuchsia.pkg/subpackages file in `gendir`.
+///
+/// Returns the path that the file was created at.
+fn create_meta_subpackages_file(
+    gendir: &Path,
+    subpackages: BTreeMap<RelativePackageUrl, Hash>,
+) -> Result<String> {
+    let meta_subpackages_path = gendir.join(MetaSubpackages::PATH);
+    if let Some(parent_dir) = meta_subpackages_path.parent() {
+        std::fs::create_dir_all(parent_dir)?;
+    }
+
+    let meta_subpackages = MetaSubpackages::from_iter(subpackages.into_iter());
+    let file = std::fs::File::create(&meta_subpackages_path)?;
+    meta_subpackages.serialize(file)?;
+    meta_subpackages_path.path_to_string()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuchsia_merkle::MerkleTreeBuilder;
-    use tempfile::{NamedTempFile, TempDir};
+    use {
+        super::*,
+        fuchsia_merkle::MerkleTreeBuilder,
+        tempfile::{NamedTempFile, TempDir},
+    };
 
     #[test]
     fn test_create_meta_package_file() {
         let gen_dir = TempDir::new().unwrap();
         let name = "some_test_package";
         let meta_package_path = gen_dir.as_ref().join("meta/package");
-        let created_path = create_meta_package_file(&gen_dir, name).unwrap();
+        let created_path = create_meta_package_file(gen_dir.path(), name).unwrap();
         assert_eq!(created_path, meta_package_path.path_to_string().unwrap());
 
         let raw_contents = std::fs::read(meta_package_path).unwrap();
@@ -876,5 +926,46 @@ mod tests {
             .expect("The manifest should have paths relative to itself");
 
         // The written manifest is tested in [crate::package_manifest::host_tests]
+    }
+
+    #[test]
+    fn test_builder_add_subpackages() {
+        let outdir = TempDir::new().unwrap();
+        let metafar_path = outdir.path().join("meta.far");
+
+        let mut builder = PackageBuilder::new("some_pkg_name");
+
+        let pkg1_url = "pkg1".parse::<RelativePackageUrl>().unwrap();
+        let pkg1_hash = Hash::from([0; fuchsia_hash::HASH_SIZE]);
+
+        let pkg2_url = "pkg2".parse::<RelativePackageUrl>().unwrap();
+        let pkg2_hash = Hash::from([1; fuchsia_hash::HASH_SIZE]);
+
+        builder.add_subpackage(pkg1_url.clone(), pkg1_hash.clone()).unwrap();
+        builder.add_subpackage(pkg2_url.clone(), pkg2_hash.clone()).unwrap();
+
+        // Build the package.
+        builder.build(&outdir, &metafar_path).unwrap();
+
+        // Validate that the metafar contains the subpackages.
+        let mut metafar = std::fs::File::open(metafar_path).unwrap();
+        let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
+        let far_file_data = far_reader.read_file(MetaSubpackages::PATH).unwrap();
+
+        assert_eq!(
+            MetaSubpackages::deserialize(Cursor::new(&far_file_data)).unwrap(),
+            MetaSubpackages::from_iter([(pkg1_url, pkg1_hash), (pkg2_url, pkg2_hash)])
+        );
+    }
+
+    #[test]
+    fn test_builder_rejects_subpackages_collisions() {
+        let url = "pkg".parse::<RelativePackageUrl>().unwrap();
+        let hash1 = Hash::from([0; fuchsia_hash::HASH_SIZE]);
+        let hash2 = Hash::from([0; fuchsia_hash::HASH_SIZE]);
+
+        let mut builder = PackageBuilder::new("some_pkg_name");
+        builder.add_subpackage(url.clone(), hash1).unwrap();
+        assert!(builder.add_subpackage(url, hash2).is_err());
     }
 }

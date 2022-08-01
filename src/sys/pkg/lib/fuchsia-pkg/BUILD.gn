@@ -18,6 +18,7 @@ lib_deps = [
   "//src/sys/pkg/lib/fuchsia-hash",
   "//src/sys/pkg/lib/fuchsia-merkle",
   "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:camino",
   "//third_party/rust_crates:proptest",
   "//third_party/rust_crates:serde",
   "//third_party/rust_crates:serde_json",
@@ -54,6 +55,7 @@ lib_sources = [
   "src/package_manifest_list.rs",
   "src/path.rs",
   "src/path_to_string.rs",
+  "src/subpackages_manifest.rs",
   "src/test.rs",
 ]
 

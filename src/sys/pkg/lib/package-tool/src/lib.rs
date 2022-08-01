@@ -7,7 +7,9 @@
 
 use {
     anyhow::{bail, Context as _, Result},
-    fuchsia_pkg::{CreationManifest, PackageBuilder},
+    fuchsia_pkg::{
+        CreationManifest, PackageBuilder, SubpackagesManifest, SubpackagesManifestEntryKind,
+    },
     std::{
         collections::BTreeSet,
         fs::{create_dir_all, File},
@@ -47,6 +49,20 @@ pub async fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
         builder.repository(repository);
     }
 
+    let subpackages_manifest =
+        if let Some(subpackages_manifest_path) = &cmd.subpackages_manifest_path {
+            let f = File::open(subpackages_manifest_path)?;
+            Some(SubpackagesManifest::deserialize(BufReader::new(f))?)
+        } else {
+            None
+        };
+
+    if let Some(subpackages_manifest) = &subpackages_manifest {
+        for (url, hash) in subpackages_manifest.to_subpackages()? {
+            builder.add_subpackage(url, hash)?;
+        }
+    }
+
     if !cmd.out.exists() {
         create_dir_all(&cmd.out)?;
     }
@@ -75,11 +91,28 @@ pub async fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
 
         write!(file, "{}:", meta_far_path.display())?;
 
-        let deps = creation_manifest
+        let mut deps = creation_manifest
             .far_contents()
             .values()
             .chain(creation_manifest.external_contents().values())
+            .map(|s| s.as_str())
             .collect::<BTreeSet<_>>();
+
+        if let Some(subpackages_manifest_path) = &cmd.subpackages_manifest_path {
+            deps.insert(subpackages_manifest_path.as_str());
+        }
+
+        if let Some(subpackages_manifest) = &subpackages_manifest {
+            for entry in subpackages_manifest.entries() {
+                match entry.kind() {
+                    SubpackagesManifestEntryKind::Url(_) => {}
+                    SubpackagesManifestEntryKind::File(file) => {
+                        deps.insert(file.as_str());
+                    }
+                }
+                deps.insert(entry.merkle_file().as_str());
+            }
+        }
 
         for path in deps {
             // Spaces are separators, so spaces in filenames must be escaped.
@@ -158,7 +191,9 @@ fn get_abi_revision(cmd: &BuildCommand) -> Result<Option<u64>> {
 mod test {
     use {
         super::*,
-        fuchsia_pkg::MetaPackage,
+        camino::Utf8Path,
+        fuchsia_pkg::{MetaPackage, MetaSubpackages},
+        fuchsia_url::RelativePackageUrl,
         pretty_assertions::assert_eq,
         std::{
             collections::BTreeMap,
@@ -168,6 +203,11 @@ mod test {
             path::{Path, PathBuf},
         },
     };
+
+    fn file_merkle(path: &Utf8Path) -> fuchsia_merkle::Hash {
+        let mut f = File::open(path).unwrap();
+        fuchsia_merkle::from_read(&mut f).unwrap().root()
+    }
 
     fn read_meta_far_contents(path: &Path) -> BTreeMap<String, String> {
         let mut metafar = File::open(path).unwrap();
@@ -204,6 +244,7 @@ mod test {
             meta_far_merkle: false,
             blobs_json: false,
             blobs_manifest: false,
+            subpackages_manifest_path: None,
         };
 
         assert!(cmd_package_build(cmd).await.is_err());
@@ -229,6 +270,7 @@ mod test {
             meta_far_merkle: false,
             blobs_json: false,
             blobs_manifest: false,
+            subpackages_manifest_path: None,
         };
 
         assert!(cmd_package_build(cmd).await.is_err());
@@ -263,6 +305,7 @@ mod test {
             meta_far_merkle: false,
             blobs_json: false,
             blobs_manifest: false,
+            subpackages_manifest_path: None,
         })
         .await
         .unwrap();
@@ -345,6 +388,7 @@ mod test {
             meta_far_merkle: false,
             blobs_json: false,
             blobs_manifest: false,
+            subpackages_manifest_path: None,
         })
         .await
         .unwrap();
@@ -428,6 +472,7 @@ mod test {
             meta_far_merkle: false,
             blobs_json: false,
             blobs_manifest: false,
+            subpackages_manifest_path: None,
         })
         .await
         .is_err());
@@ -473,6 +518,7 @@ mod test {
             depfile: false,
             blobs_json: false,
             blobs_manifest: false,
+            subpackages_manifest_path: None,
         })
         .await
         .unwrap();
@@ -540,35 +586,59 @@ mod test {
     #[fuchsia::test]
     async fn test_build_package_with_everything() {
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
 
         let out = root.join("out");
 
+        // Write the MetaPackage file.
         let meta_package_path = root.join("package");
         let meta_package_file = File::create(&meta_package_path).unwrap();
         let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
         meta_package.serialize(meta_package_file).unwrap();
 
+        // Write the subpackage manifest file.
+        let meta_subpackages_manifest_path = root.join("subpackages");
+        let meta_subpackages_manifest_file = File::create(&meta_subpackages_manifest_path).unwrap();
+        let subpackage_url = "subpackage".parse::<RelativePackageUrl>().unwrap();
+        let subpackage_hash = fuchsia_merkle::Hash::from([0; fuchsia_merkle::HASH_SIZE]);
+        let subpackage_merkle_file = root.join("subpackage.merkle");
+        std::fs::write(&subpackage_merkle_file, subpackage_hash.to_string().as_bytes()).unwrap();
+
+        let meta_subpackages = MetaSubpackages::from_iter([(subpackage_url, subpackage_hash)]);
+        let meta_subpackages_str = serde_json::to_string(&meta_subpackages).unwrap();
+
+        serde_json::to_writer(
+            meta_subpackages_manifest_file,
+            &serde_json::json!([
+                {
+                    "name": "subpackage",
+                    "merkle_file": subpackage_merkle_file.to_string(),
+                }
+            ]),
+        )
+        .unwrap();
+
+        // Write the creation manifest file.
         let creation_manifest_path = root.join("creation.manifest");
         let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
 
         let empty_file_path = root.join("empty-file");
-        File::create(&empty_file_path).unwrap();
+        std::fs::write(&empty_file_path, b"").unwrap();
+
+        // Compute the empty-file's expected hash.
+        let empty_file_hash = file_merkle(&empty_file_path);
 
         creation_manifest
             .write_all(
-                format!(
-                    "empty-file={}\nmeta/package={}",
-                    empty_file_path.display(),
-                    meta_package_path.display(),
-                )
-                .as_bytes(),
+                format!("empty-file={}\nmeta/package={}", empty_file_path, meta_package_path)
+                    .as_bytes(),
             )
             .unwrap();
 
+        // Build the package.
         cmd_package_build(BuildCommand {
-            creation_manifest_path,
-            out: out.clone(),
+            creation_manifest_path: creation_manifest_path.into_std_path_buf(),
+            out: out.clone().into_std_path_buf(),
             api_level: Some(8),
             abi_revision: None,
             repository: None,
@@ -577,9 +647,34 @@ mod test {
             meta_far_merkle: true,
             blobs_json: true,
             blobs_manifest: true,
+            subpackages_manifest_path: Some(meta_subpackages_manifest_path.clone()),
         })
         .await
         .unwrap();
+
+        let meta_far_path = out.join(META_FAR_NAME);
+
+        // Compute the meta.far's hash.
+        let meta_far_hash = file_merkle(&meta_far_path);
+
+        // Make sure the meta.far is correct.
+        assert_eq!(
+            read_meta_far_contents(meta_far_path.as_std_path()),
+            BTreeMap::from([
+                ("meta/contents".into(), format!("empty-file={}\n", empty_file_hash)),
+                ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),
+                (
+                    "meta/fuchsia.abi/abi-revision".into(),
+                    version_history::VERSION_HISTORY
+                        .iter()
+                        .find(|v| v.api_level == 8)
+                        .unwrap()
+                        .abi_revision
+                        .to_string(),
+                ),
+                ("meta/fuchsia.pkg/subpackages".into(), meta_subpackages_str),
+            ]),
+        );
 
         let meta_far_path = out.join(META_FAR_NAME);
         let meta_far_merkle_path = out.join(META_FAR_MERKLE_NAME);
@@ -604,14 +699,19 @@ mod test {
             ],
         );
 
+        // Make sure the depfile is correct, which should be all the files we touched in sorted
+        // order.
+        let mut expected = vec![
+            empty_file_path.to_string(),
+            meta_package_path.to_string(),
+            subpackage_merkle_file.to_string(),
+            meta_subpackages_manifest_path.to_string(),
+        ];
+        expected.sort();
+
         assert_eq!(
             read_to_string(meta_far_depfile_path).unwrap(),
-            format!(
-                "{}: {} {}",
-                meta_far_path.display(),
-                empty_file_path.display(),
-                meta_package_path.display(),
-            ),
+            format!("{}: {}", meta_far_path, expected.join(" ")),
         );
 
         assert_eq!(
@@ -621,27 +721,27 @@ mod test {
                     {
                         "source_path": empty_file_path,
                         "path": "empty-file",
-                        "merkle": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+                        "merkle": empty_file_hash,
                         "size": 0,
                     },
                     {
                         "source_path": meta_far_path,
                         "path": "meta/",
-                        "merkle": "36dde5da0ed4a51433a3b45ed9917c98442613f4b12e0f9661519678482ab3e3",
-                        "size": 16384,
+                        "merkle": meta_far_hash,
+                        "size": 20480,
                     },
                 ]
             )
         );
 
-        assert_eq!(
-            read_to_string(blobs_manifest_path).unwrap(),
-            format!(
-                "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b={}\n\
-                36dde5da0ed4a51433a3b45ed9917c98442613f4b12e0f9661519678482ab3e3={}\n",
-                empty_file_path.display(),
-                meta_far_path.display(),
-            )
-        );
+        // Make sure the the blobs manifest is correct, which is a sorted, newline separated, set of
+        // `merkle`=`path` entries.
+        let mut expected = vec![
+            format!("{}={}\n", empty_file_hash, empty_file_path),
+            format!("{}={}\n", meta_far_hash, meta_far_path),
+        ];
+        expected.sort();
+
+        assert_eq!(read_to_string(blobs_manifest_path).unwrap(), expected.join(""),);
     }
 }

@@ -27,6 +27,13 @@ pub use crate::builder::MerkleTreeBuilder;
 mod writer;
 pub use crate::writer::MerkleTreeWriter;
 
+/// Compute a merkle tree from a `&[u8]`.
+pub fn from_slice(slice: &[u8]) -> MerkleTree {
+    let mut builder = MerkleTreeBuilder::new();
+    builder.write(&slice);
+    builder.finish()
+}
+
 /// Compute a merkle tree from a `std::io::Read`.
 pub fn from_read<R>(reader: &mut R) -> Result<MerkleTree, io::Error>
 where
@@ -68,6 +75,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_from_slice() {
+        let file = b"hello world";
+        let mut builder = MerkleTreeBuilder::new();
+        builder.write(&file[..]);
+        let expected = builder.finish();
+
+        let actual = from_slice(&file[..]);
+        assert_eq!(expected, actual);
+    }
 
     #[test]
     fn test_from_read() {

@@ -7,8 +7,12 @@ use {
     anyhow,
     fuchsia_merkle::Hash,
     fuchsia_url::RelativePackageUrl,
-    serde::{Deserialize, Serialize},
-    std::{collections::HashMap, io, iter::FromIterator},
+    serde::{ser::Serializer, Deserialize, Serialize},
+    std::{
+        collections::{BTreeMap, HashMap},
+        io,
+        iter::FromIterator,
+    },
 };
 
 /// A `MetaSubpackages` represents the "meta/fuchsia.pkg/subpackages" file of a Fuchsia
@@ -78,9 +82,27 @@ impl Default for VersionedMetaSubpackages {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
 struct MetaSubpackagesV1 {
     subpackages: HashMap<RelativePackageUrl, Hash>,
+}
+
+impl Serialize for MetaSubpackagesV1 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let MetaSubpackagesV1 { subpackages } = self;
+
+        // Sort the subpackages list to make sure it's in a consistent order.
+
+        #[derive(Serialize)]
+        struct Helper<'a> {
+            subpackages: BTreeMap<&'a RelativePackageUrl, &'a Hash>,
+        }
+
+        Helper { subpackages: subpackages.iter().collect() }.serialize(serializer)
+    }
 }
 
 /// The following functions may be deprecated. They support the initial

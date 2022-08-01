@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, std::path::PathBuf};
+use {argh::FromArgs, camino::Utf8PathBuf, std::path::PathBuf};
 
 /// Builds a package.
 #[derive(FromArgs, PartialEq, Debug, Default)]
@@ -39,6 +39,9 @@ pub struct BuildCommand {
 
     #[argh(switch, description = "produce a blobs.manifest file")]
     pub blobs_manifest: bool,
+
+    #[argh(option, description = "path to the subpackages manifest file (experimental)")]
+    pub subpackages_manifest_path: Option<Utf8PathBuf>,
 
     #[argh(positional, description = "path to the creation manifest file")]
     pub creation_manifest_path: PathBuf,
