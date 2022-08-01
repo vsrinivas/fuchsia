@@ -267,7 +267,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		var imgs []*bootserver.Image
 		for _, img := range images {
 			img := img
-			if neededForFlashing(&img) {
+			if t.neededForFlashing(&img) {
 				imgs = append(imgs, &img)
 			}
 		}
@@ -321,6 +321,7 @@ func getImgByName(imgs []*bootserver.Image, name string) string {
 func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) error {
 	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
 	if t.UseFFXExperimental(2) {
+		t.ffx.List(ctx)
 		t.ffx.TargetWait(ctx)
 		zbiImageName := "zbi_zircon-a"
 		vbmetaImageName := "vbmeta_zircon-a"
@@ -330,7 +331,7 @@ func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) 
 		}
 		zbi := getImgByName(images, zbiImageName)
 		vbmeta := getImgByName(images, vbmetaImageName)
-		return t.ffx.BootloaderBoot(ctx, zbi, vbmeta, "")
+		return t.ffx.BootloaderBoot(ctx, t.config.FastbootSernum, zbi, vbmeta, "")
 	}
 	bootScript := getImgByName(images, "script_fastboot-boot-script")
 	if bootScript == "" {
@@ -376,7 +377,7 @@ func (t *DeviceTarget) flash(ctx context.Context, images []*bootserver.Image) er
 		}
 		t.ffx.List(ctx)
 		t.ffx.TargetWait(ctx)
-		return t.ffx.Flash(ctx, flashManifest, pubkey)
+		return t.ffx.Flash(ctx, t.config.FastbootSernum, flashManifest, pubkey)
 	}
 
 	flashScript := getImgByName(images, "script_flash-script")
@@ -433,6 +434,21 @@ func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {
 	return signers, nil
 }
 
-func neededForFlashing(img *bootserver.Image) bool {
-	return img.IsFlashable || img.Name == "script_flash-script" || img.Name == "exe.linux-x64_fastboot" || img.Name == "script_fastboot-boot-script"
+func (t *DeviceTarget) neededForFlashing(img *bootserver.Image) bool {
+	zbiImageName := "zbi_zircon-a"
+	vbmetaImageName := "vbmeta_zircon-a"
+	if t.imageOverrides != nil {
+		zbiImageName = fmt.Sprintf("zbi_%s", t.imageOverrides[build.ZbiImage].Name)
+		vbmetaImageName = fmt.Sprintf("vbmeta_%s", t.imageOverrides[build.VbmetaImage].Name)
+	}
+	neededImages := []string{zbiImageName, vbmetaImageName, "script_flash-script", "exe.linux-x64_fastboot", "script_fastboot-boot-script", "manifest_flash-manifest"}
+	if img.IsFlashable {
+		return true
+	}
+	for _, imageName := range neededImages {
+		if img.Name == imageName {
+			return true
+		}
+	}
+	return false
 }
