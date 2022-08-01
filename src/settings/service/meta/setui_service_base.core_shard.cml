@@ -49,10 +49,13 @@
             subdir: "class/input-report",
         },
         {
-            protocol: [
-                "fuchsia.media.sessions2.Discovery",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: "fuchsia.media.sessions2.Discovery",
+            from: "#mediasession",
+            to: "#setui_service",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
             from: "self",
             to: "#setui_service",
             dependency: "weak_for_migration",
