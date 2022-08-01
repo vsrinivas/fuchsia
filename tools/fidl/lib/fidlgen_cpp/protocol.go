@@ -453,24 +453,12 @@ func newProtocol(inner protocolInner) Protocol {
 	}
 }
 
-type argsWrapper []Parameter
-
-// TODO(fxb/7704): We should be able to remove as we align with args with struct
-// representation.
-func (args argsWrapper) isResource() bool {
-	for _, arg := range args {
-		if arg.Type.IsResource {
-			return true
-		}
-	}
-	return false
-}
-
 type messageInner struct {
 	TypeShapeV1     TypeShape
 	TypeShapeV2     TypeShape
 	HlCodingTable   *name
 	WireCodingTable *name
+	IsResource      bool
 }
 
 // message contains lower level wire-format information about a request/response
@@ -478,7 +466,6 @@ type messageInner struct {
 // message should be created using newMessage.
 type message struct {
 	messageInner
-	IsResource         bool
 	ClientAllocationV1 allocation
 	ClientAllocationV2 allocation
 	ServerAllocationV1 allocation
@@ -501,7 +488,6 @@ func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 	direction messageDirection) message {
 	return message{
 		messageInner: inner,
-		IsResource:   argsWrapper(args).isResource(),
 		ClientAllocationV1: computeAllocation(
 			inner.TypeShapeV1.MaxTotalSize(),
 			inner.TypeShapeV1.MaxHandles,
@@ -656,6 +642,7 @@ type methodInner struct {
 	HasRequestPayload         bool
 	RequestPayload            nameVariants
 	RequestFlattened          bool
+	RequestIsResource         bool
 	RequestArgs               []Parameter
 	RequestName               fidlgen.EncodedCompoundIdentifier
 	RequestAnonymousChildren  []ScopedLayout
@@ -664,6 +651,7 @@ type methodInner struct {
 	ResponsePayload           nameVariants
 	ResponseArgs              []Parameter
 	ResponseFlattened         bool
+	ResponseIsResource        bool
 	ResponseName              fidlgen.EncodedCompoundIdentifier
 	ResponseAnonymousChildren []ScopedLayout
 	Transitional              bool
@@ -985,12 +973,14 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p f
 			TypeShapeV2:     inner.requestTypeShapeV2,
 			HlCodingTable:   hlRequestCodingTable,
 			WireCodingTable: wireRequestCodingTable,
+			IsResource:      inner.RequestIsResource,
 		}, inner.RequestArgs, wire, messageDirectionRequest),
 		Response: newMessage(messageInner{
 			TypeShapeV1:     inner.responseTypeShapeV1,
 			TypeShapeV2:     inner.responseTypeShapeV2,
 			HlCodingTable:   hlResponseCodingTable,
 			WireCodingTable: wireResponseCodingTable,
+			IsResource:      inner.ResponseIsResource,
 		}, inner.ResponseArgs, wire, messageDirectionResponse),
 		CallbackType: callbackType,
 		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler",
@@ -1076,6 +1066,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		var requestChildren []ScopedLayout
 		var requestTypeShapeV1 fidlgen.TypeShape
 		var requestTypeShapeV2 fidlgen.TypeShape
+		var requestIsResource bool
 		var requestPayloadName fidlgen.EncodedCompoundIdentifier
 		var requestPayloadArgs []Parameter
 		requestFlattened := true
@@ -1087,9 +1078,11 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 				if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
 					requestPayloadArgs = c.compileParameterArray(val)
 					requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
+					requestIsResource = val.IsResourceType()
 				} else {
 					requestPayloadArgs = c.compileParameterSingleton(requestPayloadName, *v.RequestPayload)
 					requestFlattened = false
+					requestIsResource = requestPayloadArgs[0].Type.IsResource
 				}
 			}
 		}
@@ -1097,6 +1090,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		var responseChildren []ScopedLayout
 		var responseTypeShapeV1 fidlgen.TypeShape
 		var responseTypeShapeV2 fidlgen.TypeShape
+		var responseIsResource bool
 		var responsePayloadName fidlgen.EncodedCompoundIdentifier
 		var responsePayloadArgs []Parameter
 		responseFlattened := true
@@ -1108,9 +1102,11 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 				if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
 					responsePayloadArgs = c.compileParameterArray(val)
 					responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
+					responseIsResource = val.IsResourceType()
 				} else {
 					responsePayloadArgs = c.compileParameterSingleton(responsePayloadName, *v.ResponsePayload)
 					responseFlattened = false
+					responseIsResource = responsePayloadArgs[0].Type.IsResource
 				}
 			}
 		}
@@ -1153,6 +1149,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			RequestPayload:            maybeRequestPayload,
 			RequestArgs:               requestPayloadArgs,
 			RequestFlattened:          requestFlattened,
+			RequestIsResource:         requestIsResource,
 			RequestName:               requestPayloadName,
 			RequestAnonymousChildren:  requestChildren,
 			HasResponse:               v.HasResponse,
@@ -1160,6 +1157,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			ResponsePayload:           maybeResponsePayload,
 			ResponseArgs:              responsePayloadArgs,
 			ResponseFlattened:         responseFlattened,
+			ResponseIsResource:        responseIsResource,
 			ResponseName:              responsePayloadName,
 			ResponseAnonymousChildren: responseChildren,
 			Transitional:              v.IsTransitional(),

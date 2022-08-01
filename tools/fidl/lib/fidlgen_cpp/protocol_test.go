@@ -275,6 +275,106 @@ func TestWireBindingsAllocation(t *testing.T) {
 	}
 }
 
+func TestRequestAndResponseResourceness(t *testing.T) {
+	cases := []struct {
+		desc          string
+		fidl          string
+		actualChooser func(p *Protocol) messageInner
+		expected      bool
+	}{
+		{
+			desc:          "value struct request",
+			fidl:          "protocol P { Method(struct { a int32; b int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Request.messageInner },
+			expected:      false,
+		},
+		{
+			desc:          "value table request",
+			fidl:          "protocol P { Method(table { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Request.messageInner },
+			expected:      false,
+		},
+		{
+			desc:          "value union request",
+			fidl:          "protocol P { Method(union { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Request.messageInner },
+			expected:      false,
+		},
+		{
+			desc:          "resource struct request",
+			fidl:          "protocol P { Method(resource struct { a int32; b int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Request.messageInner },
+			expected:      true,
+		},
+		{
+			desc:          "resource table request",
+			fidl:          "protocol P { Method(resource table { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Request.messageInner },
+			expected:      true,
+		},
+		{
+			desc:          "resource union request",
+			fidl:          "protocol P { Method(resource union { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Request.messageInner },
+			expected:      true,
+		},
+		{
+			desc:          "value struct response",
+			fidl:          "protocol P { Method() -> (struct { a int32; b int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Response.messageInner },
+			expected:      false,
+		},
+		{
+			desc:          "value table response",
+			fidl:          "protocol P { Method() -> (table { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Response.messageInner },
+			expected:      false,
+		},
+		{
+			desc:          "value union response",
+			fidl:          "protocol P { Method() -> (union { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Response.messageInner },
+			expected:      false,
+		},
+		{
+			desc:          "resource struct response",
+			fidl:          "protocol P { Method() -> (resource struct { a int32; b int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Response.messageInner },
+			expected:      true,
+		},
+		{
+			desc:          "resource table response",
+			fidl:          "protocol P { Method() -> (resource table { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Response.messageInner },
+			expected:      true,
+		},
+		{
+			desc:          "resource union response",
+			fidl:          "protocol P { Method() -> (resource union { 1: a int32; }); };",
+			actualChooser: func(p *Protocol) messageInner { return p.Methods[0].Response.messageInner },
+			expected:      true,
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.desc, func(t *testing.T) {
+			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
+			var protocols []*Protocol
+			for _, decl := range root.Decls {
+				if p, ok := decl.(*Protocol); ok {
+					protocols = append(protocols, p)
+				}
+			}
+			if len(protocols) != 1 {
+				t.Fatal("Must have a single protocol defined")
+			}
+
+			p := protocols[0]
+			actual := ex.actualChooser(p)
+			expectEqual(t, actual.IsResource, ex.expected)
+		})
+	}
+}
+
 //
 // Test protocol associated declaration names
 //
