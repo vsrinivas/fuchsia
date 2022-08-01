@@ -29,7 +29,7 @@ namespace debug_agent {
 namespace {
 
 // Maximum time we wait for reading "elf/job_id" in the runtime directory.
-constexpr uint64_t kMaxWaitMsForJobId = 200;
+constexpr uint64_t kMaxWaitMsForJobId = 1000;
 
 uint64_t next_component_id = 1;
 
@@ -94,7 +94,7 @@ void ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle, const std::st
       FROM_HERE, kMaxWaitMsForJobId,
       [cb = std::move(cb), file = std::move(job_id_file), moniker]() mutable {
         if (cb) {
-          FX_LOGS(ERROR) << "Timeout reading elf/job_id for " << moniker;
+          FX_LOGS(WARNING) << "Timeout reading elf/job_id for " << moniker;
           file.Unbind();
           cb(ZX_KOID_INVALID);
         }
