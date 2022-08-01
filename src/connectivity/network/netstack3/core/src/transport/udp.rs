@@ -1893,6 +1893,40 @@ pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
     })
 }
 
+/// Disconnects a connected UDP socket.
+///
+/// `disconnect_udp_connected` removes an existing connected socket and replaces
+/// it with a listening socket bound to the same local address and port.
+///
+/// # Panics
+///
+/// Panics if `id` is not a valid `UdpConnId`.
+pub fn disconnect_udp_connected<
+    I: IpExt,
+    C: UdpStateNonSyncContext<I>,
+    SC: UdpStateContext<I, C>,
+>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    id: UdpConnId<I>,
+) -> UdpListenerId<I> {
+    sync_ctx.with_sockets_mut(|state| {
+        let UdpSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+        let (state, sharing, addr): (_, PosixSharingOptions, _) =
+            bound.conns_mut().remove(&id).expect("UDP connection not found");
+
+        let ConnState { multicast_memberships, socket: _ } = state;
+
+        let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, device } = addr;
+        let addr = ListenerAddr { ip: ListenerIpAddr { addr: Some(local_ip), identifier }, device };
+
+        bound
+            .listeners_mut()
+            .try_insert(addr, ListenerState { multicast_memberships }, sharing)
+            .expect("inserting listener for disconnected socket failed")
+    })
+}
+
 /// Removes a previously registered UDP connection.
 ///
 /// `remove_udp_conn` removes a previously registered UDP connection indexed by

@@ -32,12 +32,12 @@ use net_types::{
     SpecifiedAddr, ZonedAddr,
 };
 use netstack3_core::{
-    connect_udp, connect_udp_listener, create_udp_unbound, get_udp_bound_device, get_udp_conn_info,
-    get_udp_listener_info, get_udp_posix_reuse_port, icmp, listen_udp, remove_udp_conn,
-    remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
-    set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BufferNonSyncContext,
-    BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext, Ctx, IdMap,
-    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockCreationError,
+    connect_udp, connect_udp_listener, create_udp_unbound, disconnect_udp_connected,
+    get_udp_bound_device, get_udp_conn_info, get_udp_listener_info, get_udp_posix_reuse_port, icmp,
+    listen_udp, remove_udp_conn, remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn,
+    send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device,
+    BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext,
+    Ctx, IdMap, IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockCreationError,
     IpSockSendError, LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId,
     UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
     UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpStateContext,
@@ -242,6 +242,8 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)>;
 
+    fn disconnect_connected(sync_ctx: &mut SC, ctx: &mut C, id: Self::ConnId) -> Self::ListenerId;
+
     fn get_conn_info(
         sync_ctx: &SC,
         ctx: &mut C,
@@ -406,6 +408,10 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)> {
         connect_udp_listener(sync_ctx, ctx, id, remote_ip, remote_id)
+    }
+
+    fn disconnect_connected(sync_ctx: &mut SC, ctx: &mut C, id: Self::ConnId) -> Self::ListenerId {
+        disconnect_udp_connected(sync_ctx, ctx, id)
     }
 
     fn get_conn_info(
@@ -870,6 +876,14 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _remote_ip: SpecifiedAddr<I::Addr>,
         _remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn disconnect_connected(
+        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: Self::ConnId,
+    ) -> Self::ListenerId {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
@@ -1446,7 +1460,10 @@ where
                             );
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Disconnect { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eafnosupport));
+                            responder_send!(
+                                responder,
+                                &mut self.make_handler().await.disconnect()
+                            );
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Clone { flags, object, .. } => {
                             let cloned_worker = self.clone().await;
@@ -2251,6 +2268,33 @@ where
         Ok(listener_id)
     }
 
+    /// Handles a [POSIX socket disconnect request].
+    ///
+    /// [POSIX socket connect request]: fposix_socket::SynchronousDatagramSocketRequest::Disconnect
+    fn disconnect(mut self) -> Result<(), fposix::Errno> {
+        trace!("disconnect socket");
+
+        let listener_id = match self.get_state().info.state {
+            SocketState::Unbound { unbound_id: _ }
+            | SocketState::BoundListen { listener_id: _ } => return Err(fposix::Errno::Einval),
+            SocketState::BoundConnect { conn_id, .. } => {
+                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+
+                assert_ne!(I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id), None);
+                T::disconnect_connected(sync_ctx, non_sync_ctx, conn_id)
+            }
+        };
+
+        self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
+        assert_eq!(
+            I::get_collection_mut(&mut self.ctx.non_sync_ctx)
+                .listeners
+                .insert(&listener_id, self.binding_id),
+            None
+        );
+        Ok(())
+    }
+
     /// Handles a [POSIX socket get_sock_name request].
     ///
     /// [POSIX socket get_sock_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetSockName
@@ -2899,6 +2943,30 @@ mod tests {
 
     declare_tests!(
         bind_then_connect,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
+
+    async fn connect_then_disconnect<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (_t, socket) = prepare_test::<A>(proto).await;
+
+        let remote_addr = A::create(A::REMOTE_ADDR, 1010);
+        let () = socket.connect(&mut remote_addr.clone()).await.unwrap().expect("connect succeeds");
+
+        assert_eq!(
+            socket.get_peer_name().await.unwrap().expect("get_peer_name should suceed"),
+            remote_addr
+        );
+        let () = socket.disconnect().await.unwrap().expect("disconnect succeeds");
+
+        assert_eq!(
+            socket.get_peer_name().await.unwrap().expect_err("alice getpeername fails"),
+            fposix::Errno::Enotconn
+        );
+    }
+
+    declare_tests!(connect_then_disconnect,
         icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
     );
 
