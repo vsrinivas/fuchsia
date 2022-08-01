@@ -23,6 +23,7 @@
                 "fuchsia.component.resolution.Resolver",
                 "fuchsia.pkg.PackageResolver",
             ],
+            availability: "optional",
         },
     ],
     expose: [

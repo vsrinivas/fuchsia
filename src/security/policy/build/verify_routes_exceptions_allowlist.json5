@@ -254,42 +254,6 @@
                 {
                     // TODO(fxbug.dev/86464): remove.
                     using_node: "/core/full-resolver",
-                    capability: "fuchsia.pkg.PackageResolver",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: "/core/full-resolver",
-                                        capability_id: "fuchsia.pkg.PackageResolver",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.pkg.PackageResolver`, but no matching `offer` declaration was found in the parent",
-                    },
-                },
-                {
-                    // TODO(fxbug.dev/86464): remove.
-                    using_node: "/core/full-resolver",
-                    capability: "fuchsia.component.resolution.Resolver",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: "/core/full-resolver",
-                                        capability_id: "fuchsia.component.resolution.Resolver",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/full-resolver` for `fuchsia.component.resolution.Resolver`, but no matching `offer` declaration was found in the parent",
-                    },
-                },
-                {
-                    // TODO(fxbug.dev/86464): remove.
-                    using_node: "/core/full-resolver",
                     capability: "fuchsia.logger.LogSink",
                     error: {
                         error: {
