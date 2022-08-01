@@ -106,7 +106,7 @@ const struct Command {
 } kCommands[] = {
     {"close", nullptr, "close socket", &SockScripter::Close},
     {"bind", "<bind-ip>:<bind-port>", "bind to the given local address", &SockScripter::Bind},
-    {"shutdown", "<how>", "shutdown socket", &SockScripter::Shutdown},
+    {"shutdown", "<how>", "shutdown socket for rd and/or wr", &SockScripter::Shutdown},
     {"bound", nullptr, "log bound-to-address", &SockScripter::LogBoundToAddress},
     {"log-peername", nullptr, "log peer name", &SockScripter::LogPeerAddress},
     {"connect", "<connect-ip>:<connect-port>", "connect to the given remote address",
