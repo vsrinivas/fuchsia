@@ -73,9 +73,8 @@ func TestNeighborEntryIteratorGetNext(t *testing.T) {
 			}
 			wantItems = append(wantItems, neighbor.EntryIteratorItemWithIdle(neighbor.IdleEvent{}))
 
-			it := neighborEntryIterator{
-				items: wantItems,
-			}
+			it := neighborEntryIterator{}
+			it.mu.items = wantItems
 
 			var gotItems []neighbor.EntryIteratorItem
 

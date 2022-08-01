@@ -328,7 +328,7 @@ func Main() {
 	}
 
 	ndpDisp := newNDPDispatcher()
-	var nudDisp nudDispatcher
+	nudDisp := newNudDispatcher()
 
 	dadConfigs := tcpipstack.DADConfigurations{
 		DupAddrDetectTransmits: dadTransmits,
@@ -378,7 +378,7 @@ func Main() {
 			udp.NewProtocol,
 		},
 		HandleLocal: true,
-		NUDDisp:     &nudDisp,
+		NUDDisp:     nudDisp,
 
 		RawFactory:               &raw.EndpointFactory{},
 		AllowPacketEndpointWrite: true,
@@ -688,7 +688,7 @@ func Main() {
 	}
 
 	{
-		impl := &neighborImpl{stack: stk}
+		impl := newNeighborImpl(stk)
 
 		viewStub := neighbor.ViewWithCtxStub{Impl: impl}
 		componentCtx.OutgoingService.AddService(
@@ -715,6 +715,8 @@ func Main() {
 				return nil
 			},
 		)
+
+		go impl.observeEvents(nudDisp.events)
 	}
 
 	addMulticastIpv4RoutingTableControllerService(componentCtx, ns.stack)

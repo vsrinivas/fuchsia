@@ -64,14 +64,9 @@ protocol EntryIterator {
     /// This does not guarantee that, when blocking, only one item will be
     /// returned; implementations may debounce or batch events.
     ///
-    /// Attempt to maintain one in-flight `GetNext` call as much as possible.
-    /// If `GetNext` is not constantly polled, the networking stack might hit an
-    /// upper limit on the number of buffered events, resulting in dropping.
-    /// Should this happen, this connection will be closed with a
-    /// `ZX_ERR_IO_OVERRUN` epitaph.
-    ///
-    /// If there is more than one in-flight `GetNext` call, callers are put into
-    /// a queue and will receive responses in FIFO order.
+    /// Clients should only have one call of this method at a time; a second
+    /// call to this method while a call is already pending will cause the
+    /// server end of the protocol to be closed.
     ///
     /// - response `events` a list of events that occurred since the last
     ///     invocation of this method.
@@ -81,12 +76,12 @@ protocol EntryIterator {
             /// an event occurred.
             1: existing Entry;
 
-            /// Event indicating the iterator will no longer return `existing`
-            /// items.
-            2: idle @generated_name("IdleEvent") struct {};
-
             /// Empty event for indicating there are no more
             /// [`EntryIteratorItem.existing`] items to yield.
+            2: idle @generated_name("IdleEvent") struct {};
+
+            /// Event indicating a new entry has been added to the neighbor
+            /// table.
             3: added Entry;
 
             /// Event indicating an entry has changed.

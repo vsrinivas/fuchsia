@@ -7,11 +7,9 @@
 use std::collections::HashMap;
 use std::convert::From as _;
 
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-
 use anyhow::Context as _;
-use futures::{stream, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use fuchsia_async as fasync;
+use futures::{stream, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac};
 use net_types::SpecifiedAddress;
 use netemul::{
@@ -131,7 +129,7 @@ async fn create_neighbor_realms<'a>(
 fn get_entry_iterator(
     realm: &TestRealm<'_>,
     options: fidl_fuchsia_net_neighbor::EntryIteratorOptions,
-) -> impl futures::Stream<Item = Result<fidl_fuchsia_net_neighbor::EntryIteratorItem>> {
+) -> impl futures::Stream<Item = fidl_fuchsia_net_neighbor::EntryIteratorItem> {
     let view = realm
         .connect_to_protocol::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .expect("failed to connect to fuchsia.net.neighbor/View");
@@ -139,13 +137,13 @@ fn get_entry_iterator(
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_neighbor::EntryIteratorMarker>()
             .expect("failed to create EntryIterator proxy");
     let () = view.open_entry_iterator(server_end, options).expect("failed to open EntryIterator");
-    futures::stream::try_unfold(proxy, |proxy| {
-        proxy
-            .get_next()
-            .map(|r| r.context("fuchsia.net.neighbor/EntryIterator.GetNext FIDL error"))
-            .map_ok(|it| Some((futures::stream::iter(it.into_iter().map(Result::Ok)), proxy)))
+    futures::stream::unfold(proxy, |proxy| {
+        proxy.get_next().map(|r| {
+            let it = r.expect("fuchsia.net.neighbor/EntryIterator.GetNext FIDL error");
+            Some((futures::stream::iter(it.into_iter()), proxy))
+        })
     })
-    .try_flatten()
+    .flatten()
 }
 
 /// Retrieves all existing neighbor entries in `realm`.
@@ -156,7 +154,7 @@ async fn list_existing_entries(
     realm: &TestRealm<'_>,
 ) -> HashMap<(u64, fidl_fuchsia_net::IpAddress), fidl_fuchsia_net_neighbor::Entry> {
     use async_utils::fold::*;
-    try_fold_while(
+    fold_while(
         get_entry_iterator(realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY),
         HashMap::new(),
         |mut map, item| {
@@ -169,30 +167,26 @@ async fn list_existing_entries(
                     } = &e
                     {
                         if let Some(e) = map.insert((*interface, neighbor.clone()), e) {
-                            Err(anyhow::anyhow!("duplicate entry detected in map: {:?}", e))
+                            panic!("duplicate entry detected in map: {:?}", e)
                         } else {
-                            Ok(FoldWhile::Continue(map))
+                            FoldWhile::Continue(map)
                         }
                     } else {
-                        Err(anyhow::anyhow!(
-                            "missing interface or neighbor in existing entry: {:?}",
-                            e
-                        ))
+                        panic!("missing interface or neighbor in existing entry: {:?}", e)
                     }
                 }
                 fidl_fuchsia_net_neighbor::EntryIteratorItem::Idle(
                     fidl_fuchsia_net_neighbor::IdleEvent {},
-                ) => Ok(FoldWhile::Done(map)),
+                ) => FoldWhile::Done(map),
                 x @ fidl_fuchsia_net_neighbor::EntryIteratorItem::Added(_)
                 | x @ fidl_fuchsia_net_neighbor::EntryIteratorItem::Changed(_)
                 | x @ fidl_fuchsia_net_neighbor::EntryIteratorItem::Removed(_) => {
-                    Err(anyhow::anyhow!("unexpected EntryIteratorItem before Idle: {:?}", x))
+                    panic!("unexpected EntryIteratorItem before Idle: {:?}", x)
                 }
             })
         },
     )
     .await
-    .expect("failed to fold neighbor entries")
     .short_circuited()
     .expect("entry iterator stream ended unexpectedly")
 }
@@ -247,60 +241,154 @@ async fn exchange_dgrams(alice: &NeighborRealm<'_>, bob: &NeighborRealm<'_>) {
     let () = exchange_dgram(&alice.realm, alice.ipv6, &bob.realm, bob.ipv6).await;
 }
 
-fn assert_entry(
-    entry: fidl_fuchsia_net_neighbor::Entry,
-    match_interface: u64,
-    match_neighbor: fidl_fuchsia_net::IpAddress,
-    match_state: fidl_fuchsia_net_neighbor::EntryState,
-    match_mac: fidl_fuchsia_net::MacAddress,
-) {
+#[derive(Debug, Clone)]
+struct EntryMatch {
+    interface: u64,
+    neighbor: fidl_fuchsia_net::IpAddress,
+    state: fidl_fuchsia_net_neighbor::EntryState,
+    mac: Option<fidl_fuchsia_net::MacAddress>,
+}
+
+impl EntryMatch {
+    fn new(
+        interface: u64,
+        neighbor: fidl_fuchsia_net::IpAddress,
+        state: fidl_fuchsia_net_neighbor::EntryState,
+        mac: Option<fidl_fuchsia_net::MacAddress>,
+    ) -> Self {
+        Self { interface, neighbor, state, mac }
+    }
+}
+
+#[derive(Debug)]
+enum ItemMatch {
+    Added(EntryMatch),
+    Changed(EntryMatch),
+    Removed(EntryMatch),
+    Idle,
+}
+
+fn assert_entry(entry: fidl_fuchsia_net_neighbor::Entry, entry_match: EntryMatch) {
+    let EntryMatch {
+        interface: match_interface,
+        neighbor: match_neighbor,
+        state: match_state,
+        mac: match_mac,
+    } = entry_match;
     assert_matches::assert_matches!(
         entry,
         fidl_fuchsia_net_neighbor::Entry {
             interface: Some(interface),
             neighbor: Some(neighbor),
             state: Some(state),
-            mac: Some(mac),
+            mac,
             updated_at: Some(updated_at), ..
-        } if interface == match_interface && neighbor == match_neighbor && state == match_state && mac == match_mac && updated_at != 0
+        } if interface == match_interface &&
+             neighbor == match_neighbor &&
+             state == match_state &&
+             mac == match_mac &&
+             updated_at != 0
     );
+}
+
+async fn assert_entries<
+    S: futures::stream::Stream<Item = fidl_fuchsia_net_neighbor::EntryIteratorItem> + Unpin,
+    I: IntoIterator<Item = ItemMatch>,
+>(
+    st: &mut S,
+    entries: I,
+) {
+    for expect in entries {
+        let item = st
+            .next()
+            .await
+            .unwrap_or_else(|| panic!("stream ended unexpectedly waiting for {:?}", expect));
+        match (item, expect) {
+            (
+                fidl_fuchsia_net_neighbor::EntryIteratorItem::Added(entry),
+                ItemMatch::Added(expect),
+            )
+            | (
+                fidl_fuchsia_net_neighbor::EntryIteratorItem::Removed(entry),
+                ItemMatch::Removed(expect),
+            )
+            | (
+                fidl_fuchsia_net_neighbor::EntryIteratorItem::Changed(entry),
+                ItemMatch::Changed(expect),
+            ) => {
+                assert_entry(entry, expect);
+            }
+            (
+                fidl_fuchsia_net_neighbor::EntryIteratorItem::Idle(
+                    fidl_fuchsia_net_neighbor::IdleEvent {},
+                ),
+                ItemMatch::Idle,
+            ) => (),
+            (got, want) => {
+                panic!("got iterator item {:?}, want {:?}", got, want);
+            }
+        }
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn neigh_list_entries() {
-    // TODO(https://fxbug.dev/59425): Extend this test with hanging get.
     let sandbox = TestSandbox::new().expect("failed to create sandbox");
     let network = sandbox.create_network("net").await.expect("failed to create network");
 
     let (alice, bob) = create_neighbor_realms(&sandbox, &network, "neigh_list_entries").await;
 
+    let mut alice_iter =
+        get_entry_iterator(&alice.realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY);
+    let mut bob_iter =
+        get_entry_iterator(&bob.realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY);
+
     // No Neighbors should exist initially.
+    assert_entries(&mut alice_iter, [ItemMatch::Idle]).await;
+    assert_entries(&mut bob_iter, [ItemMatch::Idle]).await;
+
+    // Assert the same by iterating only on existing.
     let alice_entries = list_existing_entries(&alice.realm).await;
     assert!(alice_entries.is_empty(), "expected empty set of entries: {:?}", alice_entries);
-    let bob_entries = list_existing_entries(&bob.realm).await;
-    assert!(bob_entries.is_empty(), "expected empty set of entries: {:?}", bob_entries);
 
-    // Send a single UDP datagram between alice and bob.
-    let () = exchange_dgram(&alice.realm, ALICE_IP, &bob.realm, BOB_IP).await;
-    let () = exchange_dgram(&alice.realm, alice.ipv6, &bob.realm, bob.ipv6).await;
+    // Send a single UDP datagram between alice and bob. Prove this is a hanging
+    // get by performing the exchange at the same time as we're hanging for the
+    // entry updates.
+    let ((), ()) = futures::future::join(
+        exchange_dgram(&alice.realm, ALICE_IP, &bob.realm, BOB_IP),
+        assert_entries(&mut alice_iter, incomplete_then_reachable(alice.ep.id(), BOB_IP, BOB_MAC)),
+    )
+    .await;
+    let ((), ()) = futures::future::join(
+        exchange_dgram(&alice.realm, alice.ipv6, &bob.realm, bob.ipv6),
+        assert_entries(
+            &mut alice_iter,
+            incomplete_then_reachable(alice.ep.id(), bob.ipv6.clone(), BOB_MAC),
+        ),
+    )
+    .await;
 
     // Check that bob is listed as a neighbor for alice.
     let mut alice_entries = list_existing_entries(&alice.realm).await;
     // IPv4 entry.
     let () = assert_entry(
         alice_entries.remove(&(alice.ep.id(), BOB_IP)).expect("missing IPv4 neighbor entry"),
-        alice.ep.id(),
-        BOB_IP,
-        fidl_fuchsia_net_neighbor::EntryState::Reachable,
-        BOB_MAC,
+        EntryMatch::new(
+            alice.ep.id(),
+            BOB_IP,
+            fidl_fuchsia_net_neighbor::EntryState::Reachable,
+            Some(BOB_MAC),
+        ),
     );
     // IPv6 entry.
     let () = assert_entry(
         alice_entries.remove(&(alice.ep.id(), bob.ipv6)).expect("missing IPv6 neighbor entry"),
-        alice.ep.id(),
-        bob.ipv6,
-        fidl_fuchsia_net_neighbor::EntryState::Reachable,
-        BOB_MAC,
+        EntryMatch::new(
+            alice.ep.id(),
+            bob.ipv6,
+            fidl_fuchsia_net_neighbor::EntryState::Reachable,
+            Some(BOB_MAC),
+        ),
     );
     assert!(
         alice_entries.is_empty(),
@@ -311,25 +399,70 @@ async fn neigh_list_entries() {
     // Check that alice is listed as a neighbor for bob. Bob should have alice
     // listed as STALE entries due to having received solicitations as part of
     // the UDP exchange.
+    assert_entries(
+        &mut bob_iter,
+        [
+            ItemMatch::Added(EntryMatch {
+                interface: bob.ep.id(),
+                neighbor: ALICE_IP,
+                state: fidl_fuchsia_net_neighbor::EntryState::Stale,
+                mac: Some(ALICE_MAC),
+            }),
+            ItemMatch::Added(EntryMatch {
+                interface: bob.ep.id(),
+                neighbor: alice.ipv6.clone(),
+                state: fidl_fuchsia_net_neighbor::EntryState::Stale,
+                mac: Some(ALICE_MAC),
+            }),
+        ],
+    )
+    .await;
+
+    // Check that the same state is present on a new channel.
     let mut bob_entries = list_existing_entries(&bob.realm).await;
 
     // IPv4 entry.
     let () = assert_entry(
         bob_entries.remove(&(bob.ep.id(), ALICE_IP)).expect("missing IPv4 neighbor entry"),
-        bob.ep.id(),
-        ALICE_IP,
-        fidl_fuchsia_net_neighbor::EntryState::Stale,
-        ALICE_MAC,
+        EntryMatch::new(
+            bob.ep.id(),
+            ALICE_IP,
+            fidl_fuchsia_net_neighbor::EntryState::Stale,
+            Some(ALICE_MAC),
+        ),
     );
     // IPv6 entry.
     let () = assert_entry(
         bob_entries.remove(&(bob.ep.id(), alice.ipv6)).expect("missing IPv6 neighbor entry"),
-        bob.ep.id(),
-        alice.ipv6,
-        fidl_fuchsia_net_neighbor::EntryState::Stale,
-        ALICE_MAC,
+        EntryMatch::new(
+            bob.ep.id(),
+            alice.ipv6,
+            fidl_fuchsia_net_neighbor::EntryState::Stale,
+            Some(ALICE_MAC),
+        ),
     );
     assert!(bob_entries.is_empty(), "unexpected neighbors remaining in list: {:?}", bob_entries);
+}
+
+fn incomplete_then_reachable(
+    interface: u64,
+    neighbor: fidl_fuchsia_net::IpAddress,
+    mac: fidl_fuchsia_net::MacAddress,
+) -> [ItemMatch; 2] {
+    [
+        ItemMatch::Added(EntryMatch {
+            interface,
+            neighbor: neighbor.clone(),
+            state: fidl_fuchsia_net_neighbor::EntryState::Incomplete,
+            mac: None,
+        }),
+        ItemMatch::Changed(EntryMatch {
+            interface,
+            neighbor,
+            state: fidl_fuchsia_net_neighbor::EntryState::Reachable,
+            mac: Some(mac),
+        }),
+    ]
 }
 
 /// Frame metadata of interest to neighbor tests.
@@ -544,34 +677,19 @@ async fn neigh_clear_entries() {
         .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .expect("failed to connect to Controller");
 
-    let entries = list_existing_entries(&alice.realm).await;
-    assert!(entries.is_empty(), "entries should be empty on startup, got: {:?}", entries);
+    let mut iter =
+        get_entry_iterator(&alice.realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY);
+    assert_entries(&mut iter, [ItemMatch::Idle]).await;
 
     // Exchange some datagrams to add some entries to the list and check that we
     // observe the neighbor solicitations over the network.
     let () = exchange_dgrams(&alice, &bob).await;
 
     assert_eq!(next_solicitation_resolution(&mut solicit_stream).await, BOB_IP);
+    assert_entries(&mut iter, incomplete_then_reachable(alice.ep.id(), BOB_IP, BOB_MAC)).await;
     assert_eq!(next_solicitation_resolution(&mut solicit_stream).await, bob.ipv6);
-
-    let mut entries = list_existing_entries(&alice.realm).await;
-    // IPv4 entry.
-    let () = assert_entry(
-        entries.remove(&(alice.ep.id(), BOB_IP)).expect("missing IPv4 neighbor entry"),
-        alice.ep.id(),
-        BOB_IP,
-        fidl_fuchsia_net_neighbor::EntryState::Reachable,
-        BOB_MAC,
-    );
-    // IPv6 entry.
-    let () = assert_entry(
-        entries.remove(&(alice.ep.id(), bob.ipv6)).expect("missing IPv6 neighbor entry"),
-        alice.ep.id(),
-        bob.ipv6,
-        fidl_fuchsia_net_neighbor::EntryState::Reachable,
-        BOB_MAC,
-    );
-    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
+    assert_entries(&mut iter, incomplete_then_reachable(alice.ep.id(), bob.ipv6.clone(), BOB_MAC))
+        .await;
 
     // Clear entries and verify they go away.
     let () = controller
@@ -580,24 +698,49 @@ async fn neigh_clear_entries() {
         .expect("clear_entries FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
         .expect("clear_entries failed");
+
+    assert_entries(
+        &mut iter,
+        [ItemMatch::Removed(EntryMatch {
+            interface: alice.ep.id(),
+            neighbor: BOB_IP,
+            state: fidl_fuchsia_net_neighbor::EntryState::Reachable,
+            mac: Some(BOB_MAC),
+        })],
+    )
+    .await;
+
+    // V6 entry hasn't been removed.
     let mut entries = list_existing_entries(&alice.realm).await;
     // IPv6 entry.
     let () = assert_entry(
         entries.remove(&(alice.ep.id(), bob.ipv6)).expect("missing IPv6 neighbor entry"),
-        alice.ep.id(),
-        bob.ipv6,
-        fidl_fuchsia_net_neighbor::EntryState::Reachable,
-        BOB_MAC,
+        EntryMatch::new(
+            alice.ep.id(),
+            bob.ipv6,
+            fidl_fuchsia_net_neighbor::EntryState::Reachable,
+            Some(BOB_MAC),
+        ),
     );
     assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
+
     let () = controller
         .clear_entries(alice.ep.id(), fidl_fuchsia_net::IpVersion::V6)
         .await
         .expect("clear_entries FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
         .expect("clear_entries failed");
-    let entries = list_existing_entries(&alice.realm).await;
-    assert_eq!(entries, HashMap::new(), "IPv6 entries should have been emptied");
+
+    assert_entries(
+        &mut iter,
+        [ItemMatch::Removed(EntryMatch {
+            interface: alice.ep.id(),
+            neighbor: bob.ipv6.clone(),
+            state: fidl_fuchsia_net_neighbor::EntryState::Reachable,
+            mac: Some(BOB_MAC),
+        })],
+    )
+    .await;
 
     // Exchange datagrams again and assert that new solicitation requests were
     // sent.
@@ -628,9 +771,9 @@ async fn neigh_add_remove_entry() {
         .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .expect("failed to connect to Controller");
 
-    // Entries start out empty.
-    let entries = list_existing_entries(&alice.realm).await;
-    assert!(entries.is_empty(), "entries should be empty on startup, got: {:?}", entries);
+    let mut alice_iter =
+        get_entry_iterator(&alice.realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY);
+    assert_entries(&mut alice_iter, [ItemMatch::Idle]).await;
 
     // Check error conditions.
     // Add and remove entry not supported on loopback.
@@ -691,22 +834,24 @@ async fn neigh_add_remove_entry() {
         .map_err(fuchsia_zircon::Status::from_raw)
         .expect("add_entry failed");
 
-    let mut entries = list_existing_entries(&alice.realm).await;
-    let () = assert_entry(
-        entries.remove(&(alice.ep.id(), BOB_IP)).expect("static IPv4 entry missing"),
-        alice.ep.id(),
-        BOB_IP,
-        fidl_fuchsia_net_neighbor::EntryState::Static,
-        BOB_MAC,
-    );
-    let () = assert_entry(
-        entries.remove(&(alice.ep.id(), bob.ipv6)).expect("static IPv6 entry missing"),
-        alice.ep.id(),
-        bob.ipv6,
-        fidl_fuchsia_net_neighbor::EntryState::Static,
-        BOB_MAC,
-    );
-    assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
+    let static_entry_ipv4 = EntryMatch {
+        interface: alice.ep.id(),
+        neighbor: BOB_IP,
+        state: fidl_fuchsia_net_neighbor::EntryState::Static,
+        mac: Some(BOB_MAC),
+    };
+    let static_entry_ipv6 = EntryMatch {
+        interface: alice.ep.id(),
+        neighbor: bob.ipv6.clone(),
+        state: fidl_fuchsia_net_neighbor::EntryState::Static,
+        mac: Some(BOB_MAC),
+    };
+
+    assert_entries(
+        &mut alice_iter,
+        [ItemMatch::Added(static_entry_ipv4.clone()), ItemMatch::Added(static_entry_ipv6.clone())],
+    )
+    .await;
 
     let () = exchange_dgrams(&alice, &bob).await;
     for expect in [FrameMetadata::Udp(BOB_IP), FrameMetadata::Udp(bob.ipv6)].iter() {
@@ -734,8 +879,14 @@ async fn neigh_add_remove_entry() {
         .map_err(fuchsia_zircon::Status::from_raw)
         .expect("remove_entry failed");
 
-    let entries = list_existing_entries(&alice.realm).await;
-    assert!(entries.is_empty(), "entries should've been emptied, got: {:?}", entries);
+    assert_entries(
+        &mut alice_iter,
+        [
+            ItemMatch::Removed(static_entry_ipv4.clone()),
+            ItemMatch::Removed(static_entry_ipv6.clone()),
+        ],
+    )
+    .await;
 
     // Exchange datagrams again and assert that new solicitation requests were
     // sent (ignoring any UDP metadata this time).
@@ -935,9 +1086,11 @@ async fn neigh_unreachable_entries() {
     )
     .await;
 
+    let mut iter =
+        get_entry_iterator(&alice.realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY);
+
     // No Neighbors should exist initially.
-    let initial_entries = list_existing_entries(&alice.realm).await;
-    assert!(initial_entries.is_empty(), "expected empty set of entries: {:?}", initial_entries);
+    assert_entries(&mut iter, [ItemMatch::Idle]).await;
 
     // Intentionally fail to send a packet to Bob so we can create a neighbor
     // entry and have it go to UNREACHABLE state.
@@ -958,33 +1111,111 @@ async fn neigh_unreachable_entries() {
         PAYLOAD.as_bytes().len()
     );
 
-    // Poll the neighbor table until the entry transitions to UNREACHABLE state.
-    //
-    // TODO(https://fxbug.dev/59425): Use hanging get instead of polling.
-    let mut interval = fuchsia_async::Interval::new(zx::Duration::from_seconds(1));
-
-    loop {
-        assert_eq!(interval.next().await, Some(()));
-        let mut entries = list_existing_entries(&alice.realm).await;
-        let entry = entries.remove(&(alice.ep.id(), BOB_IP)).expect("missing IPv4 neighbor entry");
-        assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
-
-        assert_matches::assert_matches!(
-            entry,
-            fidl_fuchsia_net_neighbor::Entry {
-                interface: Some(interface),
-                neighbor: Some(BOB_IP),
-                state: Some(_),
+    assert_entries(
+        &mut iter,
+        [
+            ItemMatch::Added(EntryMatch {
+                interface: alice.ep.id(),
+                neighbor: BOB_IP,
+                state: fidl_fuchsia_net_neighbor::EntryState::Incomplete,
                 mac: None,
-                updated_at: Some(updated_at), ..
-            } if interface == alice.ep.id() && updated_at != 0
-        );
+            }),
+            ItemMatch::Changed(EntryMatch {
+                interface: alice.ep.id(),
+                neighbor: BOB_IP,
+                state: fidl_fuchsia_net_neighbor::EntryState::Unreachable,
+                mac: None,
+            }),
+        ],
+    )
+    .await;
+}
 
-        if entry.state == Some(fidl_fuchsia_net_neighbor::EntryState::Unreachable) {
-            break;
+#[fasync::run_singlethreaded(test)]
+async fn cant_hang_twice() {
+    let sandbox = TestSandbox::new().expect("failed to create sandbox");
+
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("cant_hang_twice"))
+        .expect("failed to create realm");
+
+    let view = realm
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .expect("failed to connect to fuchsia.net.neighbor/View");
+    let (iter, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_neighbor::EntryIteratorMarker>()
+            .expect("failed to create EntryIterator proxy");
+    let () = view
+        .open_entry_iterator(server_end, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY)
+        .expect("failed to open EntryIterator");
+
+    assert_eq!(
+        iter.get_next().await.expect("failed to fetch idle item"),
+        vec![fidl_fuchsia_net_neighbor::EntryIteratorItem::Idle(
+            fidl_fuchsia_net_neighbor::IdleEvent {}
+        )]
+    );
+
+    let get1 = iter.get_next();
+    let get2 = iter.get_next();
+
+    let (r1, r2) = futures::future::join(get1, get2).await;
+    assert_matches::assert_matches!(r1, Err(e) if e.is_closed());
+    assert_matches::assert_matches!(r2, Err(e) if e.is_closed());
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn channel_is_closed_if_not_polled() {
+    let sandbox = TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
+
+    let alice = create_realm(
+        &sandbox,
+        &network,
+        "channel_is_closed_if_not_polled",
+        "alice",
+        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
+        ALICE_MAC,
+    )
+    .await;
+
+    let view = alice
+        .realm
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .expect("failed to connect to fuchsia.net.neighbor/View");
+    let (iter, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_neighbor::EntryIteratorMarker>()
+            .expect("failed to create EntryIterator proxy");
+    let () = view
+        .open_entry_iterator(server_end, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY)
+        .expect("failed to open EntryIterator");
+
+    let controller = alice
+        .realm
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .expect("failed to connect to Controller");
+
+    let mut event_stream = iter.take_event_stream();
+    let create_entries = async {
+        loop {
+            controller
+                .add_entry(alice.ep.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
+                .await
+                .expect("add_entry FIDL error")
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .expect("add_entry failed");
+            controller
+                .remove_entry(alice.ep.id(), &mut BOB_IP.clone())
+                .await
+                .expect("remove_entry FIDL error")
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .expect("remove_entry failed");
         }
-
-        assert_eq!(entry.state, Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete));
-        println!("Found incomplete entry, waiting for the transition to unreachable...");
+    }
+    .fuse();
+    futures::pin_mut!(create_entries);
+    futures::select! {
+        o = event_stream.next() => assert_matches::assert_matches!(o, None),
+        _ = create_entries => unreachable!(),
     }
 }

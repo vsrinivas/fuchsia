@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"time"
@@ -33,7 +34,8 @@ const (
 )
 
 type nudDispatcher struct {
-	ns *Netstack
+	ns     *Netstack
+	events chan neighborEvent
 }
 
 var _ stack.NUDDispatcher = (*nudDispatcher)(nil)
@@ -88,67 +90,199 @@ func (d *nudDispatcher) log(verb string, nicID tcpip.NICID, entry stack.Neighbor
 
 // OnNeighborAdded implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborAdded(nicID tcpip.NICID, entry stack.NeighborEntry) {
+	d.events <- neighborEvent{
+		kind:  neighborAdded,
+		entry: entry,
+		nicID: nicID,
+	}
 	d.log("ADD", nicID, entry)
 }
 
 // OnNeighborChanged implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborChanged(nicID tcpip.NICID, entry stack.NeighborEntry) {
+	d.events <- neighborEvent{
+		kind:  neighborChanged,
+		entry: entry,
+		nicID: nicID,
+	}
 	d.log("MOD", nicID, entry)
 }
 
 // OnNeighborRemoved implements stack.NUDDispatcher.
 func (d *nudDispatcher) OnNeighborRemoved(nicID tcpip.NICID, entry stack.NeighborEntry) {
+	d.events <- neighborEvent{
+		kind:  neighborRemoved,
+		entry: entry,
+		nicID: nicID,
+	}
 	d.log("DEL", nicID, entry)
+}
+
+type neighborEventKind int64
+
+const (
+	_ neighborEventKind = iota
+	neighborAdded
+	neighborChanged
+	neighborRemoved
+)
+
+const maxEntryIteratorItemsQueueLen = 2 * neighbor.MaxItemBatchSize
+
+type neighborEvent struct {
+	kind  neighborEventKind
+	entry stack.NeighborEntry
+	nicID tcpip.NICID
+}
+
+type neighborEntryKey struct {
+	nicID   tcpip.NICID
+	address tcpip.Address
+}
+
+func (k *neighborEntryKey) String() string {
+	return fmt.Sprintf("%s@%d", k.address, k.nicID)
 }
 
 type neighborImpl struct {
 	stack *stack.Stack
+
+	mu struct {
+		sync.Mutex
+		state     map[neighborEntryKey]*neighbor.Entry
+		iterators map[*neighborEntryIterator]struct{}
+		running   bool
+	}
 }
 
 var _ neighbor.ViewWithCtx = (*neighborImpl)(nil)
 
-func (n *neighborImpl) OpenEntryIterator(ctx fidl.Context, it neighbor.EntryIteratorWithCtxInterfaceRequest, _ neighbor.EntryIteratorOptions) error {
-	// TODO(https://fxbug.dev/59425): Watch for changes.
-	var items []neighbor.EntryIteratorItem
+// observeEvents starts observing neighbor events from neighborEvent. Can only
+// be called once.
+func (n *neighborImpl) observeEvents(events <-chan neighborEvent) {
+	n.mu.Lock()
+	running := n.mu.running
+	n.mu.running = true
+	n.mu.Unlock()
+	if running {
+		panic("called ObserveEvents twice on the same implementation")
+	}
 
-	for nicID := range n.stack.NICInfo() {
-		for _, network := range []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber} {
-			neighbors, err := n.stack.Neighbors(nicID, network)
-			switch err.(type) {
-			case nil:
-			case *tcpip.ErrNotSupported:
-				// This NIC does not use a neighbor table.
-				continue
-			case *tcpip.ErrUnknownNICID:
-				// This NIC was removed since stack.NICInfo() was called.
-				continue
-			default:
-				_ = syslog.ErrorTf(neighbor.ViewName, "EntryIterator received unexpected error from Neighbors(%d): %s", nicID, err)
-				_ = it.Close()
-				return WrapTcpIpError(err)
+	for e := range events {
+		n.processEvent(e)
+	}
+
+	n.mu.Lock()
+	n.mu.running = false
+	n.mu.Unlock()
+}
+
+func (n *neighborImpl) processEvent(event neighborEvent) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	key := neighborEntryKey{
+		nicID:   event.nicID,
+		address: event.entry.Addr,
+	}
+	propagateEvent, valid := func() (neighbor.EntryIteratorItem, bool) {
+		switch event.kind {
+		case neighborAdded:
+			if old, ok := n.mu.state[key]; ok {
+				panic(fmt.Sprintf("observed duplicate add for neighbor key %s. old=%v, event.entry=%v", &key, old, event.entry))
 			}
-
-			for _, n := range neighbors {
-				if netEntry, ok := toNeighborEntry(nicID, n); ok {
-					items = append(items, neighbor.EntryIteratorItemWithExisting(netEntry))
+			var newEntry neighbor.Entry
+			newEntry.SetInterface(uint64(event.nicID))
+			newEntry.SetNeighbor(fidlconv.ToNetIpAddress(event.entry.Addr))
+			updateEntry(&newEntry, event.entry)
+			n.mu.state[key] = &newEntry
+			if newEntry.HasState() {
+				return neighbor.EntryIteratorItemWithAdded(newEntry), true
+			}
+		case neighborRemoved:
+			entry, ok := n.mu.state[key]
+			if !ok {
+				panic(fmt.Sprintf("attempted to remove non existing neighbor %s", &key))
+			}
+			delete(n.mu.state, key)
+			if entry.HasState() {
+				return neighbor.EntryIteratorItemWithRemoved(*entry), true
+			}
+		case neighborChanged:
+			entry, ok := n.mu.state[key]
+			if !ok {
+				panic(fmt.Sprintf("attempted to update non existing neighbor %s. event.entry=%v", &key, event.entry))
+			}
+			hadState := entry.HasState()
+			updateEntry(entry, event.entry)
+			if entry.HasState() {
+				if hadState {
+					return neighbor.EntryIteratorItemWithChanged(*entry), true
 				}
+				return neighbor.EntryIteratorItemWithAdded(*entry), true
+			}
+		default:
+			panic(fmt.Sprintf("unrecognized neighbor event %d", event.kind))
+		}
+		return neighbor.EntryIteratorItem{}, false
+	}()
+	if !valid {
+		return
+	}
+	for it := range n.mu.iterators {
+		it.mu.Lock()
+		if len(it.mu.items) < int(maxEntryIteratorItemsQueueLen) {
+			it.mu.items = append(it.mu.items, propagateEvent)
+		} else {
+			// Stop serving if client is not fetching events fast enough.
+			it.cancelServe()
+		}
+		hanging := it.mu.isHanging
+		it.mu.Unlock()
+		if hanging {
+			select {
+			case it.ready <- struct{}{}:
+			default:
 			}
 		}
 	}
+}
 
-	// End the list with a special item to indicate the end of existing entries.
+func (n *neighborImpl) OpenEntryIterator(_ fidl.Context, req neighbor.EntryIteratorWithCtxInterfaceRequest, _ neighbor.EntryIteratorOptions) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	items := make([]neighbor.EntryIteratorItem, 0, len(n.mu.state)+1)
+
+	for _, e := range n.mu.state {
+		if e.HasState() {
+			items = append(items, neighbor.EntryIteratorItemWithExisting(*e))
+		}
+	}
+
 	items = append(items, neighbor.EntryIteratorItemWithIdle(neighbor.IdleEvent{}))
 
-	stub := neighbor.EntryIteratorWithCtxStub{
-		Impl: &neighborEntryIterator{
-			items: items,
-		},
+	ctx, cancel := context.WithCancel(context.Background())
+	it := &neighborEntryIterator{
+		cancelServe: cancel,
+		ready:       make(chan struct{}, 1),
 	}
-	go component.Serve(context.Background(), &stub, it.Channel, component.ServeOptions{
-		OnError: func(err error) {
-			_ = syslog.WarnTf(neighbor.ViewName, "EntryIterator: %s", err)
-		},
-	})
+	it.mu.Lock()
+	it.mu.items = items
+	it.mu.Unlock()
+	go func() {
+		component.Serve(ctx, &neighbor.EntryIteratorWithCtxStub{Impl: it}, req.Channel, component.ServeOptions{
+			Concurrent: true,
+			OnError: func(err error) {
+				_ = syslog.WarnTf(neighbor.ViewName, "EntryIterator: %s", err)
+			},
+		})
+
+		n.mu.Lock()
+		delete(n.mu.iterators, it)
+		n.mu.Unlock()
+	}()
+
+	n.mu.iterators[it] = struct{}{}
 
 	return nil
 }
@@ -312,75 +446,106 @@ func (n *neighborImpl) UpdateUnreachabilityConfig(_ fidl.Context, interfaceID ui
 // neighborEntryIterator queues events received from the neighbor table for
 // consumption by a FIDL client.
 type neighborEntryIterator struct {
-	// items contains neighbor entry notifications waiting for client consumption.
-	items []neighbor.EntryIteratorItem
+	cancelServe context.CancelFunc
+	ready       chan struct{}
+	mu          struct {
+		sync.Mutex
+		items     []neighbor.EntryIteratorItem
+		isHanging bool
+	}
 }
 
 var _ neighbor.EntryIteratorWithCtx = (*neighborEntryIterator)(nil)
 
 // GetNext implements neighbor.EntryIteratorWithCtx.GetNext.
-func (it *neighborEntryIterator) GetNext(fidl.Context) ([]neighbor.EntryIteratorItem, error) {
-	if len(it.items) == 0 {
-		// TODO(https://fxbug.dev/59425): Watch for changes instead of closing the
-		// connection. This was deferred to unblock listing entries.
-		return nil, errors.New("watching for changes not supported")
+func (it *neighborEntryIterator) GetNext(ctx fidl.Context) ([]neighbor.EntryIteratorItem, error) {
+	it.mu.Lock()
+	defer it.mu.Unlock()
+
+	if it.mu.isHanging {
+		it.cancelServe()
+		return nil, errors.New("not allowed to call EntryIterator.GetNext when a call is already pending")
 	}
 
-	items := it.items
-	if uint64(len(it.items)) > neighbor.MaxItemBatchSize {
-		// There are too many items to send; only send the max amount and leave the
-		// rest for subsequent calls.
-		items = items[:neighbor.MaxItemBatchSize]
-	}
-	it.items = it.items[len(items):]
+	for {
+		items := it.mu.items
+		avail := len(items)
+		if avail != 0 {
+			if avail > int(neighbor.MaxItemBatchSize) {
+				items = items[:neighbor.MaxItemBatchSize]
+				it.mu.items = it.mu.items[neighbor.MaxItemBatchSize:]
+			} else {
+				it.mu.items = nil
+			}
+			return items, nil
+		}
 
-	// Avoid memory leak on always-appended slice.
-	if len(it.items) == 0 {
-		it.items = nil
-	}
+		it.mu.isHanging = true
+		it.mu.Unlock()
 
-	return items, nil
+		var err error
+		select {
+		case <-it.ready:
+		case <-ctx.Done():
+			err = fmt.Errorf("cancelled: %w", ctx.Err())
+		}
+
+		it.mu.Lock()
+		it.mu.isHanging = false
+		if err != nil {
+			return nil, err
+		}
+	}
 }
 
-// toNeighborEntry converts a stack.NeighborEntry to a
-// fuchsia.net.neighbor/Entry. Returns the converted entry and true if the
-// conversion was successful, false otherwise.
-func toNeighborEntry(nicID tcpip.NICID, n stack.NeighborEntry) (neighbor.Entry, bool) {
-	e := neighbor.Entry{}
-	e.SetInterface(uint64(nicID))
+func updateEntry(e *neighbor.Entry, n stack.NeighborEntry) {
 	e.SetUpdatedAt(n.UpdatedAt.UnixNano())
-
-	if len(n.Addr) != 0 {
-		e.SetNeighbor(fidlconv.ToNetIpAddress(n.Addr))
-	}
 	if len(n.LinkAddr) != 0 {
 		e.SetMac(fidlconv.ToNetMacAddress(n.LinkAddr))
 	}
 
-	switch n.State {
-	case stack.Unknown:
-		// Unknown is an internal state used by the netstack to represent a newly
-		// created or deleted entry. Clients do not need to be concerned with this
-		// in-between state; all transitions into and out of the Unknown state
-		// trigger an event.
-		return e, false
-	case stack.Incomplete:
-		e.SetState(neighbor.EntryStateIncomplete)
-	case stack.Reachable:
-		e.SetState(neighbor.EntryStateReachable)
-	case stack.Stale:
-		e.SetState(neighbor.EntryStateStale)
-	case stack.Delay:
-		e.SetState(neighbor.EntryStateDelay)
-	case stack.Probe:
-		e.SetState(neighbor.EntryStateProbe)
-	case stack.Static:
-		e.SetState(neighbor.EntryStateStatic)
-	case stack.Unreachable:
-		e.SetState(neighbor.EntryStateUnreachable)
-	default:
-		panic(fmt.Sprintf("invalid NeighborState = %d: %#v", n.State, n))
+	if entryState, valid := func() (neighbor.EntryState, bool) {
+		switch n.State {
+		case stack.Unknown:
+			// Unknown is an internal state used by the netstack to represent a newly
+			// created or deleted entry. Clients do not need to be concerned with this
+			// in-between state; all transitions into and out of the Unknown state
+			// trigger an event.
+			return 0, false
+		case stack.Incomplete:
+			return neighbor.EntryStateIncomplete, true
+		case stack.Reachable:
+			return neighbor.EntryStateReachable, true
+		case stack.Stale:
+			return neighbor.EntryStateStale, true
+		case stack.Delay:
+			return neighbor.EntryStateDelay, true
+		case stack.Probe:
+			return neighbor.EntryStateProbe, true
+		case stack.Static:
+			return neighbor.EntryStateStatic, true
+		case stack.Unreachable:
+			return neighbor.EntryStateUnreachable, true
+		default:
+			panic(fmt.Sprintf("invalid NeighborState = %d: %#v", n.State, n))
+		}
+	}(); valid {
+		e.SetState(entryState)
 	}
+}
 
-	return e, true
+func newNudDispatcher() *nudDispatcher {
+	return &nudDispatcher{
+		// Create channel with enough of a backlog to not block nudDispatcher.
+		events: make(chan neighborEvent, 128),
+	}
+}
+
+func newNeighborImpl(stack *stack.Stack) *neighborImpl {
+	impl := &neighborImpl{stack: stack}
+	impl.mu.Lock()
+	impl.mu.state = make(map[neighborEntryKey]*neighbor.Entry)
+	impl.mu.iterators = make(map[*neighborEntryIterator]struct{})
+	impl.mu.Unlock()
+	return impl
 }

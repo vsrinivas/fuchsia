@@ -18,9 +18,13 @@ using zx;
 ///      always [`EntryState.STATIC`].
 type Entry = table {
     /// Identifier for the interface used for communicating with the neighbor.
+    ///
+    /// Required.
     1: interface fuchsia.net.interface_id;
 
     /// IP address of the neighbor.
+    ///
+    /// Required.
     2: neighbor fuchsia.net.IpAddress;
 
     /// State of the entry within the Neighbor Unreachability Detection (NUD)
@@ -35,6 +39,8 @@ type Entry = table {
     /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
     /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
     /// `---------------------------+-------------+------------------------'
+    ///
+    /// Required.
     3: state @generated_name("EntryState") strict enum {
         /// Reachability is in the process of being confirmed for a newly
         /// created, non-static entry.
@@ -80,9 +86,15 @@ type Entry = table {
     };
 
     /// MAC address of the neighboring device's network interface controller.
-    /// Absent for dynamic entries in [`EntryState.INCOMPLETE`].
+    ///
+    /// Always absent for dynamic entries in [`EntryState.INCOMPLETE`]. May be
+    /// absent for dynamic entries in [`EntryState.UNREACHABLE`].
+    // TODO(https://fxbug.dev/105372): Consider pulling the address into a union
+    // encoding the state and its presence for better type safety.
     4: mac fuchsia.net.MacAddress;
 
     /// Timestamp when this entry has changed `state`.
+    ///
+    /// Required.
     5: updated_at zx.time;
 };
