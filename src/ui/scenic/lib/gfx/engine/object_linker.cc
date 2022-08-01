@@ -125,8 +125,13 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import, bo
       // This handles the case where the peer exists but Initialize() has not been
       // called on it yet (so no callbacks exist).
       peer_endpoint.peer_endpoint_id = ZX_KOID_INVALID;
-      FX_DCHECK(peer_endpoint.link);
-      peer_endpoint.link->Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
+
+      // TODO(fxb/81012): Ensure valid lifecycle stage for peer_endpoint.link.
+      if (peer_endpoint.link) {
+        peer_endpoint.link->Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
+      } else {
+        FX_LOGS(ERROR) << "Unexpected null peer_endpoint.link during link destruction.";
+      }
     }
   }
 
