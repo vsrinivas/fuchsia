@@ -145,11 +145,16 @@ foreach(test, shard_test_list) {
 }
 
 if (is_host) {
+  metric_files = [ "fuchsia.fidlc_microbenchmarks" ]
+
   host_test_data("runtime_deps") {
     sources = [
       "$root_out_dir/catapult_converter",
       "$root_out_dir/trace2json",
     ]
+    foreach(filename, metric_files) {
+      sources += [ "expected_metric_names/$filename" ]
+    }
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
     deps = [

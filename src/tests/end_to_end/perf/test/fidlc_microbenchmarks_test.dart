@@ -17,6 +17,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'fidlc_microbenchmarks',
         componentName: 'fidlc_microbenchmarks.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile: 'fuchsia.fidlc_microbenchmarks');
   }, timeout: Timeout.none);
 }

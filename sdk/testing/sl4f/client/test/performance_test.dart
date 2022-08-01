@@ -310,6 +310,30 @@ void main(List<String> args) {
             'exception text', matches(expectedErrorRegExp))));
   });
 
+  test('MetricsAllowlist class', () {
+    final File file = File(path.join(createTempDir().path, 'suite1'));
+    file.writeAsStringSync('# Comment line\n\n'
+        'fuchsia.suite1: foo\n'
+        'fuchsia.suite1: bar\n');
+    final allowlist = MetricsAllowlist(file);
+    expect(allowlist.expectedMetrics,
+        unorderedEquals(['fuchsia.suite1: foo', 'fuchsia.suite1: bar']));
+
+    allowlist.check(Set.from(['fuchsia.suite1: foo', 'fuchsia.suite1: bar']));
+
+    final String expectedError =
+        'Invalid argument(s): Metric names produced by the test differ from'
+        ' the expectations in ${file.path}:\n'
+        '-fuchsia.suite1: bar\n'
+        ' fuchsia.suite1: foo\n'
+        '+fuchsia.suite1: new';
+    expect(
+        () => allowlist
+            .check(Set.from(['fuchsia.suite1: foo', 'fuchsia.suite1: new'])),
+        throwsA(TypeMatcher<ArgumentError>()
+            .having((e) => e.toString(), 'exception text', expectedError)));
+  });
+
   test('convert trace', () async {
     final mockRunProcessObserver = MockRunProcessObserver();
     final performance =

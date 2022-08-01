@@ -95,14 +95,15 @@ class PerfTestHelper {
   // files.  Generates a "summary" version of that data, following the
   // process described in summarize.dart, and publishes that as
   // results for the current test.
-  Future<void> processResultsSummarized(List<File> jsonFiles) async {
+  Future<void> processResultsSummarized(List<File> jsonFiles,
+      [String expectedMetricNamesFile]) async {
     final jsonSummaryData = summarizeFuchsiaPerfFiles(jsonFiles);
 
     final File jsonSummaryFile = dump.createFile('results', 'fuchsiaperf.json');
     await writeFuchsiaPerfJson(jsonSummaryFile, jsonSummaryData);
 
     await performance.convertResults('runtime_deps/catapult_converter',
-        jsonSummaryFile, Platform.environment);
+        jsonSummaryFile, Platform.environment, expectedMetricNamesFile);
   }
 
   // Runs a command over SSH and publishes its output as performance
@@ -143,6 +144,7 @@ class PerfTestHelper {
       {@required String packageName,
       @required String componentName,
       @required String commandArgs,
+      String expectedMetricNamesFile,
       int processRuns = 1}) async {
     final List<File> localResultsFiles = [];
     for (var process = 0; process < processRuns; ++process) {
@@ -178,7 +180,7 @@ class PerfTestHelper {
         expect(result.exitCode, equals(0));
       }
     }
-    await processResultsSummarized(localResultsFiles);
+    await processResultsSummarized(localResultsFiles, expectedMetricNamesFile);
   }
 
   // Runs a component without processing any results.  This is useful when

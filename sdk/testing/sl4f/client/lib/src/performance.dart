@@ -8,6 +8,7 @@
 import 'dart:convert';
 import 'dart:io' show File, Platform, Process, ProcessResult, WebSocket;
 
+import 'package:collection/collection.dart';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
@@ -322,11 +323,12 @@ class Performance {
   /// This converts the results to Catapult format.  If uploading to Catapult is
   /// enabled, this puts the resulting file in a directory with a filename
   /// indicating that it should be uploaded.
-  Future<void> convertResults(String converterPath, File result,
-      Map<String, String> environment) async {
+  Future<void> convertResults(
+      String converterPath, File result, Map<String, String> environment,
+      [String expectedMetricNamesFile]) async {
     _log.info('Converting the results into the catapult format');
 
-    _checkFuchsiaPerfMetricsNaming(result);
+    _checkFuchsiaPerfMetricsNaming(result, expectedMetricNamesFile);
 
     var master = environment[_catapultDashboardMasterVarName];
     var bot = environment[_catapultDashboardBotVarName];
@@ -396,7 +398,12 @@ class Performance {
 
   /// Check that the performance test metrics in the given fuchsiaperf.json
   /// file follow some naming conventions.
-  void _checkFuchsiaPerfMetricsNaming(File fuchsiaPerfFile) {
+  ///
+  /// Check that the performance test metrics match the names listed in an
+  /// expectations file.  This is currently optional.
+  /// TODO(https://fxbug.dev/105202): Make this required.
+  void _checkFuchsiaPerfMetricsNaming(
+      File fuchsiaPerfFile, String expectedMetricNamesFile) {
     // The "test_suite" field should be all lower case.  It should start
     // with "fuchsia.", to distinguish Fuchsia test results from results
     // from other projects that upload to Catapult (Chromeperf), because
@@ -427,6 +434,19 @@ class Performance {
       throw ArgumentError(
           "Some performance test metrics don't follow the naming conventions:\n"
           '${errors.join('\n')}');
+    }
+
+    if (expectedMetricNamesFile != null) {
+      final Set<String> metrics = Set();
+      for (final Map<String, dynamic> entry in jsonData) {
+        metrics.add('${entry['test_suite']}: ${entry['label']}');
+      }
+
+      final String runtimeDepsDir =
+          Platform.script.resolve('runtime_deps').toFilePath();
+      final MetricsAllowlist allowlist = MetricsAllowlist(
+          File(path.join(runtimeDepsDir, expectedMetricNamesFile)));
+      allowlist.check(metrics);
     }
   }
 
@@ -587,5 +607,42 @@ class TraceSession {
     _closed = true;
     final traceData = base64.decode(response['data']);
     return traceData;
+  }
+}
+
+String _formatSetDiff(Set<String> set1, Set<String> set2) {
+  List<String> union = List.from(set1.union(set2));
+  union.sort();
+  final List<String> lines = [];
+  for (final String entry in union) {
+    final String tag =
+        set2.contains(entry) ? (set1.contains(entry) ? ' ' : '+') : '-';
+    lines.add(tag + entry);
+  }
+  return lines.join('\n');
+}
+
+class MetricsAllowlist {
+  final String filename;
+  final Set<String> expectedMetrics;
+
+  MetricsAllowlist(File file)
+      : filename = file.path,
+        expectedMetrics = Set() {
+    final String data = file.readAsStringSync();
+    for (String line in LineSplitter.split(data)) {
+      // Skip comment lines and empty lines.
+      if (line.trim().startsWith('#') || line.trim() == '') continue;
+      expectedMetrics.add(line);
+    }
+  }
+
+  void check(Set<String> actualMetrics) {
+    if (!SetEquality().equals(expectedMetrics, actualMetrics)) {
+      final String diff = _formatSetDiff(expectedMetrics, actualMetrics);
+      throw ArgumentError(
+          'Metric names produced by the test differ from the expectations in'
+          ' ${filename}:\n$diff');
+    }
   }
 }
