@@ -81,7 +81,7 @@ bool ValidateFullUtf8(const char* data, uint64_t pos, const uint64_t size) {
       // Note: don't forget about endianness here!
       uint32_t code_point;
       memcpy(&code_point, &str[pos], sizeof(code_point));
-      if constexpr (cpp20::endian::native == cpp20::endian::big) {
+      if (cpp20::endian::native == cpp20::endian::big) {
         if ((code_point & 0b11000000'11000000'11000000) != 0b10000000'10000000'10000000) {
           // Not followed by continuation characters.
           return false;
