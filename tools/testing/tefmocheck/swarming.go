@@ -71,6 +71,7 @@ type SwarmingRpcsTaskResult struct {
 	// Possible values:
 	//   "BOT_DIED"
 	//   "CANCELED"
+	//   "CLIENT_ERROR"
 	//   "COMPLETED"
 	//   "EXPIRED"
 	//   "INVALID"

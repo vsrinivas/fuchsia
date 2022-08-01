@@ -100,6 +100,7 @@ var TaskStateChecks []FailureModeCheck = []FailureModeCheck{
 	// All other states.
 	&taskStateCheck{State: "BOT_DIED"},
 	&taskStateCheck{State: "CANCELED"},
+	&taskStateCheck{State: "CLIENT_ERROR"},
 	&taskStateCheck{State: "EXPIRED"},
 	&taskStateCheck{State: "INVALID"},
 	&taskStateCheck{State: "KILLED"},
