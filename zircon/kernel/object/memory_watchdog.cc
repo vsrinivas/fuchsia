@@ -62,18 +62,7 @@ void HandleOnOomReboot() {
       break;
 
     case ZX_ERR_TIMED_OUT:
-      // TODO(fxb/91704): Update this comment once the referenced bug/work-item
-      // is fixed.
-      //
-      // Note: While in general, a timeout while waiting for acknowledgement
-      // from user mode would be an indication of something bad going on (such
-      // as a bug preventing the ack, or simply not enough time to allow user
-      // mode to shut down), it is currently expected behavior as the change to
-      // cause user-mode to acknowledge a kernel initiated OOM reboot has not
-      // landed yet.
-      //
-      // See http://fxb/91704 for details.
-      //
+      // User mode code should have acked by now, since it hasn't, reboot the system.
       printf(
           "memory-pressure: rebooting due to OOM. timed out after waiting %ums for user-mode "
           "ack.\n",
