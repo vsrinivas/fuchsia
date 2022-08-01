@@ -1675,6 +1675,10 @@
                 "^experimental_": {}
             },
             "properties": {
+                "experimental_maybe_from_type_alias": {
+                    "$ref": "#/definitions/partial-type-ctor",
+                    "description": "If provided, an alias for the corresponding type used in the definition"
+                },
                 "location": {
                     "$ref": "#/definitions/location",
                     "description": "Source location of the declaration"

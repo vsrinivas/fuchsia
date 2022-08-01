@@ -821,12 +821,14 @@ func (l *Layout) IsAnonymous() bool {
 
 // Assert that declarations conform to the Declaration interface
 var _ = []Declaration{
+	(*NewType)(nil),
 	(*TypeAlias)(nil),
 	(*Union)(nil),
 	(*Table)(nil),
 	(*Struct)(nil),
 	(*Protocol)(nil),
 	(*Service)(nil),
+	(*Resource)(nil),
 	(*Enum)(nil),
 	(*Bits)(nil),
 	(*Const)(nil),
@@ -845,6 +847,13 @@ type PartialTypeConstructor struct {
 	Args      []PartialTypeConstructor  `json:"args"`
 	Nullable  bool                      `json:"nullable"`
 	MaybeSize *Constant                 `json:"maybe_size,omitempty"`
+}
+
+// NewType represents the declaration of a FIDL 'new type'.
+type NewType struct {
+	Decl
+	Type  Type                    `json:"type"`
+	Alias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias"`
 }
 
 // Union represents the declaration of a FIDL union.
@@ -989,6 +998,8 @@ type Protocol struct {
 	Openness Openness `json:"openness,omitempty"`
 	// List of methods that are part of this protocol.
 	Methods []Method `json:"methods"`
+	// List of composed protocols.
+	Composed []Decl `json:"composed_protocols"`
 }
 
 // If the protocol is discoverable, gets the discovery name for the protocol, consisting of the
@@ -1241,6 +1252,13 @@ type Const struct {
 	Value Constant `json:"value"`
 }
 
+// Resource gives the declaration of a FIDL resource.
+type Resource struct {
+	Decl
+	Type       Type   `json:"type"`
+	Properties []Decl `json:"properties"`
+}
+
 // Strictness represents whether a FIDL object is strict or flexible. See
 // <https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-033> for more
 // information.
@@ -1289,12 +1307,14 @@ const (
 	ConstDeclType     DeclType = "const"
 	BitsDeclType      DeclType = "bits"
 	EnumDeclType      DeclType = "enum"
+	ResourceDeclType  DeclType = "resource"
 	ProtocolDeclType  DeclType = "protocol"
 	ServiceDeclType   DeclType = "service"
 	StructDeclType    DeclType = "struct"
 	TableDeclType     DeclType = "table"
 	UnionDeclType     DeclType = "union"
 	TypeAliasDeclType DeclType = "type_alias"
+	NewTypeDeclType   DeclType = "new_type"
 )
 
 type DeclInfo struct {
@@ -1328,6 +1348,7 @@ type Root struct {
 	Consts          []Const                     `json:"const_declarations,omitempty"`
 	Bits            []Bits                      `json:"bits_declarations,omitempty"`
 	Enums           []Enum                      `json:"enum_declarations,omitempty"`
+	Resources       []Resource                  `json:"experimental_resource_declarations"`
 	Protocols       []Protocol                  `json:"protocol_declarations,omitempty"`
 	Services        []Service                   `json:"service_declarations,omitempty"`
 	Structs         []Struct                    `json:"struct_declarations,omitempty"`
@@ -1335,6 +1356,7 @@ type Root struct {
 	Tables          []Table                     `json:"table_declarations,omitempty"`
 	Unions          []Union                     `json:"union_declarations,omitempty"`
 	TypeAliases     []TypeAlias                 `json:"type_alias_declarations,omitempty"`
+	NewTypes        []NewType                   `json:"new_type_declarations,omitempty"`
 	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls           DeclMap                     `json:"declarations,omitempty"`
 	Libraries       []Library                   `json:"library_dependencies,omitempty"`
