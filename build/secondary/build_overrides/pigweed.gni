@@ -6,10 +6,6 @@
 # https://pigweed.googlesource.com/pigweed/sample_project/+/refs/heads/main/build_overrides/pigweed.gni
 # This file is imported by all Pigweed modules.
 
-# Limit the visibility of Pigweed modules to Pigweed integration files and Pigweed itself. Modules
-# are allowlisted in //third_party/pigweed/BUILD.gn for use in Fuchsia.
-visibility = [ "//third_party/pigweed/*" ]
-
 declare_args() {
   # Location of the Pigweed repository.
   dir_pigweed = "//third_party/pigweed/src"
