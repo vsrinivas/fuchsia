@@ -23,7 +23,8 @@ enum class PageFlag {
   kPageMapped,        // It has a valid mapping to the address space.
   kPageActive,        // It is being referenced.
   // TODO: Clear |kPageMmapped| when all mmaped areas are unmapped.
-  kPageMmapped,  // It is mmapped. Once set, it remains regardless of munmap.
+  kPageMmapped,   // It is mmapped. Once set, it remains regardless of munmap.
+  kPageColdData,  // It is under garbage collecting. It must not be inplace updated.
   kPageFlagSize,
 };
 
@@ -99,6 +100,7 @@ class Page : public PageRefCounted<Page>,
   bool IsMapped() const { return TestFlag(PageFlag::kPageMapped); }
   bool IsActive() const { return TestFlag(PageFlag::kPageActive); }
   bool IsMmapped() const { return TestFlag(PageFlag::kPageMmapped); }
+  bool IsColdData() const { return TestFlag(PageFlag::kPageColdData); }
 
   void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
 
@@ -142,6 +144,9 @@ class Page : public PageRefCounted<Page>,
   // It ensures that the contents of |this| is synchronized with the corresponding pager backed vmo.
   void SetMmapped();
   bool ClearMmapped();
+
+  void SetColdData();
+  bool ClearColdData();
 
   // It invalidates |this| for truncate and punch-a-hole operations.
   // It clears PageFlag::kPageUptodate and PageFlag::kPageDirty. If a caller invalidates

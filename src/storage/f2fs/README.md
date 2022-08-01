@@ -7,8 +7,7 @@ For more information see: https://www.usenix.org/conference/fast15/technical-ses
 
 Limitations
 =============
-* Features under development: mmap(shared), gc, xattr, fallocate
-* We use LFS for new blocks but enforce SSR/IPU for rewritten blocks until gc is available.
+* Features under development: mmap(shared), xattr, fallocate
 
 How to test
 =============

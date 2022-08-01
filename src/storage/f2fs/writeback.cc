@@ -116,6 +116,7 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
             locked_page->SetDirty();
           }
         }
+        page->ClearColdData();
         page->ClearWriteback();
         return ret;
       });

@@ -377,8 +377,7 @@ zx_status_t VnodeF2fs::DoWriteDataPage(LockedPage &page) {
 
   // If current allocation needs SSR,
   // it had better in-place writes for updated data.
-  // TODO: GC, Impl IsCodeData
-  if (old_blk_addr != kNewAddr && /*! NodeManager::IsColdData(*page) &&*/
+  if (old_blk_addr != kNewAddr && !page->IsColdData() &&
       Vfs()->GetSegmentManager().NeedInplaceUpdate(this)) {
     Vfs()->GetSegmentManager().RewriteDataPage(page, old_blk_addr);
   } else {
@@ -430,9 +429,6 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
     }
   }
 
-#if 0  // TODO: impl it, GC
-  Vfs()->GetNodeManager().ClearColdData(*page);
-#endif
   return ZX_OK;
 }
 
@@ -489,7 +485,6 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, LockedPage *out) {
     }
   }
   page->SetUptodate();
-  // TODO: GC, Vfs()->GetNodeManager().ClearColdData(*pagep);
   *out = std::move(page);
   return ZX_OK;
 }

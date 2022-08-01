@@ -216,14 +216,6 @@ class NodeManager {
                                    const int32_t (&offset)[kMaxNodeBlockLevel], int32_t depth);
   zx_status_t NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, LockedPage *out);
 
-#if 0  // Use xxColdxx and RA when gc impl.
-  static int IsColdData(Page &page);
-  static void ClearColdData(Page &page);
-  void SetColdData(Page &page);
-  Page *GetNodePageRa(Page *parent, int start);
-  void RaNodePage(nid_t nid);
-#endif
-
   FreeNid *LookupFreeNidList(nid_t n);
   void DelFromFreeNidList(FreeNid *i);
   int AddFreeNid(nid_t nid);

@@ -499,6 +499,31 @@ void F2fs::DoCheckpoint(bool is_umount) {
   }
 }
 
+uint32_t F2fs::GetFreeSectionsForDirtyPages() {
+  uint32_t pages_per_sec =
+      safemath::CheckMul<uint32_t>((1 << superblock_info_->GetLogBlocksPerSeg()),
+                                   superblock_info_->GetSegsPerSec())
+          .ValueOrDie();
+  uint32_t node_secs =
+      safemath::CheckDiv<uint32_t>(
+          ((superblock_info_->GetPageCount(CountType::kDirtyNodes) + pages_per_sec - 1) >>
+           superblock_info_->GetLogBlocksPerSeg()),
+          superblock_info_->GetSegsPerSec())
+          .ValueOrDie();
+  uint32_t dent_secs =
+      safemath::CheckDiv<uint32_t>(
+          ((superblock_info_->GetPageCount(CountType::kDirtyDents) + pages_per_sec - 1) >>
+           superblock_info_->GetLogBlocksPerSeg()),
+          superblock_info_->GetSegsPerSec())
+          .ValueOrDie();
+
+  return (node_secs + safemath::CheckMul<uint32_t>(dent_secs, 2)).ValueOrDie();
+}
+
+bool F2fs::IsCheckpointAvailable() {
+  return segment_manager_->FreeSections() > GetFreeSectionsForDirtyPages();
+}
+
 // We guarantee that this checkpoint procedure should not fail.
 void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
@@ -510,6 +535,7 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   }
 
   std::lock_guard cp_lock(superblock_info.GetCheckpointMutex());
+  ZX_DEBUG_ASSERT(IsCheckpointAvailable());
   BlockOperations();
   ScheduleWriterSubmitPages();
 

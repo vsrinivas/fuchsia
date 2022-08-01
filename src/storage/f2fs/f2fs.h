@@ -246,7 +246,8 @@ class F2fs : public fs::Vfs {
   void UnblockOperations();
   void DoCheckpoint(bool is_umount);
   void WriteCheckpoint(bool blocked, bool is_umount);
-
+  uint32_t GetFreeSectionsForDirtyPages();
+  bool IsCheckpointAvailable();
 #if 0  // porting needed
   int F2fsWriteMetaPages(address_space *mapping, WritebackControl *wbc);
   int F2fsSetMetaPageDirty(Page *page);

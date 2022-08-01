@@ -156,7 +156,6 @@ block_t SegmentManager::ReservedSections() {
   return GetReservedSegmentsCount() / superblock_info_->GetSegsPerSec();
 }
 bool SegmentManager::NeedSSR() {
-  // TODO: need to consider allocation mode and gc mode
   return (FreeSections() < static_cast<uint32_t>(OverprovisionSections()));
 }
 
@@ -186,9 +185,7 @@ uint32_t SegmentManager::Utilization() {
 // Sometimes f2fs may be better to drop out-of-place update policy.
 // So, if fs utilization is over kMinIpuUtil, then f2fs tries to write
 // data in the original place likewise other traditional file systems.
-// TODO: Revisit it when GC is available.
-// Currently, we enforce ipu to overcome the lack of gc.
-constexpr uint32_t kMinIpuUtil = 0;
+constexpr uint32_t kMinIpuUtil = 70;
 bool SegmentManager::NeedInplaceUpdate(VnodeF2fs *vnode) {
   if (vnode->IsDir())
     return false;
@@ -311,20 +308,10 @@ bool SegmentManager::SecUsageCheck(unsigned int secno) {
 SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); }
 
 bool SegmentManager::HasNotEnoughFreeSecs(uint32_t freed) {
-  uint32_t pages_per_sec =
-      (1 << superblock_info_->GetLogBlocksPerSeg()) * superblock_info_->GetSegsPerSec();
-  int node_secs = ((superblock_info_->GetPageCount(CountType::kDirtyNodes) + pages_per_sec - 1) >>
-                   superblock_info_->GetLogBlocksPerSeg()) /
-                  superblock_info_->GetSegsPerSec();
-  int dent_secs = ((superblock_info_->GetPageCount(CountType::kDirtyDents) + pages_per_sec - 1) >>
-                   superblock_info_->GetLogBlocksPerSeg()) /
-                  superblock_info_->GetSegsPerSec();
-
   if (superblock_info_->IsOnRecovery())
     return false;
 
-  return (FreeSections() + freed) <=
-         safemath::checked_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections());
+  return (FreeSections() + freed) <= (fs_->GetFreeSectionsForDirtyPages() + ReservedSections());
 }
 
 // This function balances dirty node and dentry pages.
@@ -841,7 +828,7 @@ CursegType SegmentManager::GetSegmentType6(Page &page, PageType p_type) {
 
     if (vnode.IsDir()) {
       return CursegType::kCursegHotData;
-    } else if (/*NodeManager::IsColdData(*page) ||*/ NodeManager::IsColdFile(vnode)) {
+    } else if (page.IsColdData() || NodeManager::IsColdFile(vnode)) {
       return CursegType::kCursegColdData;
     }
     return CursegType::kCursegWarmData;

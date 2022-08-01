@@ -110,6 +110,7 @@ zx_status_t Page::Map() {
 void Page::Invalidate() {
   ZX_DEBUG_ASSERT(IsLocked());
   ClearDirtyForIo();
+  ClearColdData();
   if (ClearMmapped()) {
     ZX_ASSERT(GetVnode().InvalidatePagedVmo(GetIndex() * kBlockSize, kBlockSize) == ZX_OK);
   }
@@ -160,6 +161,20 @@ bool Page::ClearMmapped() {
   if (IsMmapped()) {
     fs_->GetSuperblockInfo().DecreasePageCount(CountType::kMmapedData);
     ClearFlag(PageFlag::kPageMmapped);
+    return true;
+  }
+  return false;
+}
+
+void Page::SetColdData() {
+  ZX_DEBUG_ASSERT(IsLocked());
+  ZX_DEBUG_ASSERT(!IsWriteback());
+  SetFlag(PageFlag::kPageColdData);
+}
+
+bool Page::ClearColdData() {
+  if (IsColdData()) {
+    ClearFlag(PageFlag::kPageColdData);
     return true;
   }
   return false;

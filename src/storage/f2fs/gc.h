@@ -30,7 +30,14 @@ class GcManager {
   zx_status_t DoGarbageCollect(uint32_t segno, GcType gc_type) __TA_REQUIRES(gc_mutex_);
 
   bool CheckValidMap(uint32_t segno, uint64_t offset) __TA_REQUIRES(gc_mutex_);
-  zx_status_t GcNodeSegment(const SummaryBlock *sum, uint32_t segno, GcType gc_type)
+  zx_status_t GcNodeSegment(const SummaryBlock &sum_blk, uint32_t segno, GcType gc_type)
+      __TA_REQUIRES(gc_mutex_);
+
+  // CheckDnode() returns ino of target block and start block index of the target block's dnode
+  // block. It also checks the validity of summary.
+  zx::status<std::pair<nid_t, block_t>> CheckDnode(const Summary &sum, block_t blkaddr)
+      __TA_REQUIRES(gc_mutex_);
+  zx_status_t GcDataSegment(const SummaryBlock &sum_blk, unsigned int segno, GcType gc_type)
       __TA_REQUIRES(gc_mutex_);
 
   F2fs *fs_ = nullptr;

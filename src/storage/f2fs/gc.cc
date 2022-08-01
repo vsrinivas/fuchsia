@@ -105,15 +105,10 @@ zx::status<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegTy
         ++nSearched;
       }
 
-      // TODO: Remove it when data gc is implemented.
-      if (policy.alloc_mode == AllocMode::kLFS &&
-          IsDataSeg(static_cast<CursegType>(GetSegmentEntry(segno).type))) {
-        continue;
-      }
-
       if (SecUsageCheck(secno)) {
         continue;
       }
+
       if (gc_type == GcType::kBgGc && TestBit(secno, dirty_info_->victim_secmap.get())) {
         continue;
       }
@@ -175,15 +170,14 @@ zx::status<uint32_t> GcManager::F2fsGc() {
       return zx::error(ZX_ERR_BAD_STATE);
     }
 
+    // For example, if there are many prefree_segments below given threshold, we can make them
+    // free by checkpoint. Then, we secure free segments which doesn't need fggc any more.
+    if (fs_->GetSegmentManager().PrefreeSegments()) {
+      fs_->WriteCheckpoint(false, false);
+    }
+
     if (gc_type == GcType::kBgGc && fs_->GetSegmentManager().HasNotEnoughFreeSecs()) {
-      // For example, if there are many prefree_segments below given threshold, we can make them
-      // free by checkpoint. Then, we secure free segments which doesn't need fggc any more.
-      if (fs_->GetSegmentManager().PrefreeSegments()) {
-        fs_->WriteCheckpoint(false, false);
-      }
-      if (fs_->GetSegmentManager().HasNotEnoughFreeSecs()) {
-        gc_type = GcType::kFgGc;
-      }
+      gc_type = GcType::kFgGc;
     }
 
     uint32_t segno;
@@ -232,19 +226,15 @@ zx_status_t GcManager::DoGarbageCollect(uint32_t start_segno, GcType gc_type) {
       sum_page = locked_sum_page.release();
     }
 
-    SummaryBlock *sum = sum_page->GetAddress<SummaryBlock>();
-    ZX_DEBUG_ASSERT(type == GetSumType((&sum->footer)));
+    SummaryBlock *sum_blk = sum_page->GetAddress<SummaryBlock>();
+    ZX_DEBUG_ASSERT(type == GetSumType((&sum_blk->footer)));
 
-    if (type == kSumTypeNode) {
-      if (auto err = GcNodeSegment(sum, segno, gc_type); err != ZX_OK) {
-        return err;
-      }
-    } else {
-      // TODO: Add GcDataSegment()
-      return ZX_ERR_NOT_SUPPORTED;
+    if (zx_status_t status = (type == kSumTypeNode) ? GcNodeSegment(*sum_blk, segno, gc_type)
+                                                    : GcDataSegment(*sum_blk, segno, gc_type);
+        status != ZX_OK) {
+      return status;
     }
   }
-
   return ZX_OK;
 }
 
@@ -256,8 +246,8 @@ bool GcManager::CheckValidMap(uint32_t segno, uint64_t offset) {
   return TestValidBitmap(offset, sentry.cur_valid_map.get());
 }
 
-zx_status_t GcManager::GcNodeSegment(const SummaryBlock *sum, uint32_t segno, GcType gc_type) {
-  const Summary *entry = sum->entries;
+zx_status_t GcManager::GcNodeSegment(const SummaryBlock &sum_blk, uint32_t segno, GcType gc_type) {
+  const Summary *entry = sum_blk.entries;
   for (block_t off = 0; off < fs_->GetSuperblockInfo().GetBlocksPerSeg(); ++off, ++entry) {
     nid_t nid = CpuToLe(entry->nid);
 
@@ -284,6 +274,94 @@ zx_status_t GcManager::GcNodeSegment(const SummaryBlock *sum, uint32_t segno, Gc
     node_page->SetDirty();
   }
 
+  return ZX_OK;
+}
+
+zx::status<std::pair<nid_t, block_t>> GcManager::CheckDnode(const Summary &sum, block_t blkaddr) {
+  nid_t nid = LeToCpu(sum.nid);
+  uint64_t ofs_in_node = LeToCpu(sum.ofs_in_node);
+
+  LockedPage node_page;
+  if (auto err = fs_->GetNodeManager().GetNodePage(nid, &node_page); err != ZX_OK) {
+    return zx::error(err);
+  }
+
+  NodeInfo dnode_info;
+  fs_->GetNodeManager().GetNodeInfo(nid, dnode_info);
+
+  if (sum.version != dnode_info.version) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  fs_->GetNodeManager().CheckNidRange(dnode_info.ino);
+
+  auto start_bidx = node_page.GetPage<NodePage>().StartBidxOfNode();
+  block_t source_blkaddr = DatablockAddr(&node_page.GetPage<NodePage>(), ofs_in_node);
+
+  if (source_blkaddr != blkaddr) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  return zx::ok(std::make_pair(dnode_info.ino, start_bidx));
+}
+
+zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int segno,
+                                     GcType gc_type) {
+  block_t start_addr = fs_->GetSegmentManager().StartBlock(segno);
+  const Summary *entry = sum_blk.entries;
+  for (block_t off = 0; off < fs_->GetSuperblockInfo().GetBlocksPerSeg(); ++off, ++entry) {
+    // stop BG_GC if there is not enough free sections. Or, stop GC if the section becomes fully
+    // valid caused by race condition along with SSR block allocation.
+    const uint32_t kBlocksPerSection =
+        fs_->GetSuperblockInfo().GetBlocksPerSeg() * fs_->GetSuperblockInfo().GetSegsPerSec();
+    if ((gc_type == GcType::kBgGc && fs_->GetSegmentManager().HasNotEnoughFreeSecs()) ||
+        fs_->GetSegmentManager().GetValidBlocks(segno, fs_->GetSuperblockInfo().GetSegsPerSec()) ==
+            kBlocksPerSection) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    if (!CheckValidMap(segno, off)) {
+      continue;
+    }
+
+    auto dnode_result =
+        CheckDnode(*entry, safemath::CheckAdd<block_t>(start_addr, off).ValueOrDie());
+    if (dnode_result.is_error()) {
+      continue;
+    }
+    auto [ino, start_bidx] = dnode_result.value();
+
+    uint32_t ofs_in_node = LeToCpu(entry->ofs_in_node);
+
+    fbl::RefPtr<VnodeF2fs> vnode;
+    if (auto err = VnodeF2fs::Vget(fs_, ino, &vnode); err != ZX_OK) {
+      continue;
+    }
+
+    LockedPage data_page;
+    if (auto err = vnode->GetLockDataPage(start_bidx + ofs_in_node, &data_page); err != ZX_OK) {
+      continue;
+    }
+
+    data_page->WaitOnWriteback();
+    data_page->SetDirty();
+    data_page->SetColdData();
+  }
+
+  if (gc_type == GcType::kFgGc) {
+    WritebackOperation op;
+    op.bSync = false;
+    op.if_page = [](fbl::RefPtr<Page> page) {
+      if (page->IsColdData()) {
+        return ZX_OK;
+      }
+      return ZX_ERR_NEXT;
+    };
+    fs_->SyncDirtyDataPages(op);
+  }
+
+  if (gc_type == GcType::kFgGc && fs_->GetSegmentManager().GetValidBlocks(segno, 1) != 0) {
+    return ZX_ERR_BAD_STATE;
+  }
   return ZX_OK;
 }
 

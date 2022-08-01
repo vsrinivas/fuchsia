@@ -120,21 +120,6 @@ void NodeManager::SetToNextNat(nid_t start_nid) {
 //  - Mark cold data pages in page cache
 bool NodeManager::IsColdFile(VnodeF2fs &vnode) { return (vnode.IsAdviseSet(FAdvise::kCold) != 0); }
 
-#if 0  // When gc impl, use the cold hint.
-int NodeManager::IsColdData(Page *page) {
-  // return PageChecked(page);
-  return 0;
-}
-
-void NodeManager::SetColdData(Page &page) {
-  // SetPageChecked(page);
-}
-
-void NodeManager::ClearColdData(Page *page) {
-  // ClearPageChecked(page);
-}
-#endif
-
 void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
   std::lock_guard stat_lock(GetSuperblockInfo().GetStatLock());
 
