@@ -56,12 +56,12 @@ use timers::TimerDispatcher;
 
 use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route,
+    add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
-    handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IdMap, IpDeviceConfiguration,
-    IpExt, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration,
-    TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, BufferUdpContext,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, IdMap, IpDeviceConfiguration, IpExt,
+    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NetstackError, NonSyncContext,
+    SlaacConfiguration, SyncCtx, TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -565,6 +565,26 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
     Ok(())
 }
 
+fn add_loopback_ip_addrs<NonSyncCtx: NonSyncContext>(
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    non_sync_ctx: &mut NonSyncCtx,
+    loopback: DeviceId,
+) -> Result<(), NetstackError> {
+    for addr_subnet in [
+        AddrSubnetEither::V4(
+            AddrSubnet::from_witness(Ipv4::LOOPBACK_ADDRESS, Ipv4::LOOPBACK_SUBNET.prefix())
+                .expect("error creating IPv4 loopback AddrSub"),
+        ),
+        AddrSubnetEither::V6(
+            AddrSubnet::from_witness(Ipv6::LOOPBACK_ADDRESS, Ipv6::LOOPBACK_SUBNET.prefix())
+                .expect("error creating IPv6 loopback AddrSub"),
+        ),
+    ] {
+        add_ip_addr_subnet(sync_ctx, non_sync_ctx, loopback, addr_subnet)?
+    }
+    Ok(())
+}
+
 impl<NonSyncCtx> InterfaceControl for Ctx<NonSyncCtx>
 where
     NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>,
@@ -705,8 +725,9 @@ impl NetstackSeed {
 
             // Add and initialize the loopback interface with the IPv4 and IPv6
             // loopback addresses and on-link routes to the loopback subnets.
-            let loopback = netstack3_core::add_loopback_device(sync_ctx, DEFAULT_LOOPBACK_MTU)
-                .expect("error adding loopback device");
+            let loopback =
+                netstack3_core::add_loopback_device(sync_ctx, non_sync_ctx, DEFAULT_LOOPBACK_MTU)
+                    .expect("error adding loopback device");
             let devices: &mut Devices = non_sync_ctx.as_mut();
             let (control_sender, control_receiver) =
                 interfaces_admin::OwnedControlHandle::new_channel();
@@ -753,46 +774,8 @@ impl NetstackSeed {
                     ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
                 };
             });
-            add_ip_addr_subnet(
-                sync_ctx,
-                non_sync_ctx,
-                loopback,
-                AddrSubnetEither::V4(
-                    AddrSubnet::from_witness(
-                        Ipv4::LOOPBACK_ADDRESS,
-                        Ipv4::LOOPBACK_SUBNET.prefix(),
-                    )
-                    .expect("error creating IPv4 loopback AddrSub"),
-                ),
-            )
-            .expect("error adding IPv4 loopback address");
-            add_route(
-                sync_ctx,
-                non_sync_ctx,
-                AddableEntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), Some(loopback), None)
-                    .expect("error creating IPv4 route entry"),
-            )
-            .expect("error adding IPv4 loopback on-link subnet route");
-            add_ip_addr_subnet(
-                sync_ctx,
-                non_sync_ctx,
-                loopback,
-                AddrSubnetEither::V6(
-                    AddrSubnet::from_witness(
-                        Ipv6::LOOPBACK_ADDRESS,
-                        Ipv6::LOOPBACK_SUBNET.prefix(),
-                    )
-                    .expect("error creating IPv6 loopback AddrSub"),
-                ),
-            )
-            .expect("error adding IPv6 loopback address");
-            add_route(
-                sync_ctx,
-                non_sync_ctx,
-                AddableEntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), Some(loopback), None)
-                    .expect("error creating IPv6 route entry"),
-            )
-            .expect("error adding IPv6 loopback on-link subnet route");
+            add_loopback_ip_addrs(sync_ctx, non_sync_ctx, loopback)
+                .expect("error adding loopback addresses");
 
             // Start servicing timers.
             let BindingsNonSyncCtxImpl {

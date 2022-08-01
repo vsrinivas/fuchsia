@@ -645,9 +645,15 @@ impl TestSetupBuilder {
             let mut stack = TestStack::new();
             stack
                 .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
-                    let loopback =
-                        netstack3_core::add_loopback_device(sync_ctx, DEFAULT_LOOPBACK_MTU)
-                            .expect("add loopback device");
+                    let loopback = netstack3_core::add_loopback_device(
+                        sync_ctx,
+                        non_sync_ctx,
+                        DEFAULT_LOOPBACK_MTU,
+                    )
+                    .expect("add loopback device");
+                    crate::bindings::add_loopback_ip_addrs(sync_ctx, non_sync_ctx, loopback)
+                        .expect("add loopback addresses");
+
                     update_ipv4_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
                         config.ip_config.ip_enabled = true;
                     });

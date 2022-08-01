@@ -3708,8 +3708,10 @@ mod tests {
         };
 
         let loopback_device_id =
-            crate::add_loopback_device(net.sync_ctx(LOCAL_CTX_NAME), u16::MAX.into())
-                .expect("create the loopback interface");
+            net.with_context(LOCAL_CTX_NAME, |Ctx { sync_ctx, non_sync_ctx }| {
+                crate::add_loopback_device(sync_ctx, non_sync_ctx, u16::MAX.into())
+                    .expect("create the loopback interface")
+            });
 
         let echo_body = vec![1, 2, 3, 4];
         let conn = net.with_context(LOCAL_CTX_NAME, |Ctx { sync_ctx, non_sync_ctx }| {

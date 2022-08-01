@@ -2652,7 +2652,10 @@ mod tests {
         test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder, TestStack,
     };
     use crate::bindings::socket::testutil::TestSockAddr;
-    use net_types::ip::{Ip, IpAddress};
+    use net_types::{
+        ip::{Ip, IpAddress},
+        Witness as _,
+    };
 
     async fn prepare_test<A: TestSockAddr>(
         proto: fposix_socket::DatagramSocketProtocol,
@@ -2816,6 +2819,20 @@ mod tests {
         connect,
         icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
     );
+
+    async fn connect_loopback<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
+        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let () = proxy
+            .connect(&mut A::create(
+                <<A::AddrType as IpAddress>::Version as Ip>::LOOPBACK_ADDRESS.get(),
+                200,
+            ))
+            .await
+            .unwrap()
+            .expect("connect succeeds");
+    }
+
+    declare_tests!(connect_loopback);
 
     async fn bind<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
         let (mut t, socket) = prepare_test::<A>(proto).await;

@@ -58,7 +58,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
+    AddableEntryEither, BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -777,7 +777,9 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
     }
 }
 
-/// Adds a new Ethernet device to the stack.
+/// Adds a new Ethernet device to the stack and installs routes for it.
+///
+/// Adds a new Ethernet device and installs routes for the link-local subnet.
 pub fn add_ethernet_device<NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
@@ -790,7 +792,7 @@ pub fn add_ethernet_device<NonSyncCtx: NonSyncContext>(
     crate::add_route(
         sync_ctx,
         ctx,
-        crate::AddableEntryEither::new(LINK_LOCAL_SUBNET.into(), Some(id), None)
+        AddableEntryEither::new(LINK_LOCAL_SUBNET.into(), Some(id), None)
             .expect("create link local entry"),
     )
     // Adding the link local route must succeed: we're providing correct
@@ -800,14 +802,30 @@ pub fn add_ethernet_device<NonSyncCtx: NonSyncContext>(
     id
 }
 
-/// Adds a new device loopback device to the stack.
+/// Adds a new loopback device to the stack and installs routes for it.
 ///
-/// Only one loopback device may be installed at any point in time.
+/// Adds a new loopback device to the stack and installs routes for the loopback
+/// subnet for the device. Only one loopback device may be installed at any
+/// point in time, so if there is one already, an error is returned.
 pub fn add_loopback_device<NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    ctx: &mut NonSyncCtx,
     mtu: u32,
 ) -> Result<DeviceId, crate::error::ExistsError> {
-    sync_ctx.state.device.add_loopback_device(mtu)
+    let id = sync_ctx.state.device.add_loopback_device(mtu)?;
+
+    for entry in [
+        AddableEntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), Some(id), None)
+            .expect("error creating IPv4 route entry"),
+        AddableEntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), Some(id), None)
+            .expect("error creating IPv6 route entry"),
+    ] {
+        crate::add_route(sync_ctx, ctx, entry)
+            // Adding the loopback route must succeed: we're providing correct
+            // arguments and the device has just been created.
+            .unwrap_or_else(|e| panic!("add loopback route for {:?} failed: {:?}", entry, e));
+    }
+    Ok(id)
 }
 
 /// Receive a device layer frame from the network.
@@ -1073,8 +1091,9 @@ mod tests {
         }
         check(&sync_ctx, &[][..]);
 
-        let loopback_device = crate::add_loopback_device(&mut sync_ctx, 55 /* mtu */)
-            .expect("error adding loopback device");
+        let loopback_device =
+            crate::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
+                .expect("error adding loopback device");
         check(&sync_ctx, &[loopback_device][..]);
 
         let DummyEventDispatcherConfig {
