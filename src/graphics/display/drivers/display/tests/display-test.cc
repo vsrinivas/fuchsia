@@ -6,8 +6,8 @@
 #include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fidl/fuchsia.hardware.display/cpp/wire_test_base.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/client_base.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <zircon/errors.h>
 
 #include <array>

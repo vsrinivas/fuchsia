@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>

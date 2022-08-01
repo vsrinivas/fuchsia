@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_DRIVER_TESTS_TRANSPORT_SERVER_ON_UNBOUND_HELPER_H_
 #define LIB_FIDL_DRIVER_TESTS_TRANSPORT_SERVER_ON_UNBOUND_HELPER_H_
 
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl_driver/cpp/transport.h>
 #include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 

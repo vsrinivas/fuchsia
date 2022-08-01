@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 
 #include <zxtest/zxtest.h>
 

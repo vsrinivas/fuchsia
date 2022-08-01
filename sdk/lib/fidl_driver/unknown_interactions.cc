@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdf/cpp/arena.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl_driver/cpp/transport.h>
 #include <lib/fidl_driver/cpp/unknown_interactions.h>
 

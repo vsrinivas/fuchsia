@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 

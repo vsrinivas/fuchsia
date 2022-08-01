@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_CLIENT_BASE_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_CLIENT_BASE_H_
 
-#include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/cpp/wire/client_base.h>
 
 namespace fidl {
 namespace internal {

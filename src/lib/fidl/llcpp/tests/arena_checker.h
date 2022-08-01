@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_ARENA_CHECKER_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_ARENA_CHECKER_H_
 
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 
 namespace fidl_testing {
 

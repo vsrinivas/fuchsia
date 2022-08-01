@@ -7,10 +7,10 @@
 
 #include <lib/fidl/cpp/internal/make_response_context.h>
 #include <lib/fidl/cpp/internal/natural_message_encoder.h>
-#include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/internal/client_continuation.h>
-#include <lib/fidl/llcpp/internal/thenable.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/client_base.h>
+#include <lib/fidl/cpp/wire/internal/client_continuation.h>
+#include <lib/fidl/cpp/wire/internal/thenable.h>
+#include <lib/fidl/cpp/wire/message.h>
 
 namespace fidl::internal {
 

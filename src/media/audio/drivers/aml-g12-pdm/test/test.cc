@@ -5,7 +5,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/sync/completion.h>
 
 #include <fake-mmio-reg/fake-mmio-reg.h>

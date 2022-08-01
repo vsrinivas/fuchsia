@@ -5,7 +5,7 @@
 #ifndef LIB_SYS_COMPONENT_CPP_HANDLERS_H_
 #define LIB_SYS_COMPONENT_CPP_HANDLERS_H_
 
-#include <lib/fidl/llcpp/service_handler_interface.h>
+#include <lib/fidl/cpp/wire/service_handler_interface.h>
 #include <lib/svc/dir.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>

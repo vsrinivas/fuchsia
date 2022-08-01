@@ -11,8 +11,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <zircon/errors.h>

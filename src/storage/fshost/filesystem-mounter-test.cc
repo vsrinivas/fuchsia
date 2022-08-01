@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>

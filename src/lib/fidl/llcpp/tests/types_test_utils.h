@@ -12,8 +12,8 @@
 #error "Fuchsia-only header"
 #endif  // __Fuchsia__
 
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>

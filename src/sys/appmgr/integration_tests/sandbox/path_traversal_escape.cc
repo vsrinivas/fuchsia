@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.sys/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/service/llcpp/service.h>
 
 #include <gtest/gtest.h>

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 

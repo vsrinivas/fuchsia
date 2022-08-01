@@ -9,8 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <zircon/assert.h>
 
 #include <map>

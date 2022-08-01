@@ -9,8 +9,8 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
 

@@ -10,10 +10,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/zx/time.h>
 
 #include <cmath>

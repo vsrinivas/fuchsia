@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/function.h>
 #include <lib/zx/pmt.h>
 

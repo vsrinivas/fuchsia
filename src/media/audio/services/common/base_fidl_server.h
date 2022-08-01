@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_COMMON_BASE_FIDL_SERVER_H_
 #define SRC_MEDIA_AUDIO_SERVICES_COMMON_BASE_FIDL_SERVER_H_
 
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>

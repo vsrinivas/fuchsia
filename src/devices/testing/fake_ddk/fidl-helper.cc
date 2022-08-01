@@ -4,7 +4,7 @@
 
 #include "lib/fake_ddk/fidl-helper.h"
 
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 
 namespace fake_ddk {
 namespace {

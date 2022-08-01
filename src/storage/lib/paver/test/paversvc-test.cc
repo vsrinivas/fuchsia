@@ -16,7 +16,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
 #include <lib/service/llcpp/service.h>

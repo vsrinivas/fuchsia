@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.llcpp.linearized.test/cpp/wire.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 
 #include <gtest/gtest.h>
 

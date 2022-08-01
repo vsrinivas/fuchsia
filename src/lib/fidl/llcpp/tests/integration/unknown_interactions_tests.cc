@@ -6,8 +6,8 @@
 #include <fidl/test.unknown.interactions/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

@@ -8,9 +8,9 @@
 #include <lib/fidl/cpp/internal/client_details.h>
 #include <lib/fidl/cpp/internal/make_response_context.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/internal/arrow.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/internal/arrow.h>
 
 namespace fidl {
 

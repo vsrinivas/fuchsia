@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/object_view.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/array.h>
+#include <lib/fidl/cpp/wire/object_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 
 #include <array>
 

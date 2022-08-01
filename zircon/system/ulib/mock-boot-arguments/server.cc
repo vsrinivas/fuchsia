@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <zircon/status.h>
 
 #include <map>

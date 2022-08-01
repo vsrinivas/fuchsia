@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.lowpan.spinel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/port.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

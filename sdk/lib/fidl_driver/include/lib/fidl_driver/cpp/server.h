@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_SERVER_H_
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_SERVER_H_
 
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl_driver/cpp/internal/server_details.h>
 #include <lib/fidl_driver/cpp/transport.h>
 

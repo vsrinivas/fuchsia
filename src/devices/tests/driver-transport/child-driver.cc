@@ -9,8 +9,8 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 
 #include <ddktl/device.h>

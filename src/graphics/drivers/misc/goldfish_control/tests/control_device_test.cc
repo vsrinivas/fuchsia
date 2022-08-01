@@ -13,7 +13,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmar.h>

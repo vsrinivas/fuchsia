@@ -12,8 +12,8 @@
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/array.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/function.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>

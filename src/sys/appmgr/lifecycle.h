@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/channel.h>
 
 #include <memory>

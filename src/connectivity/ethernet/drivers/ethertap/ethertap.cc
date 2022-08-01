@@ -7,7 +7,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/operation/ethernet.h>
 #include <stdio.h>

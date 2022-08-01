@@ -6,7 +6,7 @@
 
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <zircon/errors.h>
 
 #include "node_properties.h"

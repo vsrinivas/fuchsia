@@ -8,7 +8,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>

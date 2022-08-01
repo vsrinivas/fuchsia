@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/image-format/image_format.h>
 #include <zircon/assert.h>
 

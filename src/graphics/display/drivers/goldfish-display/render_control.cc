@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/markers.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 
 #include <memory>
 

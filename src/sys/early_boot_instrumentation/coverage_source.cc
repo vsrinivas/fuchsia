@@ -10,8 +10,8 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/stdcompat/source_location.h>
 #include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>

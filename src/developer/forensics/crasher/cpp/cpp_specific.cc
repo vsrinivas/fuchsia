@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.feedback/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <new>

@@ -11,7 +11,7 @@
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
-#include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/cpp/wire/traits.h>
 
 #include <random>
 #include <vector>

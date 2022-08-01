@@ -11,7 +11,7 @@
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/metadata.h>
 #include <lib/driver-unit-test/utils.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>

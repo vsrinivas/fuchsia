@@ -10,7 +10,7 @@
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/driver2/start_args.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>

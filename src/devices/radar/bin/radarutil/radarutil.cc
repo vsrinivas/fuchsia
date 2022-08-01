@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.hardware.radar/cpp/wire.h>
 #include <getopt.h>
 #include <lib/async/time.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/status.h>
 #include <stdio.h>

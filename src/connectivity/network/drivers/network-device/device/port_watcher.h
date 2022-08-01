@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_SYNC_CALL_H_
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_SYNC_CALL_H_
 
-#include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/cpp/wire/sync_call.h>
 #include <lib/fidl_driver/cpp/transport.h>
 
 namespace fdf {

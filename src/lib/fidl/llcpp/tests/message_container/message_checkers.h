@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_MESSAGE_CONTAINER_MESSAGE_CHECKERS_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_MESSAGE_CONTAINER_MESSAGE_CHECKERS_H_
 
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 
 namespace fidl_testing {
 

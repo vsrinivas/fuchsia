@@ -13,8 +13,8 @@
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 
 #include <ddktl/device.h>
 #include <wlan/common/dispatcher.h>

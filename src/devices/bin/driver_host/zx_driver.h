@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/fdf/internal.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/syslog/logger.h>
 #include <lib/trace/event.h>
 #include <zircon/types.h>

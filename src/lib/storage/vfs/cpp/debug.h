@@ -19,7 +19,7 @@
 
 #ifdef __Fuchsia__
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 #endif  // __Fuchsia__
 
 // Debug-only header defining utility functions for logging flags and strings.

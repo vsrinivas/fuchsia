@@ -9,7 +9,7 @@
 #include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fidl-helper.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>

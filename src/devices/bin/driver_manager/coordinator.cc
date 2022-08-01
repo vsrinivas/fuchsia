@@ -19,8 +19,8 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
-#include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/service/llcpp/service.h>

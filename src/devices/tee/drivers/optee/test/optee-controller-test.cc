@@ -12,7 +12,7 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>

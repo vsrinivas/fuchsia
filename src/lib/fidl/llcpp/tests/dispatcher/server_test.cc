@@ -4,9 +4,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/sync/completion.h>
 
 #include <mutex>

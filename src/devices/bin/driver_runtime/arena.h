@@ -6,7 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_RUNTIME_ARENA_H_
 
 #include <lib/fdf/types.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 
 #include <map>
 

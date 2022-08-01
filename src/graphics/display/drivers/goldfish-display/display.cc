@@ -13,8 +13,8 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fit/defer.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/pixelformat.h>

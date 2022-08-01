@@ -14,7 +14,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 

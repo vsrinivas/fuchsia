@@ -15,7 +15,7 @@
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <stdio.h>

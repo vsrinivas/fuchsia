@@ -7,7 +7,7 @@
 #include <fidl/fidl.types.test/cpp/fidl.h>
 #include <fidl/types/test/c/fidl.h>
 #include <inttypes.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zx/event.h>
 
 #include <type_traits>

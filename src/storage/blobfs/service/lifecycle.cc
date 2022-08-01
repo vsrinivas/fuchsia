@@ -4,7 +4,7 @@
 
 #include "lifecycle.h"
 
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace blobfs {

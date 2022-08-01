@@ -5,8 +5,8 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LLCPP_SEND_EVENT_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_SEND_EVENT_BENCHMARK_UTIL_H_
 
-#include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

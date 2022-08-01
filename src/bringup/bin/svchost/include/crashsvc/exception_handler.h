@@ -7,8 +7,8 @@
 
 #include <fidl/fuchsia.exception/cpp/wire.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>

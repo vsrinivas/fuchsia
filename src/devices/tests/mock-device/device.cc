@@ -5,7 +5,7 @@
 #include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>

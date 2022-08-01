@@ -7,7 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>

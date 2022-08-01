@@ -5,8 +5,8 @@
 // The tests in this file are forked from
 // /zircon/system/ulib/fbl/test/intrusive_wavl_tree_tests.cc
 
-#include <lib/fidl/llcpp/internal/intrusive_container/pointer_traits.h>
-#include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
+#include <lib/fidl/cpp/wire/internal/intrusive_container/pointer_traits.h>
+#include <lib/fidl/cpp/wire/internal/intrusive_container/wavl_tree.h>
 #include <math.h>
 
 #include <algorithm>

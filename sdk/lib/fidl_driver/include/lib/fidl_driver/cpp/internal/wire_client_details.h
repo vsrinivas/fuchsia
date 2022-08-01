@@ -6,7 +6,7 @@
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_WIRE_CLIENT_DETAILS_H_
 
 #include <lib/fdf/cpp/arena.h>
-#include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/cpp/wire/client_base.h>
 #include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 
 namespace fdf {

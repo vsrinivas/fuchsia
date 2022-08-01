@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_LLCPP_CONTRIB_CONNECTION_SERVICE_RECONNECTOR_H_
-#define SRC_LIB_FIDL_LLCPP_CONTRIB_CONNECTION_SERVICE_RECONNECTOR_H_
+#ifndef SRC_LIB_FIDL_CPP_CONTRIB_CONNECTION_SERVICE_RECONNECTOR_H_
+#define SRC_LIB_FIDL_CPP_CONTRIB_CONNECTION_SERVICE_RECONNECTOR_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/client.h>
-#include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <functional>
@@ -322,4 +322,4 @@ class ServiceReconnector : public std::enable_shared_from_this<ServiceReconnecto
 
 }  // namespace fidl::contrib
 
-#endif  // SRC_LIB_FIDL_LLCPP_CONTRIB_CONNECTION_SERVICE_RECONNECTOR_H_
+#endif  // SRC_LIB_FIDL_CPP_CONTRIB_CONNECTION_SERVICE_RECONNECTOR_H_

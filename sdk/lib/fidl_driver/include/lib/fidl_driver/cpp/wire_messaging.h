@@ -7,8 +7,8 @@
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
-#include <lib/fidl/llcpp/wire_coding_traits.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/wire_coding_traits.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fidl_driver/cpp/server.h>
 #include <lib/fidl_driver/cpp/sync_call.h>
 #include <lib/fidl_driver/cpp/transport.h>

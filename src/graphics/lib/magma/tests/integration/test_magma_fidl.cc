@@ -4,7 +4,7 @@
 
 #include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <unistd.h>
 
 #include <filesystem>

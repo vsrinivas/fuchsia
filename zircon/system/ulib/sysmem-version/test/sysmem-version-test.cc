@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fidl/cpp/message_part.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
 #include <iterator>

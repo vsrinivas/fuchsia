@@ -19,7 +19,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <zircon/syscalls/object.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

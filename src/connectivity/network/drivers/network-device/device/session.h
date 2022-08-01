@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/stdcompat/span.h>

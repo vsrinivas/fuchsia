@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async/default.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/result.h>

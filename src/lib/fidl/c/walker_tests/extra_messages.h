@@ -8,10 +8,10 @@
 #define SRC_LIB_FIDL_C_WALKER_TESTS_EXTRA_MESSAGES_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/wire/envelope.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/vector_view.h>
 
 // "extern" definitions copied from <fidl/test/coding/c/fidl.h>
 

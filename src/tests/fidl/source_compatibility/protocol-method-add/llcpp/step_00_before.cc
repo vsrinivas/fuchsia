@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.protocolmethodadd/cpp/wire.h>  // nogncheck
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 namespace fidl_test = fidl_test_protocolmethodadd;
 
 // [START contents]

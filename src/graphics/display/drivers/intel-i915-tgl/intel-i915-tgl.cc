@@ -14,7 +14,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/inout.h>
 #include <lib/device-protocol/pci.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>

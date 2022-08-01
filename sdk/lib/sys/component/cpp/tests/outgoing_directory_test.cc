@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/constants.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>

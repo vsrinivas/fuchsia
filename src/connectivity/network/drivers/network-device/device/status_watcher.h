@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 

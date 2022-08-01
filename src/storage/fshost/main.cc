@@ -13,7 +13,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>

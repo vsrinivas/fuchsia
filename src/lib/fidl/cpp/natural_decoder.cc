@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/natural_decoder.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 
 #include <utility>
 

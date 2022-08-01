@@ -5,7 +5,7 @@
 #include "bootstrap_fidl_impl.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 

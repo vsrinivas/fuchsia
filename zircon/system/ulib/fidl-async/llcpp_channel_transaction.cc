@@ -4,9 +4,9 @@
 
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/llcpp/message.h>
 #include <zircon/assert.h>
 
 namespace fidl {

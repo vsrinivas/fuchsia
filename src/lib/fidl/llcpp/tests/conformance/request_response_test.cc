@@ -8,7 +8,7 @@
 #include <fidl/test.types/cpp/wire.h>
 
 #ifndef __Fuchsia__
-#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
 #endif
 
 #include <gtest/gtest.h>

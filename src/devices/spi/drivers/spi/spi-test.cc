@@ -9,7 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/spi/spi.h>
 
 #include <map>

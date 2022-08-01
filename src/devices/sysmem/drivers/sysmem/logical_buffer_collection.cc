@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fit/defer.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>

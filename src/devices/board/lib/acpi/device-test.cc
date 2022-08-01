@@ -5,7 +5,7 @@
 #include "src/devices/board/lib/acpi/device.h"
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <zircon/errors.h>
 
 #include <cstdint>

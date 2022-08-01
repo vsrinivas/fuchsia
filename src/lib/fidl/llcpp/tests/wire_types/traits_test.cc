@@ -11,7 +11,7 @@
 #include <lib/zx/vmo.h>
 #endif
 
-#include <lib/fidl/llcpp/array.h>
+#include <lib/fidl/cpp/wire/array.h>
 
 #include "gtest/gtest.h"
 

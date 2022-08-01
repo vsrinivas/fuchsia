@@ -5,7 +5,7 @@
 #include "src/bringup/bin/pwrbtn-monitor/oom_watcher.h"
 
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <zircon/status.h>
 
 namespace pwrbtn {

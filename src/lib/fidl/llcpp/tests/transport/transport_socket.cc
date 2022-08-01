@@ -4,8 +4,8 @@
 
 #include "transport_socket.h"
 
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/message.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>

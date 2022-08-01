@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test.types/cpp/hlcpp_conversion.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 
 #include <gtest/gtest.h>
 

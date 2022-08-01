@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/transaction_header.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 
 #include <atomic>
 

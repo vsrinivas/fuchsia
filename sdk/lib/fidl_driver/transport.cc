@@ -10,9 +10,9 @@
 
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/status.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/message_storage.h>
+#include <lib/fidl/cpp/wire/status.h>
 #include <zircon/errors.h>
 
 #include <optional>

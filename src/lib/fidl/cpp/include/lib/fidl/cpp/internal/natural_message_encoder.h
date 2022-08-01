@@ -8,8 +8,8 @@
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/transaction_header.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 
 namespace fidl::internal {

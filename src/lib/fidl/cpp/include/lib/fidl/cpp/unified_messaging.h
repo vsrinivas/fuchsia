@@ -10,10 +10,10 @@
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging_declarations.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/traits.h>
+#include <lib/fidl/cpp/wire/transaction.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fitx/result.h>
 
 #include <cstdint>

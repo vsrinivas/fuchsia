@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test.types/cpp/wire.h>
-#include <lib/fidl/llcpp/wire_messaging_declarations.h>
+#include <lib/fidl/cpp/wire/wire_messaging_declarations.h>
 
 #include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>

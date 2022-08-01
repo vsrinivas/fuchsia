@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/zx/status.h>
 
 #include <cstdint>

@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNIFIED_MESSAGING_DECLARATIONS_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_UNIFIED_MESSAGING_DECLARATIONS_H_
 
-#include <lib/fidl/llcpp/wire_messaging_declarations.h>
+#include <lib/fidl/cpp/wire/wire_messaging_declarations.h>
 
 #include <cstdint>
 

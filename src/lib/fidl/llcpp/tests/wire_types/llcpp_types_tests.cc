@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test.types/cpp/wire.h>
-#include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/cpp/wire/message_storage.h>
 #include <lib/zx/channel.h>
 
 #include <memory>

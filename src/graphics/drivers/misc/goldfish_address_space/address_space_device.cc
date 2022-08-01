@@ -14,7 +14,7 @@
 #include <lib/fdf/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fit/defer.h>
 #include <limits.h>
 

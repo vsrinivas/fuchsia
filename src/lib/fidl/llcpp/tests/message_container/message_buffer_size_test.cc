@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.llcpp.buffersize.test/cpp/wire.h>
-#include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/cpp/wire/sync_call.h>
 
 #include <zxtest/zxtest.h>
 

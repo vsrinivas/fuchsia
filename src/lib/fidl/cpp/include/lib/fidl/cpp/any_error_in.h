@@ -6,7 +6,7 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_ANY_ERROR_IN_H_
 
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <lib/fidl/llcpp/status.h>
+#include <lib/fidl/cpp/wire/status.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/stdcompat/variant.h>

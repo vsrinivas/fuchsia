@@ -5,8 +5,8 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_DECODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_DECODE_BENCHMARK_UTIL_H_
 
-#include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 

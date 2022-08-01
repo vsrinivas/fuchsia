@@ -6,8 +6,8 @@
 
 #include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/service/llcpp/service.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"

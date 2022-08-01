@@ -11,7 +11,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl-async/bind.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/channel.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>

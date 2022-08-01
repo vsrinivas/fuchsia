@@ -10,7 +10,7 @@
 #include <fuchsia/hardware/serialimpl/async/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>

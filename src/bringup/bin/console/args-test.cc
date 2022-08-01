@@ -5,7 +5,7 @@
 #include "src/bringup/bin/console/args.h"
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>

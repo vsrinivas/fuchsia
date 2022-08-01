@@ -5,7 +5,7 @@
 #include <fidl/fidl.test.coding.fuchsia/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 

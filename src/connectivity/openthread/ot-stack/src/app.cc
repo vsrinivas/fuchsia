@@ -6,7 +6,7 @@
 
 #include <alarm.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/svc/dir.h>
 #include <radio.h>

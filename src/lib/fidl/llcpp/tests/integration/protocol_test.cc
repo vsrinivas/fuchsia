@@ -7,8 +7,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zx/object.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>

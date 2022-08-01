@@ -13,7 +13,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>

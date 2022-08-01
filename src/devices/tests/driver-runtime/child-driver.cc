@@ -8,7 +8,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/sync/completion.h>
 
 #include <ddktl/device.h>

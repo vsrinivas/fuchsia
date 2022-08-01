@@ -7,9 +7,9 @@
 #include <endian.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>

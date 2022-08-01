@@ -1,7 +1,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/svc/dir.h>
 #include <lib/svc/outgoing.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_PLAYGROUND_SRC_PLAYGROUND_UTILS_H_
 #define SRC_DEVICES_BIN_DRIVER_PLAYGROUND_SRC_PLAYGROUND_UTILS_H_
 
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 
 #include <vector>
 

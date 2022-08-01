@@ -6,7 +6,7 @@
 
 #include <fuchsia/hardware/intelhda/codec/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 
 #include <optional>
 #include <thread>

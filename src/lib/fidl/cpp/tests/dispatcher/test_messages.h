@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
 #define SRC_LIB_FIDL_CPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
 
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 
 #include <cstdint>
 

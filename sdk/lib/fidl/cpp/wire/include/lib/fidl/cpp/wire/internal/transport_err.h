@@ -6,9 +6,9 @@
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_INTERNAL_TRANSPORT_ERR_H_
 
 #include <lib/fidl/cpp/transport_err.h>
-#include <lib/fidl/llcpp/internal/display_error.h>
-#include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/wire_types.h>
+#include <lib/fidl/cpp/wire/internal/display_error.h>
+#include <lib/fidl/cpp/wire/traits.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 
 namespace fidl {
 

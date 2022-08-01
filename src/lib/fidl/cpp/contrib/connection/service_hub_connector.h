@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_LLCPP_CONTRIB_CONNECTION_SERVICE_HUB_CONNECTOR_H_
-#define SRC_LIB_FIDL_LLCPP_CONTRIB_CONNECTION_SERVICE_HUB_CONNECTOR_H_
+#ifndef SRC_LIB_FIDL_CPP_CONTRIB_CONNECTION_SERVICE_HUB_CONNECTOR_H_
+#define SRC_LIB_FIDL_CPP_CONTRIB_CONNECTION_SERVICE_HUB_CONNECTOR_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/client.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -354,4 +354,4 @@ class ServiceHubConnector {
 };
 }  // namespace fidl::contrib
 
-#endif  // SRC_LIB_FIDL_LLCPP_CONTRIB_CONNECTION_SERVICE_HUB_CONNECTOR_H_
+#endif  // SRC_LIB_FIDL_CPP_CONTRIB_CONNECTION_SERVICE_HUB_CONNECTOR_H_

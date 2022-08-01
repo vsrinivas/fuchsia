@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>

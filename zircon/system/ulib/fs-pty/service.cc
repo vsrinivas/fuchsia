@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fs-pty/service.h>
 #include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/zx/channel.h>

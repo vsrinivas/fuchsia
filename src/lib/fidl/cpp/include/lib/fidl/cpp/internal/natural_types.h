@@ -8,8 +8,8 @@
 #include <lib/fidl/cpp/internal/transport_err.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/natural_encoder.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/wire_types.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 #include <lib/fitx/result.h>
 #include <lib/stdcompat/type_traits.h>
 #include <zircon/fidl.h>

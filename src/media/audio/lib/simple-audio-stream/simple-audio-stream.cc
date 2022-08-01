@@ -4,8 +4,8 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/debug.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/process.h>

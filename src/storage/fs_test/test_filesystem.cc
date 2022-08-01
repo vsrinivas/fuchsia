@@ -9,7 +9,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/inspect/service/cpp/reader.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"

@@ -6,7 +6,7 @@
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_TABLE_HOLDER_H_
 
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
 #include <cstddef>

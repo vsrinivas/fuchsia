@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/zx/channel.h>
 
 #include <string>

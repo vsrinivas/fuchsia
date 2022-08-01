@@ -16,7 +16,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>

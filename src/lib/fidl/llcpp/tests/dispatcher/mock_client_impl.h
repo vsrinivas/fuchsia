@@ -5,9 +5,9 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_MOCK_CLIENT_IMPL_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_MOCK_CLIENT_IMPL_H_
 
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/client_base.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 
 #include <unordered_set>
 

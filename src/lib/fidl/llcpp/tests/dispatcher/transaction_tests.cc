@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
-#include <lib/fidl/llcpp/status.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/status.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
 #include <zircon/errors.h>

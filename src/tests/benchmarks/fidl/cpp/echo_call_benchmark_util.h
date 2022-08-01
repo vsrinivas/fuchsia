@@ -9,7 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/channel.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

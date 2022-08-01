@@ -6,8 +6,8 @@
 #define SRC_LIB_STORAGE_VFS_CPP_FIDL_TRANSACTION_H_
 
 #include <lib/fdio/limits.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>

@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/array.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fpromise/result.h>
 #include <lib/service/llcpp/service.h>
 

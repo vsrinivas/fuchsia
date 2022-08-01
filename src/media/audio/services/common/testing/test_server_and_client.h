@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_COMMON_TEST_SERVER_AND_CLIENT_H_
-#define SRC_MEDIA_AUDIO_SERVICES_COMMON_TEST_SERVER_AND_CLIENT_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_COMMON_TESTING_TEST_SERVER_AND_CLIENT_H_
+#define SRC_MEDIA_AUDIO_SERVICES_COMMON_TESTING_TEST_SERVER_AND_CLIENT_H_
 
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/services/common/base_fidl_server.h"
@@ -63,4 +63,4 @@ class TestServerAndClient {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_COMMON_TEST_SERVER_AND_CLIENT_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_COMMON_TESTING_TEST_SERVER_AND_CLIENT_H_

@@ -5,17 +5,17 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_CONFORMANCE_CONFORMANCE_UTILS_H_
 
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <lib/zx/channel.h>
 #else
-#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
 #endif  // __Fuchsia__
 
 #include <cstddef>

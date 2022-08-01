@@ -7,7 +7,7 @@
 
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/cpp/wire/client_base.h>
 #include <lib/fidl_driver/cpp/internal/wire_client_details.h>
 #include <lib/fidl_driver/cpp/transport.h>
 #include <lib/fidl_driver/cpp/wire_messaging_declarations.h>

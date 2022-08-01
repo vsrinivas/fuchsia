@@ -12,7 +12,7 @@
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <fidl/fuchsia.update.verify/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>

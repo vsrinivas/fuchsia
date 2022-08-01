@@ -7,8 +7,8 @@
 #include <fidl/fuchsia.sysmem/cpp/wire_types.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/cpp/component_context.h>

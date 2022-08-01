@@ -4,7 +4,7 @@
 #include <fidl/fuchsia.lowpan.bootstrap/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 
 #include <string>
 

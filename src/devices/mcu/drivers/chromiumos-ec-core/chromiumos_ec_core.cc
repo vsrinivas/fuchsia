@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.io/cpp/markers.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <zircon/errors.h>
 
 #include <chromiumos-platform-ec/ec_commands.h>

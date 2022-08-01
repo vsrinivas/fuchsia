@@ -4,11 +4,11 @@
 
 #include <fidl/fuchsia.inspect/cpp/markers.h>
 #include <lib/async/default.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/status.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/vector_view.h>
-#include <lib/fidl/llcpp/wire_types.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/status.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 #include <lib/inspect/component/cpp/service.h>
 #include <zircon/types.h>
 

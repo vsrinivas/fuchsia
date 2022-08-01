@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/driver2/runtime_connector_impl.h>
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

@@ -12,7 +12,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <pthread.h>

@@ -11,8 +11,8 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 
 #include <tuple>
 

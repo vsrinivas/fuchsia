@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.audio.effects/cpp/markers.h>
 #include <fidl/fuchsia.audio.effects/cpp/wire.h>
-#include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/cpp/wire/sync_call.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 

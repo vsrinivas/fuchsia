@@ -8,7 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/zx/status.h>
 
 #include <memory>

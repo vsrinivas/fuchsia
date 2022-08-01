@@ -4,7 +4,7 @@
 
 #include "types_test_utils.h"
 
-#include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <zircon/assert.h>
 
 namespace llcpp_types_test_utils {

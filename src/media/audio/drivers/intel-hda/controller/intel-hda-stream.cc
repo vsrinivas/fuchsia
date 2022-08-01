@@ -5,7 +5,7 @@
 #include "intel-hda-stream.h"
 
 #include <lib/ddk/hw/arch_ops.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/clock.h>
 #include <string.h>
 #include <zircon/syscalls.h>

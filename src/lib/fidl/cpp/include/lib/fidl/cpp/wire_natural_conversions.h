@@ -5,10 +5,10 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_WIRE_NATURAL_CONVERSIONS_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_WIRE_NATURAL_CONVERSIONS_H_
 
-#include <lib/fidl/llcpp/object_view.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/object_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/traits.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 
 #include <type_traits>
 

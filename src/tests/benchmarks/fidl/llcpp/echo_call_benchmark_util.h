@@ -8,7 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

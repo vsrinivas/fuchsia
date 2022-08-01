@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/cmdline/args_parser.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 #include <stdio.h>

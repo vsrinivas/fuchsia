@@ -5,8 +5,8 @@
 #include <fidl/fidl.llcpp.empty.test/cpp/wire_messaging.h>
 #include <fidl/fidl.llcpp.linearized.test/cpp/wire_types.h>
 #include <fidl/fidl.test.misc/cpp/wire_messaging.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/wire_messaging_declarations.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/wire_messaging_declarations.h>
 #include <zircon/errors.h>
 
 #include <iterator>

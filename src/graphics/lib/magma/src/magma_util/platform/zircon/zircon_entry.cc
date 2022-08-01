@@ -8,7 +8,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -343,5 +343,4 @@ zx_driver_ops_t msd_driver_ops = []() constexpr {
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = driver_bind;
   return ops;
-}
-();
+}();

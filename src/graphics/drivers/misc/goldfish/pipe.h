@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/pmt.h>

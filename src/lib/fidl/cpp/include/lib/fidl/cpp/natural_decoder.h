@@ -5,15 +5,15 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_DECODER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_DECODER_H_
 
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <zircon/fidl.h>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
 #else
-#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
 #endif
 
 namespace fidl::internal {

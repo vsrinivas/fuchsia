@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
 #define LIB_FIDL_ASYNC_2_FIDL_STRUCT_H_
 
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire_natural_conversions.h>
-#include <lib/fidl/llcpp/traits.h>
 #include <zircon/assert.h>
 
 #include <type_traits>

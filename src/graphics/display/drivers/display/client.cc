@@ -11,7 +11,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/edid/edid.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/defer.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>

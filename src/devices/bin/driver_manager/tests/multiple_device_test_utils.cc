@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/message.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/fidl.h>

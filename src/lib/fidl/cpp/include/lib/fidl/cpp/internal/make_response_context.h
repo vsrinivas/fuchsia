@@ -7,7 +7,7 @@
 
 #include <lib/fidl/cpp/any_error_in.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/cpp/wire/client_base.h>
 
 #include <optional>
 

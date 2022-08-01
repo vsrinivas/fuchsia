@@ -13,7 +13,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>

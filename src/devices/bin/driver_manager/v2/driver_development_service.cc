@@ -5,7 +5,7 @@
 #include "src/devices/bin/driver_manager/v2/driver_development_service.h"
 
 #include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
-#include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/service/llcpp/service.h>
 
 #include <queue>

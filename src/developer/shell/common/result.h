@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_SHELL_COMMON_RESULT_H_
 #define SRC_DEVELOPER_SHELL_COMMON_RESULT_H_
 
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 
 #include <cstdint>
 #include <map>

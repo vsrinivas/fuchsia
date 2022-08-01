@@ -4,8 +4,8 @@
 
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fidl/trace.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>

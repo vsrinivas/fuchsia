@@ -5,8 +5,8 @@
 #include <fidl/llcpptest.protocol.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/object.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

@@ -11,8 +11,8 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/sync_call.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 

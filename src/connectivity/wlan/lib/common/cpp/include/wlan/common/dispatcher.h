@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>

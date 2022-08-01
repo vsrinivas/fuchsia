@@ -8,10 +8,10 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/wire_coding_traits.h>
+#include <lib/fidl/cpp/wire/client_base.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/wire_coding_traits.h>
 #include <zircon/errors.h>
 
 #include <memory>

@@ -8,10 +8,10 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/internal/natural_types.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 #include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/cpp/wire_natural_conversions.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/wire_types.h>
 #include <lib/stdcompat/optional.h>
 
 #include <cstdint>

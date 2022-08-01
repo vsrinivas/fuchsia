@@ -6,8 +6,8 @@
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_INTERNAL_SERVER_DETAILS_H_
 
 #include <lib/fdf/cpp/arena.h>
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/wire_messaging_declarations.h>
+#include <lib/fidl/cpp/wire/transaction.h>
+#include <lib/fidl/cpp/wire/wire_messaging_declarations.h>
 #include <lib/fidl_driver/cpp/wire_messaging_declarations.h>
 
 namespace fdf::internal {

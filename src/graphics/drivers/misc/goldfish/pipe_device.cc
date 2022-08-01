@@ -13,8 +13,8 @@
 #include <lib/ddk/trace/event.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>

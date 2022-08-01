@@ -10,8 +10,8 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/server.h>
 
 #include <chromiumos-platform-ec/ec_commands.h>
 

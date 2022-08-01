@@ -11,8 +11,8 @@
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/fidl/llcpp/arena.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 
 #include <ddktl/device.h>
 #include <wlan/common/dispatcher.h>

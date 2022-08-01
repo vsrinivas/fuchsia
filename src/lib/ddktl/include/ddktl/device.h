@@ -8,9 +8,9 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>

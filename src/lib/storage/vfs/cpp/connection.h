@@ -11,7 +11,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <stdint.h>

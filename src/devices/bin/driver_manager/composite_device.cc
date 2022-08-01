@@ -4,7 +4,7 @@
 
 #include "composite_device.h"
 
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <zircon/status.h>
 
 #include <string_view>

@@ -6,8 +6,8 @@
 #define SRC_LIB_FIDL_C_WALKER_TESTS_CONFORMANCE_TEST_UTILS_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/message.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
@@ -20,9 +20,9 @@
 #include <vector>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #else
-#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
 
 #include "lib/fidl/llcpp/traits.h"
 // The current build rules for zircon/system/ulib/zircon don't allow linking

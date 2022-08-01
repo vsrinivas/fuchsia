@@ -8,10 +8,10 @@
 #include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/debug.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/transaction.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/stdcompat/functional.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>

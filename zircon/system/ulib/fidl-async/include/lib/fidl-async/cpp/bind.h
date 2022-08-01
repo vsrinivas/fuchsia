@@ -7,8 +7,8 @@
 
 #include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>

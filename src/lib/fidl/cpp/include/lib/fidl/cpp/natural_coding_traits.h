@@ -7,7 +7,7 @@
 
 #include <lib/fidl/cpp/natural_decoder.h>
 #include <lib/fidl/cpp/natural_encoder.h>
-#include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/stdcompat/optional.h>
 
 #ifdef __Fuchsia__

@@ -15,7 +15,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>

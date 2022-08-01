@@ -5,7 +5,7 @@
 #ifndef LIB_SERVICE_LLCPP_SERVICE_HANDLER_H_
 #define LIB_SERVICE_LLCPP_SERVICE_HANDLER_H_
 
-#include <lib/fidl/llcpp/service_handler_interface.h>
+#include <lib/fidl/cpp/wire/service_handler_interface.h>
 
 #include <fbl/ref_ptr.h>
 

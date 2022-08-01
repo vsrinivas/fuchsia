@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_TABLE_SET_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_TABLE_SET_H_
 
-#include <lib/fidl/llcpp/arena.h>
+#include <lib/fidl/cpp/wire/arena.h>
 
 #include <unordered_set>
 

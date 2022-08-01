@@ -6,7 +6,7 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_CLIENT_DETAILS_H_
 
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <lib/fidl/llcpp/internal/client_details.h>
+#include <lib/fidl/cpp/wire/internal/client_details.h>
 
 namespace fidl {
 namespace internal {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/internal/client_continuation.h>
+#include <lib/fidl/cpp/wire/client_base.h>
+#include <lib/fidl/cpp/wire/internal/client_continuation.h>
 
 #include <memory>
 

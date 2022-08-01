@@ -11,7 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
-#include <lib/fidl/llcpp/channel.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>

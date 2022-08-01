@@ -5,7 +5,7 @@
 #include <fidl/test.someotherlibrary/cpp/hlcpp_conversion.h>
 #include <fidl/test.typealiases/cpp/natural_types.h>
 #include <lib/fidl/cpp/hlcpp_conversion.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <test/typealiases/cpp/fidl.h>
 namespace fidl {
 namespace internal {

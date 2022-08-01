@@ -5,7 +5,7 @@
 #include <fidl/llcpptest.v2integration.test/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/message.h>
 
 #include <iterator>
 #include <thread>

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 
 #include <unordered_set>
 

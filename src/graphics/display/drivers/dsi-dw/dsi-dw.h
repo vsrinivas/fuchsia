@@ -15,9 +15,9 @@
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/fidl/llcpp/async_binding.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/async_binding.h>
+#include <lib/fidl/cpp/wire/server.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>

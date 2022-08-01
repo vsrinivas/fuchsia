@@ -9,8 +9,8 @@
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fidl/llcpp/internal/endpoints.h>
-#include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fidl/cpp/wire/internal/endpoints.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 
 namespace fdf {
 template <typename Protocol>

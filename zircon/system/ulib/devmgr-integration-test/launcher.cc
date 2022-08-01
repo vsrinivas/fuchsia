@@ -23,7 +23,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/exception.h>

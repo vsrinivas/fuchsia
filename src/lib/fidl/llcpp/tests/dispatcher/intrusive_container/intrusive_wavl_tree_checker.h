@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_INTRUSIVE_CONTAINER_INTRUSIVE_WAVL_TREE_CHECKER_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_INTRUSIVE_CONTAINER_INTRUSIVE_WAVL_TREE_CHECKER_H_
 
-#include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
+#include <lib/fidl/cpp/wire/internal/intrusive_container/wavl_tree.h>
 
 #include <zxtest/zxtest.h>
 

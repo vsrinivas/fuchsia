@@ -6,7 +6,7 @@
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fidl/llcpp/array.h>
+#include <lib/fidl/cpp/wire/array.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/pixelformat.h>

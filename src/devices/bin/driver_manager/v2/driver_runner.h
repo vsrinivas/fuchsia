@@ -10,8 +10,8 @@
 #include <fidl/fuchsia.driver.host/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/inspect.h>

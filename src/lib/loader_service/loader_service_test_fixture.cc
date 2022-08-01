@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/object.h>
 #include <lib/zx/resource.h>

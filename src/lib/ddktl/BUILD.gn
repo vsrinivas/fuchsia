@@ -32,7 +32,7 @@ sdk_source_set("ddktl") {
     # <ddktl/fidl.h> has #include <lib/stdcompat/span.h>
     "//sdk/lib/stdcompat",
 
-    # <ddktl/fidl.h> has #include <lib/fidl/llcpp/transaction.h>.
+    # <ddktl/fidl.h> has #include <lib/fidl/cpp/wire/transaction.h>.
     "//sdk/lib/fidl/cpp/wire",
 
     # <ddktl/device.h> has #include <lib/zx/channel.h>.

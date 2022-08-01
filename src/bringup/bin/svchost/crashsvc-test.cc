@@ -7,7 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>

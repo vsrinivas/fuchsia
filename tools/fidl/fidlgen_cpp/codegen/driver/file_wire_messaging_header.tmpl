@@ -24,10 +24,10 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   {{ IfdefFuchsia }}
     #include <lib/fidl_driver/cpp/wire_client.h>
     #include <lib/fidl_driver/cpp/server.h>
-    #include <lib/fidl/llcpp/connect_service.h>
-    #include <lib/fidl/llcpp/server.h>
-    #include <lib/fidl/llcpp/service_handler_interface.h>
-    #include <lib/fidl/llcpp/sync_call.h>
+    #include <lib/fidl/cpp/wire/connect_service.h>
+    #include <lib/fidl/cpp/wire/server.h>
+    #include <lib/fidl/cpp/wire/service_handler_interface.h>
+    #include <lib/fidl/cpp/wire/sync_call.h>
   {{ EndifFuchsia }}
 
   {{ range .Dependencies -}}

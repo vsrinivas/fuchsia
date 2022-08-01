@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_INTRUSIVE_CONTAINER_OBJECTS_H_
 #define SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_INTRUSIVE_CONTAINER_OBJECTS_H_
 
-#include <lib/fidl/llcpp/internal/intrusive_container/container_utils.h>
+#include <lib/fidl/cpp/wire/internal/intrusive_container/container_utils.h>
 
 #include <atomic>
 #include <memory>

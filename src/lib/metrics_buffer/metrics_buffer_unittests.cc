@@ -7,7 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>

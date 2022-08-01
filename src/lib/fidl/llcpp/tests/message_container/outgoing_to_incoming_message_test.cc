@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/message.h>
 #include <lib/zx/event.h>
 
 #include <cstring>

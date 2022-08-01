@@ -5,7 +5,7 @@
 #include "src/devices/board/lib/acpi/fidl.h"
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
 

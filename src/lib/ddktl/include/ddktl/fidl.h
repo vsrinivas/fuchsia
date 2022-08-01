@@ -6,8 +6,8 @@
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_FIDL_H_
 
 #include <lib/ddk/device.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 

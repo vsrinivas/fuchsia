@@ -6,7 +6,7 @@
 #define SRC_STORAGE_FS_TEST_CRYPT_SERVICE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/cpp/wire/client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 

@@ -18,7 +18,7 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>

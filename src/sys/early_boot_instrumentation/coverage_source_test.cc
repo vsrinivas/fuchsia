@@ -13,11 +13,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/string_view.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/message_storage.h>
+#include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/stdcompat/array.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>

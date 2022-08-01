@@ -6,7 +6,7 @@
 #define SRC_DEVICES_MISC_DRIVERS_COMPAT_DEVFS_VNODE_H_
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 
 #include <variant>
 

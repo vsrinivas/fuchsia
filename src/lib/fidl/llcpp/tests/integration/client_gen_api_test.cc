@@ -6,8 +6,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/time.h>
+#include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/server.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/cpp/completion.h>

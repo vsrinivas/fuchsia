@@ -6,7 +6,7 @@
 #define LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_NATURAL_CLIENT_H_
 
 #include <lib/fidl/cpp/internal/make_response_context.h>
-#include <lib/fidl/llcpp/internal/arrow.h>
+#include <lib/fidl/cpp/wire/internal/arrow.h>
 #include <lib/fidl_driver/cpp/internal/natural_client_details.h>
 #include <lib/fidl_driver/cpp/transport.h>
 #include <lib/fidl_driver/cpp/unified_messaging_declarations.h>

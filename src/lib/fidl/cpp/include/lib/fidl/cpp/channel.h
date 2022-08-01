@@ -11,10 +11,10 @@
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/channel_endpoint_conversions.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/internal/arrow.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/llcpp/server.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/internal/arrow.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/server.h>
 
 namespace fidl {
 
