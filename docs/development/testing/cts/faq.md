@@ -124,7 +124,7 @@ of tests under [//sdk/cts/tests].
 
 You should write a CTS test if:
 
-1. Your software is part of the public or parnter SDKs.
+1. Your software is part of the public or partner SDKs.
 2. You want CQ to prevent backward-incompatible changes to your software
    across multiple releases of the Fuchsia platform.
 

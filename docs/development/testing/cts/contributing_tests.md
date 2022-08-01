@@ -188,8 +188,7 @@ team by filing a bug in the [CTS bug component].
 ### Step 7. Make the test run on presubmit
 
 This step causes the version of your test from Fuchsia's HEAD commit to run as
-part of Fuchsia's presumbit queue. It *does not* include your test in the CTS
-release (See the next section).
+part of Fuchsia's presumbit queue.
 
 Add a "tests" group to your BUILD file:
 
@@ -201,31 +200,7 @@ group("tests") {
 ```
 
 Next add this target as a dependency to the closest ancestor `group("tests")`
-target.
-
-### Step 8. Make the test run as part of the CTS release
-
-This step includes your test in the CTS release, which guarantees that your test
-cannot be broken between Fuchsia milestone releases (typically made every six
-weeks).
-
-Add an `sdk_molecule` target and use it to mark all of your test packages for
-inclusion in CTS. Each `cts_*` template declares an `sdk_atom` or `sdk_molecule`
-target with the name `${target_name}_sdk`. List each of the test packages as
-dependencies:
-
-```
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [ ":my_test_sdk" ]
-}
-```
-
-Next add this target as a dependency to the closest ancestor
-`sdk_molecule("test_sdks")`.
-
-Once these steps are complete, submit your change and you should see your test run
-as part of the next CTS release.
+target. This will ensure that your test is added to the next CTS release.
 
 ### Debugging Tips
 
