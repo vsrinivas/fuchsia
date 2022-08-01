@@ -606,7 +606,12 @@ bool UserPager::VerifyDirtyRangesHelper(Vmo* paged_vmo,
           ranges_buf[i].length !=
               dirty_ranges_to_verify[verify_index].length * zx_system_get_page_size() ||
           ranges_buf[i].options != dirty_ranges_to_verify[verify_index].options) {
-        fprintf(stderr, "mismatch in queried range\n");
+        fprintf(stderr,
+                "mismatch in queried range. expected {%zu, %zu, %zu} actual {%zu, %zu, %zu}\n",
+                dirty_ranges_to_verify[verify_index].offset * zx_system_get_page_size(),
+                dirty_ranges_to_verify[verify_index].length * zx_system_get_page_size(),
+                dirty_ranges_to_verify[verify_index].options, ranges_buf[i].offset,
+                ranges_buf[i].length, ranges_buf[i].options);
         return false;
       }
       verify_index++;

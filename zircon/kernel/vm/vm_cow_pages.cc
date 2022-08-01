@@ -2913,6 +2913,18 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     }
   }
 
+  // If the source preserves page content, empty slots beyond supply_zero_offset_ are implicitly
+  // dirty and zero. Therefore, if supply_zero_offset_ falls in the specified range, we can simply
+  // update supply_zero_offset_ to start, indicating that the range from start is now all dirty and
+  // zero. This will also cause us to exit the main loop below in the first iteration itself.
+  // Removing committed pages beyond supply_zero_offset_ is going to be handled separately at the
+  // end.
+  uint64_t prev_supply_zero_offset = supply_zero_offset_;
+  if (is_source_preserving_page_content_locked() && start < supply_zero_offset_ &&
+      supply_zero_offset_ <= end) {
+    UpdateSupplyZeroOffsetLocked(start);
+  }
+
   *zeroed_len_out = 0;
   uint64_t offset = start;
   for (; offset < end; offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
@@ -3161,12 +3173,14 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Remove any committed pages that are not pinned. Empty slots starting at supply_zero_offset_
     // are implicitly zero.
     page_list_.RemovePages(
-        [this, &freed_list](VmPageOrMarker* p, uint64_t off) {
-          // We cannot have clean pages beyond supply_zero_offset_.
+        [this, &freed_list, prev_supply_zero_offset](VmPageOrMarker* p, uint64_t off) {
           ASSERT(p->IsPage());
           vm_page_t* page = p->Page();
           ASSERT(is_page_dirty_tracked(page));
-          ASSERT(!is_page_clean(page));
+          // We cannot have clean pages beyond supply_zero_offset_. But if we updated
+          // supply_zero_offset_ above to a smaller value, it is possible to encounter some clean
+          // pages in the range before the prev_supply_zero_offset.
+          ASSERT(off < prev_supply_zero_offset || !is_page_clean(page));
           DEBUG_ASSERT(!page->is_loaned());
 
           // We cannot remove a pinned page. Zero it instead.
