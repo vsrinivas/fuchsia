@@ -322,7 +322,6 @@ async fn launch_and_test_tests_with_legacy_components() {
     assert_eq!(&expected_events, &events);
 }
 
-#[ignore] // TODO(fxbug.dev/104246): reenable
 #[fuchsia::test]
 async fn launch_and_test_no_on_finished() {
     let test_url =
@@ -882,7 +881,6 @@ async fn launch_non_hermetic_test() {
     assert_eq!(&expected_events, &events);
 }
 
-#[ignore] // TODO(fxbug.dev/104246): reenable
 #[fuchsia::test]
 async fn capability_access_test() {
     let test_url =
