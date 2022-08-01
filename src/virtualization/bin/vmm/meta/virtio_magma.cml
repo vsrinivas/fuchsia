@@ -23,6 +23,7 @@
         },
         {
             protocol: [ "fuchsia.ui.composition.Allocator" ],
+            availability: "optional",
         },
     ],
     expose: [
