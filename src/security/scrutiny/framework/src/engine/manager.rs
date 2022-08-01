@@ -37,7 +37,7 @@ pub enum PluginError {
     InUse(PluginDescriptor),
     #[error("Plugin {0} is in use by {1}")]
     InUseBy(PluginDescriptor, PluginDescriptor),
-    #[error("Plugin {0} is in use by multiple plugins {:?}")]
+    #[error("Plugin {0} is in use by multiple plugins {1:?}")]
     InUseByMany(PluginDescriptor, HashSet<PluginDescriptor>),
 }
 
