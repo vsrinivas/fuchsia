@@ -9,6 +9,13 @@
             environment: "#full-resolver-env",
         },
     ],
+    collections: [
+        {
+            name: "mediasession-examples",
+            environment: "#full-resolver-env",
+            durability: "transient",
+        },
+    ],
     use: [
         {
             protocol: [
@@ -23,12 +30,20 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: "#mediasession",
+            to: [
+                "#mediasession",
+                "#mediasession-examples",
+            ],
         },
         {
             protocol: "fuchsia.media.UsageReporter",
             from: "#audio_core",
             to: "#mediasession",
+        },
+        {
+            protocol: "fuchsia.media.sessions2.Publisher",
+            from: "#mediasession",
+            to: "#mediasession-examples",
         },
     ],
 }

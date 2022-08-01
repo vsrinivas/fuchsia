@@ -30,6 +30,6 @@ rustc_binary("example_player_bin") {
 }
 
 fuchsia_package_with_single_component("example_player") {
-  manifest = "meta/example_player.cmx"
+  manifest = "meta/example_player.cml"
   deps = [ ":example_player_bin" ]
 }

@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Example player is a fake media player that publishes its media session with
-//! fuchsia.media.sessions2.
-//!
-//! run `fx shell mediasession_cli_tool ls` and then start some of these players
-//! with `fx shell run example_player` to see how it works.
-
 #![recursion_limit = "256"]
 
 use anyhow::{Context as _, Error};
