@@ -98,6 +98,9 @@ lazy_init::LazyInit<AsidAllocator> asid;
 
 KCOUNTER(vm_mmu_protect_make_execute_calls, "vm.mmu.protect.make_execute_calls")
 KCOUNTER(vm_mmu_protect_make_execute_pages, "vm.mmu.protect.make_execute_pages")
+KCOUNTER(vm_mmu_page_table_alloc, "vm.mmu.pt.alloc")
+KCOUNTER(vm_mmu_page_table_free, "vm.mmu.pt.free")
+KCOUNTER(vm_mmu_page_table_reclaim, "vm.mmu.pt.reclaim")
 
 // Convert user level mmu flags to flags that go in L1 descriptors.
 // Hypervisor flag modifies behavior to work for single translation regimes
@@ -551,6 +554,7 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp) {
 
   page->set_state(vm_page_state::MMU);
   pt_pages_++;
+  kcounter_add(vm_mmu_page_table_alloc, 1);
 
   LOCAL_KTRACE("page table alloc");
 
@@ -558,7 +562,8 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp) {
   return ZX_OK;
 }
 
-void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManager& cm) {
+void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManager& cm,
+                                    Reclaim reclaim) {
   LTRACEF("vaddr %p paddr %#lx page_size_shift %u\n", vaddr, paddr, page_size_shift_);
 
   // currently we only support freeing a single page
@@ -574,6 +579,10 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManag
   cm.FreePage(page);
 
   pt_pages_--;
+  kcounter_add(vm_mmu_page_table_free, 1);
+  if (reclaim == Reclaim::Yes) {
+    kcounter_add(vm_mmu_page_table_reclaim, 1);
+  }
 }
 
 zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, const uint index_shift, vaddr_t pt_index,
@@ -685,7 +694,8 @@ void ArmArchVmAspace::FlushAsid() const {
 
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                                         EnlargeOperation enlarge, const uint index_shift,
-                                        volatile pte_t* page_table, ConsistencyManager& cm) {
+                                        volatile pte_t* page_table, ConsistencyManager& cm,
+                                        Reclaim reclaim) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -722,8 +732,9 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Recurse a level.
-      ssize_t result = UnmapPageTable(vaddr, vaddr_rem, chunk_size, enlarge,
-                                      index_shift - (page_size_shift_ - 3), next_page_table, cm);
+      ssize_t result =
+          UnmapPageTable(vaddr, vaddr_rem, chunk_size, enlarge,
+                         index_shift - (page_size_shift_ - 3), next_page_table, cm, reclaim);
       if (result < 0) {
         return result;
       }
@@ -738,7 +749,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         // We can safely defer TLB flushing as the consistency manager will not return the backing
         // page to the PMM until after the tlb is flushed.
         cm.FlushEntry(vaddr, false);
-        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, cm);
+        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, cm, reclaim);
       }
     } else if (is_pte_valid(pte)) {
       LTRACEF("pte %p[0x%lx] = 0 (was phys %#lx)\n", page_table, index,
@@ -1019,8 +1030,9 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(
       if (do_unmap) {
         // Unmapping an exact block, which should not need enlarging and hence should never be able
         // to fail.
-        ssize_t result = UnmapPageTable(vaddr, vaddr_rem, chunk_size, EnlargeOperation::No,
-                                        index_shift - (page_size_shift_ - 3), next_page_table, cm);
+        ssize_t result =
+            UnmapPageTable(vaddr, vaddr_rem, chunk_size, EnlargeOperation::No,
+                           index_shift - (page_size_shift_ - 3), next_page_table, cm, Reclaim::Yes);
         ASSERT(result >= 0);
         DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift_));
         update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
@@ -1028,7 +1040,7 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(
         // We can safely defer TLB flushing as the consistency manager will not return the backing
         // page to the PMM until after the tlb is flushed.
         cm.FlushEntry(vaddr, false);
-        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, cm);
+        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, cm, Reclaim::Yes);
         if (unmapped_out) {
           *unmapped_out = true;
         }
@@ -1651,6 +1663,7 @@ zx_status_t ArmArchVmAspace::Init() {
     __dmb(ARM_MB_ISHST);
   }
   pt_pages_ = 1;
+  kcounter_add(vm_mmu_page_table_alloc, 1);
 
   LTRACEF("tt_phys %#" PRIxPTR " tt_virt %p\n", tt_phys_, tt_virt_);
 
@@ -1719,6 +1732,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
   DEBUG_ASSERT(page);
   pmm_free_page(page);
   pt_pages_--;
+  kcounter_add(vm_mmu_page_table_free, 1);
 
   tt_phys_ = 0;
   tt_virt_ = nullptr;

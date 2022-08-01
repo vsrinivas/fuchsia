@@ -84,15 +84,17 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   zx_status_t AllocPageTable(paddr_t* paddrp) TA_REQ(lock_);
 
-  void FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManager& cm) TA_REQ(lock_);
+  enum class Reclaim : bool { No = false, Yes = true };
+  void FreePageTable(void* vaddr, paddr_t paddr, ConsistencyManager& cm,
+                     Reclaim reclaim = Reclaim::No) TA_REQ(lock_);
 
   ssize_t MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in, size_t size_in,
                        pte_t attrs, uint index_shift, volatile pte_t* page_table,
                        ConsistencyManager& cm) TA_REQ(lock_);
 
   ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size, EnlargeOperation enlarge,
-                         uint index_shift, volatile pte_t* page_table, ConsistencyManager& cm)
-      TA_REQ(lock_);
+                         uint index_shift, volatile pte_t* page_table, ConsistencyManager& cm,
+                         Reclaim reclaim = Reclaim::No) TA_REQ(lock_);
 
   zx_status_t ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in, pte_t attrs,
                                uint index_shift, volatile pte_t* page_table, ConsistencyManager& cm)
