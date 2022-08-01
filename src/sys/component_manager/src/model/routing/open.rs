@@ -210,7 +210,7 @@ impl<'a> OpenRequest<'a> {
                     return Self {
                         flags: open_event_stream_options.flags,
                         open_mode: open_event_stream_options.open_mode,
-                        relative_path: PathBuf::new(),
+                        relative_path: PathBuf::from(open_event_stream_options.relative_path),
                         source,
                         target,
                         server_chan: open_event_stream_options.server_chan,

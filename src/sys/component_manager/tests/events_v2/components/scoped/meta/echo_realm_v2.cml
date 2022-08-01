@@ -1,0 +1,53 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // Two children: a server and client. "hub_client" has "eager" startup so it
+    // will be started along with the realm.
+    children: [
+        {
+            name: "echo_reporter",
+            url: "#meta/echo_reporter_v2.cm",
+            startup: "eager",
+        },
+        {
+            name: "echo_client",
+            url: "#meta/echo_client_v2.cm",
+            startup: "eager",
+        },
+    ],
+
+    // Route Echo service from server to client.
+    offer: [
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: "#echo_reporter",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#echo_client",
+                "#echo_reporter",
+            ],
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_reporter",
+            to: "#echo_client",
+        },
+        {
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: "#echo_reporter",
+            scope: [
+                "#echo_client",
+                "#echo_reporter",
+            ],
+        },
+    ],
+}

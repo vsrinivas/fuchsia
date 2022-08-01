@@ -78,6 +78,20 @@
             ],
         },
         {
+            event_stream: [
+                "capbility_requested_v2",
+                "directory_ready_v2",
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: [
+                "#bootstrap",
+                "#core",
+            ],
+        },
+        {
             protocol: [
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",

@@ -1,0 +1,132 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("events_integration_test_v2_bin") {
+  name = "events_integration_test_v2"
+  edition = "2021"
+  source_root = "integration_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "integration_test.rs" ]
+}
+
+fuchsia_component("async_reporter_v2") {
+  testonly = true
+  deps = [ "components:async_reporter_v2_bin" ]
+  manifest = "components/async/meta/reporter_v2.cml"
+}
+
+fuchsia_component("directory_ready_child_v2") {
+  testonly = true
+  deps = [ "components:directory_ready_child_v2_bin" ]
+  manifest = "components/directory_ready/meta/child_v2.cml"
+}
+
+fuchsia_component("directory_ready_root_v2") {
+  testonly = true
+  deps = [ "components:directory_ready_root_v2_bin" ]
+  manifest = "components/directory_ready/meta/root_v2.cml"
+}
+
+fuchsia_component("echo_realm_v2") {
+  testonly = true
+  manifest = "components/scoped/meta/echo_realm_v2.cml"
+}
+
+fuchsia_component("echo_client_v2") {
+  testonly = true
+  deps = [ "components:echo_client_for_events_v2_bin" ]
+  manifest = "components/scoped/meta/echo_client_v2.cml"
+}
+
+fuchsia_component("echo_server_v2") {
+  testonly = true
+  deps = [ "components:echo_server_for_events_v2_bin" ]
+  manifest = "components/scoped/meta/echo_server_v2.cml"
+}
+
+fuchsia_component("echo_reporter_v2") {
+  testonly = true
+  deps = [ "components:echo_reporter_v2_bin" ]
+  manifest = "components/scoped/meta/echo_reporter_v2.cml"
+}
+
+fuchsia_component("nested_reporter_v2") {
+  testonly = true
+  deps = [ "components:nested_reporter_v2_bin" ]
+  manifest = "components/nested/meta/reporter_v2.cml"
+}
+
+fuchsia_component("resolved_error_reporter_v2") {
+  testonly = true
+  deps = [ "components:resolved_error_reporter_v2_bin" ]
+  manifest = "components/resolved_error/meta/reporter_v2.cml"
+}
+
+fuchsia_component("event_dispatch_order_root_v2") {
+  testonly = true
+  deps = [ "components:stub_component_v2_bin" ]
+  manifest = "components/event_dispatch_order/meta/root_v2.cml"
+}
+
+fuchsia_component("stub_component_v2") {
+  testonly = true
+  deps = [ "components:stub_component_v2_bin" ]
+  manifest = "components/stub/meta/component_v2.cml"
+}
+
+fuchsia_component("synthesis_reporter_v2") {
+  testonly = true
+  deps = [ "components:synthesis_reporter_v2_bin" ]
+  manifest = "components/synthesis/meta/reporter_v2.cml"
+}
+
+fuchsia_component("realm_offered_reporter_v2") {
+  testonly = true
+  deps = [ "components:realm_offered_v2_bin" ]
+  manifest = "components/realm_offered/meta/reporter_v2.cml"
+}
+
+fuchsia_component("realm_offered_nested_v2") {
+  testonly = true
+  deps = [ "components:realm_offered_nested_v2" ]
+  manifest = "components/realm_offered/meta/nested_v2.cml"
+}
+
+fuchsia_component("realm_offered_root_v2") {
+  testonly = true
+  manifest = "components/realm_offered/meta/root_v2.cml"
+}
+
+fuchsia_unittest_package("events_v2_integration_test") {
+  manifest = "meta/events_integration_test_v2.cml"
+  deps = [
+    ":async_reporter_v2",
+    ":directory_ready_child_v2",
+    ":directory_ready_root_v2",
+    ":echo_client_v2",
+    ":echo_realm_v2",
+    ":echo_reporter_v2",
+    ":echo_server_v2",
+    ":event_dispatch_order_root_v2",
+    ":events_integration_test_v2_bin",
+    ":nested_reporter_v2",
+    ":realm_offered_nested_v2",
+    ":realm_offered_reporter_v2",
+    ":realm_offered_root_v2",
+    ":resolved_error_reporter_v2",
+    ":stub_component_v2",
+    ":synthesis_reporter_v2",
+    "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
+  ]
+}

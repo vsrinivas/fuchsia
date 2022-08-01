@@ -30,6 +30,21 @@
         {
             event: "directory_ready",
         },
+        {
+            event_stream: "directory_ready_v2",
+        },
+        {
+            event_stream: "started_v2",
+        },
+        {
+            event_stream: "stopped_v2",
+        },
+        {
+            event_stream: "running_v2",
+        },
+        {
+            event_stream: "capability_requested_v2",
+        },
     ],
     builtin_pkg_resolver: "appmgr_bridge",
     builtin_boot_resolver: "boot",

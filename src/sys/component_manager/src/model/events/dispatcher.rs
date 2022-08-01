@@ -6,7 +6,7 @@ use {
     crate::model::{
         events::{
             event::Event,
-            registry::{ExecutionMode, SubscriptionOptions, SubscriptionType},
+            registry::{ComponentEventRoute, ExecutionMode, SubscriptionOptions, SubscriptionType},
         },
         hooks::{
             Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, TransferEvent,
@@ -21,9 +21,8 @@ use {
         sink::SinkExt,
     },
     maplit::hashmap,
-    moniker::ExtendedMoniker,
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker},
 };
-
 /// EventDispatcher and EventStream are two ends of a channel.
 ///
 /// EventDispatcher represents the sending end of the channel.
@@ -52,8 +51,15 @@ pub struct EventDispatcher {
 
     /// An `mpsc::Sender` used to dispatch an event. Note that this
     /// `mpsc::Sender` is wrapped in an Mutex<..> to allow it to be passed along
-    /// to other tasks for dispatch.
-    tx: Mutex<mpsc::UnboundedSender<Event>>,
+    /// to other tasks for dispatch. The Event is a lifecycle event that occurred,
+    /// and the Option<Vec<ComponentEventRoute>> is the path that the event
+    /// took (if applicable) to reach the destination. This route
+    /// is used for dynamic permission checks (to filter events a component shouldn't have
+    /// access to), and to rebase the moniker of the event.
+    tx: Mutex<mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>>,
+
+    /// Route information used externally for evaluating scopes
+    pub route: Vec<ComponentEventRoute>,
 }
 
 impl EventDispatcher {
@@ -61,11 +67,21 @@ impl EventDispatcher {
         options: SubscriptionOptions,
         mode: EventMode,
         scopes: Vec<EventDispatcherScope>,
-        tx: mpsc::UnboundedSender<Event>,
+        tx: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
+    ) -> Self {
+        Self::new_with_route(options, mode, scopes, tx, vec![])
+    }
+
+    pub fn new_with_route(
+        options: SubscriptionOptions,
+        mode: EventMode,
+        scopes: Vec<EventDispatcherScope>,
+        tx: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
+        route: Vec<ComponentEventRoute>,
     ) -> Self {
         // TODO(fxbug.dev/48360): flatten scope_monikers. There might be monikers that are
         // contained within another moniker in the list.
-        Self { options, mode, scopes, tx: Mutex::new(tx) }
+        Self { options, mode, scopes, tx: Mutex::new(tx), route }
     }
 
     /// Sends the event to an event stream, if fired in the scope of `scope_moniker`. Returns
@@ -91,11 +107,14 @@ impl EventDispatcher {
 
         {
             let mut tx = self.tx.lock().await;
-            tx.send(Event {
-                event: event.transfer().await,
-                scope_moniker,
-                responder: maybe_responder_tx,
-            })
+            tx.send((
+                Event {
+                    event: event.transfer().await,
+                    scope_moniker,
+                    responder: maybe_responder_tx,
+                },
+                None,
+            ))
             .await?;
         }
         Ok(maybe_responder_rx)
@@ -159,7 +178,14 @@ impl EventDispatcherScope {
                 ExecutionMode::Debug => self.moniker.contains_in_realm(&event.target_moniker),
                 ExecutionMode::Production => false,
             },
-            _ => self.moniker.contains_in_realm(&event.target_moniker),
+            _ => {
+                let contained_in_realm = self.moniker.contains_in_realm(&event.target_moniker);
+                let is_component_instance = matches!(
+                    &event.target_moniker,
+                    ExtendedMoniker::ComponentInstance(instance) if instance.is_root()
+                );
+                contained_in_realm || is_component_instance
+            }
         };
 
         if !in_scope {
@@ -211,10 +237,10 @@ mod tests {
 
     struct EventDispatcherFactory {
         /// The receiving end of a channel of Events.
-        rx: mpsc::UnboundedReceiver<Event>,
+        rx: mpsc::UnboundedReceiver<(Event, Option<Vec<ComponentEventRoute>>)>,
 
         /// The sending end of a channel of Events.
-        tx: mpsc::UnboundedSender<Event>,
+        tx: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
     }
 
     impl EventDispatcherFactory {
@@ -225,7 +251,7 @@ mod tests {
 
         /// Receives the next event from the sender.
         pub async fn next_event(&mut self) -> Option<ComponentEvent> {
-            self.rx.next().await.map(|e| e.event)
+            self.rx.next().await.map(|(e, _)| e.event)
         }
 
         fn create_dispatcher(

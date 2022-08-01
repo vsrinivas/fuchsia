@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/synthesis_reporter_v2",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
+            from: "framework",
+        },
+        {
+            event_stream: [
+                "directory_ready_unscoped",
+                "running_unscoped",
+            ],
+            from: "parent",
+            path: "/events/event_stream",
+            filter: { name: "diagnostics" },
+        },
+    ],
+}

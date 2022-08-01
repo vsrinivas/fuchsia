@@ -1,0 +1,36 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/resolved_error_reporter_v2",
+    },
+    children: [
+        {
+            name: "child_a",
+            url: "fuchsia-pkg://fuchsia.com/events_v2_integration_test#meta/does_not_exist_v2.cm",
+            startup: "lazy",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            protocol: [
+                "fidl.examples.routing.echo.Echo",
+                "fuchsia.component.Realm",
+            ],
+            from: "framework",
+        },
+        {
+            event_stream: [
+                "resolved_v2",
+                "started_v2",
+            ],
+            from: "parent",
+            path: "/events/event_stream",
+            scope: "#child_a",
+        },
+    ],
+}

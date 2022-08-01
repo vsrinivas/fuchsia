@@ -1257,6 +1257,10 @@ fn create_capability_decl(
             let name = try_into_source_name(&event.name)?;
             cm_rust::CapabilityDecl::Event(cm_rust::EventDecl { name })
         }
+        ftest::Capability::EventStream(event) => {
+            let name = try_into_source_name(&event.name)?;
+            cm_rust::CapabilityDecl::EventStream(cm_rust::EventStreamDecl { name })
+        }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "Encountered unsupported capability variant: {:?}.",
@@ -1337,6 +1341,21 @@ fn create_offer_decl(
                 target,
                 target_name,
                 filter,
+                availability: cm_rust::Availability::Required,
+            })
+        }
+        ftest::Capability::EventStream(event_stream) => {
+            let source_name = try_into_source_name(&event_stream.name)?;
+            let target_name = try_into_target_name(&event_stream.name, &event_stream.as_)?;
+            let filter =
+                event_stream.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
+            cm_rust::OfferDecl::EventStream(cm_rust::OfferEventStreamDecl {
+                source,
+                source_name,
+                target,
+                target_name,
+                filter,
+                scope: event_stream.scope.as_ref().cloned().map(FidlIntoNative::fidl_into_native),
                 availability: cm_rust::Availability::Required,
             })
         }
@@ -1523,6 +1542,21 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
                 target_name: source_name,
                 filter,
                 dependency_type: cm_rust::DependencyType::Strong,
+                availability: cm_rust::Availability::Required,
+            })
+        }
+        ftest::Capability::EventStream(event) => {
+            // If the capability was renamed in the parent's offer declaration, we want to use the
+            // post-rename version of it here.
+            let source_name = try_into_target_name(&event.name, &event.as_)?;
+            let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
+            let target_path = try_into_capability_path(&event.path)?;
+            cm_rust::UseDecl::EventStream(cm_rust::UseEventStreamDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: source_name.clone(),
+                target_path,
+                filter,
+                scope: event.scope.as_ref().cloned().map(FidlIntoNative::fidl_into_native),
                 availability: cm_rust::Availability::Required,
             })
         }
@@ -2999,6 +3033,11 @@ mod tests {
                         as_: Some("fuchsia.examples.Orca".to_string()),
                         ..ftest::Service::EMPTY
                     }),
+                    ftest::Capability::EventStream(ftest::EventStream {
+                        name: Some("started_v2".to_string()),
+                        as_: Some("started_event".to_string()),
+                        ..ftest::EventStream::EMPTY
+                    }),
                 ],
                 fcdecl::Ref::Parent(fcdecl::ParentRef {}),
                 vec![fcdecl::Ref::Child(fcdecl::ChildRef {
@@ -3088,6 +3127,15 @@ mod tests {
                         target_name: "fuchsia.examples.Orca".into(),
                         source_instance_filter: None,
                         renamed_instances: None,
+                        availability: cm_rust::Availability::Required,
+                    }),
+                    cm_rust::OfferDecl::EventStream(cm_rust::OfferEventStreamDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "started_v2".into(),
+                        filter: None,
+                        scope: None,
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "started_event".into(),
                         availability: cm_rust::Availability::Required,
                     }),
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {

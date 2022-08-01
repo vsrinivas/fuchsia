@@ -207,6 +207,22 @@
             ],
         },
         {
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: [
+                "#starnix-tests",
+                "#system-tests",
+                "#tests",
+                "#tier-2-tests",
+            ],
+        },
+        {
             protocol: [
                 "fuchsia.device.NameProvider",
                 "fuchsia.feedback.CrashReporter",
@@ -379,6 +395,17 @@
         {
             event: "destroyed",
             from: "framework",
+            to: "#debug_data",
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "directory_ready_v2",
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
             to: "#debug_data",
         },
         {

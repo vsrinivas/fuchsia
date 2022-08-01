@@ -410,8 +410,8 @@ impl IncomingNamespace {
                                      OpenEventStreamOptions{
                                          flags,
                                          open_mode: mode,
-                                         relative_path: relative_path.into_string(),
-                                         server_chan: &mut server_end
+                                         relative_path: stream.target_path.to_string(),
+                                         server_chan: &mut server_end,
                                      }
                                  ))
                             },

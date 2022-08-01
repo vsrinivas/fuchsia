@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/nested_reporter_v2",
+    },
+    children: [
+        {
+            name: "child_a",
+            url: "#meta/stub_component_v2.cm",
+            startup: "eager",
+        },
+        {
+            name: "child_b",
+            url: "#meta/stub_component_v2.cm",
+            startup: "eager",
+        },
+        {
+            name: "child_c",
+            url: "#meta/stub_component_v2.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            event_stream: "started_v2",
+            from: "parent",
+            path: "/events/event_stream",
+        },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+    ],
+}

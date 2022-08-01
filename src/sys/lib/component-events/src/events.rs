@@ -6,11 +6,11 @@ use {
     anyhow::{format_err, Context, Error},
     fidl::endpoints::{create_endpoints, ProtocolMarker, ServerEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_channel_to_protocol,
+    fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol_at_path},
     fuchsia_zircon as zx,
     futures::StreamExt,
     lazy_static::lazy_static,
-    std::convert::TryFrom,
+    std::{collections::VecDeque, convert::TryFrom},
     thiserror::Error,
 };
 
@@ -123,8 +123,14 @@ impl EventSource {
     }
 }
 
+enum InternalStream {
+    Legacy(fsys::EventStreamRequestStream),
+    New(fsys::EventStream2Proxy),
+}
+
 pub struct EventStream {
-    stream: fsys::EventStreamRequestStream,
+    stream: InternalStream,
+    buffer: VecDeque<fsys::Event>,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -135,14 +141,46 @@ pub enum EventStreamError {
 
 impl EventStream {
     pub fn new(stream: fsys::EventStreamRequestStream) -> Self {
-        Self { stream }
+        Self { stream: InternalStream::Legacy(stream), buffer: VecDeque::new() }
+    }
+
+    pub fn new_v2(stream: fsys::EventStream2Proxy) -> Self {
+        Self { stream: InternalStream::New(stream), buffer: VecDeque::new() }
+    }
+
+    pub fn open_at_path(path: impl Into<String>) -> Result<Self, Error> {
+        Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(&path.into())?))
     }
 
     pub async fn next(&mut self) -> Result<fsys::Event, EventStreamError> {
-        match self.stream.next().await {
-            Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => Ok(event),
-            Some(_) => Err(EventStreamError::StreamClosed),
-            None => Err(EventStreamError::StreamClosed),
+        if let Some(event) = self.buffer.pop_front() {
+            return Ok(event);
+        }
+        match &mut self.stream {
+            InternalStream::New(stream) => {
+                match stream.get_next().await {
+                    Ok(events) => {
+                        let mut iter = events.into_iter();
+                        if let Some(real_event) = iter.next() {
+                            let ret = real_event;
+                            while let Some(value) = iter.next() {
+                                self.buffer.push_back(value);
+                            }
+                            return Ok(ret);
+                        } else {
+                            // This should never happen, we should always
+                            // have at least one event.
+                            Err(EventStreamError::StreamClosed)
+                        }
+                    }
+                    Err(_) => Err(EventStreamError::StreamClosed),
+                }
+            }
+            InternalStream::Legacy(stream) => match stream.next().await {
+                Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => Ok(event),
+                Some(_) => Err(EventStreamError::StreamClosed),
+                None => Err(EventStreamError::StreamClosed),
+            },
         }
     }
 }

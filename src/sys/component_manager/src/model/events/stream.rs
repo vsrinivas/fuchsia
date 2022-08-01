@@ -7,33 +7,46 @@ use {
         events::{
             dispatcher::{EventDispatcher, EventDispatcherScope},
             event::Event,
-            registry::SubscriptionOptions,
+            registry::{ComponentEventRoute, SubscriptionOptions},
         },
         hooks::{EventType, HasEventType},
     },
     cm_rust::EventMode,
-    futures::{channel::mpsc, StreamExt},
+    futures::{channel::mpsc, task::Context, Stream, StreamExt},
     moniker::{AbsoluteMoniker, ExtendedMoniker},
-    std::sync::{Arc, Weak},
+    std::{
+        pin::Pin,
+        sync::{Arc, Weak},
+        task::Poll,
+    },
 };
 
 pub struct EventStream {
     /// The receiving end of a channel of Events.
-    rx: mpsc::UnboundedReceiver<Event>,
+    rx: mpsc::UnboundedReceiver<(Event, Option<Vec<ComponentEventRoute>>)>,
 
     /// The sending end of a channel of Events.
-    tx: mpsc::UnboundedSender<Event>,
+    tx: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
 
     /// A vector of EventDispatchers to this EventStream.
     /// EventStream assumes ownership of the dispatchers. They are
     /// destroyed when this EventStream is destroyed.
     dispatchers: Vec<Arc<EventDispatcher>>,
+
+    /// The route taken for this event stream, if a v2 stream.
+    /// This is used for access control and namespacing during
+    /// serving of the event stream.
+    pub route: Vec<ComponentEventRoute>,
+    /// Routing tasks associated with this event stream.
+    /// Tasks associated with the stream will be terminated
+    /// when the EventStream is destroyed.
+    pub tasks: Vec<fuchsia_async::Task<()>>,
 }
 
 impl EventStream {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded();
-        Self { rx, tx, dispatchers: vec![] }
+        Self { rx, tx, dispatchers: vec![], route: vec![], tasks: vec![] }
     }
 
     pub fn create_dispatcher(
@@ -41,19 +54,22 @@ impl EventStream {
         options: SubscriptionOptions,
         mode: EventMode,
         scopes: Vec<EventDispatcherScope>,
+        route: Vec<ComponentEventRoute>,
     ) -> Weak<EventDispatcher> {
-        let dispatcher = Arc::new(EventDispatcher::new(options, mode, scopes, self.tx.clone()));
+        self.route = route.clone();
+        let dispatcher = Arc::new(EventDispatcher::new_with_route(
+            options,
+            mode,
+            scopes,
+            self.tx.clone(),
+            route,
+        ));
         self.dispatchers.push(dispatcher.clone());
         Arc::downgrade(&dispatcher)
     }
 
-    pub fn sender(&self) -> mpsc::UnboundedSender<Event> {
+    pub fn sender(&self) -> mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)> {
         self.tx.clone()
-    }
-
-    /// Receives the next event from the sender.
-    pub async fn next(&mut self) -> Option<Event> {
-        self.rx.next().await
     }
 
     /// Waits for an event with a particular EventType against a component with a
@@ -64,7 +80,7 @@ impl EventStream {
         expected_moniker: AbsoluteMoniker,
     ) -> Option<Event> {
         let expected_moniker = ExtendedMoniker::ComponentInstance(expected_moniker);
-        while let Some(event) = self.next().await {
+        while let Some((event, _)) = self.next().await {
             let actual_event_type = event.event.event_type();
             if expected_moniker == event.event.target_moniker
                 && expected_event_type == actual_event_type
@@ -74,5 +90,13 @@ impl EventStream {
             event.resume();
         }
         None
+    }
+}
+
+impl Stream for EventStream {
+    type Item = (Event, Option<Vec<ComponentEventRoute>>);
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.rx).poll_next(cx)
     }
 }

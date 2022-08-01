@@ -6,7 +6,7 @@ use {
     crate::model::{
         component::{ComponentInstance, InstanceState},
         error::ModelError,
-        events::{dispatcher::EventDispatcherScope, event::Event},
+        events::{dispatcher::EventDispatcherScope, event::Event, registry::ComponentEventRoute},
         hooks::{Event as HookEvent, EventType},
         model::Model,
     },
@@ -76,7 +76,7 @@ impl EventSynthesizer {
     /// `sender` channel.
     pub fn spawn_synthesis(
         &self,
-        sender: mpsc::UnboundedSender<Event>,
+        sender: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
         events: HashMap<CapabilityName, Vec<EventDispatcherScope>>,
     ) {
         SynthesisTask::new(&self, sender, events).spawn()
@@ -97,7 +97,7 @@ struct SynthesisTask {
     model: Weak<Model>,
 
     /// The sender end of the channel where synthesized events will be sent.
-    sender: mpsc::UnboundedSender<Event>,
+    sender: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
 
     /// Information about the events to synthesize
     event_infos: Vec<EventSynthesisInfo>,
@@ -108,7 +108,7 @@ impl SynthesisTask {
     /// `synthesizer` doesn't have a provider.
     pub fn new(
         synthesizer: &EventSynthesizer,
-        sender: mpsc::UnboundedSender<Event>,
+        sender: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
         mut events: HashMap<CapabilityName, Vec<EventDispatcherScope>>,
     ) -> Self {
         let event_infos = synthesizer
@@ -156,7 +156,7 @@ impl SynthesisTask {
     /// within the scope of a Running scope.
     async fn run(
         model: &Arc<Model>,
-        mut sender: mpsc::UnboundedSender<Event>,
+        mut sender: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
         info: EventSynthesisInfo,
     ) -> Result<(), ModelError> {
         let mut visited_components = HashSet::new();
@@ -204,12 +204,12 @@ impl SynthesisTask {
         provider: &Arc<dyn EventSynthesisProvider>,
         scope: &EventDispatcherScope,
         target_component: ExtendedComponent,
-        sender: &mut mpsc::UnboundedSender<Event>,
+        sender: &mut mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
     ) -> Result<(), anyhow::Error> {
         let events = provider.provide(target_component, &scope.filter).await;
         for event in events {
             let event = Event { event, scope_moniker: scope.moniker.clone(), responder: None };
-            sender.send(event).await?;
+            sender.send((event, None)).await?;
         }
         Ok(())
     }
@@ -304,7 +304,7 @@ mod tests {
 
         let mut result_monikers = HashSet::new();
         while result_monikers.len() < 4 {
-            let event = event_stream.next().await.expect("got running event");
+            let (event, _) = event_stream.next().await.expect("got running event");
             match event.event.result {
                 Ok(EventPayload::Running { .. }) => {
                     if event.event.target_moniker.to_string() == "/c/f" {
@@ -363,7 +363,7 @@ mod tests {
 
         // Verify we don't get more Running events.
         test.start_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance g success");
-        let event = event_stream.next().await.expect("got started event");
+        let (event, _) = event_stream.next().await.expect("got started event");
         match event.event.result {
             Ok(EventPayload::Started { .. }) => {
                 assert_eq!("/c/f/i", event.event.target_moniker.to_string());
@@ -405,7 +405,7 @@ mod tests {
 
         // Verify we don't get more Running events.
         test.start_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance g success");
-        let event = event_stream.next().await.expect("got started event");
+        let (event, _) = event_stream.next().await.expect("got started event");
         match event.event.result {
             Ok(EventPayload::Started { .. }) => {
                 assert_eq!("/c/f/i", event.event.target_moniker.to_string());
@@ -430,7 +430,7 @@ mod tests {
         })
         .await;
 
-        let event = event_stream.next().await.expect("got running event");
+        let (event, _) = event_stream.next().await.expect("got running event");
         match event.event.result {
             Ok(EventPayload::DirectoryReady { name, .. }) if name == "diagnostics" => {
                 assert_eq!(event.event.target_moniker, ExtendedMoniker::ComponentManager);
@@ -461,6 +461,7 @@ mod tests {
                 source_name: event.into(),
                 mode: EventMode::Async,
                 scopes: scopes.clone(),
+                route: vec![],
             })
             .collect();
         args.registry
@@ -540,7 +541,7 @@ mod tests {
     ) -> Vec<String> {
         let mut result_monikers = Vec::new();
         for _ in 0..total {
-            let event = event_stream.next().await.expect("got running event");
+            let (event, _) = event_stream.next().await.expect("got running event");
             match event.event.result {
                 Ok(EventPayload::Running { .. }) => {
                     result_monikers.push(event.event.target_moniker.to_string());

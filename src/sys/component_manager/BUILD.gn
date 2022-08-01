@@ -12,6 +12,7 @@ import("//tools/fidl/measure-tape/measure_tape.gni")
 
 template("component_manager") {
   _deps = [
+    ":measure_tape_for_events",
     ":measure_tape_for_instance_info",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
@@ -355,6 +356,15 @@ fuchsia_test_package("component-manager-tests") {
     "//examples/hello_world/rust:hello-world-rust-component",
     "//src/sys/component_manager/testing/echo_server",
     "//src/sys/component_manager/testing/lifecycle",
+  ]
+}
+
+measure_tape("measure_tape_for_events") {
+  target_binding = "rust"
+  target_types = [ "fuchsia.sys2/Event" ]
+  fidls = [
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.io",
   ]
 }
 

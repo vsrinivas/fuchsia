@@ -1,0 +1,67 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/realm_offered_nested_v2",
+    },
+    children: [
+        // Start immediately.
+        {
+            name: "reporter",
+            url: "#meta/realm_offered_reporter_v2.cm",
+            startup: "eager",
+        },
+
+        // These childrens are started by the test once "reporter" has started.
+        {
+            name: "child_a",
+            url: "#meta/stub_component_v2.cm",
+            startup: "lazy",
+        },
+        {
+            name: "child_b",
+            url: "#meta/stub_component_v2.cm",
+            startup: "lazy",
+        },
+        {
+            name: "child_c",
+            url: "#meta/stub_component_v2.cm",
+            startup: "lazy",
+        },
+    ],
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: "#reporter",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#reporter",
+        },
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "self",
+            to: "#reporter",
+        },
+        {
+            event_stream: "started_v2",
+            from: "parent",
+            as: "started_nested",
+            to: "#reporter",
+        },
+    ],
+}

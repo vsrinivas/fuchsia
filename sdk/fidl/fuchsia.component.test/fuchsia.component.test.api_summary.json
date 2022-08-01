@@ -43,6 +43,11 @@
         "name": "fuchsia.component.test/Capability.event"
     },
     {
+        "declaration": "fuchsia.component.test/EventStream",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Capability.event_stream"
+    },
+    {
         "declaration": "fuchsia.component.test/Protocol",
         "kind": "union/member",
         "name": "fuchsia.component.test/Capability.protocol"
@@ -158,6 +163,35 @@
     {
         "kind": "table",
         "name": "fuchsia.component.test/Event"
+    },
+    {
+        "declaration": "string:100",
+        "kind": "table/member",
+        "name": "fuchsia.component.test/EventStream.as"
+    },
+    {
+        "declaration": "fuchsia.data/Dictionary",
+        "kind": "table/member",
+        "name": "fuchsia.component.test/EventStream.filter"
+    },
+    {
+        "declaration": "string:100",
+        "kind": "table/member",
+        "name": "fuchsia.component.test/EventStream.name"
+    },
+    {
+        "declaration": "string:1024",
+        "kind": "table/member",
+        "name": "fuchsia.component.test/EventStream.path"
+    },
+    {
+        "declaration": "vector<fuchsia.component.decl/Ref>",
+        "kind": "table/member",
+        "name": "fuchsia.component.test/EventStream.scope"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.test/EventStream"
     },
     {
         "declaration": "string",

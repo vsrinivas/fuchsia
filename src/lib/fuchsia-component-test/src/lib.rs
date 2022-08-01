@@ -275,6 +275,11 @@ impl Capability {
     pub fn event(event: Event) -> EventCapability {
         EventCapability { event }
     }
+
+    /// Creates a new event_stream capability.
+    pub fn event_stream(name: impl Into<String>) -> EventStream {
+        EventStream { name: name.into(), rename: None, path: None, scope: None }
+    }
 }
 
 /// A protocol capability, which may be routed between components. Created by
@@ -465,6 +470,18 @@ impl Into<ftest::Capability> for EventCapability {
             as_: None,
             filter: self.event.filter().map(NativeIntoFidl::native_into_fidl),
             ..ftest::Event::EMPTY
+        })
+    }
+}
+
+impl Into<ftest::Capability> for EventStream {
+    fn into(self) -> ftest::Capability {
+        ftest::Capability::EventStream(ftest::EventStream {
+            name: Some(self.name),
+            as_: self.rename,
+            scope: self.scope.map(|scopes| scopes.into_iter().map(|scope| scope.into()).collect()),
+            path: self.path,
+            ..ftest::EventStream::EMPTY
         })
     }
 }
@@ -1682,6 +1699,45 @@ impl From<DirectoryContents> for ftest::DirectoryContents {
                 .map(|(path, buf)| ftest::DirectoryEntry { file_path: path, file_contents: buf })
                 .collect(),
         }
+    }
+}
+
+/// Represents an event stream capability per RFC-0121
+/// see https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0121_component_events
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EventStream {
+    name: String,
+    scope: Option<Vec<Ref>>,
+    rename: Option<String>,
+    path: Option<String>,
+}
+
+impl EventStream {
+    /// Creates a new event stream capability.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self { name: name.into(), scope: None, rename: None, path: None }
+    }
+
+    /// Downscopes an event stream to only handle events
+    /// from the specified Refs.
+    pub fn with_scope(mut self, scope: impl Into<Ref>) -> Self {
+        self.scope.get_or_insert(vec![]).push(scope.into());
+        self
+    }
+
+    /// The path at which this event_stream capability will be provided or
+    /// used. Only relevant if the route's source or target is a legacy or local
+    /// component, as these are the only components that realm builder will generate
+    /// a modern component manifest for.
+    pub fn path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into());
+        self
+    }
+
+    /// Renames an event stream capability
+    pub fn as_(mut self, name: impl Into<String>) -> Self {
+        self.rename = Some(name.into());
+        self
     }
 }
 

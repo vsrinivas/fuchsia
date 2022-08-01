@@ -159,6 +159,8 @@ type Capability = flexible union {
     3: storage Storage;
     4: service Service;
     5: event Event;
+    @available(added=9)
+    6: event_stream EventStream;
 };
 
 /// A protocol capability
@@ -262,6 +264,27 @@ type Event = table {
 
     /// A filter to apply on the event.
     3: filter fuchsia.data.Dictionary;
+};
+
+/// An event_stream capability
+@available(added=9)
+type EventStream = table {
+    /// The name of the capability.
+    1: name fuchsia.component.name;
+
+    /// A rename of the capability, which can be set when routing to another
+    // component. This field is optional.
+    2: as fuchsia.component.name; // optional
+
+    /// Sets the path in which the event_stream is installed.
+    3: path string:fuchsia.component.MAX_PATH_LENGTH;
+
+    /// A filter to apply on the event.
+    4: filter fuchsia.data.Dictionary;
+
+    /// A list of objects underneath this component to downscope the event to.
+    /// Example: #my_child_component, #my_child_collection.
+    5: scope vector<fuchsia.component.decl.Ref>:MAX;
 };
 
 /// Properties that may be set on a child when it is added to a realm.

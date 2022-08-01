@@ -9,7 +9,7 @@ use {
             error::ModelError,
             events::{
                 registry::{EventRegistry, ExecutionMode, SubscriptionOptions, SubscriptionType},
-                source::EventSource,
+                source::{EventSource, EventSourceV2},
                 stream_provider::EventStreamProvider,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -92,6 +92,15 @@ impl EventSourceFactory {
         .await
     }
 
+    /// Creates a `EventSource` for the given `target_moniker`.
+    pub async fn create_v2(
+        &self,
+        target_moniker: AbsoluteMoniker,
+        name: CapabilityName,
+    ) -> Result<EventSourceV2, ModelError> {
+        EventSourceV2::new(self.create(target_moniker).await?, name).await
+    }
+
     /// Returns an EventSource. An EventSource holds an InstancedAbsoluteMoniker that
     /// corresponds to the component in which it will receive events.
     async fn on_capability_routed_async(
@@ -101,9 +110,16 @@ impl EventSourceFactory {
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         if capability_decl.matches_protocol(&EVENT_SOURCE_SERVICE_NAME) {
-            let event_source = self.create(target_moniker.clone()).await?;
-            Ok(Some(Box::new(event_source.clone()) as Box<dyn CapabilityProvider>))
+            let event_source = self.create(target_moniker).await?;
+            Ok(Some(Box::new(event_source) as Box<dyn CapabilityProvider>))
         } else {
+            match capability_decl {
+                InternalCapability::EventStream(name) => {
+                    let event_source = self.create_v2(target_moniker, name.clone()).await?;
+                    return Ok(Some(Box::new(event_source)));
+                }
+                _ => {}
+            }
             Ok(capability)
         }
     }
@@ -118,6 +134,19 @@ impl Hook for EventSourceFactory {
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
                 source: CapabilitySource::Builtin { capability, .. },
+                capability_provider,
+            }) => {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_capability_routed_async(
+                        &capability,
+                        target_moniker.clone(),
+                        capability_provider.take(),
+                    )
+                    .await?;
+            }
+            Ok(EventPayload::CapabilityRouted {
+                source: CapabilitySource::Framework { capability, .. },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;

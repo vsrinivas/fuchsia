@@ -33,6 +33,27 @@
         {
             event: "directory_ready",
         },
+        {
+            event_stream: "directory_ready_v2",
+        },
+        {
+            event_stream: "started_v2",
+        },
+        {
+            event_stream: "stopped_v2",
+        },
+        {
+            event_stream: "running_v2",
+        },
+        {
+            event_stream: "capability_requested_v2",
+        },
+        {
+            event_stream: "destroyed_v2",
+        },
+        {
+            event_stream: "resolved_v2",
+        },
     ],
     builtin_pkg_resolver: "appmgr_bridge",
     realm_builder_resolver_and_runner: "namespace",

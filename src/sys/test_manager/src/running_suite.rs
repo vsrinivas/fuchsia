@@ -493,7 +493,6 @@ async fn get_realm(
     resolver: Arc<ResolverProxy>,
 ) -> Result<RealmBuilder, RealmBuilderError> {
     let builder = RealmBuilder::new_with_collection(collection.to_string()).await?;
-
     let wrapper_realm =
         builder.add_child_realm(WRAPPER_REALM_NAME, ChildOptions::new().eager()).await?;
 
@@ -590,6 +589,39 @@ async fn get_realm(
                 .to(&wrapper_realm),
         )
         .await?;
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::event_stream("started_v2").with_scope(&wrapper_realm))
+                .capability(Capability::event_stream("running_v2").with_scope(&wrapper_realm))
+                .capability(Capability::event_stream("stopped_v2").with_scope(&wrapper_realm))
+                .capability(
+                    Capability::event_stream("capability_requested_v2").with_scope(&wrapper_realm),
+                )
+                .capability(
+                    Capability::event_stream("directory_ready_v2").with_scope(&wrapper_realm),
+                )
+                .from(Ref::parent())
+                .to(&wrapper_realm),
+        )
+        .await?;
+
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::event_stream("started_v2").with_scope(&test_root))
+                .capability(Capability::event_stream("running_v2").with_scope(&test_root))
+                .capability(Capability::event_stream("stopped_v2").with_scope(&test_root))
+                .capability(
+                    Capability::event_stream("capability_requested_v2").with_scope(&test_root),
+                )
+                .capability(Capability::event_stream("directory_ready_v2").with_scope(&test_root))
+                .from(Ref::parent())
+                .to(&test_root),
+        )
+        .await?;
+
     wrapper_realm
         .add_route(
             Route::new()

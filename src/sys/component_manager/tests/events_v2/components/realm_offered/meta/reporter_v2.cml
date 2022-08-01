@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/realm_offered_reporter_v2",
+    },
+    use: [
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "framework",
+        },
+
+        // Offered by the parent realm "nested"
+        {
+            protocol: [ "fidl.test.components.Trigger" ],
+        },
+        {
+            event_stream: "started_nested",
+            from: "parent",
+            path: "/events/event_stream",
+        },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+    ],
+}
