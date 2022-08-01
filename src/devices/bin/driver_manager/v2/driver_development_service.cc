@@ -46,7 +46,7 @@ class DeviceInfoIterator : public fidl::WireServer<fdd::DeviceInfoIterator> {
       : arena_(std::move(arena)), list_(std::move(list)) {}
 
   void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
-    constexpr size_t kMaxEntries = 50;
+    constexpr size_t kMaxEntries = 20;
     auto result =
         cpp20::span(list_.begin() + offset_, std::min(kMaxEntries, list_.size() - offset_));
     offset_ += result.size();
@@ -180,7 +180,21 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
     device_infos.push_back(std::move(result.value()));
   }
   auto iterator = std::make_unique<DeviceInfoIterator>(std::move(arena), std::move(device_infos));
-  fidl::BindServer(this->dispatcher_, std::move(request->iterator), std::move(iterator));
+  fidl::BindServer(
+      this->dispatcher_, std::move(request->iterator), std::move(iterator),
+      [](auto* self, fidl::UnbindInfo info, fidl::ServerEnd<fdd::DeviceInfoIterator> server_end) {
+        if (info.is_user_initiated()) {
+          return;
+        }
+        if (info.is_peer_closed()) {
+          // For this development protocol, the client is free to disconnect
+          // at any time.
+          return;
+        }
+        LOGF(ERROR, "Error serving '%s': %s",
+             fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
+             info.FormatDescription().c_str());
+      });
 }
 
 void DriverDevelopmentService::GetDriverInfo(GetDriverInfoRequestView request,
