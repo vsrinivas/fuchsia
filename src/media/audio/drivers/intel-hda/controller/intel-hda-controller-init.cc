@@ -223,15 +223,14 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   pci_dev_ = pci_dev;
 
   // The device had better be a PCI device, or we are very confused.
-  res = ZX_ERR_NOT_FOUND;
-  if ((res = device_get_fragment_protocol(pci_dev_, "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
-    LOG(ERROR, "PCI device does not support PCI protocol! (res %d)", res);
-    return res;
+  pci_ = ddk::Pci::FromFragment(pci_dev_);
+  if (!pci_.is_valid()) {
+    LOG(ERROR, "PCI device does not support PCI protocol!");
+    return ZX_ERR_NOT_FOUND;
   }
 
   // Fetch our device info and use it to re-generate our debug tag once we
   // know our BDF address.
-  ZX_DEBUG_ASSERT(pci_.is_valid());
   res = pci_.GetDeviceInfo(&pci_dev_info_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch basic PCI device info! (res %d)", res);
