@@ -36,14 +36,23 @@ describes the complete syntax for a config schema.
 }
 ```
 
+Once your component has a configuration schema, you must define values for the
+declared fields, either using Software Assembly or GN.
 
-## Define configuration values
+## Define configuration values using Software Assembly
 
-You must define configuration values for a component's schema. The `fuchsia_structured_config_values`
-GN template validates the defined values against the config schema and compiles them into a `.cvf`
-file that must be packaged with your component.
+If your component's configuration varies between products, see the documentation
+for [Assembling Structured Configuration][sa-sc-docs]. For components whose
+configuration only varies between e.g. tests and production, see the next
+section.
 
-There are two ways to define config values: in a JSON5 file or inline in GN.
+## Define & package configuration values using GN
+
+The `fuchsia_structured_config_values` GN template validates the defined values
+against the config schema and compiles them into a `.cvf` file that must be
+packaged with your component.
+
+There are two ways to define config values in GN: in a JSON5 file or inline.
 
 ### JSON5 file
 
@@ -99,7 +108,7 @@ By using `declare_args`, you can change configuration values on the command line
     --args='config_example_rust_greeting="Rust CLI Override"'
   ```
 
-## Package the component and values
+### Package the component and values
 
 To package a component and a set of values together, add the `fuchsia_component` and `fuchsia_structured_config_values`
 rules as dependencies of a `fuchsia_package`.
@@ -180,7 +189,7 @@ Use the following functions from the library to read configuration values:
 
 ## Export configuration to Inspect
 
-You can export a components configuration to Inspect so that it is available in
+You can export a component's configuration to Inspect so that it is available in
 crash reports. The client libraries have functions to export a component's configuration to an
 Inspect tree:
 
@@ -227,4 +236,5 @@ a component.
 Realm Builder validates the replaced value against the component's configuration schema.
 
 [cml-ref-doc]: https://fuchsia.dev/reference/cml#config
+[sa-sc-docs]: assembling_structured_config.md
 [rb-feature-matrix]: /docs/development/testing/components/realm_builder.md#language-feature-matrix

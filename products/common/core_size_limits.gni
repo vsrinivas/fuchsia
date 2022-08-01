@@ -70,19 +70,31 @@ size_checker_input = {
       limit = 1624776  # 1.550 MiB
       creep_limit = 40960  # 40.0 KiB
     },
+
+    # [START session_manager_size_limit]
     {
       component = "Component Framework"
       src = [
+        # [START_EXCLUDE]
         "packages/base/appmgr",
         "packages/base/component_index",
         "packages/base/device_settings_manager",
         "packages/base/stash",
         "packages/base/sysmgr",
+
+        # [END_EXCLUDE]
+
         "session_manager",
       ]
+
+      # [START_EXCLUDE]
       limit = 2046836  # 1.952 MiB
       creep_limit = 204800  # 200.0 KiB
+
+      # [END_EXCLUDE]
     },
+
+    # [END session_manager_size_limit]
     {
       component = "Connectivity/Bluetooth"
       src = [

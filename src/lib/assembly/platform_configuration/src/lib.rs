@@ -71,10 +71,12 @@ pub fn define_repackaging(
 
     // Configure the Product Assembly + Structured Config example, if enabled.
     if should_configure_example() {
+        // [START example_patches]
         patches
             .package("configured_by_assembly")
             .component("meta/to_configure.cm")
             .field("enable_foo", matches!(config.platform.build_type, BuildType::Eng));
+        // [END example_patches]
     }
 
     // Configure the session URL.

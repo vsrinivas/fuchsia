@@ -13,3 +13,6 @@ toc:
   - title: "Structured Configuration"
     path: /docs/development/components/configuration/structured_config.md
     status: experimental
+  - title: "Assembling Structured Configuration"
+    path: /docs/development/components/configuration/assembling_structured_config.md
+    status: experimental

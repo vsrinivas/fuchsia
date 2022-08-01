@@ -8,7 +8,11 @@
         runner: "elf",
         binary: "bin/to_configure",
     },
+
+    // [START config]
     config: {
         enable_foo: { type: "bool" },
     },
+
+    // [END config]
 }
