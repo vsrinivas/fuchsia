@@ -22,7 +22,7 @@ impl DriverConnector {
 }
 
 #[async_trait::async_trait]
-impl driver_tools::DriverConnector for DriverConnector {
+impl driver_connector::DriverConnector for DriverConnector {
     async fn get_driver_development_proxy(
         &self,
         select: bool,
