@@ -215,6 +215,15 @@ void VaapiFuzzerTestFixture::RunFuzzer(std::string mime_type, const uint8_t *dat
 
 void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
     bool output_re_config_required) {
+  if (!output_re_config_required) {
+    // Generally we would inform the codec by calling CoreCodecBuildNewOutputConstraints() and then
+    // sending the constraints to the client using the OnOutputConstraints() event. Since we are
+    // faking CodecImpl, we don't need to call either and can just return.
+    // CoreCodecMidStreamOutputBufferReConfigFinish() does not have to be called when
+    // output_re_config_required is set to false
+    return;
+  }
+
   // Ensure decoder won't reuse an old buffer that will be destroyed in this method.
   decoder_->CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
 
