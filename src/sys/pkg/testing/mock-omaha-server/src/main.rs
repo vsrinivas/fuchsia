@@ -63,7 +63,7 @@ struct Args {
     )]
     key_path: String,
 
-    #[argh(option, description = "which port to serve on", default = "8880")]
+    #[argh(option, description = "which port to serve on", default = "0")]
     port: u16,
 
     #[argh(
@@ -153,7 +153,6 @@ async fn main() -> Result<(), anyhow::Error> {
     let arc_server = Arc::new(Mutex::new(server));
 
     let addr = SocketAddr::new(args.listen_on.into(), args.port);
-
     let listener = TcpListener::bind(&addr).await.context("binding to addr")?;
     println!("listening on {}", listener.local_addr()?);
     let connections = listener.incoming().map_ok(ConnectionStream::Tcp);

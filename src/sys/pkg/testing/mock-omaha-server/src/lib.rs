@@ -5,29 +5,30 @@
 use {
     anyhow::Error,
     derive_builder::Builder,
-    fuchsia_async as fasync,
     fuchsia_merkle::Hash,
-    futures::prelude::*,
-    hyper::{
-        body::Bytes,
-        header,
-        server::{accept::from_stream, Server},
-        service::{make_service_fn, service_fn},
-        Body, Method, Request, Response, StatusCode,
-    },
+    hyper::{body::Bytes, header, Body, Method, Request, Response, StatusCode},
     omaha_client::cup_ecdsa::PublicKeyId,
     parking_lot::Mutex,
     serde::Deserialize,
     serde_json::json,
     sha2::{Digest, Sha256},
+    std::{collections::HashMap, str::FromStr},
+    url::Url,
+};
+
+#[cfg(target_os = "fuchsia")]
+use {
+    fuchsia_async as fasync,
+    futures::prelude::*,
+    hyper::{
+        server::{accept::from_stream, Server},
+        service::{make_service_fn, service_fn},
+    },
     std::{
-        collections::HashMap,
         convert::Infallible,
         net::{Ipv4Addr, SocketAddr},
-        str::FromStr,
         sync::Arc,
     },
-    url::Url,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -393,6 +394,7 @@ mod tests {
     use {
         super::*,
         anyhow::Context,
+        fuchsia_async as fasync,
         hyper::{Body, StatusCode},
     };
 

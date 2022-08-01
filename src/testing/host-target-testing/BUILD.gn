@@ -7,15 +7,23 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 if (is_host) {
+  mock_omaha_server_target =
+      "//src/sys/pkg/testing/mock-omaha-server:bin($host_toolchain)"
   zbi_tool_target = "//zircon/tools/zbi($host_toolchain)"
 
   host_test_data("test_tools") {
     sources = [
-      get_label_info(zbi_tool_target, "root_out_dir") + "/zbi",
+      "//src/testing/host-target-testing/omaha_tool/testing_keys/test_private_key.pem",
       "//third_party/android/platform/external/avb/avbtool.py",
+      get_label_info(mock_omaha_server_target, "root_out_dir") +
+          "/mock-omaha-server",
+      get_label_info(zbi_tool_target, "root_out_dir") + "/zbi",
     ]
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-    deps = [ zbi_tool_target ]
+    deps = [
+      mock_omaha_server_target,
+      zbi_tool_target,
+    ]
   }
 }
 
@@ -56,6 +64,9 @@ go_library("host-target-testing") {
     "flasher/flasher_test.go",
     "omaha/omaha.go",
     "omaha/omaha_test.go",
+    "omaha_tool/omaha.go",
+    "omaha_tool/omaha_structs.go",
+    "omaha_tool/omaha_test.go",
     "packages/package.go",
     "packages/package_builder.go",
     "packages/package_builder_test.go",
@@ -83,6 +94,7 @@ test_packages = [
   "paver",
   "flasher",
   "omaha",
+  "omaha_tool",
   "util",
   "zbi",
 ]
