@@ -2088,7 +2088,12 @@ where
         trace!("connect sockaddr: {:?}", sockaddr);
         let remote_port =
             T::RemoteIdentifier::from_u16(sockaddr.port()).ok_or(fposix::Errno::Econnrefused)?;
-        let remote_addr = sockaddr.get_specified_addr().ok_or(fposix::Errno::Einval)?;
+
+        let remote_addr = sockaddr
+            .get_specified_addr()
+            // Emulate Linux, which was emulating BSD, by treating the unspecified
+            // remote address as localhost.
+            .unwrap_or(I::LOOPBACK_ADDRESS);
 
         let conn_id = match self.get_state().info.state {
             SocketState::Unbound { unbound_id } => {
@@ -2205,7 +2210,7 @@ where
             SocketState::Unbound { unbound_id } => Ok(unbound_id),
             SocketState::BoundListen { listener_id: _ }
             | SocketState::BoundConnect { conn_id: _, shutdown_read: _, shutdown_write: _ } => {
-                Err(fposix::Errno::Ealready)
+                Err(fposix::Errno::Einval)
             }
         }?;
         self.bind_inner(unbound_id, sockaddr, T::LocalIdentifier::from_u16(port))
@@ -2766,14 +2771,6 @@ mod tests {
             .expect_err("connect fails");
         assert_eq!(res, fposix::Errno::Eafnosupport);
 
-        // Pass an unspecified remote address.
-        let res = proxy
-            .connect(&mut A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 1010))
-            .await
-            .unwrap()
-            .expect_err("connect fails");
-        assert_eq!(res, fposix::Errno::Einval);
-
         // Pass a zero port. UDP disallows it, ICMP allows it.
         let res = proxy.connect(&mut A::create(A::LOCAL_ADDR, 0)).await.unwrap();
         match proto {
@@ -2834,6 +2831,29 @@ mod tests {
 
     declare_tests!(connect_loopback);
 
+    async fn connect_any<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
+        // Pass an unspecified remote address. This should be treated as the
+        // loopback address.
+        let (_t, proxy) = prepare_test::<A>(proto).await;
+
+        const PORT: u16 = 1010;
+        let () = proxy
+            .connect(&mut A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, PORT))
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(
+            proxy.get_peer_name().await.unwrap().unwrap(),
+            A::create(<A::AddrType as IpAddress>::Version::LOOPBACK_ADDRESS.get(), PORT)
+        );
+    }
+
+    declare_tests!(
+        connect_any,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
+
     async fn bind<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
         let (mut t, socket) = prepare_test::<A>(proto).await;
         let stack = t.get(0);
@@ -2844,7 +2864,7 @@ mod tests {
         // Can't bind again (to another port).
         let res =
             socket.bind(&mut A::create(A::LOCAL_ADDR, 201)).await.unwrap().expect_err("bind fails");
-        assert_eq!(res, fposix::Errno::Ealready);
+        assert_eq!(res, fposix::Errno::Einval);
 
         // Can bind another socket to a different port.
         let socket = get_socket::<A>(stack, proto).await;
