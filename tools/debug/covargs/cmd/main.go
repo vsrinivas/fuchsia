@@ -324,7 +324,10 @@ func mergeEntries(ctx context.Context, vf versionFetcher, versionedSummaries map
 			if useVersionFetcher {
 				llvmVersion, err := vf.getVersion(profile)
 				if err != nil {
-					return fmt.Errorf("cannot read version from profile %q: %s", profile, err)
+					// TODO(fxbug.dev/97842): Known issue causes occasional failures on host tests
+					// in incremental coverage builders. Once resolved, return an error.
+					logger.Warningf(ctx, "cannot read version from profile %q: %s", profile, err)
+					return nil
 				}
 				if llvmVersion > 0 {
 					version = strconv.Itoa(int(llvmVersion))
