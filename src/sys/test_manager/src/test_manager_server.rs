@@ -58,6 +58,7 @@ pub async fn run_test_manager(
                     controller,
                     resolver: resolver.clone(),
                     above_root_capabilities_for_test: above_root_capabilities_for_test.clone(),
+                    facets: facet::ResolveStatus::Unresolved,
                 });
             }
             ftest_manager::RunBuilderRequest::Build { controller, control_handle } => {

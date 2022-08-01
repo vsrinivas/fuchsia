@@ -105,6 +105,7 @@ rustc_library("lib") {
     "src/resolver.rs",
     "src/run_events.rs",
     "src/running_suite.rs",
+    "src/scheduler.rs",
     "src/self_diagnostics.rs",
     "src/test_manager_server.rs",
     "src/test_suite.rs",

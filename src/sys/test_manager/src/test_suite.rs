@@ -5,7 +5,7 @@
 use {
     crate::{
         above_root_capabilities::AboveRootCapabilitiesForTest, debug_data_server, error::*, facet,
-        run_events::RunEvent, running_suite, self_diagnostics,
+        run_events::RunEvent, running_suite, scheduler, scheduler::Scheduler, self_diagnostics,
     },
     anyhow::{Context, Error},
     fidl::endpoints::ClientEnd,
@@ -34,6 +34,7 @@ pub(crate) struct Suite {
     pub controller: SuiteControllerRequestStream,
     pub resolver: Arc<ResolverProxy>,
     pub above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
+    pub facets: facet::ResolveStatus,
 }
 
 pub(crate) struct TestRunBuilder {
@@ -170,17 +171,12 @@ impl TestRunBuilder {
         let run_id: u32 = rand::random();
         let run_suites_fut = async move {
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Executing);
-            // run test suites serially for now
-            for (suite_idx, suite) in self.suites.into_iter().enumerate() {
-                // only check before running the test. We should complete the test run for
-                // running tests, if stop is called.
-                if let Ok(Some(())) = stop_recv.try_recv() {
-                    break;
-                }
-                let instance_name = format!("{:?}-{:?}", run_id, suite_idx);
-                let suite_inspect = inspect_node_ref.new_suite(&instance_name, &suite.test_url);
-                run_single_suite(suite, &debug_controller, &instance_name, suite_inspect).await;
-            }
+
+            let serial_executer = scheduler::SerialScheduler {};
+            serial_executer
+                .execute(self.suites, inspect_node_ref, &mut stop_recv, run_id, &debug_controller)
+                .await;
+
             debug_controller
                 .finish()
                 .unwrap_or_else(|e| warn!("Error finishing debug data set: {:?}", e));
@@ -289,7 +285,7 @@ impl Suite {
     }
 }
 
-async fn run_single_suite(
+pub(crate) async fn run_single_suite(
     suite: Suite,
     debug_controller: &ftest_internal::DebugDataSetControllerProxy,
     instance_name: &str,
@@ -300,16 +296,44 @@ async fn run_single_suite(
     let mut maybe_instance = None;
     let mut realm_moniker = None;
 
-    let Suite { test_url, options, mut controller, resolver, above_root_capabilities_for_test } =
-        suite;
+    let Suite {
+        test_url,
+        options,
+        mut controller,
+        resolver,
+        above_root_capabilities_for_test,
+        facets,
+    } = suite;
 
     let run_test_fut = async {
         inspect_node.set_execution_state(self_diagnostics::ExecutionState::GetFacets);
-        let facets = match facet::get_suite_facets(&test_url, &resolver).await {
-            Ok(facets) => facets,
-            Err(e) => {
-                sender.send(Err(e.into())).await.unwrap();
-                return;
+
+        let facets = match facets {
+            // Currently, all suites are passed in with unresolved facets by the
+            // SerialScheduler. ParallelScheduler will pass in Resolved facets
+            // once it is implemented.
+            facet::ResolveStatus::_Resolved(result) => {
+                match result {
+                    Ok(facets) => facets,
+
+                    // This error is reported here instead of when the error was
+                    // first encountered because here is where it has access to
+                    // the SuiteController protocol server (Suite::run_controller)
+                    // which can report the error back to the test_manager client
+                    Err(error) => {
+                        sender.send(Err(error.into())).await.unwrap();
+                        return;
+                    }
+                }
+            }
+            facet::ResolveStatus::Unresolved => {
+                match facet::get_suite_facets(&test_url, &resolver).await {
+                    Ok(facets) => facets,
+                    Err(error) => {
+                        sender.send(Err(error.into())).await.unwrap();
+                        return;
+                    }
+                }
             }
         };
         let realm_moniker_ref =

@@ -12,6 +12,7 @@ mod facet;
 mod resolver;
 mod run_events;
 mod running_suite;
+mod scheduler;
 mod self_diagnostics;
 mod test_manager_server;
 mod test_suite;

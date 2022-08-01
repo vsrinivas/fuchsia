@@ -19,6 +19,11 @@ pub(crate) struct SuiteFacets {
     pub collection: &'static str,
 }
 
+pub(crate) enum ResolveStatus {
+    Unresolved,
+    _Resolved(Result<SuiteFacets, LaunchTestError>),
+}
+
 pub(crate) async fn get_suite_facets(
     test_url: &str,
     resolver: &fresolution::ResolverProxy,
