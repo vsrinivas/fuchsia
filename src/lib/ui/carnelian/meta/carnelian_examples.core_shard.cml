@@ -19,9 +19,10 @@
             to: "#carnelian-examples",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
             to: "#carnelian-examples",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.sysmem.Allocator",

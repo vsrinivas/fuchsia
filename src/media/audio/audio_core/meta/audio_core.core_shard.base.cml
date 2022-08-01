@@ -39,10 +39,10 @@
             to: "#audio_core",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "self",
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
             to: "#audio_core",
-            dependency: "weak_for_migration",
+            source_availability: "unknown",
         },
         {
             protocol: [

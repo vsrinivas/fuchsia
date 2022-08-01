@@ -56,9 +56,9 @@
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
-            from: "self",
+            from: "#trace_manager",
             to: "#setui_service",
-            dependency: "weak_for_migration",
+            source_availability: "unknown",
         },
         {
             protocol: [

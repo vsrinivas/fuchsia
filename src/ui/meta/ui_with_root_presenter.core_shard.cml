@@ -63,12 +63,15 @@
             to: "#ui",
         },
         {
-            protocol: [
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: "fuchsia.intl.PropertyProvider",
             from: "self",
             to: "#ui",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#ui",
+            source_availability: "unknown",
         },
         {
             protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],

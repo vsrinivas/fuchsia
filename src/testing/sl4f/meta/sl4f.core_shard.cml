@@ -205,6 +205,7 @@
             ],
             from: "#trace_manager",
             to: [ "#sl4f" ],
+            source_availability: "unknown",
         },
         {
             protocol: [ "fuchsia.media.ProfileProvider" ],
