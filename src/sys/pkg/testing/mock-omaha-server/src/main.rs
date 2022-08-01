@@ -13,7 +13,7 @@ use {
         service::{make_service_fn, service_fn},
     },
     mock_omaha_server::{
-        handle_omaha_request, OmahaServerBuilder, PrivateKeyAndId, PrivateKeys, ResponseAndMetadata,
+        handle_request, OmahaServerBuilder, PrivateKeyAndId, PrivateKeys, ResponseAndMetadata,
     },
     parking_lot::Mutex,
     std::{
@@ -163,7 +163,7 @@ async fn main() -> Result<(), anyhow::Error> {
             Ok::<_, Infallible>(service_fn(move |req| {
                 println!("received req: {req:?}");
                 let arc_server = Arc::clone(&arc_server);
-                async move { handle_omaha_request(req, &*arc_server).await }
+                async move { handle_request(req, &*arc_server).await }
             }))
         }
     });

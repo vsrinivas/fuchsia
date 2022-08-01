@@ -158,7 +158,7 @@ impl OmahaServer {
             async move {
                 Ok::<_, Infallible>(service_fn(move |req| {
                     let arc_server = Arc::clone(&arc_server);
-                    async move { handle_omaha_request(req, &*arc_server).await }
+                    async move { handle_request(req, &*arc_server).await }
                 }))
             }
         });
@@ -212,12 +212,40 @@ fn make_etag(
     ))
 }
 
+pub async fn handle_request(
+    req: Request<Body>,
+    omaha_server: &Mutex<OmahaServer>,
+) -> Result<Response<Body>, Error> {
+    if req.uri().path() == "/set_responses_by_appid" {
+        return handle_set_responses(req, omaha_server).await;
+    }
+
+    return handle_omaha_request(req, omaha_server).await;
+}
+
+pub async fn handle_set_responses(
+    req: Request<Body>,
+    omaha_server: &Mutex<OmahaServer>,
+) -> Result<Response<Body>, Error> {
+    assert_eq!(req.method(), Method::POST);
+
+    let req_body = hyper::body::to_bytes(req).await?;
+    let req_json: HashMap<String, ResponseAndMetadata> =
+        serde_json::from_slice(&req_body).expect("parse json");
+    {
+        let mut omaha_server = omaha_server.lock();
+        omaha_server.responses_by_appid = req_json;
+    }
+
+    let builder = Response::builder().status(StatusCode::OK).header(header::CONTENT_LENGTH, 0);
+    Ok(builder.body(Body::empty()).unwrap())
+}
+
 pub async fn handle_omaha_request(
     req: Request<Body>,
     omaha_server: &Mutex<OmahaServer>,
 ) -> Result<Response<Body>, Error> {
     let omaha_server = omaha_server.lock().clone();
-
     assert_eq!(req.method(), Method::POST);
 
     let uri_string = req.uri().to_string();
@@ -400,7 +428,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_server_replies() -> Result<(), Error> {
-        let server = OmahaServer::start(Arc::new(Mutex::new(
+        let server_url = OmahaServer::start(Arc::new(Mutex::new(
             OmahaServerBuilder::default()
                 .responses_by_appid([
                     (
@@ -425,39 +453,95 @@ mod tests {
         )))
         .context("starting server")?;
 
-        let client = fuchsia_hyper::new_client();
-        let body = json!({
-            "request": {
-                "app": [
-                    {
-                        "appid": "integration-test-appid-1",
-                        "version": "0.0.0.1",
-                        "updatecheck": { "updatedisabled": false }
-                    },
-                    {
-                        "appid": "integration-test-appid-2",
-                        "version": "0.0.0.2",
-                        "updatecheck": { "updatedisabled": false }
-                    },
-                ]
+        {
+            let client = fuchsia_hyper::new_client();
+            let body = json!({
+                "request": {
+                    "app": [
+                        {
+                            "appid": "integration-test-appid-1",
+                            "version": "0.0.0.1",
+                            "updatecheck": { "updatedisabled": false }
+                        },
+                        {
+                            "appid": "integration-test-appid-2",
+                            "version": "0.0.0.2",
+                            "updatecheck": { "updatedisabled": false }
+                        },
+                    ]
+                }
+            });
+            let request = Request::post(&server_url).body(Body::from(body.to_string())).unwrap();
+
+            let response = client.request(request).await?;
+
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = hyper::body::to_bytes(response).await.context("reading response body")?;
+            let obj: serde_json::Value =
+                serde_json::from_slice(&body).context("parsing response json")?;
+
+            let response = obj.get("response").unwrap();
+            let apps = response.get("app").unwrap().as_array().unwrap();
+            assert_eq!(apps.len(), 2);
+            for app in apps {
+                let status = app.get("updatecheck").unwrap().get("status").unwrap();
+                assert_eq!(status, "noupdate");
             }
-        });
-        let request = Request::post(server).body(Body::from(body.to_string())).unwrap();
-
-        let response = client.request(request).await?;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = hyper::body::to_bytes(response).await.context("reading response body")?;
-        let obj: serde_json::Value =
-            serde_json::from_slice(&body).context("parsing response json")?;
-
-        let response = obj.get("response").unwrap();
-        let apps = response.get("app").unwrap().as_array().unwrap();
-        assert_eq!(apps.len(), 2);
-        for app in apps {
-            let status = app.get("updatecheck").unwrap().get("status").unwrap();
-            assert_eq!(status, "noupdate");
         }
+
+        {
+            // change the expected responses; now we only configure one app,
+            // 'integration-test-appid-1', which will respond with an update.
+            let body = json!({
+                "integration-test-appid-1": {
+                    "response": "Update",
+                    "merkle": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                    "check_assertion": "UpdatesEnabled",
+                    "version": "0.0.0.1",
+                    "codebase": "fuchsia-pkg://integration.test.fuchsia.com/",
+                    "package_path": "update",
+                }
+            });
+            let request = Request::post(format!("{server_url}set_responses_by_appid"))
+                .body(Body::from(body.to_string()))
+                .unwrap();
+            let client = fuchsia_hyper::new_client();
+            let response = client.request(request).await?;
+            assert_eq!(response.status(), StatusCode::OK);
+        }
+
+        {
+            let body = json!({
+                "request": {
+                    "app": [
+                        {
+                            "appid": "integration-test-appid-1",
+                            "version": "0.0.0.1",
+                            "updatecheck": { "updatedisabled": false }
+                        },
+                    ]
+                }
+            });
+            let request = Request::post(&server_url).body(Body::from(body.to_string())).unwrap();
+
+            let client = fuchsia_hyper::new_client();
+            let response = client.request(request).await?;
+
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = hyper::body::to_bytes(response).await.context("reading response body")?;
+            let obj: serde_json::Value =
+                serde_json::from_slice(&body).context("parsing response json")?;
+
+            let response = obj.get("response").unwrap();
+            let apps = response.get("app").unwrap().as_array().unwrap();
+            assert_eq!(apps.len(), 1);
+            for app in apps {
+                let status = app.get("updatecheck").unwrap().get("status").unwrap();
+                // We configured 'integration-test-appid-1' to respond with an update.
+                assert_eq!(status, "ok");
+            }
+        }
+
         Ok(())
     }
 }
