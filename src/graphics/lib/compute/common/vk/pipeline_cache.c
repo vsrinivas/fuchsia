@@ -94,7 +94,7 @@ vk_pipeline_cache_create(VkDevice                      device,
 
   VkResult vk_res = vkCreatePipelineCache(device, &pipeline_cache_info, allocator, pipeline_cache);
 
-  free(data);
+  free(data);  // Doesn't matter if data is NULL
 
   return vk_res;
 }
@@ -140,10 +140,10 @@ vk_pipeline_cache_destroy(VkDevice                      device,
                 {
                   VK_PIPELINE_CACHE_DEBUG("%s : couldn't open file \"%s\"\n", __func__, name);
                 }
-
-              free(data);
             }
         }
+
+      free(data);  // Doesn't matter if data is NULL
     }
 
   vkDestroyPipelineCache(device, pipeline_cache, allocator);
