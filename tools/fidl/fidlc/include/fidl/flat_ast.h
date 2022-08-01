@@ -291,7 +291,7 @@ struct TypeConstraints;
 // store a Reference. In the case where the type constructor represents an
 // anonymous layout, the data of the anonymous layout is consumed and stored in
 // the library and the corresponding type constructor contains a Reference
-// whose name has is_anonymous=true and a span covering the anonymous layout.
+// whose name has AnonymousNameContext and a span covering the anonymous layout.
 //
 // This allows all type compilation to share the code paths through the consume
 // step (i.e. RegisterDecl) and the compilation step (i.e. Typespace::Create),
