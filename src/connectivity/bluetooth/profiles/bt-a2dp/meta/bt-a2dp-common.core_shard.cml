@@ -46,7 +46,7 @@
         {
             protocol: "fuchsia.media.AudioDeviceEnumerator",
             from: "#audio_core",
-            to: [ "#bt-a2dp" ],
+            to: "#bt-a2dp",
         },
         {
             protocol: "fuchsia.bluetooth.bredr.Profile",
@@ -72,6 +72,12 @@
             protocol: "fuchsia.mediacodec.CodecFactory",
             from: "#codec_factory",
             to: "#bt-a2dp",
+        },
+        {
+            protocol: "fuchsia.power.battery.BatteryManager",
+            from: "#battery_manager",
+            to: "#bt-a2dp",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.bluetooth.a2dp.AudioMode",

@@ -4,8 +4,8 @@ A library for interacting with the Fuchsia Battery Manager.
 
 ## Build
 
-Make sure to include the `client.shard.cml` in your component's manifest. This will route the
-`fuchsia.power.battery.BatteryManager` capability to your component.
+This library depends on the `fuchsia.power.battery.BatteryManager` capability. Make sure it is
+routed to your component.
 
 ## Testing
 

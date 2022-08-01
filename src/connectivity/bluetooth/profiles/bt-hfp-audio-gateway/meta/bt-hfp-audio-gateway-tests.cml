@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/connectivity/bluetooth/lib/battery-client/meta/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",

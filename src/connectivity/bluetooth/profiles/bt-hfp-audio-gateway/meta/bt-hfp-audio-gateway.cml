@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/connectivity/bluetooth/lib/battery-client/meta/client.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -32,6 +31,10 @@
                 "fuchsia.media.AudioDeviceEnumerator",
             ],
             from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.power.battery.BatteryManager" ],
+            availability: "optional",
         },
     ],
     expose: [

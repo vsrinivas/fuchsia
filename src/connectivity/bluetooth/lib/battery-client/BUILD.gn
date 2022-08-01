@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//tools/cmc/build/expect_includes.gni")
 
 rustc_library("battery-client") {
   edition = "2021"
@@ -12,7 +11,6 @@ rustc_library("battery-client") {
   with_unit_tests = true
 
   deps = [
-    ":battery_client_includes",
     "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
@@ -37,10 +35,6 @@ rustc_library("battery-client") {
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
-}
-
-expect_includes("battery_client_includes") {
-  includes = [ "meta/client.shard.cml" ]
 }
 
 fuchsia_unittest_package("battery-client-tests") {

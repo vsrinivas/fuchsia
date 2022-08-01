@@ -39,6 +39,12 @@
             to: [ "#bt-hfp-audio-gateway" ],
         },
         {
+            protocol: [ "fuchsia.power.battery.BatteryManager" ],
+            from: "#battery_manager",
+            to: "#bt-hfp-audio-gateway",
+            source_availability: "unknown",
+        },
+        {
             protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
             from: "#bt-hfp-audio-gateway",
             to: "#session-manager",
