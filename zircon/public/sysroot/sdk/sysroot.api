@@ -236,7 +236,7 @@
   "include/zircon/syscalls/scheduler.h": "3746b1f7ac54ad8652cc3cedc80ecfcc",
   "include/zircon/syscalls/smc.h": "3e9718911d322b84c31fb74920416f5e",
   "include/zircon/syscalls/system.h": "97a11153a706b0d883a3a0942bfddacb",
-  "include/zircon/syscalls/types.h": "2486f00253fe454abcce12868b7566ab",
+  "include/zircon/syscalls/types.h": "81aab0206278bb9e86cf043c8ad6bacc",
   "include/zircon/testonly-syscalls.h": "a5e34a29034182a9af62963a44359124",
   "include/zircon/threads.h": "0e01c22126479fb344bddd7d924cff0e",
   "include/zircon/time.h": "61c8aac18e1c19c1b8fa58a4e67b9468",
