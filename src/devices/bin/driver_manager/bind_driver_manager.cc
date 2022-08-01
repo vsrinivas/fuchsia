@@ -23,8 +23,8 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
     return BindDriverToFragment(std::get<MatchedCompositeDriverInfo>(driver), dev);
   }
 
-  if (std::holds_alternative<MatchedDeviceGroupInfo>(driver)) {
-    return BindDriverToDeviceGroup(std::get<MatchedDeviceGroupInfo>(driver), dev);
+  if (std::holds_alternative<MatchedDeviceGroupNodeInfo>(driver)) {
+    return BindDriverToDeviceGroup(std::get<MatchedDeviceGroupNodeInfo>(driver), dev);
   }
 
   if (!std::holds_alternative<MatchedDriverInfo>(driver)) {
@@ -282,16 +282,11 @@ zx_status_t BindDriverManager::MatchAndBindDeviceGroup(const fbl::RefPtr<Device>
 
   auto matched_drivers = std::move(result.value());
   for (auto driver : matched_drivers) {
-    if (!std::holds_alternative<MatchedDeviceGroupInfo>(driver)) {
+    if (!std::holds_alternative<MatchedDeviceGroupNodeInfo>(driver)) {
       continue;
     }
 
-    auto device_group = std::get<MatchedDeviceGroupInfo>(driver);
-    if (device_group.topological_path.compare(std::string(topological_path)) != 0) {
-      continue;
-    }
-
-    zx_status_t status = BindDriverToDeviceGroup(device_group, dev);
+    zx_status_t status = BindDriverToDeviceGroup(std::get<MatchedDeviceGroupNodeInfo>(driver), dev);
 
     // If we get this here it means we've successfully bound one driver
     // and the device isn't multi-bind.
@@ -309,14 +304,7 @@ zx_status_t BindDriverManager::BindDriverToFragment(const MatchedCompositeDriver
   // it doesn't, create and add a new CompositeDevice.
   std::string name(driver.driver_info.driver->libname.c_str());
   if (driver_index_composite_devices_.count(name) == 0) {
-    std::unique_ptr<CompositeDevice> composite_dev;
-    zx_status_t status = CompositeDevice::CreateFromDriverIndex(driver, &composite_dev);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to create CompositeDevice from DriverIndex: %s",
-           zx_status_get_string(status));
-      return status;
-    }
-    driver_index_composite_devices_[name] = std::move(composite_dev);
+    driver_index_composite_devices_[name] = CompositeDevice::CreateFromDriverIndex(driver);
   }
 
   // Bind the matched fragment to the device.
@@ -329,8 +317,19 @@ zx_status_t BindDriverManager::BindDriverToFragment(const MatchedCompositeDriver
   return status;
 }
 
-zx_status_t BindDriverManager::BindDriverToDeviceGroup(const MatchedDeviceGroupInfo& device_group,
+zx_status_t BindDriverManager::BindDriverToDeviceGroup(const MatchedDeviceGroupNodeInfo& node_info,
                                                        const fbl::RefPtr<Device>& dev) {
+  if (node_info.groups.empty()) {
+    LOGF(ERROR, "Missing device groups in MatchedDeviceGroupNodeInfo");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (node_info.groups.size() > 1) {
+    LOGF(WARNING,
+         "Multiple device groups in MatchedDeviceGroupNodeInfo found. Only one will be used");
+  }
+
+  auto device_group = node_info.groups.at(0);
   auto path = std::string(device_group.topological_path);
   if (device_groups_.count(path) == 0) {
     return ZX_ERR_NOT_FOUND;

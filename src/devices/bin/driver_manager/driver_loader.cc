@@ -78,60 +78,6 @@ zx::status<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::Mat
   return zx::ok(driver.driver());
 }
 
-MatchedCompositeDevice CreateMatchedCompositeDevice(
-    fdi::wire::MatchedCompositeInfo composite_info) {
-  MatchedCompositeDevice composite = {};
-  if (composite_info.has_num_nodes()) {
-    composite.num_nodes = composite_info.num_nodes();
-  }
-
-  if (composite_info.has_node_index()) {
-    composite.node = composite_info.node_index();
-  }
-
-  if (composite_info.has_composite_name()) {
-    composite.name =
-        std::string(composite_info.composite_name().data(), composite_info.composite_name().size());
-  }
-
-  if (composite_info.has_node_names()) {
-    std::vector<std::string> names;
-    for (auto& name : composite_info.node_names()) {
-      names.push_back(std::string(name.data(), name.size()));
-    }
-    composite.node_names = std::move(names);
-  }
-
-  return composite;
-}
-
-zx::status<MatchedDeviceGroupInfo> CreateMatchedDeviceGroupInfo(
-    fdi::wire::MatchedDeviceGroupNodeInfo device_group_node_info) {
-  // Currently we only support only one device group in the list.
-  // TODO(fxb/103208): Update the DFv1 device group implementation so it
-  // can handle multiple device groups.
-  if (!device_group_node_info.has_device_groups() ||
-      device_group_node_info.device_groups().count() != 1) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  auto device_group = device_group_node_info.device_groups().at(0);
-
-  if (!device_group.has_topological_path()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  if (!device_group.has_node_index()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  return zx::ok(MatchedDeviceGroupInfo{
-      .topological_path = std::string(device_group.topological_path().data(),
-                                      device_group.topological_path().size()),
-      .node_index = device_group.node_index(),
-  });
-}
-
 bool ShouldUseUniversalResolver(fdi::wire::DriverPackageType package_type) {
   return package_type == fdi::wire::DriverPackageType::kUniverse ||
          package_type == fdi::wire::DriverPackageType::kCached;
@@ -405,14 +351,14 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
 
   for (auto driver : drivers) {
     if (driver.is_device_group_node()) {
-      auto device_group = CreateMatchedDeviceGroupInfo(driver.device_group_node());
-      if (device_group.is_error()) {
+      auto device_group_info = CreateMatchedDeviceGroupNodeInfo(driver.device_group_node());
+      if (device_group_info.is_error()) {
         LOGF(ERROR,
              "DriverIndex: MatchDriverV1 response is missing fields in MatchedDeviceGroupInfo");
         continue;
       }
 
-      matched_drivers.push_back(device_group.value());
+      matched_drivers.push_back(device_group_info.value());
       continue;
     }
 

@@ -39,8 +39,7 @@ class DeviceGroupManager {
   // Receives this call from CompositeManagerBridge when a device/node is matched to a device group
   // node. DeviceGroupManager will go through the list of device groups until it finds one with
   // the node unbound.
-  zx::status<> BindDeviceGroupNode(std::vector<MatchedDeviceGroupInfo> matched_groups,
-                                   DeviceOrNode node);
+  zx::status<> BindDeviceGroupNode(MatchedDeviceGroupNodeInfo match_info, DeviceOrNode node);
 
   // Exposed for testing only.
   const DeviceGroupMap& device_groups() const { return device_groups_; }

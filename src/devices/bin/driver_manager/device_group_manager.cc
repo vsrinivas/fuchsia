@@ -67,10 +67,10 @@ zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(fdf::wire::DeviceGroup
   return zx::ok();
 }
 
-zx::status<> DeviceGroupManager::BindDeviceGroupNode(
-    std::vector<MatchedDeviceGroupInfo> matched_groups, DeviceOrNode node) {
+zx::status<> DeviceGroupManager::BindDeviceGroupNode(MatchedDeviceGroupNodeInfo match_info,
+                                                     DeviceOrNode node) {
   // Go through each device group until we find an available one with an unbound node.
-  for (auto device_group_info : matched_groups) {
+  for (auto device_group_info : match_info.groups) {
     auto& device_group = device_groups_[device_group_info.topological_path];
     if (!device_group) {
       LOGF(ERROR, "Missing device group: %d", ZX_ERR_INTERNAL);

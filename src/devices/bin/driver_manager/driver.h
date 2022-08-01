@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/fit/function.h>
@@ -42,8 +43,18 @@ struct MatchedDeviceGroupInfo {
   uint32_t node_index;
 };
 
+struct MatchedDeviceGroupNodeInfo {
+  std::vector<MatchedDeviceGroupInfo> groups;
+};
+
 using MatchedDriver =
-    std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo, MatchedDeviceGroupInfo>;
+    std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo, MatchedDeviceGroupNodeInfo>;
+
+MatchedCompositeDevice CreateMatchedCompositeDevice(
+    fuchsia_driver_index::wire::MatchedCompositeInfo composite_info);
+
+zx::status<MatchedDeviceGroupNodeInfo> CreateMatchedDeviceGroupNodeInfo(
+    fuchsia_driver_index::wire::MatchedDeviceGroupNodeInfo fidl_info);
 
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;

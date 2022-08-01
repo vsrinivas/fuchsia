@@ -168,8 +168,8 @@ zx::status<std::unique_ptr<CompositeDevice>> CompositeDevice::CreateForDeviceGro
   return zx::ok(std::move(dev));
 }
 
-zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedCompositeDriverInfo driver,
-                                                   std::unique_ptr<CompositeDevice>* out) {
+std::unique_ptr<CompositeDevice> CompositeDevice::CreateFromDriverIndex(
+    MatchedCompositeDriverInfo driver) {
   fbl::String name(driver.composite.name);
   auto dev = std::make_unique<CompositeDevice>(
       std::move(name), fbl::Array<const zx_device_prop_t>(), fbl::Array<const StrProperty>(),
@@ -183,9 +183,7 @@ zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedCompositeDriverInfo dr
     dev->unbound_fragments_.push_back(std::move(fragment));
   }
   dev->driver_index_driver_ = driver.driver_info.driver;
-
-  *out = std::move(dev);
-  return ZX_OK;
+  return dev;
 }
 
 bool CompositeDevice::IsFragmentMatch(const fbl::RefPtr<Device>& dev, size_t* index_out) const {

@@ -91,7 +91,7 @@ class BindDriverManager {
   zx_status_t BindDriverToFragment(const MatchedCompositeDriverInfo& driver,
                                    const fbl::RefPtr<Device>& dev);
 
-  zx_status_t BindDriverToDeviceGroup(const MatchedDeviceGroupInfo& device_group,
+  zx_status_t BindDriverToDeviceGroup(const MatchedDeviceGroupNodeInfo& device_group,
                                       const fbl::RefPtr<Device>& dev);
 
   // Owner. Must outlive BindDriverManager.
