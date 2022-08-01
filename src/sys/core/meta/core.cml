@@ -350,6 +350,13 @@
             to: "#pkg-resolver",
         },
         {
+            // This capability is only offered to pkg-resolver in test scenarios
+            protocol: "fuchsia.pkg.LocalMirror",
+            from: "void",
+            to: "#pkg-resolver",
+            availability: "optional",
+        },
+        {
             storage: "data",
             from: "self",
             to: "#pkg-resolver",

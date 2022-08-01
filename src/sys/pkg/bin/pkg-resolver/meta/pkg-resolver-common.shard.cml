@@ -28,10 +28,14 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.pkg.LocalMirror",
                 "fuchsia.pkg.PackageCache",
             ],
             from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.pkg.LocalMirror" ],
+            from: "parent",
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],

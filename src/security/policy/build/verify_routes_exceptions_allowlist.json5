@@ -474,23 +474,6 @@
                     },
                 },
                 {
-                    capability: "fuchsia.pkg.LocalMirror",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        capability_id: "fuchsia.pkg.LocalMirror",
-                                        moniker: "/core/pkg-resolver",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/pkg-resolver` for `fuchsia.pkg.LocalMirror`, but no matching `offer` declaration was found in the parent",
-                    },
-                    using_node: "/core/pkg-resolver",
-                },
-                {
                     capability: "fuchsia.pkg.PackageCache",
                     error: {
                         error: {
