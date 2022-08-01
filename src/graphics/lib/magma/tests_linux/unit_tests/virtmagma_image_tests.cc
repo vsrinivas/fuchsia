@@ -10,6 +10,23 @@
 
 #include "drm_fourcc.h"
 
+// Copied from vulkan_core.h
+typedef enum VkImageUsageFlagBits {
+  VK_IMAGE_USAGE_TRANSFER_SRC_BIT = 0x00000001,
+  VK_IMAGE_USAGE_TRANSFER_DST_BIT = 0x00000002,
+  VK_IMAGE_USAGE_SAMPLED_BIT = 0x00000004,
+  VK_IMAGE_USAGE_STORAGE_BIT = 0x00000008,
+  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010,
+  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020,
+  VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
+  VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
+  VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV = 0x00000100,
+  VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT = 0x00000200,
+  VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR =
+      VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV,
+  VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM = 0x7FFFFFFF
+} VkImageUsageFlagBits;
+
 class MagmaImageTest : public ::testing::Test {
  public:
   static constexpr bool kDirectToDisplaySupported = false;
@@ -147,7 +164,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
     close(fd);
   }
 
-  void ImportExportTest(uint32_t flags, uint64_t specified_modifier, uint64_t expected_modifier) {
+  void ImportExportTest(uint64_t flags, uint64_t specified_modifier, uint64_t expected_modifier) {
     int fd = 0;
 
     {
@@ -220,30 +237,41 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
 };
 
 TEST_P(MagmaImageTestFormats, ImportExportLinear) {
-  constexpr uint32_t kFlags = 0;
+  constexpr uint64_t kFlags = 0;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_LINEAR;
   constexpr uint64_t kExpectedModifier = DRM_FORMAT_MOD_LINEAR;
   ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
 TEST_P(MagmaImageTestFormats, ImportExportPresentableLinear) {
-  constexpr uint32_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
+  constexpr uint64_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_LINEAR;
   constexpr uint64_t kExpectedModifier = DRM_FORMAT_MOD_LINEAR;
   ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
 TEST_P(MagmaImageTestFormats, ImportExportIntel) {
-  constexpr uint32_t kFlags = 0;
+  constexpr uint64_t kFlags = 0;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_INVALID;
   constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED_CCS;
   ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
 TEST_P(MagmaImageTestFormats, ImportExportPresentableIntel) {
-  constexpr uint32_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
+  constexpr uint64_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_INVALID;
   constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED;
+  ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
+}
+
+TEST_P(MagmaImageTestFormats, ImportExportWithUsageIntel) {
+  constexpr uint64_t kFlags =
+      (static_cast<uint64_t>(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+       << 32) |
+      MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE;
+  constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_INVALID;
+  constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED_CCS;
   ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 

@@ -8,6 +8,7 @@ use fidl_fuchsia_sysmem as fsysmem;
 use fidl_fuchsia_ui_composition as fuicomp;
 use fuchsia_component::client::connect_channel_to_protocol;
 use fuchsia_image_format::*;
+use fuchsia_vulkan::*;
 use fuchsia_zircon as zx;
 use magma::*;
 use vk_sys as vk;
@@ -96,6 +97,64 @@ pub fn create_drm_image(
 
     let loader = Loader::new(physical_device_index).map_err(|_| MAGMA_STATUS_INVALID_ARGS)?;
 
+    let mut vk_format_features = 0 as vk::FormatFeatureFlagBits;
+    let mut vk_usage = 0 as vk::ImageUsageFlagBits;
+
+    if (flags & MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE) != 0 {
+        // Use the Vulkan usage as provided by the client.
+        vk_usage = (create_info.flags >> 32) as vk::ImageUsageFlagBits;
+
+        if (vk_usage & vk::IMAGE_USAGE_TRANSFER_SRC_BIT) != 0 {
+            vk_format_features |= vk::FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR;
+        }
+        if (vk_usage & vk::IMAGE_USAGE_TRANSFER_DST_BIT) != 0 {
+            vk_format_features |= vk::FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+        }
+        if (vk_usage & vk::IMAGE_USAGE_SAMPLED_BIT) != 0 {
+            vk_format_features |= vk::FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+        }
+        if (vk_usage & vk::IMAGE_USAGE_STORAGE_BIT) != 0 {
+            vk_format_features |= vk::FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+        }
+        if (vk_usage & vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0 {
+            vk_format_features |= vk::FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+        }
+        if (vk_usage & vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0 {
+            vk_format_features |= vk::FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        }
+    } else {
+        // If linear isn't requested, assume we'll get a tiled format modifier.
+        let is_linear_tiling =
+            sysmem_modifiers.len() == 1 && sysmem_modifiers[0] == fsysmem::FORMAT_MODIFIER_LINEAR;
+
+        vk_format_features = loader.get_format_features(vk_format, is_linear_tiling);
+
+        // For non-ICD clients like GBM, the client API has no fine grained usage.
+        // To maximize compatibility, we pass as many usages as make sense given the format features.
+        if (vk_format_features & vk::FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR) != 0 {
+            vk_usage |= vk::IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
+        if (vk_format_features & vk::FORMAT_FEATURE_TRANSFER_DST_BIT_KHR) != 0 {
+            vk_usage |= vk::IMAGE_USAGE_TRANSFER_DST_BIT;
+        }
+        if (vk_format_features & vk::FORMAT_FEATURE_SAMPLED_IMAGE_BIT) != 0 {
+            vk_usage |= vk::IMAGE_USAGE_SAMPLED_BIT;
+        }
+        if (vk_format_features & vk::FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0 {
+            vk_usage |= vk::IMAGE_USAGE_STORAGE_BIT;
+        }
+        if (vk_format_features & vk::FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) != 0 {
+            vk_usage |= vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            vk_usage |= vk::IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        }
+        if (vk_format_features & vk::FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0 {
+            vk_usage |= vk::IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            vk_usage |= vk::IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        }
+        // No format features apply here.
+        vk_usage |= vk::IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    };
+
     // TODO: verify physical device limits
     let scenic_allocator =
         if use_scenic { Some(init_scenic().map_err(|_| MAGMA_STATUS_INVALID_ARGS)?) } else { None };
@@ -111,16 +170,45 @@ pub fn create_drm_image(
         arrayLayers: 1,
         samples: vk::SAMPLE_COUNT_1_BIT,
         tiling: vk::IMAGE_TILING_OPTIMAL,
-        usage: vk::IMAGE_USAGE_TRANSFER_SRC_BIT
-            | vk::IMAGE_USAGE_TRANSFER_DST_BIT
-            | vk::IMAGE_USAGE_SAMPLED_BIT
-            | vk::IMAGE_USAGE_STORAGE_BIT
-            | vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-            | vk::IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+        usage: vk_usage,
         sharingMode: vk::SHARING_MODE_EXCLUSIVE,
         queueFamilyIndexCount: 0,
         pQueueFamilyIndices: std::ptr::null(),
         initialLayout: vk::IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    let rgb_color_space = SysmemColorSpaceFUCHSIA {
+        sType: STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA,
+        pNext: std::ptr::null(),
+        colorSpace: fsysmem::ColorSpaceType::Srgb as u32,
+    };
+
+    let format_info = ImageFormatConstraintsInfoFUCHSIA {
+        sType: STRUCTURE_TYPE_IMAGE_FORMAT_CONSTRAINTS_INFO_FUCHSIA,
+        pNext: std::ptr::null(),
+        imageCreateInfo: image_create_info,
+        requiredFormatFeatures: vk_format_features,
+        flags: 0,
+        sysmemPixelFormat: 0,
+        colorSpaceCount: 1,
+        pColorSpaces: &rgb_color_space,
+    };
+
+    let image_constraints = ImageConstraintsInfoFUCHSIA {
+        sType: STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIA,
+        pNext: std::ptr::null(),
+        formatConstraintsCount: 1,
+        pFormatConstraints: &format_info,
+        bufferCollectionConstraints: BufferCollectionConstraintsInfoFUCHSIA {
+            sType: STRUCTURE_TYPE_BUFFER_COLLECTION_CONSTRAINTS_INFO_FUCHSIA,
+            pNext: std::ptr::null(),
+            minBufferCount: 1,
+            maxBufferCount: 1,
+            minBufferCountForCamping: 0,
+            minBufferCountForDedicatedSlack: 0,
+            minBufferCountForSharedSlack: 0,
+        },
+        flags: 0,
     };
 
     let (tokens, sysmem_allocator) =
@@ -128,7 +216,8 @@ pub fn create_drm_image(
 
     let (scenic_import_token, buffer_collection) = loader
         .create_collection(
-            &image_create_info,
+            vk::Extent2D { width: create_info.width, height: create_info.height },
+            &image_constraints,
             sysmem_format,
             &sysmem_modifiers,
             tokens,

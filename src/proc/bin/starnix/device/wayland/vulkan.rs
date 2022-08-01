@@ -139,7 +139,7 @@ impl Loader {
             pQueuePriorities: &0.0,
         };
 
-        let extension_name: Vec<u8> = b"VK_FUCHSIA_buffer_collection_x".to_vec();
+        let extension_name: Vec<u8> = b"VK_FUCHSIA_buffer_collection".to_vec();
         let device_extensions = vec![extension_name.as_ptr() as *const i8];
         let device_create_info = vk::DeviceCreateInfo {
             sType: vk::STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -175,13 +175,38 @@ impl Loader {
         })
     }
 
+    pub fn get_format_features(
+        &self,
+        format: vk::Format,
+        linear_tiling: bool,
+    ) -> vk::FormatFeatureFlags {
+        let mut format_properties = vk::FormatProperties {
+            linearTilingFeatures: 0,
+            optimalTilingFeatures: 0,
+            bufferFeatures: 0,
+        };
+        unsafe {
+            self.instance_pointers.GetPhysicalDeviceFormatProperties(
+                self._physical_device,
+                format,
+                &mut format_properties,
+            );
+        }
+        if linear_tiling {
+            format_properties.linearTilingFeatures
+        } else {
+            format_properties.optimalTilingFeatures
+        }
+    }
+
     /// Creates a new `BufferCollection` and returns the image import endpoint for the collection,
     /// as well as an active proxy to the collection.
     ///
     /// Returns an error if creating the collection fails.
     pub fn create_collection(
         &self,
-        image_create_info: &vk::ImageCreateInfo,
+        extent: vk::Extent2D,
+        image_constraints_info: &ImageConstraintsInfoFUCHSIA,
         pixel_format: fsysmem::PixelFormatType,
         modifiers: &[u64],
         tokens: BufferCollectionTokens,
@@ -206,7 +231,7 @@ impl Loader {
 
         let mut collection: BufferCollectionFUCHSIA = 0;
         let result = unsafe {
-            vk_ext.CreateBufferCollectionFUCHSIAX(
+            vk_ext.CreateBufferCollectionFUCHSIA(
                 self.device,
                 &BufferCollectionCreateInfoFUCHSIA {
                     sType: STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA,
@@ -222,17 +247,11 @@ impl Loader {
         }
         assert!(collection != 0);
 
-        let mut image_constraints_info = ImageConstraintsInfoFUCHSIAX::default();
-        image_constraints_info.createInfoCount = 1;
-        image_constraints_info.pCreateInfos = image_create_info;
-        image_constraints_info.minBufferCount = 1;
-        image_constraints_info.maxBufferCount = 1;
-
         let result = unsafe {
-            vk_ext.SetBufferCollectionImageConstraintsFUCHSIAX(
+            vk_ext.SetBufferCollectionImageConstraintsFUCHSIA(
                 self.device,
                 collection,
-                &mut image_constraints_info as *mut ImageConstraintsInfoFUCHSIAX,
+                image_constraints_info as *const ImageConstraintsInfoFUCHSIA,
             )
         };
         if result != vk::SUCCESS {
@@ -251,12 +270,13 @@ impl Loader {
 
         let mut constraints = buffer_collection_constraints();
         constraints.image_format_constraints_count = modifiers.len() as u32;
+
         for (index, modifier) in modifiers.iter().enumerate() {
             let mut image_constraints = fsysmem::ImageFormatConstraints {
-                min_coded_width: image_create_info.extent.width,
-                min_coded_height: image_create_info.extent.height,
-                max_coded_width: image_create_info.extent.width,
-                max_coded_height: image_create_info.extent.height,
+                min_coded_width: extent.width,
+                min_coded_height: extent.height,
+                max_coded_width: extent.width,
+                max_coded_height: extent.height,
                 min_bytes_per_row: 0,
                 color_spaces_count: 1,
                 ..IMAGE_FORMAT_CONSTRAINTS_DEFAULT

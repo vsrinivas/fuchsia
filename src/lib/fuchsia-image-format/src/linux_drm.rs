@@ -12,6 +12,8 @@ pub fn drm_modifier_to_sysmem_modifier(modifier: u64) -> Result<u64, Error> {
         I915_FORMAT_MOD_X_TILED => Ok(fsysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED),
         I915_FORMAT_MOD_Y_TILED => Ok(fsysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED),
         I915_FORMAT_MOD_YF_TILED => Ok(fsysmem::FORMAT_MODIFIER_INTEL_I915_YF_TILED),
+        I915_FORMAT_MOD_Y_TILED_CCS => Ok(fsysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED_CCS),
+        I915_FORMAT_MOD_YF_TILED_CCS => Ok(fsysmem::FORMAT_MODIFIER_INTEL_I915_YF_TILED_CCS),
         _ => Err(anyhow!("Unsupported modifier.")),
     }
 }
@@ -48,10 +50,12 @@ pub fn drm_format_to_sysmem_format(drm_format: u32) -> Result<fsysmem::PixelForm
 
 pub fn sysmem_modifier_to_drm_modifier(modifier: u64) -> Result<u64, Error> {
     match modifier {
-        DRM_FORMAT_MOD_LINEAR
-        | I915_FORMAT_MOD_X_TILED
-        | I915_FORMAT_MOD_Y_TILED
-        | I915_FORMAT_MOD_YF_TILED => Ok(modifier),
+        fsysmem::FORMAT_MODIFIER_LINEAR => Ok(DRM_FORMAT_MOD_LINEAR),
+        fsysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED => Ok(I915_FORMAT_MOD_X_TILED),
+        fsysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED => Ok(I915_FORMAT_MOD_Y_TILED),
+        fsysmem::FORMAT_MODIFIER_INTEL_I915_YF_TILED => Ok(I915_FORMAT_MOD_YF_TILED),
+        fsysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED_CCS => Ok(I915_FORMAT_MOD_Y_TILED_CCS),
+        fsysmem::FORMAT_MODIFIER_INTEL_I915_YF_TILED_CCS => Ok(I915_FORMAT_MOD_YF_TILED_CCS),
         _ => Err(anyhow!("Unsupported modifier.")),
     }
 }
@@ -79,6 +83,8 @@ pub const DRM_FORMAT_MOD_LINEAR: u64 = fourcc_mod_code(DRM_FORMAT_MOD_VENDOR_NON
 pub const I915_FORMAT_MOD_X_TILED: u64 = fourcc_mod_code(DRM_FORMAT_MOD_VENDOR_INTEL, 1);
 pub const I915_FORMAT_MOD_Y_TILED: u64 = fourcc_mod_code(DRM_FORMAT_MOD_VENDOR_INTEL, 2);
 pub const I915_FORMAT_MOD_YF_TILED: u64 = fourcc_mod_code(DRM_FORMAT_MOD_VENDOR_INTEL, 3);
+pub const I915_FORMAT_MOD_Y_TILED_CCS: u64 = fourcc_mod_code(DRM_FORMAT_MOD_VENDOR_INTEL, 4);
+pub const I915_FORMAT_MOD_YF_TILED_CCS: u64 = fourcc_mod_code(DRM_FORMAT_MOD_VENDOR_INTEL, 5);
 
 pub const DRM_FORMAT_XRGB8888: u32 = fourcc_code(b'X', b'R', b'2', b'4');
 pub const DRM_FORMAT_XBGR8888: u32 = fourcc_code(b'X', b'B', b'2', b'4');

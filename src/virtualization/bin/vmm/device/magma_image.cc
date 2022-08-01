@@ -684,19 +684,36 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
 
   vk::ImageUsageFlags vk_usage = {};
   vk::FormatFeatureFlags vk_format_features = {};
-  {
+
+  if (create_info->flags & MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE) {
+    // Use the Vulkan usage as provided by the client.
+    vk_usage = static_cast<vk::ImageUsageFlags>(create_info->flags >> 32);
+
+    if (vk_usage & vk::ImageUsageFlagBits::eTransferSrc) {
+      vk_format_features |= vk::FormatFeatureFlagBits::eTransferSrc;
+    }
+    if (vk_usage & vk::ImageUsageFlagBits::eTransferDst) {
+      vk_format_features |= vk::FormatFeatureFlagBits::eTransferDst;
+    }
+    if (vk_usage & vk::ImageUsageFlagBits::eSampled) {
+      vk_format_features |= vk::FormatFeatureFlagBits::eSampledImage;
+    }
+    if (vk_usage & vk::ImageUsageFlagBits::eStorage) {
+      vk_format_features |= vk::FormatFeatureFlagBits::eStorageImage;
+    }
+    if (vk_usage & vk::ImageUsageFlagBits::eColorAttachment) {
+      vk_format_features |= vk::FormatFeatureFlagBits::eColorAttachment;
+    }
+    if (vk_usage & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
+      vk_format_features |= vk::FormatFeatureFlagBits::eDepthStencilAttachment;
+    }
+  } else {
     // If linear isn't requested, assume we'll get a tiled format modifier.
     bool linear_tiling = sysmem_modifiers.size() == 1 &&
                          sysmem_modifiers[0] == fuchsia_sysmem::wire::kFormatModifierLinear;
 
     image_creator.GetFormatFeatures(vk_format, linear_tiling, &vk_format_features);
-  }
 
-  if (create_info->flags & MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE) {
-    // Use the Vulkan usage as provided by the client.
-    // Don't bother checking these against the supported format features.
-    vk_usage = static_cast<vk::ImageUsageFlags>(create_info->flags >> 32);
-  } else {
     // For non-ICD clients like GBM, the client API has no fine grained usage.
     // To maximize compatibility, we pass as many usages as make sense given the format features.
     if (vk_format_features & vk::FormatFeatureFlagBits::eTransferSrc) {
