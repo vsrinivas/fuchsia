@@ -1,3 +1,4 @@
 include /third_party/rust_crates/OWNERS
+marinaciocea@google.com
 
 # COMPONENT: Rust>third_party>auto_owners
