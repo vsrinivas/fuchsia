@@ -139,8 +139,7 @@ types but runtime modifiable in others.
   same configuration data, for example several different components may need to
   know the set of approved SSL root keys.
 
-### Does configuration vary across instances of a component?
-{#does-configuration}
+### Does configuration vary across instances of a component? {#does-configuration}
 
 - **No**. Here there is only one instance of a component or there are multiple
   component instances that always use the same configuration values. For
