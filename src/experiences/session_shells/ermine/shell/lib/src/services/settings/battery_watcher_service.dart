@@ -19,8 +19,14 @@ class BatteryWatcherService extends BatteryInfoWatcher implements TaskService {
     _proxy = BatteryManagerProxy();
     Incoming.fromSvcPath().connectToService(_proxy);
     _binding = BatteryInfoWatcherBinding();
-    await _proxy!.watch(_binding!.wrap(this));
-    await _proxy!.getBatteryInfo().then(onChangeBatteryInfo);
+    try {
+      await _proxy!.watch(_binding!.wrap(this));
+      await _proxy!.getBatteryInfo().then(onChangeBatteryInfo);
+      // ignore: avoid_catches_without_on_clauses
+    } catch (_) {
+      _proxy = null;
+      _binding = null;
+    }
   }
 
   @override

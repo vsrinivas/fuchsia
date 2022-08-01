@@ -572,6 +572,7 @@ class ErmineDriver {
   /// Returns [true] is successfully performed authentication flows.
   Future<FlutterDriver> authenticate() async {
     // Check if login shell's inspect data is published and is 'ready'.
+    print('Starting authentication flow.');
     final snapshot = await inspectSnapshot(kLoginInspectSelector,
         predicate: (snapshot) => snapshot['ready'] == true);
 
@@ -641,22 +642,27 @@ class ErmineDriver {
   /// the end of the flow.
   Future<void> logoutAndLogin() async {
     // Ensure that ermine shell is running.
+    print('Starting logout->login flow');
     await login.waitFor(find.byType('ErmineApp'));
     await inspectSnapshot(kErmineInspectSelector);
     await driver.waitUntilNoTransientCallbacks();
 
     // Send logout action
+    print('Sending logout request');
     await driver.requestData('logout');
     await driver.waitUntilNoTransientCallbacks();
 
     // Tap 'Log out' button to confirm logout dialog, but don't wait for it to
     // complete because ermine is killed.
+    print('Tapping logout button in logout confirmation dialog');
     // ignore: unawaited_futures
     driver.tap(find.text('LOGOUT')).catchError((_) {});
     // ignore: unawaited_futures
     driver.close();
+    await Future.delayed(Duration(seconds: 2));
 
     // If launchOOBE is true, wait for the login screen.
+    print('Waiting for login screen');
     final snapshot = await inspectSnapshot(kLoginInspectSelector,
         predicate: (snapshot) => snapshot['ready'] == true);
     if (snapshot['launchOOBE'] == true) {
