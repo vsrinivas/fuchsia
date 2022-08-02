@@ -121,7 +121,9 @@ class LinearBufferManager : public SurfaceBufferManager {
     }
 
     size_t pic_size_bytes = static_cast<size_t>(pic_size_checked.ValueOrDie());
-    ZX_ASSERT(buffer->size() >= pic_size_bytes);
+    ZX_ASSERT_MSG(buffer->size() >= pic_size_bytes,
+                  "surface size (%zu bytes) exceeds buffer size (%zu bytes)", pic_size_bytes,
+                  buffer->size());
 
     zx::vmo vmo_dup;
     zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
@@ -407,7 +409,9 @@ class TiledBufferManager : public SurfaceBufferManager {
       }
 
       size_t pic_size_bytes = static_cast<size_t>(pic_size_checked.ValueOrDie());
-      ZX_ASSERT(buffer->size() >= pic_size_bytes);
+      ZX_ASSERT_MSG(buffer->size() >= pic_size_bytes,
+                    "surface size (%zu bytes) exceeds buffer size (%zu bytes)", pic_size_bytes,
+                    buffer->size());
 
       // For the moment we use DRM_PRIME_2 to represent VMOs.
       // To specify the destination VMO, we need two VASurfaceAttrib, one to set the

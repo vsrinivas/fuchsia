@@ -82,9 +82,12 @@ class VaapiFuzzerTestFixture : public FakeCodecAdapterEvents::Owner {
 
   void ParseDataIntoInputPackets(FuzzedDataProvider &provider);
 
-  void ConfigureOutputBuffers(uint32_t output_packet_count, size_t output_packet_size);
-
   void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) override;
+
+  enum ImageFormat : uint32_t {
+    kLinear = 0,
+    kTiled = 1,
+  };
 
   std::mutex lock_;
   FakeCodecAdapterEvents events_{this};
@@ -94,7 +97,7 @@ class VaapiFuzzerTestFixture : public FakeCodecAdapterEvents::Owner {
   TestBuffers test_buffers_;
   std::vector<std::unique_ptr<CodecPacket>> test_packets_;
   static constexpr size_t kOutputImageFormatArraySize = 8u;
-  std::array<bool, kOutputImageFormatArraySize> output_image_format_array_;
+  std::array<ImageFormat, kOutputImageFormatArraySize> output_image_format_array_;
   size_t output_image_format_idx_ = 0u;
 };
 

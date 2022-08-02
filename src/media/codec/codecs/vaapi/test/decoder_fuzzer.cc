@@ -113,18 +113,26 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.settings.has_image_format_constraints = true;
 
-  if (output_image_format_array_[output_image_format_idx_]) {
-    const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
-    ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
-                linear_constraints.pixel_format.format_modifier.value ==
-                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
-    buffer_collection.settings.image_format_constraints = linear_constraints;
-  } else {
-    const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
-    ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
-                tiled_constraints.pixel_format.format_modifier.value ==
-                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
-    buffer_collection.settings.image_format_constraints = tiled_constraints;
+  switch (output_image_format_array_[output_image_format_idx_]) {
+    case ImageFormat::kLinear: {
+      const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
+      ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
+                  linear_constraints.pixel_format.format_modifier.value ==
+                      fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+      buffer_collection.settings.image_format_constraints = linear_constraints;
+      break;
+    }
+    case ImageFormat::kTiled: {
+      const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
+      ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
+                  tiled_constraints.pixel_format.format_modifier.value ==
+                      fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+      buffer_collection.settings.image_format_constraints = tiled_constraints;
+      break;
+    }
+    default:
+      ASSERT_TRUE(false);
+      break;
   }
 
   output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
@@ -165,26 +173,6 @@ void VaapiFuzzerTestFixture::ParseDataIntoInputPackets(FuzzedDataProvider &provi
   }
 }
 
-void VaapiFuzzerTestFixture::ConfigureOutputBuffers(uint32_t output_packet_count,
-                                                    size_t output_packet_size) {
-  auto test_packets = Packets(output_packet_count);
-  test_buffers_ = Buffers(std::vector<size_t>(output_packet_count, output_packet_size));
-
-  test_packets_ = std::vector<std::unique_ptr<CodecPacket>>(output_packet_count);
-  for (size_t i = 0; i < output_packet_count; i++) {
-    auto &packet = test_packets.packets[i];
-    test_packets_[i] = std::move(packet);
-    decoder_->CoreCodecAddBuffer(CodecPort::kOutputPort, test_buffers_.buffers[i].get());
-  }
-
-  decoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
-  for (size_t i = 0; i < output_packet_count; i++) {
-    decoder_->CoreCodecRecycleOutputPacket(test_packets_[i].get());
-  }
-
-  decoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
-}
-
 void VaapiFuzzerTestFixture::RunFuzzer(std::string mime_type, const uint8_t *data, size_t size) {
   FuzzedDataProvider provider(data, size);
 
@@ -195,7 +183,8 @@ void VaapiFuzzerTestFixture::RunFuzzer(std::string mime_type, const uint8_t *dat
 
   // Test both linear and tiled outputs
   for (size_t i = 0; i < output_image_format_array_.size(); i += 1u) {
-    output_image_format_array_[i] = provider.ConsumeBool();
+    output_image_format_array_[i] =
+        provider.ConsumeBool() ? ImageFormat::kLinear : ImageFormat::kTiled;
   }
   output_image_format_idx_ = 0u;
 
@@ -237,21 +226,27 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.settings.has_image_format_constraints = true;
 
-  if (output_image_format_array_[output_image_format_idx_]) {
-    const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
-    ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
-                linear_constraints.pixel_format.format_modifier.value ==
-                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
-    buffer_collection.settings.image_format_constraints = linear_constraints;
-  } else {
-    const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
-    ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
-                tiled_constraints.pixel_format.format_modifier.value ==
-                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
-    buffer_collection.settings.image_format_constraints = tiled_constraints;
+  switch (output_image_format_array_[output_image_format_idx_]) {
+    case ImageFormat::kLinear: {
+      const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
+      ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
+                  linear_constraints.pixel_format.format_modifier.value ==
+                      fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+      buffer_collection.settings.image_format_constraints = linear_constraints;
+      break;
+    }
+    case ImageFormat::kTiled: {
+      const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
+      ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
+                  tiled_constraints.pixel_format.format_modifier.value ==
+                      fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+      buffer_collection.settings.image_format_constraints = tiled_constraints;
+      break;
+    }
+    default:
+      ASSERT_TRUE(false);
+      break;
   }
-
-  output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
 
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
 
@@ -259,62 +254,74 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
   constexpr uint32_t output_packet_count = 35;
 
   // Ensure that the image will always fit, which is dependant on if the output has an output format
-  // modifier or not
-  size_t pic_size_bytes;
+  // modifier or not. Since we use VADRMPRIMESurfaceDescriptor for both linear and tiled formats, we
+  // are limited to having a size of uint32_t for object length.
+  uint32_t pic_size_bytes;
   const auto &image_constraints = output_constraints.image_format_constraints[0];
-  if (output_image_format_array_[output_image_format_idx_]) {
-    // Output is linear
-    auto out_width = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),
-                             safemath::MakeCheckedNum(image_constraints.coded_width_divisor));
-    auto out_width_stride =
-        RoundUp(out_width, safemath::MakeCheckedNum(image_constraints.bytes_per_row_divisor));
-    auto out_height = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_height),
-                              safemath::MakeCheckedNum(image_constraints.coded_height_divisor));
+  switch (output_image_format_array_[output_image_format_idx_]) {
+    case ImageFormat::kLinear: {
+      // Output is linear
+      auto out_width = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),
+                               safemath::MakeCheckedNum(image_constraints.coded_width_divisor));
+      auto out_width_stride =
+          RoundUp(out_width, safemath::MakeCheckedNum(image_constraints.bytes_per_row_divisor));
+      auto out_height =
+          RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_height),
+                  safemath::MakeCheckedNum(image_constraints.coded_height_divisor));
 
-    auto main_plane_size = out_width_stride * out_height;
-    auto uv_plane_size = main_plane_size / 2;
-    auto pic_size_checked = main_plane_size + uv_plane_size;
-    if (!pic_size_checked.IsValid()) {
-      return;
+      auto main_plane_size = out_width_stride * out_height;
+      auto uv_plane_size = main_plane_size / 2;
+      auto pic_size_checked = (main_plane_size + uv_plane_size).Cast<uint32_t>();
+      if (!pic_size_checked.IsValid()) {
+        return;
+      }
+
+      pic_size_bytes = pic_size_checked.ValueOrDie();
+      break;
     }
+    case ImageFormat::kTiled: {
+      // Output is tiled
+      static constexpr auto kRowsPerTile =
+          safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileHeightAlignment);
+      static constexpr auto kBytesPerRowPerTile =
+          safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileWidthAlignment);
 
-    pic_size_bytes = pic_size_checked.ValueOrDie();
-  } else {
-    // Output is tiled
-    static constexpr auto kRowsPerTile =
-        safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileHeightAlignment);
-    static constexpr auto kBytesPerRowPerTile =
-        safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileWidthAlignment);
+      auto aligned_stride =
+          RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),
+                  kBytesPerRowPerTile);
+      auto aligned_y_height = safemath::MakeCheckedNum(image_constraints.required_max_coded_height);
+      auto aligned_uv_height =
+          safemath::MakeCheckedNum(image_constraints.required_max_coded_height) / 2u;
 
-    auto aligned_stride = RoundUp(
-        safemath::MakeCheckedNum(image_constraints.required_max_coded_width), kBytesPerRowPerTile);
-    auto aligned_y_height = safemath::MakeCheckedNum(image_constraints.required_max_coded_height);
-    auto aligned_uv_height =
-        safemath::MakeCheckedNum(image_constraints.required_max_coded_height) / 2u;
+      aligned_y_height = RoundUp(aligned_y_height, kRowsPerTile);
+      aligned_uv_height = RoundUp(aligned_uv_height, kRowsPerTile);
 
-    aligned_y_height = RoundUp(aligned_y_height, kRowsPerTile);
-    aligned_uv_height = RoundUp(aligned_uv_height, kRowsPerTile);
+      auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
+      auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
+      auto pic_size_checked = (y_plane_size + uv_plane_size).Cast<uint32_t>();
+      if (!pic_size_checked.IsValid()) {
+        return;
+      }
 
-    auto y_plane_size = safemath::CheckMul(aligned_stride, aligned_y_height);
-    auto uv_plane_size = safemath::CheckMul(aligned_stride, aligned_uv_height);
-    auto pic_size_checked = y_plane_size + uv_plane_size;
-
-    if (!pic_size_checked.IsValid()) {
-      return;
+      pic_size_bytes = pic_size_checked.ValueOrDie();
+      break;
     }
-
-    pic_size_bytes = pic_size_checked.ValueOrDie();
+    default:
+      ASSERT_TRUE(false);
+      break;
   }
 
-  // Place an arbitrary cap on the size to avoid OOMs when allocating output buffers and to reduce
-  // the amount of test time spent allocating memory.
+  output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
+
+  // Place an arbitrary cap on the size to avoid OOMs when allocating output buffers and to
+  // reduce the amount of test time spent allocating memory.
   constexpr uint32_t kMaxBufferSize = 1024 * 1024;
   if (pic_size_bytes > kMaxBufferSize) {
     return;
   }
-  const size_t output_packet_size = pic_size_bytes;
+
   auto test_packets = Packets(output_packet_count);
-  test_buffers_ = Buffers(std::vector<size_t>(output_packet_count, output_packet_size));
+  test_buffers_ = Buffers(std::vector<size_t>(output_packet_count, pic_size_bytes));
 
   test_packets_ = std::vector<std::unique_ptr<CodecPacket>>(output_packet_count);
   for (size_t i = 0; i < output_packet_count; i++) {
