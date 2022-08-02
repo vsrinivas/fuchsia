@@ -115,6 +115,7 @@ pub(super) enum RecognizedGesture {
     SecondaryTap,
     Motion,
     Scroll,
+    OneFingerDrag,
 }
 
 #[derive(Debug)]
@@ -173,7 +174,6 @@ pub(super) trait MatchedContender: std::fmt::Debug + AsAny {
 
 #[derive(Debug, PartialEq)]
 pub(super) enum EndGestureEvent {
-    #[allow(dead_code)] // Unuse until we implement the drag-drop gesture.
     GeneratedEvent(MouseEvent),
     UnconsumedEvent(TouchpadEvent),
     NoEvent,

@@ -83,6 +83,7 @@ rustc_library("input_pipeline") {
     "src/gestures/gesture_arena.rs",
     "src/gestures/mod.rs",
     "src/gestures/motion.rs",
+    "src/gestures/one_finger_drag.rs",
     "src/gestures/primary_tap.rs",
     "src/gestures/scroll.rs",
     "src/gestures/secondary_tap.rs",
