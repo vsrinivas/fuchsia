@@ -470,6 +470,22 @@ executable("timezone_provider_unittest_exe") {
   ]
 }
 
+executable("ui_state_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "ui_state_provider_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/annotations:ui_state_provider",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 ###############################################################################
 # COMPONENTS
 ###############################################################################
@@ -614,6 +630,10 @@ fuchsia_unittest_component("timezone_provider_unittest") {
   deps = [ ":timezone_provider_unittest_exe" ]
 }
 
+fuchsia_unittest_component("ui_state_provider_unittest") {
+  deps = [ ":ui_state_provider_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -644,6 +664,7 @@ fuchsia_test_package("feedback-tests") {
     ":target_channel_provider_unittest",
     ":time_provider_unittest",
     ":timezone_provider_unittest",
+    ":ui_state_provider_unittest",
   ]
 
   test_specs = {

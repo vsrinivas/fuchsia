@@ -186,3 +186,15 @@ source_set("timezone_provider") {
 
   deps = [ "//zircon/system/ulib/async" ]
 }
+
+source_set("ui_state_provider") {
+  sources = [
+    "ui_state_provider.cc",
+    "ui_state_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.activity",
+    "//src/developer/forensics/feedback/annotations",
+  ]
+}
