@@ -16,16 +16,6 @@ group("tests") {
   ]
 }
 
-fuchsia_component("tee_manager_cmp_legacy") {
-  manifest = "meta/tee_manager.cmx"
-  component_name = "tee_manager"
-  deps = [ ":bin" ]
-}
-
-fuchsia_package("tee_manager") {
-  deps = [ ":tee_manager_cmp_legacy" ]
-}
-
 rustc_binary("bin") {
   name = "tee_manager"
   edition = "2021"

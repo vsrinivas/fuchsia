@@ -397,7 +397,6 @@ group("cmx_allowlist") {
     "//src/security/fcrypto/test:hmac-fuzzer_component_manifest_compile",
     "//src/security/kms:kms_component_manifest_compile",
     "//src/security/kms:kms_tests_component_manifest_compile",
-    "//src/security/tee_manager:tee_manager_cmp_legacy_manifest_compile",
     "//src/settings/service:setui_service_v1_manifest_compile",
     "//src/storage/extractor:disk-extractor-lib-tests_component_manifest_compile",
     "//src/storage/extractor/c:c-lib-test-component_manifest_compile",

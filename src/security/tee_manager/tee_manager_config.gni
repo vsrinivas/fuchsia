@@ -39,18 +39,8 @@ template("tee_manager_pkg_with_config") {
     deps = [ "//src/security/tee_manager:bin" ]
   }
 
-  # TODO(fxbug.dev/93612): remove once all dependent components migrated to CFv2
-  fuchsia_component("tee_manager_cmp_legacy") {
-    manifest = "//src/security/tee_manager/meta/tee_manager.cmx"
-    component_name = "tee_manager"
-    deps = [ "//src/security/tee_manager:bin" ]
-  }
-
   fuchsia_package("tee_manager") {
-    deps = [
-      ":tee_manager_cmp",
-      ":tee_manager_cmp_legacy",
-    ]
+    deps = [ ":tee_manager_cmp" ]
   }
 
   tee_manager_config_validate(validate_target) {

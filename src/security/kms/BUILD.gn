@@ -66,9 +66,3 @@ fuchsia_unittest_package("kms_tests") {
   manifest = "meta/kms_bin_test.cml"
   deps = [ ":bin_test" ]
 }
-
-config_data("optee_provider_test_config") {
-  sources = [ "config/optee_provider_config.json" ]
-  for_pkg = "kms_test_client_pkg"
-  outputs = [ "crypto_provider_config.json" ]
-}
