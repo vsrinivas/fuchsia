@@ -4,6 +4,7 @@
 use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::ok_or_default_err;
 use crate::shutdown_request::ShutdownRequest;
 use crate::utils::connect_to_driver;
 use anyhow::{format_err, Error};
@@ -59,34 +60,39 @@ const LID_CLOSED: u8 = 0x0;
 static INPUT_DEVICES_DIRECTORY: &str = "/dev/class/input";
 
 pub struct LidShutdownBuilder<'a> {
-    proxy: Option<LidProxy>,
-    lid_report_event: Option<zx::Event>,
-    system_shutdown_node: Rc<dyn Node>,
+    driver_proxy: Option<LidProxy>,
+    system_shutdown_node: Option<Rc<dyn Node>>,
     inspect_root: Option<&'a inspect::Node>,
 }
 
 impl<'a> LidShutdownBuilder<'a> {
-    pub fn new(system_shutdown_node: Rc<dyn Node>) -> Self {
+    #[cfg(test)]
+    pub fn new() -> Self {
+        use crate::test::mock_node::create_dummy_node;
+
         LidShutdownBuilder {
-            proxy: None,
-            lid_report_event: None,
-            system_shutdown_node,
+            driver_proxy: None,
+            system_shutdown_node: Some(create_dummy_node()),
             inspect_root: None,
         }
     }
 
     #[cfg(test)]
-    pub fn new_with_event_and_proxy(
-        proxy: LidProxy,
-        lid_report_event: zx::Event,
-        system_shutdown_node: Rc<dyn Node>,
-    ) -> Self {
-        Self {
-            proxy: Some(proxy),
-            lid_report_event: Some(lid_report_event),
-            system_shutdown_node,
-            inspect_root: None,
-        }
+    pub fn driver_proxy(mut self, proxy: LidProxy) -> Self {
+        self.driver_proxy = Some(proxy);
+        self
+    }
+
+    #[cfg(test)]
+    pub fn system_shutdown_node(mut self, node: Rc<dyn Node>) -> Self {
+        self.system_shutdown_node = Some(node);
+        self
+    }
+
+    #[cfg(test)]
+    fn inspect_root(mut self, inspect_root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(inspect_root);
+        self
     }
 
     pub fn new_from_json(json_data: json::Value, nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
@@ -101,33 +107,30 @@ impl<'a> LidShutdownBuilder<'a> {
         }
 
         let data: JsonData = json::from_value(json_data).unwrap();
-        Self::new(nodes[&data.dependencies.system_shutdown_node].clone())
-    }
-
-    #[cfg(test)]
-    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
-        self.inspect_root = Some(root);
-        self
+        Self {
+            system_shutdown_node: Some(nodes[&data.dependencies.system_shutdown_node].clone()),
+            driver_proxy: None,
+            inspect_root: None,
+        }
     }
 
     pub async fn build<'b>(
         self,
         futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
     ) -> Result<Rc<LidShutdown>, Error> {
+        let system_shutdown_node = ok_or_default_err!(self.system_shutdown_node)?;
+
         // In tests use the default proxy.
-        let proxy = match self.proxy {
+        let proxy = match self.driver_proxy {
             Some(proxy) => proxy,
             None => Self::find_lid_sensor().await?,
         };
 
-        // In tests use the default event.
-        let report_event = match self.lid_report_event {
-            Some(report_event) => report_event,
-            None => match proxy.get_reports_event().await {
-                Ok((_, report_event)) => report_event,
-                Err(_e) => return Err(format_err!("Could not get report event.")),
-            },
-        };
+        let report_event = proxy
+            .get_reports_event()
+            .await
+            .map_err(|_| format_err!("Could not get report event"))?
+            .1;
 
         // In tests use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
@@ -135,7 +138,7 @@ impl<'a> LidShutdownBuilder<'a> {
         let node = Rc::new(LidShutdown {
             proxy,
             report_event,
-            system_shutdown_node: self.system_shutdown_node,
+            system_shutdown_node,
             inspect: InspectData::new(inspect_root, "LidShutdown".to_string()),
         });
 
@@ -311,13 +314,19 @@ mod tests {
     /// Spawns a new task that acts as a fake device driver for testing purposes. The driver only
     /// handles requests for ReadReport - trying to send any other requests to it is a bug.
     /// Each ReadReport responds with the |lid_report| specified.
-    fn setup_fake_driver(lid_report: u8) -> LidProxy {
+    fn fake_lid_driver(lid_report: u8, reports_event: zx::Event) -> LidProxy {
         let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<LidMarker>().unwrap();
         fasync::Task::local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(finput::DeviceRequest::ReadReport { responder }) => {
                         let _ = responder.send(zx::Status::OK.into_raw(), &[lid_report], 0 as i64);
+                    }
+                    Some(finput::DeviceRequest::GetReportsEvent { responder }) => {
+                        let _ = responder.send(
+                            zx::Status::OK.into_raw(),
+                            reports_event.duplicate_handle(zx::Rights::BASIC).unwrap(),
+                        );
                     }
                     _ => assert!(false),
                 }
@@ -358,14 +367,15 @@ mod tests {
         );
 
         let event = zx::Event::create().unwrap();
-        let node = LidShutdownBuilder::new_with_event_and_proxy(
-            setup_fake_driver(LID_CLOSED),
-            event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-            shutdown_node,
-        )
-        .build(&FuturesUnordered::new())
-        .await
-        .unwrap();
+        let node = LidShutdownBuilder::new()
+            .driver_proxy(fake_lid_driver(
+                LID_CLOSED,
+                event.duplicate_handle(zx::Rights::BASIC).unwrap(),
+            ))
+            .system_shutdown_node(shutdown_node)
+            .build(&FuturesUnordered::new())
+            .await
+            .unwrap();
 
         event
             .signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
@@ -388,14 +398,15 @@ mod tests {
         );
 
         let event = zx::Event::create().unwrap();
-        let node = LidShutdownBuilder::new_with_event_and_proxy(
-            setup_fake_driver(LID_OPEN),
-            event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-            shutdown_node,
-        )
-        .build(&FuturesUnordered::new())
-        .await
-        .unwrap();
+        let node = LidShutdownBuilder::new()
+            .driver_proxy(fake_lid_driver(
+                LID_OPEN,
+                event.duplicate_handle(zx::Rights::BASIC).unwrap(),
+            ))
+            .system_shutdown_node(shutdown_node)
+            .build(&FuturesUnordered::new())
+            .await
+            .unwrap();
 
         event
             .signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
@@ -410,18 +421,12 @@ mod tests {
     /// Tests that an unsupported message is handled gracefully and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let mut mock_maker = MockNodeMaker::new();
-        let shutdown_node = mock_maker.make("Shutdown", vec![]);
+        let node = LidShutdownBuilder::new()
+            .driver_proxy(fake_lid_driver(LID_CLOSED, zx::Event::create().unwrap()))
+            .build(&FuturesUnordered::new())
+            .await
+            .unwrap();
 
-        let node_futures = FuturesUnordered::new();
-        let node = LidShutdownBuilder::new_with_event_and_proxy(
-            setup_fake_driver(LID_CLOSED),
-            zx::Event::create().unwrap(),
-            shutdown_node,
-        )
-        .build(&node_futures)
-        .await
-        .unwrap();
         match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -431,17 +436,11 @@ mod tests {
     #[test]
     fn test_loop_is_not_blocked() {
         let mut executor = fasync::TestExecutor::new().unwrap();
-        let mut mock_maker = MockNodeMaker::new();
-        let shutdown_node = mock_maker.make("Shutdown", vec![]);
-        let node_futures = FuturesUnordered::new();
         let node = executor
             .run_singlethreaded(
-                LidShutdownBuilder::new_with_event_and_proxy(
-                    setup_fake_driver(LID_OPEN),
-                    zx::Event::create().unwrap(),
-                    shutdown_node,
-                )
-                .build(&node_futures),
+                LidShutdownBuilder::new()
+                    .driver_proxy(fake_lid_driver(LID_OPEN, zx::Event::create().unwrap()))
+                    .build(&FuturesUnordered::new()),
             )
             .unwrap();
 
@@ -457,20 +456,17 @@ mod tests {
     async fn test_inspect_data() {
         let lid_state = LID_OPEN;
         let inspector = inspect::Inspector::new();
-        let mut mock_maker = MockNodeMaker::new();
-        let shutdown_node = mock_maker.make("Shutdown", vec![]);
         let event = zx::Event::create().unwrap();
 
-        let node_futures = FuturesUnordered::new();
-        let node = LidShutdownBuilder::new_with_event_and_proxy(
-            setup_fake_driver(lid_state),
-            event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-            shutdown_node,
-        )
-        .with_inspect_root(inspector.root())
-        .build(&node_futures)
-        .await
-        .unwrap();
+        let node = LidShutdownBuilder::new()
+            .driver_proxy(fake_lid_driver(
+                lid_state,
+                event.duplicate_handle(zx::Rights::BASIC).unwrap(),
+            ))
+            .inspect_root(inspector.root())
+            .build(&FuturesUnordered::new())
+            .await
+            .unwrap();
 
         // The node will read the current temperature and log the sample into Inspect. Read enough
         // samples to test that the correct number of samples are logged and older ones are dropped.
