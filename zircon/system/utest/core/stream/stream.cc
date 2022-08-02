@@ -266,14 +266,14 @@ TEST(StreamTestCase, ReadV) {
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 
   for (size_t i = 0; i < kVectorCount; ++i) {
-    multivec[kVectorCount - i - 1].buffer = &buffer[i];
-    multivec[kVectorCount - i - 1].capacity = 1;
+    multivec[i].buffer = &buffer[i];
+    multivec[i].capacity = 1;
   }
 
   ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, 0, nullptr));
   ASSERT_OK(stream.readv(0, multivec, kVectorCount, &actual));
   EXPECT_EQ(kVectorCount, actual);
-  EXPECT_STREQ("gfedcba", buffer);
+  EXPECT_STREQ("abcdef", buffer);
   memset(buffer, 0, sizeof(buffer));
 }
 
@@ -368,7 +368,7 @@ TEST(StreamTestCase, WriteExtendsContentSize) {
   vec.capacity = 7u;
   ASSERT_OK(stream.writev(0, &vec, 1, &actual));
   EXPECT_EQ(7u, actual);
-  EXPECT_STREQ("0123456hijklmnopqrstuvwxyz", GetData(vmo).c_str());
+  EXPECT_STREQ("0123456", GetData(vmo).c_str());
   EXPECT_EQ(7u, GetContentSize(vmo));
   ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
 

@@ -224,6 +224,16 @@ zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
   Guard<Mutex> guard{content_size_mgr_.lock()};
   content_size_mgr_.BeginSetContentSizeLocked(content_size, &op, &guard);
 
+  uint64_t vmo_size = vmo_->size();
+  if (content_size < vmo_size) {
+    // TODO(fxbug.dev/102757): Determine whether failure to ZeroRange here should undo this
+    // operation.
+    //
+    // Dropping the lock here is fine, as an `Operation` only needs to be locked when initializing,
+    // committing, or cancelling.
+    guard.CallUnlocked([&] { vmo_->ZeroRange(content_size, vmo_size - content_size); });
+  }
+
   op.AssertParentLockHeld();
   op.CommitLocked();
   return ZX_OK;
