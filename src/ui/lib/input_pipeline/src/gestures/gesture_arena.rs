@@ -62,7 +62,7 @@ pub(super) struct MouseEvent {
 pub(super) enum ExamineEventResult {
     Contender(Box<dyn Contender>),
     MatchedContender(Box<dyn MatchedContender>),
-    Mismatch,
+    Mismatch(&'static str),
 }
 
 pub(super) trait Contender: std::fmt::Debug + AsAny {
@@ -99,7 +99,7 @@ impl<T: Any> AsAny for T {
 #[derive(Debug)]
 pub(super) enum VerifyEventResult {
     MatchedContender(Box<dyn MatchedContender>),
-    Mismatch,
+    Mismatch(&'static str),
 }
 
 #[derive(Debug, PartialEq)]
@@ -182,7 +182,7 @@ pub(super) enum EndGestureEvent {
 #[derive(Debug)]
 pub(super) enum ProcessNewEventResult {
     ContinueGesture(Option<MouseEvent>, Box<dyn Winner>),
-    EndGesture(EndGestureEvent),
+    EndGesture(EndGestureEvent, &'static str),
 }
 
 pub(super) trait Winner: std::fmt::Debug {
@@ -195,13 +195,13 @@ pub(super) trait Winner: std::fmt::Debug {
     /// * `ContinueGesutre(None, …)` if the gesture is still
     ///   in progress, and no `MouseEvent` should be sent downstream;
     ///   might be used, e.g., by a palm recognizer
-    /// * `EndGesture(UnconsumedEvent)` if the gesture has ended because
+    /// * `EndGesture(UnconsumedEvent, …)` if the gesture has ended because
     ///   `event` did not match; might be used, e.g., if the user
     ///    presses the touchpad down after a motion gesture
-    /// * `EndGesture(GeneratedEvent)` if the gesture has ended because
+    /// * `EndGesture(GeneratedEvent, …)` if the gesture has ended because
     ///   `event` did end the gesture; might be used, e.g., if the user
     ///    release the touchpad down after a drag gesture
-    /// * `EndGesture(NoEvent)` if `event` matches a normal end
+    /// * `EndGesture(NoEvent, …)` if `event` matches a normal end
     ///   of the gesture; might be used, e.g., if the user lifts
     ///   their finger off the touchpad after a motion gesture
     fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> ProcessNewEventResult;
@@ -367,20 +367,25 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
     fn handle_event_while_idle(&self, new_event: TouchpadEvent) -> (MutableState, Vec<MouseEvent>) {
         let (contenders, matched_contenders) = (self.contender_factory)()
             .into_iter()
-            .map(|contender| contender.examine_event(&new_event))
-            .fold((vec![], vec![]), |(mut contenders, mut matched_contenders), examine_result| {
-                match examine_result {
-                    ExamineEventResult::Contender(c) => {
-                        contenders.push(c);
-                        (contenders, matched_contenders)
+            .map(|contender| (contender.get_type_name(), contender.examine_event(&new_event)))
+            .fold(
+                (vec![], vec![]),
+                |(mut contenders, mut matched_contenders), (type_name, examine_result)| {
+                    match examine_result {
+                        ExamineEventResult::Contender(contender) => {
+                            contenders.push(contender);
+                        }
+                        ExamineEventResult::MatchedContender(matched_contender) => {
+                            matched_contenders.push(matched_contender);
+                        }
+                        ExamineEventResult::Mismatch(reason) => {
+                            // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
+                            fx_log_info!("touchpad: {} mismatched due to {}", type_name, reason);
+                        }
                     }
-                    ExamineEventResult::MatchedContender(m) => {
-                        matched_contenders.push(m);
-                        (contenders, matched_contenders)
-                    }
-                    ExamineEventResult::Mismatch => (contenders, matched_contenders),
-                }
-            });
+                    (contenders, matched_contenders)
+                },
+            );
         if contenders.is_empty() && matched_contenders.is_empty() {
             // No `Contender`s or `MatchedContender`s. The event does not
             // match the start of any gesture:
@@ -420,27 +425,40 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
         // See also: `does_not_repeat_event_to_matched_contender_returned_by_examine_event` test.
         let matched_contenders = matched_contenders
             .into_iter()
-            .map(|matched_contender| matched_contender.verify_event(&new_event))
-            .fold(vec![], |mut matched_contenders, verify_result| match verify_result {
-                VerifyEventResult::MatchedContender(m) => {
-                    matched_contenders.push(m);
-                    matched_contenders
-                }
-                VerifyEventResult::Mismatch => matched_contenders,
-            });
-        let (contenders, matched_contenders) =
-            contenders.into_iter().map(|contender| contender.examine_event(&new_event)).fold(
-                (vec![], matched_contenders),
-                |(mut contenders, mut matched_contenders), examine_result| match examine_result {
-                    ExamineEventResult::Contender(c) => {
-                        contenders.push(c);
-                        (contenders, matched_contenders)
-                    }
-                    ExamineEventResult::MatchedContender(m) => {
+            .map(|matched_contender| {
+                (matched_contender.get_type_name(), matched_contender.verify_event(&new_event))
+            })
+            .fold(vec![], |mut matched_contenders, (type_name, verify_result)| {
+                match verify_result {
+                    VerifyEventResult::MatchedContender(m) => {
                         matched_contenders.push(m);
-                        (contenders, matched_contenders)
                     }
-                    ExamineEventResult::Mismatch => (contenders, matched_contenders),
+                    VerifyEventResult::Mismatch(reason) => {
+                        // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
+                        fx_log_info!("touchpad: {} mismatched due to {}", type_name, reason);
+                    }
+                }
+                matched_contenders
+            });
+        let (contenders, matched_contenders) = contenders
+            .into_iter()
+            .map(|contender| (contender.get_type_name(), contender.examine_event(&new_event)))
+            .fold(
+                (vec![], matched_contenders),
+                |(mut contenders, mut matched_contenders), (type_name, examine_result)| {
+                    match examine_result {
+                        ExamineEventResult::Contender(contender) => {
+                            contenders.push(contender);
+                        }
+                        ExamineEventResult::MatchedContender(matched_contender) => {
+                            matched_contenders.push(matched_contender);
+                        }
+                        ExamineEventResult::Mismatch(reason) => {
+                            // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
+                            fx_log_info!("touchpad: {} mismatched due to {}", type_name, reason);
+                        }
+                    }
+                    (contenders, matched_contenders)
                 },
             );
         match (
@@ -481,17 +499,30 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
         winner: Box<dyn Winner>,
         new_event: TouchpadEvent,
     ) -> (MutableState, Vec<MouseEvent>) {
+        let type_name = winner.get_type_name();
         match winner.process_new_event(new_event) {
             ProcessNewEventResult::ContinueGesture(generated_event, winner) => {
                 (MutableState::Forwarding { winner }, generated_event.into_iter().collect())
             }
-            ProcessNewEventResult::EndGesture(EndGestureEvent::GeneratedEvent(generated_event)) => {
+            ProcessNewEventResult::EndGesture(
+                EndGestureEvent::GeneratedEvent(generated_event),
+                reason,
+            ) => {
+                // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
+                fx_log_info!("touchpad: {} ended due to {}", type_name, reason);
                 (MutableState::Idle, vec![generated_event])
             }
-            ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(
-                unconsumed_event,
-            )) => self.handle_event_while_idle(unconsumed_event),
-            ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent) => {
+            ProcessNewEventResult::EndGesture(
+                EndGestureEvent::UnconsumedEvent(unconsumed_event),
+                reason,
+            ) => {
+                // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
+                fx_log_info!("touchpad: {} ended due to {}", type_name, reason);
+                self.handle_event_while_idle(unconsumed_event)
+            }
+            ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent, reason) => {
+                // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
+                fx_log_info!("touchpad: {} ended due to {}", type_name, reason);
                 (MutableState::Idle, vec![])
             }
         }
@@ -1078,7 +1109,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(contender.calls_received(), 1);
         }
@@ -1094,7 +1125,7 @@ mod tests {
             first_contender.set_next_result(ExamineEventResult::MatchedContender(
                 StubMatchedContender::new().into(),
             ));
-            second_contender.set_next_result(ExamineEventResult::Mismatch);
+            second_contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(first_contender.calls_received(), 1);
             assert_eq!(second_contender.calls_received(), 1);
@@ -1222,7 +1253,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             assert_eq!(
                 arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
@@ -1248,7 +1279,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
@@ -1348,7 +1379,8 @@ mod tests {
                 None,
             );
             contender.set_next_result(ExamineEventResult::Contender(contender.clone().into()));
-            matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch);
+            matched_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(contender.calls_received(), 1);
             assert_eq!(matched_contender.verify_event_calls_received(), 1);
@@ -1364,8 +1396,9 @@ mod tests {
                 vec![],
                 None,
             );
-            contender.set_next_result(ExamineEventResult::Mismatch);
-            matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
+            matched_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
             assert_eq!(contender.calls_received(), 0);
             assert_eq!(matched_contender.verify_event_calls_received(), 0);
@@ -1393,7 +1426,8 @@ mod tests {
             // is buggy, and `verify_event()` is called, having a return value for
             // that call makes this test fail at the final assertion, which is easier
             // to understand.
-            matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch);
+            matched_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
 
             // Send the touchpad event, and validate that the arena did not call
             // `verify_event()` on the newly returned `MatchedContender`.
@@ -1418,7 +1452,7 @@ mod tests {
 
             // Process another touchpad event. This should cause `arena` to invoke
             // `examine_event()` on `replacement_contender`.
-            replacement_contender.set_next_result(ExamineEventResult::Mismatch);
+            replacement_contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that `replacement_contender` was called.
@@ -1450,7 +1484,8 @@ mod tests {
 
             // Process another touchpad event. This should cause `arena` to invoke
             // `examine_event()` on `replacement_contender`.
-            replacement_contender.set_next_verify_event_result(VerifyEventResult::Mismatch);
+            replacement_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that `replacement_contender` was called.
@@ -1483,7 +1518,8 @@ mod tests {
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
 
             // Set a return value for the expected call on `replacement_contender`.
-            replacement_matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch);
+            replacement_matched_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
 
             // Process another touchpad event, and verify that `replacement_contender`
             // is called.
@@ -1495,7 +1531,7 @@ mod tests {
         async fn generates_no_events_on_mismatch() {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             assert_eq!(
                 arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
@@ -1656,7 +1692,7 @@ mod tests {
                 .await;
 
             // Send the event that concludes the contest.
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             matched_contender.set_next_verify_event_result(VerifyEventResult::MatchedContender(
                 matched_contender.clone().into(),
             ));
@@ -1698,7 +1734,7 @@ mod tests {
         async fn transitions_to_idle_when_sole_contender_does_not_match() {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
@@ -1707,7 +1743,8 @@ mod tests {
         async fn transitions_to_idle_when_sole_matched_contender_does_not_match() {
             let matched_contender = StubMatchedContender::new();
             let arena = make_matching_arena(vec![], vec![matched_contender.clone()], vec![], None);
-            matched_contender.set_next_verify_event_result(VerifyEventResult::Mismatch);
+            matched_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
@@ -1829,7 +1866,10 @@ mod tests {
         async fn invokes_process_new_event_on_touchpad_event() {
             let winner = StubWinner::new();
             let arena = make_forwarding_arena(winner.clone(), None);
-            winner.set_next_result(ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent));
+            winner.set_next_result(ProcessNewEventResult::EndGesture(
+                EndGestureEvent::NoEvent,
+                "some reason",
+            ));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(winner.calls_received(), 1);
         }
@@ -1838,7 +1878,10 @@ mod tests {
         async fn does_not_invoke_process_new_event_on_mouse_event() {
             let winner = StubWinner::new();
             let arena = make_forwarding_arena(winner.clone(), None);
-            winner.set_next_result(ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent));
+            winner.set_next_result(ProcessNewEventResult::EndGesture(
+                EndGestureEvent::NoEvent,
+                "some reason",
+            ));
             arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
             assert_eq!(winner.calls_received(), 0);
         }
@@ -1924,7 +1967,10 @@ mod tests {
         async fn generates_no_events_on_end_gesture_without_touchpad_event() {
             let winner = StubWinner::new();
             let arena = make_forwarding_arena(winner.clone(), None);
-            winner.set_next_result(ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent));
+            winner.set_next_result(ProcessNewEventResult::EndGesture(
+                EndGestureEvent::NoEvent,
+                "some reason",
+            ));
             pretty_assertions::assert_eq!(
                 arena
                     .handle_unhandled_input_event(make_unhandled_touchpad_event())
@@ -1947,10 +1993,11 @@ mod tests {
                     pressed_buttons: vec![],
                     timestamp: zx::Time::ZERO,
                 }),
+                "some reason",
             ));
 
             // Set a return value for the `examine_event()` call.
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
 
             // Verify no events were generated.
             pretty_assertions::assert_eq!(
@@ -1986,6 +2033,7 @@ mod tests {
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::GeneratedEvent(mouse_event),
+                "some reason",
             ));
 
             // Verify events were generated.
@@ -2053,6 +2101,7 @@ mod tests {
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(
                 EndGestureEvent::GeneratedEvent(mouse_event),
+                "some reason",
             ));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle { .. });
@@ -2062,7 +2111,10 @@ mod tests {
         async fn transitions_to_idle_on_end_gesture_without_touchpad_event() {
             let winner = StubWinner::new();
             let arena = make_forwarding_arena(winner.clone(), None);
-            winner.set_next_result(ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent));
+            winner.set_next_result(ProcessNewEventResult::EndGesture(
+                EndGestureEvent::NoEvent,
+                "reason",
+            ));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
@@ -2083,10 +2135,11 @@ mod tests {
                     contacts: vec![],
                     pressed_buttons: vec![],
                 }),
+                "reason",
             ));
 
             // Set up `contender` to reply to the `examine_event()` call.
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
 
             // Send an event into the arena.
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
@@ -2181,7 +2234,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena
                 .handle_unhandled_input_event(make_unhandled_touchpad_event(
                     contact_position_units,
@@ -2247,7 +2300,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            contender.set_next_result(ExamineEventResult::Mismatch);
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena
                 .handle_unhandled_input_event(make_unhandled_touchpad_event(
                     contact_position_units,

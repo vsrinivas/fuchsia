@@ -41,12 +41,12 @@ impl InitialContender {
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 1 contact");
         }
 
         match event.pressed_buttons.len() {
             0 => ExamineEventResult::Contender(self.into_finger_contact_contender(event.clone())),
-            _ => ExamineEventResult::Mismatch,
+            _ => ExamineEventResult::Mismatch("wanted 0 pressed buttons"),
         }
     }
 }
@@ -82,11 +82,11 @@ impl FingerContactContender {
 impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if !is_valid_event_time(event, &self.finger_down_event, self.max_time_elapsed) {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("too much time elapsed");
         }
 
         if event.pressed_buttons.len() != 0 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
         }
 
         match event.contacts.len() {
@@ -97,11 +97,11 @@ impl gesture_arena::Contender for FingerContactContender {
                     position_from_event(&self.finger_down_event),
                     self.max_finger_displacement_in_mm,
                 ) {
-                    return ExamineEventResult::Mismatch;
+                    return ExamineEventResult::Mismatch("too much motion");
                 }
                 ExamineEventResult::Contender(self)
             }
-            _ => ExamineEventResult::Mismatch,
+            _ => ExamineEventResult::Mismatch("wanted < 2 contacts"),
         }
     }
 }
@@ -124,15 +124,15 @@ struct MatchedContender {
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         if !is_valid_event_time(event, &self.finger_down_event, self.max_time_elapsed) {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("too much time elapsed");
         }
 
         if event.contacts.len() != 0 {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("wanted 0 contacts");
         }
 
         if event.pressed_buttons.len() != 0 {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("wanted 0 pressed buttons");
         }
 
         VerifyEventResult::MatchedContender(self)
@@ -257,7 +257,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -278,7 +278,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -296,7 +296,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0],
             },),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -314,7 +314,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             },),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -354,7 +354,7 @@ mod tests {
                 timestamp: MAX_TIME_ELAPSED + zx::Time::from_nanos(1),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -402,7 +402,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -428,7 +428,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -504,7 +504,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -531,7 +531,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -557,7 +557,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
@@ -584,7 +584,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
@@ -610,7 +610,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
@@ -640,7 +640,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
@@ -667,7 +667,7 @@ mod tests {
                 timestamp: MAX_TIME_ELAPSED + zx::Time::from_nanos(1),
                 pressed_buttons: vec![],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 

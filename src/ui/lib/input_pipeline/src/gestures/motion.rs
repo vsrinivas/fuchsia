@@ -56,11 +56,11 @@ impl InitialContender {
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 1 contact");
         }
 
         if event.pressed_buttons.len() > 0 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
         }
 
         ExamineEventResult::Contender(
@@ -78,11 +78,11 @@ impl FingerContactContender {
 impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 1 contact");
         }
 
         if event.pressed_buttons.len() > 0 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
         }
 
         let distance = euclidean_distance(event.contacts[0].position, self.initial_position);
@@ -103,11 +103,11 @@ impl MatchedContender {
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         if event.contacts.len() != 1 {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("wanted 1 contact");
         }
 
         if event.pressed_buttons.len() > 0 {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("wanted 0 pressed buttons");
         }
 
         VerifyEventResult::MatchedContender(self)
@@ -138,10 +138,16 @@ impl gesture_arena::MatchedContender for MatchedContender {
 impl gesture_arena::Winner for Winner {
     fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> ProcessNewEventResult {
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
-            0 => ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent),
+            0 => ProcessNewEventResult::EndGesture(
+                EndGestureEvent::NoEvent,
+                "wanted 1 contact, got 0",
+            ),
             1 => {
                 if event.pressed_buttons.len() > 0 {
-                    ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(event))
+                    ProcessNewEventResult::EndGesture(
+                        EndGestureEvent::UnconsumedEvent(event),
+                        "wanted 0 pressed buttons",
+                    )
                 } else {
                     let last_position = event.contacts[0].position.clone();
                     ProcessNewEventResult::ContinueGesture(
@@ -150,7 +156,10 @@ impl gesture_arena::Winner for Winner {
                     )
                 }
             }
-            2.. => ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(event)),
+            2.. => ProcessNewEventResult::EndGesture(
+                EndGestureEvent::UnconsumedEvent(event),
+                "wanted 1 contact, got >= 2",
+            ),
         }
     }
 }
@@ -213,7 +222,7 @@ mod test {
             Box::new(InitialContender { min_movement_in_mm: 10.0 });
 
         let got = contender.examine_event(&event);
-        assert_matches!(got, ExamineEventResult::Mismatch);
+        assert_matches!(got, ExamineEventResult::Mismatch(_));
     }
 
     #[test_case(TouchpadEvent{
@@ -261,7 +270,7 @@ mod test {
         });
 
         let got = contender.examine_event(&event);
-        assert_matches!(got, ExamineEventResult::Mismatch);
+        assert_matches!(got, ExamineEventResult::Mismatch(_));
     }
 
     #[test_case(TouchpadEvent{timestamp: zx::Time::ZERO,
@@ -322,7 +331,7 @@ mod test {
         let contender: Box<dyn gesture_arena::MatchedContender> = Box::new(MatchedContender {});
 
         let got = contender.verify_event(&event);
-        assert_matches!(got, VerifyEventResult::Mismatch);
+        assert_matches!(got, VerifyEventResult::Mismatch(_));
     }
 
     #[test_case(TouchpadEvent{
@@ -388,7 +397,7 @@ mod test {
             TouchpadEvent { timestamp: zx::Time::ZERO, pressed_buttons: vec![], contacts: vec![] };
         let got = winner.process_new_event(event);
 
-        assert_matches!(got, ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent));
+        assert_matches!(got, ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent, _reason));
     }
 
     #[test_case(
@@ -414,7 +423,7 @@ mod test {
 
         assert_matches!(
             got,
-            ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(_))
+            ProcessNewEventResult::EndGesture(EndGestureEvent::UnconsumedEvent(_), _reason)
         );
     }
 
@@ -442,7 +451,7 @@ mod test {
         // - assert_matches: floating point is not allow in match.
         // - assert_eq: `ContinueGesture` has Box dyn type.
         match got {
-            ProcessNewEventResult::EndGesture(_) => {
+            ProcessNewEventResult::EndGesture(..) => {
                 panic!("Got {:?}, want ContinueGesture()", got);
             }
             ProcessNewEventResult::ContinueGesture(got_mouse_event, _) => {
@@ -484,7 +493,7 @@ mod test {
         // - assert_matches: floating point is not allow in match.
         // - assert_eq: `ContinueGesture` has Box dyn type.
         match got {
-            ProcessNewEventResult::EndGesture(_) => {
+            ProcessNewEventResult::EndGesture(..) => {
                 panic!("Got {:?}, want ContinueGesture()", got);
             }
             ProcessNewEventResult::ContinueGesture(got_mouse_event, got_winner) => {
@@ -523,7 +532,7 @@ mod test {
         // - assert_matches: floating point is not allow in match.
         // - assert_eq: `ContinueGesture` has Box dyn type.
         match got {
-            ProcessNewEventResult::EndGesture(_) => {
+            ProcessNewEventResult::EndGesture(..) => {
                 panic!("Got {:?}, want ContinueGesture()", got)
             }
             ProcessNewEventResult::ContinueGesture(got_mouse_event, _) => {

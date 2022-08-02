@@ -45,7 +45,7 @@ impl InitialContender {
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 1 contact");
         }
 
         match event.pressed_buttons.len() {
@@ -56,7 +56,7 @@ impl gesture_arena::Contender for InitialContender {
             // More than one button is a Mismatch for now, but in practice
             // we do not expect to receive more than one button from the
             // touchpad driver.
-            _ => ExamineEventResult::Mismatch,
+            _ => ExamineEventResult::Mismatch("wanted < 2 buttons"),
         }
     }
 }
@@ -88,7 +88,7 @@ impl UnpressedContender {
 impl gesture_arena::Contender for UnpressedContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("wanted 1 contact");
         }
 
         if !position_is_in_click_threshold(
@@ -96,13 +96,13 @@ impl gesture_arena::Contender for UnpressedContender {
             self.initial_position,
             self.max_finger_displacement_in_mm,
         ) {
-            return ExamineEventResult::Mismatch;
+            return ExamineEventResult::Mismatch("too much motion");
         }
 
         match event.pressed_buttons.len() {
             0 => ExamineEventResult::Contender(self),
             1 => ExamineEventResult::Contender(self.into_pressed_contender(event.clone())),
-            _ => ExamineEventResult::Mismatch,
+            _ => ExamineEventResult::Mismatch("wanted < 2 contacts"),
         }
     }
 }
@@ -138,17 +138,17 @@ impl gesture_arena::Contender for PressedContender {
                     position_from_event(&self.pressed_event),
                     self.max_finger_displacement_in_mm,
                 ) {
-                    return ExamineEventResult::Mismatch;
+                    return ExamineEventResult::Mismatch("too much motion");
                 }
                 match event.pressed_buttons.len() {
                     0 => ExamineEventResult::MatchedContender(
                         self.into_matched_contender(event.clone()),
                     ),
                     1 => ExamineEventResult::Contender(self),
-                    _ => ExamineEventResult::Mismatch,
+                    _ => ExamineEventResult::Mismatch("wanted < 2 buttons"),
                 }
             }
-            _ => ExamineEventResult::Mismatch,
+            _ => ExamineEventResult::Mismatch("wanted < 2 contacts"),
         }
     }
 }
@@ -167,14 +167,14 @@ struct MatchedContender {
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         if event.pressed_buttons.len() > 0 {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("wanted 0 pressed buttons");
         }
 
         // Note: One potential pitfall is that this MatchedContender
         // may verify tap-like events which alternate reporting 0 and 1 touch
         // contacts.
         if event.contacts.len() > 1 {
-            return VerifyEventResult::Mismatch;
+            return VerifyEventResult::Mismatch("wanted < 2 contacts");
         }
 
         VerifyEventResult::MatchedContender(self)
@@ -297,7 +297,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -317,7 +317,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -368,7 +368,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             },),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -386,7 +386,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -407,7 +407,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -428,7 +428,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -494,7 +494,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             },),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -540,7 +540,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -565,7 +565,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -642,7 +642,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             }),
-            ExamineEventResult::Mismatch
+            ExamineEventResult::Mismatch(_)
         );
     }
 
@@ -670,7 +670,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
@@ -699,7 +699,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![0, 1],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
@@ -728,7 +728,7 @@ mod tests {
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
-            VerifyEventResult::Mismatch
+            VerifyEventResult::Mismatch(_)
         );
     }
 
