@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "mediaplayer",
+            url: "fuchsia-pkg://fuchsia.com/mediaplayer#meta/mediaplayer.cm",
+        },
+    ],
+    capabilities: [
+        { protocol: [
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+          ], 
+        },
+    ],
+    offer: [
+        {
+            protocol: ["fuchsia.media.SessionAudioConsumerFactory",
+                       "fuchsia.media.playback.Player",],
+            from: "#mediaplayer",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: ["fuchsia.media.Audio",
+                       "fuchsia.media.AudioCore",],
+            from: "#audio_core",
+            to: [ "#mediaplayer" ],
+        },
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "#codec_factory",
+            to: [ "#mediaplayer" ],
+        },
+        {
+            protocol: ["fuchsia.scheduler.ProfileProvider",
+                       "fuchsia.logger.LogSink",],
+            from: "parent",
+            to: [ "#mediaplayer" ],
+        },
+        {
+            protocol: "fuchsia.sys.Environment",
+            from: "self",
+            to: [ "#mediaplayer" ],
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: [ "#mediaplayer" ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: [ "#mediaplayer" ],
+        },
+        {
+            protocol: "fuchsia.ui.scenic.Scenic",
+            from: "#ui",
+            to: [ "#mediaplayer" ],
+        },
+    ],
+}

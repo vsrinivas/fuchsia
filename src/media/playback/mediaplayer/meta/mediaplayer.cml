@@ -1,0 +1,66 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/mediaplayer",
+    },
+    collections: [
+        {
+            name: "isolates",
+            durability: "single_run",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.media.playback.Player",
+                "fuchsia.media.SessionAudioConsumerFactory",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: "#isolates",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.media.playback.Player",
+                "fuchsia.media.SessionAudioConsumerFactory",
+            ],
+            from: "self",
+        },
+    ],
+}

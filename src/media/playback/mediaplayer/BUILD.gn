@@ -4,6 +4,11 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+core_shard("mediaplayer_shard") {
+  shard_file = "meta/mediaplayer_shard.core_shard.cml"
+}
 
 group("tests") {
   testonly = true
@@ -13,9 +18,23 @@ group("tests") {
   ]
 }
 
-fuchsia_package_with_single_component("mediaplayer") {
+fuchsia_component("mediaplayer_component") {
   manifest = "meta/mediaplayer.cmx"
+  component_name = "mediaplayer"
   deps = [ ":mediaplayer_bin" ]
+}
+
+fuchsia_component("mediaplayer_component_v2") {
+  manifest = "meta/mediaplayer.cml"
+  component_name = "mediaplayer"
+  deps = [ ":mediaplayer_bin" ]
+}
+
+fuchsia_package("mediaplayer") {
+  deps = [
+    ":mediaplayer_component",
+    ":mediaplayer_component_v2",
+  ]
 }
 
 executable("mediaplayer_bin") {
