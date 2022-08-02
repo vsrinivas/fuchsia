@@ -17,7 +17,7 @@ The following diagram shows a very high level overview of the three lifecycle ev
   The archivist consumes the following lifecycle events under appmgr through
   [`fuchsia.sys.internal.ComponentEventProvider`][component_event_provider]:
 
-  - **Started**: Sent by appmgr when a component starts, the [runner][runner] might still need to
+  - **Started**: Sent by appmgr when a component starts, the [runner] might still need to
     launch the component. This event is synthesized for all components that exist at the moment the
     archivist starts listening for events.
   - **Stopped**: Sent by appmgr when a component stops. The runner might still need to tear down the
@@ -33,7 +33,7 @@ The following diagram shows a very high level overview of the three lifecycle ev
   The archivist consumes the following lifecycle events under component manager through
   [`fuchsia.sys2.EventSource`][event_source]:
 
-  - **Started**: Sent by component manager when a component starts, the [runner][runner] might still
+  - **Started**: Sent by component manager when a component starts, the [runner] might still
     need to launch the component, but the component has started from the framework perspective.
   - **Stopped**: Sent by component manager when a component stops, the runner might still need to to
     tear down the component, but the component is gone from the framework perspective.
@@ -117,7 +117,7 @@ Usually, no errors are expected for lifecycle events, so in most cases this is e
 
 The payload is always be empty for lifecycle events. Other types of data sources, like logs and
 inspect, contain a payload. For more information, refer to the
-[ArchiveAccessor documentation][archive_accessor].
+[ArchiveAccessor documentation].
 
 
 ## Related docs
@@ -132,3 +132,5 @@ inspect, contain a payload. For more information, refer to the
 [event_capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [inspect_discovery_hosting]: /docs/reference/diagnostics/inspect/tree.md#archivist
 [component_runner]: /docs/glossary#runner
+[runner]: /docs/glossary#runner
+[ArchiveAccessor documentation]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
