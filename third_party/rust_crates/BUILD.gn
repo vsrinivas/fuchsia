@@ -8315,7 +8315,13 @@ rust_library("ring-v0_16_12") {
     "--cfg=feature=\"lazy_static\"",
   ]
 
-  visibility = [ ":*" ]
+  group_visibility = []
+  group_visibility += [ ":ring" ]
+  group_visibility += [ ":rustls-v0_19_1" ]
+  group_visibility += [ ":sct-v0_6_0" ]
+  group_visibility += [ ":trust-dns-proto-v0_21_2" ]
+  group_visibility += [ ":tuf-v0_3_0-beta9" ]
+  group_visibility += [ ":webpki-v0_21_0" ]
 }
 
 rust_library("rust_icu_common-v2_0_2") {

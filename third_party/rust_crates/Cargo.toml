@@ -523,6 +523,16 @@ rustflags = ["--cfg=rustc_1_26"]
 rustflags = ["--cfg=rust_1_26"]
 
 [gn.package.ring."0.16.12"]
+# See fxbug.dev/104855 if you want to change this: Please talk to Security team.
+# Thank you!
+visibility = [
+  ":ring",
+  ":rustls-v0_19_1",
+  ":sct-v0_6_0",
+  ":trust-dns-proto-v0_21_2",
+  ":tuf-v0_3_0-beta9",
+  ":webpki-v0_21_0",
+]
 deps = [ "//third_party/rust_crates/compat/ring:ring-core" ]
 
 [gn.package.ryu."1.0.3"]
