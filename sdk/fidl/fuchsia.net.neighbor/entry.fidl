@@ -87,8 +87,8 @@ type Entry = table {
 
     /// MAC address of the neighboring device's network interface controller.
     ///
-    /// Always absent for dynamic entries in [`EntryState.INCOMPLETE`]. May be
-    /// absent for dynamic entries in [`EntryState.UNREACHABLE`].
+    /// May be absent for dynamic entries in [`EntryState.UNREACHABLE`] or
+    /// [`EntryState.INCOMPLETE`].
     // TODO(https://fxbug.dev/105372): Consider pulling the address into a union
     // encoding the state and its presence for better type safety.
     4: mac fuchsia.net.MacAddress;
