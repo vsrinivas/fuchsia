@@ -306,8 +306,6 @@ group("cmx_allowlist") {
     "//src/lib/storage/vfs/cpp/journal:journal-entry-fuzzer_component_manifest_compile",
     "//src/lib/storage/vfs/cpp/journal:journal-fuzzer_component_manifest_compile",
     "//src/lib/storage/vfs/cpp/journal:journal-replay-fuzzer_component_manifest_compile",
-    "//src/lib/syslog/rust/tests:panic_is_logged_manifest_compile",
-    "//src/lib/syslog/rust/tests:panicker_manifest_compile",
     "//src/lib/ui/carnelian:button-rs_v1_manifest_compile",
     "//src/lib/ui/carnelian:carnelian-fb-integration-test-component_manifest_compile",
     "//src/lib/ui/carnelian:carnelian-integration-test-component_manifest_compile",

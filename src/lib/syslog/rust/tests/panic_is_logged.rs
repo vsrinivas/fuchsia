@@ -4,9 +4,9 @@
 
 use {
     fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage},
-    fidl_fuchsia_sys::LauncherMarker,
     fuchsia_async as fasync,
     fuchsia_component::client as fclient,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     validating_log_listener,
 };
 
@@ -15,15 +15,21 @@ async fn listen_for_syslog() {
     let log_proxy =
         fclient::connect_to_protocol::<LogMarker>().expect("failed to connect to log server");
 
-    let launcher =
-        fclient::connect_to_protocol::<LauncherMarker>().expect("failed to connect to launcher");
-    let mut child_component = fclient::AppBuilder::new(
-        "fuchsia-pkg://fuchsia.com/fuchsia-syslog-integration-tests#meta/panicker.cmx",
-    )
-    .spawn(&launcher)
-    .expect("failed to launch panicker");
-
-    assert!(child_component.wait().await.unwrap().success());
+    let builder = RealmBuilder::new().await.expect("failed to create a realm builder");
+    let child = builder
+        .add_child("panicker", "#meta/panicker.cm", ChildOptions::new().eager())
+        .await
+        .expect("failed to create child component");
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&child),
+        )
+        .await
+        .expect("failed to route capability");
+    let _realm = builder.build_with_name("panic-is-logged").await.expect("failed to create realm");
 
     // only interested in catching the panic log
     let options = LogFilterOptions {

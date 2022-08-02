@@ -13,13 +13,13 @@ group("tests") {
 
 fuchsia_component("panic_is_logged") {
   deps = [ ":panic_is_logged_bin" ]
-  manifest = "meta/panic_is_logged.cmx"
+  manifest = "meta/panic_is_logged.cml"
   testonly = true
 }
 
 fuchsia_component("panicker") {
   deps = [ ":panicker_bin" ]
-  manifest = "meta/panicker.cmx"
+  manifest = "meta/panicker.cml"
 }
 
 rustc_test("panic_is_logged_bin") {
@@ -28,10 +28,10 @@ rustc_test("panic_is_logged_bin") {
   source_root = "panic_is_logged.rs"
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/diagnostics/lib/validating-log-listener",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
   ]
 
   sources = [ "panic_is_logged.rs" ]
@@ -48,5 +48,10 @@ rustc_binary("panicker_bin") {
 
 fuchsia_test_package("fuchsia-syslog-integration-tests") {
   test_components = [ ":panic_is_logged" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [ ":panicker" ]
 }
