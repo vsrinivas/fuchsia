@@ -21,8 +21,8 @@ void gic_write_gich_state(IchState* state, uint32_t hcr) { gic_ops->write_gich_s
 
 uint32_t gic_default_gich_vmcr() { return gic_ops->default_gich_vmcr(); }
 
-uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, InterruptState state, uint32_t vector) {
-  return gic_ops->get_lr_from_vector(hw, prio, state, vector);
+uint64_t gic_get_lr_from_vector(uint8_t prio, InterruptState state, uint32_t vector) {
+  return gic_ops->get_lr_from_vector(prio, state, vector);
 }
 
 uint32_t gic_get_vector_from_lr(uint64_t lr, InterruptState* state) {

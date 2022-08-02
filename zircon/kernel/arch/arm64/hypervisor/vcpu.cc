@@ -98,7 +98,7 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
       }
     }
 
-    ich_state->lr[lr_index] = gic_get_lr_from_vector(false, prio, state, vector);
+    ich_state->lr[lr_index] = gic_get_lr_from_vector(prio, state, vector);
     elrsr &= ~(1u << lr_index);
   }
 }
