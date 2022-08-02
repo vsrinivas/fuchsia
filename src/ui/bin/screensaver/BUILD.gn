@@ -32,6 +32,15 @@ fuchsia_component("screensaver_cm") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("screensaver_cm2") {
+  component_name = "screensaver"
+  manifest = "meta/screensaver.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("screensaver") {
-  deps = [ ":screensaver_cm" ]
+  deps = [
+    ":screensaver_cm",
+    ":screensaver_cm2",
+  ]
 }
