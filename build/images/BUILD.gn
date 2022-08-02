@@ -169,8 +169,6 @@ if (gpt_image != "") {
 
 default_image_deps += [ "//build/images/tools:board_tools" ]
 
-default_image_deps += [ ":fastboot_manifest" ]
-
 default_image_deps += [ recovery_label ]
 
 # Build the UEFI disk image.
@@ -263,13 +261,11 @@ group("images") {
 group("default-images") {
   testonly = true
 
-  deps = [
-    ":qemu-kernel",
-    "//build/images/flash:fastboot_manifest",
-    "//build/images/flash:flash_script",
-    "//build/images/tools:fastboot",
-    recovery_label,
-  ]
+  deps = default_image_deps + [
+           "//build/images/flash:fastboot_manifest",
+           "//build/images/flash:flash_script",
+           "//build/images/tools:fastboot",
+         ]
 
   if (size_checker_input != {
       }) {
