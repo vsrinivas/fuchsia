@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_F2FS_F2FS_LIB_H_
 #define SRC_STORAGE_F2FS_F2FS_LIB_H_
 
+#include <safemath/checked_math.h>
+
 namespace f2fs {
 
 // Checkpoint
@@ -159,6 +161,11 @@ inline void list_add(list_node_t *list, list_node_t *item) {
 }
 
 inline bool IsDotOrDotDot(std::string_view name) { return (name == "." || name == ".."); }
+
+template <typename T>
+inline T CheckedDivRoundUp(const T n, const T d) {
+  return safemath::CheckDiv<T>(fbl::round_up(n, d), d).ValueOrDie();
+}
 
 }  // namespace f2fs
 

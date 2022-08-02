@@ -296,12 +296,6 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 #endif
 
 zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
-  uint64_t blk_start = off / kBlockSize;
-  uint64_t blk_end = (off + len) / kBlockSize;
-  size_t off_in_block = off % kBlockSize;
-  size_t off_in_buf = 0;
-  uint64_t npages = (GetSize() + kBlockSize - 1) / kBlockSize;
-
   if (off >= GetSize()) {
     *out_actual = 0;
     return ZX_OK;
@@ -311,9 +305,15 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     return ReadInline(data, len, off, out_actual);
   }
 
+  const pgoff_t block_index_start = safemath::CheckDiv<pgoff_t>(off, kBlockSize).ValueOrDie();
+  const size_t offset_end = safemath::CheckAdd<size_t>(off, len).ValueOrDie();
+  const pgoff_t block_index_end = CheckedDivRoundUp<pgoff_t>(offset_end, kBlockSize);
+
+  size_t off_in_block = safemath::CheckMod<size_t>(off, kBlockSize).ValueOrDie();
+  size_t off_in_buf = 0;
   size_t left = std::min(len, GetSize() - off);
 
-  for (pgoff_t n = blk_start; n <= blk_end; ++n) {
+  for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
     bool is_empty_page = false;
     LockedPage data_page;
     if (zx_status_t ret = GetLockDataPage(n, &data_page); ret != ZX_OK) {
@@ -325,7 +325,8 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
       }
     }
 
-    size_t cur_len = std::min(static_cast<size_t>(kBlockSize - off_in_block), left);
+    size_t cur_len = safemath::CheckSub<size_t>(kBlockSize, off_in_block).ValueOrDie();
+    cur_len = std::min(cur_len, left);
 
     if (is_empty_page) {
       memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
@@ -340,9 +341,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
 
     if (left == 0)
       break;
-
-    if (n == npages - 1)
-      break;
   }
 
   *out_actual = off_in_buf;
@@ -351,12 +349,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
 }
 
 zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *out_actual) {
-  uint64_t blk_start = offset / kBlockSize;
-  uint64_t blk_end = (offset + len) / kBlockSize;
-  size_t off_in_block = offset % kBlockSize;
-  size_t off_in_buf = 0;
-  size_t left = len;
-
   if (len == 0)
     return ZX_OK;
 
@@ -371,11 +363,20 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     ConvertInlineData();
   }
 
-  std::vector<LockedPage> data_pages(blk_end - blk_start + 1);
+  const pgoff_t block_index_start = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();
+  const size_t offset_end = safemath::CheckAdd<size_t>(offset, len).ValueOrDie();
+  const pgoff_t block_index_end = CheckedDivRoundUp<pgoff_t>(offset_end, kBlockSize);
 
-  for (uint64_t n = blk_start; n <= blk_end; ++n) {
-    uint64_t index = n - blk_start;
-    size_t cur_len = std::min(static_cast<size_t>(kBlockSize - off_in_block), left);
+  size_t off_in_block = safemath::CheckMod<size_t>(offset, kBlockSize).ValueOrDie();
+  size_t off_in_buf = 0;
+  size_t left = len;
+
+  std::vector<LockedPage> data_pages(block_index_end - block_index_start);
+
+  for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
+    pgoff_t index = n - block_index_start;
+    size_t cur_len = safemath::CheckSub<size_t>(kBlockSize, off_in_block).ValueOrDie();
+    cur_len = std::min(cur_len, left);
 
     ZX_ASSERT(index < data_pages.size());
 
@@ -397,13 +398,14 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
       break;
   }
 
-  off_in_block = offset % kBlockSize;
+  off_in_block = safemath::checked_cast<size_t>(offset % kBlockSize);
   off_in_buf = 0;
   left = len;
 
-  for (uint64_t n = blk_start; n <= blk_end; ++n) {
-    uint64_t index = n - blk_start;
-    size_t cur_len = std::min(static_cast<size_t>(kBlockSize - off_in_block), left);
+  for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
+    pgoff_t index = n - block_index_start;
+    size_t cur_len = safemath::CheckSub<size_t>(kBlockSize, off_in_block).ValueOrDie();
+    cur_len = std::min(cur_len, left);
 
     ZX_ASSERT(index < data_pages.size());
 
