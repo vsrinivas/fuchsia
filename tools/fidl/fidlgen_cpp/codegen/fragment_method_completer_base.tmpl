@@ -155,21 +155,12 @@ void
 
 
 
-{{- define "Method:NaturalReplySignature:Helper" -}}
-{{- /* TODO(fxbug.dev/60240): Use `const T&` for value types. */}}
-{{- if .HasResponseArgs -}}
-{{ .NaturalResponse }}&& response
-{{- end }}
-{{- end }}
-
-
-
 {{- define "Method:CompleterBase:NaturalMessagingHeader" }}
 {{ EnsureNamespace "" }}
 template<>
 class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
  public:
-  void Reply({{ template "Method:NaturalReplySignature:Helper" . }});
+  void Reply({{ .NaturalResponseArg "response" }});
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -182,13 +173,13 @@ class {{ .NaturalCompleterBase }} : public ::fidl::CompleterBase {
 {{- define "Method:CompleterBase:NaturalMessagingSource" }}
 {{ EnsureNamespace "" }}
 void {{ .NaturalCompleterBase.NoLeading }}::Reply(
-    {{- template "Method:NaturalReplySignature:Helper" . }}) {
+    {{- .NaturalResponseArg "response" }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
     {{- if .HasResponseArgs }}
   _encoder.EncodeBody(
-      {{ .NaturalResponseConverter }}::IntoDomainObject(std::move(response)));
+      {{ .NaturalResponseConverter }}::IntoDomainObject({{ .Response.Forward "response" }}));
     {{- else }}
   _encoder.EncodeBody({{ .ResponsePayload }} { { .result = {{ .Result.ResultDecl }}::WithResponse({}) } });
     {{- end }}

@@ -607,7 +607,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult::WithErr(m.error_value())}};
     } else {
@@ -653,7 +653,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::WithErr(m.error_value())}};
     } else {
@@ -698,7 +698,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::WithErr(m.error_value())}};
     } else {
@@ -743,7 +743,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::WithErr(m.error_value())}};
     } else {
@@ -788,7 +788,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::WithErr(m.error_value())}};
     } else {
@@ -809,15 +809,15 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> OnlyDenyDart(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> request) const;
+  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> OnlyDenyDart(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> OnlyDenyGo(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> request) const;
+  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> OnlyDenyGo(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> OnlyDenyLibfuzzer(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> request) const;
+  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> OnlyDenyLibfuzzer(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> OnlyDenyRust(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> request) const;
+  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> OnlyDenyRust(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> request) const;
+  ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& request) const;
 };
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__
@@ -829,15 +829,15 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>> {
  public:
-  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> OnlyDenyDart(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> request);
+  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> OnlyDenyDart(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& request);
 
-  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> OnlyDenyGo(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> request);
+  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> OnlyDenyGo(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& request);
 
-  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> OnlyDenyLibfuzzer(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> request);
+  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> OnlyDenyLibfuzzer(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& request);
 
-  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> OnlyDenyRust(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> request);
+  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> OnlyDenyRust(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& request);
 
-  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> request);
+  ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> _client_end() const {
@@ -987,7 +987,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& response);
+  void Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -996,7 +996,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBi
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& response);
+  void Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1005,7 +1005,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBi
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&& response);
+  void Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1014,7 +1014,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBi
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& response);
+  void Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1023,7 +1023,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBi
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&& response);
+  void Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

@@ -11,12 +11,12 @@ namespace test_nullable {
 #ifdef __Fuchsia__
 }  // namespace test_nullable
 ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add>
-fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(::fidl::Request<::test_nullable::SimpleProtocol::Add> request) const {
+fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request) const {
   return ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -35,11 +35,11 @@ namespace test_nullable {
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_nullable::SimpleProtocol::Add>
-fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>::Add(::fidl::Request<::test_nullable::SimpleProtocol::Add> request) {
+fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>::Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_nullable::SimpleProtocol::Add>(
@@ -62,11 +62,11 @@ fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>::Add(::fi
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add>::Reply(::fidl::Response<::test_nullable::SimpleProtocol::Add>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add>::Reply(const ::fidl::Response<::test_nullable::SimpleProtocol::Add>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

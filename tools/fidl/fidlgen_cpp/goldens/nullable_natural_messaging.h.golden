@@ -61,7 +61,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add> Add(::fidl::Request<::test_nullable::SimpleProtocol::Add> request) const;
+  ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add> Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request) const;
 };
 namespace test_nullable {
 #endif  // __Fuchsia__
@@ -73,7 +73,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>> {
  public:
-  ::fidl::Result<::test_nullable::SimpleProtocol::Add> Add(::fidl::Request<::test_nullable::SimpleProtocol::Add> request);
+  ::fidl::Result<::test_nullable::SimpleProtocol::Add> Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> _client_end() const {
@@ -155,7 +155,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_nullable::SimplePr
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_nullable::SimpleProtocol::Add>&& response);
+  void Reply(const ::fidl::Response<::test_nullable::SimpleProtocol::Add>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

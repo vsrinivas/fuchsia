@@ -64,7 +64,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::E
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_error::Example::Foo>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_error::Example::Foo>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_error::ExampleFooResult::WithErr(m.error_value())}};
     } else {
@@ -86,7 +86,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_error::Example> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_error::Example::Foo> Foo(::fidl::Request<::test_error::Example::Foo> request) const;
+  ::fidl::internal::NaturalThenable<::test_error::Example::Foo> Foo(const ::fidl::Request<::test_error::Example::Foo>& request) const;
 };
 namespace test_error {
 #endif  // __Fuchsia__
@@ -98,7 +98,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_error::Example> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_error::Example>> {
  public:
-  ::fidl::Result<::test_error::Example::Foo> Foo(::fidl::Request<::test_error::Example::Foo> request);
+  ::fidl::Result<::test_error::Example::Foo> Foo(const ::fidl::Request<::test_error::Example::Foo>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_error::Example> _client_end() const {
@@ -180,7 +180,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_error::Example::Fo
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_error::Example::Foo>&& response);
+  void Reply(const ::fidl::Response<::test_error::Example::Foo>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

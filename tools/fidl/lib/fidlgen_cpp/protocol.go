@@ -472,6 +472,13 @@ type message struct {
 	ServerAllocationV2 allocation
 }
 
+func (m message) Forward(argName string) string {
+	if m.IsResource {
+		return fmt.Sprintf("std::move(%s)", argName)
+	}
+	return fmt.Sprintf("%s", argName)
+}
+
 // methodContext indicates where the request/response is used.
 // The allocation strategies differ for client and server contexts, in LLCPP.
 type methodContext int
@@ -687,10 +694,27 @@ func (m Method) NaturalCompleterArg() string {
 }
 
 func (m Method) NaturalRequestArg(argName string) string {
-	if m.HasRequestPayload {
-		return fmt.Sprintf("%s %s", m.NaturalRequest, argName)
+	if !m.HasRequestPayload {
+		return ""
 	}
-	return ""
+	if !m.Request.IsResource {
+		return fmt.Sprintf("const %s& %s", m.NaturalRequest, argName)
+	}
+	return fmt.Sprintf("%s %s", m.NaturalRequest, argName)
+}
+
+func (m Method) NaturalResponseArg(argName string) string {
+	if !m.HasResponseArgs() {
+		return ""
+	}
+	n := m.NaturalResponse
+	if m.IsEvent {
+		n = m.NaturalEvent
+	}
+	if !m.Response.IsResource {
+		return fmt.Sprintf("const %s& %s", n, argName)
+	}
+	return fmt.Sprintf("%s %s", n, argName)
 }
 
 // Returns true if the method has a result payload and the payload has the `err`
@@ -730,8 +754,8 @@ func (m Method) HasNonEmptyPayload() bool {
 	return false
 }
 
-// Returns true if the method has a response that requires the server to provide
-// arguments to the response completer in order to reply.
+// HasResponseArgs determines if the method has a response that requires the
+// server to provide arguments to the response completer in order to reply.
 //
 // This is true if there is a response payload and either the payload does not
 // use a result type (so the response is just the payload) or the result type

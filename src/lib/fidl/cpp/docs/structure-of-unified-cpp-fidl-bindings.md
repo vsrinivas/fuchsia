@@ -461,7 +461,10 @@ wire types.
 
 ### Input argument optimizations
 
-Use `const T&` for non-resource types and `T&&` for resource types.
+For a function that send a domain object of type `T`:
+- Take `T` if the domain object is a resource type, to always consume the
+  object.
+- Take `const T&` otherwise, to skip a copy.
 
 ### Out-of-scope features
 

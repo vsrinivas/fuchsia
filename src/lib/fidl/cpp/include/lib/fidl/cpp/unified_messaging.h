@@ -59,10 +59,17 @@ template <typename Message>
 class NaturalMessageConverter {
   using DomainObject = typename MessageTraits<Message>::Payload;
 
+  // Resource type: |DomainObject|
+  // Value type: |const DomainObject&|
+  using MessageArg =
+      std::conditional_t<fidl::IsResource<DomainObject>::value, Message, const Message&>;
+
  public:
   static Message FromDomainObject(DomainObject&& o) { return static_cast<Message>(std::move(o)); }
 
-  static DomainObject IntoDomainObject(Message&& m) { return DomainObject{std::move(m)}; }
+  static DomainObject IntoDomainObject(MessageArg m) {
+    return DomainObject{std::forward<MessageArg>(m)};
+  }
 };
 
 // |DecodeTransactionalMessage| decodes a transactional incoming message to an

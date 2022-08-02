@@ -207,7 +207,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_union::TestProtoco
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&& response);
+  void Reply(const ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -216,7 +216,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictX
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>&& response);
+  void Reply(const ::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

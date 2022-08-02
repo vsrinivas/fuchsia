@@ -11,12 +11,12 @@ namespace test_error {
 #ifdef __Fuchsia__
 }  // namespace test_error
 ::fidl::internal::NaturalThenable<::test_error::Example::Foo>
-fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(::fidl::Request<::test_error::Example::Foo> request) const {
+fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(const ::fidl::Request<::test_error::Example::Foo>& request) const {
   return ::fidl::internal::NaturalThenable<::test_error::Example::Foo>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_error::kExample_foo_Ordinal, ::test_error::kExample_foo_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -35,11 +35,11 @@ namespace test_error {
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_error::Example::Foo>
-fidl::internal::NaturalSyncClientImpl<::test_error::Example>::Foo(::fidl::Request<::test_error::Example::Foo> request) {
+fidl::internal::NaturalSyncClientImpl<::test_error::Example>::Foo(const ::fidl::Request<::test_error::Example::Foo>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_error::kExample_foo_Ordinal, ::test_error::kExample_foo_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_error::Example::Foo>(
@@ -62,11 +62,11 @@ fidl::internal::NaturalSyncClientImpl<::test_error::Example>::Foo(::fidl::Reques
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(::fidl::Response<::test_error::Example::Foo>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(const ::fidl::Response<::test_error::Example::Foo>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_error::kExample_foo_Ordinal, ::test_error::kExample_foo_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::Example::Foo>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::Example::Foo>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

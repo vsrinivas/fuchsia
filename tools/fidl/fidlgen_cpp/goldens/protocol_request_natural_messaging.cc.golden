@@ -141,7 +141,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>::Reply(::fidl::Response<::test_protocolrequest::Parent::GetChild> response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChild_Ordinal, ::test_protocolrequest::kParent_GetChild_DynamicFlags};
   _encoder.EncodeBody(
@@ -150,7 +150,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChi
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest>::Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest>::Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_GetChildRequest_Ordinal, ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags};
   _encoder.EncodeBody(

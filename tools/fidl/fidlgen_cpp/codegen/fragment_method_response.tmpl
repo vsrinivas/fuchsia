@@ -164,7 +164,7 @@ class {{ .NaturalResponseConverter }} {
   {{ if not .Result.HasTransportError }}
   {{/* FromDomainObject is not available if HasTransportError because transport
   error variants cannot be converted to fidl::Response. */}}
-  static {{ .NaturalResponse }} FromDomainObject(DomainObject  o) {
+  static {{ .NaturalResponse }} FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
       return ::fitx::error(std::move(o.result().err().value()));
     } else {
@@ -178,7 +178,7 @@ class {{ .NaturalResponseConverter }} {
   }
   {{ end }}
 
-  static DomainObject  IntoDomainObject({{ .NaturalResponse }}&& m) {
+  static DomainObject IntoDomainObject({{ .NaturalResponseArg "m" }}) {
     {{ if .Result.HasError -}}
     if (m.is_error()) {
       return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithErr(m.error_value()) } };

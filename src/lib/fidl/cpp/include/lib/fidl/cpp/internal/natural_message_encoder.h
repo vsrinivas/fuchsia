@@ -34,9 +34,10 @@ class NaturalMessageEncoder final {
   // Do not move the encoder object until the message is sent.
   template <typename Payload>
   void EncodeBody(Payload&& payload) {
+    using PayloadDecay = std::decay_t<Payload>;
     body_encoder().Alloc(
-        NaturalEncodingInlineSize<Payload, NaturalCodingConstraintEmpty>(&body_encoder()));
-    NaturalCodingTraits<Payload, NaturalCodingConstraintEmpty>::Encode(
+        NaturalEncodingInlineSize<PayloadDecay, NaturalCodingConstraintEmpty>(&body_encoder()));
+    NaturalCodingTraits<PayloadDecay, NaturalCodingConstraintEmpty>::Encode(
         &body_encoder(), &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
   }
 

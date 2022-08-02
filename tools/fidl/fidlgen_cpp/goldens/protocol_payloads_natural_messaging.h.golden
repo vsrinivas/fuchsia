@@ -199,7 +199,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpay
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -252,7 +252,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpay
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::MainProtocolOnLocalWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -305,7 +305,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpay
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::MainProtocolOnImportWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -358,7 +358,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocolpay
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::MainProtocolOnAnonWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -419,7 +419,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads_imported::ComposedProtocolTwoWayComposedWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -486,7 +486,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -553,7 +553,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -620,7 +620,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult::WithErr(m.error_value())}};
     } else {
@@ -641,29 +641,29 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposed> TwoWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposed> TwoWayComposed(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> TwoWayComposedWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> TwoWayComposedWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocal> TwoWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocal> TwoWayLocal(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> TwoWayLocalWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> TwoWayLocalWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImport> TwoWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImport> TwoWayImport(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> TwoWayImportWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> TwoWayImportWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnon> TwoWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnon> TwoWayAnon(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed> request) const;
+  ::fitx::result<::fidl::Error> OneWayComposed(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal> request) const;
+  ::fitx::result<::fidl::Error> OneWayLocal(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport> request) const;
+  ::fitx::result<::fidl::Error> OneWayImport(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon> request) const;
+  ::fitx::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>& request) const;
 };
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -675,29 +675,29 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>> {
  public:
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed> TwoWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed> TwoWayComposed(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> TwoWayComposedWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> TwoWayComposedWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocal> TwoWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocal> TwoWayLocal(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> TwoWayLocalWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> TwoWayLocalWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImport> TwoWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImport> TwoWayImport(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> TwoWayImportWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> TwoWayImportWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon> TwoWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon> TwoWayAnon(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>& request);
 
-  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> request);
+  ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>& request);
 
-  ::fitx::result<::fidl::Error> OneWayComposed(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed> request);
+  ::fitx::result<::fidl::Error> OneWayComposed(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>& request);
 
-  ::fitx::result<::fidl::Error> OneWayLocal(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal> request);
+  ::fitx::result<::fidl::Error> OneWayLocal(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>& request);
 
-  ::fitx::result<::fidl::Error> OneWayImport(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport> request);
+  ::fitx::result<::fidl::Error> OneWayImport(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>& request);
 
-  ::fitx::result<::fidl::Error> OneWayAnon(::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon> request);
+  ::fitx::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> _client_end() const {
@@ -769,21 +769,21 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocolpayloads::MainProt
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> OnComposed(::test_protocolpayloads_imported::ImportStructPayload payload);
+  ::fitx::result<::fidl::Error> OnComposed(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed>& payload);
 
-  ::fitx::result<::fidl::Error> OnComposedWithError(::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnComposedWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocal(::test_protocolpayloads::LocalStructPayload payload);
+  ::fitx::result<::fidl::Error> OnLocal(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocalWithError(::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnLocalWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnImport(::test_protocolpayloads_imported::ImportStructPayload payload);
+  ::fitx::result<::fidl::Error> OnImport(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport>& payload);
 
-  ::fitx::result<::fidl::Error> OnImportWithError(::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnImportWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnon(::test_protocolpayloads::MainProtocolOnAnonRequest payload);
+  ::fitx::result<::fidl::Error> OnAnon(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnonWithError(::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>& payload);
 };
 
 template <>
@@ -792,21 +792,21 @@ class ::fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> OnComposed(::test_protocolpayloads_imported::ImportStructPayload payload);
+  ::fitx::result<::fidl::Error> OnComposed(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed>& payload);
 
-  ::fitx::result<::fidl::Error> OnComposedWithError(::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnComposedWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposedWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocal(::test_protocolpayloads::LocalStructPayload payload);
+  ::fitx::result<::fidl::Error> OnLocal(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocalWithError(::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnLocalWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnImport(::test_protocolpayloads_imported::ImportStructPayload payload);
+  ::fitx::result<::fidl::Error> OnImport(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport>& payload);
 
-  ::fitx::result<::fidl::Error> OnImportWithError(::test_protocolpayloads::MainProtocolOnImportWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnImportWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnon(::test_protocolpayloads::MainProtocolOnAnonRequest payload);
+  ::fitx::result<::fidl::Error> OnAnon(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnonWithError(::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest payload);
+  ::fitx::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -1017,7 +1017,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposed>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposed>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1026,7 +1026,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1035,7 +1035,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocal> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocal>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1044,7 +1044,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1053,7 +1053,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImport> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImport>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1062,7 +1062,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1071,7 +1071,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnon> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1080,7 +1080,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtoc
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&& response);
+  void Reply(const ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

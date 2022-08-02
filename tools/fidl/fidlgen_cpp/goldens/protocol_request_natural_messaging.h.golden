@@ -252,7 +252,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::P
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChild>&& response);
+  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChild> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -261,7 +261,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::Get
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&& response);
+  void Reply(::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

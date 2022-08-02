@@ -264,12 +264,12 @@ namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyDart(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> request) const {
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyDart(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& request) const {
   return ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -282,12 +282,12 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::Onl
 }
 
 ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyGo(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> request) const {
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyGo(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& request) const {
   return ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -300,12 +300,12 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::Onl
 }
 
 ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyLibfuzzer(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> request) const {
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyLibfuzzer(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& request) const {
   return ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -318,12 +318,12 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::Onl
 }
 
 ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyRust(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> request) const {
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyRust(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& request) const {
   return ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -336,12 +336,12 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::Onl
 }
 
 ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenySyzkaller(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> request) const {
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenySyzkaller(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& request) const {
   return ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -360,11 +360,11 @@ namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyDart(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> request) {
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyDart(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(
@@ -372,11 +372,11 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 }
 
 ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyGo(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> request) {
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyGo(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(
@@ -384,11 +384,11 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 }
 
 ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyLibfuzzer(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> request) {
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyLibfuzzer(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(
@@ -396,11 +396,11 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 }
 
 ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyRust(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> request) {
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyRust(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(
@@ -408,11 +408,11 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 }
 
 ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenySyzkaller(::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> request) {
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenySyzkaller(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(
@@ -435,47 +435,47 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>:
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
-void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::Reply(::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::Reply(const ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal, ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }

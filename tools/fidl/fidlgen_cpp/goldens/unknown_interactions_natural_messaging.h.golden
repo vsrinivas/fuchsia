@@ -394,7 +394,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::WithErr(m.error_value())}};
     } else {
@@ -432,7 +432,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -470,7 +470,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -508,7 +508,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -603,7 +603,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::WithErr(m.error_value())}};
     } else {
@@ -641,7 +641,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -679,7 +679,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -717,7 +717,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -841,7 +841,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -886,7 +886,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -931,7 +931,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -976,7 +976,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -1009,7 +1009,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>&& m) {
+  static DomainObject IntoDomainObject() {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::WithResponse({})}};
   }
 };
@@ -1040,7 +1040,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>& m) {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::WithResponse(std::move(m))}};
   }
 };
@@ -1071,7 +1071,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>& m) {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::WithResponse(std::move(m))}};
   }
 };
@@ -1102,7 +1102,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>& m) {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::WithResponse(std::move(m))}};
   }
 };
@@ -1134,7 +1134,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -1170,7 +1170,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -1206,7 +1206,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -1242,7 +1242,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -1433,35 +1433,35 @@ class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Unkno
 
   ::fitx::result<::fidl::Error> StrictEvent();
 
-  ::fitx::result<::fidl::Error> StrictEventFields(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnion(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTable(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventFieldsErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnionErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTableErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>& payload);
 
   ::fitx::result<::fidl::Error> FlexibleEvent();
 
-  ::fitx::result<::fidl::Error> FlexibleEventFields(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnion(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTable(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTableErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>& payload);
 };
 
 template <>
@@ -1472,35 +1472,35 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
 
   ::fitx::result<::fidl::Error> StrictEvent();
 
-  ::fitx::result<::fidl::Error> StrictEventFields(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnion(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTable(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventFieldsErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnionErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTableErr(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>& payload);
 
   ::fitx::result<::fidl::Error> FlexibleEvent();
 
-  ::fitx::result<::fidl::Error> FlexibleEventFields(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnion(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTable(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTableErr(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -1768,7 +1768,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1777,7 +1777,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1786,7 +1786,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1795,7 +1795,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1804,7 +1804,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1813,7 +1813,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1822,7 +1822,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1840,7 +1840,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1849,7 +1849,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1858,7 +1858,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1867,7 +1867,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1876,7 +1876,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1885,7 +1885,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1894,7 +1894,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2250,7 +2250,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::WithErr(m.error_value())}};
     } else {
@@ -2288,7 +2288,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -2326,7 +2326,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -2364,7 +2364,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -2488,7 +2488,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -2533,7 +2533,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -2578,7 +2578,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -2623,7 +2623,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -2762,19 +2762,19 @@ class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Unkno
 
   ::fitx::result<::fidl::Error> StrictEvent();
 
-  ::fitx::result<::fidl::Error> StrictEventFields(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnion(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTable(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventFieldsErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnionErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTableErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>& payload);
 };
 
 template <>
@@ -2785,19 +2785,19 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
 
   ::fitx::result<::fidl::Error> StrictEvent();
 
-  ::fitx::result<::fidl::Error> StrictEventFields(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnion(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTable(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventFieldsErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnionErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTableErr(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -2939,7 +2939,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2948,7 +2948,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2957,7 +2957,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2966,7 +2966,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2975,7 +2975,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2984,7 +2984,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2993,7 +2993,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -3319,7 +3319,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::WithErr(m.error_value())}};
     } else {
@@ -3357,7 +3357,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -3395,7 +3395,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -3433,7 +3433,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -3528,7 +3528,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::WithErr(m.error_value())}};
     } else {
@@ -3566,7 +3566,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -3604,7 +3604,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -3642,7 +3642,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninte
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -3766,7 +3766,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -3811,7 +3811,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -3856,7 +3856,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -3901,7 +3901,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -4060,35 +4060,35 @@ class ::fidl::internal::NaturalWeakEventSender<::test_unknowninteractions::Unkno
 
   ::fitx::result<::fidl::Error> StrictEvent();
 
-  ::fitx::result<::fidl::Error> StrictEventFields(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnion(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTable(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventFieldsErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnionErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTableErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>& payload);
 
   ::fitx::result<::fidl::Error> FlexibleEvent();
 
-  ::fitx::result<::fidl::Error> FlexibleEventFields(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnion(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTable(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTableErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>& payload);
 };
 
 template <>
@@ -4099,35 +4099,35 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
 
   ::fitx::result<::fidl::Error> StrictEvent();
 
-  ::fitx::result<::fidl::Error> StrictEventFields(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnion(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTable(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventFieldsErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventUnionErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> StrictEventTableErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> StrictEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>& payload);
 
   ::fitx::result<::fidl::Error> FlexibleEvent();
 
-  ::fitx::result<::fidl::Error> FlexibleEventFields(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFields(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnion(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnion(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTable(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTable(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventFieldsErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventUnionErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>& payload);
 
-  ::fitx::result<::fidl::Error> FlexibleEventTableErr(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest payload);
+  ::fitx::result<::fidl::Error> FlexibleEventTableErr(const ::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -4283,7 +4283,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -4292,7 +4292,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -4301,7 +4301,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -4310,7 +4310,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -4319,7 +4319,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -4328,7 +4328,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -4337,7 +4337,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

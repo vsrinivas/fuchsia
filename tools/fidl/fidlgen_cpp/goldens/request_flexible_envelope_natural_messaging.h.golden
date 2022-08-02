@@ -98,9 +98,9 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> RequestStrictResponseFlexible(::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> request) const;
+  ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> RequestStrictResponseFlexible(const ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> request) const;
+  ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(const ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& request) const;
 };
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -112,9 +112,9 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_requestflexibleenvelope::Protocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_requestflexibleenvelope::Protocol>> {
  public:
-  ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> RequestStrictResponseFlexible(::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> request);
+  ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> RequestStrictResponseFlexible(const ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& request);
 
-  ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> request);
+  ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(const ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> _client_end() const {
@@ -213,7 +213,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_requestflexibleenv
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&& response);
+  void Reply(const ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -222,7 +222,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Pro
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&& response);
+  void Reply(const ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

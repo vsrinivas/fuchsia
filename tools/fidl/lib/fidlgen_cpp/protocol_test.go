@@ -74,6 +74,103 @@ func TestFullyQualifiedName(t *testing.T) {
 	expectEqual(t, exampleProtocol(t).OneWayMethods[0].FullyQualifiedName, "example/P.OneWay")
 }
 
+// Test natural argument rendering on the send path.
+//
+// E.g. value types should get decorated with "const &".
+func TestNaturalArgumentRenderingSendPath(t *testing.T) {
+	cases := []struct {
+		desc          string
+		fidl          string
+		actualChooser func(p *Protocol) string
+		expected      string
+	}{
+		{
+			desc:          "value request",
+			fidl:          "closed protocol P { strict Method(struct { a int32; }); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalRequestArg("r") },
+			expected:      "const ::fidl::Request<::example::P::Method>& r",
+		},
+		{
+			desc:          "resource request",
+			fidl:          "closed protocol P { strict Method(resource struct { a int32; }); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalRequestArg("r") },
+			expected:      "::fidl::Request<::example::P::Method> r",
+		},
+		{
+			desc:          "no request",
+			fidl:          "closed protocol P { strict Method(); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalRequestArg("r") },
+			expected:      "",
+		},
+		{
+			desc:          "value response",
+			fidl:          "closed protocol P { strict Method() -> (struct { a int32; }); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "const ::fidl::Response<::example::P::Method>& r",
+		},
+		{
+			desc:          "resource response",
+			fidl:          "closed protocol P { strict Method() -> (resource struct { a int32; }); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "::fidl::Response<::example::P::Method> r",
+		},
+		{
+			desc:          "no response",
+			fidl:          "closed protocol P { strict Method() -> (); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "",
+		},
+		{
+			desc:          "flexible empty struct response",
+			fidl:          "open protocol P { flexible Method() -> (struct {}); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "",
+		},
+		{
+			desc:          "domain error empty struct response",
+			fidl:          "closed protocol P { strict Method() -> (struct {}) error int32; };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "const ::fidl::Response<::example::P::Method>& r", // fitx::result<int32_t>
+		},
+		{
+			desc:          "value event",
+			fidl:          "closed protocol P { strict -> Event(struct { a int32; }); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "const ::fidl::Event<::example::P::Event>& r",
+		},
+		{
+			desc:          "resource event",
+			fidl:          "closed protocol P { strict -> Event(resource struct { a int32; }); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "::fidl::Event<::example::P::Event> r",
+		},
+		{
+			desc:          "flexible event",
+			fidl:          "open protocol P { flexible -> Event(); };",
+			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
+			expected:      "",
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.desc, func(t *testing.T) {
+			root := compile(fidlgentest.EndToEndTest{T: t}.WithExperiment("unknown_interactions").Single("library example; " + ex.fidl))
+			var protocols []*Protocol
+			for _, decl := range root.Decls {
+				if p, ok := decl.(*Protocol); ok {
+					protocols = append(protocols, p)
+				}
+			}
+			if len(protocols) != 1 {
+				t.Fatal("Must have a single protocol defined")
+			}
+
+			p := protocols[0]
+			actual := ex.actualChooser(p)
+			expectEqual(t, actual, ex.expected)
+		})
+	}
+}
+
 //
 // Test allocation strategies
 //

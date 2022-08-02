@@ -32,7 +32,8 @@ import (
 //         .Single(`library example; struct MyStruct{ dep.S foo};`)
 type EndToEndTest struct {
 	*testing.T
-	deps []string
+	deps       []string
+	experiment []string
 }
 
 var fidlcPath = flag.String("fidlc", "", "Path to fidlc.")
@@ -40,6 +41,12 @@ var fidlcPath = flag.String("fidlc", "", "Path to fidlc.")
 // WithDependency adds the source text for a dependency.
 func (t EndToEndTest) WithDependency(content string) EndToEndTest {
 	t.deps = append(t.deps, content)
+	return t
+}
+
+// WithExperiment adds the input as an experimental flag.
+func (t EndToEndTest) WithExperiment(f string) EndToEndTest {
+	t.experiment = append(t.experiment, f)
 	return t
 }
 
@@ -66,6 +73,10 @@ func (t EndToEndTest) Single(content string) fidlgen.Root {
 			t.Fatal(err)
 		}
 		params = append(params, "--files", depFidlFile)
+	}
+
+	for _, e := range t.experiment {
+		params = append(params, "--experimental", e)
 	}
 
 	params = append(params, "--files", dotFidlFile)

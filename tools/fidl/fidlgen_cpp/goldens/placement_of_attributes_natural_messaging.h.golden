@@ -25,7 +25,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Method(::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request) const;
+  ::fitx::result<::fidl::Error> Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) const;
 };
 namespace test_placementofattributes {
 #endif  // __Fuchsia__
@@ -37,7 +37,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol>> {
  public:
-  ::fitx::result<::fidl::Error> Method(::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request);
+  ::fitx::result<::fidl::Error> Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> _client_end() const {

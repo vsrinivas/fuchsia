@@ -199,13 +199,13 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutReques
 
   ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> NoRequestWithResponse() const;
 
-  ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> WithRequestEmptyResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> WithRequestEmptyResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& request) const;
 
   ::fitx::result<::fidl::Error> NoRequestNoResponse() const;
 
-  ::fitx::result<::fidl::Error> WithRequestNoResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> request) const;
+  ::fitx::result<::fidl::Error> WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -221,13 +221,13 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRe
 
   ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> NoRequestWithResponse();
 
-  ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> WithRequestEmptyResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> request);
+  ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> WithRequestEmptyResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>& request);
 
-  ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> request);
+  ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& request);
 
   ::fitx::result<::fidl::Error> NoRequestNoResponse();
 
-  ::fitx::result<::fidl::Error> WithRequestNoResponse(::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> request);
+  ::fitx::result<::fidl::Error> WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> _client_end() const {
@@ -289,7 +289,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutR
 
   ::fitx::result<::fidl::Error> OnEmptyResponse();
 
-  ::fitx::result<::fidl::Error> OnWithResponse(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest payload);
+  ::fitx::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
 };
 
 template <>
@@ -300,7 +300,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutReque
 
   ::fitx::result<::fidl::Error> OnEmptyResponse();
 
-  ::fitx::result<::fidl::Error> OnWithResponse(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest payload);
+  ::fitx::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -409,7 +409,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutReq
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -427,7 +427,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutReq
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -559,9 +559,9 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::Transitional> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request> Request(::fidl::Request<::test_protocols::Transitional::Request> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWay(::fidl::Request<::test_protocols::Transitional::OneWay> request) const;
+  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -573,9 +573,9 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>> {
  public:
-  ::fidl::Result<::test_protocols::Transitional::Request> Request(::fidl::Request<::test_protocols::Transitional::Request> request);
+  ::fidl::Result<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request);
 
-  ::fitx::result<::fidl::Error> OneWay(::fidl::Request<::test_protocols::Transitional::OneWay> request);
+  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::Transitional> _client_end() const {
@@ -634,7 +634,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional> :
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> Event(::test_protocols::TransitionalEventRequest payload);
+  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
 };
 
 template <>
@@ -643,7 +643,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> Event(::test_protocols::TransitionalEventRequest payload);
+  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -684,7 +684,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transit
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::Transitional::Request>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::Transitional::Request>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -988,7 +988,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithPro
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>&& response);
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -997,7 +997,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds:
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>&& response);
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1006,7 +1006,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds:
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>&& response);
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1105,7 +1105,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1117,7 +1117,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>> {
  public:
-  ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request);
+  ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> _client_end() const {
@@ -1199,7 +1199,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::MethodW
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1251,7 +1251,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Fifteen(::fidl::Request<::test_protocols::ManyParameters::Fifteen> request) const;
+  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1263,7 +1263,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>> {
  public:
-  ::fitx::result<::fidl::Error> Fifteen(::fidl::Request<::test_protocols::ManyParameters::Fifteen> request);
+  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> _client_end() const {
@@ -1518,7 +1518,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsPro
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> AnEvent(::test_protocols::HandleRightsProtocolAnEventRequest payload);
+  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
 };
 
 template <>
@@ -1527,7 +1527,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtoco
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> AnEvent(::test_protocols::HandleRightsProtocolAnEventRequest payload);
+  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
 };
 #endif  // __Fuchsia__
 
@@ -1568,7 +1568,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleR
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>&& response);
+  void Reply(::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1716,7 +1716,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxResponseAsStructResult::WithErr(m.error_value())}};
     } else {
@@ -1762,7 +1762,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::WithErr(m.error_value())}};
     } else {
@@ -1807,7 +1807,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxErrorAsEnumResult::WithErr(m.error_value())}};
     } else {
@@ -1852,7 +1852,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>&& m) {
+  static DomainObject IntoDomainObject(::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_protocols::WithErrorSyntaxHandleInResultResult::WithErr(m.error_value())}};
     } else {
@@ -2018,7 +2018,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithErr
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2027,7 +2027,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2036,7 +2036,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2045,7 +2045,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::HandleInResult> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult>&& response);
+  void Reply(::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2367,13 +2367,13 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MethodB> MethodB(::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request) const;
+  ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MethodB> MethodB(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>& request) const;
 
   ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::TakeHandle> TakeHandle(::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request) const;
 
   ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MutateSocket> MutateSocket(::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request) const;
 
-  ::fitx::result<::fidl::Error> MethodA(::fidl::Request<::test_protocols::ChannelProtocol::MethodA> request) const;
+  ::fitx::result<::fidl::Error> MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) const;
 };
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -2385,13 +2385,13 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>> {
  public:
-  ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> MethodB(::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request);
+  ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> MethodB(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>& request);
 
   ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> TakeHandle(::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request);
 
   ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> MutateSocket(::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request);
 
-  ::fitx::result<::fidl::Error> MethodA(::fidl::Request<::test_protocols::ChannelProtocol::MethodA> request);
+  ::fitx::result<::fidl::Error> MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> _client_end() const {
@@ -2449,7 +2449,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::ChannelProtocol
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> EventA(::test_protocols::ChannelProtocolEventARequest payload);
+  ::fitx::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
 };
 
 template <>
@@ -2458,7 +2458,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> EventA(::test_protocols::ChannelProtocolEventARequest payload);
+  ::fitx::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -2533,7 +2533,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Channel
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::ChannelProtocol::MethodB>&& response);
+  void Reply(const ::fidl::Response<::test_protocols::ChannelProtocol::MethodB>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2551,7 +2551,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MutateSocket> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>&& response);
+  void Reply(::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

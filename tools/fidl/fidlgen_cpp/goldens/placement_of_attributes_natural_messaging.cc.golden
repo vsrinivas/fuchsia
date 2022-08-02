@@ -11,11 +11,11 @@ namespace test_placementofattributes {
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
 ::fitx::result<::fidl::Error>
-fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request) const {
+fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -28,11 +28,11 @@ namespace test_placementofattributes {
 #ifdef __Fuchsia__
 
 ::fitx::result<::fidl::Error>
-fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol>::Method(::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request) {
+fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});

@@ -61,7 +61,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_inheritance::Super> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo> Foo(::fidl::Request<::test_inheritance::Super::Foo> request) const;
+  ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo> Foo(const ::fidl::Request<::test_inheritance::Super::Foo>& request) const;
 };
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -73,7 +73,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>> {
  public:
-  ::fidl::Result<::test_inheritance::Super::Foo> Foo(::fidl::Request<::test_inheritance::Super::Foo> request);
+  ::fidl::Result<::test_inheritance::Super::Foo> Foo(const ::fidl::Request<::test_inheritance::Super::Foo>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritance::Super> _client_end() const {
@@ -155,7 +155,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritance::Super
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_inheritance::Super::Foo>&& response);
+  void Reply(const ::fidl::Response<::test_inheritance::Super::Foo>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -239,7 +239,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo> Foo(::fidl::Request<::test_inheritance::Sub::Foo> request) const;
+  ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo> Foo(const ::fidl::Request<::test_inheritance::Sub::Foo>& request) const;
 };
 #endif  // __Fuchsia__
 
@@ -249,7 +249,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>> {
  public:
-  ::fidl::Result<::test_inheritance::Sub::Foo> Foo(::fidl::Request<::test_inheritance::Sub::Foo> request);
+  ::fidl::Result<::test_inheritance::Sub::Foo> Foo(const ::fidl::Request<::test_inheritance::Sub::Foo>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritance::Sub> _client_end() const {
@@ -331,7 +331,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritance::Sub::
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_inheritance::Sub::Foo>&& response);
+  void Reply(const ::fidl::Response<::test_inheritance::Sub::Foo>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

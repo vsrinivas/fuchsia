@@ -79,9 +79,9 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> request) const;
+  ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(const ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>& request) const;
 
-  ::fitx::result<::fidl::Error> Send(::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request) const;
+  ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) const;
 };
 namespace test_emptystruct {
 #endif  // __Fuchsia__
@@ -93,9 +93,9 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>> {
  public:
-  ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> request);
+  ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(const ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>& request);
 
-  ::fitx::result<::fidl::Error> Send(::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request);
+  ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> _client_end() const {
@@ -153,7 +153,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_emptystruct::EmptyProtocol
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> Receive(::test_emptystruct::EmptyProtocolReceiveRequest payload);
+  ::fitx::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
 };
 
 template <>
@@ -162,7 +162,7 @@ class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> Receive(::test_emptystruct::EmptyProtocolReceiveRequest payload);
+  ::fitx::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
 };
 #endif  // __Fuchsia__
 
@@ -203,7 +203,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::Empty
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>&& response);
+  void Reply(const ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

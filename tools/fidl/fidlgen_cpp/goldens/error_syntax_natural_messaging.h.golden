@@ -82,7 +82,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyn
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithErr(m.error_value())}};
     } else {
@@ -128,7 +128,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyn
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithErr(m.error_value())}};
     } else {
@@ -149,9 +149,9 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ComposedCallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> request) const;
+  ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ComposedCallWhichMayFail(const ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>& request) const;
 
-  ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> request) const;
+  ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(const ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>& request) const;
 };
 namespace test_errorsyntax {
 #endif  // __Fuchsia__
@@ -163,9 +163,9 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>> {
  public:
-  ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ComposedCallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> request);
+  ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ComposedCallWhichMayFail(const ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>& request);
 
-  ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> request);
+  ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(const ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> _client_end() const {
@@ -264,7 +264,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_errorsyntax::Examp
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>&& response);
+  void Reply(const ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -273,7 +273,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErr
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&& response);
+  void Reply(const ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

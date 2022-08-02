@@ -390,7 +390,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -435,7 +435,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -480,7 +480,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -525,7 +525,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -558,7 +558,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>&& m) {
+  static DomainObject IntoDomainObject() {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::WithResponse({})}};
   }
 };
@@ -589,7 +589,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>& m) {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::WithResponse(std::move(m))}};
   }
 };
@@ -620,7 +620,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>& m) {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::WithResponse(std::move(m))}};
   }
 };
@@ -651,7 +651,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>& m) {
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::WithResponse(std::move(m))}};
   }
 };
@@ -683,7 +683,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -719,7 +719,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -755,7 +755,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -791,7 +791,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse;
 
  public:
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -1142,7 +1142,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1151,7 +1151,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1160,7 +1160,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1169,7 +1169,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1178,7 +1178,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1187,7 +1187,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1196,7 +1196,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1214,7 +1214,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1223,7 +1223,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1232,7 +1232,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1241,7 +1241,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1250,7 +1250,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1259,7 +1259,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1268,7 +1268,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1637,7 +1637,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -1682,7 +1682,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -1727,7 +1727,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -1772,7 +1772,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -1976,7 +1976,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1985,7 +1985,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -1994,7 +1994,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2003,7 +2003,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2012,7 +2012,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2021,7 +2021,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2030,7 +2030,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2355,7 +2355,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::WithErr(m.error_value())}};
     } else {
@@ -2400,7 +2400,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::WithErr(m.error_value())}};
     } else {
@@ -2445,7 +2445,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult::WithErr(m.error_value())}};
     } else {
@@ -2490,7 +2490,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult::WithErr(m.error_value())}};
     } else {
@@ -2713,7 +2713,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2722,7 +2722,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2731,7 +2731,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2740,7 +2740,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2749,7 +2749,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2758,7 +2758,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -2767,7 +2767,7 @@ class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::Unknown
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>&& response);
+  void Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

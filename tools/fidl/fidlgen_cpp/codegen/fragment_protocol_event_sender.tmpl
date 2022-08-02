@@ -154,8 +154,7 @@ class {{ .NaturalWeakEventSender }} : public ::fidl::internal::WeakEventSenderBa
 
   {{- range .Events }}
     {{- .Docs }}
-    ::fitx::result<::fidl::Error> {{ .Name }}(
-        {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }});
+    ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalResponseArg "payload" }});
 
   {{ end }}
 };
@@ -169,8 +168,7 @@ class {{ .NaturalEventSender }}
 
   {{- range .Events }}
     {{- .Docs }}
-    ::fitx::result<::fidl::Error> {{ .Name }}(
-        {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }});
+    ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalResponseArg "payload" }});
 
   {{ end }}
 };
@@ -186,11 +184,12 @@ class {{ .NaturalEventSender }}
   {{- range .Events }}
 
 ::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
-    {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
+    {{- .NaturalResponseArg "payload" }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
-  _encoder.EncodeBody(std::move(payload));
+  _encoder.EncodeBody(
+      {{ .NaturalEventConverter }}::IntoDomainObject({{ .Response.Forward "payload" }}));
   {{- end }}
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status result = _inner().SendEvent(_encoded_message);
@@ -198,11 +197,12 @@ class {{ .NaturalEventSender }}
 }
 
 ::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
-    {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
+    {{- .NaturalResponseArg "payload" }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasResponsePayload }}
-  _encoder.EncodeBody(std::move(payload));
+  _encoder.EncodeBody(
+      {{ .NaturalEventConverter }}::IntoDomainObject({{ .Response.Forward "payload" }}));
   {{- end }}
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   _encoded_message.Write(_transport());

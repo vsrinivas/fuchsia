@@ -64,7 +64,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_anonymou
     }
   }
 
-  static DomainObject IntoDomainObject(::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& m) {
+  static DomainObject IntoDomainObject(const ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>& m) {
     if (m.is_error()) {
       return DomainObject{{.result = ::test_anonymous::SomeProtocolSomeMethodResult::WithErr(m.error_value())}};
     } else {
@@ -86,7 +86,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) const;
+  ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(const ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>& request) const;
 };
 namespace test_anonymous {
 #endif  // __Fuchsia__
@@ -98,7 +98,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>> {
  public:
-  ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request);
+  ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(const ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> _client_end() const {
@@ -180,7 +180,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_anonymous::SomePro
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& response);
+  void Reply(const ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

@@ -154,7 +154,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_foreigntypeinrespo
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> : public ::fidl::CompleterBase {
  public:
-  void Reply(::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&& response);
+  void Reply(const ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& response);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;

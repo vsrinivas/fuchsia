@@ -169,7 +169,7 @@ class {{ .NaturalEventConverter }} {
     }
   }
 
-  static DomainObject  IntoDomainObject({{ .NaturalEvent }}&& m) {
+  static DomainObject IntoDomainObject({{ .NaturalResponseArg "m" }}) {
     if (m.is_error()) {
       return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithErr(m.error_value()) } };
     } else {

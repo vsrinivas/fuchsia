@@ -7,7 +7,7 @@ namespace test_driveroneway {
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
 ::fitx::result<::fidl::Error>
-fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(::fidl::Request<::test_driveroneway::OneWay::Send> request) const {
+fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(const ::fidl::Request<::test_driveroneway::OneWay::Send>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_driveroneway::kOneWay_Send_Ordinal, ::test_driveroneway::kOneWay_Send_DynamicFlags};
 
@@ -22,7 +22,7 @@ fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(::fidl::Req
           ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
   };
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driveroneway::OneWay::Send>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driveroneway::OneWay::Send>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
   ::fidl::Status status = client_base().SendOneWay(_arena_msg, std::move(_options));

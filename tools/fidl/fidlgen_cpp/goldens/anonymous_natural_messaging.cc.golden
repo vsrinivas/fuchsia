@@ -11,12 +11,12 @@ namespace test_anonymous {
 #ifdef __Fuchsia__
 }  // namespace test_anonymous
 ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) const {
+fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(const ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>& request) const {
   return ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags,
-      [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
+      [request = request](NaturalMessageEncoder& encoder) mutable {
         encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(request)));
+            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(request));
         return ZX_OK;
       },
       [](
@@ -35,11 +35,11 @@ namespace test_anonymous {
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod>
-fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> request) {
+fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(const ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
   encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(request)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_anonymous::SomeProtocol::SomeMethod>(
@@ -62,11 +62,11 @@ fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMetho
 
 #endif  // __Fuchsia__
 
-void fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&& response) {
+void fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(const ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal, ::test_anonymous::kSomeProtocol_SomeMethod_DynamicFlags};
   _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(std::move(response)));
+      ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
