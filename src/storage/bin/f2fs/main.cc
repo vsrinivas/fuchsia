@@ -40,23 +40,6 @@ int main(int argc, char** argv) {
     fprintf(stderr, "usage: f2fs mkfs [ <options>*] devicepath f2fs\n");
     fprintf(stderr, "usage: f2fs fsck [ <options>*] devicepath f2fs\n");
     fprintf(stderr, "usage: f2fs mount [ <options>*] devicepath f2fs\n");
-    fprintf(stderr, "usage: f2fs fsync filename\n");
-    return 0;
-  }
-
-  // TODO: remove it after unittest impl.
-  if (!strcmp(argv[1], "fsync")) {
-    if (argc != 3) {
-      fprintf(stderr, "usage: fsync filename\n");
-      return EXIT_FAILURE;
-    }
-    fbl::unique_fd fd(open(argv[2], O_RDONLY));
-    if (!fd.get()) {
-      std::cout << "f2fs: cannot open " << argv[2] << std::endl;
-      return EXIT_FAILURE;
-    }
-    fsync(fd.get());
-    close(fd.release());
     return 0;
   }
 
