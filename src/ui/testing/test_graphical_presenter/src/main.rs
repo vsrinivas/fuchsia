@@ -5,31 +5,39 @@
 use {
     anyhow::{anyhow, Context, Error},
     async_utils::hanging_get::client::HangingGetStream,
-    fidl::endpoints::{Proxy, RequestStream},
+    fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_element::{
         GraphicalPresenterRequest, GraphicalPresenterRequestStream, PresentViewError,
         ViewControllerRequestStream,
     },
     fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream},
     fidl_fuchsia_ui_composition::{
-        ChildViewWatcherMarker, ContentId, FlatlandEvent, FlatlandEventStream, FlatlandMarker,
-        FlatlandProxy, LayoutInfo, ParentViewportWatcherMarker, ParentViewportWatcherProxy,
-        PresentArgs, TransformId, ViewBoundProtocols, ViewportProperties,
+        ChildViewWatcherMarker, ChildViewWatcherProxy, ColorRgba, ContentId, FlatlandEvent,
+        FlatlandEventStream, FlatlandMarker, FlatlandProxy, LayoutInfo,
+        ParentViewportWatcherMarker, ParentViewportWatcherProxy, PresentArgs, TransformId,
+        ViewBoundProtocols, ViewportProperties,
     },
-    fidl_fuchsia_ui_views::ViewportCreationToken,
+    fidl_fuchsia_ui_views::{
+        FocusState, FocuserMarker, FocuserProxy, ViewRefFocusedMarker, ViewportCreationToken,
+    },
     fuchsia_async as fasync,
     fuchsia_component::{client, server},
-    fuchsia_zircon as zx,
     futures::{
         stream::{FusedStream, SelectAll},
         {select, FutureExt, StreamExt},
     },
     std::pin::Pin,
+    std::rc::Rc,
 };
 
+// The root transform will contain a static/solid background color content node. It will have a
+// single child for the attached viewport.
 const NULL_CONTENT_ID: ContentId = ContentId { value: 0 };
 const ROOT_TRANSFORM_ID: TransformId = TransformId { value: 1 };
-const VIEWPORT_CONTENT_ID: ContentId = ContentId { value: 2 };
+const ROOT_CONTENT_ID: ContentId = ContentId { value: 2 };
+const VIEWPORT_TRANSFORM_ID: TransformId = TransformId { value: 3 };
+const VIEWPORT_CONTENT_ID: ContentId = ContentId { value: 4 };
+const BACKGROUND_COLOR: ColorRgba = ColorRgba { red: 1.0, green: 0.0, blue: 1.0, alpha: 1.0 };
 
 struct ChildView(fasync::Task<()>);
 
@@ -45,6 +53,8 @@ struct TestGraphicalPresenter {
     child_view: Option<ChildView>,
     present_credits: u32,
     need_present: bool,
+    view_focuser_request: Option<ServerEnd<FocuserMarker>>,
+    view_focuser: Rc<FocuserProxy>,
 }
 
 impl TestGraphicalPresenter {
@@ -61,6 +71,8 @@ impl TestGraphicalPresenter {
                 .context("error creating viewport watcher")?;
         let flatland_events = flatland.take_event_stream();
 
+        let (view_focuser, view_focuser_request) = fidl::endpoints::create_proxy::<FocuserMarker>()
+            .expect("Failed to create Focuser channel");
         Ok(Self {
             flatland,
             flatland_events,
@@ -76,6 +88,8 @@ impl TestGraphicalPresenter {
             child_view: None,
             present_credits: 1,
             need_present: false,
+            view_focuser_request: Some(view_focuser_request),
+            view_focuser: Rc::new(view_focuser),
         })
     }
 
@@ -90,10 +104,17 @@ impl TestGraphicalPresenter {
                                 let viewref_pair = fuchsia_scenic::ViewRefPair::new()?;
                                 let mut view_identity =
                                                     fidl_fuchsia_ui_views::ViewIdentityOnCreation::from(viewref_pair);
+                                let (view_focused_proxy, view_focused) = fidl::endpoints::create_proxy::<ViewRefFocusedMarker>()
+                                    .expect("Failed to create ViewRefFocused channel");
+                                let view_bound_protocols = ViewBoundProtocols {
+                                    view_focuser: self.view_focuser_request.take(),
+                                    view_ref_focused: Some(view_focused),
+                                    ..ViewBoundProtocols::EMPTY
+                                };
                                 self.flatland.create_view2(
                                     &mut token,
                                     &mut view_identity,
-                                    ViewBoundProtocols::EMPTY,
+                                    view_bound_protocols,
                                     viewport_watcher_request)?;
 
                                 // Get our layout size
@@ -104,11 +125,59 @@ impl TestGraphicalPresenter {
                                     }
                                 };
 
-                                // Create the root transform.
+                                // Create the root transform and configure the background node.
+                                //
+                                // We set a background node for a couple reasons:
+                                //   1) We need to present something to get focus, and we want to
+                                //      have focus before attaching a child view so that we can
+                                //      forward focus to that view.
+                                //   2) Since we'll present a configuration without a view, having
+                                //      a fixed background color will provide deterministic signal
+                                //      if any part of the view isn't covered by a client view.
                                 self.flatland.create_transform(&mut ROOT_TRANSFORM_ID.clone())
                                     .context("Failed to create root transform")?;
+                                self.flatland.create_filled_rect(&mut ROOT_CONTENT_ID.clone())
+                                    .context("Failed to create filled rect")?;
+                                self.flatland.set_solid_fill(&mut ROOT_CONTENT_ID.clone(),
+                                    &mut BACKGROUND_COLOR.clone(),
+                                    &mut self.root_layout_info.logical_size.unwrap().clone())
+                                    .context("Failed to set solid fill")?;
+                                self.flatland.set_content(
+                                    &mut ROOT_TRANSFORM_ID.clone(),
+                                    &mut ROOT_CONTENT_ID.clone())
+                                    .context("Failed to set root content")?;
+
+                                // Add an empty child (for now) to hold the attached viewport.
+                                // We'll attach content to this child once we have a view to
+                                // attach.
+                                self.flatland.create_transform(&mut VIEWPORT_TRANSFORM_ID.clone())
+                                    .context("Failed to create viewport transform")?;
+                                self.flatland.add_child(
+                                    &mut ROOT_TRANSFORM_ID.clone(),
+                                    &mut VIEWPORT_TRANSFORM_ID.clone())
+                                    .context("Failed to add child transform")?;
+
+                                // Perform the initial present.
                                 self.flatland.set_root_transform(&mut ROOT_TRANSFORM_ID.clone())
                                     .context("Failed to set root transform")?;
+                                self.try_present()?;
+
+                                // Now wait for our view to obtain focus. We do this here to
+                                // because we want to request focus for child views when they're
+                                // created, but we need to have focus ourselves to do so.
+                                //
+                                // Note: this implementation is simple and assumes that once we
+                                // obtain focus we will not lose focus.
+                                loop {
+                                    match view_focused_proxy.watch().await {
+                                        Ok(FocusState { focused: Some(true), ..}) => break,
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            tracing::error!("Error waiting for view to focus {}", e);
+                                            return Err(e.into());
+                                        }
+                                    }
+                                }
                             }
                         }
                         break;
@@ -185,7 +254,10 @@ impl TestGraphicalPresenter {
                 // If we have a view already, first detach and destroy the viewport.
                 if let Some(_) = self.child_view.take() {
                     self.flatland
-                        .set_content(&mut ROOT_TRANSFORM_ID.clone(), &mut NULL_CONTENT_ID.clone())
+                        .set_content(
+                            &mut VIEWPORT_TRANSFORM_ID.clone(),
+                            &mut NULL_CONTENT_ID.clone(),
+                        )
                         .context("Failed to remove root content")?;
                     // The returns the viewport creation token, but that response will not come
                     // until we present so we can't await here.
@@ -256,7 +328,7 @@ impl TestGraphicalPresenter {
             )
             .context("Failed to create viewport")?;
         self.flatland
-            .set_content(&mut ROOT_TRANSFORM_ID.clone(), &mut VIEWPORT_CONTENT_ID.clone())
+            .set_content(&mut VIEWPORT_TRANSFORM_ID.clone(), &mut VIEWPORT_CONTENT_ID.clone())
             .context("Failed to set content viewport")?;
         self.try_present()?;
 
@@ -265,16 +337,29 @@ impl TestGraphicalPresenter {
             stream.control_handle().send_on_presented()?;
         }
 
+        let view_focuser = self.view_focuser.clone();
         Ok(ChildView(fasync::Task::local(async move {
             // TODO: Poll the request stream and handle Dismiss. For now we just hold onto the
             // channels so they don't close.
             let _view_controller_request_stream = view_controller_request_stream;
-            fasync::OnSignals::new(
-                child_view_watcher.as_channel(),
-                zx::Signals::CHANNEL_PEER_CLOSED,
-            )
-            .await
-            .unwrap();
+            let mut child_view_ref_stream = HangingGetStream::new_with_fn_ptr(
+                child_view_watcher,
+                ChildViewWatcherProxy::get_view_ref,
+            );
+            loop {
+                match child_view_ref_stream.next().await {
+                    Some(Ok(mut token)) => match view_focuser.request_focus(&mut token).await {
+                        Ok(Ok(())) => {}
+                        Ok(Err(e)) => {
+                            tracing::error!("Error requesting focus:: {:?}", e);
+                        }
+                        Err(e) => {
+                            tracing::error!("FIDL error requesting focus: {:?}", e);
+                        }
+                    },
+                    _ => {}
+                }
+            }
         })))
     }
 }
