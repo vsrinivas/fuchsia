@@ -58,6 +58,7 @@
                 // Used by the input pipeline library which is linked into the
                 // scene manager.
                 "fuchsia.accessibility.scene.Provider",
+                "fuchsia.recovery.FactoryReset",
                 "fuchsia.settings.Keyboard",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",

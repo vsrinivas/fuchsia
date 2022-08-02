@@ -82,6 +82,11 @@
             to: "#ui",
         },
         {
+            protocol: [ "fuchsia.recovery.FactoryReset" ],
+            from: "#factory_reset",
+            to: "#ui",
+        },
+        {
             protocol: [ "fuchsia.feedback.LastRebootInfoProvider" ],
             from: "#feedback",
             to: "#ui",

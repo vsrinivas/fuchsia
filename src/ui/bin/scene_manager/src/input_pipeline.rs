@@ -6,6 +6,8 @@ use {
     ::input_pipeline::{text_settings_handler::TextSettingsHandler, CursorMessage},
     anyhow::{Context, Error},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_recovery_policy::DeviceRequestStream,
+    fidl_fuchsia_recovery_ui::FactoryResetCountdownRequestStream,
     fidl_fuchsia_settings as fsettings,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_pointerinjector_configuration::SetupProxy,
@@ -19,6 +21,7 @@ use {
     icu_data,
     input_pipeline::{
         self, dead_keys_handler,
+        factory_reset_handler::FactoryResetHandler,
         ime_handler::ImeHandler,
         immersive_mode_shortcut_handler::ImmersiveModeShortcutHandler,
         input_device,
@@ -58,10 +61,17 @@ pub async fn handle_input(
     media_buttons_listener_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         DeviceListenerRegistryRequestStream,
     >,
+    factory_reset_countdown_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        FactoryResetCountdownRequestStream,
+    >,
+    factory_reset_device_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        DeviceRequestStream,
+    >,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
     display_ownership_event: zx::Event,
 ) -> Result<InputPipeline, Error> {
+    let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
     let input_pipeline = InputPipeline::new(
         vec![
@@ -76,6 +86,7 @@ pub async fn handle_input(
             icu_data_loader,
             node,
             display_ownership_event,
+            factory_reset_handler.clone(),
             media_buttons_handler.clone(),
         )
         .await,
@@ -95,6 +106,18 @@ pub async fn handle_input(
         input_pipeline.input_device_bindings().clone(),
     );
     fasync::Task::local(input_config_fut).detach();
+
+    let factory_reset_countdown_fut = handle_factory_reset_countdown_request_stream(
+        factory_reset_countdown_request_stream_receiver,
+        factory_reset_handler.clone(),
+    );
+    fasync::Task::local(factory_reset_countdown_fut).detach();
+
+    let factory_reset_device_device_fut = handle_recovery_policy_device_request_stream(
+        factory_reset_device_request_stream_receiver,
+        factory_reset_handler.clone(),
+    );
+    fasync::Task::local(factory_reset_device_device_fut).detach();
 
     let media_buttons_listener_registry_fut = handle_device_listener_registry_request_stream(
         media_buttons_listener_registry_request_stream_receiver,
@@ -177,6 +200,7 @@ async fn build_input_pipeline_assembly(
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
     display_ownership_event: zx::Event,
+    factory_reset_handler: Rc<FactoryResetHandler>,
     media_buttons_handler: Rc<MediaButtonsHandler>,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
@@ -200,7 +224,8 @@ async fn build_input_pipeline_assembly(
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
 
-        // Add media button handler.
+        // Add factory reset handler before media buttons handler.
+        assembly = assembly.add_handler(factory_reset_handler);
         assembly = assembly.add_handler(media_buttons_handler);
 
         // Add the click-drag handler before the mouse handler, to allow
@@ -394,12 +419,56 @@ pub async fn handle_device_listener_registry_request_stream(
     media_buttons_handler: Rc<MediaButtonsHandler>,
 ) {
     while let Some(stream) = stream_receiver.next().await {
-        match media_buttons_handler.handle_device_listener_registry_request_stream(stream).await {
-            Ok(()) => (),
-            Err(e) => {
-                fx_log_warn!("failure while serving DeviceListenerRegistry: {}", e);
+        let media_buttons_handler = media_buttons_handler.clone();
+        fasync::Task::local(async move {
+            match media_buttons_handler.handle_device_listener_registry_request_stream(stream).await
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    fx_log_warn!("failure while serving DeviceListenerRegistry: {}", e);
+                }
             }
-        }
+        })
+        .detach();
+    }
+}
+
+pub async fn handle_factory_reset_countdown_request_stream(
+    mut stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        FactoryResetCountdownRequestStream,
+    >,
+    factory_reset_handler: Rc<FactoryResetHandler>,
+) {
+    while let Some(stream) = stream_receiver.next().await {
+        let factory_reset_handler = factory_reset_handler.clone();
+        fasync::Task::local(async move {
+            match factory_reset_handler.handle_factory_reset_countdown_request_stream(stream).await
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    fx_log_warn!("failure while serving FactoryResetCountdown: {}", e);
+                }
+            }
+        })
+        .detach();
+    }
+}
+
+pub async fn handle_recovery_policy_device_request_stream(
+    mut stream_receiver: futures::channel::mpsc::UnboundedReceiver<DeviceRequestStream>,
+    factory_reset_handler: Rc<FactoryResetHandler>,
+) {
+    while let Some(stream) = stream_receiver.next().await {
+        let factory_reset_handler = factory_reset_handler.clone();
+        fasync::Task::local(async move {
+            match factory_reset_handler.handle_recovery_policy_device_request_stream(stream).await {
+                Ok(()) => (),
+                Err(e) => {
+                    fx_log_warn!("failure while serving fuchsia.recovery.policy.Device: {}", e);
+                }
+            }
+        })
+        .detach();
     }
 }
 

@@ -11,11 +11,8 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_interaction::NotifierRequestStream,
     fidl_fuchsia_input_interaction_observation::AggregatorRequestStream,
-    fidl_fuchsia_recovery_policy::{
-        DeviceRequest as FactoryResetDeviceRequest,
-        DeviceRequestStream as FactoryResetDeviceRequestStream,
-    },
-    fidl_fuchsia_recovery_ui::{FactoryResetCountdownRequest, FactoryResetCountdownRequestStream},
+    fidl_fuchsia_recovery_policy::DeviceRequestStream as FactoryResetDeviceRequestStream,
+    fidl_fuchsia_recovery_ui::FactoryResetCountdownRequestStream,
     fidl_fuchsia_session_scene::{
         ManagerRequest as SceneManagerRequest, ManagerRequestStream as SceneManagerRequestStream,
         PresentRootViewError,
@@ -47,6 +44,8 @@ use {
     std::sync::Arc,
 };
 
+mod factory_reset_countdown_server;
+mod factory_reset_device_server;
 mod input_config_server;
 mod input_device_registry_server;
 mod input_pipeline;
@@ -108,6 +107,12 @@ async fn inner_main() -> Result<(), Error> {
         media_buttons_listener_registry_server,
         media_buttons_listener_registry_request_stream_receiver,
     ) = media_buttons_listener_registry_server::make_server_and_receiver();
+
+    let (factory_reset_countdown_server, factory_reset_countdown_request_stream_receiver) =
+        factory_reset_countdown_server::make_server_and_receiver();
+
+    let (factory_reset_device_server, factory_reset_device_request_stream_receiver) =
+        factory_reset_device_server::make_server_and_receiver();
 
     // This call should normally never fail. The ICU data loader must be kept alive to ensure
     // Unicode data is kept in memory.
@@ -226,6 +231,8 @@ async fn inner_main() -> Result<(), Error> {
         input_config_receiver,
         input_device_registry_request_stream_receiver,
         media_buttons_listener_registry_request_stream_receiver,
+        factory_reset_countdown_request_stream_receiver,
+        factory_reset_device_request_stream_receiver,
         icu_data_loader,
         &inspect_node.clone(),
         display_ownership,
@@ -258,20 +265,6 @@ async fn inner_main() -> Result<(), Error> {
                 handle_display_backlight_request_stream(request_stream, Arc::clone(&scene_manager)),
             )
             .detach(),
-            ExposedServices::FactoryResetCountdown(request_stream) => {
-                fasync::Task::local(handle_factory_reset_countdown_request_stream(
-                    request_stream,
-                    Arc::clone(&scene_manager),
-                ))
-                .detach()
-            }
-            ExposedServices::FactoryReset(request_stream) => {
-                fasync::Task::local(handle_factory_reset_device_request_stream(
-                    request_stream,
-                    Arc::clone(&scene_manager),
-                ))
-                .detach()
-            }
             ExposedServices::SceneManager(request_stream) => {
                 fasync::Task::local(handle_scene_manager_request_stream(
                     request_stream,
@@ -321,6 +314,22 @@ async fn inner_main() -> Result<(), Error> {
                             "failed to forward media buttons listener request via DeviceListenerRegistryRequestStream: {:?}",
                             e
                         )
+                    }
+                }
+            }
+            ExposedServices::FactoryResetCountdown(request_stream) => {
+                match &factory_reset_countdown_server.handle_request(request_stream).await {
+                    Ok(()) => (),
+                    Err(e) => {
+                        fx_log_warn!("failed to forward FactoryResetCountdown: {:?}", e)
+                    }
+                }
+            }
+            ExposedServices::FactoryReset(request_stream) => {
+                match &factory_reset_device_server.handle_request(request_stream).await {
+                    Ok(()) => (),
+                    Err(e) => {
+                        fx_log_warn!("failed to forward fuchsia.recovery.policy.Device: {:?}", e)
                     }
                 }
             }
@@ -427,36 +436,6 @@ pub async fn handle_display_backlight_request_stream(
                         fx_log_err!("Error responding to SetMinimumRgb(): {}", e);
                     }
                 }
-            }
-        };
-    }
-}
-
-pub async fn handle_factory_reset_countdown_request_stream(
-    mut request_stream: FactoryResetCountdownRequestStream,
-    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-) {
-    let mut responder_holder = None;
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            FactoryResetCountdownRequest::Watch { responder, .. } => {
-                fx_log_err!("FactoryResetCountdown.Watch() called");
-                if let None = responder_holder {
-                    responder_holder = Some(responder);
-                }
-            }
-        };
-    }
-}
-
-pub async fn handle_factory_reset_device_request_stream(
-    mut request_stream: FactoryResetDeviceRequestStream,
-    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-) {
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            FactoryResetDeviceRequest::SetIsLocalResetAllowed { allowed, .. } => {
-                fx_log_err!("FactoryResetCountdown.SetIsLocalResetAllowed() called: {allowed}");
             }
         };
     }
