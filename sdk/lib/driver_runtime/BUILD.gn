@@ -18,6 +18,7 @@ sdk_source_set("driver_runtime") {
     "include/lib/fdf/channel.h",
     "include/lib/fdf/channel_read.h",
     "include/lib/fdf/dispatcher.h",
+    "include/lib/fdf/token.h",
     "include/lib/fdf/types.h",
   ]
   public_configs = [ ":include" ]
@@ -39,6 +40,7 @@ sdk_source_set("driver_runtime_cpp") {
     "include/lib/fdf/cpp/channel.h",
     "include/lib/fdf/cpp/channel_read.h",
     "include/lib/fdf/cpp/dispatcher.h",
+    "include/lib/fdf/cpp/protocol.h",
     "include/lib/fdf/cpp/unowned.h",
   ]
   public_configs = [ ":include" ]
@@ -48,7 +50,10 @@ sdk_source_set("driver_runtime_cpp") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
-  sources = [ "channel_read.cc" ]
+  sources = [
+    "channel_read.cc",
+    "protocol.cc",
+  ]
   deps = [ ":driver_runtime" ]
 }
 

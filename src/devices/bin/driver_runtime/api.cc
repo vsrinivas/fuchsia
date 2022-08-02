@@ -6,6 +6,7 @@
 #include <lib/fdf/channel.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
+#include <lib/fdf/token.h>
 
 #include "src/devices/bin/driver_runtime/arena.h"
 #include "src/devices/bin/driver_runtime/channel.h"
@@ -153,6 +154,15 @@ __EXPORT void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher) { return disp
 
 __EXPORT fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher() {
   return static_cast<fdf_dispatcher_t*>(driver_context::GetCurrentDispatcher());
+}
+
+__EXPORT fdf_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                         fdf_token_t* handler) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+__EXPORT fdf_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handler) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }

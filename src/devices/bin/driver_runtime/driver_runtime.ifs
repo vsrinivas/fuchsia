@@ -30,4 +30,6 @@ Symbols:
   - { Name: fdf_internal_wait_until_all_dispatchers_destroyed, Type: Func }
   - { Name: fdf_internal_wait_until_all_dispatchers_idle, Type: Func }
   - { Name: fdf_internal_wait_until_dispatcher_idle, Type: Func }
+  - { Name: fdf_token_exchange, Type: Func }
+  - { Name: fdf_token_register, Type: Func }
 ...
