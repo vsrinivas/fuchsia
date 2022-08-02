@@ -53,6 +53,8 @@ else
   # initialize some variables required for E2E tests:
   export FUCHSIA_DEVICE_ADDR="$(get-fuchsia-device-addr)"
 
+  export FUCHSIA_NODENAME="$(get-device-name)"
+
   if [[ "$FUCHSIA_DEVICE_ADDR" == "::1" && -z "$SL4F_HTTP_PORT" ]]; then
     # Device addr is localhost, assume that means that ports were forwarded with
     # fx serve-remote from a remote workstation/laptop with a device attached.
