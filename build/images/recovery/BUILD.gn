@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/assembly/assembled_system.gni")
+import("//build/board.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
@@ -130,27 +131,28 @@ if (is_fuchsia) {
     core_package_name = core_name
   }
 
-  recovery_packages = [
-    "//build/info:build-info",
-    "//src/connectivity/location/regulatory_region:regulatory_region",
-    "//src/connectivity/network",
-    "//src/connectivity/network/netcfg:config-default",
-    "//src/connectivity/wlan/wlancfg",
-    "//src/connectivity/wlan/wlandevicemonitor",
-    "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
-    "//src/devices/sysmem/bin/sysmem_connector",
-    "//src/recovery/factory_reset",
-    "//src/recovery/system:system_recovery",
-    "//src/security/root_ssl_certificates",
-    "//src/sys/appmgr",
-    "//src/sys/appmgr:appmgr_scheme_config",
-    "//src/sys/appmgr:component_id_index_no_restrict_storage",
-    "//src/sys/pkg:recovery",
-    "//src/sys/stash:pkg",
-    "//src/sys/sysmgr",
-    "//src/sys/time:recovery",
-    "//src/ui/bin/brightness_manager:auto-brightness",
-  ]
+  recovery_packages =
+      board_recovery_package_labels + [
+        "//build/info:build-info",
+        "//src/connectivity/location/regulatory_region:regulatory_region",
+        "//src/connectivity/network",
+        "//src/connectivity/network/netcfg:config-default",
+        "//src/connectivity/wlan/wlancfg",
+        "//src/connectivity/wlan/wlandevicemonitor",
+        "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
+        "//src/devices/sysmem/bin/sysmem_connector",
+        "//src/recovery/factory_reset",
+        "//src/recovery/system:system_recovery",
+        "//src/security/root_ssl_certificates",
+        "//src/sys/appmgr",
+        "//src/sys/appmgr:appmgr_scheme_config",
+        "//src/sys/appmgr:component_id_index_no_restrict_storage",
+        "//src/sys/pkg:recovery",
+        "//src/sys/stash:pkg",
+        "//src/sys/sysmgr",
+        "//src/sys/time:recovery",
+        "//src/ui/bin/brightness_manager:auto-brightness",
+      ]
 
   recovery_eng_packages =
       recovery_packages + [
@@ -193,6 +195,13 @@ if (is_fuchsia) {
       recovery_eng_packages - [ "//src/recovery/system:system_recovery" ] +
       [ "//src/recovery/system:system_recovery_installer" ]
 
+  recovery_fdr_packages = recovery_packages
+  recovery_fdr_packages -= [ "//src/recovery/system:system_recovery" ]
+  recovery_fdr_packages += [
+    ":core",
+    "//src/recovery/system:system_recovery_fdr",
+  ]
+
   assembled_system("recovery-eng") {
     forward_variables_from(recovery_base, "*")
     base_packages = recovery_eng_packages + [ ":core-eng" ]
@@ -225,7 +234,7 @@ if (is_fuchsia) {
   }
 
   assembled_system("recovery-fdr") {
-    base_packages = recovery_packages + [ ":core" ]
+    base_packages = recovery_fdr_packages
     generate_fvm = !bootfs_only
 
     # We avoid compressing blobs in the blobfs image so that they can be more
