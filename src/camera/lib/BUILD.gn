@@ -12,6 +12,7 @@ group("lib") {
     "fake_stream",
     "format_conversion",
     "image_utils",
+    "raw_formats",
     "stream_utils",
     "virtual_camera",
   ]
@@ -27,6 +28,7 @@ group("tests") {
     "hanging_get_helper:tests",
     "image_utils:tests",
     "numerics:tests",
+    "raw_formats:tests",
     "stream_utils:tests",
     "tokens:tests",
     "virtual_camera:tests",

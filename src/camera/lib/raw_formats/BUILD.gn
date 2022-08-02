@@ -1,0 +1,109 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("raw_formats") {
+  public_deps = [
+    ":base",
+    ":format_collection",
+    ":lookups",
+    ":raw10",
+    ":raw_ipu3",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":raw_unittests" ]
+}
+
+source_set("base") {
+  public = [ "raw.h" ]
+  sources = [
+    "pointer_list.h",
+    "raw.cc",
+    "raw_bit_depth.h",
+    "raw_color_filter.h",
+    "raw_hash.h",
+    "raw_packing.h",
+  ]
+  deps = [
+    "//sdk/lib/syslog",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/zx",
+  ]
+  visibility = [ ":*" ]
+
+  configs -= [ "//build/config:language" ]
+  cflags_cc = [ "--std=c++20" ]
+}
+
+source_set("raw10") {
+  public = [ "raw10.h" ]
+  public_deps = [ ":base" ]
+  visibility = [ "//src/camera/*" ]
+
+  configs -= [ "//build/config:language" ]
+  cflags_cc = [ "--std=c++20" ]
+}
+
+source_set("raw_ipu3") {
+  public = [ "raw_ipu3.h" ]
+  public_deps = [ ":base" ]
+  visibility = [ "//src/camera/*" ]
+
+  configs -= [ "//build/config:language" ]
+  cflags_cc = [ "--std=c++20" ]
+}
+
+source_set("format_collection") {
+  public = [ "raw_formats.h" ]
+  public_deps = [
+    ":base",
+    ":raw10",
+    ":raw_ipu3",
+  ]
+  visibility = [ "//src/camera/*" ]
+
+  configs -= [ "//build/config:language" ]
+  cflags_cc = [ "--std=c++20" ]
+}
+
+source_set("lookups") {
+  public = [ "raw_lookups.h" ]
+  sources = [ "raw_lookups.cc" ]
+  public_deps = [ ":base" ]
+  visibility = [ "//src/camera/*" ]
+
+  configs -= [ "//build/config:language" ]
+  cflags_cc = [ "--std=c++20" ]
+}
+
+executable("raw_unittests_bin") {
+  testonly = true
+  sources = [
+    "raw10_unittest.cc",
+    "raw_formats_unittest.cc",
+    "raw_ipu3_unittest.cc",
+    "raw_unittest.cc",
+  ]
+  deps = [
+    ":format_collection",
+    ":lookups",
+    "//sdk/lib/syslog",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+  testonly = true
+  configs -= [ "//build/config:language" ]
+  cflags_cc = [ "--std=c++20" ]
+}
+
+fuchsia_unittest_package("raw_unittests") {
+  deps = [ ":raw_unittests_bin" ]
+  manifest = "meta/raw_unittests.cml"
+}
