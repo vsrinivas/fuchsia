@@ -20,5 +20,7 @@ pub mod utils;
 pub use bitfields::*;
 pub use block::*;
 pub use block_type::*;
+#[cfg(target_os = "fuchsia")]
+pub use container::fuchsia::*;
 pub use container::*;
 pub use error::*;
