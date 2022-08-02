@@ -88,3 +88,17 @@ zx::status<zx::channel> GetCryptService() {
 }
 
 }  // namespace fs_test
+
+extern "C" {
+
+// Exported for Rust
+zx_status_t get_crypt_service(zx_handle_t* handle) {
+  if (auto channel = fs_test::GetCryptService(); channel.is_error()) {
+    return channel.error_value();
+  } else {
+    *handle = channel->release();
+    return ZX_OK;
+  }
+}
+
+}  // extern

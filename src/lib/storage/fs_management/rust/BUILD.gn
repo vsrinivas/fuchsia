@@ -28,6 +28,7 @@ rustc_library("fs_management") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/ramdevice_client",
+    "//src/storage/fs_test:crypt_service",
   ]
   data_deps = [
     "//src/storage/bin/blobfs",
@@ -40,11 +41,18 @@ rustc_library("fs_management") {
     "src/filesystem.rs",
     "src/lib.rs",
   ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 storage_driver_test_realm_v2_component("fs-management-rust-tests-component") {
   component_name = "fs-management-rust-tests"
-  deps = [ ":fs_management_test" ]
+  deps = [
+    ":fs_management_test",
+    "//src/storage/fs_test:test_crypt_service",
+    "//src/storage/fxfs:fxfs_component",
+    "//src/storage/fxfs:test_fxfs_component_manifest_shard",
+    "//src/storage/fxfs-crypt",
+  ]
 }
 
 fuchsia_test_package("fs-management-rust-tests") {

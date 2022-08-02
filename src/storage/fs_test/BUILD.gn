@@ -409,7 +409,7 @@ expect_includes("test_crypt_service") {
   includes = [ "meta/fxfs_crypt_test.shard.cml" ]
 }
 
-source_set("crypt_service") {
+static_library("crypt_service") {
   testonly = true
   sources = [
     "crypt_service.cc",

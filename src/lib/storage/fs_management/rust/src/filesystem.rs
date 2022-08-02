@@ -237,7 +237,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
 /// Asynchronously manages a serving filesystem. Created from [`Filesystem::serve()`].
 pub struct ServingFilesystem {
-    // If the filesystem is running as a component, there will be no process and no export root.
+    // If the filesystem is running as a component, there will be no process.
     process: Option<Process>,
     exposed_dir: fio::DirectoryProxy,
     root_dir: fio::DirectoryProxy,
@@ -283,6 +283,7 @@ impl ServingFilesystem {
                 .await?;
             Ok(())
         }
+
         if let Err(e) = do_shutdown(&self.exposed_dir).await {
             if let Some(process) = self.process.take() {
                 if process.kill().is_ok() {
@@ -345,6 +346,13 @@ impl Drop for ServingFilesystem {
     fn drop(&mut self) {
         if let Some(process) = self.process.take() {
             let _ = process.kill();
+        } else {
+            // For components, make a best effort attempt to shut down to the filesystem.
+            if let Ok(proxy) =
+                connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.exposed_dir)
+            {
+                let _ = proxy.shutdown();
+            }
         }
         if let Some(path) = self.binding.as_ref() {
             if let Ok(namespace) = fdio::Namespace::installed() {
@@ -373,11 +381,15 @@ mod tests {
 
     use {
         super::*,
-        crate::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Minfs},
-        fidl_fuchsia_io as fio,
+        crate::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Fxfs, Minfs},
+        fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
         fuchsia_zircon::HandleBased,
         ramdevice_client::RamdiskClient,
-        std::io::{Seek, Write},
+        std::{
+            io::{Seek, Write},
+            sync::Arc,
+            time::Duration,
+        },
     };
 
     fn ramdisk(block_size: u64) -> RamdiskClient {
@@ -767,5 +779,44 @@ mod tests {
         }
 
         std::fs::File::open("/test-factoryfs-path").expect_err("factoryfs path is still bound");
+    }
+
+    #[link(name = "crypt_service", kind = "static")]
+    extern "C" {
+        fn get_crypt_service(channel: *const zx::Channel) -> zx::zx_status_t;
+    }
+
+    #[fuchsia::test]
+    async fn fxfs_shutdown_component_when_dropped() {
+        let block_size = 512;
+        let ramdisk = ramdisk(block_size);
+        let fxfs = new_fs(
+            &ramdisk,
+            Fxfs::with_crypt_client(Arc::new(|| {
+                let channel = Handle::invalid().into();
+                zx::Status::ok(unsafe { get_crypt_service(&channel) })
+                    .expect("get_crypt_service failed");
+                channel
+            })),
+        );
+
+        fxfs.format().await.expect("failed toformat fxfs");
+        {
+            let _fs = fxfs.serve().await.expect("failed to serve fxfs");
+
+            // Serve should fail for the second time.
+            assert!(fxfs.serve().await.is_err(), "serving succeeded when already mounted");
+        }
+
+        // Fxfs should get shut down when dropped, but it's asynchronous, so we need to loop here.
+        let mut attempts = 0;
+        loop {
+            if let Ok(_) = fxfs.serve().await {
+                break;
+            }
+            attempts += 1;
+            assert!(attempts < 10);
+            fasync::Timer::new(Duration::from_secs(1)).await;
+        }
     }
 }
