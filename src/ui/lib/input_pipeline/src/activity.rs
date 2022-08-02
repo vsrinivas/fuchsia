@@ -49,7 +49,7 @@ impl ActivityManager {
         let initial_state = State::Active;
 
         let interaction_hanging_get = ActivityManager::init_hanging_get(initial_state);
-        let mut state_publisher = interaction_hanging_get.new_publisher();
+        let state_publisher = interaction_hanging_get.new_publisher();
         let idle_transition_task = Task::local(async move {
             Timer::new(initial_timestamp + ACTIVITY_TIMEOUT).await;
             state_publisher.set(State::Idle);
@@ -74,7 +74,7 @@ impl ActivityManager {
         while let Some(aggregator_request) = stream.next().await {
             let AggregatorRequest::ReportDiscreteActivity { event_time, responder } =
                 aggregator_request?;
-            let mut state_publisher = self.interaction_hanging_get.borrow().new_publisher();
+            let state_publisher = self.interaction_hanging_get.borrow().new_publisher();
 
             let event_time =
                 zx::Time::from_nanos(event_time).clamp(zx::Time::ZERO, zx::Time::get_monotonic());

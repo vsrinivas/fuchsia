@@ -83,14 +83,14 @@ where
     /// passed in as the `state` parameter.
     /// Any subscriber that has registered an observer will immediately be notified of the
     /// update.
-    pub fn set(&mut self, state: S) {
+    pub fn set(&self, state: S) {
         self.inner.lock().set(state)
     }
 
     /// Pass a function to the hanging get that can update the hanging get state in place.
     /// Any subscriber that has registered an observer will immediately be notified of the
     /// update.
-    pub fn update<UpdateFn>(&mut self, update: UpdateFn)
+    pub fn update<UpdateFn>(&self, update: UpdateFn)
     where
         UpdateFn: FnOnce(&mut S) -> bool,
     {
@@ -424,7 +424,7 @@ mod tests {
         let mut broker = HangingGet::new(0i32, |s, o: oneshot::Sender<_>| {
             o.send(s.clone()).map(|()| true).unwrap()
         });
-        let mut publisher = broker.new_publisher();
+        let publisher = broker.new_publisher();
         let subscriber = broker.new_subscriber();
 
         // Initial observation is immediate
@@ -452,7 +452,7 @@ mod tests {
         let mut broker = HangingGet::new(0i32, |s, o: oneshot::Sender<_>| {
             o.send(s.clone()).map(|()| true).unwrap()
         });
-        let mut publisher = broker.new_publisher();
+        let publisher = broker.new_publisher();
 
         let sub1 = broker.new_subscriber();
         let sub2 = broker.new_subscriber();

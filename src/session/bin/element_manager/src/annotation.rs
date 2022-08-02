@@ -104,6 +104,13 @@ type WatchHangingGet = hanging_get::HangingGet<
     WatchResponderNotifyFn,
 >;
 
+// Publishes updates to the annotations to hanging_get clients
+type WatchPublisher = async_utils::hanging_get::server::Publisher<
+    Result<Vec<felement::Annotation>, felement::WatchAnnotationsError>,
+    WatchResponder,
+    WatchResponderNotifyFn,
+>;
+
 // Subscribes to a notification for the next annotation update and hands the result to its
 // registered `WatchResponder`. This wrapper is needed in order to provide an interface for
 // `watch_annotations` to register a `WatchResponder`.
@@ -178,6 +185,8 @@ pub struct AnnotationHolder {
     annotations: HashMap<Key, felement::AnnotationValue>,
     #[derivative(Debug = "ignore")]
     watch_hanging_get: WatchHangingGet,
+    #[derivative(Debug = "ignore")]
+    watch_publisher: WatchPublisher,
 }
 
 impl AnnotationHolder {
@@ -193,7 +202,8 @@ impl AnnotationHolder {
 
         // Create a hanging get controller and initialize its copy of the annotations to an empty vector.
         let watch_hanging_get = WatchHangingGet::new(Ok(Vec::new()), notify_fn);
-        AnnotationHolder { annotations: HashMap::new(), watch_hanging_get }
+        let watch_publisher = watch_hanging_get.new_publisher();
+        AnnotationHolder { annotations: HashMap::new(), watch_hanging_get, watch_publisher }
     }
 
     pub fn new_watch_subscriber(&mut self) -> WatchSubscriber {
@@ -201,9 +211,8 @@ impl AnnotationHolder {
         WatchSubscriber(s)
     }
 
-    fn notify_watch_subscribers(&mut self) {
-        let mut watch_publisher = self.watch_hanging_get.new_publisher();
-        watch_publisher.set(annotations_to_vec(&self.annotations).map_err(|e| e.into()));
+    fn notify_watch_subscribers(&self) {
+        self.watch_publisher.set(annotations_to_vec(&self.annotations).map_err(Into::into));
     }
 
     // Update (add/modify/delete) annotations as specified by fuchsia.element.AnnotationController.UpdateAnnotations()
