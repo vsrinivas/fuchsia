@@ -221,8 +221,6 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::UnboundId,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
-        local_id: Option<Self::LocalIdentifier>,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError>;
@@ -392,12 +390,10 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::UnboundId,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
-        local_id: Option<Self::LocalIdentifier>,
         remote_ip: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
-        connect_udp(sync_ctx, ctx, id, local_ip, local_id, remote_ip, remote_id)
+        connect_udp(sync_ctx, ctx, id, remote_ip, remote_id)
     }
 
     fn listen_on_unbound(
@@ -689,10 +685,6 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
         sync_ctx: &mut SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Self>,
-        local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<
-            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<NonSyncCtx>>>::LocalIdentifier,
-        >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
 
@@ -772,20 +764,9 @@ impl IcmpEchoIpExt for Ipv4 {
         sync_ctx: &mut SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv4>,
-        local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<
-            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<NonSyncCtx>>>::LocalIdentifier,
-        >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
-        icmp::connect_icmpv4(
-            sync_ctx,
-            ctx,
-            unbound,
-            local_addr,
-            remote_addr,
-            local_id.unwrap_or_default(),
-        )
+        icmp::connect_icmpv4(sync_ctx, ctx, unbound, None, remote_addr, 0)
     }
 
     fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
@@ -818,20 +799,9 @@ impl IcmpEchoIpExt for Ipv6 {
         sync_ctx: &mut SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         unbound: icmp::IcmpUnboundId<Ipv6>,
-        local_addr: Option<SpecifiedAddr<Self::Addr>>,
-        local_id: Option<
-            <IcmpEcho as TransportState<Self, NonSyncCtx, SyncCtx<NonSyncCtx>>>::LocalIdentifier,
-        >,
         remote_addr: SpecifiedAddr<Self::Addr>,
     ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
-        icmp::connect_icmpv6(
-            sync_ctx,
-            ctx,
-            unbound,
-            local_addr,
-            remote_addr,
-            local_id.unwrap_or_default(),
-        )
+        icmp::connect_icmpv6(sync_ctx, ctx, unbound, None, remote_addr, 0)
     }
 
     fn send_icmp_echo_request<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(
@@ -871,13 +841,11 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         sync_ctx: &mut SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         id: Self::UnboundId,
-        local_addr: Option<SpecifiedAddr<I::Addr>>,
-        local_id: Option<Self::LocalIdentifier>,
         remote_addr: SpecifiedAddr<I::Addr>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
         let IcmpRemoteIdentifier {} = remote_id;
-        I::new_icmp_connection(sync_ctx, ctx, id, local_addr, local_id, remote_addr)
+        I::new_icmp_connection(sync_ctx, ctx, id, remote_addr)
     }
 
     fn listen_on_unbound(
@@ -2151,8 +2119,6 @@ where
                     sync_ctx,
                     non_sync_ctx,
                     unbound_id,
-                    None,
-                    None,
                     remote_addr,
                     remote_port,
                 )

@@ -1355,11 +1355,10 @@ pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCo
 /// Create a UDP connection.
 ///
 /// `connect_udp` binds `conn` as a connection to the remote address and port.
-/// It is also bound to the local address and port, meaning that packets sent on
-/// this connection will always come from that address and port. If `local_ip`
-/// is `None`, then the local address will be chosen based on the route to the
-/// remote address. If `local_port` is `None`, then one will be chosen from the
-/// available local ports.
+/// It is also bound to a local address and port, meaning that packets sent on
+/// this connection will always come from that address and port. The local
+/// address will be chosen based on the route to the remote address, and the
+/// local port will be chosen from the available ones.
 ///
 /// # Errors
 ///
@@ -1378,8 +1377,6 @@ pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpUnboundId<I>,
-    local_ip: Option<SpecifiedAddr<I::Addr>>,
-    local_port: Option<NonZeroU16>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
@@ -1392,8 +1389,8 @@ pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     create_udp_conn(
         sync_ctx,
         ctx,
-        local_ip,
-        local_port,
+        None,
+        None,
         device,
         remote_ip,
         remote_port,
@@ -2799,16 +2796,22 @@ mod tests {
         let remote_ip = remote_ip::<I>();
         let unbound = create_udp_unbound(&mut sync_ctx);
         // Create a UDP connection with a specified local port and local IP.
-        let conn = connect_udp::<I, _, _>(
+        let listener = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
+            Some(ZonedAddr::Unzoned(local_ip)),
             Some(NonZeroU16::new(100).unwrap()),
+        )
+        .expect("listen_udp failed");
+        let conn = connect_udp_listener::<I, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
             remote_ip,
             NonZeroU16::new(200).unwrap(),
         )
-        .expect("connect_udp failed");
+        .expect("connect_udp_listener failed");
 
         // Inject a UDP packet and see if we receive it on the context.
         let body = [1, 2, 3, 4, 5];
@@ -2864,7 +2867,7 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
         // Set dummy context callback to treat all addresses as unroutable.
-        let local_ip = local_ip::<I>();
+        let _local_ip = local_ip::<I>();
         let remote_ip = I::get_other_ip_address(127);
         // Create a UDP connection with a specified local port and local IP.
         let unbound = create_udp_unbound(&mut sync_ctx);
@@ -2872,8 +2875,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            Some(NonZeroU16::new(100).unwrap()),
             remote_ip,
             NonZeroU16::new(200).unwrap(),
         )
@@ -2887,8 +2888,8 @@ mod tests {
         );
     }
 
-    /// Tests that UDP connections fail with an appropriate error when local
-    /// address is non-local.
+    /// Tests that UDP listener creation fails with an appropriate error when
+    /// local address is non-local.
     #[ip_test]
     fn test_udp_conn_cannot_bind<I: Ip + TestIpExt>()
     where
@@ -2898,28 +2899,19 @@ mod tests {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
 
-        // Cse remote address to trigger IpSockCreationError::LocalAddrNotAssigned.
-        let local_ip = remote_ip::<I>();
+        // Use remote address to trigger IpSockCreationError::LocalAddrNotAssigned.
         let remote_ip = remote_ip::<I>();
-        // Create a UDP connection with a specified local port and local ip:
+        // Create a UDP listener with a specified local port and local ip:
         let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn_err = connect_udp::<I, _, _>(
+        let result = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            Some(NonZeroU16::new(100).unwrap()),
-            remote_ip,
-            NonZeroU16::new(200).unwrap(),
-        )
-        .unwrap_err();
-
-        assert_eq!(
-            conn_err,
-            UdpSockCreationError::Ip(
-                IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned).into()
-            )
+            Some(ZonedAddr::Unzoned(remote_ip)),
+            NonZeroU16::new(200),
         );
+
+        assert_eq!(result, Err(LocalAddressError::CannotBindToAddress));
     }
 
     /// Tests that UDP connections fail with an appropriate error when local
@@ -2953,105 +2945,12 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            None,
             remote_ip,
             NonZeroU16::new(100).unwrap(),
         )
         .unwrap_err();
 
         assert_eq!(conn_err, UdpSockCreationError::CouldNotAllocateLocalPort);
-    }
-
-    /// Tests that UDP connections fail with an appropriate error when the
-    /// connection is in use.
-    #[ip_test]
-    fn test_udp_conn_in_use<I: Ip + TestIpExt>()
-    where
-        DummySyncCtx<I>: DummySyncCtxBound<I>,
-    {
-        set_logger_for_test();
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-
-        let local_ip = local_ip::<I>();
-        let remote_ip = remote_ip::<I>();
-
-        let local_port = NonZeroU16::new(100).unwrap();
-
-        // Tie up the connection so the second call to `connect_udp` fails.
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        let _ = connect_udp::<I, _, _>(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            unbound,
-            Some(local_ip),
-            Some(local_port),
-            remote_ip,
-            NonZeroU16::new(200).unwrap(),
-        )
-        .expect("Initial call to connect_udp was expected to succeed");
-
-        // Create a UDP connection with a specified local port and local ip:
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn_err = connect_udp::<I, _, _>(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            unbound,
-            Some(local_ip),
-            Some(local_port),
-            remote_ip,
-            NonZeroU16::new(200).unwrap(),
-        )
-        .unwrap_err();
-
-        assert_eq!(conn_err, UdpSockCreationError::SockAddrConflict);
-    }
-
-    /// Tests that if a UDP connect fails, it can be retried later.
-    #[ip_test]
-    fn test_udp_retry_connect_after_removing_conflict<I: Ip + TestIpExt>()
-    where
-        DummySyncCtx<I>: DummySyncCtxBound<I>,
-    {
-        set_logger_for_test();
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-
-        fn connect_unbound<I: Ip + TestIpExt, C: UdpStateNonSyncContext<I>>(
-            sync_ctx: &mut impl UdpStateContext<I, C>,
-            non_sync_ctx: &mut C,
-            unbound: UdpUnboundId<I>,
-        ) -> Result<UdpConnId<I>, UdpSockCreationError> {
-            connect_udp::<I, _, _>(
-                sync_ctx,
-                non_sync_ctx,
-                unbound,
-                Some(local_ip::<I>()),
-                Some(NonZeroU16::new(100).unwrap()),
-                remote_ip::<I>(),
-                NonZeroU16::new(200).unwrap(),
-            )
-        }
-
-        // Tie up the address so the second call to `connect_udp` fails.
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        let connected = connect_unbound(&mut sync_ctx, &mut non_sync_ctx, unbound)
-            .expect("Initial call to connect_udp was expected to succeed");
-
-        // Trying to connect on the same address should fail.
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        assert_eq!(
-            connect_unbound(&mut sync_ctx, &mut non_sync_ctx, unbound,),
-            Err(UdpSockCreationError::SockAddrConflict)
-        );
-
-        // Once the first connection is removed, the second socket can be
-        // connected.
-        let _: UdpConnInfo<_> = remove_udp_conn(&mut sync_ctx, &mut non_sync_ctx, connected);
-
-        let _: UdpConnId<_> = connect_unbound(&mut sync_ctx, &mut non_sync_ctx, unbound)
-            .expect("connect should succeed");
     }
 
     #[ip_test]
@@ -3218,12 +3117,19 @@ mod tests {
         let local_port = NonZeroU16::new(100).unwrap();
 
         let unbound = create_udp_unbound(&mut sync_ctx);
-        let socket = connect_udp(
+        let bound = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
+            Some(ZonedAddr::Unzoned(local_ip)),
             Some(local_port),
+        )
+        .expect("listen should succeed");
+
+        let socket = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            bound,
             remote_ip,
             NonZeroU16::new(200).unwrap(),
         )
@@ -3261,16 +3167,18 @@ mod tests {
         let other_remote_ip = I::get_other_ip_address(3);
 
         let unbound = create_udp_unbound(&mut sync_ctx);
-        let socket = connect_udp(
+        let bound = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
+            Some(ZonedAddr::Unzoned(local_ip)),
             Some(LOCAL_PORT),
-            remote_ip,
-            REMOTE_PORT,
         )
-        .expect("connect was expected to succeed");
+        .expect("listen should succeed");
+
+        let socket =
+            connect_udp_listener(&mut sync_ctx, &mut non_sync_ctx, bound, remote_ip, REMOTE_PORT)
+                .expect("connect was expected to succeed");
         let other_remote_port = NonZeroU16::new(300).unwrap();
         let (error, socket) = reconnect_udp(
             &mut sync_ctx,
@@ -3426,7 +3334,7 @@ mod tests {
         set_logger_for_test();
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-        let local_ip = local_ip::<I>();
+        let _local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
         // Create a UDP connection with a specified local port and local IP.
         let unbound = create_udp_unbound(&mut sync_ctx);
@@ -3434,8 +3342,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            Some(NonZeroU16::new(100).unwrap()),
             remote_ip,
             NonZeroU16::new(200).unwrap(),
         )
@@ -3478,29 +3384,28 @@ mod tests {
         );
 
         // Create some UDP connections and listeners:
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn1 = connect_udp::<I, _, _>(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            unbound,
-            Some(local_ip),
-            Some(local_port_d),
-            remote_ip_a,
-            remote_port_a,
-        )
-        .expect("connect_udp failed");
-        // conn2 has just a remote addr different than conn1
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn2 = connect_udp::<I, _, _>(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            unbound,
-            Some(local_ip),
-            Some(local_port_d),
-            remote_ip_b,
-            remote_port_a,
-        )
-        .expect("connect_udp failed");
+        // conn2 has just a remote addr different than conn1, which requires
+        // allowing them to share the local port.
+        let [conn1, conn2] = [remote_ip_a, remote_ip_b].map(|remote_ip| {
+            let unbound = create_udp_unbound(&mut sync_ctx);
+            set_udp_posix_reuse_port(&mut sync_ctx, &mut non_sync_ctx, unbound.into(), true);
+            let listen = listen_udp(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                unbound,
+                Some(ZonedAddr::Unzoned(local_ip)),
+                Some(local_port_d),
+            )
+            .expect("connect_udp_listener failed");
+            connect_udp_listener::<I, _, _>(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                listen,
+                remote_ip,
+                remote_port_a,
+            )
+            .expect("connect_udp_listener failed")
+        });
         let unbound = create_udp_unbound(&mut sync_ctx);
         let list1 = listen_udp::<I, _, _>(
             &mut sync_ctx,
@@ -3826,12 +3731,18 @@ mod tests {
         let sync_ctx = &mut sync_ctx;
         let bound_first_device = {
             let unbound = create_udp_unbound(sync_ctx);
-            let conn = connect_udp(
+            let listen = listen_udp(
                 sync_ctx,
                 &mut non_sync_ctx,
                 unbound,
-                Some(local_ip::<I>()),
+                Some(ZonedAddr::Unzoned(local_ip::<I>())),
                 Some(LOCAL_PORT),
+            )
+            .expect("listen should succeed");
+            let conn = connect_udp_listener(
+                sync_ctx,
+                &mut non_sync_ctx,
+                listen,
                 I::get_other_remote_ip_address(1),
                 REMOTE_PORT,
             )
@@ -4118,16 +4029,17 @@ mod tests {
         let local_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
         let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn = connect_udp::<I, _, _>(
+        let listener =
+            listen_udp(&mut sync_ctx, &mut non_sync_ctx, unbound, None, Some(local_port))
+                .expect("listen_udp failed");
+        let conn = connect_udp_listener::<I, _, _>(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            unbound,
-            None,
-            Some(local_port),
+            listener,
             remote_ip::<I>(),
             remote_port,
         )
-        .expect("connect_udp failed");
+        .expect("connect_udp_listener failed");
         let UdpSockets { bound, unbound: _, lazy_port_alloc: _ } = &sync_ctx.get_ref().sockets;
         let (_state, _tag_state, addr) = bound.conns().get_by_id(&conn).unwrap();
 
@@ -4146,7 +4058,7 @@ mod tests {
     /// Tests local port allocation for [`connect_udp`].
     ///
     /// Tests that calling [`connect_udp`] causes a valid local port to be
-    /// allocated when no local port is passed.
+    /// allocated.
     #[ip_test]
     fn test_udp_local_port_alloc<I: Ip + TestIpExt>()
     where
@@ -4167,8 +4079,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            None,
             ip_a,
             NonZeroU16::new(1010).unwrap(),
         )
@@ -4178,8 +4088,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            None,
             ip_b,
             NonZeroU16::new(1010).unwrap(),
         )
@@ -4189,8 +4097,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            None,
             ip_a,
             NonZeroU16::new(2020).unwrap(),
         )
@@ -4200,8 +4106,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            None,
             ip_a,
             NonZeroU16::new(1010).unwrap(),
         )
@@ -4290,31 +4194,26 @@ mod tests {
             Ok(UdpListenerId::new(3))
         );
         // Connections
-        let unbound = create_udp_unbound(&mut sync_ctx);
         assert_eq!(
-            connect_udp::<I, _, _>(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                unbound,
-                Some(local_ip),
-                Some(pe),
-                remote_ip,
-                remote_port
-            ),
-            Ok(UdpConnId::new(0))
-        );
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        assert_eq!(
-            connect_udp::<I, _, _>(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                unbound,
-                Some(local_ip_2),
-                Some(pf),
-                remote_ip,
-                remote_port
-            ),
-            Ok(UdpConnId::new(1))
+            [Ok(UdpConnId::new(0)), Ok(UdpConnId::new(1))],
+            [(local_ip, pe), (local_ip_2, pf)].map(|(local_ip, port)| {
+                let unbound = create_udp_unbound(&mut sync_ctx);
+                let listener = listen_udp(
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
+                    unbound,
+                    Some(ZonedAddr::Unzoned(local_ip)),
+                    Some(port),
+                )
+                .unwrap();
+                connect_udp_listener::<I, _, _>(
+                    &mut sync_ctx,
+                    &mut non_sync_ctx,
+                    listener,
+                    remote_ip,
+                    remote_port,
+                )
+            })
         );
 
         let bound = &sync_ctx.get_ref().sockets.bound;
@@ -4322,22 +4221,22 @@ mod tests {
         // Collect all used local ports.
         assert_eq!(
             bound.collect_used_local_ports(None.into_iter()),
-            [pa, pb, pc, pd, pe, pf].iter().copied().collect()
+            [pa, pb, pc, pd, pe, pf].into_iter().collect()
         );
         // Collect all local ports for local_ip.
         assert_eq!(
             bound.collect_used_local_ports(Some(local_ip).into_iter()),
-            [pa, pb, pc, pe].iter().copied().collect()
+            [pa, pb, pc, pe].into_iter().collect()
         );
         // Collect all local ports for local_ip_2.
         assert_eq!(
             bound.collect_used_local_ports(Some(local_ip_2).into_iter()),
-            [pa, pb, pd, pf].iter().copied().collect()
+            [pa, pb, pd, pf].into_iter().collect()
         );
         // Collect all local ports for local_ip and local_ip_2.
         assert_eq!(
             bound.collect_used_local_ports(vec![local_ip, local_ip_2].into_iter()),
-            [pa, pb, pc, pd, pe, pf].iter().copied().collect()
+            [pa, pb, pc, pd, pe, pf].into_iter().collect()
         );
     }
 
@@ -4502,12 +4401,18 @@ mod tests {
         let local_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
         let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn = connect_udp::<I, _, _>(
+        let listener = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
+            Some(ZonedAddr::Unzoned(local_ip)),
             Some(local_port),
+        )
+        .unwrap();
+        let conn = connect_udp_listener::<I, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
             remote_ip,
             remote_port,
         )
@@ -4654,8 +4559,6 @@ mod tests {
             sync_ctx,
             non_sync_ctx,
             unbound,
-            Some(local_ip::<I>()),
-            NonZeroU16::new(100),
             I::get_other_remote_ip_address(1),
             NonZeroU16::new(200).unwrap(),
         )
@@ -4876,8 +4779,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
-            NonZeroU16::new(100),
             I::get_other_remote_ip_address(1),
             NonZeroU16::new(200).unwrap(),
         )
@@ -4918,16 +4819,22 @@ mod tests {
         let remote_ip = remote_ip::<I>();
         // Create a UDP connection with a specified local port and local IP.
         let unbound = create_udp_unbound(&mut sync_ctx);
-        let conn = connect_udp::<I, _, _>(
+        let listener = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip),
+            Some(ZonedAddr::Unzoned(local_ip)),
             NonZeroU16::new(100),
+        )
+        .expect("listen_udp failed");
+        let conn = connect_udp_listener::<I, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
             remote_ip,
             NonZeroU16::new(200).unwrap(),
         )
-        .expect("connect_udp failed");
+        .expect("connect_udp_listener failed");
         let info = get_udp_conn_info(&sync_ctx, &mut non_sync_ctx, conn);
         assert_eq!(info.local_ip, local_ip);
         assert_eq!(info.local_port.get(), 100);
@@ -5004,8 +4911,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            None,
-            None,
             remote_ip::<I>(),
             nonzero!(569u16),
         )
@@ -5079,8 +4984,6 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(local_ip::<I>()),
-            Some(NonZeroU16::new(100).unwrap()),
             remote_ip::<I>(),
             NonZeroU16::new(200).unwrap(),
         )
@@ -5391,13 +5294,19 @@ mod tests {
                 UdpListenerId::new(1)
             );
             let unbound = create_udp_unbound(sync_ctx);
+            let listener = listen_udp(
+                sync_ctx,
+                non_sync_ctx,
+                unbound,
+                Some(ZonedAddr::Unzoned(local_ip::<I>())),
+                Some(NonZeroU16::new(3).unwrap()),
+            )
+            .unwrap();
             assert_eq!(
-                connect_udp(
+                connect_udp_listener(
                     sync_ctx,
                     non_sync_ctx,
-                    unbound,
-                    Some(local_ip::<I>()),
-                    Some(NonZeroU16::new(3).unwrap()),
+                    listener,
                     remote_ip::<I>(),
                     NonZeroU16::new(4).unwrap(),
                 )
