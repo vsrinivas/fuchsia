@@ -149,6 +149,9 @@ where
         if let Err(err) = driver_state.set_advertising_proxy_enabled(true) {
             warn!("Unable to start SRP advertising proxy: {:?}", err);
         }
+
+        // Enable the receive filter.
+        driver_state.ot_instance.ip6_set_receive_filter_enabled(true);
     }
 
     /// A single iteration of the main task loop
