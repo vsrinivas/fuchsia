@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "display-detect",
+            url: "fuchsia-pkg://fuchsia.com/display-detect#meta/display-detect.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.sysinfo.SysInfo",
+            from: "parent",
+            to: [ "#display-detect" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#display-detect" ],
+        },
+    ],
+}

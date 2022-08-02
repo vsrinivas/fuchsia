@@ -6,6 +6,15 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+core_shard("display_png_shard") {
+  shard_file = "meta/display-png.core_shard.cml"
+}
+
+core_shard("display_detect_shard") {
+  shard_file = "meta/display-detect.core_shard.cml"
+}
 
 executable("display_detect") {
   sources = [ "display-detect.cc" ]
@@ -50,9 +59,19 @@ rustc_binary("display_png") {
   sources = [ "display-png.rs" ]
 }
 
-fuchsia_shell_package("display-factory-test") {
+fuchsia_package_with_single_component("display-detect") {
+  manifest = "meta/display-detect.cml"
+  deps = [ ":display_detect" ]
+}
+
+fuchsia_package_with_single_component("display-png") {
+  manifest = "meta/display-png.cml"
+  deps = [ ":display_png" ]
+}
+
+group("display-factory-test") {
   deps = [
-    ":display_detect",
-    ":display_png",
+    ":display-detect",
+    ":display-png",
   ]
 }

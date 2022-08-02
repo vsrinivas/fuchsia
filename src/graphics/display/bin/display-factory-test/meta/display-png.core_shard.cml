@@ -1,0 +1,48 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "display-png",
+            url: "fuchsia-pkg://fuchsia.com/display-png#meta/display-png.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: [ "#display-png" ],
+            subdir: "class/input-report",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: [ "#display-png" ],
+            subdir: "class/display-controller",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: [ "#display-png" ],
+        },
+        {
+            protocol: "fuchsia.ui.scenic.Scenic",
+            from: "#ui",
+            to: [ "#display-png" ],
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#display-png" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#display-png" ],
+        },
+    ],
+}
