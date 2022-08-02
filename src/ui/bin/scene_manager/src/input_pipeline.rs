@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_settings as fsettings,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_pointerinjector_configuration::SetupProxy,
+    fidl_fuchsia_ui_policy::DeviceListenerRegistryRequestStream,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
@@ -23,11 +24,13 @@ use {
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap_handler,
+        media_buttons_handler::MediaButtonsHandler,
         mouse_injector_handler::MouseInjectorHandler,
         shortcut_handler::ShortcutHandler,
         touch_injector_handler::TouchInjectorHandler,
     },
     scene_management::{self, SceneManager},
+    std::rc::Rc,
     std::sync::Arc,
 };
 
@@ -52,15 +55,20 @@ pub async fn handle_input(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
+    media_buttons_listener_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        DeviceListenerRegistryRequestStream,
+    >,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
     display_ownership_event: zx::Event,
 ) -> Result<InputPipeline, Error> {
+    let media_buttons_handler = MediaButtonsHandler::new();
     let input_pipeline = InputPipeline::new(
         vec![
             input_device::InputDeviceType::Mouse,
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
+            input_device::InputDeviceType::ConsumerControls,
         ],
         build_input_pipeline_assembly(
             use_flatland,
@@ -68,6 +76,7 @@ pub async fn handle_input(
             icu_data_loader,
             node,
             display_ownership_event,
+            media_buttons_handler.clone(),
         )
         .await,
     )
@@ -79,15 +88,19 @@ pub async fn handle_input(
         input_pipeline.input_event_sender().clone(),
         input_pipeline.input_device_bindings().clone(),
     );
-
     fasync::Task::local(input_device_registry_fut).detach();
 
     let input_config_fut = handle_input_config_request_streams(
         input_config_request_stream_receiver,
         input_pipeline.input_device_bindings().clone(),
     );
-
     fasync::Task::local(input_config_fut).detach();
+
+    let media_buttons_listener_registry_fut = handle_device_listener_registry_request_stream(
+        media_buttons_listener_registry_request_stream_receiver,
+        media_buttons_handler.clone(),
+    );
+    fasync::Task::local(media_buttons_listener_registry_fut).detach();
 
     Ok(input_pipeline)
 }
@@ -164,6 +177,7 @@ async fn build_input_pipeline_assembly(
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
     display_ownership_event: zx::Event,
+    media_buttons_handler: Rc<MediaButtonsHandler>,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
@@ -173,6 +187,7 @@ async fn build_input_pipeline_assembly(
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         assembly = assembly.add_display_ownership(display_ownership_event);
         assembly = add_modifier_handler(assembly);
+
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
         assembly = add_text_settings_handler(assembly);
@@ -180,9 +195,14 @@ async fn build_input_pipeline_assembly(
         assembly = assembly.add_autorepeater();
         assembly = add_dead_keys_handler(assembly, icu_data_loader);
         assembly = add_immersive_mode_shortcut_handler(assembly);
+
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
+
+        // Add media button handler.
+        assembly = assembly.add_handler(media_buttons_handler);
+
         // Add the click-drag handler before the mouse handler, to allow
         // the click-drag handler to filter events seen by the mouse
         // handler.
@@ -362,6 +382,22 @@ pub async fn handle_input_config_request_streams(
                      will continue serving other clients",
                     e
                 );
+            }
+        }
+    }
+}
+
+pub async fn handle_device_listener_registry_request_stream(
+    mut stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        DeviceListenerRegistryRequestStream,
+    >,
+    media_buttons_handler: Rc<MediaButtonsHandler>,
+) {
+    while let Some(stream) = stream_receiver.next().await {
+        match media_buttons_handler.handle_device_listener_registry_request_stream(stream).await {
+            Ok(()) => (),
+            Err(e) => {
+                fx_log_warn!("failure while serving DeviceListenerRegistry: {}", e);
             }
         }
     }

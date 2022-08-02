@@ -58,6 +58,7 @@ rustc_binary("scene_manager_bin") {
     "src/input_device_registry_server.rs",
     "src/input_pipeline.rs",
     "src/main.rs",
+    "src/media_buttons_listener_registry_server.rs",
   ]
 }
 

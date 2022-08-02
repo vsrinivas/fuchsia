@@ -31,7 +31,7 @@ use {
     fidl_fuchsia_ui_composition as flatland,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_policy::{
-        DeviceListenerRegistryRequest, DeviceListenerRegistryRequestStream,
+        DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
         DisplayBacklightRequest, DisplayBacklightRequestStream,
     },
     fidl_fuchsia_ui_scenic::ScenicMarker,
@@ -50,11 +50,12 @@ use {
 mod input_config_server;
 mod input_device_registry_server;
 mod input_pipeline;
+mod media_buttons_listener_registry_server;
 
 enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
     ColorAdjustmentHandler(ColorAdjustmentHandlerRequestStream),
-    DeviceListenerRegistry(DeviceListenerRegistryRequestStream),
+    MediaButtonsListenerRegistry(MediaButtonsListenerRegistryRequestStream),
     DisplayBacklight(DisplayBacklightRequestStream),
     FactoryResetCountdown(FactoryResetCountdownRequestStream),
     FactoryReset(FactoryResetDeviceRequestStream),
@@ -86,7 +87,7 @@ async fn inner_main() -> Result<(), Error> {
     fs.dir("svc")
         .add_fidl_service(ExposedServices::AccessibilityViewRegistry)
         .add_fidl_service(ExposedServices::ColorAdjustmentHandler)
-        .add_fidl_service(ExposedServices::DeviceListenerRegistry)
+        .add_fidl_service(ExposedServices::MediaButtonsListenerRegistry)
         .add_fidl_service(ExposedServices::DisplayBacklight)
         .add_fidl_service(ExposedServices::FactoryResetCountdown)
         .add_fidl_service(ExposedServices::FactoryReset)
@@ -102,6 +103,11 @@ async fn inner_main() -> Result<(), Error> {
 
     let (input_config_server, input_config_receiver) =
         input_config_server::make_server_and_receiver();
+
+    let (
+        media_buttons_listener_registry_server,
+        media_buttons_listener_registry_request_stream_receiver,
+    ) = media_buttons_listener_registry_server::make_server_and_receiver();
 
     // This call should normally never fail. The ICU data loader must be kept alive to ensure
     // Unicode data is kept in memory.
@@ -219,6 +225,7 @@ async fn inner_main() -> Result<(), Error> {
         scene_manager.clone(),
         input_config_receiver,
         input_device_registry_request_stream_receiver,
+        media_buttons_listener_registry_request_stream_receiver,
         icu_data_loader,
         &inspect_node.clone(),
         display_ownership,
@@ -242,13 +249,6 @@ async fn inner_main() -> Result<(), Error> {
             }
             ExposedServices::ColorAdjustmentHandler(request_stream) => {
                 fasync::Task::local(handle_color_adjustment_handler_request_stream(
-                    request_stream,
-                    Arc::clone(&scene_manager),
-                ))
-                .detach()
-            }
-            ExposedServices::DeviceListenerRegistry(request_stream) => {
-                fasync::Task::local(handle_device_listener_registry_request_stream(
                     request_stream,
                     Arc::clone(&scene_manager),
                 ))
@@ -310,6 +310,17 @@ async fn inner_main() -> Result<(), Error> {
                     Ok(()) => (),
                     Err(e) => {
                         fx_log_warn!("failed to forward InputConfigFeaturesRequestStream: {:?}", e)
+                    }
+                }
+            }
+            ExposedServices::MediaButtonsListenerRegistry(request_stream) => {
+                match &media_buttons_listener_registry_server.handle_request(request_stream).await {
+                    Ok(()) => (),
+                    Err(e) => {
+                        fx_log_warn!(
+                            "failed to forward media buttons listener request via DeviceListenerRegistryRequestStream: {:?}",
+                            e
+                        )
                     }
                 }
             }
@@ -398,30 +409,6 @@ pub async fn handle_color_adjustment_handler_request_stream(
                     "ColorAdjustmentHandler.SetColorAdjustment() called with {color_adjustment:?}"
                 );
             }
-        };
-    }
-}
-
-pub async fn handle_device_listener_registry_request_stream(
-    mut request_stream: DeviceListenerRegistryRequestStream,
-    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-) {
-    let mut listener_holder = None;
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            DeviceListenerRegistryRequest::RegisterListener { listener, responder } => {
-                fx_log_err!("DeviceListenerRegistryRequest.RegisterListener() called");
-                if let None = listener_holder {
-                    listener_holder = Some(listener);
-                }
-                match responder.send() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        fx_log_err!("Error responding to RegisterListener(): {}", e);
-                    }
-                }
-            }
-            _ => {}
         };
     }
 }
