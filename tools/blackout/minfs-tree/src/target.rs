@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
     blackout_target::{
         static_tree::{DirectoryEntry, EntryDistribution},
@@ -22,10 +22,10 @@ impl Test for MinfsTree {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut minfs = Minfs::new(&dev)?;
+        let minfs = Minfs::new(&dev)?;
 
         tracing::info!("formatting block device with minfs");
-        minfs.format().context("failed to format minfs")?;
+        minfs.format().await.context("failed to format minfs")?;
 
         Ok(())
     }
@@ -34,12 +34,13 @@ impl Test for MinfsTree {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut minfs = Minfs::new(&dev)?;
+        let minfs = Minfs::new(&dev)?;
 
         let root = format!("/test-fs-root-{}", seed);
 
         tracing::info!("mounting minfs into default namespace at {}", root);
-        minfs.mount(&root).context("failed to mount minfs")?;
+        let mut minfs = minfs.serve().await.context("failed to mount minfs")?;
+        minfs.bind_to_path(&root).map_err(|e| anyhow!(e)).context("failed to bind to path")?;
 
         tracing::info!("generating load");
         let mut rng = StdRng::seed_from_u64(seed);
@@ -66,10 +67,10 @@ impl Test for MinfsTree {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut minfs = Minfs::new(&dev)?;
+        let minfs = Minfs::new(&dev)?;
 
         tracing::info!("verifying disk with fsck");
-        minfs.fsck().context("failed to run fsck")?;
+        minfs.fsck().await.context("failed to run fsck")?;
 
         tracing::info!("verification successful");
         Ok(())

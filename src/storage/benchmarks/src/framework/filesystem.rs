@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
-    fs_management::{asynchronous::ServingFilesystem, Blobfs, FSConfig, Fxfs, Minfs},
+    fs_management::{filesystem::ServingFilesystem, Blobfs, FSConfig, Fxfs, Minfs},
     fuchsia_component::client::{
         connect_channel_to_protocol, connect_to_childs_protocol, open_childs_exposed_directory,
     },
@@ -78,17 +78,16 @@ pub trait Filesystem: Send {
 }
 
 struct FsmFilesystem<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> {
-    fs: fs_management::asynchronous::Filesystem<FSC>,
+    fs: fs_management::filesystem::Filesystem<FSC>,
     serving_filesystem: Option<ServingFilesystem>,
     _block_device: BD,
 }
 
 impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> FsmFilesystem<FSC, BD> {
     pub async fn new(config: FSC, block_device: BD) -> Self {
-        let fs =
-            fs_management::asynchronous::Filesystem::from_node(block_device.get_node(), config);
+        let fs = fs_management::filesystem::Filesystem::from_node(block_device.get_node(), config);
         fs.format().await.expect("Failed to format the filesystem");
-        let serving_filesystem = fs.serve().await.expect("Failed to start the filesystem");
+        let mut serving_filesystem = fs.serve().await.expect("Failed to start the filesystem");
         serving_filesystem.bind_to_path(MOUNT_PATH).expect("Failed to bind the filesystem");
         Self { fs, serving_filesystem: Some(serving_filesystem), _block_device: block_device }
     }
@@ -100,7 +99,7 @@ impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> Filesystem for FsmFile
         // Remount the filesystem to guarantee that all cached data from reads and write is cleared.
         let serving_filesystem = self.serving_filesystem.take().unwrap();
         serving_filesystem.shutdown().await.expect("Failed to stop the filesystem");
-        let serving_filesystem = self.fs.serve().await.expect("Failed to start the filesystem");
+        let mut serving_filesystem = self.fs.serve().await.expect("Failed to start the filesystem");
         serving_filesystem.bind_to_path(MOUNT_PATH).expect("Failed to bind the filesystem");
         self.serving_filesystem = Some(serving_filesystem);
     }

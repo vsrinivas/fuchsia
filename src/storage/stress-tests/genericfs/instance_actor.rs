@@ -4,7 +4,7 @@
 
 use {
     async_trait::async_trait,
-    fs_management::asynchronous::ServingFilesystem,
+    fs_management::filesystem::ServingFilesystem,
     fuchsia_async as fasync,
     std::time::Duration,
     storage_stress_test_utils::fvm::FvmInstance,

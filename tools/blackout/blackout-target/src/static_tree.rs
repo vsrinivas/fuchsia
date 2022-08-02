@@ -152,6 +152,7 @@ mod tests {
     use {
         super::{DirectoryEntry, Entry, EntryDistribution, FileEntry},
         fs_management::Minfs,
+        fuchsia_async as fasync,
         ramdevice_client::RamdiskClient,
         rand::{rngs::mock::StepRng, Rng as _},
     };
@@ -213,8 +214,8 @@ mod tests {
         assert_eq!(tree1, tree2);
     }
 
-    #[test]
-    fn write_tree() {
+    #[fasync::run_singlethreaded(test)]
+    async fn write_tree() {
         let root = "/test-root";
         let initial = 0xdeadbeef;
         let increment = 1;
@@ -232,9 +233,10 @@ mod tests {
         let ramdisk = RamdiskClient::create(512, 1 << 16).expect("failed to make ramdisk");
         let device_path = ramdisk.get_path();
 
-        let mut minfs = Minfs::new(device_path).expect("failed to make new minfs");
-        minfs.format().expect("failed to format minfs");
-        minfs.mount(root).expect("failed to mount minfs");
+        let minfs = Minfs::new(device_path).expect("failed to make new minfs");
+        minfs.format().await.expect("failed to format minfs");
+        let mut minfs = minfs.serve().await.expect("failed to mount minfs");
+        minfs.bind_to_path(root).expect("failed to bind path");
 
         tree.write_tree_at(root).expect("failed to write tree");
 
@@ -254,7 +256,7 @@ mod tests {
             assert_eq!(file_name, expected_name.to_string());
         }
 
-        minfs.unmount().expect("failed to unmount minfs");
+        minfs.shutdown().await.expect("failed to unmount minfs");
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 }

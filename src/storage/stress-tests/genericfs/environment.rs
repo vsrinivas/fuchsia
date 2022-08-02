@@ -8,7 +8,7 @@ use {
     },
     async_trait::async_trait,
     fidl_fuchsia_io as fio,
-    fs_management::{asynchronous::Filesystem, FSConfig},
+    fs_management::{filesystem::Filesystem, FSConfig},
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
@@ -71,7 +71,7 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         let fs = Filesystem::from_node(node, config.clone());
         fs.format().await.unwrap();
 
-        let instance = fs.serve().await.unwrap();
+        let mut instance = fs.serve().await.unwrap();
         instance.bind_to_path(MOUNT_PATH).unwrap();
 
         let seed = match args.seed {
@@ -178,7 +178,7 @@ impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironmen
 
             let fs = Filesystem::from_node(node, self.config.clone());
             fs.fsck().await.unwrap();
-            let instance = fs.serve().await.unwrap();
+            let mut instance = fs.serve().await.unwrap();
             instance.bind_to_path(MOUNT_PATH).unwrap();
 
             // Replace the fvm and fs instances

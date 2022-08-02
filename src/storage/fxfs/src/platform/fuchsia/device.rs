@@ -602,7 +602,7 @@ mod tests {
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_hardware_block_volume::VolumeAndNodeMarker,
         fidl_fuchsia_io as fio,
-        fs_management::{asynchronous::Filesystem, Blobfs},
+        fs_management::{filesystem::Filesystem, Blobfs},
         fuchsia_async as fasync,
         fuchsia_merkle::MerkleTree,
         fuchsia_zircon as zx,

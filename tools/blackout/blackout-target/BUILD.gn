@@ -23,6 +23,7 @@ rustc_library("blackout-target") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia-async",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
   ]

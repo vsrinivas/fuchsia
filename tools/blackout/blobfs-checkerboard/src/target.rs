@@ -44,23 +44,24 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut blobfs = Blobfs::new(&dev)?;
+        let blobfs = Blobfs::new(&dev)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
 
         tracing::info!("formatting provided block device with blobfs");
-        blobfs.format().context("failed to format blobfs")?;
+        blobfs.format().await.context("failed to format blobfs")?;
 
         let root = format!("/test-fs-root-{}", rng.gen::<u16>());
         tracing::info!("mounting blobfs into default namespace at {}", root);
-        blobfs.mount(&root).context("failed to mount blobfs")?;
+        let mut blobfs = blobfs.serve().await.context("failed to mount blobfs")?;
+        blobfs.bind_to_path(&root).context("failed to bind path")?;
 
         // Normally these tests just format in the setup, but I want a pile of files that I'm never
         // going to touch again, so this is the best place to set them up. Each file has a number
         // followed by a random amount of random garbage up to 6k (so the data for each blob takes
         // up one block at most). We want to stay within the bounds of the provided partition, so
         // query the size of the filesystem, and fill about 3/4ths of it with blobs.
-        let q = blobfs.query_filesystem()?;
+        let q = blobfs.query().await?;
         tracing::info!("got query results - {:#?}", q);
         let num_blobs = (((q.total_bytes - q.used_bytes) / q.block_size as u64) * 3) / 4;
         let num_blobs = num_blobs - (num_blobs % 2);
@@ -71,7 +72,7 @@ impl Test for BlobfsCheckerboard {
         }
 
         tracing::info!("unmounting blobfs");
-        blobfs.unmount().context("failed to unmount blobfs")?;
+        blobfs.shutdown().await.context("failed to unmount blobfs")?;
 
         Ok(())
     }
@@ -80,13 +81,14 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut blobfs = Blobfs::new(&dev)?;
+        let blobfs = Blobfs::new(&dev)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
         let root = format!("/test-fs-root-{}", rng.gen::<u16>());
 
         tracing::info!("mounting blobfs into default namespace at {}", root);
-        blobfs.mount(&root).context("failed to mount blobfs")?;
+        let mut blobfs = blobfs.serve().await.context("failed to mount blobfs")?;
+        blobfs.bind_to_path(&root).context(format!("failed to bind to {}", root))?;
 
         tracing::info!("some prep work...");
         // Get a list of all the blobs on the partition so we can generate our load gen state. We
@@ -183,10 +185,10 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut blobfs = Blobfs::new(&dev)?;
+        let blobfs = Blobfs::new(&dev)?;
 
         tracing::info!("verifying disk with fsck");
-        blobfs.fsck().context("fsck failed")?;
+        blobfs.fsck().await.context("fsck failed")?;
 
         tracing::info!("verification successful");
         Ok(())

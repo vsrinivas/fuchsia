@@ -4,7 +4,7 @@
 use {
     crate::{
         setup::DevhostConfig,
-        storage::{Initializer, Storage, TopoPathInitializer},
+        storage::{Storage, TopoPathInitializer},
     },
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,

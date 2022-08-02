@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio,
     fs_management::{
         self as fs,
-        asynchronous::{Filesystem, ServingFilesystem},
+        filesystem::{Filesystem, ServingFilesystem},
     },
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     fuchsia_zircon as zx,

@@ -72,8 +72,8 @@ impl BlobfsEnvironment {
         let volume_path = get_volume_path(&volume_guid).await;
 
         // Initialize blobfs on volume
-        let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
-        blobfs.format().unwrap();
+        let blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+        blobfs.format().await.unwrap();
 
         let seed = match args.seed {
             Some(seed) => seed,
@@ -81,8 +81,9 @@ impl BlobfsEnvironment {
         };
 
         // Mount the blobfs volume
-        blobfs.fsck().unwrap();
-        blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
+        blobfs.fsck().await.unwrap();
+        let mut blobfs = blobfs.serve().await.unwrap();
+        blobfs.bind_to_path(BLOBFS_MOUNT_PATH).unwrap();
 
         // Create the instance actor
         let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, blobfs)));
@@ -209,11 +210,12 @@ impl Environment for BlobfsEnvironment {
             let volume_path = get_volume_path(&self.volume_guid).await;
 
             // Initialize blobfs on volume
-            let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+            let blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
 
             // Mount the blobfs volume
-            blobfs.fsck().unwrap();
-            blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
+            blobfs.fsck().await.unwrap();
+            let mut blobfs = blobfs.serve().await.unwrap();
+            blobfs.bind_to_path(BLOBFS_MOUNT_PATH).unwrap();
 
             // Replace the fvm and blobfs instances
             actor.instance = Some((blobfs, fvm));

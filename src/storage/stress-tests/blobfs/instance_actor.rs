@@ -4,18 +4,18 @@
 
 use {
     async_trait::async_trait,
-    fs_management::{Blobfs, Filesystem},
+    fs_management::filesystem::ServingFilesystem,
     storage_stress_test_utils::fvm::FvmInstance,
     stress_test::actor::{Actor, ActorError},
 };
 
 /// An actor that kills blobfs and destroys the ramdisk
 pub struct InstanceActor {
-    pub instance: Option<(Filesystem<Blobfs>, FvmInstance)>,
+    pub instance: Option<(ServingFilesystem, FvmInstance)>,
 }
 
 impl InstanceActor {
-    pub fn new(fvm: FvmInstance, blobfs: Filesystem<Blobfs>) -> Self {
+    pub fn new(fvm: FvmInstance, blobfs: ServingFilesystem) -> Self {
         Self { instance: Some((blobfs, fvm)) }
     }
 }
@@ -23,8 +23,8 @@ impl InstanceActor {
 #[async_trait]
 impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        if let Some((mut blobfs, _)) = self.instance.take() {
-            blobfs.kill().expect("Could not kill blobfs");
+        if let Some((blobfs, _)) = self.instance.take() {
+            blobfs.kill().await.expect("Could not kill blobfs");
         } else {
             panic!("Instance was already killed!")
         }

@@ -5,7 +5,10 @@
 use {
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_io as fio,
-    fs_management::{Blobfs, Filesystem},
+    fs_management::{
+        filesystem::{Filesystem, ServingFilesystem},
+        Blobfs,
+    },
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_fs::open_directory_in_namespace,
     fuchsia_zircon::{AsHandleRef, Rights, Vmo},
@@ -31,7 +34,7 @@ pub struct BlobfsInstance {
     _fvm_vmo: Vmo,
     _fvm: FvmInstance,
     blobfs: Filesystem<Blobfs>,
-    blobfs_dir: Option<String>,
+    serving_blobfs: Option<ServingFilesystem>,
 }
 
 impl BlobfsInstance {
@@ -53,51 +56,50 @@ impl BlobfsInstance {
         wait_for_device(&blobfs_block_path, Duration::from_secs(20)).unwrap();
 
         // Instantiate blobfs.
-        let mut blobfs = Blobfs::new(&blobfs_block_path).unwrap();
+        let blobfs = Blobfs::new(&blobfs_block_path).unwrap();
 
         // Check blobfs consistency.
-        blobfs.fsck().unwrap();
+        blobfs.fsck().await.unwrap();
 
-        Self { _fvm_vmo: fvm_vmo, _fvm: fvm, blobfs, blobfs_dir: None }
+        Self { _fvm_vmo: fvm_vmo, _fvm: fvm, blobfs, serving_blobfs: None }
     }
 
     /// Mount blobfs to directory location `mountpoint`.
-    pub fn mount(&mut self, mountpoint: &str) {
-        if let Some(blobfs_dir) = &self.blobfs_dir {
+    pub async fn mount(&mut self, mountpoint: &str) {
+        if let Some(blobfs_dir) =
+            self.serving_blobfs.as_ref().and_then(ServingFilesystem::bound_path)
+        {
             panic!(
                 "Attempt to re-mount blobfs at {} when it is already mounted at {}",
                 mountpoint, blobfs_dir
             );
         }
 
-        self.blobfs.mount(mountpoint).unwrap();
-        self.blobfs_dir = Some(mountpoint.to_string());
+        let mut blobfs = self.blobfs.serve().await.unwrap();
+        blobfs.bind_to_path(mountpoint).unwrap();
+        self.serving_blobfs = Some(blobfs);
     }
 
     /// Umount blobfs.
     pub fn unmount(&mut self) {
-        if self.blobfs_dir.is_some() {
-            self.blobfs.unmount().unwrap();
-            self.blobfs_dir = None;
-            return;
-        }
-
-        panic!("Attempt to unmount blobfs when it is not mounted");
+        assert!(
+            self.serving_blobfs.take().is_some(),
+            "Attempt to unmount blobfs when it is not mounted"
+        );
     }
 
     /// Open the blobfs root directory.
     pub fn open_root_dir(&self) -> fio::DirectoryProxy {
-        if let Some(blobfs_dir) = &self.blobfs_dir {
-            return open_directory_in_namespace(
-                blobfs_dir,
-                fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::RIGHT_WRITABLE
-                    | fio::OpenFlags::RIGHT_EXECUTABLE,
-            )
-            .unwrap();
-        }
-
-        panic!("Attempt to open blobfs root when it is not mounted");
+        open_directory_in_namespace(
+            self.serving_blobfs
+                .as_ref()
+                .and_then(ServingFilesystem::bound_path)
+                .expect("Attempt to open blobfs root when it is not mounted"),
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::RIGHT_EXECUTABLE,
+        )
+        .unwrap()
     }
 }
 

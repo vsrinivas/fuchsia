@@ -6,45 +6,11 @@
 //!
 //! This library is analogous to the fs-management library in zircon. It provides support for
 //! formatting, mounting, unmounting, and fsck-ing. It is implemented in a similar way to the C++
-//! version - it uses the blobfs command line tool present in the base image. In order to use this
-//! library inside of a sandbox, the following must be added to the relevant component manifest
-//! file -
-//!
-//! ```
-//! "sandbox": {
-//!     "services": [
-//!         "fuchsia.process.Launcher",
-//!         "fuchsia.tracing.provider.Registry"
-//!     ]
-//! }
-//! ```
-//!
-//! and the projects BUILD.gn file must contain
-//!
-//! ```
-//! package("foo") {
-//!     deps = [
-//!         "//src/storage/bin/blobfs",
-//!         "//src/storage/bin/minfs",
-//!         ...
-//!     ]
-//!     binaries = [
-//!         { name = "blobfs" },
-//!         { name = "minfs" },
-//!         ...
-//!     ]
-//!     ...
-//! }
-//! ```
-//!
-//! for components v1. For components v2, add `/svc/fuchsia.process.Launcher` to `use` and add the
+//! version.  For components v2, add `/svc/fuchsia.process.Launcher` to `use` and add the
 //! binaries as dependencies to your component.
-//!
-//! This library currently doesn't work outside of a component (the filesystem utility binary paths
-//! are hard-coded strings).
 
-pub mod asynchronous;
 mod error;
+pub mod filesystem;
 
 use {
     anyhow::{bail, format_err, Context as _, Error},
@@ -54,14 +20,13 @@ use {
     fidl_fuchsia_fs::AdminSynchronousProxy,
     fidl_fuchsia_io as fio,
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef, Task},
-    fuchsia_zircon_status as zx_status,
+    fuchsia_zircon::{self as zx, Task},
     std::{ffi::CStr, sync::Arc},
 };
 
 // Re-export errors as public.
 pub use error::{
-    BindError, CommandError, KillError, LaunchProcessError, QueryError, ServeError, ShutdownError,
+    CommandError, KillError, LaunchProcessError, QueryError, ServeError, ShutdownError,
 };
 
 /// Constants for fuchsia.io/FilesystemInfo.fs_type
@@ -76,6 +41,7 @@ pub mod vfs_type {
     pub const F2FS: u32 = 0xfe694d21;
 }
 
+// TODO(https://fxbug.dev/105241): Remove this.
 /// Stores state of the mounted filesystem instance
 struct FSInstance {
     process: zx::Process,
@@ -171,7 +137,7 @@ impl FSInstance {
         let (status, result) = proxy
             .query_filesystem(zx::Time::INFINITE)
             .context("failed to query filesystem info")?;
-        zx_status::Status::ok(status).context("failed to query filesystem info")?;
+        zx::Status::ok(status).context("failed to query filesystem info")?;
         result.ok_or(format_err!("querying filesystem info got empty result"))
     }
 
@@ -207,38 +173,6 @@ fn launch_process(
     }
 }
 
-fn run_command_and_wait_for_clean_exit(
-    args: Vec<&CStr>,
-    block_device: zx::Channel,
-    crypt_client: Option<zx::Channel>,
-) -> Result<(), Error> {
-    let mut actions = vec![
-        // device handle is passed in as a PA_USER0 handle at argument 1
-        SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
-    ];
-    if let Some(crypt_client) = crypt_client {
-        actions.push(SpawnAction::add_handle(
-            HandleInfo::new(HandleType::User0, 2),
-            crypt_client.into(),
-        ));
-    }
-
-    let process = launch_process(&args, actions)?;
-
-    let _signals = process
-        .wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)
-        .context(format!("failed to wait for process to complete"))?;
-
-    let info = process.info().context("failed to get process info")?;
-    if !zx::ProcessInfoFlags::from_bits(info.flags).unwrap().contains(zx::ProcessInfoFlags::EXITED)
-        || info.return_code != 0
-    {
-        bail!("process returned non-zero exit code ({})", info.return_code);
-    }
-
-    Ok(())
-}
-
 /// Describes the configuration for a particular native filesystem.
 pub trait FSConfig {
     /// If the filesystem runs as a component, Returns the component name in which case the
@@ -272,6 +206,7 @@ pub trait FSConfig {
     }
 }
 
+// TODO(https://fxbug.dev/105241): Remove this.
 /// Manages a block device for filesystem operations
 pub struct Filesystem<FSC: FSConfig> {
     device: fio::NodeSynchronousProxy,
@@ -327,46 +262,6 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             Some(FSInstance::mount(block_device, args, mount_point, self.config.crypt_client())?);
 
         Ok(())
-    }
-
-    /// Format the associated device with a fresh filesystem. It must not be mounted.
-    pub fn format(&mut self) -> Result<(), Error> {
-        if self.instance.is_some() {
-            bail!("cannot format! filesystem is mounted");
-        }
-        if self.config.component_name().is_some() {
-            bail!("Not supported");
-        }
-
-        let block_device = self.get_channel()?;
-
-        let mut args = vec![self.config.binary_path()];
-        args.append(&mut self.config.generic_args());
-        args.push(cstr!("mkfs"));
-        args.append(&mut self.config.format_args());
-
-        run_command_and_wait_for_clean_exit(args, block_device, self.config.crypt_client())
-            .context("failed to format device")
-    }
-
-    /// Run fsck on the filesystem partition. Returns Ok(()) if fsck succeeds, or the associated
-    /// error if it doesn't. Will fail if run on a mounted partition.
-    pub fn fsck(&mut self) -> Result<(), Error> {
-        if self.instance.is_some() {
-            bail!("cannot fsck! filesystem is mounted");
-        }
-        if self.config.component_name().is_some() {
-            bail!("Not supported");
-        }
-
-        let block_device = self.get_channel()?;
-
-        let mut args = vec![self.config.binary_path()];
-        args.append(&mut self.config.generic_args());
-        args.push(cstr!("fsck"));
-
-        run_command_and_wait_for_clean_exit(args, block_device, self.config.crypt_client())
-            .context("failed to fsck device")
     }
 
     /// Unmount the filesystem partition. The partition must already be mounted.
@@ -452,14 +347,14 @@ pub struct Blobfs {
 impl Blobfs {
     /// Manages a block device at a given path using
     /// the default configuration.
-    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_path(path, Self::default())
+    pub fn new(path: &str) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::default())
     }
 
     /// Manages a block device at a given channel using
     /// the default configuration.
-    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_channel(channel, Self::default())
+    pub fn from_channel(channel: zx::Channel) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::default())
     }
 }
 
@@ -519,14 +414,14 @@ pub struct Minfs {
 impl Minfs {
     /// Manages a block device at a given path using
     /// the default configuration.
-    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_path(path, Self::default())
+    pub fn new(path: &str) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::default())
     }
 
     /// Manages a block device at a given channel using
     /// the default configuration.
-    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_channel(channel, Self::default())
+    pub fn from_channel(channel: zx::Channel) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::default())
     }
 }
 
@@ -571,8 +466,11 @@ impl Fxfs {
 
     /// Manages a block device at a given path using
     /// the default configuration.
-    pub fn new(path: &str, crypt_client_fn: CryptClientFn) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_path(path, Self::with_crypt_client(crypt_client_fn))
+    pub fn new(
+        path: &str,
+        crypt_client_fn: CryptClientFn,
+    ) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::with_crypt_client(crypt_client_fn))
     }
 
     /// Manages a block device at a given channel using
@@ -580,8 +478,8 @@ impl Fxfs {
     pub fn from_channel(
         channel: zx::Channel,
         crypt_client_fn: CryptClientFn,
-    ) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_channel(channel, Self::with_crypt_client(crypt_client_fn))
+    ) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::with_crypt_client(crypt_client_fn))
     }
 }
 
@@ -607,14 +505,14 @@ pub struct Factoryfs {
 impl Factoryfs {
     /// Manages a block device at a given path using
     /// the default configuration.
-    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_path(path, Self::default())
+    pub fn new(path: &str) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::default())
     }
 
     /// Manages a block device at a given channel using
     /// the default configuration.
-    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_channel(channel, Self::default())
+    pub fn from_channel(channel: zx::Channel) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::default())
     }
 }
 
@@ -628,317 +526,5 @@ impl FSConfig for Factoryfs {
             args.push(cstr!("--verbose"));
         }
         args
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Filesystem, Minfs},
-        fuchsia_zircon::HandleBased,
-        ramdevice_client::RamdiskClient,
-        std::io::{Read, Seek, Write},
-    };
-
-    fn ramdisk(block_size: u64) -> RamdiskClient {
-        ramdevice_client::wait_for_device(
-            "/dev/sys/platform/00:00:2d/ramctl",
-            std::time::Duration::from_secs(60),
-        )
-        .unwrap();
-        RamdiskClient::create(block_size, 1 << 16).unwrap()
-    }
-
-    fn blobfs(ramdisk: &RamdiskClient) -> Filesystem<Blobfs> {
-        let device = ramdisk.open().unwrap();
-        Blobfs::from_channel(device).unwrap()
-    }
-
-    #[test]
-    fn blobfs_custom_config() {
-        let block_size = 512;
-        let mount_point = "/test-fs-root";
-
-        let ramdisk = ramdisk(block_size);
-        let device = ramdisk.open().unwrap();
-        let config = Blobfs {
-            verbose: true,
-            readonly: true,
-            blob_deprecated_padded_format: false,
-            blob_compression: Some(BlobCompression::Uncompressed),
-            blob_eviction_policy: Some(BlobEvictionPolicy::EvictImmediately),
-        };
-        let mut blobfs = Filesystem::from_channel(device, config).unwrap();
-
-        blobfs.format().expect("failed to format blobfs");
-        blobfs.fsck().expect("failed to fsck blobfs");
-        blobfs.mount(mount_point).expect("failed to mount blobfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn blobfs_format_fsck_success() {
-        let block_size = 512;
-        let ramdisk = ramdisk(block_size);
-        let mut blobfs = blobfs(&ramdisk);
-
-        blobfs.format().expect("failed to format blobfs");
-        blobfs.fsck().expect("failed to fsck blobfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn blobfs_format_fsck_error() {
-        let block_size = 512;
-        let ramdisk = ramdisk(block_size);
-        let mut blobfs = blobfs(&ramdisk);
-
-        blobfs.format().expect("failed to format blobfs");
-
-        // force fsck to fail by stomping all over one of blobfs's metadata blocks after formatting
-        // TODO(fxbug.dev/35860): corrupt something other than the superblock
-        let device_channel = ramdisk.open().expect("failed to get channel to device");
-        let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
-            .expect("failed to convert to file descriptor");
-        let mut bytes: Vec<u8> = std::iter::repeat(0xff).take(block_size as usize).collect();
-        file.write_all(&mut bytes).expect("failed to write to device");
-
-        blobfs.fsck().expect_err("fsck succeeded when it shouldn't have");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn blobfs_format_mount_write_query_remount_read_unmount() {
-        let block_size = 512;
-        let mount_point = "/test-fs-root";
-        let ramdisk = ramdisk(block_size);
-        let mut blobfs = blobfs(&ramdisk);
-
-        blobfs.format().expect("failed to format blobfs");
-        blobfs.mount(mount_point).expect("failed to mount blobfs the first time");
-
-        // snapshot of FilesystemInfo
-        let fs_info1 =
-            blobfs.query_filesystem().expect("failed to query filesystem info after first mount");
-
-        // pre-generated merkle test fixture data
-        let merkle = "be901a14ec42ee0a8ee220eb119294cdd40d26d573139ee3d51e4430e7d08c28";
-        let content = String::from("test content").into_bytes();
-        let path = format!("{}/{}", mount_point, merkle);
-
-        {
-            let mut test_file = std::fs::File::create(&path).expect("failed to create test file");
-            test_file.set_len(content.len() as u64).expect("failed to truncate file");
-            test_file.write_all(&content).expect("failed to write to test file");
-        }
-
-        // check against the snapshot FilesystemInfo
-        let fs_info2 =
-            blobfs.query_filesystem().expect("failed to query filesystem info after write");
-        assert_eq!(
-            fs_info2.used_bytes - fs_info1.used_bytes,
-            fs_info2.block_size as u64 // assuming content < 8K
-        );
-
-        blobfs.unmount().expect("failed to unmount blobfs the first time");
-
-        blobfs
-            .query_filesystem()
-            .expect_err("filesystem query on an unmounted filesystem didn't fail");
-
-        blobfs.mount(mount_point).expect("failed to mount blobfs the second time");
-
-        {
-            let mut test_file = std::fs::File::open(&path).expect("failed to open test file");
-            let mut read_content = Vec::new();
-            test_file.read_to_end(&mut read_content).expect("failed to read from test file");
-            assert_eq!(content, read_content);
-        }
-
-        // once more check against the snapshot FilesystemInfo
-        let fs_info3 =
-            blobfs.query_filesystem().expect("failed to query filesystem info after read");
-        assert_eq!(
-            fs_info3.used_bytes - fs_info1.used_bytes,
-            fs_info3.block_size as u64 // assuming content < 8K
-        );
-
-        blobfs.unmount().expect("failed to unmount blobfs the second time");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    fn minfs(ramdisk: &RamdiskClient) -> Filesystem<Minfs> {
-        let device = ramdisk.open().unwrap();
-        Minfs::from_channel(device).unwrap()
-    }
-
-    #[test]
-    fn minfs_custom_config() {
-        let block_size = 512;
-        let mount_point = "/test-fs-root";
-
-        let ramdisk = ramdisk(block_size);
-        let device = ramdisk.open().unwrap();
-        let config = Minfs { verbose: true, readonly: true, fsck_after_every_transaction: true };
-        let mut minfs = Filesystem::from_channel(device, config).unwrap();
-
-        minfs.format().expect("failed to format minfs");
-        minfs.fsck().expect("failed to fsck minfs");
-        minfs.mount(mount_point).expect("failed to mount minfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn minfs_format_fsck_success() {
-        let block_size = 8192;
-        let ramdisk = ramdisk(block_size);
-        let mut minfs = minfs(&ramdisk);
-
-        minfs.format().expect("failed to format minfs");
-        minfs.fsck().expect("failed to fsck minfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn minfs_format_fsck_error() {
-        let block_size = 8192;
-        let ramdisk = ramdisk(block_size);
-        let mut minfs = minfs(&ramdisk);
-
-        minfs.format().expect("failed to format minfs");
-
-        // force fsck to fail by stomping all over one of minfs's metadata blocks after formatting
-        let device_channel = ramdisk.open().expect("failed to get channel to device");
-        let mut file = fdio::create_fd::<std::fs::File>(device_channel.into_handle())
-            .expect("failed to convert to file descriptor");
-
-        // when minfs isn't on an fvm, the location for it's bitmap offset is the 8th block.
-        // TODO(fxbug.dev/35861): parse the superblock for this offset and the block size.
-        let bitmap_block_offset = 8;
-        let bitmap_offset = block_size * bitmap_block_offset;
-
-        let mut stomping_bytes: Vec<u8> =
-            std::iter::repeat(0xff).take(block_size as usize).collect();
-        let actual_offset =
-            file.seek(std::io::SeekFrom::Start(bitmap_offset)).expect("failed to seek to bitmap");
-        assert_eq!(actual_offset, bitmap_offset);
-        file.write_all(&mut stomping_bytes).expect("failed to write to device");
-
-        minfs.fsck().expect_err("fsck succeeded when it shouldn't have");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn minfs_format_mount_write_query_remount_read_unmount() {
-        let block_size = 8192;
-        let mount_point = "/test-fs-root";
-        let ramdisk = ramdisk(block_size);
-        let mut minfs = minfs(&ramdisk);
-
-        minfs.format().expect("failed to format minfs");
-        minfs.mount(mount_point).expect("failed to mount minfs the first time");
-
-        // snapshot of FilesystemInfo
-        let fs_info1 =
-            minfs.query_filesystem().expect("failed to query filesystem info after first mount");
-
-        let filename = "test_file";
-        let content = String::from("test content").into_bytes();
-        let path = format!("{}/{}", mount_point, filename);
-
-        {
-            let mut test_file = std::fs::File::create(&path).expect("failed to create test file");
-            test_file.write_all(&content).expect("failed to write to test file");
-        }
-
-        // check against the snapshot FilesystemInfo
-        let fs_info2 =
-            minfs.query_filesystem().expect("failed to query filesystem info after write");
-        assert_eq!(
-            fs_info2.used_bytes - fs_info1.used_bytes,
-            fs_info2.block_size as u64 // assuming content < 8K
-        );
-
-        minfs.unmount().expect("failed to unmount minfs the first time");
-
-        minfs
-            .query_filesystem()
-            .expect_err("filesystem query on an unmounted filesystem didn't fail");
-
-        minfs.mount(mount_point).expect("failed to mount minfs the second time");
-
-        {
-            let mut test_file = std::fs::File::open(&path).expect("failed to open test file");
-            let mut read_content = Vec::new();
-            test_file.read_to_end(&mut read_content).expect("failed to read from test file");
-            assert_eq!(content, read_content);
-        }
-
-        // once more check against the snapshot FilesystemInfo
-        let fs_info3 =
-            minfs.query_filesystem().expect("failed to query filesystem info after read");
-        assert_eq!(
-            fs_info3.used_bytes - fs_info1.used_bytes,
-            fs_info3.block_size as u64 // assuming content < 8K
-        );
-
-        minfs.unmount().expect("failed to unmount minfs the second time");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    fn factoryfs(ramdisk: &RamdiskClient) -> Filesystem<Factoryfs> {
-        let device = ramdisk.open().unwrap();
-        Factoryfs::from_channel(device).unwrap()
-    }
-
-    #[test]
-    fn factoryfs_custom_config() {
-        let block_size = 512;
-        let mount_point = "/test-fs-root";
-
-        let ramdisk = ramdisk(block_size);
-        let device = ramdisk.open().unwrap();
-        let config = Factoryfs { verbose: true };
-        let mut factoryfs = Filesystem::from_channel(device, config).unwrap();
-
-        factoryfs.format().expect("failed to format factoryfs");
-        factoryfs.fsck().expect("failed to fsck factoryfs");
-        factoryfs.mount(mount_point).expect("failed to mount factoryfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn factoryfs_format_fsck_success() {
-        let block_size = 512;
-        let ramdisk = ramdisk(block_size);
-        let mut factoryfs = factoryfs(&ramdisk);
-
-        factoryfs.format().expect("failed to format factoryfs");
-        factoryfs.fsck().expect("failed to fsck factoryfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
-    }
-
-    #[test]
-    fn factoryfs_format_mount_unmount() {
-        let block_size = 512;
-        let mount_point = "/test-fs-root";
-        let ramdisk = ramdisk(block_size);
-        let mut factoryfs = factoryfs(&ramdisk);
-
-        factoryfs.format().expect("failed to format factoryfs");
-        factoryfs.mount(mount_point).expect("failed to mount factoryfs");
-        factoryfs.unmount().expect("failed to unmount factoryfs");
-
-        ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 }

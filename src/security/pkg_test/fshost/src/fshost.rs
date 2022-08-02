@@ -23,7 +23,7 @@ impl FSHost {
         fx_log_info!("Starting blobfs from FVM image at {}", fvm_path);
         let mut blobfs = BlobfsInstance::new_from_resource(fvm_path).await;
         fx_log_info!("Mounting blobfs at {}", blobfs_mountpoint);
-        blobfs.mount(blobfs_mountpoint);
+        blobfs.mount(blobfs_mountpoint).await;
 
         Self { blobfs }
     }

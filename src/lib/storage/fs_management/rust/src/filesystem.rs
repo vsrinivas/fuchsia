@@ -6,14 +6,16 @@
 
 use {
     crate::{
-        error::{BindError, CommandError, KillError, QueryError, ServeError, ShutdownError},
+        error::{CommandError, KillError, QueryError, ServeError, ShutdownError},
         launch_process, FSConfig,
     },
-    anyhow::Error,
+    anyhow::{ensure, Error},
     cstr::cstr,
     fdio::SpawnAction,
-    fidl::encoding::Decodable,
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::{
+        encoding::Decodable,
+        endpoints::{create_endpoints, ClientEnd, ServerEnd},
+    },
     fidl_fuchsia_fs_startup::{CheckOptions, FormatOptions, StartOptions, StartupMarker},
     fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
@@ -23,7 +25,6 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{Channel, Handle, Process, Signals, Status, Task},
     log::warn,
-    std::sync::Mutex,
 };
 
 /// Asynchronously manages a block device for filesystem operations.
@@ -38,8 +39,15 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         Self { config, block_device: node_proxy }
     }
 
+    /// Creates a new `Filesystem` from the block device at the given path.
+    pub fn from_path(path: &str, config: FSC) -> Result<Self, Error> {
+        let (client, server) = create_endpoints::<fio::NodeMarker>()?;
+        fdio::service_connect(&path, server.into_channel())?;
+        Ok(Self::from_node(client.into_proxy()?, config))
+    }
+
     /// Creates a new `Filesystem` with the block device represented by `channel`.
-    pub fn from_channel(channel: Channel, config: FSC) -> Result<Self, fidl::Error> {
+    pub fn from_channel(channel: Channel, config: FSC) -> Result<Self, Error> {
         Ok(Self::from_node(ClientEnd::<fio::NodeMarker>::new(channel).into_proxy()?, config))
     }
 
@@ -167,7 +175,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 exposed_dir,
                 root_dir: ClientEnd::<fio::DirectoryMarker>::new(root_dir.into_channel())
                     .into_proxy()?,
-                binding: Mutex::new(None),
+                binding: None,
             })
         } else {
             // do_serve is returning the outgoing directory for the process which is different from
@@ -181,7 +189,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 process: Some(process),
                 exposed_dir: export_root,
                 root_dir,
-                binding: Mutex::new(None),
+                binding: None,
             })
         }
     }
@@ -235,7 +243,7 @@ pub struct ServingFilesystem {
     root_dir: fio::DirectoryProxy,
 
     // The path in the local namespace that this filesystem is bound to (optional).
-    binding: Mutex<Option<String>>,
+    binding: Option<String>,
 }
 
 impl ServingFilesystem {
@@ -251,12 +259,13 @@ impl ServingFilesystem {
     /// # Errors
     ///
     /// Returns [`Err`] if binding failed.
-    pub fn bind_to_path<'a>(&self, path: &str) -> Result<(), BindError> {
+    pub fn bind_to_path<'a>(&mut self, path: &str) -> Result<(), Error> {
+        ensure!(self.binding.is_none(), "Already bound");
         let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         self.root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
-        let namespace = fdio::Namespace::installed().map_err(BindError::LocalNamespace)?;
-        namespace.bind(path, client_end).map_err(BindError::Bind)?;
-        *self.binding.lock().unwrap() = Some(path.to_string());
+        let namespace = fdio::Namespace::installed()?;
+        namespace.bind(path, client_end)?;
+        self.binding = Some(path.to_string());
         Ok(())
     }
 
@@ -326,6 +335,10 @@ impl ServingFilesystem {
         }
         Ok(())
     }
+
+    pub fn bound_path(&self) -> Option<&str> {
+        self.binding.as_deref()
+    }
 }
 
 impl Drop for ServingFilesystem {
@@ -333,7 +346,7 @@ impl Drop for ServingFilesystem {
         if let Some(process) = self.process.take() {
             let _ = process.kill();
         }
-        if let Some(path) = self.binding.lock().unwrap().as_ref() {
+        if let Some(path) = self.binding.as_ref() {
             if let Ok(namespace) = fdio::Namespace::installed() {
                 let _ = namespace.unbind(path);
             }
@@ -518,7 +531,7 @@ mod tests {
         let blobfs = new_fs(&ramdisk, Blobfs::default());
 
         blobfs.format().await.expect("failed to format blobfs");
-        let serving = blobfs.serve().await.expect("failed to serve blobfs");
+        let mut serving = blobfs.serve().await.expect("failed to serve blobfs");
         serving.bind_to_path("/test-blobfs-path").expect("bind_to_path failed");
         let test_path = format!("/test-blobfs-path/{}", merkle);
 
@@ -674,7 +687,7 @@ mod tests {
         let minfs = new_fs(&ramdisk, Minfs::default());
 
         minfs.format().await.expect("failed to format minfs");
-        let serving = minfs.serve().await.expect("failed to serve minfs");
+        let mut serving = minfs.serve().await.expect("failed to serve minfs");
         serving.bind_to_path("/test-minfs-path").expect("bind_to_path failed");
         let test_path = "/test-minfs-path/test_file";
 
@@ -742,7 +755,7 @@ mod tests {
 
         factoryfs.format().await.expect("failed to format factoryfs");
         {
-            let serving = factoryfs.serve().await.expect("failed to serve factoryfs");
+            let mut serving = factoryfs.serve().await.expect("failed to serve factoryfs");
             serving.bind_to_path("/test-factoryfs-path").expect("bind_to_path failed");
 
             // factoryfs is read-only, so just check that we can open the root directory.

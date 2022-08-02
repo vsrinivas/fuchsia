@@ -49,20 +49,6 @@ pub enum ServeError {
     LaunchProcess(#[from] LaunchProcessError),
 }
 
-/// The error type used by the bind operation of a serving filesystem.
-#[derive(Clone, Debug, Error)]
-pub enum BindError {
-    /// A FIDL error occurred.
-    #[error(transparent)]
-    Fidl(#[from] fidl::Error),
-    /// An error occurred retrieving the local namespace.
-    #[error("failed to get local namespace: {0}")]
-    LocalNamespace(#[source] Status),
-    /// An error occurred binding the root directory to a path in the local namespace.
-    #[error("failed to bind path to local namespace: {0}")]
-    Bind(#[source] Status),
-}
-
 /// The error type used by the shutdown operation of a serving filesystem.
 #[derive(Debug, Error)]
 pub enum ShutdownError {

@@ -3,44 +3,49 @@
 // found in the LICENSE file.
 
 use crate::fdr::execute_reset;
-use anyhow::{Context, Error};
+use anyhow::{ensure, Context, Error};
 use async_trait::async_trait;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_io as fio;
-use fs_management as fs;
+use fs_management::{self as fs, filesystem::ServingFilesystem};
 use recovery_util::block::get_block_devices;
 
 pub const BLOBFS_MOUNT_POINT: &str = "/b";
 
 /// Required functionality from an fs::Filesystem.
 /// See fs_management for the documentation.
+#[async_trait]
 trait Filesystem {
-    fn format(&mut self) -> Result<(), Error>;
-    fn mount(&mut self, mount_point: &str) -> Result<(), Error>;
+    async fn format(&mut self) -> Result<(), Error>;
+    async fn mount(&mut self, mount_point: &str) -> Result<(), Error>;
 }
 
 /// Forwards calls to the fs_management implementation.
-impl Filesystem for fs::Filesystem<fs::Blobfs> {
-    fn format(&mut self) -> Result<(), Error> {
-        self.format()
+struct Blobfs {
+    fs: fs::filesystem::Filesystem<fs::Blobfs>,
+    serving_filesystem: Option<ServingFilesystem>,
+}
+
+#[async_trait]
+impl Filesystem for Blobfs {
+    async fn format(&mut self) -> Result<(), Error> {
+        self.fs.format().await
     }
 
-    fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
-        self.mount(mount_point)
+    async fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
+        ensure!(self.serving_filesystem.is_none(), "Already mounted");
+        let mut fs = self.fs.serve().await?;
+        fs.bind_to_path(mount_point)?;
+        self.serving_filesystem = Some(fs);
+        Ok(())
     }
 }
 
-#[async_trait(?Send)]
-pub trait Initializer {
-    async fn initialize(&self) -> Result<Storage, Error>;
-}
-
-/// Creates blobfs and minfs fs::Filesystem objects by scanning topological paths.
+/// Creates blobfs and minfs Filesystem objects by scanning topological paths.
 pub struct TopoPathInitializer {}
 
-#[async_trait(?Send)]
-impl Initializer for TopoPathInitializer {
-    async fn initialize(&self) -> Result<Storage, Error> {
+impl TopoPathInitializer {
+    pub async fn initialize(&self) -> Result<Storage, Error> {
         // TODO(b/235401377): Add tests when component is moved to CFv2.
         let block_devices = get_block_devices().await.context("Failed to get block devices")?;
 
@@ -60,10 +65,13 @@ impl Initializer for TopoPathInitializer {
             }
         }
 
-        let blobfs = fs::Filesystem::from_path(&blobfs_path, blobfs_config)
-            .context(format!("Failed to open blobfs: {:?}", blobfs_path))?;
-
-        Ok(Storage { blobfs: Box::new(blobfs) })
+        Ok(Storage {
+            blobfs: Box::new(Blobfs {
+                fs: fs::filesystem::Filesystem::from_path(&blobfs_path, blobfs_config)
+                    .context(format!("Failed to open blobfs: {:?}", blobfs_path))?,
+                serving_filesystem: None,
+            }),
+        })
     }
 }
 
@@ -78,8 +86,8 @@ impl Storage {
     // TODO(fxbug.dev/100049): Switch to storage API which can handle reprovisioning FVM and minfs.
     /// Reformat filesystems, then mount available filesystems.
     pub async fn wipe_storage(&mut self) -> Result<(), Error> {
-        self.blobfs.format().context("Failed to format blobfs")?;
-        self.blobfs.mount(BLOBFS_MOUNT_POINT).context("Failed to mount blobfs")?;
+        self.blobfs.format().await.context("Failed to format blobfs")?;
+        self.blobfs.mount(BLOBFS_MOUNT_POINT).await.context("Failed to mount blobfs")?;
         Ok(())
     }
 
@@ -112,85 +120,55 @@ impl Storage {
 
 #[cfg(test)]
 mod tests {
-    use super::{Filesystem, Initializer, Storage, BLOBFS_MOUNT_POINT};
+    use super::{Filesystem, Storage, BLOBFS_MOUNT_POINT};
     use anyhow::Error;
     use async_trait::async_trait;
     use fuchsia_async as fasync;
-    use std::{cell::RefCell, rc::Rc};
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
 
     // Mock for a Filesystem.
-    struct FilesystemMock {
-        format_called: Rc<RefCell<bool>>,
-        mount_called: Rc<RefCell<bool>>,
+    #[derive(Default)]
+    struct Inner {
+        format_called: AtomicBool,
+        mount_called: AtomicBool,
     }
+
+    #[derive(Clone)]
+    struct FilesystemMock(Arc<Inner>);
 
     impl FilesystemMock {
-        fn new(
-            format_call_tracker: Rc<RefCell<bool>>,
-            mount_call_tracker: Rc<RefCell<bool>>,
-        ) -> FilesystemMock {
-            FilesystemMock {
-                format_called: format_call_tracker.clone(),
-                mount_called: mount_call_tracker.clone(),
-            }
+        fn new() -> Self {
+            FilesystemMock(Arc::new(Inner::default()))
         }
     }
 
+    #[async_trait]
     impl Filesystem for FilesystemMock {
-        fn format(&mut self) -> Result<(), Error> {
-            self.format_called.replace(true);
+        async fn format(&mut self) -> Result<(), Error> {
+            self.0.format_called.store(true, Ordering::SeqCst);
             Ok(())
         }
 
-        fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
+        async fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
             assert_eq!(mount_point, BLOBFS_MOUNT_POINT);
-            self.mount_called.replace(true);
+            self.0.mount_called.store(true, Ordering::SeqCst);
             Ok(())
-        }
-    }
-
-    struct InitializerMock {
-        format_called: Rc<RefCell<bool>>,
-        mount_called: Rc<RefCell<bool>>,
-    }
-
-    impl InitializerMock {
-        async fn new(
-            format_call_tracker: Rc<RefCell<bool>>,
-            mount_call_tracker: Rc<RefCell<bool>>,
-        ) -> Result<InitializerMock, Error> {
-            Ok(InitializerMock {
-                format_called: format_call_tracker.clone(),
-                mount_called: mount_call_tracker.clone(),
-            })
-        }
-    }
-
-    #[async_trait(?Send)]
-    impl Initializer for InitializerMock {
-        async fn initialize(&self) -> Result<Storage, Error> {
-            Ok(Storage {
-                blobfs: Box::new(FilesystemMock::new(
-                    self.format_called.clone(),
-                    self.mount_called.clone(),
-                )),
-            })
         }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_wipe_storage() -> Result<(), Error> {
-        let format_call_tracker = Rc::new(RefCell::new(false));
-        let mount_call_tracker = Rc::new(RefCell::new(false));
-        let initializer =
-            InitializerMock::new(format_call_tracker.clone(), mount_call_tracker.clone()).await?;
-        let mut storage = initializer.initialize().await?;
+        let fs_mock = FilesystemMock::new();
+        let mut storage = Storage { blobfs: Box::new(fs_mock.clone()) };
 
         storage.wipe_storage().await?;
 
         // Check that it formatted and mounted blobfs.
-        assert!(*format_call_tracker.borrow());
-        assert!(*mount_call_tracker.borrow());
+        assert!(fs_mock.0.format_called.load(Ordering::SeqCst));
+        assert!(fs_mock.0.mount_called.load(Ordering::SeqCst));
         Ok(())
     }
 }
