@@ -195,8 +195,8 @@ rewrapper="$reclient_bindir"/rewrapper
 remote_env=/usr/bin/env
 
 # Split up $inputs and $output_files for possible modification.
-IFS="," read -r -a inputs_array <<< "$inputs"
-IFS="," read -r -a output_files_array <<< "$output_files"
+IFS="," inputs_array=($inputs)
+IFS="," output_files_array=($output_files)
 
 if test "${#output_files_array[@]}" -gt 0
 then
@@ -234,8 +234,10 @@ test -z "$fsatrace_path" || {
   )
 }
 
-inputs_joined="$(IFS=, ; echo "${inputs_array[*]}")"
-output_files_joined="$(IFS=, ; echo "${output_files_array[*]}")"
+# Workaround bash treating an empty array as unset in some versions: ${arr[@]+"${arr[@]}"}
+# https://stackoverflow.com/questions/7577052/bash-empty-array-expansion-with-set-u
+inputs_joined="$(IFS=, echo "${inputs_array[*]+"${inputs_array[*]}"}")"
+output_files_joined="$(IFS=, echo "${output_files_array[*]+"${output_files_array[*]}"}")"
 
 output_files_rel=()
 for f in "${output_files_array[@]}"
@@ -252,10 +254,10 @@ rewrapped_command=(
   "$rewrapper"
   --cfg="$rewrapper_cfg"
   --exec_root="$project_root"
-  "${rewrapper_options[@]}"
+  "${rewrapper_options[@]+"${rewrapper_options[@]}"}"
 
-  "${log_wrapper[@]}"
-  "${fsatrace_prefix[@]}"
+  "${log_wrapper[@]+"${log_wrapper[@]}"}"
+  "${fsatrace_prefix[@]+"${fsatrace_prefix[@]}"}"
   "$@"
 )
 
