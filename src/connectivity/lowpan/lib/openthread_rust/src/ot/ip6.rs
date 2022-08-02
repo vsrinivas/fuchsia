@@ -104,6 +104,14 @@ pub trait Ip6 {
     /// Functional equivalent of
     /// [`otsys::otIcmp6SetEchoMode`](crate::otsys::otIcmp6SetEchoMode).
     fn icmp6_set_echo_mode(&self, mode: Icmp6EchoMode);
+
+    /// Functional equivalent of
+    /// [`otsys::otIp6SetReceiveFilterEnabled`](crate::otsys::otIp6SetReceiveFilterEnabled).
+    fn ip6_set_receive_filter_enabled(&self, enabled: bool);
+
+    /// Functional equivalent of
+    /// [`otsys::otIp6IsReceiveFilterEnabled`](crate::otsys::otIp6IsReceiveFilterEnabled).
+    fn ip6_is_receive_filter_enabled(&self) -> bool;
 }
 
 impl<T: Ip6 + ot::Boxable> Ip6 for ot::Box<T> {
@@ -171,6 +179,14 @@ impl<T: Ip6 + ot::Boxable> Ip6 for ot::Box<T> {
 
     fn icmp6_set_echo_mode(&self, mode: Icmp6EchoMode) {
         self.as_ref().icmp6_set_echo_mode(mode)
+    }
+
+    fn ip6_set_receive_filter_enabled(&self, enabled: bool) {
+        self.as_ref().ip6_set_receive_filter_enabled(enabled);
+    }
+
+    fn ip6_is_receive_filter_enabled(&self) -> bool {
+        self.as_ref().ip6_is_receive_filter_enabled()
     }
 }
 
@@ -341,5 +357,13 @@ impl Ip6 for Instance {
 
     fn icmp6_set_echo_mode(&self, mode: Icmp6EchoMode) {
         unsafe { otIcmp6SetEchoMode(self.as_ot_ptr(), mode.into()) }
+    }
+
+    fn ip6_set_receive_filter_enabled(&self, enabled: bool) {
+        unsafe { otIp6SetReceiveFilterEnabled(self.as_ot_ptr(), enabled) }
+    }
+
+    fn ip6_is_receive_filter_enabled(&self) -> bool {
+        unsafe { otIp6IsReceiveFilterEnabled(self.as_ot_ptr()) }
     }
 }
