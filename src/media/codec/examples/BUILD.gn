@@ -661,9 +661,15 @@ _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
 # running off-target that scrapts stdout for the MD5 and deteremines e2e test
 # success/failure in the e2e test script, not on the target.
 if (build_all_vp9_file_decoder_conformance_tests) {
-  testcases = read_file(
+  testcases_with_comments_and_newlines = read_file(
           "//prebuilt/test_data/media/third_party/webm_vp9_conformance_streams/test_cases_all.list",
           "trim list lines")
+  testcases = filter_exclude(testcases_with_comments_and_newlines,
+                             [
+                               "#*",  # Filter out comments
+                               "",  # Filter out newlines (whitespaces because
+                                    # they are trimmed)
+                             ])
   foreach(testcase, testcases) {
     # remove prefix
     testcase = string_replace(testcase, "processed/", "")
