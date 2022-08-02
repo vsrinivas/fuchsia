@@ -99,7 +99,7 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
   }
 
   char name[20];
-  snprintf(name, sizeof(name), "asc-%03d", assoc_desc->i_function);
+  snprintf(name, sizeof(name), "asc-%03d", assoc_desc->b_first_interface);
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
