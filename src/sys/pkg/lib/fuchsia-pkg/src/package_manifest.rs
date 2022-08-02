@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        MetaContents, MetaPackage, Package, PackageManifestError, PackageName, PackagePath,
-        PackageVariant,
+        BlobEntry, MetaContents, MetaPackage, Package, PackageManifestError, PackageName,
+        PackagePath, PackageVariant,
     },
     fuchsia_hash::Hash,
     serde::{Deserialize, Serialize},
@@ -120,6 +120,20 @@ impl PackageManifest {
         // Build the PackageManifest of this package.
         let mut builder = PackageManifestBuilder::new(meta_package);
 
+        // Add the meta.far blob. We add this first since some scripts assume the first entry is the
+        // meta.far entry.
+        builder = builder.add_blob(BlobInfo {
+            source_path: meta_far_path.into_os_string().into_string().map_err(|source_path| {
+                PackageManifestError::InvalidBlobPath {
+                    merkle: meta_far_hash,
+                    source_path: source_path.into(),
+                }
+            })?,
+            path: "meta/".into(),
+            merkle: meta_far_hash,
+            size: meta_far_size,
+        });
+
         for (blob_path, merkle) in meta_contents.into_iter() {
             let source_path = dir.join(&merkle.to_string()).canonicalize()?;
 
@@ -145,19 +159,6 @@ impl PackageManifest {
             });
         }
 
-        // Add the meta.far blob.
-        builder = builder.add_blob(BlobInfo {
-            source_path: meta_far_path.into_os_string().into_string().map_err(|source_path| {
-                PackageManifestError::InvalidBlobPath {
-                    merkle: meta_far_hash,
-                    source_path: source_path.into(),
-                }
-            })?,
-            path: "meta/".into(),
-            merkle: meta_far_hash,
-            size: meta_far_size,
-        });
-
         Ok(builder.build())
     }
 
@@ -166,7 +167,8 @@ impl PackageManifest {
         repository: Option<String>,
     ) -> Result<Self, PackageManifestError> {
         let mut blobs = Vec::with_capacity(package.blobs().len());
-        for (blob_path, blob_entry) in package.blobs() {
+
+        let mut push_blob = |blob_path, blob_entry: BlobEntry| {
             let source_path = blob_entry.source_path();
 
             blobs.push(BlobInfo {
@@ -179,14 +181,28 @@ impl PackageManifest {
                 path: blob_path,
                 merkle: blob_entry.hash(),
                 size: blob_entry.size(),
-            })
-        }
-        let package_metadata = PackageMetadata {
-            name: package.meta_package().name().to_owned(),
-            version: package.meta_package().variant().to_owned(),
+            });
+
+            Ok::<(), PackageManifestError>(())
         };
+
+        let mut package_blobs = package.blobs();
+
+        // Add the meta.far blob. We add this first since some scripts assume the first entry is the
+        // meta.far entry.
+        if let Some((blob_path, blob_entry)) = package_blobs.remove_entry("meta/") {
+            push_blob(blob_path, blob_entry)?;
+        }
+
+        for (blob_path, blob_entry) in package_blobs {
+            push_blob(blob_path, blob_entry)?;
+        }
+
         let manifest_v1 = PackageManifestV1 {
-            package: package_metadata,
+            package: PackageMetadata {
+                name: package.meta_package().name().to_owned(),
+                version: package.meta_package().variant().to_owned(),
+            },
             blobs,
             repository,
             blob_sources_relative: Default::default(),
@@ -238,10 +254,10 @@ enum VersionedPackageManifest {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct PackageManifestV1 {
-    package: PackageMetadata,
-    blobs: Vec<BlobInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     repository: Option<String>,
+    package: PackageMetadata,
+    blobs: Vec<BlobInfo>,
 
     /// Are the blob source_paths relative to the working dir (default, as made
     /// by 'pm') or the file containing the serialized manifest (new, portable,
@@ -342,7 +358,7 @@ pub mod host {
                     .blobs
                     .into_iter()
                     .map(|blob| relativize_blob_source_path(blob, &manifest_path))
-                    .collect::<anyhow::Result<Vec<BlobInfo>>>()?;
+                    .collect::<anyhow::Result<_>>()?;
                 Self { blobs, blob_sources_relative: RelativeTo::File, ..self }
             } else {
                 self
@@ -364,7 +380,7 @@ pub mod host {
                     .blobs
                     .into_iter()
                     .map(|blob| resolve_blob_source_path(blob, &manifest_path))
-                    .collect::<anyhow::Result<Vec<BlobInfo>>>()?;
+                    .collect::<anyhow::Result<_>>()?;
                 Ok(Self { blobs, ..self })
             } else {
                 Ok(self)
@@ -655,6 +671,12 @@ mod tests {
                 },
                 blobs: vec![
                     BlobInfo {
+                        source_path: meta_far_path.to_str().unwrap().to_string(),
+                        path: "meta/".into(),
+                        merkle: meta_far_hash,
+                        size: 12288,
+                    },
+                    BlobInfo {
                         source_path: file1_path,
                         path: "file-1".into(),
                         merkle: file1_hash,
@@ -665,12 +687,6 @@ mod tests {
                         path: "file-2".into(),
                         merkle: file2_hash,
                         size: 6,
-                    },
-                    BlobInfo {
-                        source_path: meta_far_path.to_str().unwrap().to_string(),
-                        path: "meta/".into(),
-                        merkle: meta_far_hash,
-                        size: 12288,
                     },
                 ],
                 repository: None,

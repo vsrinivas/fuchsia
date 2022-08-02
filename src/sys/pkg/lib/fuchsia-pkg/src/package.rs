@@ -74,7 +74,7 @@ impl Builder {
         source_path: PathBuf,
         size: u64,
     ) {
-        if blob_path != "meta/".to_string() {
+        if blob_path != "meta/" {
             self.contents.insert(blob_path.clone(), hash);
         }
         self.blobs.insert(blob_path, BlobEntry { source_path, size, hash });

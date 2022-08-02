@@ -10,10 +10,11 @@ use {
     fuchsia_pkg::{
         CreationManifest, PackageBuilder, SubpackagesManifest, SubpackagesManifestEntryKind,
     },
+    serde::Serialize,
     std::{
         collections::BTreeSet,
         fs::{create_dir_all, File},
-        io::{BufReader, BufWriter, Write as _},
+        io::{BufReader, BufWriter, Write},
     },
     version_history::AbiRevision,
 };
@@ -28,6 +29,14 @@ const META_FAR_DEPFILE_NAME: &str = "meta.far.d";
 const PACKAGE_MANIFEST_NAME: &str = "package_manifest.json";
 const BLOBS_JSON_NAME: &str = "blobs.json";
 const BLOBS_MANIFEST_NAME: &str = "blobs.manifest";
+
+fn to_writer_json_pretty<S: Serialize>(writer: impl Write, value: S) -> Result<()> {
+    let mut ser = serde_json::ser::Serializer::with_formatter(
+        BufWriter::new(writer),
+        serde_json::ser::PrettyFormatter::with_indent(b"    "),
+    );
+    Ok(value.serialize(&mut ser)?)
+}
 
 pub async fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
     let creation_manifest = File::open(&cmd.creation_manifest_path)
@@ -76,7 +85,7 @@ pub async fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
     let package_manifest_path = cmd.out.join(PACKAGE_MANIFEST_NAME);
     let file = File::create(&package_manifest_path)
         .with_context(|| format!("creating {}", package_manifest_path.display()))?;
-    serde_json::to_writer(BufWriter::new(file), &package_manifest)?;
+    to_writer_json_pretty(file, &package_manifest)?;
 
     // FIXME(fxbug.dev/101306): We're replicating `pm build --depfile` here, and directly expressing
     // that the `meta.far` depends on all the package contents. However, I think this should
@@ -139,8 +148,7 @@ pub async fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
         let blobs_json_path = cmd.out.join(BLOBS_JSON_NAME);
         let file = File::create(&blobs_json_path)
             .with_context(|| format!("creating {}", blobs_json_path.display()))?;
-
-        serde_json::to_writer(BufWriter::new(file), package_manifest.blobs())?;
+        to_writer_json_pretty(file, package_manifest.blobs())?;
     }
 
     // FIXME(fxbug.dev/101304): Some tools still depend on the legacy `blobs.manifest` file. We
@@ -546,16 +554,16 @@ mod test {
                 "repository": "my-repository",
                 "blobs": [
                     {
-                        "source_path": empty_file_path,
-                        "path": "empty-file",
-                        "merkle": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
-                        "size": 0,
-                    },
-                    {
                         "source_path": meta_far_path,
                         "path": "meta/",
                         "merkle": "36dde5da0ed4a51433a3b45ed9917c98442613f4b12e0f9661519678482ab3e3",
                         "size": 16384,
+                    },
+                    {
+                        "source_path": empty_file_path,
+                        "path": "empty-file",
+                        "merkle": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+                        "size": 0,
                     },
                 ],
             }),
@@ -719,29 +727,27 @@ mod test {
                 .unwrap(),
             serde_json::json!([
                     {
-                        "source_path": empty_file_path,
-                        "path": "empty-file",
-                        "merkle": empty_file_hash,
-                        "size": 0,
-                    },
-                    {
                         "source_path": meta_far_path,
                         "path": "meta/",
                         "merkle": meta_far_hash,
                         "size": 20480,
                     },
+                    {
+                        "source_path": empty_file_path,
+                        "path": "empty-file",
+                        "merkle": empty_file_hash,
+                        "size": 0,
+                    },
                 ]
             )
         );
 
-        // Make sure the the blobs manifest is correct, which is a sorted, newline separated, set of
-        // `merkle`=`path` entries.
-        let mut expected = vec![
-            format!("{}={}\n", empty_file_hash, empty_file_path),
-            format!("{}={}\n", meta_far_hash, meta_far_path),
-        ];
-        expected.sort();
-
-        assert_eq!(read_to_string(blobs_manifest_path).unwrap(), expected.join(""),);
+        assert_eq!(
+            read_to_string(blobs_manifest_path).unwrap(),
+            format!(
+                "{meta_far_hash}={meta_far_path}\n\
+                {empty_file_hash}={empty_file_path}\n"
+            ),
+        );
     }
 }
