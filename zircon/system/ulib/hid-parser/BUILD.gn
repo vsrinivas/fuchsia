@@ -19,7 +19,10 @@ zx_library("hid-parser") {
     "report.cc",
     "units.cc",
   ]
-  deps = [ "//zircon/system/ulib/fbl" ]
+  deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
+  ]
 }
 
 group("tests") {

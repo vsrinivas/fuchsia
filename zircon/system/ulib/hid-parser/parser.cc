@@ -9,6 +9,9 @@
 #include <fbl/vector.h>
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
+#include <safemath/safe_math.h>
+
+using safemath::CheckAdd, safemath::CheckMul;
 
 namespace {
 
@@ -168,14 +171,23 @@ class ParseState {
     }
     size_t report_count = report_ids_.size();
 
-    size_t device_sz = sizeof(DeviceDescriptor) + report_count * sizeof(ReportDescriptor);
-    size_t fields_sz = fields_.size() * sizeof(ReportField);
-    size_t collect_sz = coll_size_ * sizeof(Collection);
+    size_t device_sz;
+    if (!CheckAdd(sizeof(DeviceDescriptor), CheckMul(report_count, sizeof(ReportDescriptor)))
+             .AssignIfValid(&device_sz)) {
+      return kParseNoMemory;
+    }
+    size_t fields_sz;
+    if (!CheckMul(fields_.size(), sizeof(ReportField)).AssignIfValid(&fields_sz)) {
+      return kParseNoMemory;
+    }
+    size_t collect_sz;
+    if (!CheckMul(coll_size_, sizeof(Collection)).AssignIfValid(&collect_sz)) {
+      return kParseNoMemory;
+    }
 
-    size_t total_sz = device_sz + fields_sz + collect_sz;
-    // Don't try to allocate more than a reasonable number of bytes for the
-    // device descriptor, even if we could.
-    if (total_sz > kMaxTotalDescriptorByteCount) {
+    size_t total_sz;
+    if (!CheckAdd(device_sz, CheckAdd(fields_sz, collect_sz)).AssignIfValid(&total_sz) ||
+        total_sz > kMaxTotalDescriptorByteCount) {
       return kParseNoMemory;
     }
     auto mem = Alloc(total_sz);
