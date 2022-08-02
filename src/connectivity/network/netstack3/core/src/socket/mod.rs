@@ -6,6 +6,7 @@
 //! sockets.
 
 pub(crate) mod address;
+pub(crate) mod datagram;
 pub(crate) mod posix;
 
 use alloc::{collections::HashMap, vec::Vec};
@@ -519,16 +520,7 @@ impl<A: SocketMapAddrSpec, S> BoundSocketMap<A, S>
 where
     Bound<S>: Tagged<AddrVec<A>>,
     AddrVec<A>: IterShadows,
-    S: SocketMapStateSpec
-        + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        >,
+    S: SocketMapStateSpec,
 {
     pub(crate) fn listeners(
         &self,
@@ -558,6 +550,11 @@ where
         Addr = ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
     >
     where
+        S: SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        >,
         S::ListenerAddrState:
             SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
     {
@@ -597,6 +594,11 @@ where
         Addr = ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
     >
     where
+        S: SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
         S::ConnAddrState:
             SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     {
