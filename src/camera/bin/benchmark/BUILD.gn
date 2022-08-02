@@ -1,7 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/components.gni")
+import("//build/components/fuchsia_shell_package.gni")
 
 group("benchmark") {
   public_deps = [ ":camera_benchmark" ]
@@ -36,7 +36,6 @@ executable("camera_benchmark_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("camera_benchmark") {
-  manifest = "camera_benchmark.cmx"
+fuchsia_shell_package("camera_benchmark") {
   deps = [ ":camera_benchmark_bin" ]
 }
