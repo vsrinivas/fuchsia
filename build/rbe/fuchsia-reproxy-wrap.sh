@@ -12,8 +12,24 @@ script_dir="$(dirname "$script")"
 
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
+
+detected_os="$(uname -s)"
+case "$detected_os" in
+  Darwin) readonly PREBUILT_OS="mac" ;;
+  Linux) readonly PREBUILT_OS="linux" ;;
+  *) echo >&2 "Unknown operating system: $detected_os" ; exit 1 ;;
+esac
+
+detected_arch="$(uname -m)"
+case "$detected_arch" in
+  x86_64) readonly PREBUILT_ARCH="x64" ;;
+  *) echo >&2 "Unknown machine architecture: $detected_arch" ; exit 1 ;;
+esac
+
+PREBUILT_SUBDIR="$PREBUILT_OS"-"$PREBUILT_ARCH"
+
 # location of reclient binaries relative to output directory where build is run
-reclient_bindir="$script_dir"/../../prebuilt/proprietary/third_party/reclient/linux-x64
+reclient_bindir="$script_dir"/../../prebuilt/proprietary/third_party/reclient/"$PREBUILT_SUBDIR"
 
 usage() {
   cat <<EOF
