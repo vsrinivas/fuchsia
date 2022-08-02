@@ -1162,7 +1162,7 @@ profile aot runner is built without asserts.
 }
 ```
 
-From //build/dart/dart_build_config.gni:23
+From //build/dart/dart_build_config.gni:22
 
 ### dart_debug_build_cfg
 Builds the component in a non-product JIT build. This will
@@ -1233,7 +1233,7 @@ launch the vm service in the runner.
 }
 ```
 
-From //build/dart/dart_build_config.gni:36
+From //build/dart/dart_build_config.gni:34
 
 ### dart_release_build_cfg
 Builds the component in a product AOT build. This will
@@ -1252,7 +1252,7 @@ not launch the vm service in the runner.
 }
 ```
 
-From //build/dart/dart_build_config.gni:49
+From //build/dart/dart_build_config.gni:46
 
 ### data_filesystem_format
 Set to one of "minfs", "fxfs", "f2fs" (unstable).
@@ -1391,6 +1391,7 @@ From //build/config/compiler.gni:66
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
@@ -1695,6 +1696,7 @@ profile aot runner is built without asserts.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
@@ -1714,6 +1716,7 @@ launch the vm service in the runner.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_jit_runner"
   runtime_meta = "//build/flutter/meta/jit_runtime.cml"
+  runtime_meta_v1 = "//build/flutter/meta/jit_runtime.cmx"
 }
 ```
 
@@ -1732,6 +1735,7 @@ Non-product AOT
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
@@ -1776,6 +1780,7 @@ launch the vm service in the runner.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
@@ -1795,6 +1800,7 @@ not launch the vm service in the runner.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_product_runner"
   runtime_meta = "//build/flutter/meta/aot_product_runtime.cml"
+  runtime_meta_v1 = "//build/flutter/meta/aot_product_runtime.cmx"
 }
 ```
 
