@@ -13,8 +13,8 @@
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
-#include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
@@ -24,8 +24,8 @@ using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 
 const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 48000});
 
-std::shared_ptr<PacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+std::shared_ptr<SimplePacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
+  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
       .format = format,
       .reference_clock_koid = DefaultClockKoid(),
   });

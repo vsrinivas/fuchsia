@@ -30,8 +30,8 @@
 #include "src/media/audio/services/common/thread_checker.h"
 #include "src/media/audio/services/mixer/mix/detached_thread.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
-#include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
@@ -200,8 +200,8 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
   return custom_stage;
 }
 
-std::shared_ptr<PacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+std::shared_ptr<SimplePacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
+  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
       .format = format,
       .reference_clock_koid = DefaultClockKoid(),
   });

@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
@@ -15,7 +15,7 @@ namespace {
 PipelineStagePtr CreatePipelineStage() {
   const Format format =
       Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
-  return std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
       .format = format,
       .reference_clock_koid = DefaultClockKoid(),
   });

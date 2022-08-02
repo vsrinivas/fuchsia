@@ -15,90 +15,43 @@
 
 namespace media_audio {
 
+PacketQueueProducerStage::PacketQueueProducerStage(Args args)
+    : ProducerStage(args.name, args.format, args.reference_clock_koid),
+      pending_command_queue_(std::move(args.command_queue)),
+      queue_({
+          .name = args.name,
+          .format = args.format,
+          .reference_clock_koid = args.reference_clock_koid,
+      }) {
+  FX_CHECK(pending_command_queue_);
+}
+
 void PacketQueueProducerStage::AdvanceSelfImpl(Fixed frame) {
   ApplyPendingCommands();
-
-  while (!pending_packet_queue_.empty()) {
-    const auto& pending_packet = pending_packet_queue_.front();
-    if (pending_packet.end() > frame) {
-      return;
-    }
-    pending_packet_queue_.pop_front();
-  }
+  queue_.AdvanceSelfImpl(frame);
 }
 
 std::optional<PipelineStage::Packet> PacketQueueProducerStage::ReadImpl(MixJobContext& ctx,
                                                                         Fixed start_frame,
                                                                         int64_t frame_count) {
   ApplyPendingCommands();
-
-  // Clean up pending packets before `start_frame`.
-  while (!pending_packet_queue_.empty()) {
-    auto& pending_packet = pending_packet_queue_.front();
-    // If the packet starts before the requested frame and has not been seen before, it underflowed.
-    if (const Fixed underflow_frame_count = start_frame - pending_packet.start();
-        !pending_packet.seen_in_read_ && underflow_frame_count >= Fixed(1)) {
-      ReportUnderflow(underflow_frame_count);
-    }
-    if (pending_packet.end() > start_frame) {
-      pending_packet.seen_in_read_ = true;
-      break;
-    }
-    pending_packet_queue_.pop_front();
-  }
-
-  if (pending_packet_queue_.empty()) {
-    return std::nullopt;
-  }
-
-  // Read the next pending packet.
-  const auto& pending_packet = pending_packet_queue_.front();
-  if (const auto intersect = pending_packet.IntersectionWith(start_frame, frame_count)) {
-    // We don't need to cache the returned packet, since we don't generate any data dynamically.
-    return MakeUncachedPacket(intersect->start(), intersect->length(), intersect->payload());
-  }
-  return std::nullopt;
+  return ForwardPacket(queue_.Read(ctx, start_frame, frame_count));
 }
 
 void PacketQueueProducerStage::ApplyPendingCommands() {
-  if (!pending_command_queue_) {
-    return;
-  }
-
   for (;;) {
     auto cmd_or_null = pending_command_queue_->pop();
     if (!cmd_or_null) {
       return;
     }
     if (auto* cmd = std::get_if<PushPacketCommand>(&*cmd_or_null); cmd) {
-      push(cmd->packet, std::move(cmd->fence));
+      queue_.push(cmd->packet, std::move(cmd->fence));
     } else if (std::holds_alternative<ClearCommand>(*cmd_or_null)) {
       // The fence is cleared when `cmd_or_null` is destructed.
-      clear();
+      queue_.clear();
     } else {
       FX_CHECK(false) << "unhandled Command variant";
     }
-  }
-}
-
-void PacketQueueProducerStage::ReportUnderflow(Fixed underlow_frame_count) {
-  ++underflow_count_;
-  if (underflow_reporter_) {
-    // We estimate the underflow duration using the stream's frame rate. However, this can be an
-    // underestimate in three ways:
-    //
-    // * If the stream has been paused, this does not include the time spent paused.
-    //
-    // * Frames are typically read in batches. This does not account for the batch size. In practice
-    //   we expect the batch size should be 10ms or less, which puts a bound on this underestimate.
-    //
-    // * `underflow_frame_count` is ultimately derived from the reference clock of the stage. For
-    //   example, if the reference clock is running slower than the system monotonic clock, then the
-    //   underflow will appear shorter than it actually was. This error is bounded by the maximum
-    //   rate difference of the reference clock, which is +/-0.1% (see `zx_clock_update`).
-    const auto duration =
-        zx::duration(format().frames_per_ns().Inverse().Scale(underlow_frame_count.Ceiling()));
-    underflow_reporter_(duration);
   }
 }
 

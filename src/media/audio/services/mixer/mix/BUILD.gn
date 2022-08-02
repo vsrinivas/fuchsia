@@ -44,6 +44,8 @@ source_set("mix") {
     "ring_buffer_producer_stage.h",
     "silence_padding_stage.cc",
     "silence_padding_stage.h",
+    "simple_packet_queue_producer_stage.cc",
+    "simple_packet_queue_producer_stage.h",
     "thread.h",
   ]
 
@@ -78,6 +80,7 @@ executable("mix_unittests") {
     "reusable_buffer_unittest.cc",
     "ring_buffer_producer_stage_unittest.cc",
     "silence_padding_stage_unittest.cc",
+    "simple_packet_queue_producer_stage_unittest.cc",
   ]
 
   deps = [
