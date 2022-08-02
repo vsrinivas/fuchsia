@@ -4,9 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_common::WlanMacRole::Client,
-    fidl_fuchsia_wlan_device_service::{
-        CreateIfaceRequest, DeviceMonitorMarker, DeviceServiceMarker,
-    },
+    fidl_fuchsia_wlan_device_service::{CreateIfaceRequest, DeviceMonitorMarker},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::sys::ZX_OK,
     fuchsia_zircon::DurationNum,
@@ -24,20 +22,18 @@ async fn multiple_interfaces_per_phy() {
 
     let client_helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
 
-    let wlanstack_svc =
-        connect_to_protocol::<DeviceServiceMarker>().expect("connecting to wlanstack");
     let wlan_monitor_svc =
         connect_to_protocol::<DeviceMonitorMarker>().expect("connecting to wlandevicemonitor");
-    let first_iface_id = get_first_matching_iface_id(&wlanstack_svc, |_iface| true)
+    let first_iface_id = get_first_matching_iface_id(&wlan_monitor_svc, |_iface| true)
         .expect_within(5.seconds(), "getting first iface")
         .await;
-    let resp = wlanstack_svc.list_ifaces().await.expect("listing ifaces #1");
-    assert_eq!(resp.ifaces.len(), 1);
+    let ifaces = wlan_monitor_svc.list_ifaces().await.expect("listing ifaces #1");
+    assert_eq!(ifaces.len(), 1);
 
-    let resp = wlan_monitor_svc.list_phys().await.expect("listing phys");
-    assert_eq!(resp.len(), 1);
+    let phys = wlan_monitor_svc.list_phys().await.expect("listing phys");
+    assert_eq!(phys.len(), 1);
 
-    let phy_id = resp[0];
+    let phy_id = phys[0];
     let mut req = CreateIfaceRequest { phy_id, role: Client, sta_addr: NULL_MAC_ADDR };
     let (status, resp) =
         wlan_monitor_svc.create_iface(&mut req).await.expect("creating a new iface");
@@ -47,12 +43,12 @@ async fn multiple_interfaces_per_phy() {
     assert_ne!(new_iface_id, first_iface_id);
 
     let second_iface_id =
-        get_first_matching_iface_id(&wlanstack_svc, |iface| iface.id != first_iface_id)
+        get_first_matching_iface_id(&wlan_monitor_svc, |iface| iface.id != first_iface_id)
             .expect_within(5.seconds(), "getting next client iface")
             .await;
     assert_eq!(new_iface_id, second_iface_id);
 
-    let resp = wlanstack_svc.list_ifaces().await.expect("listing ifaces #2");
-    assert_eq!(resp.ifaces.len(), 2);
+    let ifaces = wlan_monitor_svc.list_ifaces().await.expect("listing ifaces #2");
+    assert_eq!(ifaces.len(), 2);
     client_helper.stop().await;
 }

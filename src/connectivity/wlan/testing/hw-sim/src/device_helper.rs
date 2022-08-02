@@ -4,21 +4,21 @@
 
 use {
     crate::{test_utils, wlancfg_helper},
-    fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, QueryIfaceResponse},
+    fidl_fuchsia_wlan_device_service::{DeviceMonitorProxy, QueryIfaceResponse},
     fidl_fuchsia_wlan_sme::{ApSmeProxy, ClientSmeProxy},
     fidl_fuchsia_wlan_tap::WlantapPhyConfig,
-    fuchsia_zircon::{sys::ZX_OK, DurationNum},
+    fuchsia_zircon::DurationNum,
     tracing::info,
 };
 
 pub struct CreateDeviceHelper<'a> {
-    wlanstack_svc: &'a DeviceServiceProxy,
+    dev_monitor: &'a DeviceMonitorProxy,
     iface_ids: Vec<u16>,
 }
 
 impl<'a> CreateDeviceHelper<'a> {
-    pub fn new(wlanstack_svc: &'a DeviceServiceProxy) -> CreateDeviceHelper<'a> {
-        return CreateDeviceHelper { wlanstack_svc, iface_ids: vec![] };
+    pub fn new(dev_monitor: &'a DeviceMonitorProxy) -> CreateDeviceHelper<'a> {
+        return CreateDeviceHelper { dev_monitor, iface_ids: vec![] };
     }
 
     pub async fn create_device(
@@ -33,7 +33,7 @@ impl<'a> CreateDeviceHelper<'a> {
             None => test_utils::TestHelper::begin_test(config).await,
         };
 
-        let iface_id = get_first_matching_iface_id(self.wlanstack_svc, |iface| {
+        let iface_id = get_first_matching_iface_id(self.dev_monitor, |iface| {
             !self.iface_ids.contains(&iface.id)
         })
         .await;
@@ -43,10 +43,10 @@ impl<'a> CreateDeviceHelper<'a> {
     }
 }
 
-/// Queries wlanstack service and return the first iface id that makes |filter(iface)| true.
+/// Queries wlandevicemonitor service and return the first iface id that makes |filter(iface)| true.
 /// Panics after timeout expires.
 pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
-    svc: &DeviceServiceProxy,
+    monitor: &DeviceMonitorProxy,
     filter: F,
 ) -> u16 {
     // Sleep between queries to make main future yield.
@@ -57,15 +57,15 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
     let mut attempt = 1;
     loop {
         info!("Calling list_ifaces(): attempt {}", attempt);
-        let ifaces = svc.list_ifaces().await.expect("getting iface list").ifaces;
+        let ifaces = monitor.list_ifaces().await.expect("getting iface list");
         {
-            for iface in ifaces {
-                info!("Calling query_iface({})", iface.iface_id);
-                let (status, resp) =
-                    svc.query_iface(iface.iface_id).await.expect("querying iface info");
-                assert_eq!(status, ZX_OK, "query_iface {} failed: {}", iface.iface_id, status);
-                if filter(&resp.unwrap()) {
-                    return iface.iface_id;
+            for iface_id in ifaces {
+                info!("Calling query_iface({})", iface_id);
+                let result = monitor.query_iface(iface_id).await.expect("querying iface info");
+                match result {
+                    Ok(resp) if filter(&resp) => return iface_id,
+                    Err(e) => panic!("query_iface {} failed: {}", iface_id, e),
+                    _ => (),
                 }
             }
         }
@@ -76,19 +76,25 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
     }
 }
 
-/// Wrapper function to get an ApSmeProxy from wlanstack with an |iface_id| assumed to be valid.
-pub async fn get_ap_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) -> ApSmeProxy {
+/// Wrapper function to get an ApSmeProxy from wlandevicemonitor with an |iface_id| assumed to be valid.
+pub async fn get_ap_sme(monitor: &DeviceMonitorProxy, iface_id: u16) -> ApSmeProxy {
     let (proxy, remote) = fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
-    let status = wlan_service.get_ap_sme(iface_id, remote).await.expect("fail get_ap_sme");
-    assert_eq!(status, ZX_OK, "fail getting ap sme status: {}", status);
+    monitor
+        .get_ap_sme(iface_id, remote)
+        .await
+        .expect("failed to request ap sme")
+        .expect("ap sme request completed with error");
     proxy
 }
 
-/// Wrapper function to get a ClientSmeProxy from wlanstack with an |iface_id| assumed to be valid.
-pub async fn get_client_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) -> ClientSmeProxy {
+/// Wrapper function to get a ClientSmeProxy from wlandevicemonitor with an |iface_id| assumed to be valid.
+pub async fn get_client_sme(monitor: &DeviceMonitorProxy, iface_id: u16) -> ClientSmeProxy {
     let (proxy, remote) = fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
-    let status = wlan_service.get_client_sme(iface_id, remote).await.expect("fail get_client_sme");
-    assert_eq!(status, ZX_OK, "fail getting client sme status: {}", status);
+    monitor
+        .get_client_sme(iface_id, remote)
+        .await
+        .expect("failed to request client sme")
+        .expect("client sme request completed with error");
     proxy
 }
 
@@ -98,17 +104,12 @@ mod tests {
         super::*,
         fidl_fuchsia_wlan_common::WlanMacRole::*,
         fidl_fuchsia_wlan_device_service::{
-            DeviceServiceMarker, DeviceServiceRequest::*, IfaceListItem, ListIfacesResponse,
-            QueryIfaceResponse,
+            DeviceMonitorMarker, DeviceMonitorRequest, QueryIfaceResponse,
         },
         futures::{pin_mut, StreamExt},
         std::task::Poll,
         wlan_common::assert_variant,
     };
-
-    fn fake_iface_item(iface_id: u16) -> IfaceListItem {
-        IfaceListItem { iface_id }
-    }
 
     fn fake_query_iface_response() -> QueryIfaceResponse {
         QueryIfaceResponse { role: Client, id: 0, phy_id: 0, phy_assigned_id: 0, sta_addr: [0; 6] }
@@ -116,13 +117,13 @@ mod tests {
 
     fn test_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
         filter: F,
-        mut list_response: ListIfacesResponse,
+        mut list_response: Vec<u16>,
         query_responses: Vec<QueryIfaceResponse>,
         expected_id: Option<u16>,
     ) {
         let mut exec = fuchsia_async::TestExecutor::new().expect("creating executor");
         let (proxy, remote) =
-            fidl::endpoints::create_proxy::<DeviceServiceMarker>().expect("creating proxy");
+            fidl::endpoints::create_proxy::<DeviceMonitorMarker>().expect("creating proxy");
         let mut request_stream = remote.into_stream().expect("getting request stream");
 
         let iface_id_fut = get_first_matching_iface_id(&proxy, filter);
@@ -133,21 +134,21 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut iface_id_fut), Poll::Pending);
         // The fake server receives the call as a request.
         let responder = assert_variant!(exec.run_singlethreaded(&mut request_stream.next()),
-                                         Some(Ok(ListIfaces{responder})) => responder);
+                                         Some(Ok(DeviceMonitorRequest::ListIfaces{responder})) => responder);
         // The fake response is sent.
-        responder.send(&mut list_response).expect("sending list ifaces response");
+        responder.send(&mut list_response[..]).expect("sending list ifaces response");
 
-        for mut query_resp in query_responses {
+        for query_resp in query_responses {
             // This line advances the future to the point where it calls query_iface(id) and waits
             // for a response.
             assert_variant!(exec.run_until_stalled(&mut iface_id_fut), Poll::Pending);
             // The fake server receives the call as a request.
             let (id, responder) = assert_variant!(
                 exec.run_singlethreaded(&mut request_stream.next()),
-                Some(Ok(QueryIface{iface_id, responder})) => (iface_id, responder));
+                Some(Ok(DeviceMonitorRequest::QueryIface{iface_id, responder})) => (iface_id, responder));
             assert_eq!(id, query_resp.id);
             // The fake response is sent.
-            responder.send(ZX_OK, Some(&mut query_resp)).expect("sending query iface response");
+            responder.send(&mut Ok(query_resp)).expect("sending query iface response");
         }
 
         match expected_id {
@@ -162,14 +163,14 @@ mod tests {
 
     #[test]
     fn no_iface() {
-        test_matching_iface_id(|_iface| true, ListIfacesResponse { ifaces: vec![] }, vec![], None);
+        test_matching_iface_id(|_iface| true, vec![], vec![], None);
     }
 
     #[test]
     fn found_ap_iface() {
         test_matching_iface_id(
             |iface| iface.role == Ap,
-            ListIfacesResponse { ifaces: vec![fake_iface_item(0), fake_iface_item(3)] },
+            vec![0, 3],
             vec![
                 fake_query_iface_response(),
                 QueryIfaceResponse { role: Ap, id: 3, ..fake_query_iface_response() },
@@ -182,7 +183,7 @@ mod tests {
     fn ifaces_exist_but_no_match() {
         test_matching_iface_id(
             |iface| iface.role == Client,
-            ListIfacesResponse { ifaces: vec![fake_iface_item(0)] },
+            vec![0],
             vec![QueryIfaceResponse { role: Ap, ..fake_query_iface_response() }],
             None,
         )

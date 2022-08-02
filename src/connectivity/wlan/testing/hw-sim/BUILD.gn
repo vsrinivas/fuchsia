@@ -48,12 +48,12 @@ rustc_library("wlan-hw-sim") {
 
   sources = [
     "src/config.rs",
+    "src/device_helper.rs",
     "src/eth_helper.rs",
     "src/event_handler_helper.rs",
     "src/lib.rs",
     "src/test_utils.rs",
     "src/wlancfg_helper.rs",
-    "src/wlanstack_helper.rs",
   ]
 }
 

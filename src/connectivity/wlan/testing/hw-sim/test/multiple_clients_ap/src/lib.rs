@@ -12,7 +12,7 @@
 use {
     anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_common_security as fidl_security,
-    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
+    fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeProxy, ConnectRequest},
     fuchsia_async as fasync,
@@ -77,12 +77,12 @@ async fn canary(mut finish_receiver: oneshot::Receiver<()>) {
 async fn multiple_clients_ap() {
     init_syslog();
 
-    let wlanstack_svc =
-        connect_to_protocol::<DeviceServiceMarker>().expect("connecting to wlanstack service");
+    let wlan_monitor_svc =
+        connect_to_protocol::<DeviceMonitorMarker>().expect("connecting to device monitor service");
 
     let network_config = NetworkConfigBuilder::open().ssid(&AP_SSID);
 
-    let mut dc = CreateDeviceHelper::new(&wlanstack_svc);
+    let mut dc = CreateDeviceHelper::new(&wlan_monitor_svc);
 
     let (mut ap_helper, _) = dc
         .create_device(default_wlantap_config_ap(), Some(network_config))
@@ -95,7 +95,7 @@ async fn multiple_clients_ap() {
         .await
         .expect("create client1");
     let client1_proxy = client1_helper.proxy();
-    let client1_sme = get_client_sme(&wlanstack_svc, client1_iface_id).await;
+    let client1_sme = get_client_sme(&wlan_monitor_svc, client1_iface_id).await;
     let (client1_confirm_sender, client1_confirm_receiver) = oneshot::channel();
 
     let (mut client2_helper, client2_iface_id) = dc
@@ -103,7 +103,7 @@ async fn multiple_clients_ap() {
         .await
         .expect("create client2");
     let client2_proxy = client2_helper.proxy();
-    let client2_sme = get_client_sme(&wlanstack_svc, client2_iface_id).await;
+    let client2_sme = get_client_sme(&wlan_monitor_svc, client2_iface_id).await;
     let (client2_confirm_sender, client2_confirm_receiver) = oneshot::channel();
 
     let (finish_sender, finish_receiver) = oneshot::channel();
