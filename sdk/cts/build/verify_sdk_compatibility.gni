@@ -12,12 +12,11 @@
 template("generate_sdk_layout_golden_file") {
   assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
 
-  # Run the test.
   action(target_name) {
     forward_variables_from(invoker, "*")
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
-    gold_file = "$root_build_dir/cts/sdk_directory_layout.json.golden"
+    gold_file = "$root_build_dir/cts/sdk_directory_layout.golden"
 
     tarfile = sdk_archive
 
@@ -34,7 +33,41 @@ template("generate_sdk_layout_golden_file") {
     ]
 
     metadata = {
-      cts_artifacts = [ "cts/sdk_directory_layout.json.golden" ]
+      cts_artifacts = [ "cts/sdk_directory_layout.golden" ]
     }
+  }
+}
+
+# Test preventing incompatible changes to an SDK's directory layout.
+#
+# Parameters
+#
+#   sdk_archive (required)
+#     A generated tarball of the local SDK archive.
+#
+template("verify_sdk_compatibility") {
+  assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    current = sdk_archive
+    golden = "//prebuilt/cts/canary/linux-x64/cts/sdk_directory_layout.golden"
+
+    inputs = [ sdk_archive ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--golden",
+      rebase_path(golden, root_build_dir),
+      "--current",
+      rebase_path(current, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+    ]
   }
 }

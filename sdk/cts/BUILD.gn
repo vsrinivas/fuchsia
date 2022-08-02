@@ -99,3 +99,9 @@ generate_sdk_layout_golden_file("core_sdk_layout") {
   sdk_archive = "$root_out_dir/sdk/archive/core.tar.gz"
   deps = [ "//sdk:core_archive" ]
 }
+
+# Ensures the backwards compatibility of core SDK directory layout changes.
+verify_sdk_compatibility("verify_sdk_compatibility") {
+  sdk_archive = "$root_out_dir/sdk/archive/core.tar.gz"
+  deps = [ "//sdk:core_archive" ]
+}
