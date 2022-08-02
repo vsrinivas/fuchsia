@@ -115,6 +115,7 @@ if (is_host) {
       "//src/testing/fidl:placeholders",
       "//src/testing/sl4f($target_toolchain)",
       "//tools/fidlcat",
+      "//tools/fidlcat:fidlcat_sdk_meta_generated_file",
     ]
   }
 }

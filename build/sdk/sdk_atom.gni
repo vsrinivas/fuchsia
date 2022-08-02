@@ -175,9 +175,15 @@ template("sdk_atom") {
   meta_file = "$target_gen_dir/$target_name.meta.json"
 
   if (defined(meta_content.value)) {
-    # Directly write the value into a file in the output directory.
-    write_file(meta_file, meta_content.value, "json")
-    meta_deps = gn_deps
+    meta_generated_file_target = "${target_name}_meta_generated_file"
+    generated_file(meta_generated_file_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      outputs = [ meta_file ]
+      contents = meta_content.value
+      output_conversion = "json"
+      deps = gn_deps
+    }
+    meta_deps = [ ":$meta_generated_file_target" ]
   } else {
     meta_copy_target_name = "${target_name}_meta_copy"
     assert(defined(meta_content.source), "Meta scope needs a source or value")
