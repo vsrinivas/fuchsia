@@ -42,6 +42,7 @@
                 "fuchsia.ssh.AuthorizedKeys",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.ui.activity.Tracker",
