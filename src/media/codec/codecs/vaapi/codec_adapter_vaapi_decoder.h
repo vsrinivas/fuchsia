@@ -405,7 +405,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // no hard-coded max stride, at least for now
       linear_constraints.max_bytes_per_row = tiled_constraints.max_bytes_per_row = 0xFFFFFFFF;
       linear_constraints.max_coded_width_times_coded_height =
-          tiled_constraints.max_coded_width_times_coded_height = 3840 * 2160;
+          tiled_constraints.max_coded_width_times_coded_height =
+              (max_picture_width_ * max_picture_height_);
       linear_constraints.layers = tiled_constraints.layers = 1;
       linear_constraints.coded_width_divisor = tiled_constraints.coded_width_divisor =
           is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
