@@ -111,34 +111,74 @@ In this section, you'll use the generated FIDL bindings for
 Begin by creating a new component project to implement the echo server. This
 component will serve the `Echo` protocol and handle incoming requests.
 
+Create a project scaffold for a new component called `echo-server` in the
+`//vendor/fuchsia-codelab` directory:
+
+```posix-terminal
+mkdir -p vendor/fuchsia-codelab/echo-server
+```
+
+Create the following file and directory structure in the new project directory:
+
 * {Rust}
 
-  ```posix-terminal
-  fx create component --path vendor/fuchsia-codelab/echo-server --lang rust
+  ```none {:.devsite-disable-click-to-copy}
+  //vendor/fuchsia-codelab/echo-server
+                          |- BUILD.gn
+                          |- meta
+                          |   |- echo.cml
+                          |
+                          |- src
+                              |- main.rs
   ```
 
 * {C++}
 
-  ```posix-terminal
-  fx create component --path vendor/fuchsia-codelab/echo-server --lang cpp
+  ```none {:.devsite-disable-click-to-copy}
+  //vendor/fuchsia-codelab/echo-server
+                          |- BUILD.gn
+                          |- meta
+                          |   |- echo.cml
+                          |
+                          |- main.cc
   ```
 
-Add the generated bindings to the `BUILD.gn` file as a dependency:
+Add the following build rules to your `BUILD.gn` file to build and package the server component:
 
 * {Rust}
 
   `echo-server/BUILD.gn`:
 
   ```gn
+  import("//build/components.gni")
+  import("//build/rust/rustc_binary.gni")
+
   rustc_binary("bin") {
     output_name = "echo-server"
+    edition = "2021"
 
     deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo_rust",{{ '</strong>' }}
-      ...
+      "//vendor/fuchsia-codelab/echo-fidl:echo_rust",
+      "//src/lib/diagnostics/inspect/runtime/rust",
+      "//src/lib/diagnostics/inspect/rust",
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-component",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:futures",
     ]
 
     sources = [ "src/main.rs" ]
+  }
+
+  fuchsia_component("component") {
+    component_name = "echo_server"
+    manifest = "meta/echo_server.cml"
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("echo-server") {
+    package_name = "echo-server"
+    deps = [ ":component" ]
   }
   ```
 
@@ -147,15 +187,31 @@ Add the generated bindings to the `BUILD.gn` file as a dependency:
   `echo-server/BUILD.gn`:
 
   ```gn
+  import("//build/components.gni")
+
   executable("bin") {
     output_name = "echo-server"
 
-    deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo",{{ '</strong>' }}
-      ...
-    ]
-
     sources = [ "main.cc" ]
+
+    deps = [
+      "//vendor/fuchsia-codelab/echo-fidl:echo",
+      "//sdk/lib/sys/cpp",
+      "//sdk/lib/sys/inspect/cpp",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+  }
+
+  fuchsia_component("component") {
+    component_name = "echo_server"
+    manifest = "meta/echo_server.cml"
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("echo-server") {
+    package_name = "echo-server"
+    deps = [ ":component" ]
   }
   ```
 
@@ -167,7 +223,32 @@ and expose it for use by the parent realm:
   `echo-server/meta/echo_server.cml`:
 
   ```json5
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+  {
+      include: [
+          "inspect/client.shard.cml",
+          "syslog/client.shard.cml",
+      ],
+
+      // Information about the program to run.
+      program: {
+          // Use the built-in ELF runner.
+          runner: "elf",
+
+          // The binary to run for this component.
+          binary: "bin/echo-server",
+      },
+
+      // Capabilities provided by this component.
+      capabilities: [
+          { protocol: "fidl.examples.routing.echo.Echo" },
+      ],
+      expose: [
+          {
+              protocol: "fidl.examples.routing.echo.Echo",
+              from: "self",
+          },
+      ],
+  }
   ```
 
 * {C++}
@@ -175,7 +256,32 @@ and expose it for use by the parent realm:
   `echo-server/meta/echo_server.cml`:
 
   ```json5
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+  {
+      include: [
+          "inspect/client.shard.cml",
+          "syslog/client.shard.cml",
+      ],
+
+      // Information about the program to run.
+      program: {
+          // Use the built-in ELF runner.
+          runner: "elf",
+
+          // The binary to run for this component.
+          binary: "bin/echo-server",
+      },
+
+      // Capabilities provided by this component.
+      capabilities: [
+          { protocol: "fidl.examples.routing.echo.Echo" },
+      ],
+      expose: [
+          {
+              protocol: "fidl.examples.routing.echo.Echo",
+              from: "self",
+          },
+      ],
+  }
   ```
 
 ### Implement the server
@@ -214,7 +320,7 @@ Add the following code to `main()` to serve the `Echo` protocol:
   `echo-server/src/main.rs`:
 
   ```rust
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/src/main.rs" region_tag="main_body" adjust_indentation="auto" highlight="1,2,3,4,14,15,23,24,25,26,27" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_server/src/main.rs" region_tag="main_body" adjust_indentation="auto" %}
   ```
 
   This code performs the following steps to serve the `Echo` protocol:
@@ -230,7 +336,7 @@ Add the following code to `main()` to serve the `Echo` protocol:
   `echo-server/main.cc`:
 
   ```cpp
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_server/main.cc" region_tag="main_body" adjust_indentation="auto" highlight="3,8,13,14,15,16,17" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_server/main.cc" region_tag="main_body" adjust_indentation="auto" %}
   ```
 
   This code performs the following steps to serve the `Echo` protocol:
@@ -274,34 +380,72 @@ in the response payload.
 Create another new component project to implement the echo client. This
 component will connect to the protocol implementation and send requests.
 
+Create a project scaffold for a new component called `echo-client` in the
+`//vendor/fuchsia-codelab` directory:
+
+```posix-terminal
+mkdir -p vendor/fuchsia-codelab/echo-client
+```
+
+Create the following file and directory structure in the new project directory:
+
 * {Rust}
 
-  ```posix-terminal
-  fx create component --path vendor/fuchsia-codelab/echo-client --lang rust
+  ```none {:.devsite-disable-click-to-copy}
+  //vendor/fuchsia-codelab/echo-client
+                          |- BUILD.gn
+                          |- meta
+                          |   |- echo.cml
+                          |
+                          |- src
+                              |- main.rs
   ```
 
 * {C++}
 
-  ```posix-terminal
-  fx create component --path vendor/fuchsia-codelab/echo-client --lang cpp
+  ```none {:.devsite-disable-click-to-copy}
+  //vendor/fuchsia-codelab/echo-client
+                          |- BUILD.gn
+                          |- meta
+                          |   |- echo.cml
+                          |
+                          |- main.cc
   ```
 
-Add the generated bindings to the `BUILD.gn` file as a dependency:
+Add the following build rules to your `BUILD.gn` file to build and package the client component:
 
 * {Rust}
 
   `echo-client/BUILD.gn`:
 
   ```gn
+  import("//build/components.gni")
+  import("//build/rust/rustc_binary.gni")
+
   rustc_binary("bin") {
     output_name = "echo-client"
+    edition = "2021"
 
     deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo_rust",{{ '</strong>' }}
-      ...
+      "//vendor/fuchsia-codelab/echo-fidl:echo_rust",
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-component",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:tracing",
     ]
 
     sources = [ "src/main.rs" ]
+  }
+
+  fuchsia_component("component") {
+    component_name = "echo_client"
+    manifest = "meta/echo_client.cml"
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("echo-client") {
+    package_name = "echo-client"
+    deps = [ ":component" ]
   }
   ```
 
@@ -310,15 +454,31 @@ Add the generated bindings to the `BUILD.gn` file as a dependency:
   `echo-client/BUILD.gn`:
 
   ```gn
+  import("//build/components.gni")
+
   executable("bin") {
     output_name = "echo-client"
 
-    deps = [
-      {{ '<strong>' }}"//vendor/fuchsia-codelab/echo-fidl:echo",{{ '</strong>' }}
-      ...
-    ]
-
     sources = [ "main.cc" ]
+
+    deps = [
+      "//vendor/fuchsia-codelab/echo-fidl:echo",
+      "//sdk/lib/sys/cpp",
+      "//sdk/lib/syslog/cpp",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+  }
+
+  fuchsia_component("component") {
+    component_name = "echo_client"
+    manifest = "meta/echo_client.cml"
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("echo-client") {
+    package_name = "echo-client"
+    deps = [ ":component" ]
   }
   ```
 
@@ -330,7 +490,25 @@ Configure the client's component manifest to request the
   `echo-client/meta/echo_client.cml`:
 
   ```json5
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/rust/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+  {
+      include: [
+          "syslog/client.shard.cml",
+      ],
+
+      // Information about the program to run.
+      program: {
+          // Use the built-in ELF runner.
+          runner: "elf",
+
+          // The binary to run for this component.
+          binary: "bin/echo-client",
+      },
+
+      // Capabilities used by this component.
+      use: [
+          { protocol: "fidl.examples.routing.echo.Echo" },
+      ],
+  }
   ```
 
 * {C++}
@@ -338,7 +516,25 @@ Configure the client's component manifest to request the
   `echo-client/meta/echo_client.cml`:
 
   ```json5
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+  {
+      include: [
+          "syslog/client.shard.cml",
+      ],
+
+      // Information about the program to run.
+      program: {
+          // Use the built-in ELF runner.
+          runner: "elf",
+
+          // The binary to run for this component.
+          binary: "bin/echo-client",
+      },
+
+      // Capabilities used by this component.
+      use: [
+          { protocol: "fidl.examples.routing.echo.Echo" },
+      ],
+  }
   ```
 
 ### Implement the client
@@ -362,42 +558,7 @@ to the server. Add the following program arguments to `echo_client.cml`:
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" highlight="9,10" %}
   ```
 
-Update the manifest includes to provide logging support, including on stdout:
-
-* {Rust}
-
-  `echo-client/meta/echo_client.cml`:
-
-  ```json5
-  {
-    include: [
-        "inspect/client.shard.cml",
-        // Enable logging
-        "syslog/client.shard.cml",
-    ],
-
-    // ...
-  }
-  ```
-
-* {C++}
-
-  `echo-client/meta/echo_client.cml`:
-
-  ```json5
-  {
-    include: [
-        "inspect/client.shard.cml",
-        // Enable logging
-        "syslog/client.shard.cml",
-    ],
-
-    // ...
-  }
-  ```
-
-Open the main source file and replace the import statements with the
-following code:
+Open the main source file and replace the import statements with the following code:
 
 * {Rust}
 
@@ -451,7 +612,16 @@ to act as the parent and manage capability routing.
 Create a new project directory for the realm product definition:
 
 ```posix-terminal
-mkdir vendor/fuchsia-codelab/echo-realm
+mkdir -p vendor/fuchsia-codelab/echo-realm
+```
+
+Create the following file and directory structure in the new project directory:
+
+```none {:.devsite-disable-click-to-copy}
+//vendor/fuchsia-codelab/echo-realm
+                        |- BUILD.gn
+                        |- meta
+                        |   |- echo_realm.cml
 ```
 
 Create a new component manifest file `meta/echo_realm.cml` with the

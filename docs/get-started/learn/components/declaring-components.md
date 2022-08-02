@@ -105,123 +105,124 @@ Note: For more details on the GN syntax of the component build rules, see the
 In this exercise, you'll build and run a basic component that reads the program
 arguments and echoes a greeting out the system log.
 
-To begin, create a project scaffold for a new component called `echo-args` under
+To begin, Create a project scaffold for a new component called `echo-args` in
 the `//vendor/fuchsia-codelab` directory:
 
-* {Rust}
+```posix-terminal
+mkdir -p vendor/fuchsia-codelab/echo-args
+```
 
-  ```posix-terminal
-  fx create component --path vendor/fuchsia-codelab/echo-args --lang rust
-  ```
-
-* {C++}
-
-  ```posix-terminal
-  fx create component --path vendor/fuchsia-codelab/echo-args --lang cpp
-  ```
-
-This creates a project directory structure with a basic component template:
+Create the following file and directory structure in the new project directory:
 
 * {Rust}
 
   ```none {:.devsite-disable-click-to-copy}
-  echo-args
-    |- BUILD.gn
-    |- meta
-    |   |- echo_args.cml
-    |
-    |- src
-        |- main.rs
+  //vendor/fuchsia-codelab/echo-args
+                          |- BUILD.gn
+                          |- meta
+                          |   |- echo.cml
+                          |
+                          |- src
+                              |- main.rs
   ```
 
   * `BUILD.gn`: GN build targets for the executable binaries, component, and
     package.
-  * `meta/echo_args.cml`: Manifest declaring the component's executable and
+  * `meta/echo.cml`: Manifest declaring the component's executable and
     required capabilities.
   * `src/main.rs`: Source code for the Rust executable binary and unit tests.
 
 * {C++}
 
   ```none {:.devsite-disable-click-to-copy}
-  echo-args
-    |- BUILD.gn
-    |- meta
-    |   |- echo_args.cml
-    |
-    |- echo_args.cc
-    |- echo_args.h
-    |- echo_args_unittest.cc
-    |- main.cc
+  //vendor/fuchsia-codelab/echo-args
+                          |- BUILD.gn
+                          |- meta
+                          |   |- echo.cml
+                          |
+                          |- echo_component.cc
+                          |- echo_component.h
+                          |- main.cc
   ```
 
   * `BUILD.gn`: GN build targets for the executable binaries, component, and
     package.
-  * `meta/echo_args.cml`: Manifest declaring the component's executable and
+  * `meta/echo.cml`: Manifest declaring the component's executable and
     required capabilities.
-  * `echo_args.cc`: Source code for the C++ component functionality.
-  * `echo_args_unittest.cc`: Source code for the C++ unit tests.
+  * `echo_component.cc`: Source code for the C++ component functionality.
   * `main.cc`: Source code for the C++ executable binary main entry point.
 
 ### Add program arguments
 
-Open the component manifest file in your editor and locate the `program` block.
-This defines the attributes of the component's executable. Add an `args` array
-to supply the list of names to greet:
+The component manifest file defines the attributes of the component's executable,
+including program arguments, and the component's capabilities.
+Add the following contents to `meta/echo.cml`:
 
 * {Rust}
 
-  `echo-args/meta/echo_args.cml`:
-
-  ```json5
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/rust/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
-  ```
-
-* {C++}
-
-  `echo-args/meta/echo_args.cml`:
-
-  ```json5
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
-  ```
-
-Update the manifest includes to provide logging support, including on stdout:
-
-* {Rust}
-
-  `echo-args/meta/echo_args.cml`:
+  `echo-args/meta/echo.cml`:
 
   ```json5
   {
-    include: [
-        "inspect/client.shard.cml",
-        // Enable logging
-        "syslog/client.shard.cml",
-    ],
+      include: [
+          // Enable logging.
+          "syslog/client.shard.cml",
+      ],
 
-    // ...
+      // Information about the program to run.
+      program: {
+          // Use the built-in ELF runner.
+          runner: "elf",
+
+          // The binary to run for this component.
+          binary: "bin/echo-args",
+
+          // Program arguments
+          args: [
+              "Alice",
+              "Bob",
+          ],
+
+          // Program environment variables
+          environ: [ "FAVORITE_ANIMAL=Spot" ],
+      },
   }
   ```
 
 * {C++}
 
-  `echo-args/meta/echo_args.cml`:
+  `echo-args/meta/echo.cml`:
 
   ```json5
   {
-    include: [
-        "inspect/client.shard.cml",
-        // Enable logging
-        "syslog/client.shard.cml",
-    ],
+      include: [
+          // Enable logging.
+          "syslog/client.shard.cml",
+      ],
 
-    // ...
+      // Information about the program to run.
+      program: {
+          // Use the built-in ELF runner.
+          runner: "elf",
+
+          // The binary to run for this component.
+          binary: "bin/echo-args",
+
+          // Program arguments
+          args: [
+              "Alice",
+              "Bob",
+          ],
+
+          // Program environment variables
+          environ: [ "FAVORITE_ANIMAL=Spot" ],
+      },
   }
   ```
 
 ### Log the arguments
 
-Open the source file for the main executable and replace the import statements
-with the following code:
+Open the source file for the main executable and add the following import statements:
 
 * {Rust}
 
@@ -238,10 +239,10 @@ with the following code:
   ```cpp
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/main.cc" region_tag="imports" adjust_indentation="auto" %}
 
-  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
+  #include "vendor/fuchsia-codelab/echo-args/echo_component.h"
   ```
 
-Replace the `main()` function with the following code:
+Add the following code to implement the `main()` function:
 
 * {Rust}
 
@@ -280,18 +281,16 @@ Add the following code to implement the `greeting()` function:
 
 * {C++}
 
-  Replace `echo-args/echo_args.h` and `echo-args/echo_args.cc` with the following code:
-
-  `echo-args/echo_args.h`:
+  `echo-args/echo_component.h`:
 
   ```cpp
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_component.h" region_tag="greeting" adjust_indentation="auto" %}
   ```
 
-  `echo-args/echo_args.cc`:
+  `echo-args/echo_component.cc`:
 
   ```cpp
-  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
+  #include "vendor/fuchsia-codelab/echo-args/echo_component.h"
 
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_component.cc" region_tag="greeting" adjust_indentation="auto" %}
   ```
@@ -313,6 +312,97 @@ on the length of the list.
 </aside>
 
 ### Add to the build configuration
+
+Update the program's dependencies in your `BUILD.gn` file:
+
+* {Rust}
+
+  `echo-args/BUILD.gn`:
+
+  ```gn
+  import("//build/components.gni")
+  import("//build/rust/rustc_binary.gni")
+
+  group("echo-args") {
+    testonly = true
+    deps = [
+      ":package",
+    ]
+  }
+
+  rustc_binary("bin") {
+    output_name = "echo-args"
+    edition = "2021"
+
+    with_unit_tests = true
+
+    deps = [
+      "//src/lib/fuchsia",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:tracing",
+    ]
+
+    sources = [ "src/main.rs" ]
+  }
+
+  fuchsia_component("component") {
+    component_name = "echo-args"
+    manifest = "meta/echo.cml"
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("package") {
+    package_name = "echo-args"
+    deps = [ ":component" ]
+  }
+  ```
+
+* {C++}
+
+  `echo-args/BUILD.gn`:
+
+  ```gn
+  import("//build/components.gni")
+
+  group("echo-args") {
+    testonly = true
+    deps = [
+      ":package",
+    ]
+  }
+
+  source_set("lib") {
+    sources = [
+      "echo_component.cc",
+      "echo_component.h",
+    ]
+  }
+
+  executable("bin") {
+    output_name = "echo-args"
+
+    sources = [ "main.cc" ]
+
+    deps = [
+      ":lib",
+      "//sdk/lib/syslog/cpp",
+      "//zircon/system/ulib/async-default",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+  }
+
+  fuchsia_component("component") {
+    component_name = "echo-args"
+    manifest = "meta/echo.cml"
+    deps = [ ":bin" ]
+  }
+
+  fuchsia_package("package") {
+    package_name = "echo-args"
+    deps = [ ":component" ]
+  }
+  ```
 
 Add your new component to the build configuration:
 

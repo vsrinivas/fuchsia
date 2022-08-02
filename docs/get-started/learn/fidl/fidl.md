@@ -99,6 +99,14 @@ Start by creating a new directory for the FIDL library target:
 mkdir -p vendor/fuchsia-codelab/echo-fidl
 ```
 
+Create the following file and directory structure in the new project directory:
+
+```none {:.devsite-disable-click-to-copy}
+//vendor/fuchsia-codelab/echo-fidl
+                        |- BUILD.gn
+                        |- echo.fidl
+```
+
 Add a new FIDL interface file called `echo.fidl` with the following contents:
 
 ```fidl
@@ -152,7 +160,7 @@ editor:
 * {Rust}
 
   ```posix-terminal
-  fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo_rust sources
+  fx gn desc out/default/ vendor/fuchsia-codelab/echo-fidl:echo_rust.actual sources
   ```
 
 * {C++}

@@ -146,26 +146,30 @@ Add the following unit test functions to validate the behavior of the
 
 * {C++}
 
-  `echo-args/echo_args_unittest.cc`:
+  `echo-args/echo_unittest.cc`:
 
   ```
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_unittest.cc" region_tag="imports" adjust_indentation="auto" %}
 
-  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
+  #include "vendor/fuchsia-codelab/echo-args/echo_component.h"
 
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_unittest.cc" region_tag="test_mod" adjust_indentation="auto" %}
   ```
 
-### Run the unit tests
+### Update the build configuration
 
-In the previous exercise, your component project scaffold generated a
-`fuchsia_unittest_package()` in the `BUILD.gn` file. Locate this rule:
+Add the following rules to your `BUILD.gn` file to generate a new unit test package:
 
 * {Rust}
 
   `echo-args/BUILD.gn`:
 
-  ```gn {:.devsite-disable-click-to-copy}
+  ```gn
+  group("tests") {
+    testonly = true
+    deps = [ ":echo-args-unittests" ]
+  }
+
   fuchsia_unittest_package("echo-args-unittests") {
     deps = [ ":bin_test" ]
   }
@@ -175,7 +179,28 @@ In the previous exercise, your component project scaffold generated a
 
   `echo-args/BUILD.gn`:
 
-  ```gn {:.devsite-disable-click-to-copy}
+  ```gn
+  group("tests") {
+    testonly = true
+    deps = [ ":echo-args-unittests" ]
+  }
+
+  executable("unittests") {
+    output_name = "echo-args-test"
+    testonly = true
+
+    sources = [ "echo_unittest.cc" ]
+
+    deps = [
+      ":lib",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+      "//zircon/system/ulib/async-default",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+  }
+
   fuchsia_unittest_package("echo-args-unittests") {
     deps = [ ":unittests" ]
   }
@@ -183,10 +208,47 @@ In the previous exercise, your component project scaffold generated a
 
 This rule packages your unit tests into a component with the following URL:
 
-
 ```none {:.devsite-disable-click-to-copy}
 fuchsia-pkg://fuchsia.com/echo-args-unittests#meta/echo-args-unittests.cm
 ```
+
+### Run the unit tests
+
+Update the top-level build target to build both your component package and the
+test package:
+
+* {Rust}
+
+  `echo-args/BUILD.gn`:
+
+  ```gn {:.devsite-disable-click-to-copy}
+  import("//build/components.gni")
+  import("//build/rust/rustc_binary.gni")
+
+  group("echo-args") {
+    testonly = true
+    deps = [
+      ":package",
+      {{ '<strong>' }}":tests",{{ '</strong>' }}
+    ]
+  }
+  ```
+
+* {C++}
+
+  `echo-args/BUILD.gn`:
+
+  ```gn {:.devsite-disable-click-to-copy}
+  import("//build/components.gni")
+
+  group("echo-args") {
+    testonly = true
+    deps = [
+      ":package",
+      {{ '<strong>' }}":tests",{{ '</strong>' }}
+    ]
+  }
+  ```
 
 Run `fx build` again to build the test package:
 
