@@ -14,5 +14,14 @@
         },
         "expected": "match",
         "name": "max98373"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.maxim.platform.BIND_PLATFORM_DEV_DID.MAX98373",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.maxim.platform.BIND_PLATFORM_DEV_VID.MAXIM"
+        },
+        "expected": "match",
+        "name": "maxim98373"
     }
 ]

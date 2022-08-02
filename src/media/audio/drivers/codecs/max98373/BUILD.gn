@@ -11,7 +11,10 @@ driver_bind_rules("max98373-bind") {
   rules = "max98373.bind"
   header_output = "max98373-bind.h"
   tests = "tests.json"
-  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+  deps = [
+    "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.maxim.platform",
+  ]
 }
 
 fuchsia_driver("max98373-driver") {
