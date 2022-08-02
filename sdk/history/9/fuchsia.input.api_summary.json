@@ -11,6 +11,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.input/Key.ASSISTANT",
+        "value": "4294901761"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.input/Key.B",
         "value": "458757"
     },
@@ -433,6 +438,11 @@
         "kind": "enum/member",
         "name": "fuchsia.input/Key.PAUSE",
         "value": "458824"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.POWER",
+        "value": "4294901762"
     },
     {
         "kind": "enum/member",

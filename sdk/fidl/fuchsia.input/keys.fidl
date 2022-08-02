@@ -347,4 +347,14 @@ type Key = flexible enum : uint32 {
 
     /// Volume Decrement
     MEDIA_VOLUME_DECREMENT = 0x000c00ea;
+
+    /// NOTE: the following are self-defined and do not have to follow the HID usage pages.
+    /// We use HID-Vendor-Specific page 0xFFFF to represent Fuchsia defined keys.
+    /// Assistant Key.
+    @available(added=9)
+    ASSISTANT = 0xffff0001;
+
+    /// Power Button.
+    @available(added=9)
+    POWER = 0xffff0002;
 };
