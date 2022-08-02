@@ -100,6 +100,7 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }

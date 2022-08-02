@@ -1388,6 +1388,7 @@ fidl::internal::WireEventDispatcher<::test_protocollayouts::MainProtocol>::Dispa
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }

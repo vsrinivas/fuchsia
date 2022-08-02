@@ -7024,7 +7024,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsProtocol> {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -16749,7 +16749,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;

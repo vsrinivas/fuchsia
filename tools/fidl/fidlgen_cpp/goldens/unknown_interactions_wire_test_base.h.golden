@@ -141,6 +141,9 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
   virtual void FlexibleEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>* event) override {
     NotImplemented_("FlexibleEventTableErr");
   }
+  virtual void handle_unknown_event(::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata) override {
+    NotImplemented_("handle_unknown_event");
+  }
 };
 
 template <>
@@ -319,6 +322,9 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
   }
   virtual void FlexibleEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>* event) override {
     NotImplemented_("FlexibleEventTableErr");
+  }
+  virtual void handle_unknown_event(::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata) override {
+    NotImplemented_("handle_unknown_event");
   }
 };
 }  // namespace testing

@@ -53,6 +53,12 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
         NotImplemented_("{{ .Name }}");
       }
     {{- end }}
+
+    {{- if .HandlesOneWayUnknownInteractions }}
+    virtual void handle_unknown_event({{ .UnknownEventMetadata }} metadata) override {
+      NotImplemented_("handle_unknown_event");
+    }
+    {{- end }}
   };
 {{ end -}}
 

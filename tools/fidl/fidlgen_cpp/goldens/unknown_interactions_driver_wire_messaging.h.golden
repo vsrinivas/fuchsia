@@ -4715,7 +4715,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -4736,6 +4736,9 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
  public:
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>
@@ -10762,7 +10765,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 template<>
-class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
 public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -10783,6 +10786,9 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
  public:
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
+    ::fidl::Status DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
 template <>

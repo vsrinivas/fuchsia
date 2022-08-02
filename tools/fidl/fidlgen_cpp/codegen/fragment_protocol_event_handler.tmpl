@@ -8,7 +8,10 @@
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
-class {{ .WireEventHandlerInterface }} : public ::fidl::internal::BaseEventHandlerInterface {
+class {{ .WireEventHandlerInterface }} : public ::fidl::internal::BaseEventHandlerInterface
+{{- if .HandlesOneWayUnknownInteractions -}}
+, public {{ .UnknownEventHandler }}
+{{- end }} {
 public:
   {{ .WireEventHandlerInterface.Self }}() = default;
   virtual ~{{ .WireEventHandlerInterface.Self }}() = default;
@@ -57,7 +60,7 @@ class {{ .WireEventDispatcher }} final :
   explicit {{ .WireEventDispatcher.Self }}({{ .WireEventHandlerInterface }}* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
-  {{- if .Events }}
+  {{- if or .Events .HandlesOneWayUnknownInteractions }}
     ::fidl::Status DispatchEvent(
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
@@ -81,7 +84,7 @@ class {{ .WireEventDispatcher }} final :
   }
 {{- end }}
 
-{{- if .Events }}
+{{- if or .Events .HandlesOneWayUnknownInteractions }}
   ::fidl::Status
   {{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -107,6 +110,21 @@ class {{ .WireEventDispatcher }} final :
       }
     {{- end }}
       default:
+        {{ if .HandlesOneWayUnknownInteractions -}}
+        auto* hdr = msg.header();
+        ::fidl::UnknownInteractionType unknown_interaction_type =
+            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        if (::fidl::IsFlexibleInteraction(hdr) &&
+            ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
+          if (event_handler()) {
+            {{ .UnknownEventMetadata }} metadata {
+              .method_ordinal = hdr->ordinal,
+            };
+            event_handler()->handle_unknown_event(metadata);
+          }
+          return ::fidl::Status::Ok();
+        }
+        {{- end }}
         return ::fidl::Status::UnknownOrdinal();
     }
   }

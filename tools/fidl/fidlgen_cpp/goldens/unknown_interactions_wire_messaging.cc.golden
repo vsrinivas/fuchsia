@@ -1964,6 +1964,19 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         return ::fidl::Status::Ok();
       }
       default:
+        auto* hdr = msg.header();
+        ::fidl::UnknownInteractionType unknown_interaction_type =
+            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        if (::fidl::IsFlexibleInteraction(hdr) &&
+            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsProtocol::kOpenness, unknown_interaction_type)) {
+          if (event_handler()) {
+            ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata {
+              .method_ordinal = hdr->ordinal,
+            };
+            event_handler()->handle_unknown_event(metadata);
+          }
+          return ::fidl::Status::Ok();
+        }
         return ::fidl::Status::UnknownOrdinal();
     }
   }
@@ -5204,6 +5217,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
         return ::fidl::Status::Ok();
       }
       default:
+        
         return ::fidl::Status::UnknownOrdinal();
     }
   }
@@ -7551,6 +7565,19 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
         return ::fidl::Status::Ok();
       }
       default:
+        auto* hdr = msg.header();
+        ::fidl::UnknownInteractionType unknown_interaction_type =
+            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        if (::fidl::IsFlexibleInteraction(hdr) &&
+            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarProtocol::kOpenness, unknown_interaction_type)) {
+          if (event_handler()) {
+            ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata {
+              .method_ordinal = hdr->ordinal,
+            };
+            event_handler()->handle_unknown_event(metadata);
+          }
+          return ::fidl::Status::Ok();
+        }
         return ::fidl::Status::UnknownOrdinal();
     }
   }

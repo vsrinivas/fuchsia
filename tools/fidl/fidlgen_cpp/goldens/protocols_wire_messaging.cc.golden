@@ -524,6 +524,7 @@ fidl::internal::WireEventDispatcher<::test_protocols::WithAndWithoutRequestRespo
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }
@@ -1126,6 +1127,7 @@ fidl::internal::WireEventDispatcher<::test_protocols::Transitional>::DispatchEve
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }
@@ -2314,6 +2316,7 @@ fidl::internal::WireEventDispatcher<::test_protocols::HandleRightsProtocol>::Dis
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }
@@ -3699,6 +3702,7 @@ fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol>::Dispatch
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }

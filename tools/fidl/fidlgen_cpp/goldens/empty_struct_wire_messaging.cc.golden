@@ -191,6 +191,7 @@ fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch
       return ::fidl::Status::Ok();
     }
     default:
+
       return ::fidl::Status::UnknownOrdinal();
   }
 }

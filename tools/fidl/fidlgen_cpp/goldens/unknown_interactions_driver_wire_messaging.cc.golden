@@ -1107,6 +1107,28 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
 
 
 
+  ::fidl::Status
+  fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::MessageStorageViewBase* storage_view) {
+    switch (msg.header()->ordinal) {
+      default:
+        auto* hdr = msg.header();
+        ::fidl::UnknownInteractionType unknown_interaction_type =
+            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        if (::fidl::IsFlexibleInteraction(hdr) &&
+            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsDriverProtocol::kOpenness, unknown_interaction_type)) {
+          if (event_handler()) {
+            ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsDriverProtocol> metadata {
+              .method_ordinal = hdr->ordinal,
+            };
+            event_handler()->handle_unknown_event(metadata);
+          }
+          return ::fidl::Status::Ok();
+        }
+        return ::fidl::Status::UnknownOrdinal();
+    }
+  }
 #endif  // __Fuchsia__
 
 
@@ -3655,6 +3677,28 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
 
 
 
+  ::fidl::Status
+  fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::MessageStorageViewBase* storage_view) {
+    switch (msg.header()->ordinal) {
+      default:
+        auto* hdr = msg.header();
+        ::fidl::UnknownInteractionType unknown_interaction_type =
+            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        if (::fidl::IsFlexibleInteraction(hdr) &&
+            ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::kOpenness, unknown_interaction_type)) {
+          if (event_handler()) {
+            ::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> metadata {
+              .method_ordinal = hdr->ordinal,
+            };
+            event_handler()->handle_unknown_event(metadata);
+          }
+          return ::fidl::Status::Ok();
+        }
+        return ::fidl::Status::UnknownOrdinal();
+    }
+  }
 #endif  // __Fuchsia__
 
 
