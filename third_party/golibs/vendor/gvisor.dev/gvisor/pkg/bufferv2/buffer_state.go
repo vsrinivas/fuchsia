@@ -1,4 +1,4 @@
-// Copyright 2020 The gVisor Authors.
+// Copyright 2022 The gVisor Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package buffer
+package bufferv2
 
-import (
-	"unsafe"
-)
+// saveData is invoked by stateify.
+func (b *Buffer) saveData() []byte {
+	return b.Flatten()
+}
 
-// minBatch is the smallest Read or Write operation that the
-// WriteFromReader and ReadToWriter functions will use.
-//
-// This is defined as the size of a native pointer.
-const minBatch = int(unsafe.Sizeof(uintptr(0)))
+// loadData is invoked by stateify.
+func (b *Buffer) loadData(data []byte) {
+	*b = MakeWithData(data)
+}

@@ -27,7 +27,7 @@ import (
 	"fidl/fuchsia/hardware/network"
 
 	"go.uber.org/multierr"
-	"gvisor.dev/gvisor/pkg/buffer"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -152,7 +152,7 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList) (int, t
 
 		data := c.getDescriptorData(descriptor)
 		n := 0
-		for _, v := range pkt.Slices() {
+		for _, v := range pkt.AsSlices() {
 			if w := copy(data[n:], v); w != len(v) {
 				panic(fmt.Sprintf("failed to copy packet data to descriptor %d, want %d got %d bytes", descriptorIndex, len(v), w))
 			} else {
@@ -161,7 +161,7 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList) (int, t
 		}
 
 		var frameType network.FrameType
-		if len(pkt.LinkHeader().View()) != 0 {
+		if len(pkt.LinkHeader().Slice()) != 0 {
 			frameType = network.FrameTypeEthernet
 		} else {
 			switch pkt.NetworkProtocolNumber {
@@ -386,7 +386,7 @@ func (c *Client) Run(ctx context.Context) {
 					if dispatcher != nil {
 						func() {
 							pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-								Payload: buffer.NewWithData(view),
+								Payload: bufferv2.MakeWithData(view),
 							})
 							defer pkt.DecRef()
 

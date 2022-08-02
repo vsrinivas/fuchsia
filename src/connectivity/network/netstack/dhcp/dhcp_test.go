@@ -19,6 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"github.com/google/go-cmp/cmp"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/packetsocket"
@@ -472,7 +473,7 @@ func TestDelayRetransmission(t *testing.T) {
 			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
 				func() {
-					switch mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) {
+					switch mustMsgType(t, hdr(pkt.Data().AsRange().ToSlice())) {
 					case dhcpOFFER:
 						if !tc.cancelBeforeOffer {
 							return
@@ -689,7 +690,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			var ackCnt uint32
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
 				waitForSignal(ctx, unblockResponse)
-				if mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) != dhcpACK {
+				if mustMsgType(t, hdr(pkt.Data().AsRange().ToSlice())) != dhcpACK {
 					return pkt, false
 				}
 
@@ -702,7 +703,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 
 				// Add a message option. An earlier version of the client incorrectly
 				// rejected dhcpNAK with a populated message.
-				h := hdr(pkt.Data().AsRange().AsView())
+				h := hdr(pkt.Data().AsRange().ToSlice())
 				opts, err := h.options()
 				if err != nil {
 					t.Fatalf("failed to get options from header: %s", err)
@@ -718,14 +719,14 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				}
 				b.setOptions(opts)
 				pkt.Data().CapLength(0)
-				pkt.Data().AppendView(b)
+				pkt.Data().AppendView(bufferv2.NewViewWithData(b))
 
 				// Rewrite all the headers and IP checksum. Yes, this is all
 				// required.
 				delta := uint16(len(b) - len(h))
-				udpHeader := header.UDP(pkt.TransportHeader().View())
+				udpHeader := header.UDP(pkt.TransportHeader().Slice())
 				udpHeader.SetLength(udpHeader.Length() + delta)
-				ipv4Header := header.IPv4(pkt.NetworkHeader().View())
+				ipv4Header := header.IPv4(pkt.NetworkHeader().Slice())
 				ipv4Header.SetTotalLength(ipv4Header.TotalLength() + delta)
 				ipv4Header.SetChecksum(0)
 				ipv4Header.SetChecksum(^ipv4Header.CalculateChecksum())
@@ -1124,7 +1125,7 @@ func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcp
 
 	pkt = pkt.Clone()
 
-	h := hdr(pkt.Data().AsRange().ToOwnedView())
+	h := hdr(pkt.Data().AsRange().ToSlice())
 	opts, err := h.options()
 	if err != nil {
 		t.Fatalf("failed to get options from header: %s", err)
@@ -1146,10 +1147,10 @@ func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcp
 	h.setOptions(opts)
 
 	// Disable checksum verification since we've surely invalidated it.
-	header.UDP(pkt.TransportHeader().View()).SetChecksum(0)
+	header.UDP(pkt.TransportHeader().Slice()).SetChecksum(0)
 
 	pkt.Data().CapLength(0)
-	pkt.Data().AppendView(h)
+	pkt.Data().AppendView(bufferv2.NewViewWithData(h))
 	return pkt
 }
 
@@ -1285,11 +1286,11 @@ func TestClientDropsIrrelevantFrames(t *testing.T) {
 			pkt = pkt.Clone()
 
 			// Destination port number.
-			h := header.UDP(pkt.TransportHeader().View())
+			h := header.UDP(pkt.TransportHeader().Slice())
 			h.SetDestinationPort(tc.clientPort)
 
 			// Transport protocol number.
-			ip := header.IPv4(pkt.NetworkHeader().View())
+			ip := header.IPv4(pkt.NetworkHeader().Slice())
 			ip.Encode(&header.IPv4Fields{
 				Protocol:    uint8(tc.transportProto),
 				TotalLength: ip.TotalLength(),
@@ -1937,7 +1938,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 	packets := make(chan Packet, len(types)*iterations)
 	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
 		var packet Packet
-		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
+		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToSlice())
 		packet.Addresses.Source = ipv4Packet.SourceAddress()
 		packet.Addresses.Destination = ipv4Packet.DestinationAddress()
 		udpPacket := header.UDP(ipv4Packet.Payload())
@@ -2103,7 +2104,7 @@ func TestDecline(t *testing.T) {
 		ipv4Packet := func() header.IPv4 {
 			pkt := <-ch
 			defer pkt.DecRef()
-			return header.IPv4(pkt.Data().AsRange().ToOwnedView())
+			return header.IPv4(pkt.Data().AsRange().ToSlice())
 		}()
 		isValid := ipv4Packet.IsValid(len(ipv4Packet))
 		if !isValid {
@@ -2258,7 +2259,7 @@ func TestClientRestartLeaseTime(t *testing.T) {
 
 		initialAcquisitionTimeout := true
 		clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
-			ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
+			ipv4Packet := header.IPv4(pkt.Data().AsRange().ToSlice())
 			udpPacket := header.UDP(ipv4Packet.Payload())
 			dhcpPacket := hdr(udpPacket.Payload())
 			opts, err := dhcpPacket.options()

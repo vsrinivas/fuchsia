@@ -1,4 +1,4 @@
-package buffer
+package bufferv2
 
 // ElementMapper provides an identity mapping by default.
 //
@@ -6,14 +6,14 @@ package buffer
 // objects, if they are not the same. An ElementMapper is not typically
 // required if: Linker is left as is, Element is left as is, or Linker and
 // Element are the same type.
-type bufferElementMapper struct{}
+type viewElementMapper struct{}
 
 // linkerFor maps an Element to a Linker.
 //
 // This default implementation should be inlined.
 //
 //go:nosplit
-func (bufferElementMapper) linkerFor(elem *buffer) *buffer { return elem }
+func (viewElementMapper) linkerFor(elem *View) *View { return elem }
 
 // List is an intrusive list. Entries can be added to or removed from the list
 // in O(1) time and with no additional memory allocations.
@@ -27,13 +27,13 @@ func (bufferElementMapper) linkerFor(elem *buffer) *buffer { return elem }
 //	}
 //
 // +stateify savable
-type bufferList struct {
-	head *buffer
-	tail *buffer
+type viewList struct {
+	head *View
+	tail *View
 }
 
 // Reset resets list l to the empty state.
-func (l *bufferList) Reset() {
+func (l *viewList) Reset() {
 	l.head = nil
 	l.tail = nil
 }
@@ -41,21 +41,21 @@ func (l *bufferList) Reset() {
 // Empty returns true iff the list is empty.
 //
 //go:nosplit
-func (l *bufferList) Empty() bool {
+func (l *viewList) Empty() bool {
 	return l.head == nil
 }
 
 // Front returns the first element of list l or nil.
 //
 //go:nosplit
-func (l *bufferList) Front() *buffer {
+func (l *viewList) Front() *View {
 	return l.head
 }
 
 // Back returns the last element of list l or nil.
 //
 //go:nosplit
-func (l *bufferList) Back() *buffer {
+func (l *viewList) Back() *View {
 	return l.tail
 }
 
@@ -64,8 +64,8 @@ func (l *bufferList) Back() *buffer {
 // NOTE: This is an O(n) operation.
 //
 //go:nosplit
-func (l *bufferList) Len() (count int) {
-	for e := l.Front(); e != nil; e = (bufferElementMapper{}.linkerFor(e)).Next() {
+func (l *viewList) Len() (count int) {
+	for e := l.Front(); e != nil; e = (viewElementMapper{}.linkerFor(e)).Next() {
 		count++
 	}
 	return count
@@ -74,12 +74,12 @@ func (l *bufferList) Len() (count int) {
 // PushFront inserts the element e at the front of list l.
 //
 //go:nosplit
-func (l *bufferList) PushFront(e *buffer) {
-	linker := bufferElementMapper{}.linkerFor(e)
+func (l *viewList) PushFront(e *View) {
+	linker := viewElementMapper{}.linkerFor(e)
 	linker.SetNext(l.head)
 	linker.SetPrev(nil)
 	if l.head != nil {
-		bufferElementMapper{}.linkerFor(l.head).SetPrev(e)
+		viewElementMapper{}.linkerFor(l.head).SetPrev(e)
 	} else {
 		l.tail = e
 	}
@@ -90,13 +90,13 @@ func (l *bufferList) PushFront(e *buffer) {
 // PushFrontList inserts list m at the start of list l, emptying m.
 //
 //go:nosplit
-func (l *bufferList) PushFrontList(m *bufferList) {
+func (l *viewList) PushFrontList(m *viewList) {
 	if l.head == nil {
 		l.head = m.head
 		l.tail = m.tail
 	} else if m.head != nil {
-		bufferElementMapper{}.linkerFor(l.head).SetPrev(m.tail)
-		bufferElementMapper{}.linkerFor(m.tail).SetNext(l.head)
+		viewElementMapper{}.linkerFor(l.head).SetPrev(m.tail)
+		viewElementMapper{}.linkerFor(m.tail).SetNext(l.head)
 
 		l.head = m.head
 	}
@@ -107,12 +107,12 @@ func (l *bufferList) PushFrontList(m *bufferList) {
 // PushBack inserts the element e at the back of list l.
 //
 //go:nosplit
-func (l *bufferList) PushBack(e *buffer) {
-	linker := bufferElementMapper{}.linkerFor(e)
+func (l *viewList) PushBack(e *View) {
+	linker := viewElementMapper{}.linkerFor(e)
 	linker.SetNext(nil)
 	linker.SetPrev(l.tail)
 	if l.tail != nil {
-		bufferElementMapper{}.linkerFor(l.tail).SetNext(e)
+		viewElementMapper{}.linkerFor(l.tail).SetNext(e)
 	} else {
 		l.head = e
 	}
@@ -123,13 +123,13 @@ func (l *bufferList) PushBack(e *buffer) {
 // PushBackList inserts list m at the end of list l, emptying m.
 //
 //go:nosplit
-func (l *bufferList) PushBackList(m *bufferList) {
+func (l *viewList) PushBackList(m *viewList) {
 	if l.head == nil {
 		l.head = m.head
 		l.tail = m.tail
 	} else if m.head != nil {
-		bufferElementMapper{}.linkerFor(l.tail).SetNext(m.head)
-		bufferElementMapper{}.linkerFor(m.head).SetPrev(l.tail)
+		viewElementMapper{}.linkerFor(l.tail).SetNext(m.head)
+		viewElementMapper{}.linkerFor(m.head).SetPrev(l.tail)
 
 		l.tail = m.tail
 	}
@@ -140,9 +140,9 @@ func (l *bufferList) PushBackList(m *bufferList) {
 // InsertAfter inserts e after b.
 //
 //go:nosplit
-func (l *bufferList) InsertAfter(b, e *buffer) {
-	bLinker := bufferElementMapper{}.linkerFor(b)
-	eLinker := bufferElementMapper{}.linkerFor(e)
+func (l *viewList) InsertAfter(b, e *View) {
+	bLinker := viewElementMapper{}.linkerFor(b)
+	eLinker := viewElementMapper{}.linkerFor(e)
 
 	a := bLinker.Next()
 
@@ -151,7 +151,7 @@ func (l *bufferList) InsertAfter(b, e *buffer) {
 	bLinker.SetNext(e)
 
 	if a != nil {
-		bufferElementMapper{}.linkerFor(a).SetPrev(e)
+		viewElementMapper{}.linkerFor(a).SetPrev(e)
 	} else {
 		l.tail = e
 	}
@@ -160,9 +160,9 @@ func (l *bufferList) InsertAfter(b, e *buffer) {
 // InsertBefore inserts e before a.
 //
 //go:nosplit
-func (l *bufferList) InsertBefore(a, e *buffer) {
-	aLinker := bufferElementMapper{}.linkerFor(a)
-	eLinker := bufferElementMapper{}.linkerFor(e)
+func (l *viewList) InsertBefore(a, e *View) {
+	aLinker := viewElementMapper{}.linkerFor(a)
+	eLinker := viewElementMapper{}.linkerFor(e)
 
 	b := aLinker.Prev()
 	eLinker.SetNext(a)
@@ -170,7 +170,7 @@ func (l *bufferList) InsertBefore(a, e *buffer) {
 	aLinker.SetPrev(e)
 
 	if b != nil {
-		bufferElementMapper{}.linkerFor(b).SetNext(e)
+		viewElementMapper{}.linkerFor(b).SetNext(e)
 	} else {
 		l.head = e
 	}
@@ -179,19 +179,19 @@ func (l *bufferList) InsertBefore(a, e *buffer) {
 // Remove removes e from l.
 //
 //go:nosplit
-func (l *bufferList) Remove(e *buffer) {
-	linker := bufferElementMapper{}.linkerFor(e)
+func (l *viewList) Remove(e *View) {
+	linker := viewElementMapper{}.linkerFor(e)
 	prev := linker.Prev()
 	next := linker.Next()
 
 	if prev != nil {
-		bufferElementMapper{}.linkerFor(prev).SetNext(next)
+		viewElementMapper{}.linkerFor(prev).SetNext(next)
 	} else if l.head == e {
 		l.head = next
 	}
 
 	if next != nil {
-		bufferElementMapper{}.linkerFor(next).SetPrev(prev)
+		viewElementMapper{}.linkerFor(next).SetPrev(prev)
 	} else if l.tail == e {
 		l.tail = prev
 	}
@@ -205,35 +205,35 @@ func (l *bufferList) Remove(e *buffer) {
 // methods needed by List.
 //
 // +stateify savable
-type bufferEntry struct {
-	next *buffer
-	prev *buffer
+type viewEntry struct {
+	next *View
+	prev *View
 }
 
 // Next returns the entry that follows e in the list.
 //
 //go:nosplit
-func (e *bufferEntry) Next() *buffer {
+func (e *viewEntry) Next() *View {
 	return e.next
 }
 
 // Prev returns the entry that precedes e in the list.
 //
 //go:nosplit
-func (e *bufferEntry) Prev() *buffer {
+func (e *viewEntry) Prev() *View {
 	return e.prev
 }
 
 // SetNext assigns 'entry' as the entry that follows e in the list.
 //
 //go:nosplit
-func (e *bufferEntry) SetNext(elem *buffer) {
+func (e *viewEntry) SetNext(elem *View) {
 	e.next = elem
 }
 
 // SetPrev assigns 'entry' as the entry that precedes e in the list.
 //
 //go:nosplit
-func (e *bufferEntry) SetPrev(elem *buffer) {
+func (e *viewEntry) SetPrev(elem *View) {
 	e.prev = elem
 }

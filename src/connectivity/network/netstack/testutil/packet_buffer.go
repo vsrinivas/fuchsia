@@ -22,9 +22,9 @@ type PacketBufferParts struct {
 // tests.
 var PacketBufferCmpTransformer = cmp.Transformer("packetBufferToParts", func(pkt *stack.PacketBuffer) PacketBufferParts {
 	return PacketBufferParts{
-		LinkHeader:      pkt.LinkHeader().View(),
-		NetworkHeader:   pkt.NetworkHeader().View(),
-		TransportHeader: pkt.TransportHeader().View(),
-		Data:            pkt.Data().AsRange().ToOwnedView(),
+		LinkHeader:      pkt.LinkHeader().Slice(),
+		NetworkHeader:   pkt.NetworkHeader().Slice(),
+		TransportHeader: pkt.TransportHeader().Slice(),
+		Data:            pkt.Data().AsRange().ToSlice(),
 	}
 })

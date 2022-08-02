@@ -109,7 +109,8 @@ var _ tcpip.Payloader = (*socketReader)(nil)
 type socketReader struct {
 	socket    zx.Socket
 	lastError error
-	lastRead  int
+	// readBytes keep track of how many bytes were read from the reader.
+	readBytes int
 }
 
 func (r *socketReader) Read(p []byte) (int, error) {
@@ -118,7 +119,7 @@ func (r *socketReader) Read(p []byte) (int, error) {
 		err = &zx.Error{Status: zx.ErrShouldWait}
 	}
 	r.lastError = err
-	r.lastRead = n
+	r.readBytes += n
 	return n, err
 }
 
@@ -134,7 +135,6 @@ func (r *socketReader) Len() int {
 		err = &zx.Error{Status: zx.ErrShouldWait}
 	}
 	r.lastError = err
-	r.lastRead = n
 	return n
 }
 
@@ -1568,7 +1568,9 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 	}
 	for {
 		reader.lastError = nil
-		reader.lastRead = 0
+		// Reset the number of read bytes so we can assert the exact number of bytes
+		// read by ep.Write below.
+		reader.readBytes = 0
 
 		s.terminal.mu.Lock()
 		trace.AsyncBegin("net", "fuchsia_posix_socket.streamSocket.transferTx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
@@ -1581,8 +1583,8 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 		s.terminal.setLocked(err)
 		s.terminal.mu.Unlock()
 
-		if n != int64(reader.lastRead) {
-			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.lastRead))
+		if n != int64(reader.readBytes) {
+			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.readBytes))
 		}
 		// TODO(https://fxbug.dev/35006): Handle all transport write errors.
 		switch err.(type) {

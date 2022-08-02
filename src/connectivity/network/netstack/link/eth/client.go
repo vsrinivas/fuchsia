@@ -25,7 +25,7 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/hardware/network"
 
-	"gvisor.dev/gvisor/pkg/buffer"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -188,7 +188,7 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, tcpip.Error) {
 		entry.SetLength(bufferSize)
 		b := c.iob.BufferFromEntry(*entry)
 		var used int
-		for _, v := range pkt.Slices() {
+		for _, v := range pkt.AsSlices() {
 			used += copy(b[used:], v)
 		}
 		entry.SetLength(uint16(used))
@@ -241,7 +241,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			// Process inbound packet.
 			func() {
 				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-					Payload: buffer.NewWithData(append([]byte(nil), c.iob.BufferFromEntry(*entry)...)),
+					Payload: bufferv2.MakeWithData(append([]byte(nil), c.iob.BufferFromEntry(*entry)...)),
 				})
 				defer pkt.DecRef()
 

@@ -19,7 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"gvisor.dev/gvisor/pkg/buffer"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -572,18 +572,18 @@ const maxBackoff = 64 * time.Second
 // RFC 2131 section 4.1
 // https://tools.ietf.org/html/rfc2131#section-4.1
 //
-//   The delay between retransmissions SHOULD be
-//   chosen to allow sufficient time for replies from the server to be
-//   delivered based on the characteristics of the internetwork between
-//   the client and the server.  For example, in a 10Mb/sec Ethernet
-//   internetwork, the delay before the first retransmission SHOULD be 4
-//   seconds randomized by the value of a uniform random number chosen
-//   from the range -1 to +1.  Clients with clocks that provide resolution
-//   granularity of less than one second may choose a non-integer
-//   randomization value.  The delay before the next retransmission SHOULD
-//   be 8 seconds randomized by the value of a uniform number chosen from
-//   the range -1 to +1.  The retransmission delay SHOULD be doubled with
-//   subsequent retransmissions up to a maximum of 64 seconds.
+//	The delay between retransmissions SHOULD be
+//	chosen to allow sufficient time for replies from the server to be
+//	delivered based on the characteristics of the internetwork between
+//	the client and the server.  For example, in a 10Mb/sec Ethernet
+//	internetwork, the delay before the first retransmission SHOULD be 4
+//	seconds randomized by the value of a uniform random number chosen
+//	from the range -1 to +1.  Clients with clocks that provide resolution
+//	granularity of less than one second may choose a non-integer
+//	randomization value.  The delay before the next retransmission SHOULD
+//	be 8 seconds randomized by the value of a uniform number chosen from
+//	the range -1 to +1.  The retransmission delay SHOULD be doubled with
+//	subsequent retransmissions up to a maximum of 64 seconds.
 func (c *Client) exponentialBackoff(iteration uint) time.Duration {
 	jitter := time.Duration(c.rand.Int63n(int64(2*time.Second+1))) - time.Second // [-1s, +1s]
 	backoff := maxBackoff
@@ -972,7 +972,7 @@ func (c *Client) send(
 		writeTo.NIC,
 		linkAddress,
 		header.IPv4ProtocolNumber,
-		buffer.NewWithData(bytes),
+		bufferv2.MakeWithData(bytes),
 	); err != nil {
 		return fmt.Errorf("failed to write packet: %s", err)
 	}

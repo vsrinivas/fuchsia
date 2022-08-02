@@ -15,7 +15,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
-	"gvisor.dev/gvisor/pkg/buffer"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
@@ -222,7 +222,7 @@ func expectPacket(t *testing.T, name string, pkt *stack.PacketBuffer, wantSrc, w
 		t.Errorf("%s: no packet received", name)
 		return
 	}
-	eth := header.Ethernet(pkt.LinkHeader().View())
+	eth := header.Ethernet(pkt.LinkHeader().Slice())
 	if got := eth.SourceAddress(); got != wantSrc {
 		t.Errorf("%s: got src = %s, want = %s", name, got, wantSrc)
 	}
@@ -232,7 +232,7 @@ func expectPacket(t *testing.T, name string, pkt *stack.PacketBuffer, wantSrc, w
 	if got := eth.Type(); got != wantProto {
 		t.Errorf("%s: got ethertype = %d, want = %d", name, got, wantProto)
 	}
-	if got := pkt.Data().AsRange().ToOwnedView(); !bytes.Equal(got, wantData) {
+	if got := pkt.Data().AsRange().ToSlice(); !bytes.Equal(got, wantData) {
 		t.Errorf("%s: got data = %x, want = %x", name, got, wantData)
 	}
 }
@@ -315,7 +315,7 @@ func TestBridgeWritePackets(t *testing.T) {
 			for j := 0; j < i; j++ {
 				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 					ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
-					Payload:            buffer.NewWithData(data[j]),
+					Payload:            bufferv2.MakeWithData(data[j]),
 				})
 				pkt.EgressRoute.LocalLinkAddress = baddr
 				pkt.EgressRoute.RemoteLinkAddress = dstAddr
@@ -429,7 +429,7 @@ func TestDeliverNetworkPacketToBridge(t *testing.T) {
 					srcAddr := linkAddr3
 					pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 						ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
-						Payload:            buffer.NewWithData(data),
+						Payload:            bufferv2.MakeWithData(data),
 					})
 					eth := header.Ethernet(pkt.LinkHeader().Push(header.EthernetMinimumSize))
 					fields := header.EthernetFields{
@@ -573,11 +573,15 @@ func TestBridge(t *testing.T) {
 			}
 
 			ep2.onWritePacket = func(pkt *stack.PacketBuffer) {
-				for i, view := range pkt.Data().Slices() {
-					if bytes.Contains(view, []byte(payload)) {
+				i := 0
+				buf := pkt.Data().ToBuffer()
+				buf.Apply(func(view *bufferv2.View) {
+					if view := view.AsSlice(); bytes.Contains(view, []byte(payload)) {
 						t.Errorf("did not expect payload %x to be sent back to ep1 in view %d: %x", payload, i, view)
 					}
-				}
+
+					i++
+				})
 			}
 
 			for addr, toStack := range addrs {

@@ -87,7 +87,7 @@ func (*TCPSourcePortMatcher) Name() string {
 
 // Match implements stack.Matcher.
 func (m *TCPSourcePortMatcher) Match(_ stack.Hook, pkt *stack.PacketBuffer, _, _ string) (matches bool, hotdrop bool) {
-	tcp := header.TCP(pkt.TransportHeader().View())
+	tcp := header.TCP(pkt.TransportHeader().Slice())
 	if len(tcp) < header.TCPMinimumSize {
 		// Drop immediately as the packet is invalid.
 		return false, true
@@ -114,7 +114,7 @@ func (*TCPDestinationPortMatcher) Name() string {
 
 // Match implements stack.Matcher.
 func (m *TCPDestinationPortMatcher) Match(_ stack.Hook, pkt *stack.PacketBuffer, _, _ string) (matches bool, hotdrop bool) {
-	tcp := header.TCP(pkt.TransportHeader().View())
+	tcp := header.TCP(pkt.TransportHeader().Slice())
 	if len(tcp) < header.TCPMinimumSize {
 		// Drop immediately as the packet is invalid.
 		return false, true
@@ -141,7 +141,7 @@ func (*UDPSourcePortMatcher) Name() string {
 
 // Match implements stack.Matcher.
 func (m *UDPSourcePortMatcher) Match(_ stack.Hook, pkt *stack.PacketBuffer, _, _ string) (matches bool, hotdrop bool) {
-	udp := header.UDP(pkt.TransportHeader().View())
+	udp := header.UDP(pkt.TransportHeader().Slice())
 	if len(udp) < header.UDPMinimumSize {
 		// Drop immediately as the packet is invalid.
 		return false, true
@@ -168,7 +168,7 @@ func (*UDPDestinationPortMatcher) Name() string {
 
 // Match implements stack.Matcher.
 func (m *UDPDestinationPortMatcher) Match(_ stack.Hook, pkt *stack.PacketBuffer, _, _ string) (matches bool, hotdrop bool) {
-	udp := header.UDP(pkt.TransportHeader().View())
+	udp := header.UDP(pkt.TransportHeader().Slice())
 	if len(udp) < header.UDPMinimumSize {
 		// Drop immediately as the packet is invalid.
 		return false, true

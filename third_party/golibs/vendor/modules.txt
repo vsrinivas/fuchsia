@@ -356,10 +356,11 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20220714043431-1868ba74ac26
+# gvisor.dev/gvisor v0.0.0-20220722165144-d2c2e1b8bd5d
 ## explicit
 gvisor.dev/gvisor/pkg/atomicbitops
-gvisor.dev/gvisor/pkg/buffer
+gvisor.dev/gvisor/pkg/bits
+gvisor.dev/gvisor/pkg/bufferv2
 gvisor.dev/gvisor/pkg/context
 gvisor.dev/gvisor/pkg/cpuid
 gvisor.dev/gvisor/pkg/gohacks

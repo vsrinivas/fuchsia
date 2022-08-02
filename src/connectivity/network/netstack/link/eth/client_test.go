@@ -30,7 +30,7 @@ import (
 	"fidl/fuchsia/hardware/network"
 
 	"github.com/google/go-cmp/cmp"
-	"gvisor.dev/gvisor/pkg/buffer"
+	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
@@ -377,7 +377,7 @@ func TestClient(t *testing.T) {
 
 						pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 							ReserveHeaderBytes: int(client.MaxHeaderLength()) + len(packetHeader) + 5,
-							Payload:            buffer.NewWithData([]byte(body)),
+							Payload:            bufferv2.MakeWithData([]byte(body)),
 						})
 						pkts.PushBack(pkt)
 
@@ -459,7 +459,7 @@ func TestClient(t *testing.T) {
 							defer args.Pkt.DecRef()
 
 							pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-								Payload: buffer.NewWithData([]byte(payload)),
+								Payload: bufferv2.MakeWithData([]byte(payload)),
 							})
 							defer pkt.DecRef()
 

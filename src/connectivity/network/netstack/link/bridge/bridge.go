@@ -207,7 +207,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, proto
 	dispatcher := ep.mu.dispatcher
 	ep.mu.RUnlock()
 
-	dstLinkAddr := header.Ethernet(pkt.LinkHeader().View()).DestinationAddress()
+	dstLinkAddr := header.Ethernet(pkt.LinkHeader().Slice()).DestinationAddress()
 	if dstLinkAddr == ep.linkAddress {
 		if dispatcher != nil {
 			dispatcher.DeliverNetworkPacket(protocol, pkt)
