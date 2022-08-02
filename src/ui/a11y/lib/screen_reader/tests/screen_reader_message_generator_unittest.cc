@@ -17,6 +17,7 @@
 namespace accessibility_test {
 namespace {
 
+using fuchsia::accessibility::semantics::Action;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 using fuchsia::accessibility::semantics::States;
@@ -909,6 +910,21 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeUnselectedUnknown) {
   ASSERT_EQ(result.size(), 1u);
   ASSERT_TRUE(result[0].utterance.has_message());
   ASSERT_EQ(result[0].utterance.message(), "foo");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeClickableUnknown) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::UNKNOWN);
+  node.set_actions({Action::DEFAULT});
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::DOUBLE_TAP_HINT),
+                                               "double tap to activate");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "double tap to activate");
 }
 
 }  // namespace

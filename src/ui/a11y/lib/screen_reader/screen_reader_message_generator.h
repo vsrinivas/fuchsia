@@ -167,6 +167,12 @@ class ScreenReaderMessageGenerator {
       const fuchsia::accessibility::semantics::Node* node,
       std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description);
 
+  // Add the "double-tap to activate" hint to |description| if |node| has a
+  // DEFAULT action.
+  void MaybeAddDoubleTapHint(
+      const fuchsia::accessibility::semantics::Node* node,
+      std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description);
+
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
 
   std::unordered_map<std::string, fuchsia::intl::l10n::MessageIds> character_to_message_id_;

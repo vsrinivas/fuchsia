@@ -233,9 +233,8 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
       }
     }
   }
-  if (NodeIsClickable(node)) {
-    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, kLongDelay));
-  }
+
+  MaybeAddDoubleTapHint(node, &description);
 
   return description;
 }
@@ -280,6 +279,18 @@ void ScreenReaderMessageGenerator::MaybeAddGenericSelectedDescriptor(
   }
 }
 
+void ScreenReaderMessageGenerator::MaybeAddDoubleTapHint(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description) {
+  FX_DCHECK(node);
+  FX_DCHECK(description);
+
+  if (NodeIsClickable(node)) {
+    description->emplace_back(
+        GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, kLongDelay));
+  }
+}
+
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeUnknown(const fuchsia::accessibility::semantics::Node* node) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::UNKNOWN);
@@ -288,6 +299,7 @@ ScreenReaderMessageGenerator::DescribeUnknown(const fuchsia::accessibility::sema
 
   MaybeAddGenericSelectedDescriptor(node, &description);
   MaybeAddLabelDescriptor(node, &description);
+  MaybeAddDoubleTapHint(node, &description);
 
   return description;
 }
@@ -315,12 +327,7 @@ ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::seman
     description.emplace_back(GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0))));
   }
 
-  // Announce if the node is clickable.
-  // TODO(fxbug.dev/81707): Maybe move out of this function once we create
-  // separate describe methods for each node type.
-  if (NodeIsClickable(node)) {
-    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, kLongDelay));
-  }
+  MaybeAddDoubleTapHint(node, &description);
 
   return description;
 }
