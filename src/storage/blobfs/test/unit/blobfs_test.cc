@@ -339,12 +339,12 @@ std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t 
 // This test has an understanding about block allocation policy.
 
 void FragmentationStatsEqual(const FragmentationStats& lhs, const FragmentationStats& rhs) {
-  ASSERT_EQ(lhs.total_nodes, rhs.total_nodes);
-  ASSERT_EQ(lhs.files_in_use, rhs.files_in_use);
-  ASSERT_EQ(lhs.extent_containers_in_use, rhs.extent_containers_in_use);
-  ASSERT_EQ(lhs.extents_per_file, rhs.extents_per_file);
-  ASSERT_EQ(lhs.free_fragments, rhs.free_fragments);
-  ASSERT_EQ(lhs.in_use_fragments, rhs.in_use_fragments);
+  EXPECT_EQ(lhs.total_nodes, rhs.total_nodes);
+  EXPECT_EQ(lhs.files_in_use, rhs.files_in_use);
+  EXPECT_EQ(lhs.extent_containers_in_use, rhs.extent_containers_in_use);
+  EXPECT_EQ(lhs.extents_per_file, rhs.extents_per_file);
+  EXPECT_EQ(lhs.free_fragments, rhs.free_fragments);
+  EXPECT_EQ(lhs.in_use_fragments, rhs.in_use_fragments);
 }
 
 TEST(BlobfsFragmentationTest, FragmentationMetrics) {
