@@ -10,8 +10,8 @@ declare_args() {
   # Builds the component in a non-product JIT build. This will
   # launch the vm service in the runner.
   flutter_debug_build_cfg = {
-    runtime_meta = "//build/flutter/meta/jit_runtime.cmx"
-    runtime_meta_v2 = "//build/flutter/meta/jit_runtime.cml"
+    runtime_meta_v1 = "//build/flutter/meta/jit_runtime.cmx"
+    runtime_meta = "//build/flutter/meta/jit_runtime.cml"
     runner_dep = "//src/flutter:flutter_jit_runner"
     platform_name = "flutter_runner"
     is_aot = false
@@ -25,8 +25,8 @@ declare_args() {
   # This configuration is not compatible with a --release build since the
   # profile aot runner is built without asserts.
   flutter_aot_debug_build_cfg = {
-    runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
-    runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+    runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
+    runtime_meta = "//build/flutter/meta/aot_runtime.cml"
     runner_dep = "//src/flutter:flutter_aot_runner"
     platform_name = "flutter_runner"
     is_aot = true
@@ -38,8 +38,8 @@ declare_args() {
   # Builds the component in a non-product AOT build. This will
   # launch the vm service in the runner.
   flutter_profile_build_cfg = {
-    runtime_meta = "//build/flutter/meta/aot_runtime.cmx"  # profile runner
-    runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"  # profile runner
+    runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"  # profile runner
+    runtime_meta = "//build/flutter/meta/aot_runtime.cml"  # profile runner
     runner_dep = "//src/flutter:flutter_aot_runner"
     platform_name = "flutter_runner"
     is_aot = true
@@ -51,8 +51,8 @@ declare_args() {
   # Builds the component in a product AOT build. This will
   # not launch the vm service in the runner.
   flutter_release_build_cfg = {
-    runtime_meta = "//build/flutter/meta/aot_product_runtime.cmx"
-    runtime_meta_v2 = "//build/flutter/meta/aot_product_runtime.cml"
+    runtime_meta_v1 = "//build/flutter/meta/aot_product_runtime.cmx"
+    runtime_meta = "//build/flutter/meta/aot_product_runtime.cml"
     runner_dep = "//src/flutter:flutter_aot_product_runner"
     platform_name = "flutter_runner"
     is_aot = true

@@ -415,7 +415,7 @@ state without needing to dig through logs.
    * {Dart}
 
      In [BUILD.gn][dart-part1-build] in `deps` under `dart_library("lib")` and
-     `dart_app("bin")`:
+     `dart_component("bin")`:
 
      ```
      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/dart/part_2/BUILD.gn" region_tag="part_1_solution_build_dep" adjust_indentation="auto" %}

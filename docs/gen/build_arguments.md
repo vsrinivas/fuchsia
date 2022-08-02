@@ -1158,8 +1158,7 @@ profile aot runner is built without asserts.
   is_product = false
   platform_name = "dart_runner"
   runner_dep = "//src/dart:dart_aot_runner"
-  runtime_meta = "//build/dart/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/dart/meta/aot_runtime.cml"
+  runtime_meta = "//build/dart/meta/aot_runtime.cml"
 }
 ```
 
@@ -1178,8 +1177,7 @@ launch the vm service in the runner.
   is_product = false
   platform_name = "dart_runner"
   runner_dep = "//src/dart:dart_jit_runner"
-  runtime_meta = "//build/dart/meta/jit_runtime.cmx"
-  runtime_meta_v2 = "//build/dart/meta/jit_runtime.cml"
+  runtime_meta = "//build/dart/meta/jit_runtime.cml"
 }
 ```
 
@@ -1197,8 +1195,7 @@ Non-product AOT
   is_product = false
   platform_name = "dart_runner"
   runner_dep = "//src/dart:dart_aot_runner"
-  runtime_meta = "//build/dart/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/dart/meta/aot_runtime.cml"
+  runtime_meta = "//build/dart/meta/aot_runtime.cml"
 }
 ```
 
@@ -1232,8 +1229,7 @@ launch the vm service in the runner.
   is_product = false
   platform_name = "dart_runner"
   runner_dep = "//src/dart:dart_aot_runner"
-  runtime_meta = "//build/dart/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/dart/meta/aot_runtime.cml"
+  runtime_meta = "//build/dart/meta/aot_runtime.cml"
 }
 ```
 
@@ -1252,8 +1248,7 @@ not launch the vm service in the runner.
   is_product = true
   platform_name = "dart_runner"
   runner_dep = "//src/dart:dart_aot_product_runner"
-  runtime_meta = "//build/dart/meta/aot_product_runtime.cmx"
-  runtime_meta_v2 = "//build/dart/meta/aot_product_runtime.cml"
+  runtime_meta = "//build/dart/meta/aot_product_runtime.cml"
 }
 ```
 
@@ -1395,8 +1390,7 @@ From //build/config/compiler.gni:66
   is_product = false
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
-  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cml"
 }
 ```
 
@@ -1700,8 +1694,7 @@ profile aot runner is built without asserts.
   is_product = false
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
-  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cml"
 }
 ```
 
@@ -1720,8 +1713,7 @@ launch the vm service in the runner.
   is_product = false
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_jit_runner"
-  runtime_meta = "//build/flutter/meta/jit_runtime.cmx"
-  runtime_meta_v2 = "//build/flutter/meta/jit_runtime.cml"
+  runtime_meta = "//build/flutter/meta/jit_runtime.cml"
 }
 ```
 
@@ -1739,8 +1731,7 @@ Non-product AOT
   is_product = false
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
-  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cml"
 }
 ```
 
@@ -1784,8 +1775,7 @@ launch the vm service in the runner.
   is_product = false
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
-  runtime_meta = "//build/flutter/meta/aot_runtime.cmx"
-  runtime_meta_v2 = "//build/flutter/meta/aot_runtime.cml"
+  runtime_meta = "//build/flutter/meta/aot_runtime.cml"
 }
 ```
 
@@ -1804,8 +1794,7 @@ not launch the vm service in the runner.
   is_product = true
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_product_runner"
-  runtime_meta = "//build/flutter/meta/aot_product_runtime.cmx"
-  runtime_meta_v2 = "//build/flutter/meta/aot_product_runtime.cml"
+  runtime_meta = "//build/flutter/meta/aot_product_runtime.cml"
 }
 ```
 

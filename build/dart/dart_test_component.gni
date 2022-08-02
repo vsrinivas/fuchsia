@@ -22,7 +22,7 @@ import("//build/flutter/internal/flutter_dart_test_component.gni")
 # }
 #
 # dart_test_component("my-test-component") {
-#   manifest = "meta/my-test-component.cmx"
+#   manifest = "meta/my-test-component.cml"
 #   sources = [
 #     "foo_test.dart",
 #     "bar_test.dart",

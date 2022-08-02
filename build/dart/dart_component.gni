@@ -29,7 +29,7 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 # }
 #
 # dart_component("my-component") {
-#   manifest = "meta/my-component.cmx"
+#   manifest = "meta/my-component.cml"
 #   main_package = "my_library"
 #   deps = [
 #     ":lib",
