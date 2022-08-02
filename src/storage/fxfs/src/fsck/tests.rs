@@ -14,14 +14,14 @@ use {
             simple_persistent_layer::SimplePersistentLayerWriter,
             types::{Item, ItemRef, Key, LayerIterator, LayerWriter, Value},
         },
-        object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
+        object_handle::{ObjectHandle, ObjectHandleExt, Writer, INVALID_OBJECT_ID},
         object_store::{
             allocator::{AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator},
             directory::Directory,
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
             AttributeKey, ExtentValue, HandleOptions, Mutation, ObjectAttributes, ObjectDescriptor,
-            ObjectKey, ObjectKind, ObjectStore, ObjectValue, Timestamp,
+            ObjectKey, ObjectKind, ObjectStore, ObjectValue, StoreInfo, Timestamp,
         },
         round::round_down,
         serialized_types::VersionedLatest,
@@ -138,13 +138,10 @@ async fn install_items_in_store<K: Key, V: Value>(
         writer.flush().await.expect("flush failed");
     }
 
-    let mut store_info = store.store_info();
-    store_info.layers.push(layer_handle.object_id());
-    let mut store_info_vec = vec![];
-    store_info.serialize_with_version(&mut store_info_vec).expect("serialize failed");
-    let mut buf = device.allocate_buffer(store_info_vec.len());
-    buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
-
+    // store.store_info() holds the current state of the store including unflushed mods.
+    // The on-disk version should represent the state of the store at the time the layer files
+    // were written (i.e. excluding any entries pending in the journal) so we read it and modify
+    // it's layer files.
     let store_info_handle = ObjectStore::open_object(
         &root_store,
         store.store_info_handle_object_id().unwrap(),
@@ -153,6 +150,21 @@ async fn install_items_in_store<K: Key, V: Value>(
     )
     .await
     .expect("open store info handle failed");
+
+    let mut store_info = if store_info_handle.get_size() == 0 {
+        StoreInfo::default()
+    } else {
+        let mut cursor = std::io::Cursor::new(
+            store_info_handle.contents(1000).await.expect("error reading content"),
+        );
+        StoreInfo::deserialize_with_version(&mut cursor).expect("deserialize_error").0
+    };
+    store_info.layers.push(layer_handle.object_id());
+    let mut store_info_vec = vec![];
+    store_info.serialize_with_version(&mut store_info_vec).expect("serialize failed");
+    let mut buf = device.allocate_buffer(store_info_vec.len());
+    buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
+
     let mut transaction =
         store_info_handle.new_transaction().await.expect("new_transaction failed");
     store_info_handle.txn_write(&mut transaction, 0, buf.as_ref()).await.expect("txn_write failed");
