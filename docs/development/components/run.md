@@ -3,10 +3,9 @@
 This document demonstrates how to add components directly to the component
 instance tree during development and interact with them at runtime.
 
-Fuchsia provides a few abstractions on top of [component
-framework][glossary.component-framework] for specific use cases. If you are
-building components using one of the following frameworks, refer to the
-corresponding guides instead:
+Fuchsia provides a few abstractions on top of [component framework][glossary.component-framework]
+for specific use cases. If you are building components using one of the
+following frameworks, refer to the corresponding guides instead:
 
 *   **Session components:** [Building and running a session][run-session]
 *   **Test components:** [Run Fuchsia tests][run-test]
@@ -398,6 +397,7 @@ Starting component instance...
 [fidl-logger]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogSink
 [ffx-reference]: https://fuchsia.dev/reference/tools/sdk/ffx.md#component
 [glossary.capability]: /docs/glossary/README.md#capability
+[glossary.component-framework]: /docs/glossary/README.md#component-framework
 [glossary.component-instance]: /docs/glossary/README.md#component-instance
 [glossary.component-instance-tree]: /docs/glossary/README.md#component-instance-tree
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
