@@ -37,9 +37,6 @@ toc:
 - title: "Drivers"
   section:
   - include: /docs/development/drivers/_toc.yaml
-- title: "Editors"
-  section:
-  - include: /docs/development/editors/_toc.yaml
 - title: "ffx"
   section:
   - include: /docs/development/tools/ffx/_toc.yaml

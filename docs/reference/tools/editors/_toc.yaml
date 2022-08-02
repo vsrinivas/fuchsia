@@ -18,3 +18,7 @@ toc:
     path: /docs/reference/tools/editors/vscode/remote-workspaces.md
   - title: "Configuring file reloading"
     path: /docs/reference/tools/editors/vscode/file-reloading.md
+  - title: "YouCompleteMe integration"
+    path: /docs/reference/tools/editors/youcompleteme.md
+  - title: "Vim tools for Fuchsia development"
+    path: /docs/reference/tools/editors/vim.md
