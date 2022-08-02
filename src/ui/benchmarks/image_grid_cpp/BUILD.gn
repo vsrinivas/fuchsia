@@ -27,6 +27,6 @@ executable("bin") {
 }
 
 fuchsia_package_with_single_component("image_grid_cpp") {
-  manifest = "meta/image_grid_cpp.cmx"
+  manifest = "meta/image_grid_cpp.cml"
   deps = [ ":bin" ]
 }
