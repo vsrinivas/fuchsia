@@ -65,13 +65,12 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
   // we prefer when populating the LRs.
   for (uint64_t elrsr = ich_state->elrsr; elrsr != 0;) {
     uint32_t vector = 0;
-    hypervisor::InterruptType type = gich_state->Pop(&vector);
-    if (type == hypervisor::InterruptType::INACTIVE) {
+    bool pending = gich_state->Pop(&vector);
+    if (!pending) {
       // There are no more pending interrupts.
       break;
     }
     uint32_t lr_index = __builtin_ctzl(elrsr);
-    bool hw = type == hypervisor::InterruptType::PHYSICAL;
     // From ARM GIC v3/v4, Section 4.8: If the GIC implements fewer than 256
     // priority levels, the low-order bits of the priority fields are
     // RAZ/WI.
@@ -99,7 +98,7 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
       }
     }
 
-    ich_state->lr[lr_index] = gic_get_lr_from_vector(hw, prio, state, vector);
+    ich_state->lr[lr_index] = gic_get_lr_from_vector(false, prio, state, vector);
     elrsr &= ~(1u << lr_index);
   }
 }
@@ -333,8 +332,8 @@ void Vcpu::Kick() {
   }
 }
 
-void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-  gich_state_.Interrupt(vector, type);
+void Vcpu::Interrupt(uint32_t vector) {
+  gich_state_.Interrupt(vector);
   // Check if the VCPU is running and whether to send an IPI. We hold the thread
   // lock to guard against thread migration between CPUs during the check.
   //
