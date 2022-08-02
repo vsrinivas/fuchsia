@@ -16,6 +16,8 @@ ffx_plugin("ffx_package_download") {
     "//third_party/rust_crates:url",
   ]
   test_deps = [
+    "//src/developer/ffx/lib/pkg:empty-repo-keys",
+    "//src/developer/ffx/lib/pkg:empty-repo-metadata",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:camino",
