@@ -8,6 +8,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
@@ -41,10 +42,22 @@ constexpr uint32_t kTestDeviceBlockSize = 512;
 constexpr uint32_t kTestDeviceNumBlocks = 400 * kBlobfsBlockSize / kTestDeviceBlockSize;
 namespace fio = fuchsia_io;
 
+struct BlobWriteOptions {
+  CompressionAlgorithm compression_algorithm;
+  bool use_streaming_writes = false;
+};
+
+constexpr BlobWriteOptions kAllValidWriteOptions[] = {
+    {.compression_algorithm = CompressionAlgorithm::kUncompressed},
+    {.compression_algorithm = CompressionAlgorithm::kChunked},
+    // Streaming writes are only supported when compression is disabled.
+    {.compression_algorithm = CompressionAlgorithm::kUncompressed, .use_streaming_writes = true},
+};
+
 }  // namespace
 
 class BlobTest : public BlobfsTestSetup,
-                 public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
+                 public testing::TestWithParam<std::tuple<BlobLayoutFormat, BlobWriteOptions>> {
  public:
   // Tests that need to test migration from a specific revision can override this method to
   // specify an older minor revision. See also blobfs_revision_test.cc for general migration tests.
@@ -67,9 +80,13 @@ class BlobTest : public BlobfsTestSetup,
     };
     ASSERT_EQ(FormatFilesystem(device.get(), filesystem_options), ZX_OK);
 
-    MountOptions mount_options{.compression_settings = {
-                                   .compression_algorithm = std::get<1>(GetParam()),
-                               }};
+    MountOptions mount_options{
+        .compression_settings =
+            {
+                .compression_algorithm = std::get<1>(GetParam()).compression_algorithm,
+            },
+        .enable_streaming_writes = std::get<1>(GetParam()).use_streaming_writes,
+    };
     ASSERT_EQ(ZX_OK, Mount(std::move(device), mount_options));
   }
 
@@ -652,17 +669,64 @@ TEST_P(BlobTest, WrittenBlobsArePagedOutWhenClosed) {
   EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), inactive_name) << "VMO wasn't inactive";
 }
 
+// Verify that Blobfs handles writing blobs in chunks by repeatedly appending data.
+TEST_P(BlobTest, WriteBlobChunked) {
+  // To exercise more code paths, we use a non-block aligned blob size.
+  constexpr size_t kUnalignedBlobSize = (1 << 10) - 1;
+  static_assert(kUnalignedBlobSize % kBlobfsBlockSize, "blob size must be non block aligned");
+  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", kUnalignedBlobSize);
+  auto root = OpenRoot();
+
+  // Write the blob in chunks.
+  constexpr size_t kWriteLength = 100;
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
+    ASSERT_EQ(file->Truncate(info->size_data), ZX_OK);
+    size_t bytes_written = 0;
+    while (bytes_written < info->size_data) {
+      const size_t to_write = std::min(kWriteLength, info->size_data - bytes_written);
+      size_t out_end;
+      size_t out_actual;
+      ASSERT_EQ(file->Append(info->data.get() + bytes_written, to_write, &out_end, &out_actual),
+                ZX_OK);
+      bytes_written += out_actual;
+    }
+    ASSERT_EQ(bytes_written, info->size_data);
+    ASSERT_EQ(file->Close(), ZX_OK);
+  }
+
+  fbl::RefPtr<fs::Vnode> file;
+  // Lookup doesn't call Open, so no need to Close later.
+  EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+
+  // Open the blob, get the vmo, and close the blob.
+  TestScopedVnodeOpen open(file);
+
+  // Read back data in chunks.
+  std::array<uint8_t, 4096> read_buff;
+  size_t offset = 0;
+  while (offset < kUnalignedBlobSize) {
+    size_t out_actual;
+    size_t read_len = std::min(read_buff.size(), kUnalignedBlobSize - offset);
+    ASSERT_EQ(file->Read(read_buff.data(), read_len, offset, &out_actual), ZX_OK);
+    offset += out_actual;
+  }
+}
+
 std::string GetTestParamName(
-    const ::testing::TestParamInfo<std::tuple<BlobLayoutFormat, CompressionAlgorithm>>& param) {
-  const auto& [layout, algorithm] = param.param;
-  return GetBlobLayoutFormatNameForTests(layout) + GetCompressionAlgorithmName(algorithm);
+    const ::testing::TestParamInfo<std::tuple<BlobLayoutFormat, BlobWriteOptions>>& param) {
+  const auto& [layout, write_options] = param.param;
+  return GetBlobLayoutFormatNameForTests(layout) +
+         GetCompressionAlgorithmName(write_options.compression_algorithm) +
+         std::string(write_options.use_streaming_writes ? "Streaming" : "");
 }
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, BlobTest,
     testing::Combine(testing::Values(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
                                      BlobLayoutFormat::kCompactMerkleTreeAtEnd),
-                     testing::Values(CompressionAlgorithm::kChunked)),
+                     testing::ValuesIn(kAllValidWriteOptions)),
     GetTestParamName);
 
 }  // namespace

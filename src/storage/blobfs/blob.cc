@@ -52,6 +52,18 @@
 
 namespace blobfs {
 
+namespace {
+
+// When performing streaming writes, to ensure block alignment, we must cache data in memory before
+// it is streamed into the writeback buffer. The lower this value is, the less memory will be used
+// during streaming writes, at the expense of performing more (smaller) unbuffered IO operations.
+constexpr size_t kCacheFlushThreshold = 4;
+static_assert(kCacheFlushThreshold <= Blobfs::WriteBufferBlockCount(),
+              "Number of cached blocks exceeds size of writeback cache.");
+const size_t kSystemPageSize = zx_system_get_page_size();
+
+}  // namespace
+
 // Data used exclusively during writeback.
 struct Blob::WriteInfo {
   // See comment for merkle_tree() below.
@@ -70,6 +82,7 @@ struct Blob::WriteInfo {
     return merkle_tree_buffer.get() + kPreMerkleTreePadding;
   }
 
+  // Amount of data written via the fuchsia.io Write() or Append() methods thus far.
   uint64_t bytes_written = 0;
 
   std::vector<ReservedExtent> extents;
@@ -94,7 +107,21 @@ struct Blob::WriteInfo {
   // The old blob that this write is replacing.
   fbl::RefPtr<Blob> old_blob;
 
-  zx::vmo buffer;
+  fzl::OwnedVmoMapper buffer;
+
+  std::unique_ptr<BlobLayout> blob_layout = nullptr;
+
+  std::unique_ptr<fs::DataStreamer> streamer = nullptr;
+
+  // If true, indicates we are streaming the current blob to disk as written. This implies that
+  // we have disabled dynamic compression (i.e. if true, |compressor| should be std::nullopt).
+  bool streaming_write = false;
+
+  // Amount of data persisted to disk thus far (always <= bytes_written). Will always be 0 if
+  // streaming writes has been disabled.
+  uint64_t bytes_persisted = 0;
+
+  BlockIterator block_iter = BlockIterator{nullptr};
 };
 
 zx_status_t Blob::VerifyNullBlob() const {
@@ -106,7 +133,7 @@ zx_status_t Blob::VerifyNullBlob() const {
   return verifier_or->Verify(nullptr, 0, 0);
 }
 
-uint64_t Blob::SizeData() const {
+uint64_t Blob::FileSize() const {
   std::lock_guard lock(mutex_);
   if (state() == BlobState::kReadable)
     return blob_size_;
@@ -164,36 +191,39 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
   }
   map_index_ = write_info_->node_indices[0].index();
 
-  // For compressed blobs, we only write into the compression buffer.  For uncompressed blobs we
-  // write into the data vmo.
-  if (compress) {
-    write_info_->compressor =
-        BlobCompressor::Create(blobfs_->write_compression_settings(), blob_size_);
-    if (!write_info_->compressor) {
-      // TODO(fxbug.dev/70356)Make BlobCompressor::Create return the actual error instead.
-      // Replace ZX_ERR_INTERNAL with the correct error once fxbug.dev/70356 is fixed.
-      FX_LOGS(ERROR) << "Failed to initialize compressor: " << ZX_ERR_INTERNAL;
-      return ZX_ERR_INTERNAL;
+  if (size_data > 0) {
+    // Initialize write buffers. For compressed blobs, we only write into the compression buffer.
+    // For uncompressed or pre-compressed blobs, we write into the data vmo.
+    if (compress) {
+      write_info_->compressor =
+          BlobCompressor::Create(blobfs_->write_compression_settings(), blob_size_);
+      if (!write_info_->compressor) {
+        // TODO(fxbug.dev/70356)Make BlobCompressor::Create return the actual error instead.
+        // Replace ZX_ERR_INTERNAL with the correct error once fxbug.dev/70356 is fixed.
+        FX_LOGS(ERROR) << "Failed to initialize compressor: " << ZX_ERR_INTERNAL;
+        return ZX_ERR_INTERNAL;
+      }
+    } else {
+      fbl::StringBuffer<ZX_MAX_NAME_LEN> name;
+      FormatWritingBlobDataVmoName(digest(), &name);
+      uint64_t block_aligned_size = fbl::round_up(size_data, kBlobfsBlockSize);
+      zx_status_t status = write_info_->buffer.CreateAndMap(block_aligned_size, name.c_str());
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to create vmo for writing blob " << digest()
+                       << " (vmo size = " << block_aligned_size
+                       << "): " << zx_status_get_string(status);
+        return status;
+      }
     }
-  } else if (blob_size_ != 0) {
-    if ((status = PrepareDataVmoForWriting()) != ZX_OK) {
+
+    status = InitializeMerkleBuffer(size_data);
+    if (status != ZX_OK) {
       return status;
     }
-  }
 
-  write_info_->merkle_tree_creator.SetUseCompactFormat(
-      ShouldUseCompactMerkleTreeFormat(GetBlobLayoutFormat(blobfs_->Info())));
-  if ((status = write_info_->merkle_tree_creator.SetDataLength(blob_size_)) != ZX_OK) {
-    return status;
-  }
-  const size_t tree_len = write_info_->merkle_tree_creator.GetTreeLength();
-  // Allow for zero padding before and after.
-  write_info_->merkle_tree_buffer =
-      std::make_unique<uint8_t[]>(tree_len + WriteInfo::kPreMerkleTreePadding);
-  if ((status = write_info_->merkle_tree_creator.SetTree(write_info_->merkle_tree(), tree_len,
-                                                         &write_info_->digest,
-                                                         sizeof(write_info_->digest))) != ZX_OK) {
-    return status;
+    write_info_->streamer =
+        std::make_unique<fs::DataStreamer>(blobfs_->GetJournal(), Blobfs::WriteBufferBlockCount());
+    write_info_->streaming_write = blobfs_->use_streaming_writes() && !compress;
   }
 
   set_state(BlobState::kDataWrite);
@@ -207,9 +237,11 @@ void Blob::SetOldBlob(Blob& blob) {
   write_info_->old_blob = fbl::RefPtr(&blob);
 }
 
-zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
-  TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
-  ZX_ASSERT_MSG(block_count != 0, "Block count should not be zero.");
+zx_status_t Blob::SpaceAllocate() {
+  ZX_DEBUG_ASSERT(write_info_->blob_layout != nullptr);
+  ZX_DEBUG_ASSERT(write_info_->blob_layout->TotalBlockCount() != 0);
+  TRACE_DURATION("blobfs", "Blob::SpaceAllocate", "block_count",
+                 write_info_->blob_layout->TotalBlockCount());
 
   fs::Ticker ticker;
 
@@ -217,6 +249,7 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   std::vector<ReservedNode> nodes;
 
   // Reserve space for the blob.
+  const BlockCountType block_count = write_info_->blob_layout->TotalBlockCount();
   const uint64_t reserved_blocks = blobfs_->GetAllocator()->ReservedBlockCount();
   zx_status_t status = blobfs_->GetAllocator()->ReserveBlocks(block_count, &extents);
   if (status == ZX_ERR_NO_SPACE && reserved_blocks > 0) {
@@ -229,6 +262,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
     status = blobfs_->GetAllocator()->ReserveBlocks(block_count, &extents);
   }
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to allocate " << write_info_->blob_layout->TotalBlockCount()
+                   << " blocks for blob: " << zx_status_get_string(status);
     return status;
   }
   if (extents.size() > kMaxBlobExtents) {
@@ -243,6 +278,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   size_t node_count = NodePopulator::NodeCountForExtents(extent_count) - 1;
   status = blobfs_->GetAllocator()->ReserveNodes(node_count, &nodes);
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to reserve " << node_count
+                   << " nodes for blob: " << zx_status_get_string(status);
     return status;
   }
 
@@ -250,6 +287,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   write_info_->node_indices.insert(write_info_->node_indices.end(),
                                    std::make_move_iterator(nodes.begin()),
                                    std::make_move_iterator(nodes.end()));
+  write_info_->block_iter =
+      BlockIterator(std::make_unique<VectorExtentIterator>(write_info_->extents));
   block_count_ = block_count;
   blobfs_->GetMetrics()->UpdateAllocation(blob_size_, ticker.End());
   return ZX_OK;
@@ -328,18 +367,25 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   }
 
   const size_t to_write = std::min(len, blob_size_ - write_info_->bytes_written);
-
   if (write_info_->compressor) {
     if (zx_status_t status = write_info_->compressor->Update(data, to_write); status != ZX_OK) {
       return status;
     }
   } else {
     // In the uncompressed case, the backing vmo should have been set up to write into already.
-    ZX_ASSERT(write_info_->buffer.is_valid());
-    if (zx_status_t status = write_info_->buffer.write(data, write_info_->bytes_written, to_write);
+    ZX_DEBUG_ASSERT(write_info_->buffer.vmo().is_valid());
+    if (zx_status_t status =
+            write_info_->buffer.vmo().write(data, write_info_->bytes_written, to_write);
         status != ZX_OK) {
       FX_LOGS(ERROR) << "VMO write failed: " << zx_status_get_string(status);
       return status;
+    }
+    if (write_info_->streaming_write) {
+      if (zx_status_t status = StreamBufferedData(write_info_->bytes_written + to_write);
+          status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to perform streaming write: " << zx_status_get_string(status);
+        return status;
+      }
     }
   }
 
@@ -382,60 +428,51 @@ zx_status_t Blob::Commit() {
       compress = false;
     }
   }
+  const CompressionAlgorithm compression_algorithm =
+      compress ? write_info_->compressor->algorithm() : CompressionAlgorithm::kUncompressed;
+  const uint64_t data_size = compress ? write_info_->compressor->Size() : blob_size_;
 
   fs::Duration generation_time;
 
-  const uint64_t data_size = compress ? write_info_->compressor->Size() : blob_size_;
-  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()), blob_size_,
-                                                 data_size, GetBlockSize());
-  if (blob_layout.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
-    return blob_layout.status_value();
-  }
-
-  const uint32_t total_block_count = blob_layout->TotalBlockCount();
-  if (zx_status_t status = SpaceAllocate(total_block_count); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to allocate " << total_block_count
-                   << " blocks for the blob: " << zx_status_get_string(status);
-    return status;
+  // For non-streaming writes, we lazily allocate space.
+  if (!write_info_->streaming_write) {
+    if (zx_status_t status = InitializeBlobLayout(blob_size_, data_size); status != ZX_OK) {
+      return status;
+    }
+    if (zx_status_t status = SpaceAllocate(); status != ZX_OK) {
+      return status;
+    }
   }
 
   std::variant<std::monostate, DecompressBlobDataProducer, SimpleBlobDataProducer> data;
   BlobDataProducer* data_ptr = nullptr;
-  fzl::VmoMapper data_mapping;
-  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::kUncompressed;
 
   if (compress) {
     // The data comes from the compression buffer.
     data_ptr = &data.emplace<SimpleBlobDataProducer>(
         cpp20::span(static_cast<const uint8_t*>(write_info_->compressor->Data()),
                     write_info_->compressor->Size()));
-    compression_algorithm = write_info_->compressor->algorithm();
   } else if (write_info_->compressor) {
     // In this case, we've decided against compressing because there are no savings, so we have to
     // decompress.
-    if (auto producer_or = DecompressBlobDataProducer::Create(*write_info_->compressor, blob_size_);
-        producer_or.is_error()) {
+    zx::status producer_or =
+        DecompressBlobDataProducer::Create(*write_info_->compressor, blob_size_);
+    if (producer_or.is_error()) {
       return producer_or.error_value();
-    } else {
-      data_ptr = &data.emplace<DecompressBlobDataProducer>(std::move(producer_or).value());
     }
+    data_ptr = &data.emplace<DecompressBlobDataProducer>(std::move(producer_or).value());
   } else {
     // The data comes from the data buffer.
-    ZX_ASSERT(write_info_->buffer.is_valid());
-    uint64_t block_aligned_size = fbl::round_up(blob_size_, kBlobfsBlockSize);
-    if (zx_status_t status = data_mapping.Map(write_info_->buffer, 0, block_aligned_size);
-        status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to map blob VMO: " << zx_status_get_string(status);
-      return status;
-    }
-    data_ptr = &data.emplace<SimpleBlobDataProducer>(
-        cpp20::span(static_cast<const uint8_t*>(data_mapping.start()), blob_size_));
+    const uint8_t* buff = static_cast<const uint8_t*>(write_info_->buffer.start());
+    // |data| / |data_ptr| may point to an empty span if we streamed all blob data to disk already
+    // (e.g. if the data was block aligned, or we're using the deprecated blob format).
+    data_ptr = &data.emplace<SimpleBlobDataProducer>(cpp20::span(
+        buff + write_info_->bytes_persisted, blob_size_ - write_info_->bytes_persisted));
   }
 
   SimpleBlobDataProducer merkle(cpp20::span(write_info_->merkle_tree(), merkle_size));
 
-  MergeBlobDataProducer producer = [&]() {
+  MergeBlobDataProducer producer = [&, &blob_layout = write_info_->blob_layout]() {
     switch (blob_layout->Format()) {
       case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
         // Write the merkle data first followed by the data.  The merkle data should be a multiple
@@ -447,26 +484,56 @@ zx_status_t Blob::Commit() {
       case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
         // Write the data followed by the merkle tree.  There might be some padding between the
         // data and the merkle tree.
-        return MergeBlobDataProducer(
-            *data_ptr, merkle, blob_layout->MerkleTreeOffset() - data_ptr->GetRemainingBytes());
+        const size_t padding = blob_layout->MerkleTreeOffset() - data_size;
+        return MergeBlobDataProducer(*data_ptr, merkle, padding);
     }
   }();
 
-  fs::DataStreamer streamer(blobfs_->GetJournal(), blobfs_->WriteBufferBlockCount());
-  if (zx_status_t status = WriteData(total_block_count, producer, streamer); status != ZX_OK) {
+  // Calculate outstanding amount of data to write, and where, in terms of blocks.
+  uint32_t block_count = write_info_->blob_layout->TotalBlockCount();
+  uint32_t block_offset = 0;
+  // If we already streamed some data to disk, update |block_count| and |block_offset| accordingly.
+  if (write_info_->bytes_persisted > 0) {
+    if (write_info_->bytes_persisted < blob_size_) {
+      // Continue writing data from last position (which should be block aligned).
+      ZX_DEBUG_ASSERT((write_info_->bytes_persisted % kBlobfsBlockSize) == 0);
+      block_offset = write_info_->bytes_persisted / kBlobfsBlockSize;
+      block_count = write_info_->blob_layout->TotalBlockCount() - block_offset;
+    } else {
+      // Already streamed blob data to disk, only the Merkle tree remains.
+      block_count = write_info_->blob_layout->MerkleTreeBlockCount();
+      block_offset = write_info_->blob_layout->MerkleTreeBlockOffset();
+    }
+  }
+
+  // Write remaining data to disk, if any.
+  if (block_count > 0) {
+    zx_status_t status = WriteData(block_count, block_offset, producer, *write_info_->streamer);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // No more data to write. Flush data to disk and commit metadata.
+  fs::Ticker ticker;  // Tracking enqueue time.
+
+  if (zx_status_t status = FlushData(compression_algorithm); status != ZX_OK) {
     return status;
   }
 
-  // No more data to write. Flush to disk.
-  fs::Ticker ticker;  // Tracking enqueue time.
+  blobfs_->GetMetrics()->UpdateClientWrite(block_count_ * kBlobfsBlockSize, merkle_size,
+                                           ticker.End(), generation_time);
+  return MarkReadable();
+}
 
+zx_status_t Blob::FlushData(CompressionAlgorithm compression_algorithm) {
   // Enqueue the blob's final data work. Metadata must be enqueued separately.
   zx_status_t data_status = ZX_ERR_IO;
   sync_completion_t data_written;
   // Issue the signal when the callback is destroyed rather than in the callback because the
   // callback won't get called in some error paths.
   auto data_written_finished = fit::defer([&] { sync_completion_signal(&data_written); });
-  auto write_all_data = streamer.Flush().then(
+  auto write_all_data = write_info_->streamer->Flush().then(
       [&data_status, data_written_finished = std::move(data_written_finished)](
           const fpromise::result<void, zx_status_t>& result) {
         data_status = result.is_ok() ? ZX_OK : result.error();
@@ -475,8 +542,7 @@ zx_status_t Blob::Commit() {
 
   // Discard things we don't need any more. This has to be after the Flush call above to ensure
   // all data has been copied from these buffers.
-  data_mapping.Unmap();
-  write_info_->buffer.reset();
+  write_info_->buffer.Reset();
 
   // FreePagedVmo() will return the reference that keeps this object alive on behalf of the paging
   // system so we can free it outside the lock. However, when a Blob is being written it can't be
@@ -520,17 +586,20 @@ zx_status_t Blob::Commit() {
     return data_status;
   }
 
-  blobfs_->GetMetrics()->UpdateClientWrite(block_count_ * kBlobfsBlockSize, merkle_size,
-                                           ticker.End(), generation_time);
-  return MarkReadable();
+  return ZX_OK;
 }
 
-zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
+zx_status_t Blob::WriteData(uint32_t block_count, uint32_t block_offset, BlobDataProducer& producer,
                             fs::DataStreamer& streamer) {
-  BlockIterator block_iter(std::make_unique<VectorExtentIterator>(write_info_->extents));
+  if (zx_status_t status = IterateToBlock(&write_info_->block_iter, block_offset);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to iterate to block offset " << block_offset << ": "
+                   << zx_status_get_string(status);
+    return status;
+  }
   const uint64_t data_start = DataStartBlock(blobfs_->Info());
   return StreamBlocks(
-      &block_iter, block_count,
+      &write_info_->block_iter, block_count,
       [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t block_count) {
         while (block_count) {
           if (producer.NeedsFlush()) {
@@ -757,20 +826,6 @@ zx_status_t Blob::LoadVmosFromDisk() {
   return status;
 }
 
-zx_status_t Blob::PrepareDataVmoForWriting() {
-  if (IsDataLoaded())
-    return ZX_OK;
-
-  uint64_t block_aligned_size = fbl::round_up(blob_size_, kBlobfsBlockSize);
-  if (zx_status_t status = zx::vmo::create(block_aligned_size, 0, &write_info_->buffer);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create data vmo: " << zx_status_get_string(status);
-    return status;
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t Blob::QueueUnlink() {
   std::lock_guard lock(mutex_);
 
@@ -949,8 +1004,8 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
 zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   TRACE_DURATION("blobfs", "Blob::GetAttributes");
   return blobfs_->node_operations().get_attr.Track([&] {
-    // SizeData() expects to be called outside the lock.
-    auto content_size = SizeData();
+    // FileSize() expects to be called outside the lock.
+    auto content_size = FileSize();
 
     std::lock_guard lock(mutex_);
 
@@ -1197,8 +1252,6 @@ zx_status_t Blob::Purge() {
   return ZX_OK;
 }
 
-uint32_t Blob::GetBlockSize() const { return blobfs_->Info().block_size; }
-
 void Blob::SetPagedVmoName(bool active) {
   fbl::StringBuffer<ZX_MAX_NAME_LEN> name;
   if (active) {
@@ -1208,6 +1261,134 @@ void Blob::SetPagedVmoName(bool active) {
   }
   // Ignore failures, the name is for informational purposes only.
   paged_vmo().set_property(ZX_PROP_NAME, name.data(), name.size());
+}
+
+zx_status_t Blob::InitializeBlobLayout(uint64_t blob_size, uint64_t data_size) {
+  ZX_DEBUG_ASSERT(blob_size > 0 && data_size > 0);
+
+  zx::status blob_layout_or = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()),
+                                                          blob_size, data_size, kBlobfsBlockSize);
+  if (blob_layout_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout_or.status_string();
+    return blob_layout_or.status_value();
+  }
+  write_info_->blob_layout = std::move(blob_layout_or.value());
+
+  return ZX_OK;
+}
+
+zx_status_t Blob::InitializeMerkleBuffer(uint64_t blob_size) {
+  ZX_DEBUG_ASSERT(state() == BlobState::kEmpty);
+  ZX_DEBUG_ASSERT(blob_size > 0);
+  ZX_DEBUG_ASSERT(write_info_->merkle_tree_buffer == nullptr);
+
+  write_info_->merkle_tree_creator.SetUseCompactFormat(
+      ShouldUseCompactMerkleTreeFormat(GetBlobLayoutFormat(blobfs_->Info())));
+  zx_status_t status = write_info_->merkle_tree_creator.SetDataLength(blob_size);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to set Merkle tree data length to " << blob_size
+                   << " bytes: " << zx_status_get_string(status);
+    return status;
+  }
+  const size_t tree_len = write_info_->merkle_tree_creator.GetTreeLength();
+  // Allow for zero padding before and after.
+  write_info_->merkle_tree_buffer =
+      std::make_unique<uint8_t[]>(tree_len + WriteInfo::kPreMerkleTreePadding);
+  status = write_info_->merkle_tree_creator.SetTree(
+      write_info_->merkle_tree(), tree_len, &write_info_->digest, sizeof write_info_->digest);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to set Merkle tree data length to " << blob_size
+                   << " bytes: " << zx_status_get_string(status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Blob::StreamBufferedData(uint64_t buff_pos) {
+  // Ensure we allocated space for the blob before writing it to disk.
+  if (write_info_->blob_layout == nullptr) {
+    zx_status_t status = InitializeBlobLayout(blob_size_, blob_size_);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = SpaceAllocate();
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  ZX_DEBUG_ASSERT(buff_pos >= write_info_->bytes_persisted);
+  ZX_DEBUG_ASSERT(buff_pos <= blob_size_);
+  const uint64_t buffered_bytes = buff_pos - write_info_->bytes_persisted;
+  // Write as many block-aligned bytes from the buffer to disk as we can.
+  if (buffered_bytes >= (kCacheFlushThreshold * kBlobfsBlockSize)) {
+    const uint64_t write_amount = fbl::round_down(buffered_bytes, kBlobfsBlockSize);
+    ZX_DEBUG_ASSERT(write_info_->bytes_persisted % kBlobfsBlockSize == 0);
+    const uint32_t start_block = write_info_->blob_layout->DataBlockOffset() +
+                                 write_info_->bytes_persisted / kBlobfsBlockSize;
+    const uint8_t* buffer = static_cast<const uint8_t*>(write_info_->buffer.start());
+    SimpleBlobDataProducer data({buffer + write_info_->bytes_persisted, write_amount});
+    zx_status_t status =
+        WriteData(write_amount / kBlobfsBlockSize, start_block, data, *write_info_->streamer);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to stream blob data to disk: " << zx_status_get_string(status);
+      return status;
+    }
+    // Ensure data is copied into writeback cache so we can decommit those pages from the buffer.
+    write_info_->streamer->IssueOperations();
+    write_info_->bytes_persisted += write_amount;
+    // Decommit now unused pages from the buffer.
+    const uint64_t page_aligned_offset =
+        fbl::round_down(write_info_->bytes_persisted, kSystemPageSize);
+    status = zx_vmo_op_range(write_info_->buffer.vmo().get(), ZX_VMO_OP_DECOMMIT, 0,
+                             page_aligned_offset, nullptr, 0);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // To simplify the Commit logic when using the deprecated format (Merkle tree at beginning), if we
+  // received all data for the blob, enqueue the remaining data so we only have the Merkle tree left
+  // to write to disk. This ensures Commit only has to deal with contiguous chunks of data.
+  if (buff_pos == blob_size_ &&
+      write_info_->blob_layout->Format() == BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart) {
+    if (zx_status_t status = WriteRemainingDataForDeprecatedFormat(); status != ZX_OK) {
+      return status;
+    }
+    ZX_DEBUG_ASSERT(write_info_->bytes_persisted == blob_size_);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Blob::WriteRemainingDataForDeprecatedFormat() {
+  ZX_DEBUG_ASSERT(write_info_->blob_layout->Format() ==
+                  BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
+  if (write_info_->bytes_persisted < blob_size_) {
+    // All data persisted so far should have been block aligned.
+    ZX_DEBUG_ASSERT(write_info_->bytes_persisted % kBlobfsBlockSize == 0);
+    const size_t remaining_bytes = blob_size_ - write_info_->bytes_persisted;
+    const size_t remaining_bytes_aligned = fbl::round_up(remaining_bytes, kBlobfsBlockSize);
+    const uint32_t block_count = remaining_bytes_aligned / kBlobfsBlockSize;
+    const uint32_t block_offset = write_info_->blob_layout->DataBlockOffset() +
+                                  (write_info_->bytes_persisted / kBlobfsBlockSize);
+    const uint8_t* buff = static_cast<const uint8_t*>(write_info_->buffer.start());
+    // The data buffer is already padded to ensure it's a multiple of the block size.
+    SimpleBlobDataProducer data({buff + write_info_->bytes_persisted, remaining_bytes_aligned});
+    if (zx_status_t status = WriteData(block_count, block_offset, data, *write_info_->streamer);
+        status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to write final block to disk: " << zx_status_get_string(status);
+      return status;
+    }
+    write_info_->bytes_persisted += remaining_bytes;
+  }
+  // We've now persisted all of the blob's data to disk. The only remaining thing to write out is
+  // the Merkle tree, which is at the first block, so we need to reset the block iterator before
+  // writing any more data to disk.
+  write_info_->block_iter =
+      BlockIterator(std::make_unique<VectorExtentIterator>(write_info_->extents));
+  return ZX_OK;
 }
 
 }  // namespace blobfs

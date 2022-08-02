@@ -75,7 +75,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
       return status;
     }
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-    blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
+    blobfs_->GetMetrics()->UpdateLookup(vnode->FileSize());
     *out = std::move(vnode);
     return ZX_OK;
   });
@@ -135,7 +135,7 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
       return status;
     }
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-    blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
+    blobfs_->GetMetrics()->UpdateLookup(vnode->FileSize());
     status = vnode->QueueUnlink();
     return status;
   });
