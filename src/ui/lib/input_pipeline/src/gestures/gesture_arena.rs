@@ -78,6 +78,12 @@ pub(super) trait Contender: std::fmt::Debug + AsAny {
     /// * `ExamineEventResult::Mismatch` if this recognizer no longer
     ///   wants to contend for this gesture
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult;
+
+    /// Returns a string that uniquely identifies the concrete type
+    /// of this implementation of the `Contender` trait.
+    fn get_type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 pub trait AsAny {
@@ -157,6 +163,12 @@ pub(super) trait MatchedContender: std::fmt::Debug + AsAny {
         self: Box<Self>,
         events: Vec<TouchpadEvent>,
     ) -> ProcessBufferedEventsResult;
+
+    /// Returns a string that uniquely identifies the concrete type
+    /// of this implementation of the `MatchedContender` trait.
+    fn get_type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -193,6 +205,12 @@ pub(super) trait Winner: std::fmt::Debug {
     ///   of the gesture; might be used, e.g., if the user lifts
     ///   their finger off the touchpad after a motion gesture
     fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> ProcessNewEventResult;
+
+    /// Returns a string that uniquely defines the concrete type
+    /// of this implementation of the `Winner` trait.
+    fn get_type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 const SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM: f32 = 16.0 / 12.0;
@@ -478,6 +496,33 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
             }
         }
     }
+
+    #[allow(dead_code)] // only called in developer debug builds
+    fn log_mutable_state(&self) {
+        match &*self.mutable_state.borrow() {
+            MutableState::Idle => fx_log_info!("touchpad: Idle"),
+            MutableState::Matching { contenders, matched_contenders, buffered_events } => {
+                fx_log_info!(
+                    "touchpad: Matching {{ \
+                                contenders: [ {} ], \
+                                matched_contenders: [ {} ], \
+                                n_buffered_events: {} \
+                              }}",
+                    contenders.iter().fold(String::new(), |accum, item| {
+                        accum + &format!("{}, ", item.get_type_name())
+                    }),
+                    matched_contenders.iter().fold(String::new(), |accum, item| {
+                        accum + &format!("{}, ", item.get_type_name())
+                    }),
+                    buffered_events.len()
+                )
+            }
+            MutableState::Forwarding { winner } => {
+                fx_log_info!("touchpad: Forwarding {{ winner: {} }}", winner.get_type_name());
+            }
+            MutableState::Invalid => fx_log_info!("touchpad: Invalid"),
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -515,6 +560,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> UnhandledInputHandler
         };
         fx_log_debug!("gesture_arena: {:?} -> {:?}", old_state_name, new_state.get_state_name());
         self.mutable_state.replace(new_state);
+        // self.log_mutable_state();  // uncomment to log contender set
         generated_events.into_iter().map(input_device::InputEvent::from).collect()
     }
 }
