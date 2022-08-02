@@ -212,7 +212,7 @@ zx_status_t DeviceContext::SecondLevelMap(const fbl::RefPtr<VmObject>& vmo, uint
 
   uint flags = perms_to_arch_mmu_flags(perms);
 
-  if (vmo->LookupContiguous(offset, size, nullptr) == ZX_OK) {
+  if (vmo->LookupContiguous(offset, size, nullptr) != ZX_OK) {
     return SecondLevelMapDiscontiguous(vmo, offset, size, flags, map_contiguous, virt_paddr,
                                        mapped_len);
   }
