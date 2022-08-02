@@ -6,20 +6,20 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::ok_or_default_err;
 use crate::shutdown_request::ShutdownRequest;
-use crate::utils::connect_to_driver;
+use crate::utils::{connect_to_driver, result_debug_panic::ResultDebugPanic};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_input::{DeviceMarker as LidMarker, DeviceProxy as LidProxy};
-use fuchsia_async::OnSignals;
+use fuchsia_async as fasync;
 use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_vfs_watcher as vfs;
 use fuchsia_zircon as zx;
+use futures::channel::mpsc;
 use futures::{
     future::{FutureExt, LocalBoxFuture},
-    stream::FuturesUnordered,
-    TryStreamExt,
+    StreamExt, TryStreamExt,
 };
 use log::*;
 use serde_derive::Deserialize;
@@ -114,88 +114,46 @@ impl<'a> LidShutdownBuilder<'a> {
         }
     }
 
-    pub async fn build<'b>(
-        self,
-        futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
-    ) -> Result<Rc<LidShutdown>, Error> {
+    pub fn build(self) -> Result<Rc<LidShutdown>, Error> {
         let system_shutdown_node = ok_or_default_err!(self.system_shutdown_node)?;
 
-        // In tests use the default proxy.
-        let proxy = match self.driver_proxy {
-            Some(proxy) => proxy,
-            None => Self::find_lid_sensor().await?,
+        // Use an mpsc channel to relay the `report_event` obtained in `init()` to `watch_lid_task`
+        // created later in this function since `watch_lid_task` must be created here using the
+        // node's Rc wrapper which won't be accessible in `init()`.
+        let (report_event_sender, report_event_receiver) = mpsc::channel(1);
+
+        let mutable_inner = MutableInner {
+            driver_proxy: self.driver_proxy,
+            report_event_sender,
+            watch_lid_task: None,
         };
 
-        let report_event = proxy
-            .get_reports_event()
-            .await
-            .map_err(|_| format_err!("Could not get report event"))?
-            .1;
-
-        // In tests use the default inspect root node
+        // In tests use the provided inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         let node = Rc::new(LidShutdown {
-            proxy,
-            report_event,
+            mutable_inner: RefCell::new(mutable_inner),
             system_shutdown_node,
             inspect: InspectData::new(inspect_root, "LidShutdown".to_string()),
         });
 
-        futures_out.push(node.clone().watch_lid());
+        let watch_lid_task = fasync::Task::local(node.clone().watch_lid(report_event_receiver));
+        node.mutable_inner.borrow_mut().watch_lid_task = Some(watch_lid_task);
+
         Ok(node)
     }
 
-    /// Checks all the input devices until the lid sensor is found.
-    async fn find_lid_sensor() -> Result<LidProxy, Error> {
-        let dir_proxy =
-            open_directory_in_namespace(INPUT_DEVICES_DIRECTORY, OpenFlags::RIGHT_READABLE)?;
-
-        let mut watcher = vfs::Watcher::new(dir_proxy).await?;
-
-        while let Some(msg) = watcher.try_next().await? {
-            match msg.event {
-                vfs::WatchEvent::EXISTING | vfs::WatchEvent::ADD_FILE => {
-                    match Self::open_sensor(&msg.filename).await {
-                        Ok(device) => return Ok(device),
-                        _ => (),
-                    }
-                }
-                _ => (),
-            }
-        }
-
-        Err(format_err!("No lid device found"))
-    }
-
-    /// Opens the sensor's device file. Returns the device if the correct HID
-    /// report descriptor is found.
-    async fn open_sensor(filename: &PathBuf) -> Result<LidProxy, Error> {
-        let path = Path::new(INPUT_DEVICES_DIRECTORY).join(filename);
-        let device = connect_to_driver::<LidMarker>(&String::from(
-            path.to_str().ok_or(format_err!("Could not read path {:?}", path))?,
-        ))
-        .await?;
-        if let Ok(device_descriptor) = device.get_report_desc().await {
-            if device_descriptor.len() < HID_LID_DESCRIPTOR.len() {
-                return Err(format_err!("Short HID header"));
-            }
-            let device_header = &device_descriptor[0..HID_LID_DESCRIPTOR.len()];
-            if device_header == HID_LID_DESCRIPTOR {
-                return Ok(device);
-            } else {
-                return Err(format_err!("Device is not lid sensor"));
-            }
-        }
-        Err(format_err!("Could not get device HID report descriptor"))
+    #[cfg(test)]
+    pub async fn build_and_init(self) -> Rc<LidShutdown> {
+        let node = self.build().unwrap();
+        node.init().await.unwrap();
+        node
     }
 }
 
 pub struct LidShutdown {
-    proxy: LidProxy,
-
-    /// Event that will signal |USER_0| when a report is in the lid device's report FIFO.
-    report_event: zx::Event,
+    /// Mutable inner state.
+    mutable_inner: RefCell<MutableInner>,
 
     /// Node to provide the system shutdown functionality via the SystemShutdown message.
     system_shutdown_node: Rc<dyn Node>,
@@ -205,18 +163,25 @@ pub struct LidShutdown {
 }
 
 impl LidShutdown {
-    fn watch_lid<'a>(self: Rc<Self>) -> LocalBoxFuture<'a, ()> {
+    fn watch_lid<'a>(
+        self: Rc<Self>,
+        mut report_event_receiver: mpsc::Receiver<zx::Event>,
+    ) -> LocalBoxFuture<'a, ()> {
         async move {
-            loop {
-                self.watch_lid_inner().await;
+            // Wait to receive `report_event` from `init()`, then continuously monitor it for lid
+            // state changes
+            if let Some(report_event) = report_event_receiver.next().await {
+                loop {
+                    self.watch_lid_inner(&report_event).await;
+                }
             }
         }
         .boxed_local()
     }
 
     /// Watches the lid device for reports.
-    async fn watch_lid_inner(&self) {
-        match OnSignals::new(&self.report_event, zx::Signals::USER_0).await {
+    async fn watch_lid_inner(&self, report_event: &zx::Event) {
+        match fasync::OnSignals::new(report_event, zx::Signals::USER_0).await {
             Err(e) => error!("Could not wait for lid event: {:?}", e),
             _ => match self.check_report().await {
                 Ok(()) => (),
@@ -231,7 +196,18 @@ impl LidShutdown {
 
     /// Reads the report from the lid sensor and sends shutdown signal if lid is closed.
     async fn check_report(&self) -> Result<(), Error> {
-        let (status, report, _time) = self.proxy.read_report().await?;
+        // Extract `driver_proxy` from `mutable_inner`, returning an error (or asserting in debug)
+        // if the proxy is missing
+        let driver_proxy = self
+            .mutable_inner
+            .borrow()
+            .driver_proxy
+            .as_ref()
+            .ok_or(format_err!("Missing driver_proxy"))
+            .or_debug_panic()?
+            .clone();
+
+        let (status, report, _time) = driver_proxy.read_report().await?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
             return Err(format_err!("Error reading report {}", status));
@@ -255,15 +231,107 @@ impl LidShutdown {
     }
 }
 
+struct MutableInner {
+    /// Proxy to the lid sensor driver. Populated during `init()` unless previously supplied (in a
+    /// test).
+    driver_proxy: Option<LidProxy>,
+
+    /// Task that monitors the lid sensor state and processes changes to that state. Requires being
+    /// an Option because the Task has a reference to the node itself. Therefore, the node had to be
+    /// created before the Task could be created, at which point `watch_lid_task` could be
+    /// populated.
+    watch_lid_task: Option<fasync::Task<()>>,
+
+    /// Sender end to be used in `init()` once `report_event` is obtained from the lid driver. The
+    /// event is sent to the receiver end in `watch_lid_task` where it will be used to monitor for
+    /// lid sensor state changes.
+    report_event_sender: mpsc::Sender<zx::Event>,
+}
+
 #[async_trait(?Send)]
 impl Node for LidShutdown {
     fn name(&self) -> String {
         "LidShutdown".to_string()
     }
 
+    /// Initializes internal state.
+    ///
+    /// Connects to the lid sensor driver unless a proxy was already provided (in a test).
+    async fn init(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "LidShutdown::init");
+
+        // Connect to the lid driver. Typically this is None, but it may be set by tests.
+        let driver_proxy = match &self.mutable_inner.borrow().driver_proxy {
+            Some(p) => p.clone(),
+            None => find_lid_sensor().await?,
+        };
+
+        let report_event = driver_proxy
+            .get_reports_event()
+            .await
+            .map_err(|_| format_err!("Could not get report event"))?
+            .1;
+
+        // Send `report_event` to be used by `watch_lid_task`
+        self.mutable_inner.borrow_mut().report_event_sender.try_send(report_event)?;
+
+        self.mutable_inner.borrow_mut().driver_proxy = Some(driver_proxy);
+
+        Ok(())
+    }
+
     async fn handle_message(&self, _msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         Err(PowerManagerError::Unsupported)
     }
+}
+
+/// Checks all the input devices until the lid sensor is found.
+async fn find_lid_sensor() -> Result<LidProxy, Error> {
+    info!("Trying to find lid device");
+
+    let dir_proxy =
+        open_directory_in_namespace(INPUT_DEVICES_DIRECTORY, OpenFlags::RIGHT_READABLE)?;
+
+    let mut watcher = vfs::Watcher::new(dir_proxy).await?;
+
+    while let Some(msg) = watcher.try_next().await? {
+        match msg.event {
+            vfs::WatchEvent::EXISTING | vfs::WatchEvent::ADD_FILE => {
+                match open_sensor(&msg.filename).await {
+                    Ok(device) => {
+                        info!("Found lid device");
+                        return Ok(device);
+                    }
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
+    }
+
+    Err(format_err!("No lid device found"))
+}
+
+/// Opens the sensor's device file. Returns the device if the correct HID
+/// report descriptor is found.
+async fn open_sensor(filename: &PathBuf) -> Result<LidProxy, Error> {
+    let path = Path::new(INPUT_DEVICES_DIRECTORY).join(filename);
+    let device = connect_to_driver::<LidMarker>(&String::from(
+        path.to_str().ok_or(format_err!("Could not read path {:?}", path))?,
+    ))
+    .await?;
+    if let Ok(device_descriptor) = device.get_report_desc().await {
+        if device_descriptor.len() < HID_LID_DESCRIPTOR.len() {
+            return Err(format_err!("Short HID header"));
+        }
+        let device_header = &device_descriptor[0..HID_LID_DESCRIPTOR.len()];
+        if device_header == HID_LID_DESCRIPTOR {
+            return Ok(device);
+        } else {
+            return Err(format_err!("Device is not lid sensor"));
+        }
+    }
+    Err(format_err!("Could not get device HID report descriptor"))
 }
 
 struct InspectData {
@@ -301,40 +369,115 @@ impl InspectData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker};
-    use crate::{msg_eq, msg_ok_return};
+    use crate::test::mock_node::create_dummy_node;
+    use crate::utils::run_all_tasks_until_stalled::run_all_tasks_until_stalled;
     use fidl_fuchsia_hardware_input as finput;
     use fuchsia_async as fasync;
     use fuchsia_inspect::testing::TreeAssertion;
     use fuchsia_zircon::{AsHandleRef, HandleBased};
+    use futures::channel::mpsc;
     use inspect::assert_data_tree;
+    use std::cell::Cell;
 
     const LID_OPEN: u8 = 0x1;
 
-    /// Spawns a new task that acts as a fake device driver for testing purposes. The driver only
-    /// handles requests for ReadReport - trying to send any other requests to it is a bug.
-    /// Each ReadReport responds with the |lid_report| specified.
-    fn fake_lid_driver(lid_report: u8, reports_event: zx::Event) -> LidProxy {
-        let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<LidMarker>().unwrap();
-        fasync::Task::local(async move {
-            while let Ok(req) = stream.try_next().await {
-                match req {
-                    Some(finput::DeviceRequest::ReadReport { responder }) => {
-                        let _ = responder.send(zx::Status::OK.into_raw(), &[lid_report], 0 as i64);
-                    }
-                    Some(finput::DeviceRequest::GetReportsEvent { responder }) => {
-                        let _ = responder.send(
-                            zx::Status::OK.into_raw(),
-                            reports_event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-                        );
-                    }
-                    _ => assert!(false),
-                }
-            }
-        })
-        .detach();
+    // Fake node to mock the ShutdownHandler node, providing a convenient function to wait on a
+    // received shutdown message (`wait_for_shutdown`).
+    struct FakeShutdownNode {
+        shutdown_received_sender: RefCell<mpsc::Sender<()>>,
+        shutdown_received_receiver: RefCell<mpsc::Receiver<()>>,
+    }
 
-        proxy
+    impl FakeShutdownNode {
+        fn new() -> Rc<Self> {
+            let (shutdown_received_sender, shutdown_received_receiver) = mpsc::channel(1);
+            Rc::new(Self {
+                shutdown_received_sender: RefCell::new(shutdown_received_sender),
+                shutdown_received_receiver: RefCell::new(shutdown_received_receiver),
+            })
+        }
+
+        async fn wait_for_shutdown(&self) {
+            self.shutdown_received_receiver.borrow_mut().next().await.unwrap();
+        }
+    }
+
+    #[async_trait(?Send)]
+    impl Node for FakeShutdownNode {
+        fn name(&self) -> String {
+            "FakeShutdownNode".to_string()
+        }
+
+        async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
+            match msg {
+                Message::SystemShutdown(ShutdownRequest::PowerOff) => {
+                    self.shutdown_received_sender.borrow_mut().try_send(()).unwrap();
+                    Ok(MessageReturn::SystemShutdown)
+                }
+                _ => panic!(),
+            }
+        }
+    }
+
+    // Fake driver representing the lid sensor driver. Provides a convenient `set_state` method for
+    // simulating lid state changes. The driver handles requests for ReadReport and GetReportsEvent.
+    // Each ReadReport responds with the `lid_report` most recently set by a call to `set_state`.
+    struct FakeLidDriver {
+        report_event: zx::Event,
+        _server_task: fasync::Task<()>,
+        proxy: LidProxy,
+        lid_state: Rc<Cell<u8>>,
+    }
+
+    impl FakeLidDriver {
+        fn new() -> Self {
+            let lid_state = Rc::new(Cell::new(0));
+            let lid_state_clone = lid_state.clone();
+
+            let report_event = zx::Event::create().unwrap();
+            let report_event_clone =
+                report_event.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
+
+            let (proxy, mut stream) =
+                fidl::endpoints::create_proxy_and_stream::<LidMarker>().unwrap();
+
+            let server_task = fasync::Task::local(async move {
+                while let Ok(req) = stream.try_next().await {
+                    match req {
+                        Some(finput::DeviceRequest::ReadReport { responder }) => {
+                            report_event_clone
+                                .signal_handle(zx::Signals::USER_0, zx::Signals::NONE)
+                                .expect("Failed to clear event signal");
+                            let _ = responder.send(
+                                zx::Status::OK.into_raw(),
+                                &[lid_state_clone.get()],
+                                0 as i64,
+                            );
+                        }
+                        Some(finput::DeviceRequest::GetReportsEvent { responder }) => {
+                            let _ = responder.send(
+                                zx::Status::OK.into_raw(),
+                                report_event_clone.duplicate_handle(zx::Rights::BASIC).unwrap(),
+                            );
+                        }
+                        _ => assert!(false),
+                    }
+                }
+            });
+
+            Self { report_event, _server_task: server_task, proxy, lid_state }
+        }
+
+        fn set_state(&self, lid_state: u8) {
+            self.lid_state.set(lid_state);
+            self.report_event
+                .signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
+                .expect("Failed to signal event");
+        }
+
+        fn proxy(&self) -> LidProxy {
+            self.proxy.clone()
+        }
     }
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
@@ -357,75 +500,44 @@ mod tests {
     /// report and, on reception of a lid closed report, it triggers a system shutdown.
     #[fasync::run_singlethreaded(test)]
     async fn test_triggered_shutdown() {
-        let mut mock_maker = MockNodeMaker::new();
-        let shutdown_node = mock_maker.make(
-            "Shutdown",
-            vec![(
-                msg_eq!(SystemShutdown(ShutdownRequest::PowerOff)),
-                msg_ok_return!(SystemShutdown),
-            )],
-        );
+        let fake_lid_driver = FakeLidDriver::new();
+        let shutdown_node = FakeShutdownNode::new();
+        let _node = LidShutdownBuilder::new()
+            .driver_proxy(fake_lid_driver.proxy())
+            .system_shutdown_node(shutdown_node.clone())
+            .build_and_init()
+            .await;
 
-        let event = zx::Event::create().unwrap();
-        let node = LidShutdownBuilder::new()
-            .driver_proxy(fake_lid_driver(
-                LID_CLOSED,
-                event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-            ))
-            .system_shutdown_node(shutdown_node)
-            .build(&FuturesUnordered::new())
-            .await
-            .unwrap();
-
-        event
-            .signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
-            .expect("Failed to signal event");
-
-        node.watch_lid_inner().await;
-
-        // When mock_maker goes out of scope, it verifies the ShutdownNode received the shutdown
-        // request.
+        fake_lid_driver.set_state(LID_CLOSED);
+        shutdown_node.wait_for_shutdown().await;
     }
 
     /// Tests that when the node receives a signal on its |report_event|, it checks for a lid
     /// report and, on reception of a lid open report, it does NOT trigger a system shutdown.
-    #[fasync::run_singlethreaded(test)]
-    async fn test_event_handling() {
-        let mut mock_maker = MockNodeMaker::new();
-        let shutdown_node = mock_maker.make(
-            "Shutdown",
-            vec![], // the shutdown node is not expected to receive any messages
+    #[test]
+    fn test_event_handling() {
+        let mut executor = fasync::TestExecutor::new().unwrap();
+        let fake_lid_driver = FakeLidDriver::new();
+        let shutdown_node = FakeShutdownNode::new();
+        let _node = executor.run_singlethreaded(
+            LidShutdownBuilder::new()
+                .driver_proxy(fake_lid_driver.proxy())
+                .system_shutdown_node(shutdown_node.clone())
+                .build_and_init(),
         );
 
-        let event = zx::Event::create().unwrap();
-        let node = LidShutdownBuilder::new()
-            .driver_proxy(fake_lid_driver(
-                LID_OPEN,
-                event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-            ))
-            .system_shutdown_node(shutdown_node)
-            .build(&FuturesUnordered::new())
-            .await
-            .unwrap();
+        fake_lid_driver.set_state(LID_OPEN);
 
-        event
-            .signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
-            .expect("Failed to signal event");
-
-        node.watch_lid_inner().await;
-
-        // When mock_maker will verify that the ShutdownNode receives no messages until it goes
-        // out of scope.
+        let mut wait_for_shutdown_future = Box::pin(shutdown_node.wait_for_shutdown());
+        assert!(executor.run_until_stalled(&mut wait_for_shutdown_future).is_pending());
     }
 
     /// Tests that an unsupported message is handled gracefully and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = LidShutdownBuilder::new()
-            .driver_proxy(fake_lid_driver(LID_CLOSED, zx::Event::create().unwrap()))
-            .build(&FuturesUnordered::new())
-            .await
-            .unwrap();
+        let fake_lid_driver = FakeLidDriver::new();
+        let node =
+            LidShutdownBuilder::new().driver_proxy(fake_lid_driver.proxy()).build_and_init().await;
 
         match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
@@ -436,45 +548,37 @@ mod tests {
     #[test]
     fn test_loop_is_not_blocked() {
         let mut executor = fasync::TestExecutor::new().unwrap();
-        let node = executor
-            .run_singlethreaded(
-                LidShutdownBuilder::new()
-                    .driver_proxy(fake_lid_driver(LID_OPEN, zx::Event::create().unwrap()))
-                    .build(&FuturesUnordered::new()),
-            )
-            .unwrap();
+        let fake_lid_driver = FakeLidDriver::new();
+        let _node = executor.run_singlethreaded(
+            LidShutdownBuilder::new().driver_proxy(fake_lid_driver.proxy()).build_and_init(),
+        );
 
-        let mut future = node.watch_lid();
-        let _ = executor.run_until_stalled(&mut future);
+        run_all_tasks_until_stalled(&mut executor);
+
         // If watch_lid() blocks waiting for the event, it will block forever (because the event
         // will never come), meaning that this test will time out. Otherwise run_until_stalled()
         // will return immediately and the test will pass.
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data
-    #[fasync::run_singlethreaded(test)]
-    async fn test_inspect_data() {
-        let lid_state = LID_OPEN;
+    #[test]
+    fn test_inspect_data() {
+        let mut executor = fasync::TestExecutor::new().unwrap();
         let inspector = inspect::Inspector::new();
-        let event = zx::Event::create().unwrap();
+        let fake_lid_driver = FakeLidDriver::new();
 
-        let node = LidShutdownBuilder::new()
-            .driver_proxy(fake_lid_driver(
-                lid_state,
-                event.duplicate_handle(zx::Rights::BASIC).unwrap(),
-            ))
-            .inspect_root(inspector.root())
-            .build(&FuturesUnordered::new())
-            .await
-            .unwrap();
+        let _node = executor.run_singlethreaded(
+            LidShutdownBuilder::new()
+                .driver_proxy(fake_lid_driver.proxy())
+                .inspect_root(inspector.root())
+                .build_and_init(),
+        );
 
         // The node will read the current temperature and log the sample into Inspect. Read enough
         // samples to test that the correct number of samples are logged and older ones are dropped.
         for _ in 0..InspectData::NUM_INSPECT_LID_REPORTS + 10 {
-            event
-                .signal_handle(zx::Signals::NONE, zx::Signals::USER_0)
-                .expect("Failed to signal event");
-            node.watch_lid_inner().await;
+            fake_lid_driver.set_state(LID_OPEN);
+            run_all_tasks_until_stalled(&mut executor);
         }
 
         let mut root = TreeAssertion::new("LidShutdown", false);
@@ -486,7 +590,7 @@ mod tests {
         for i in 10..InspectData::NUM_INSPECT_LID_REPORTS + 10 {
             let mut sample_child = TreeAssertion::new(&i.to_string(), true);
             sample_child
-                .add_property_assertion("lid_report", Box::new(format!("{:?}", [lid_state])));
+                .add_property_assertion("lid_report", Box::new(format!("{:?}", [LID_OPEN])));
             sample_child.add_property_assertion("@time", Box::new(inspect::testing::AnyProperty));
             lid_reports.add_child_assertion(sample_child);
         }

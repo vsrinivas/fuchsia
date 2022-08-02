@@ -172,9 +172,7 @@ impl PowerManager {
                 .build(node_futures)?
             }
             "LidShutdown" => {
-                lid_shutdown::LidShutdownBuilder::new_from_json(json_data, &self.nodes)
-                    .build(node_futures)
-                    .await?
+                lid_shutdown::LidShutdownBuilder::new_from_json(json_data, &self.nodes).build()?
             }
             "PlatformMetrics" => {
                 platform_metrics::PlatformMetricsBuilder::new_from_json(json_data, &self.nodes)
