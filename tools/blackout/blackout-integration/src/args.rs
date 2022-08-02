@@ -12,6 +12,9 @@ pub struct BlackoutIntegrationCommand {
     /// configure the tests to add a reboot step between the load and verification steps.
     #[argh(switch)]
     pub reboot: bool,
+    /// use dmc to trigger reboots. Only works in infra.
+    #[argh(switch)]
+    pub dmc_reboot: bool,
     /// run a bootserver in the background for serving netboot images. This only works when the
     /// test is run by botanist, as the environment variables and bootserver arguments are specific
     /// to that environment.

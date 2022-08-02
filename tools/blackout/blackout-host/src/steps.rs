@@ -28,6 +28,8 @@ pub enum RebootType {
     /// Perform a hardware reboot by writing a byte to a relay device. THIS OPTION IS LIKELY TO
     /// CHANGE IN THE FUTURE.
     Hardware(PathBuf),
+    /// Perform a hardware reboot by calling the infra device management tool.
+    Dmc,
 }
 
 // TODO(sdemos): the final implementation will also have to handle a CI environment where hard
@@ -282,6 +284,22 @@ impl TestStep for RebootStep {
                 let _ = self.ffx.ffx(&["--target", &target, "target", "reboot"]).await?;
             }
             RebootType::Hardware(relay) => hard_reboot(&relay)?,
+            RebootType::Dmc => {
+                let target = get_target(&self.ffx).await?;
+                let dmc = std::env::var("DMC_PATH").unwrap();
+                let output = std::process::Command::new(dmc)
+                    .arg("set-power-state")
+                    .arg("-server-port")
+                    .arg("8000")
+                    .arg("-nodename")
+                    .arg(target)
+                    .arg("-state")
+                    .arg("cycle")
+                    .output()?;
+                if !output.status.success() {
+                    return Err(BlackoutError::Reboot(RebootError::Command(output.into())));
+                }
+            }
         }
         if self.bootserver {
             println!("launching infra bootserver...");

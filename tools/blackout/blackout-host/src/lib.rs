@@ -23,7 +23,8 @@ use {
 };
 
 pub mod steps;
-use steps::{LoadStep, RebootStep, RebootType, SetupStep, TestStep, VerifyStep};
+pub use steps::RebootType;
+use steps::{LoadStep, RebootStep, SetupStep, TestStep, VerifyStep};
 
 pub mod integration;
 
@@ -138,10 +139,16 @@ pub struct CommonOpts {
     /// One will be randomly generated if not provided. When performing the same test multiple times
     /// in one run, a new seed will be generated for each run if one was not provided.
     pub seed: Option<u64>,
-    /// Path to a power relay for cutting the power to a device. Probably the highest-numbered
-    /// /dev/ttyUSB[N]. If in doubt, try removing it and seeing what disappears from /dev. When a
-    /// relay is provided, the harness automatically switches to use hardware reboots.
-    pub relay: Option<PathBuf>,
+    /// Reboot type. There are three options
+    /// 1. Soft reboot - we reboot the system using ffx target reboot
+    /// 2. Hard reboot with a serial power relay - we reboot the system by writing bytes to a
+    /// serial device that we assume is a power relay. Includes a path to the power relay. Probably
+    /// the highest-numbered /dev/ttyUSB[N]. If in doubt, try removing it and seeing what
+    /// disappears from /dev.
+    /// 3. Hard reboot with the infra dmc command - we reboot the system by calling the dmc binary
+    /// provided by infra. This command cycles the power for us using some kind of http accessible
+    /// power strip, but the details are abstracted behind the set-power-state command.
+    pub reboot: RebootType,
     /// Run the test N number of times, collecting statistics on the number of failures.
     pub iterations: Option<u64>,
     /// Run the test until a verification failure is detected, then exit.
@@ -242,10 +249,7 @@ impl Test {
             component: component.to_string(),
             seed: Seed::new(opts.seed),
             block_device: opts.block_device,
-            reboot_type: match opts.relay {
-                Some(relay) => RebootType::Hardware(relay),
-                None => RebootType::Software,
-            },
+            reboot_type: opts.reboot,
             run_mode: match (opts.iterations, opts.run_until_failure) {
                 (None, false) => RunMode::Once,
                 (None, true) => panic!("run until failure requires multiple iterations"),
@@ -452,7 +456,7 @@ impl TestEnv {
 #[cfg(test)]
 mod tests {
     use super::BlackoutError as Error;
-    use super::{BlackoutError, CommandError, CommonOpts, Test, TestStep};
+    use super::{BlackoutError, CommandError, CommonOpts, RebootType, Test, TestStep};
     use {
         async_trait::async_trait,
         fuchsia_async as fasync,
@@ -497,7 +501,7 @@ mod tests {
         let opts = CommonOpts {
             block_device: "/fake/block/device".into(),
             seed: None,
-            relay: None,
+            reboot: RebootType::Software,
             iterations,
             run_until_failure,
         };

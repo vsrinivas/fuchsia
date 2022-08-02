@@ -58,6 +58,7 @@ if (is_host) {
       "blobfs-checkerboard",
       "/dev/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-009/block/fvm/blobfs-p-1/block",
       "--bootserver",
+      "--dmc-reboot",
     ]
 
     deps = [ "//src/developer/ffx:ffx_bin" ]

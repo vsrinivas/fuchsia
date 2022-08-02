@@ -77,6 +77,7 @@ if (is_host) {
       "blackout",
       "integration",
       "--reboot",
+      "--dmc-reboot",
       "--bootserver",
     ]
 

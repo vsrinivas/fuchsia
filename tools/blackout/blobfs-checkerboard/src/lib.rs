@@ -12,7 +12,13 @@ pub async fn blobfs_checkerboard(cmd: BlobfsCheckerboardCommand) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         block_device: cmd.block_device,
         seed: cmd.seed,
-        relay: cmd.relay,
+        reboot: if cmd.dmc_reboot {
+            blackout_host::RebootType::Dmc
+        } else if cmd.relay.is_some() {
+            blackout_host::RebootType::Hardware(cmd.relay.unwrap())
+        } else {
+            blackout_host::RebootType::Software
+        },
         iterations: cmd.iterations,
         run_until_failure: cmd.run_until_failure,
     };

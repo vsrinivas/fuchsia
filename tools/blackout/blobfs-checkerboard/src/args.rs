@@ -28,6 +28,9 @@ pub struct BlobfsCheckerboardCommand {
     /// relay is provided, the harness automatically switches to use hardware reboots.
     #[argh(option, short = 'r', long = "relay")]
     pub relay: Option<std::path::PathBuf>,
+    /// use dmc to trigger reboots. Only works in infra.
+    #[argh(switch)]
+    pub dmc_reboot: bool,
     /// run the test N number of times, collecting statistics on the number of failures.
     #[argh(option, short = 'i', long = "iterations")]
     pub iterations: Option<u64>,

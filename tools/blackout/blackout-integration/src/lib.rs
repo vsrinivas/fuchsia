@@ -10,11 +10,15 @@ use {
     std::time::Duration,
 };
 
-async fn failure(reboot: bool, bootserver: bool) -> Result<()> {
+async fn failure(reboot: bool, bootserver: bool, dmc_reboot: bool) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         block_device: String::from("fail"),
         seed: None,
-        relay: None,
+        reboot: if dmc_reboot {
+            blackout_host::RebootType::Dmc
+        } else {
+            blackout_host::RebootType::Software
+        },
         iterations: None,
         run_until_failure: false,
     };
@@ -35,11 +39,20 @@ async fn failure(reboot: bool, bootserver: bool) -> Result<()> {
     }
 }
 
-async fn success(iterations: Option<u64>, reboot: bool, bootserver: bool) -> Result<()> {
+async fn success(
+    iterations: Option<u64>,
+    reboot: bool,
+    bootserver: bool,
+    dmc_reboot: bool,
+) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         block_device: String::from("/nothing"),
         seed: None,
-        relay: None,
+        reboot: if dmc_reboot {
+            blackout_host::RebootType::Dmc
+        } else {
+            blackout_host::RebootType::Software
+        },
         iterations: iterations,
         run_until_failure: false,
     };
@@ -61,11 +74,11 @@ async fn success(iterations: Option<u64>, reboot: bool, bootserver: bool) -> Res
 async fn integration(cmd: BlackoutIntegrationCommand) -> Result<()> {
     // make sure verification failure detection works
     println!("testing a verification failure...");
-    failure(cmd.reboot, cmd.bootserver).await?;
+    failure(cmd.reboot, cmd.bootserver, cmd.dmc_reboot).await?;
 
     // make sure a successful test run works
     println!("testing a successful run...");
-    success(cmd.iterations, cmd.reboot, cmd.bootserver).await?;
+    success(cmd.iterations, cmd.reboot, cmd.bootserver, cmd.dmc_reboot).await?;
 
     Ok(())
 }
