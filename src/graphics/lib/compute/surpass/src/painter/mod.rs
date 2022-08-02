@@ -329,7 +329,7 @@ impl LayerPainter for Painter {
                             }
 
                             let fill = Self::fill_at(
-                                x + tile_x * TILE_WIDTH,
+                                x - 1 + tile_x * TILE_WIDTH,
                                 y * f32x8::LANES + tile_y * TILE_HEIGHT,
                                 style,
                             );
