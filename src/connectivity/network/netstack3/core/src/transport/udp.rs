@@ -638,6 +638,7 @@ impl<A: IpAddress, D: IpDeviceId> ConnAddr<A, D, NonZeroU16, NonZeroU16> {
 
 /// Information associated with a UDP connection.
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct UdpConnInfo<A: IpAddress> {
     /// The local address associated with a UDP connection.
     pub local_ip: SpecifiedAddr<A>,
@@ -1927,6 +1928,57 @@ pub fn disconnect_udp_connected<
     })
 }
 
+/// Disconnects an already existing UDP socket and connects it to a new remote
+/// destination.
+///
+/// # Panics
+///
+/// `reconnect_udp` panics if `id` is not a valid `UdpConnId`.
+pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: UdpConnId<I>,
+    remote_ip: SpecifiedAddr<I::Addr>,
+    remote_port: NonZeroU16,
+) -> Result<UdpConnId<I>, (IpSockCreationError, UdpConnId<I>)> {
+    let (addr, conn_state, sharing) = sync_ctx.with_sockets_mut(|state| {
+        let UdpSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+        let (state, sharing, addr) = bound.conns_mut().remove(&id).expect("Invalid UDP conn ID");
+        (addr, state, sharing)
+    });
+    let ConnAddr { ip: ConnIpAddr { local: (local_ip, local_port), remote: _ }, device } = addr;
+    let ConnState { multicast_memberships, socket } = conn_state;
+
+    create_udp_conn(
+        sync_ctx,
+        ctx,
+        Some(local_ip),
+        Some(local_port),
+        device,
+        remote_ip,
+        remote_port,
+        sharing,
+        multicast_memberships,
+    )
+    .map_err(|(e, multicast_memberships)| match e {
+        UdpSockCreationError::CouldNotAllocateLocalPort => {
+            unreachable!("local port is already provided")
+        }
+        UdpSockCreationError::SockAddrConflict => unreachable!("the socket was just vacated"),
+        UdpSockCreationError::Ip(ip) => sync_ctx.with_sockets_mut(|state| {
+            // Restore the original socket if creation of the new socket fails.
+            let UdpSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+            let conn = bound
+                .conns_mut()
+                .try_insert(addr, ConnState { multicast_memberships, socket }, sharing)
+                .unwrap_or_else(|(e, _, _): (_, ConnState<_, _, _>, PosixSharingOptions)| {
+                    unreachable!("reinserting just-removed connected socket failed: {:?}", e)
+                });
+            (ip, conn)
+        }),
+    })
+}
+
 /// Removes a previously registered UDP connection.
 ///
 /// `remove_udp_conn` removes a previously registered UDP connection indexed by
@@ -3141,6 +3193,98 @@ mod tests {
                 true
             ),
             Err(UdpSetMulticastMembershipError::NoMembershipChange)
+        );
+    }
+
+    #[ip_test]
+    fn test_reconnect_udp_conn_success<I: Ip + TestIpExt>()
+    where
+        DummySyncCtx<I>: DummySyncCtxBound<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
+    {
+        set_logger_for_test();
+
+        let local_ip = local_ip::<I>();
+        let remote_ip = remote_ip::<I>();
+        let other_remote_ip = I::get_other_ip_address(3);
+
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } = DummyCtx::with_sync_ctx(
+            DummySyncCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
+                vec![local_ip],
+                vec![remote_ip, other_remote_ip],
+            )),
+        );
+
+        let local_port = NonZeroU16::new(100).unwrap();
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        let socket = connect_udp(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(local_ip),
+            Some(local_port),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+        )
+        .expect("connect was expected to succeed");
+        let other_remote_port = NonZeroU16::new(300).unwrap();
+        let socket = reconnect_udp(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            socket,
+            other_remote_ip,
+            other_remote_port,
+        )
+        .expect("reconnect_udp should succeed");
+        assert_eq!(
+            get_udp_conn_info(&sync_ctx, &mut non_sync_ctx, socket),
+            UdpConnInfo {
+                local_ip,
+                local_port,
+                remote_ip: other_remote_ip,
+                remote_port: other_remote_port
+            }
+        );
+    }
+
+    #[ip_test]
+    fn test_reconnect_udp_conn_fails<I: Ip + TestIpExt>()
+    where
+        DummySyncCtx<I>: DummySyncCtxBound<I>,
+    {
+        set_logger_for_test();
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
+        let local_ip = local_ip::<I>();
+        let remote_ip = remote_ip::<I>();
+        let other_remote_ip = I::get_other_ip_address(3);
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        let socket = connect_udp(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(local_ip),
+            Some(LOCAL_PORT),
+            remote_ip,
+            REMOTE_PORT,
+        )
+        .expect("connect was expected to succeed");
+        let other_remote_port = NonZeroU16::new(300).unwrap();
+        let (error, socket) = reconnect_udp(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            socket,
+            other_remote_ip,
+            other_remote_port,
+        )
+        .expect_err("reconnect_udp should fail");
+        assert_matches!(error, IpSockCreationError::Route(IpSockRouteError::Unroutable(_)));
+
+        assert_eq!(
+            get_udp_conn_info(&sync_ctx, &mut non_sync_ctx, socket),
+            UdpConnInfo { local_ip, local_port: LOCAL_PORT, remote_ip, remote_port: REMOTE_PORT }
         );
     }
 
