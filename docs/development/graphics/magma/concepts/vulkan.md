@@ -25,31 +25,6 @@ Include the following to enable access to the Vulkan driver:
   }
   ```
 
-- {CMX}
-
-  For components declared using a [.cmx][cmx] manifest:
-
-  ```json
-  {
-    "include": [
-        "//src/lib/vulkan/application.shard.cmx"
-    ],
-    ...
-  }
-  ```
-
-  A [test component](/docs/concepts/testing/v1_test_component.md) should instead
-  have these lines in its `.cmx` file:
-
-  ```json
-  {
-    "include": [
-        "//src/lib/vulkan/test-application.shard.cmx"
-    ],
-    ...
-  }
-  ```
-
 ### Out of tree runtime dependencies
 
 For components built outside the Fuchsia tree or otherwise can't include the
@@ -68,47 +43,11 @@ above shards, include the following:
   }
   ```
 
-- {CMX}
-
-  For components declared using a [.cmx][cmx] manifest:
-
-  ```json
-  {
-    "sandbox": {
-        "features": [
-          "vulkan"
-        ],
-        "services": [
-          "fuchsia.sysmem.Allocator",
-          "fuchsia.vulkan.loader.Loader"
-        ]
-    },
-    ...
-  }
-  ```
-
   The `fuchsia.tracing.provider.Registry` service may optionally be included to
   allow the client driver to report [trace events](/docs/concepts/kernel/tracing-system.md).
   `fuchsia.logger.LogSink` is also
   recommended to allow logs from the client driver to appear in the [system
   log](/docs/development/diagnostics/logs/viewing.md).
-
-  A [test component](/docs/concepts/testing/v1_test_component.md) must also have
-  these lines in its `.cmx` file:
-
-  ```json
-  {
-    "facets": {
-        "fuchsia.test": {
-          "system-services": [
-              "fuchsia.sysmem.Allocator",
-              "fuchsia.vulkan.loader.Loader"
-          ]
-        }
-      },
-      ...
-  }
-  ```
 
 ### Required capabilities
 
@@ -200,6 +139,5 @@ Again, may be an application error or driver bug. If you believe your app is inn
 ```
 
 [cml]: /docs/concepts/components/v2/component_manifests.md
-[cmx]: /docs/concepts/components/v1/component_manifests.md
 [environment]: /docs/contribute/testing/environments.md
 [vulkan_envs]: /src/lib/vulkan/vulkan.gni
