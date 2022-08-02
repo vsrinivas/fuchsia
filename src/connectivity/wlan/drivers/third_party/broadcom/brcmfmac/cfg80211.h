@@ -172,17 +172,30 @@
 #define BRCMF_ACTIVE_SCAN_NUM_PROBES 3
 
 /**
- * enum brcmf_scan_status - scan engine status
+ * enum class brcmf_scan_status_bit_t - scan engine status
  *
- * @BRCMF_SCAN_STATUS_BUSY: scanning in progress on dongle.
- * @BRCMF_SCAN_STATUS_ABORT: scan being aborted on dongle.
- * @BRCMF_SCAN_STATUS_SUPPRESS: scanning is suppressed in driver.
+ * @BUSY: scanning in progress on dongle.
+ * @ABORT: scan being aborted on dongle.
+ * @SUPPRESS: scanning is suppressed in driver.
  */
-enum brcmf_scan_status {
-  BRCMF_SCAN_STATUS_BUSY,
-  BRCMF_SCAN_STATUS_ABORT,
-  BRCMF_SCAN_STATUS_SUPPRESS,
-};
+#define BRCMF_SCAN_STATUS_LIST \
+  X(BUSY)                      \
+  X(ABORT)                     \
+  X(SUPPRESS)
+
+#define X(SCAN_STATUS) SCAN_STATUS,
+enum class brcmf_scan_status_bit_t : size_t { BRCMF_SCAN_STATUS_LIST };
+#undef X
+
+template <typename T>
+constexpr auto get_enum_value(T value);
+
+#define X(SCAN_STATUS) brcmf_scan_status_bit_t::SCAN_STATUS,
+constexpr brcmf_scan_status_bit_t BRCMF_ALL_SCAN_STATUS_BITS[] = {BRCMF_SCAN_STATUS_LIST};
+#undef X
+
+const char* brcmf_get_scan_status_bit_str(brcmf_scan_status_bit_t scan_status);
+zx_status_t brcmf_check_scan_status(unsigned long scan_status, std::string* out_scan_status_report);
 
 #define BRCMF_CONNECT_STATUS_LIST \
   X(CONNECTED)                    \

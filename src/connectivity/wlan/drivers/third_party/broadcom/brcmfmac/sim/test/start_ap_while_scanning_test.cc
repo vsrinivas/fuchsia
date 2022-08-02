@@ -163,7 +163,7 @@ TEST_F(ScanAndApStartTest, ScanAbortFailure) {
   env_->Run(kSecondRunDuration);
 
   // The second scan should also be successfully done without being blocked by the remaining
-  // BRCMF_SCAN_STATUS_ABORT bit.
+  // brcmf_scan_status_bit_t::ABORT bit.
   auto second_result = client_ifc_.ScanResultCode(kSecondScanId);
   EXPECT_NE(second_result, std::nullopt);
   EXPECT_EQ(*second_result, WLAN_SCAN_RESULT_SUCCESS);

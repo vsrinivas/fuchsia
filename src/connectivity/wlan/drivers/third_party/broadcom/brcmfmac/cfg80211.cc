@@ -35,6 +35,7 @@
 #include <cstdint>
 #include <cstring>
 #include <optional>
+#include <sstream>
 #include <vector>
 
 #include <wifi/wifi-config.h>
@@ -130,6 +131,19 @@ struct parsed_vndr_ies {
   uint32_t count;
   struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
+
+template <typename T>
+constexpr auto brcmf_get_enum_value(T value) {
+  return static_cast<std::underlying_type_t<T>>(value);
+}
+
+#define X(SCAN_STATUS)                       \
+  case brcmf_scan_status_bit_t::SCAN_STATUS: \
+    return #SCAN_STATUS;
+const char* brcmf_get_scan_status_bit_str(brcmf_scan_status_bit_t scan_status) {
+  switch (scan_status) { BRCMF_SCAN_STATUS_LIST };
+}
+#undef X
 
 #define X(CONNECT_STATUS)                      \
   case brcmf_connect_status_t::CONNECT_STATUS: \
@@ -809,7 +823,8 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id, scan_result);
   }
 
-  if (!brcmf_test_and_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+  if (!brcmf_test_and_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
+                                         &cfg->scan_status)) {
     BRCMF_DBG(SCAN, "Scan complete, probably P2P scan");
   }
 }
@@ -1082,6 +1097,36 @@ static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, const wlan_fullmac_scan_
   return err;
 }
 
+zx_status_t brcmf_check_scan_status(unsigned long scan_status,
+                                    std::string* out_scan_status_report) {
+  zx_status_t out_scan_status = ZX_OK;
+  std::ostringstream scan_status_ss;
+
+  // brcmf_test_bit_in_array() requires a std::atomic<unsigned long>*
+  std::atomic<unsigned long> atomic_scan_status = scan_status;
+  for (auto scan_status_bit : BRCMF_ALL_SCAN_STATUS_BITS) {
+    if (brcmf_test_bit_in_array(brcmf_get_enum_value(scan_status_bit), &atomic_scan_status)) {
+      out_scan_status = ZX_ERR_UNAVAILABLE;
+      if (out_scan_status_report == nullptr) {
+        return out_scan_status;
+      }
+      if (scan_status_ss.tellp() > 0) {
+        scan_status_ss << "+";
+      }
+      scan_status_ss << brcmf_get_scan_status_bit_str(scan_status_bit);
+    }
+  }
+
+  if (out_scan_status_report != nullptr) {
+    if (scan_status_ss.tellp() > 0) {
+      scan_status_ss << " ";
+    }
+    scan_status_ss << "(0x" << std::hex << scan_status << ")";
+    *out_scan_status_report = scan_status_ss.str();
+  }
+  return out_scan_status;
+}
+
 zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlan_fullmac_scan_req_t* req,
                                 uint16_t* sync_id_out) {
   zx_status_t err;
@@ -1095,18 +1140,13 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlan_fullmac_scan
 
   struct brcmf_cfg80211_info* cfg = ndev_to_if(ndev)->drvr->config;
 
-  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-    BRCMF_ERR("Scanning already: status (%lu)", cfg->scan_status.load());
-    return ZX_ERR_UNAVAILABLE;
+  std::string scan_status_report;
+  zx_status_t scan_status = brcmf_check_scan_status(cfg->scan_status.load(), &scan_status_report);
+  if (scan_status != ZX_OK) {
+    BRCMF_ERR("Scanning unavailable: scan_status %s", scan_status_report.c_str());
+    return scan_status;
   }
-  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
-    BRCMF_ERR("Scanning being aborted: status (%lu)", cfg->scan_status.load());
-    return ZX_ERR_UNAVAILABLE;
-  }
-  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status)) {
-    BRCMF_ERR("Scanning suppressed: status (%lu)", cfg->scan_status.load());
-    return ZX_ERR_UNAVAILABLE;
-  }
+
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
     BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)", vif->sme_state.load());
     return ZX_ERR_SHOULD_WAIT;
@@ -1119,7 +1159,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlan_fullmac_scan
   BRCMF_DBG(SCAN, "START ESCAN\n");
 
   cfg->scan_in_progress = true;
-  brcmf_set_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+  brcmf_set_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY), &cfg->scan_status);
 
   cfg->escan_info.run = brcmf_run_escan;
 
@@ -1136,7 +1176,7 @@ scan_out:
   if (err != ZX_ERR_SHOULD_WAIT) {
     BRCMF_ERR("scan error (%d)", err);
   }
-  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
+  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY), &cfg->scan_status);
   cfg->scan_in_progress = false;
   return err;
 }
@@ -1338,7 +1378,8 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
 
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
+  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::SUPPRESS),
+                           &cfg->scan_status);
   brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
   if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_NONE) {
     brcmf_set_pmk(vif->ifp, nullptr, 0);
@@ -2544,7 +2585,8 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping scan result callback");
     return;
   }
-  if (!brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+  if (!brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
+                               &cfg->scan_status)) {
     return;
   }
   wlan_fullmac_scan_result_t result = {};
@@ -2621,8 +2663,9 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   struct escan_info* escan = &cfg->escan_info;
   zx_status_t err = ZX_OK;
 
-  if (brcmf_test_and_set_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status)) {
-    BRCMF_INFO("A scan abort is already in progress.");
+  if (brcmf_test_and_set_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::ABORT),
+                                      &cfg->scan_status)) {
+    BRCMF_INFO("Abort scan already in progress.");
     return ZX_OK;
   }
 
@@ -2632,7 +2675,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
       BRCMF_ERR("Abort scan failed -- error: %s", zx_status_get_string(err));
     }
   }
-  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_ABORT, &cfg->scan_status);
+  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::ABORT), &cfg->scan_status);
   return err;
 }
 
@@ -2704,7 +2747,8 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     goto chk_scan_end;
   }
 
-  if (!brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+  if (!brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
+                               &cfg->scan_status)) {
     BRCMF_ERR("scan not ready, bsscfgidx=%d", ifp->bsscfgidx);
     return ZX_ERR_UNAVAILABLE;
   }
@@ -3113,11 +3157,12 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev,
   // sure those scans are blocked by setting this bit.
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
 
-  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
-    BRCMF_INFO(
-        "Scanning in progress when AP start request comes, scan status (%lu), aborting scan to "
-        "continue AP start request.\n",
-        cfg->scan_status.load());
+  if (brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
+                              &cfg->scan_status)) {
+    std::string scan_status_report;
+    brcmf_check_scan_status(cfg->scan_status.load(), &scan_status_report);
+    BRCMF_INFO("AP start request incoming during scan_status %s", scan_status_report.c_str());
+    BRCMF_INFO("Aborting scan to continue AP start request.");
     brcmf_abort_scanning(cfg);
   }
 
@@ -6093,7 +6138,8 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
   }
 
   if (ndev) {
-    if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
+    if (brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
+                                &cfg->scan_status) &&
         cfg->escan_info.ifp == ndev_to_if(ndev)) {
       BRCMF_WARN("Aborting scan, interface being removed");
       brcmf_abort_scanning_immediately(cfg);
@@ -6247,8 +6293,9 @@ zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   cfg->connect_timer->Stop();
 
   // Clear all driver scan states.
-  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
-  brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
+  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY), &cfg->scan_status);
+  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::SUPPRESS),
+                           &cfg->scan_status);
 
   // Clear connect and disconnect states for primary iface.
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &client_vif->sme_state);

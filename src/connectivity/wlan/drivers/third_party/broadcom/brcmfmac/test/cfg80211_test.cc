@@ -54,4 +54,33 @@ TEST(Cfg80211, ChannelSwitchTest) {
   EXPECT_EQ(brcmf_notify_channel_switch(nullptr, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
 }
 
+TEST(Cfg80211, ScanStatusReport) {
+  std::string scan_status_report;
+
+  // Check one status bit printed alone.
+  EXPECT_EQ(ZX_ERR_UNAVAILABLE,
+            brcmf_check_scan_status((1 << static_cast<size_t>(brcmf_scan_status_bit_t::ABORT)),
+                                    &scan_status_report));
+
+  EXPECT_EQ(scan_status_report, "ABORT (0x2)");
+
+  // Check two status bits concatenated with '+'.
+  EXPECT_EQ(
+      ZX_ERR_UNAVAILABLE,
+      brcmf_check_scan_status((1 << static_cast<size_t>(brcmf_scan_status_bit_t::BUSY)) |
+                                  (1 << static_cast<size_t>(brcmf_scan_status_bit_t::SUPPRESS)),
+                              &scan_status_report));
+
+  EXPECT_EQ(scan_status_report, "BUSY+SUPPRESS (0x5)");
+
+  // Check threes status bits concatenated with '+'.
+  EXPECT_EQ(
+      ZX_ERR_UNAVAILABLE,
+      brcmf_check_scan_status((1 << static_cast<size_t>(brcmf_scan_status_bit_t::BUSY)) |
+                                  (1 << static_cast<size_t>(brcmf_scan_status_bit_t::ABORT)) |
+                                  (1 << static_cast<size_t>(brcmf_scan_status_bit_t::SUPPRESS)),
+                              &scan_status_report));
+  EXPECT_EQ(scan_status_report, "BUSY+ABORT+SUPPRESS (0x7)");
+}
+
 }  // namespace
