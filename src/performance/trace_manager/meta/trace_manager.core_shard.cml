@@ -10,9 +10,8 @@
         },
     ],
 
-    // TODO(fxbug.dev/90444): Remove capabilities and expose sections after
-    // updating core shards outside of fuchsia.git that defined an offer
-    // from "self".
+    // Capabilities are exposed to core so they can be then routed to
+    // components under bootstrap, such as drivers.
     capabilities: [
         {
             protocol: [

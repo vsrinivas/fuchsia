@@ -351,9 +351,6 @@ executable("provider_destruction_tests") {
   ]
 }
 
-# TODO(fxbug.dev/90444): This group target is to ensure that the v1
-# trace_manager component is included with these tests. These tests should be
-# updated to use the v2 component instead.
 group("trace_tests") {
   testonly = true
   deps = [
