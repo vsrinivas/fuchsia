@@ -46,7 +46,7 @@ class AppStateImpl with Disposable implements AppState {
   static const kLicenseUrl =
       'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
   static const kScreenSaverUrl =
-      'fuchsia-pkg://fuchsia.com/screensaver#meta/screensaver.cmx';
+      'fuchsia-pkg://fuchsia.com/screensaver#meta/screensaver.cm';
   static const kEnableUserFeedbackMarkerFile =
       '/pkg/config/enable_user_feedback';
 
