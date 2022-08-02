@@ -28,19 +28,10 @@ rustc_binary("bin") {
 
 fuchsia_component("screensaver_cm") {
   component_name = "screensaver"
-  manifest = "meta/screensaver.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("screensaver_cm2") {
-  component_name = "screensaver"
   manifest = "meta/screensaver.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("screensaver") {
-  deps = [
-    ":screensaver_cm",
-    ":screensaver_cm2",
-  ]
+  deps = [ ":screensaver_cm" ]
 }
