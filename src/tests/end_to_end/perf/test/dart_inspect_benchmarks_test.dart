@@ -92,17 +92,6 @@ void main() {
         await helper.performance.initializeTracing(categories: ['dart:dart']);
     await traceSession.start();
 
-    // TODO(richkadel): Confirm the iterations are working in the component
-    // using a default value, since we can't pass this as an argument to
-    // CFv2.
-    //
-    // The original launch() call passed only the app name, which defaulted to a
-    // CFv1 .cmx URL, but the function supports passing in a full URL, so it
-    // can be set to a CFv2 URL.
-    //
-    //  _log.info('Running: dart-inspect-benchmarks --iterations=$_iterations');
-    //  stopwatch.start();
-    //  await helper.component.launch(_appName, ['--iterations=$_iterations']);
     _log.info('Running: dart-inspect-benchmarks');
     stopwatch.start();
     final url = 'fuchsia-pkg://fuchsia.com/$_appName#meta/$_appName.cm';
