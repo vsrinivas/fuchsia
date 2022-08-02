@@ -16,6 +16,7 @@ ffx_plugin("ffx_package_download") {
     "//third_party/rust_crates:url",
   ]
   test_deps = [
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:pretty_assertions",

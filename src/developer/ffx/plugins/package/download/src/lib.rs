@@ -69,7 +69,7 @@ mod tests {
         std::{collections::BTreeSet, net::Ipv4Addr, sync::Arc},
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_download() {
         let tmp = tempfile::TempDir::new().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();

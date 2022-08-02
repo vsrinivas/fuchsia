@@ -87,7 +87,17 @@ fn copy_dir(from: &Path, to: &Path) -> Result<()> {
 
 pub fn make_repo_keys() -> RepoKeys {
     let keys_dir = Utf8PathBuf::from(EMPTY_REPO_PATH).join("keys");
-    RepoKeys::from_dir(keys_dir.as_std_path()).unwrap()
+    let repo_keys = RepoKeys::from_dir(keys_dir.as_std_path()).unwrap();
+
+    // FIXME(fxbug.dev/105539) Add logging to help debug 105539.
+    tracing::debug!("{:#?}", repo_keys);
+
+    assert_eq!(repo_keys.root_keys().len(), 1);
+    assert_eq!(repo_keys.targets_keys().len(), 1);
+    assert_eq!(repo_keys.snapshot_keys().len(), 1);
+    assert_eq!(repo_keys.timestamp_keys().len(), 1);
+
+    repo_keys
 }
 
 pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
