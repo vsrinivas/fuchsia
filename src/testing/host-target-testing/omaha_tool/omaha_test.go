@@ -77,7 +77,7 @@ func TestSingleRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create omaha server: %v\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
 	}
-	defer o.Shutdown()
+	defer o.Shutdown(ctx)
 
 	if err := o.SetPkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
 		t.Fatalf("SetPkgURL should not fail with the given input. %s", err)
@@ -141,7 +141,7 @@ func TestSingleRequest(t *testing.T) {
 			updateCheck.Manifest.Packages.Pkg[0].Name)
 	}
 
-	if err := o.Shutdown(); err != nil {
+	if err := o.Shutdown(ctx); err != nil {
 		t.Fatalf("shutdown should not have failed: %s", err)
 	}
 
@@ -161,7 +161,7 @@ func TestSetPkgUrlOnServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create omaha server: %v\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
 	}
-	defer o.Shutdown()
+	defer o.Shutdown(ctx)
 
 	if err := o.SetPkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
 		t.Fatalf("SetPkgURL should not fail with the given input. %s", err)
