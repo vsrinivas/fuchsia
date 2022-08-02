@@ -31,11 +31,11 @@ static composite_device_desc_t composite_dev = []() {
 }();
 
 zx_status_t Nelson::SelinaInit() {
-  // Enable the clock to the Selina sensor on proto boards. This pin is not connected to anything on
-  // DVT2.
+  // Enable the clock to the Selina sensor on proto boards. GPIOH_8 is open-drain: set it to input
+  // so that it gets pulled up by the sensor board. This pin is not connected to anything on DVT2.
   if (GetBoardRev() == BOARD_REV_P1) {
     gpio_impl_.SetAltFunction(GPIO_SOC_SELINA_OSC_EN, 0);
-    gpio_impl_.ConfigOut(GPIO_SOC_SELINA_OSC_EN, 1);
+    gpio_impl_.ConfigIn(GPIO_SOC_SELINA_OSC_EN, GPIO_NO_PULL);
   }
 
   return DdkAddComposite("selina", &composite_dev);
