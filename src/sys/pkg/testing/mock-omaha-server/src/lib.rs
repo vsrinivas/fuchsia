@@ -99,10 +99,6 @@ impl PrivateKeys {
 
 pub type ResponseMap = HashMap<String, ResponseAndMetadata>;
 
-fn make_default_responses_by_appid() -> ResponseMap {
-    ResponseMap::from([("integration-test-appid".to_string(), ResponseAndMetadata::default())])
-}
-
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub enum UpdateCheckAssertion {
     UpdatesEnabled,
@@ -113,8 +109,7 @@ pub enum UpdateCheckAssertion {
 #[builder(pattern = "owned")]
 #[builder(derive(Debug))]
 pub struct OmahaServer {
-    #[builder(setter(into))]
-    #[builder(default = "make_default_responses_by_appid()")]
+    #[builder(default, setter(into))]
     pub responses_by_appid: ResponseMap,
     #[builder(default = "None")]
     pub private_keys: Option<PrivateKeys>,
@@ -247,6 +242,14 @@ pub async fn handle_omaha_request(
 ) -> Result<Response<Body>, Error> {
     let omaha_server = omaha_server.lock().clone();
     assert_eq!(req.method(), Method::POST);
+
+    if omaha_server.responses_by_appid.is_empty() {
+        let builder = Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .header(header::CONTENT_LENGTH, 0);
+        tracing::error!("Received a request before |responses_by_appid| was set; returning an empty response with status 500.");
+        return Ok(builder.body(Body::empty()).unwrap());
+    }
 
     let uri_string = req.uri().to_string();
 
@@ -592,6 +595,31 @@ mod tests {
             }
         }
 
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_no_configured_responses() -> Result<(), Error> {
+        let server = OmahaServer::start(Arc::new(Mutex::new(
+            OmahaServerBuilder::default().responses_by_appid([]).build().unwrap(),
+        )))
+        .context("starting server")?;
+
+        let client = fuchsia_hyper::new_client();
+        let body = json!({
+            "request": {
+                "app": [
+                    {
+                        "appid": "integration-test-appid-1",
+                        "version": "0.1.2.3",
+                        "updatecheck": { "updatedisabled": false }
+                    },
+                ]
+            }
+        });
+        let request = Request::post(&server).body(Body::from(body.to_string())).unwrap();
+        let response = client.request(request).await?;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
         Ok(())
     }
 }

@@ -45,7 +45,8 @@ struct Args {
     #[argh(
         option,
         description = "responses and metadata keyed by appid",
-        from_str_fn(parse_responses_by_appid)
+        from_str_fn(parse_responses_by_appid),
+        default = "HashMap::new()"
     )]
     responses_by_appid: HashMap<String, ResponseAndMetadata>,
 

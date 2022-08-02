@@ -73,16 +73,15 @@ func TestSingleRequest(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	args := argsForTest()
-	if err := args.SetUpdatePkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
-		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
-	}
-
-	o, err := NewOmahaServer(ctx, args, &stdout, &stderr)
+	o, err := NewOmahaServer(ctx, argsForTest(), &stdout, &stderr)
 	if err != nil {
-		t.Fatalf("failed to create omaha server: %v", err)
+		t.Fatalf("failed to create omaha server: %v\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
 	}
 	defer o.Shutdown()
+
+	if err := o.SetPkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
+		t.Fatalf("SetPkgURL should not fail with the given input. %s", err)
+	}
 
 	req := getTestOmahaRequest(t)
 	resp, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req))
@@ -93,7 +92,7 @@ func TestSingleRequest(t *testing.T) {
 	dec := json.NewDecoder(resp.Body)
 	var data response
 	if err = dec.Decode(&data); err != nil {
-		t.Fatalf("Could not decode")
+		t.Fatalf("Could not decode data: %s", resp.Body)
 	}
 
 	app := data.Response.App[0]
@@ -158,16 +157,15 @@ func TestSetPkgUrlOnServer(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	args := argsForTest()
-	if err := args.SetUpdatePkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
-		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
-	}
-
-	o, err := NewOmahaServer(ctx, args, &stdout, &stderr)
+	o, err := NewOmahaServer(ctx, argsForTest(), &stdout, &stderr)
 	if err != nil {
-		t.Fatalf("failed to create omaha server: %v", err)
+		t.Fatalf("failed to create omaha server: %v\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
 	}
 	defer o.Shutdown()
+
+	if err := o.SetPkgURL(ctx, "fuchsia-pkg://fuchsia.com/update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != nil {
+		t.Fatalf("SetPkgURL should not fail with the given input. %s", err)
+	}
 
 	req := getTestOmahaRequest(t)
 	if _, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req)); err != nil {
@@ -176,5 +174,39 @@ func TestSetPkgUrlOnServer(t *testing.T) {
 
 	if err := o.SetPkgURL(ctx, "fuchsia-pkg://other-domain.com/update/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"); err != nil {
 		t.Fatalf("Setting Pkg URL on a running server shouldn't fail. err: %s\nstdout: %s\n stderr: %s\n", err, stdout.String(), stderr.String())
+	}
+}
+
+func TestSingleRequestBeforeMerkleSet(t *testing.T) {
+	ctx := context.Background()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	args := argsForTest()
+	if args.merkle != "" {
+		t.Fatalf("This test is supposed to invoke NewOmahaServer on args with merkle empty, but it is not: %s", args.merkle)
+	}
+
+	o, err := NewOmahaServer(ctx, args, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("failed to create omaha server: %v\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
+	}
+	defer o.Shutdown()
+
+	resp, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(getTestOmahaRequest(t)))
+	if err != nil {
+		t.Fatalf("Get request ought to fail. err: %s\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
+	}
+	if resp.StatusCode != 500 {
+		t.Fatalf("Querying mock-omaha-server before |responses_by_appid| is configured ought to return a 500.")
+	}
+
+	if err := o.SetPkgURL(ctx, "fuchsia-pkg://other-domain.com/foo/1?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"); err != nil {
+		t.Fatalf("Setting Pkg URL on a running server shouldn't fail. err: %s\nstdout: %s\n stderr: %s\n", err, stdout.String(), stderr.String())
+	}
+
+	_, err = http.Post(o.URL(), "application/json", bytes.NewBuffer(getTestOmahaRequest(t)))
+	if err != nil {
+		t.Fatalf("Get request shouldn't fail. err: %s\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
 	}
 }

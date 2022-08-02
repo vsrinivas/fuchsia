@@ -71,25 +71,6 @@ type OmahaTool struct {
 	cmd       *exec.Cmd
 }
 
-func makeResponsesByAppIDSerialized(appId string, merkle string, packagePath string) (string, error) {
-	responsesByAppID := map[string]responseAndMetadata{
-		appId: {
-			Response:       "Update",
-			Merkle:         merkle,
-			CheckAssertion: "UpdatesEnabled",
-			Version:        "0.1.2.3",
-			Codebase:       "fuchsia-pkg://fuchsia.com",
-			PackagePath:    packagePath,
-		},
-	}
-	responsesByAppidSerialized, err := json.Marshal(responsesByAppID)
-	if err != nil {
-		return "", err
-	}
-
-	return string(responsesByAppidSerialized), nil
-}
-
 func NewOmahaServer(ctx context.Context, args OmahaToolArgs, stdout io.Writer, stderr io.Writer) (*OmahaTool, error) {
 	l := logger.NewLogger(
 		logger.DebugLevel,
@@ -105,18 +86,12 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, stdout io.Writer, s
 		return nil, err
 	}
 
-	responsesByAppid, err := makeResponsesByAppIDSerialized(args.AppId, args.merkle, args.packagePath)
-	if err != nil {
-		return nil, err
-	}
-
 	toolPath, err := exec.LookPath(args.toolPath)
 	if err != nil {
 		return nil, err
 	}
 
 	toolArgs := []string{
-		"--responses-by-appid", responsesByAppid,
 		"--key-id", args.privateKeyId,
 		"--key-path", privateKeyPath,
 		"--listen-on", "::1",
@@ -222,11 +197,21 @@ func (o *OmahaTool) SetPkgURL(ctx context.Context, updatePkgURL string) error {
 	}
 	o.Args = newArgs
 
-	req, err := makeResponsesByAppIDSerialized(o.Args.AppId, o.Args.merkle, o.Args.packagePath)
+	responsesByAppID := map[string]responseAndMetadata{
+		o.Args.AppId: {
+			Response:       "Update",
+			Merkle:         o.Args.merkle,
+			CheckAssertion: "UpdatesEnabled",
+			Version:        "0.1.2.3",
+			Codebase:       "fuchsia-pkg://fuchsia.com",
+			PackagePath:    o.Args.packagePath,
+		},
+	}
+	req, err := json.Marshal(responsesByAppID)
 	if err != nil {
 		return err
 	}
 
-	_, err = http.Post(o.URL()+"/set_responses_by_appid", "application/json", bytes.NewBuffer([]byte(req)))
+	_, err = http.Post(o.URL()+"/set_responses_by_appid", "application/json", bytes.NewBuffer(req))
 	return err
 }
