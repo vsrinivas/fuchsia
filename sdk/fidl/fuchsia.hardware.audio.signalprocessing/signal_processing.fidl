@@ -11,6 +11,8 @@ const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
 const MAX_COUNT_TOPOLOGIES uint32 = 64;
 const MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 = 64;
 const MAX_STRING_SIZE uint32 = 256;
+@available(added=HEAD)
+const MAX_BYTES_ELEMENT_VENDOR_SPECIFIC uint32 = 4096;
 
 type ElementType = flexible enum {
     /// Vendor Specific. A type of processing element not covered by any subsequent type definition.
@@ -133,6 +135,10 @@ type ElementState = table {
     /// the latency can't be set by a client, it can only provided by the server in a
     /// `WatchElementState` reply.
     3: latency Latency;
+
+    /// If included, an opaque object of octets for exchanging vendor specific information.
+    @available(added=HEAD)
+    4: vendor_specific_data bytes:MAX_BYTES_ELEMENT_VENDOR_SPECIFIC;
 };
 
 /// Edge pairs between processing elements used to define ordering in processing elements

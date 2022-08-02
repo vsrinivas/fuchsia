@@ -132,6 +132,21 @@ element is not changed with respect to the particular field. For instance, if an
 `EqualizerBandState` in a `SetElement` does not include an optional `frequency` then the
 equalizer's band frequency state is not changed.
 
+## Vendor specific data
+
+`ElementState` `vendor_specific_data` is an optional parameter that can be specified for any
+processing element. This allows processing elements to specify an opaque object to be either sent
+to the drivers part of a `SetElementState` or received from a driver as part of a
+`WatchElementState`.
+
+In addition to opaque data for any type, a processing element of type `VENDOR_SPECIFIC` allows
+drivers to specify a type that is not defined in the `SignalProcessing` protocol, for instance
+something that is not standard yet or is not meant to be standardized and provided only by a
+specific vendor. A processing element of type `VENDOR_SPECIFIC` does not specify any
+`TypeSpecificElement` parameter, instead it may specify opaque data to be sent or received to or
+from the driver using the `ElementState` `vendor_specific_data` parameter same as any other
+processing element type.
+
 ## Topologies {#topologies}
 
 The topologies returned by `GetTopologies` support different arrangements for the PEs returned by

@@ -224,6 +224,11 @@
         "name": "fuchsia.hardware.audio.signalprocessing/ElementState.type_specific"
     },
     {
+        "declaration": "vector<uint8>:4096",
+        "kind": "table/member",
+        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.vendor_specific_data"
+    },
+    {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/ElementState"
     },
@@ -571,6 +576,12 @@
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/LevelType",
         "strictness": "strict"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "const",
+        "name": "fuchsia.hardware.audio.signalprocessing/MAX_BYTES_ELEMENT_VENDOR_SPECIFIC",
+        "value": "4096"
     },
     {
         "declaration": "uint32",
