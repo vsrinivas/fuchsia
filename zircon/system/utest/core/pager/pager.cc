@@ -3016,11 +3016,28 @@ TEST(Pager, EvictionHintsVmar) {
   // We should see page requests for both VMOs.
   ASSERT_TRUE(pager.WaitForPageRead(vmo1, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo1, 0, 1));
-  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 2, 1, ZX_TIME_INFINITE));
+  // The next page was committed and then marked DONT_NEED and could have been evicted already, so
+  // get the next request manually and see where we're at.
+  uint64_t req_offset;
+  uint64_t req_count;
+  ASSERT_TRUE(pager.GetPageReadRequest(vmo1, ZX_TIME_INFINITE, &req_offset, &req_count));
+  if (req_offset == 1) {
+    pager.SupplyPages(vmo1, 1, 1);
+    ASSERT_TRUE(pager.WaitForPageRead(vmo1, 2, 1, ZX_TIME_INFINITE));
+  } else {
+    ASSERT_EQ(req_offset, 2);
+  }
   ASSERT_TRUE(pager.SupplyPages(vmo1, 2, 1));
   ASSERT_TRUE(pager.WaitForPageRead(vmo2, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo2, 0, 1));
-  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 2, 1, ZX_TIME_INFINITE));
+  // Similar as before, page might have been evicted.
+  ASSERT_TRUE(pager.GetPageReadRequest(vmo2, ZX_TIME_INFINITE, &req_offset, &req_count));
+  if (req_offset == 1) {
+    pager.SupplyPages(vmo2, 1, 1);
+    ASSERT_TRUE(pager.WaitForPageRead(vmo2, 2, 1, ZX_TIME_INFINITE));
+  } else {
+    ASSERT_EQ(req_offset, 2);
+  }
   ASSERT_TRUE(pager.SupplyPages(vmo2, 2, 1));
 
   ASSERT_TRUE(t1.Wait());
@@ -3089,11 +3106,28 @@ TEST(Pager, EvictionHintsNestedVmar) {
   // We should see page requests for both VMOs.
   ASSERT_TRUE(pager.WaitForPageRead(vmo1, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo1, 0, 1));
-  ASSERT_TRUE(pager.WaitForPageRead(vmo1, 2, 1, ZX_TIME_INFINITE));
+  // The next page was committed and then marked DONT_NEED and could have been evicted already, so
+  // get the next request manually and see where we're at.
+  uint64_t req_offset;
+  uint64_t req_count;
+  ASSERT_TRUE(pager.GetPageReadRequest(vmo1, ZX_TIME_INFINITE, &req_offset, &req_count));
+  if (req_offset == 1) {
+    pager.SupplyPages(vmo1, 1, 1);
+    ASSERT_TRUE(pager.WaitForPageRead(vmo1, 2, 1, ZX_TIME_INFINITE));
+  } else {
+    ASSERT_EQ(req_offset, 2);
+  }
   ASSERT_TRUE(pager.SupplyPages(vmo1, 2, 1));
   ASSERT_TRUE(pager.WaitForPageRead(vmo2, 0, 1, ZX_TIME_INFINITE));
   ASSERT_TRUE(pager.SupplyPages(vmo2, 0, 1));
-  ASSERT_TRUE(pager.WaitForPageRead(vmo2, 2, 1, ZX_TIME_INFINITE));
+  // Similar as before, page might have been evicted.
+  ASSERT_TRUE(pager.GetPageReadRequest(vmo2, ZX_TIME_INFINITE, &req_offset, &req_count));
+  if (req_offset == 1) {
+    pager.SupplyPages(vmo2, 1, 1);
+    ASSERT_TRUE(pager.WaitForPageRead(vmo2, 2, 1, ZX_TIME_INFINITE));
+  } else {
+    ASSERT_EQ(req_offset, 2);
+  }
   ASSERT_TRUE(pager.SupplyPages(vmo2, 2, 1));
 
   ASSERT_TRUE(t1.Wait());
