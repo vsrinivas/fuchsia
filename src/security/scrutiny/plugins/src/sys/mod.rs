@@ -73,7 +73,7 @@ impl DataController for FindSysRealmComponents {
             component_ids.get(&manifest.component_id).map(|url| {
                 let manifest_str = match &manifest.manifest {
                     ManifestData::Version1(content) => content.clone(),
-                    ManifestData::Version2(content) => content.clone(),
+                    ManifestData::Version2 { cm_base64 } => cm_base64.clone(),
                 };
                 let features = serde_json::from_str::<ManifestContent>(&manifest_str).ok()?;
                 component_manifests.insert(

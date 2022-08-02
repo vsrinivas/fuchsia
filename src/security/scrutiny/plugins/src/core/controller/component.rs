@@ -103,7 +103,7 @@ impl DataController for ComponentManifestGraphController {
                 if let ManifestData::Version1(data) = &manifest.manifest {
                     return Ok(serde_json::from_str(data)?);
                 }
-                if let ManifestData::Version2(data) = &manifest.manifest {
+                if let ManifestData::Version2 { cm_base64: data } = &manifest.manifest {
                     return Ok(serde_json::to_value(data.clone())?);
                 }
             }

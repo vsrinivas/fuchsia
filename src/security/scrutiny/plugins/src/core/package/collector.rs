@@ -448,7 +448,7 @@ impl PackageDataCollector {
                 let cf2_manifest = {
                     if let ComponentManifest::Version2(decl_bytes) = &cm {
                         let mut cap_uses = Vec::new();
-                        let base64_bytes = base64::encode(&decl_bytes);
+                        let cm_base64 = base64::encode(&decl_bytes);
 
                         if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&decl_bytes) {
                             if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
@@ -495,13 +495,13 @@ impl PackageDataCollector {
                         }
                         Manifest {
                             component_id: *component_id,
-                            manifest: ManifestData::Version2(base64_bytes),
+                            manifest: ManifestData::Version2 { cm_base64 },
                             uses: cap_uses,
                         }
                     } else {
                         Manifest {
                             component_id: *component_id,
-                            manifest: ManifestData::Version2(String::from("")),
+                            manifest: ManifestData::Version2 { cm_base64: String::from("") },
                             uses: Vec::new(),
                         }
                     }
@@ -579,7 +579,7 @@ impl PackageDataCollector {
                 let url = Url::parse(&url.to_string()).with_context(|| {
                     format!("Failed to convert boot URL to standard URL: {}", url)
                 })?;
-                let base64_bytes = base64::encode(&file_data);
+                let cm_base64 = base64::encode(&file_data);
                 if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&file_data) {
                     if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
                         warn!("Invalid cm {} {}", file_name, err);
@@ -651,7 +651,7 @@ impl PackageDataCollector {
                         );
                         manifests.push(Manifest {
                             component_id: *component_id,
-                            manifest: ManifestData::Version2(base64_bytes),
+                            manifest: ManifestData::Version2 { cm_base64 },
                             uses: cap_uses,
                         });
                     }

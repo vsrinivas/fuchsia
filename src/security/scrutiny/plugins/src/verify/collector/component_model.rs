@@ -79,11 +79,11 @@ impl V2ComponentModelDataCollector {
             .entries
             .iter()
         {
-            if let ManifestData::Version2(decl_base64) = &manifest.manifest {
+            if let ManifestData::Version2 { cm_base64 } = &manifest.manifest {
                 match urls.remove(&manifest.component_id) {
                     Some(url) => {
                         let result: Result<fdecl::Component, fidl::Error> = decode_persistent(
-                            &base64::decode(&decl_base64)
+                            &base64::decode(&cm_base64)
                                 .context("Unable to decode base64 v2 manifest")?,
                         );
                         match result {
