@@ -353,18 +353,22 @@ fn bytes_to_mac(b: &[u8]) -> Option<Mac> {
     })
 }
 
-impl<C: NonSyncContext> NudIpHandler<Ipv6, C> for SyncCtx<C> {
+impl<I: Ip, C: NonSyncContext> NudIpHandler<I, C> for SyncCtx<C>
+where
+    SyncCtx<C>: NudHandler<I, EthernetLinkDevice, C>
+        + DeviceIdContext<EthernetLinkDevice, DeviceId = EthernetDeviceId>,
+{
     fn handle_neighbor_probe(
         &mut self,
         ctx: &mut C,
         device_id: DeviceId,
-        neighbor: SpecifiedAddr<Ipv6Addr>,
+        neighbor: SpecifiedAddr<I::Addr>,
         link_addr: &[u8],
     ) {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => {
                 if let Some(link_addr) = bytes_to_mac(link_addr) {
-                    NudHandler::<Ipv6, EthernetLinkDevice, _>::set_dynamic_neighbor(
+                    NudHandler::<I, EthernetLinkDevice, _>::set_dynamic_neighbor(
                         self,
                         ctx,
                         id,
@@ -382,13 +386,13 @@ impl<C: NonSyncContext> NudIpHandler<Ipv6, C> for SyncCtx<C> {
         &mut self,
         ctx: &mut C,
         device_id: DeviceId,
-        neighbor: SpecifiedAddr<Ipv6Addr>,
+        neighbor: SpecifiedAddr<I::Addr>,
         link_addr: &[u8],
     ) {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => {
                 if let Some(link_addr) = bytes_to_mac(link_addr) {
-                    NudHandler::<Ipv6, EthernetLinkDevice, _>::set_dynamic_neighbor(
+                    NudHandler::<I, EthernetLinkDevice, _>::set_dynamic_neighbor(
                         self,
                         ctx,
                         id,
@@ -405,7 +409,7 @@ impl<C: NonSyncContext> NudIpHandler<Ipv6, C> for SyncCtx<C> {
     fn flush_neighbor_table(&mut self, ctx: &mut C, device_id: DeviceId) {
         match device_id.inner() {
             DeviceIdInner::Ethernet(id) => {
-                NudHandler::<Ipv6, EthernetLinkDevice, _>::flush(self, ctx, id)
+                NudHandler::<I, EthernetLinkDevice, _>::flush(self, ctx, id)
             }
             DeviceIdInner::Loopback => {}
         }
@@ -759,7 +763,6 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
     crate::ip::del_device_routes::<Ipv6, _, _>(sync_ctx, ctx, &device);
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
-            crate::device::ethernet::deinitialize(sync_ctx, ctx, id);
             let EthernetDeviceId(id) = id;
             let _: IpLinkDeviceState<_, _> = sync_ctx
                 .state

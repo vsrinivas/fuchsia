@@ -28,6 +28,7 @@ use crate::{
 const MAX_MULTICAST_SOLICIT: u8 = 3;
 
 /// The type of message with a dynamic neighbor update.
+#[derive(Copy, Clone)]
 pub(crate) enum DynamicNeighborUpdateSource {
     /// Indicates an update from a neighbor probe message.
     ///

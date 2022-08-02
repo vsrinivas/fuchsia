@@ -34,7 +34,7 @@ use crate::{
     context::{FrameContext, RngContext, StateContext, TimerHandler},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
-        arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
+        arp::{self, ArpContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
         ndp::NdpContext,
         BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
@@ -423,14 +423,15 @@ impl<D> From<NudTimerId<Ipv6, EthernetLinkDevice, D>> for EthernetTimerId<D> {
 pub(super) fn handle_timer<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
     SC: EthernetIpLinkDeviceContext<C>
-        + TimerHandler<C, NudTimerId<Ipv6, EthernetLinkDevice, SC::DeviceId>>,
+        + TimerHandler<C, NudTimerId<Ipv6, EthernetLinkDevice, SC::DeviceId>>
+        + TimerHandler<C, ArpTimerId<EthernetLinkDevice, SC::DeviceId>>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: EthernetTimerId<SC::DeviceId>,
 ) {
     match id {
-        EthernetTimerId::Arp(id) => arp::handle_timer(sync_ctx, ctx, id.into()),
+        EthernetTimerId::Arp(id) => TimerHandler::handle_timer(sync_ctx, ctx, id),
         EthernetTimerId::Nudv6(id) => TimerHandler::handle_timer(sync_ctx, ctx, id),
     }
 }
@@ -464,6 +465,7 @@ pub(super) fn send_ip_frame<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
     SC: EthernetIpLinkDeviceContext<C>
         + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>
+        + NudHandler<Ipv4, EthernetLinkDevice, C>
         + NudHandler<Ipv6, EthernetLinkDevice, C>,
     A: IpAddress,
     S: Serializer<Buffer = B>,
@@ -484,13 +486,13 @@ pub(super) fn send_ip_frame<
     let dst_mac = match local_addr.into() {
         IpAddr::V4(local_addr) => match MulticastAddr::from_witness(local_addr) {
             Some(multicast) => Ok(Mac::from(&multicast)),
-            None => arp::lookup(sync_ctx, ctx, device_id, local_mac.get(), local_addr.get())
+            None => NudHandler::<Ipv4, _, _>::lookup(sync_ctx, ctx, device_id, local_addr)
                 .ok_or(IpAddr::V4(local_addr)),
         },
         IpAddr::V6(local_addr) => match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
             UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
             UnicastOrMulticastIpv6Addr::Unicast(addr) => {
-                NudHandler::lookup(sync_ctx, ctx, device_id, addr.into_specified())
+                NudHandler::<Ipv6, _, _>::lookup(sync_ctx, ctx, device_id, addr.into_specified())
                     .ok_or(IpAddr::V6(local_addr))
             }
         },
@@ -765,21 +767,6 @@ pub(super) fn insert_ndp_table_entry<
     )
 }
 
-/// Deinitializes and cleans up state for ethernet devices
-///
-/// After this function is called, the ethernet device should not be used and
-/// nothing else should be done with the state.
-pub(super) fn deinitialize<
-    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
-    SC: EthernetIpLinkDeviceContext<C>,
->(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    device_id: SC::DeviceId,
-) {
-    arp::deinitialize(sync_ctx, ctx, device_id);
-}
-
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
     StateContext<C, ArpState<EthernetLinkDevice>, SC::DeviceId> for SC
 {
@@ -815,18 +802,10 @@ impl<
     }
 }
 
-impl<C: DeviceIdContext<EthernetLinkDevice>> ArpDeviceIdContext<EthernetLinkDevice> for C {
-    type DeviceId = <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId;
-}
-
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
     ArpContext<EthernetLinkDevice, C> for SC
 {
-    fn get_protocol_addr(
-        &self,
-        _ctx: &mut C,
-        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
-    ) -> Option<Ipv4Addr> {
+    fn get_protocol_addr(&self, _ctx: &mut C, device_id: SC::DeviceId) -> Option<Ipv4Addr> {
         self.get_state_with(device_id.into())
             .ip
             .ipv4
@@ -836,17 +815,13 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
             .cloned()
             .map(|addr| addr.addr().get())
     }
-    fn get_hardware_addr(
-        &self,
-        _ctx: &mut C,
-        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
-    ) -> UnicastAddr<Mac> {
+    fn get_hardware_addr(&self, _ctx: &mut C, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
         self.get_state_with(device_id.into()).link.mac
     }
     fn address_resolved(
         &mut self,
         ctx: &mut C,
-        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        device_id: SC::DeviceId,
         proto_addr: Ipv4Addr,
         hw_addr: Mac,
     ) {
@@ -855,7 +830,7 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
     fn address_resolution_failed(
         &mut self,
         ctx: &mut C,
-        device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        device_id: SC::DeviceId,
         proto_addr: Ipv4Addr,
     ) {
         mac_resolution_failed(self, ctx, device_id.into(), IpAddr::V4(proto_addr));
@@ -1010,7 +985,7 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::DummyInstant,
-        device::{arp::ArpHandler, DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState},
+        device::{DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState},
         error::NotFoundError,
         ip::{
             device::{
@@ -1176,7 +1151,8 @@ mod tests {
                 crate::context::testutil::DummyCtx::with_sync_ctx(DummyCtx::with_state(
                     DummyEthernetCtx::new(DUMMY_CONFIG_V4.local_mac, Ipv6::MINIMUM_LINK_MTU.into()),
                 ));
-            <DummyCtx as ArpHandler<_, _>>::insert_static_neighbor(
+
+            insert_static_arp_table_entry(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 DummyDeviceId,

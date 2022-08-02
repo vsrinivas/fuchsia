@@ -615,12 +615,13 @@ fn enable_ipv4_device<
 
 fn disable_ipv4_device<
     C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
-    SC: IpDeviceContext<Ipv4, C> + GmpHandler<Ipv4, C>,
+    SC: IpDeviceContext<Ipv4, C> + GmpHandler<Ipv4, C> + NudIpHandler<Ipv4, C>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
+    NudIpHandler::flush_neighbor_table(sync_ctx, ctx, device_id);
     GmpHandler::gmp_handle_disabled(sync_ctx, ctx, device_id);
     leave_ip_multicast(sync_ctx, ctx, device_id, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS);
 }
@@ -1047,7 +1048,7 @@ pub(crate) fn get_ipv6_configuration<
 /// Updates the IPv4 Configuration for the device.
 pub(crate) fn update_ipv4_configuration<
     C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
-    SC: IpDeviceContext<Ipv4, C> + GmpHandler<Ipv4, C>,
+    SC: IpDeviceContext<Ipv4, C> + GmpHandler<Ipv4, C> + NudIpHandler<Ipv4, C>,
     F: FnOnce(&mut Ipv4DeviceConfiguration),
 >(
     sync_ctx: &mut SC,
