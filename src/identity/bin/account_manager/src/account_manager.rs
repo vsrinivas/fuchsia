@@ -8,7 +8,6 @@ use {
             AccountEvent, AccountEventEmitter, Options as AccountEventEmitterOptions,
         },
         account_handler_connection::AccountHandlerConnection,
-        account_handler_context::AccountHandlerContext,
         account_map::AccountMap,
     },
     account_common::{AccountId, AccountManagerError, FidlAccountId},
@@ -45,13 +44,8 @@ pub struct AccountManager<AHC: AccountHandlerConnection> {
 
 impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     /// Constructs a new AccountManager and loads an existing set of accounts from `data_dir`.
-    pub fn new(
-        data_dir: PathBuf,
-        auth_mechanism_ids: &[String],
-        inspector: &Inspector,
-    ) -> Result<AccountManager<AHC>, Error> {
-        let context = Arc::new(AccountHandlerContext::new(auth_mechanism_ids));
-        let account_map = AccountMap::load(data_dir, Arc::clone(&context), inspector.root())?;
+    pub fn new(data_dir: PathBuf, inspector: &Inspector) -> Result<AccountManager<AHC>, Error> {
+        let account_map = AccountMap::load(data_dir, inspector.root())?;
 
         // Initialize the structs used to output state through the inspect system.
         let event_emitter = AccountEventEmitter::new(inspector.root());
@@ -298,7 +292,6 @@ mod tests {
     type TestAccountManager = AccountManager<AccountHandlerConnectionImpl>;
 
     lazy_static! {
-        static ref AUTH_MECHANISM_IDS: Vec<String> = vec![];
         static ref TEST_GRANULARITY: AuthChangeGranularity =
             AuthChangeGranularity { summary_changes: Some(true), ..AuthChangeGranularity::EMPTY };
     }
@@ -351,7 +344,7 @@ mod tests {
         data_dir: &Path,
         inspector: &Inspector,
     ) -> AccountManager<AccountHandlerConnectionImpl> {
-        AccountManager::new(data_dir.to_path_buf(), &AUTH_MECHANISM_IDS, inspector).unwrap()
+        AccountManager::new(data_dir.to_path_buf(), inspector).unwrap()
     }
 
     /// Note: Many AccountManager methods launch instances of an AccountHandler. Since its
@@ -364,7 +357,7 @@ mod tests {
         let inspector = Inspector::new();
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
-            AccountManager::new(data_dir.path().into(), &AUTH_MECHANISM_IDS, &inspector).unwrap(),
+            AccountManager::new(data_dir.path().into(), &inspector).unwrap(),
             |proxy, _| async move {
                 assert_eq!(proxy.get_account_ids().await?.len(), 0);
                 Ok(())

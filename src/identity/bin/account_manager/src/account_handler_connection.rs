@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::account_handler_context::AccountHandlerContext,
     account_common::{AccountId, AccountManagerError, ResultExt},
     anyhow::Context,
     async_trait::async_trait,
@@ -16,8 +15,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     futures::prelude::*,
-    log::{error, info, warn},
-    std::{fmt, sync::Arc},
+    log::{info, warn},
+    std::fmt,
 };
 
 /// The url used to launch new AccountHandler component instances.
@@ -50,11 +49,7 @@ const ACCOUNT_PREFIX: &str = "account_";
 #[async_trait]
 pub trait AccountHandlerConnection: Send + Sized + Debug {
     /// Create a new uninitialized AccountHandlerConnection.
-    async fn new(
-        account_id: AccountId,
-        lifetime: Lifetime,
-        context: Arc<AccountHandlerContext>,
-    ) -> Result<Self, AccountManagerError>;
+    async fn new(account_id: AccountId, lifetime: Lifetime) -> Result<Self, AccountManagerError>;
 
     /// Returns the lifetime of the account.
     fn get_account_id(&self) -> &AccountId;
@@ -94,11 +89,7 @@ impl fmt::Debug for AccountHandlerConnectionImpl {
 
 #[async_trait]
 impl AccountHandlerConnection for AccountHandlerConnectionImpl {
-    async fn new(
-        account_id: AccountId,
-        lifetime: Lifetime,
-        context: Arc<AccountHandlerContext>,
-    ) -> Result<Self, AccountManagerError> {
+    async fn new(account_id: AccountId, lifetime: Lifetime) -> Result<Self, AccountManagerError> {
         let account_handler_url = if lifetime == Lifetime::Ephemeral {
             info!("Launching new ephemeral AccountHandler instance");
             ACCOUNT_HANDLER_EPHEMERAL_URL
@@ -114,16 +105,7 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         if lifetime == Lifetime::Persistent {
             fs_for_account_handler.add_proxy_service::<StoreMarker, _>();
         }
-        fs_for_account_handler.add_fidl_service(move |stream| {
-            let context_clone = context.clone();
-            fasync::Task::spawn(async move {
-                context_clone
-                    .handle_requests_from_stream(stream)
-                    .await
-                    .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
-            })
-            .detach();
-        });
+
         let realm = client::connect_to_protocol::<RealmMarker>()
             .context("failed to connect to fuchsia.component.Realm")
             .account_manager_error(ApiError::Resource)?;

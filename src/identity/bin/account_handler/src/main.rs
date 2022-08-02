@@ -18,19 +18,14 @@ mod pre_auth;
 mod stored_account;
 
 #[cfg(test)]
-mod fake_account_handler_context;
-#[cfg(test)]
-mod fake_authenticator;
-#[cfg(test)]
 mod test_util;
 
 use {
     crate::{account_handler::AccountHandler, common::AccountLifetime},
     account_common::{AccountId, AccountManagerError},
     anyhow::{Context as _, Error},
-    fidl_fuchsia_identity_internal::AccountHandlerContextMarker,
     fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
+    fuchsia_component::server::ServiceFs,
     fuchsia_inspect::Inspector,
     futures::StreamExt,
     log::{error, info},
@@ -72,13 +67,9 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;
 
-    // TODO(dnordstrom): Find a testable way to inject global capabilities.
-    let context = connect_to_protocol::<AccountHandlerContextMarker>()
-        .expect("Error connecting to the AccountHandlerContext service");
-
     let pre_auth_manager = create_pre_auth_manager(&lifetime, &account_id)?;
     let account_handler =
-        Arc::new(AccountHandler::new(context, account_id, lifetime, pre_auth_manager, &inspector));
+        Arc::new(AccountHandler::new(account_id, lifetime, pre_auth_manager, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::Task::spawn(async move {

@@ -40,10 +40,10 @@ fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
 protocol. The crate's main function creates a single instance of this struct
 and uses it to handle all incoming requests.
 
-`AccountManager` maintains a single `AccountHandlerContext` instance and an
-`AccountMap` which contains the existing accounts and opens connections to them
-on demand. New accounts are created by the AccountManager, and then the
-`AccountHandlerConnection` is handed over to the `AccountMap`.
+`AccountManager` maintains an `AccountMap` which contains the existing accounts
+and opens connections to them on demand. New accounts are created by the
+AccountManager, and then the `AccountHandlerConnection` is handed over to the
+`AccountMap`.
 
 `AccountMap` is the source of truth for active accounts on the device, keyed by
 local account id. It is responsible for storing the set of persistent accounts
@@ -55,11 +55,6 @@ intializing and maintaining a connection to an Account Handler component. It is
 implemented by `AccountHandlerConnectionImpl` in business logic, where each
 component instance is launched in a separate environment based on the local
 account ID.
-
-`AccountHandlerContext` implements the
-fuchsia.identity.internal.AccountHandlerContext FIDL protocol, using a map
-from all configured auth_provider_type strings to an associated
-`AuthProviderConnection`.
 
 `AccountEventEmitter` serves clients implementing the
 fuchsia.identity.account.AccountListener FIDL protocol.

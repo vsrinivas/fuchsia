@@ -19,10 +19,7 @@
     ],
     capabilities: [
         {
-            protocol: [
-                "fuchsia.identity.account.AccountManager",
-                "fuchsia.identity.internal.AccountHandlerContext",
-            ],
+            protocol: [ "fuchsia.identity.account.AccountManager" ],
         },
     ],
     use: [
@@ -42,11 +39,6 @@
         },
     ],
     offer: [
-        {
-            protocol: [ "fuchsia.identity.internal.AccountHandlerContext" ],
-            from: "self",
-            to: "#account_handlers",
-        },
         {
             protocol: [
                 "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",

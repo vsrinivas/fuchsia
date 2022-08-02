@@ -11,12 +11,11 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
-    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
-    "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication_rust",
-    "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal_rust",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
+    "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/identity/lib/account_common",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -27,10 +26,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:getopts",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -38,16 +34,15 @@ rustc_binary("bin") {
 
   test_deps = [
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:tempfile",
   ]
 
   sources = [
     "src/account_event_emitter.rs",
     "src/account_handler_connection.rs",
-    "src/account_handler_context.rs",
     "src/account_manager.rs",
     "src/account_map.rs",
-    "src/authenticator_connection.rs",
     "src/fake_account_handler_connection.rs",
     "src/inspect.rs",
     "src/main.rs",

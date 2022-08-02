@@ -12,10 +12,8 @@
 
 mod account_event_emitter;
 mod account_handler_connection;
-mod account_handler_context;
 mod account_manager;
 mod account_map;
-mod authenticator_connection;
 mod fake_account_handler_connection;
 pub mod inspect;
 mod stored_account_list;
@@ -29,49 +27,14 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::Inspector,
     futures::prelude::*,
-    lazy_static::lazy_static,
     log::{error, info},
     std::{path::PathBuf, sync::Arc},
 };
 
-/// This command line flag (prefixed with `--`) results in a set of hermetic auth mechanisms.
-const DEV_AUTH_MECHANISMS_FLAG: &str = "dev-auth-mechanisms";
-
 /// Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
 
-lazy_static! {
-    /// (Temporary) Configuration for a fixed set of authentication mechanisms,
-    /// used until file-based configuration is available.
-    static ref DEFAULT_AUTHENTICATION_MECHANISM_IDS: Vec<String> = vec![];
-
-    /// Configuration for a set of fake authentication mechanisms used for
-    /// testing.
-    static ref DEV_AUTHENTICATION_MECHANISM_IDS: Vec<String> = vec![
-        concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
-                "#meta/dev_authenticator_always_succeed.cm").to_string(),
-        concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
-                "#meta/dev_authenticator_always_fail_authentication.cm").to_string(),
-    ];
-}
-
 fn main() -> Result<(), Error> {
-    // Parse CLI args
-    let mut opts = getopts::Options::new();
-    opts.optflag(
-        "",
-        DEV_AUTH_MECHANISMS_FLAG,
-        "use dev authenticators instead of the default set, for tests",
-    );
-
-    let args: Vec<String> = std::env::args().collect();
-    let options = opts.parse(args)?;
-    let auth_mechanism_ids: &Vec<_> = if options.opt_present(DEV_AUTH_MECHANISMS_FLAG) {
-        &DEV_AUTHENTICATION_MECHANISM_IDS
-    } else {
-        &DEFAULT_AUTHENTICATION_MECHANISM_IDS
-    };
-
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
 
@@ -82,15 +45,11 @@ fn main() -> Result<(), Error> {
     inspect_runtime::serve(&inspector, &mut fs)?;
 
     let account_manager = Arc::new(
-        AccountManager::<AccountHandlerConnectionImpl>::new(
-            PathBuf::from(DATA_DIR),
-            &auth_mechanism_ids,
-            &inspector,
-        )
-        .map_err(|e| {
-            error!("Error initializing AccountManager: {:?}", e);
-            e
-        })?,
+        AccountManager::<AccountHandlerConnectionImpl>::new(PathBuf::from(DATA_DIR), &inspector)
+            .map_err(|e| {
+                error!("Error initializing AccountManager: {:?}", e);
+                e
+            })?,
     );
 
     fs.dir("svc").add_fidl_service(move |stream| {

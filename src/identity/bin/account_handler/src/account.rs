@@ -16,7 +16,6 @@ use {
         AccountRequest, AccountRequestStream, AuthState, AuthTargetRegisterAuthListenerRequest,
         Error as ApiError, Lifetime, PersonaMarker,
     },
-    fidl_fuchsia_identity_internal::AccountHandlerContextProxy,
     fuchsia_inspect::{Node, NumericProperty},
     futures::prelude::*,
     identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
@@ -61,7 +60,6 @@ impl Account {
     async fn new(
         persona_id: PersonaId,
         lifetime: AccountLifetime,
-        _context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
@@ -89,7 +87,6 @@ impl Account {
     /// Creates a new system account and, if it is persistent, stores it on disk.
     pub async fn create(
         lifetime: AccountLifetime,
-        context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
@@ -102,13 +99,12 @@ impl Account {
             let stored_account = StoredAccount::new(persona_id.clone());
             stored_account.save(account_dir)?;
         }
-        Self::new(persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent).await
+        Self::new(persona_id, lifetime, lock_request_sender, inspect_parent).await
     }
 
     /// Loads an existing system account from disk.
     pub async fn load(
         lifetime: AccountLifetime,
-        context_proxy: AccountHandlerContextProxy,
         lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
@@ -124,7 +120,7 @@ impl Account {
         };
         let stored_account = StoredAccount::load(account_dir)?;
         let persona_id = stored_account.get_default_persona_id().clone();
-        Self::new(persona_id, lifetime, context_proxy, lock_request_sender, inspect_parent).await
+        Self::new(persona_id, lifetime, lock_request_sender, inspect_parent).await
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -309,7 +305,6 @@ mod tests {
     use fidl_fuchsia_identity_account::{
         AccountMarker, AccountProxy, AuthChangeGranularity, AuthTargetRegisterAuthListenerRequest,
     };
-    use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use futures::channel::oneshot;
@@ -331,12 +326,9 @@ mod tests {
 
         async fn create_persistent_account(&self) -> Result<Account, AccountManagerError> {
             let inspector = Inspector::new();
-            let (account_handler_context_client_end, _) =
-                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             let account_dir = self.location.path.clone();
             Account::create(
                 AccountLifetime::Persistent { account_dir },
-                account_handler_context_client_end.into_proxy().unwrap(),
                 lock_request::Sender::NotSupported,
                 &inspector.root(),
             )
@@ -345,11 +337,8 @@ mod tests {
 
         async fn create_ephemeral_account(&self) -> Result<Account, AccountManagerError> {
             let inspector = Inspector::new();
-            let (account_handler_context_client_end, _) =
-                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::create(
                 AccountLifetime::Ephemeral,
-                account_handler_context_client_end.into_proxy().unwrap(),
                 lock_request::Sender::NotSupported,
                 &inspector.root(),
             )
@@ -358,11 +347,8 @@ mod tests {
 
         async fn load_account(&self) -> Result<Account, AccountManagerError> {
             let inspector = Inspector::new();
-            let (account_handler_context_client_end, _) =
-                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::load(
                 AccountLifetime::Persistent { account_dir: self.location.path.clone() },
-                account_handler_context_client_end.into_proxy().unwrap(),
                 lock_request::Sender::NotSupported,
                 &inspector.root(),
             )
@@ -373,13 +359,10 @@ mod tests {
             &self,
         ) -> Result<(Account, oneshot::Receiver<()>), AccountManagerError> {
             let inspector = Inspector::new();
-            let (account_handler_context_client_end, _) =
-                create_endpoints::<AccountHandlerContextMarker>().unwrap();
             let account_dir = self.location.path.clone();
             let (sender, receiver) = lock_request::channel();
             let account = Account::create(
                 AccountLifetime::Persistent { account_dir },
-                account_handler_context_client_end.into_proxy().unwrap(),
                 sender,
                 &inspector.root(),
             )
@@ -467,11 +450,8 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_load_ephemeral() {
         let inspector = Inspector::new();
-        let (account_handler_context_client_end, _) =
-            create_endpoints::<AccountHandlerContextMarker>().unwrap();
         assert!(Account::load(
             AccountLifetime::Ephemeral,
-            account_handler_context_client_end.into_proxy().unwrap(),
             lock_request::Sender::NotSupported,
             &inspector.root(),
         )

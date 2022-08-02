@@ -43,8 +43,6 @@ rustc_binary("bin") {
     "src/account.rs",
     "src/account_handler.rs",
     "src/common.rs",
-    "src/fake_account_handler_context.rs",
-    "src/fake_authenticator.rs",
     "src/inspect.rs",
     "src/lock_request.rs",
     "src/main.rs",

@@ -18,8 +18,7 @@ use {
         StorageUnlockMechanismProxy,
     },
     fidl_fuchsia_identity_internal::{
-        AccountHandlerContextProxy, AccountHandlerControlRequest,
-        AccountHandlerControlRequestStream,
+        AccountHandlerControlRequest, AccountHandlerControlRequestStream,
     },
     fuchsia_async as fasync,
     fuchsia_component::client,
@@ -106,9 +105,6 @@ impl Into<Vec<u8>> for AccountPreAuthState {
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
 /// the execution context.
 pub struct AccountHandler {
-    /// An AccountHandlerContextProxy for this account.
-    context: AccountHandlerContextProxy,
-
     /// The current state of the AccountHandler state machine, optionally containing
     /// a reference to the `Account` and its pre-authentication data, depending on the
     /// state. The methods of the AccountHandler drives changes to the state.
@@ -130,7 +126,6 @@ pub struct AccountHandler {
 impl AccountHandler {
     /// Constructs a new AccountHandler and puts it in the Uninitialized state.
     pub fn new(
-        context: AccountHandlerContextProxy,
         account_id: AccountId,
         lifetime: AccountLifetime,
         pre_auth_manager: Arc<dyn pre_auth::Manager>,
@@ -139,7 +134,6 @@ impl AccountHandler {
         let inspect =
             Arc::new(inspect::AccountHandler::new(inspector.root(), &account_id, "uninitialized"));
         Self {
-            context,
             state: Arc::new(Mutex::new(Lifecycle::Uninitialized)),
             lifetime,
             pre_auth_manager,
@@ -275,14 +269,10 @@ impl AccountHandler {
                     warn!("Error constructing lock request sender: {:?}", err);
                     err.api_error
                 })?;
-                let account = Account::create(
-                    self.lifetime.clone(),
-                    self.context.clone(),
-                    sender,
-                    self.inspect.get_node(),
-                )
-                .await
-                .map_err(|err| err.api_error)?;
+                let account =
+                    Account::create(self.lifetime.clone(), sender, self.inspect.get_node())
+                        .await
+                        .map_err(|err| err.api_error)?;
                 *state_lock = Lifecycle::Initialized { account: Arc::new(account) };
                 self.inspect.lifecycle.set("initialized");
                 Ok(AccountPreAuthState {})
@@ -351,14 +341,9 @@ impl AccountHandler {
                     warn!("Error constructing lock request sender: {:?}", err);
                     err.api_error
                 })?;
-                let account = Account::load(
-                    self.lifetime.clone(),
-                    self.context.clone(),
-                    sender,
-                    self.inspect.get_node(),
-                )
-                .await
-                .map_err(|err| err.api_error)?;
+                let account = Account::load(self.lifetime.clone(), sender, self.inspect.get_node())
+                    .await
+                    .map_err(|err| err.api_error)?;
                 if let Some(updated_state) = updated_state {
                     self.pre_auth_manager.put(updated_state).await.map_err(|err| err.api_error)?;
                 }
@@ -600,13 +585,8 @@ impl AccountHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fake_account_handler_context::{spawn_context_channel, FakeAccountHandlerContext};
-    use crate::fake_authenticator::{Expected, FakeAuthenticator};
     use crate::test_util::*;
     use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
-    use fidl_fuchsia_identity_authentication::{
-        AttemptedEvent, Enrollment, Error as AuthenticationApiError,
-    };
     use fidl_fuchsia_identity_internal::{
         AccountHandlerControlCreateAccountRequest, AccountHandlerControlMarker,
         AccountHandlerControlProxy, AccountHandlerControlUnlockAccountRequest,
@@ -621,7 +601,6 @@ mod tests {
     use std::sync::Arc;
 
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
-    const TEST_INVALID_AUTH_MECHANISM_ID: &str = "<INVALID AUTH MECHANISM ID>";
 
     lazy_static! {
         /// Initial enrollment data
@@ -673,11 +652,9 @@ mod tests {
     fn create_account_handler(
         lifetime: AccountLifetime,
         pre_auth_manager: Arc<dyn pre_auth::Manager>,
-        context: AccountHandlerContextProxy,
         inspector: Arc<Inspector>,
     ) -> (AccountHandlerControlProxy, impl Future<Output = ()>) {
         let test_object = AccountHandler::new(
-            context,
             TEST_ACCOUNT_ID.clone().into(),
             lifetime,
             pre_auth_manager,
@@ -703,7 +680,6 @@ mod tests {
     fn request_stream_test<TestFn, Fut>(
         lifetime: AccountLifetime,
         pre_auth_manager: Arc<dyn pre_auth::Manager>,
-        fake_authenticator: Option<FakeAuthenticator>,
         inspector: Arc<Inspector>,
         test_fn: TestFn,
     ) where
@@ -711,13 +687,7 @@ mod tests {
         Fut: Future<Output = TestResult>,
     {
         let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
-        let mut fake_context = FakeAccountHandlerContext::new();
-        if let Some(fake_authenticator) = fake_authenticator {
-            fake_context.insert_authenticator(TEST_AUTH_MECHANISM_ID, fake_authenticator);
-        }
-        let ahc_proxy = spawn_context_channel(Arc::new(fake_context));
-        let (proxy, server_fut) =
-            create_account_handler(lifetime, pre_auth_manager, ahc_proxy, inspector);
+        let (proxy, server_fut) = create_account_handler(lifetime, pre_auth_manager, inspector);
 
         let (test_res, _server_result) =
             executor.run_singlethreaded(join(test_fn(proxy), server_fut));
@@ -735,7 +705,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let (_, account_server_end) = create_endpoints().unwrap();
@@ -754,7 +723,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let (_, account_server_end) = create_endpoints().unwrap();
@@ -775,7 +743,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await??;
@@ -796,7 +763,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::clone(&inspector),
             |account_handler_proxy| {
                 async move {
@@ -853,7 +819,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::clone(&pre_auth_manager),
-            None,
             Arc::clone(&inspector),
             |proxy| async move {
                 proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await??;
@@ -871,7 +836,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             pre_auth_manager,
-            None,
             Arc::clone(&inspector),
             |proxy| async move {
                 let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
@@ -901,7 +865,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::clone(&pre_auth_manager),
-            None,
             Arc::clone(&inspector),
             |proxy| async move {
                 proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await??;
@@ -922,7 +885,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             pre_auth_manager,
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 assert_eq!(
@@ -935,310 +897,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO(fxbug.dev/104824): Refactor or remove these tests
-              // while cleaning up AccountHandlerContext.
-    fn test_create_account_with_authentication_mechanism() {
-        let authenticator = FakeAuthenticator::new();
-        authenticator
-            .enqueue(Expected::Enroll { resp: Err(AuthenticationApiError::InvalidAuthContext) });
-        authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
-        });
-        let location = TempLocation::new();
-        let inspector = Arc::new(Inspector::new());
-        let pre_auth_manager = create_clean_pre_auth_manager();
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&pre_auth_manager),
-            Some(authenticator),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                // Non-existing auth mechanism
-                assert_eq!(
-                    proxy
-                        .create_account(AccountHandlerControlCreateAccountRequest {
-                            auth_mechanism_id: Some(TEST_INVALID_AUTH_MECHANISM_ID.to_string()),
-                            ..AccountHandlerControlCreateAccountRequest::EMPTY
-                        })
-                        .await
-                        .unwrap(),
-                    Err(ApiError::NotFound)
-                );
-
-                // An authentication API error was returned and converted to the appropriate error
-                assert_eq!(
-                    proxy
-                        .create_account(AccountHandlerControlCreateAccountRequest {
-                            auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                            ..AccountHandlerControlCreateAccountRequest::EMPTY
-                        })
-                        .await
-                        .unwrap(),
-                    Err(ApiError::InvalidRequest)
-                );
-
-                // Check that the handler is still uninitialized and that none of the failed calls
-                // were able to alter the pre-auth state.
-                assert_data_tree!(inspector, root: { account_handler: contains {
-                    lifecycle: "uninitialized",
-                }});
-                assert_eq!(
-                    pre_auth_manager.get().await.unwrap().as_ref(),
-                    &pre_auth::State::NoEnrollments
-                );
-
-                // Account creation with enrollment succeeded
-                proxy
-                    .create_account(AccountHandlerControlCreateAccountRequest {
-                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                        ..AccountHandlerControlCreateAccountRequest::EMPTY
-                    })
-                    .await
-                    .unwrap()
-                    .unwrap();
-                assert_data_tree!(inspector, root: { account_handler: contains {
-                    lifecycle: "initialized",
-                }});
-                assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    #[ignore] // TODO(fxbug.dev/104824): Refactor or remove these tests
-              // while cleaning up AccountHandlerContext.
-    fn _test_unlock_account_success_without_enrollment_update() {
-        let authenticator = FakeAuthenticator::new();
-        authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
-        });
-        authenticator.enqueue(Expected::Authenticate {
-            req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
-            resp: Ok(AttemptedEvent {
-                enrollment_id: Some(0),
-                prekey_material: Some(MAGIC_PREKEY.clone()),
-                timestamp: Some(1337),
-                updated_enrollment_data: None,
-                ..AttemptedEvent::EMPTY
-            }),
-        });
-        let location = TempLocation::new();
-        let inspector = Arc::new(Inspector::new());
-        let pre_auth_manager: Arc<dyn pre_auth::Manager> =
-            Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments));
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&pre_auth_manager),
-            Some(authenticator),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                proxy
-                    .create_account(AccountHandlerControlCreateAccountRequest {
-                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                        ..AccountHandlerControlCreateAccountRequest::EMPTY
-                    })
-                    .await
-                    .unwrap()
-                    .unwrap();
-                proxy.lock_account().await.unwrap().unwrap();
-                assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
-
-                // Authentication passed
-                assert_eq!(
-                    proxy
-                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-                        .await
-                        .unwrap(),
-                    Ok(None)
-                );
-
-                // Lifecycle updated
-                assert_data_tree!(inspector, root: { account_handler: contains {
-                    lifecycle: "initialized",
-                }});
-
-                // Pre-auth state in unaltered
-                assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    #[ignore] // TODO(fxbug.dev/104824): Refactor or remove these tests
-              // while cleaning up AccountHandlerContext.
-    fn _test_unlock_account_success_with_enrollment_update() {
-        let authenticator = FakeAuthenticator::new();
-        authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
-        });
-        authenticator.enqueue(Expected::Authenticate {
-            req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
-            resp: Ok(AttemptedEvent {
-                enrollment_id: Some(0),
-                prekey_material: Some(MAGIC_PREKEY.clone()),
-                timestamp: Some(1337),
-                updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
-                ..AttemptedEvent::EMPTY
-            }),
-        });
-        let location = TempLocation::new();
-        let inspector = Arc::new(Inspector::new());
-        let pre_auth_manager: Arc<dyn pre_auth::Manager> =
-            Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments));
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&pre_auth_manager),
-            Some(authenticator),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                proxy
-                    .create_account(AccountHandlerControlCreateAccountRequest {
-                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                        ..AccountHandlerControlCreateAccountRequest::EMPTY
-                    })
-                    .await
-                    .unwrap()
-                    .unwrap();
-                proxy.lock_account().await.unwrap().unwrap();
-
-                // Authentication passed
-                assert_eq!(
-                    proxy
-                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-                        .await
-                        .unwrap(),
-                    Ok(None)
-                );
-
-                // Lifecycle updated
-                assert_data_tree!(inspector, root: { account_handler: contains {
-                    lifecycle: "initialized",
-                }});
-
-                // Pre-auth state updated
-                assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_UPDATED);
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    #[ignore] // TODO(fxbug.dev/104824): Refactor or remove these tests
-              // while cleaning up AccountHandlerContext.
-    fn _test_unlock_account_failure() {
-        let authenticator = FakeAuthenticator::new();
-
-        // Required for setup
-        authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
-        });
-
-        // Aborted authentication attempt
-        authenticator.enqueue(Expected::Authenticate {
-            req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
-            resp: Err(AuthenticationApiError::Aborted),
-        });
-
-        // Unexpected enrollment id
-        authenticator.enqueue(Expected::Authenticate {
-            req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
-            resp: Ok(AttemptedEvent {
-                enrollment_id: Some(1),
-                prekey_material: Some(MAGIC_PREKEY.clone()),
-                timestamp: Some(1337),
-                updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
-                ..AttemptedEvent::EMPTY
-            }),
-        });
-
-        // Updated enrollment data, but invalid pre-key material
-        authenticator.enqueue(Expected::Authenticate {
-            req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
-            resp: Ok(AttemptedEvent {
-                enrollment_id: Some(0),
-                prekey_material: Some(TEST_NOT_MAGIC_PREKEY.clone()),
-                timestamp: Some(1337),
-                updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
-                ..AttemptedEvent::EMPTY
-            }),
-        });
-
-        let location = TempLocation::new();
-        let inspector = Arc::new(Inspector::new());
-        let pre_auth_manager: Arc<dyn pre_auth::Manager> =
-            Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments));
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&pre_auth_manager),
-            Some(authenticator),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                proxy
-                    .create_account(AccountHandlerControlCreateAccountRequest {
-                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                        ..AccountHandlerControlCreateAccountRequest::EMPTY
-                    })
-                    .await
-                    .unwrap()
-                    .unwrap();
-                proxy.lock_account().await.unwrap().unwrap();
-
-                // Aborted authentication attempt
-                assert_eq!(
-                    proxy
-                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-                        .await
-                        .unwrap(),
-                    Err(ApiError::Unknown)
-                );
-
-                // Unexpected enrollment id
-                assert_eq!(
-                    proxy
-                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-                        .await
-                        .unwrap(),
-                    Err(ApiError::Internal)
-                );
-
-                // Unexpected pre-key material
-                assert_eq!(
-                    proxy
-                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-                        .await
-                        .unwrap(),
-                    Err(ApiError::FailedAuthentication)
-                );
-
-                // Account handler is still locked
-                assert_data_tree!(inspector, root: { account_handler: contains {
-                    lifecycle: "locked",
-                }});
-
-                // Extra sanity check that account is not retrievable
-                let (_, account_server_end) = create_endpoints().unwrap();
-                assert_eq!(
-                    proxy.get_account(account_server_end).await.unwrap(),
-                    Err(ApiError::FailedPrecondition)
-                );
-
-                // Pre-auth state unaltered
-                assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
     fn test_remove_account() {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::clone(&inspector),
             |proxy| {
                 async move {
@@ -1298,7 +962,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
@@ -1316,7 +979,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
@@ -1331,7 +993,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
@@ -1365,7 +1026,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
@@ -1393,7 +1053,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
@@ -1413,7 +1072,6 @@ mod tests {
         request_stream_test(
             AccountLifetime::Ephemeral,
             create_clean_pre_auth_manager(),
-            None,
             Arc::new(Inspector::new()),
             |proxy| async move {
                 assert_eq!(
@@ -1436,7 +1094,6 @@ mod tests {
         request_stream_test(
             AccountLifetime::Ephemeral,
             create_clean_pre_auth_manager(),
-            None,
             Arc::clone(&inspector),
             |account_handler_proxy| async move {
                 account_handler_proxy
@@ -1475,7 +1132,6 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             create_clean_pre_auth_manager(),
-            None,
             Arc::clone(&inspector),
             |account_handler_proxy| async move {
                 account_handler_proxy
@@ -1489,60 +1145,6 @@ mod tests {
 
                 // Send the lock request
                 assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
-                Ok(())
-            },
-        );
-    }
-
-    #[test]
-    #[ignore] // TODO(fxbug.dev/104824): Refactor or remove these tests
-              // while cleaning up AccountHandlerContext.
-    fn _test_lock_request_persistent_account_with_auth_mechanism() {
-        let authenticator = FakeAuthenticator::new();
-        authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
-        });
-        let location = TempLocation::new();
-        let inspector = Arc::new(Inspector::new());
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            create_clean_pre_auth_manager(),
-            Some(authenticator),
-            Arc::clone(&inspector),
-            |account_handler_proxy| async move {
-                account_handler_proxy
-                    .create_account(AccountHandlerControlCreateAccountRequest {
-                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                        ..AccountHandlerControlCreateAccountRequest::EMPTY
-                    })
-                    .await??;
-
-                // Get a proxy to the Account interface
-                let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                account_handler_proxy.get_account(account_server_end).await??;
-                let account_proxy = account_client_end.into_proxy().unwrap();
-
-                // Send the lock request
-                assert_eq!(account_proxy.lock().await?, Ok(()));
-
-                // Wait for it to propagate
-                fasync::Timer::new(LOCK_REQUEST_DURATION.clone().after_now()).await;
-
-                // Channel is unusable
-                assert!(account_proxy.get_persona_ids().await.is_err());
-
-                assert_data_tree!(inspector, root: {
-                    account_handler: contains {
-                        lifecycle: "locked",
-                    }
-                });
-
-                // Extra check to ensure the account cannot be retrieved
-                let (_, account_server_end) = create_endpoints().unwrap();
-                assert_eq!(
-                    account_handler_proxy.get_account(account_server_end).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
                 Ok(())
             },
         );

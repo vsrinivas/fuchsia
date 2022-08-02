@@ -8,7 +8,6 @@
 use {
     crate::{
         account_handler_connection::AccountHandlerConnection,
-        account_handler_context::AccountHandlerContext,
         inspect,
         stored_account_list::{StoredAccountList, StoredAccountMetadata},
     },
@@ -35,10 +34,6 @@ pub struct AccountMap<AHC: AccountHandlerConnection> {
     /// be both read and written during the lifetime of the account map.
     data_dir: PathBuf,
 
-    /// The AccountHandlerContext which is used to provide contextual
-    /// information to account handlers spawned by the account map.
-    context: Arc<AccountHandlerContext>,
-
     /// An inspect node which reports information about the accounts on the
     /// device and whether they are currently active.
     inspect: inspect::Accounts,
@@ -49,31 +44,20 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     /// metadata file does not exist, it will be created.
     ///
     /// `data_dir`          The data directory.
-    /// `context`           An AccountHandlerContext which is used to create
-    ///                     AccountHandlerConnections.
     /// `inspect_parent`    An inspect node which will be the parent of the
     ///                     `Accounts` node which the account map will populate.
-    pub fn load(
-        data_dir: PathBuf,
-        context: Arc<AccountHandlerContext>,
-        inspect_parent: &Node,
-    ) -> Result<Self, AccountManagerError> {
+    pub fn load(data_dir: PathBuf, inspect_parent: &Node) -> Result<Self, AccountManagerError> {
         let mut accounts = InnerMap::new();
         let stored_account_list = StoredAccountList::load(&data_dir)?;
         for stored_account in stored_account_list.accounts().into_iter() {
             accounts.insert(stored_account.account_id().clone(), None);
         }
-        Ok(Self::new(accounts, data_dir, context, inspect_parent))
+        Ok(Self::new(accounts, data_dir, inspect_parent))
     }
 
-    fn new(
-        accounts: InnerMap<AHC>,
-        data_dir: PathBuf,
-        context: Arc<AccountHandlerContext>,
-        inspect_parent: &Node,
-    ) -> Self {
+    fn new(accounts: InnerMap<AHC>, data_dir: PathBuf, inspect_parent: &Node) -> Self {
         let inspect = inspect::Accounts::new(inspect_parent);
-        let account_map = Self { accounts, data_dir, context, inspect };
+        let account_map = Self { accounts, data_dir, inspect };
         account_map.refresh_inspect();
         account_map
     }
@@ -92,10 +76,8 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
             None => Err(AccountManagerError::new(ApiError::NotFound)),
             Some(Some(handler)) => Ok(Arc::clone(handler)),
             Some(ref mut handler_option) => {
-                let new_handler = Arc::new(
-                    AHC::new(account_id.clone(), Lifetime::Persistent, Arc::clone(&self.context))
-                        .await?,
-                );
+                let new_handler =
+                    Arc::new(AHC::new(account_id.clone(), Lifetime::Persistent).await?);
                 new_handler
                     .proxy()
                     .preload(&vec![])
@@ -121,7 +103,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         while self.accounts.contains_key(&account_id) {
             account_id = AccountId::new(rand::random::<u64>());
         }
-        let new_handler = AHC::new(account_id.clone(), lifetime, Arc::clone(&self.context)).await?;
+        let new_handler = AHC::new(account_id.clone(), lifetime).await?;
         Ok(Arc::new(new_handler))
     }
 
@@ -236,8 +218,6 @@ mod tests {
     lazy_static! {
         static ref TEST_ACCOUNT_ID_1: AccountId = AccountId::new(123);
         static ref TEST_ACCOUNT_ID_2: AccountId = AccountId::new(456);
-        static ref ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
-            Arc::new(AccountHandlerContext::new(&[]));
     }
 
     // Run some sanity checks on an empty AccountMap
@@ -245,11 +225,7 @@ mod tests {
     async fn empty_map() -> Result<(), AccountManagerError> {
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
-        let mut map = TestAccountMap::load(
-            data_dir.path().into(),
-            ACCOUNT_HANDLER_CONTEXT.clone(),
-            inspector.root(),
-        )?;
+        let mut map = TestAccountMap::load(data_dir.path().into(), inspector.root())?;
         assert_eq!(map.get_account_ids(), vec![]);
         assert_eq!(
             map.get_handler(&TEST_ACCOUNT_ID_1).await.unwrap_err().api_error,
@@ -270,11 +246,7 @@ mod tests {
     async fn check_persisted() -> Result<(), AccountManagerError> {
         let data_dir = TempDir::new().unwrap();
         let inspector = Inspector::new();
-        let mut map = TestAccountMap::load(
-            data_dir.path().into(),
-            ACCOUNT_HANDLER_CONTEXT.clone(),
-            inspector.root(),
-        )?;
+        let mut map = TestAccountMap::load(data_dir.path().into(), inspector.root())?;
 
         // Regular persistent account
         let conn_test = Arc::new(
@@ -317,11 +289,7 @@ mod tests {
 
         // New account map loaded from the same directory.
         let inspector = Inspector::new();
-        let mut map = TestAccountMap::load(
-            data_dir.path().into(),
-            ACCOUNT_HANDLER_CONTEXT.clone(),
-            inspector.root(),
-        )?;
+        let mut map = TestAccountMap::load(data_dir.path().into(), inspector.root())?;
         assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,
             active: 0u64,
@@ -359,11 +327,7 @@ mod tests {
         std::mem::drop(map);
 
         let inspector = Inspector::new();
-        let map = TestAccountMap::load(
-            data_dir.path().into(),
-            ACCOUNT_HANDLER_CONTEXT.clone(),
-            inspector.root(),
-        )?;
+        let map = TestAccountMap::load(data_dir.path().into(), inspector.root())?;
 
         // Check that the removed account was persisted correctly
         assert_data_tree!(inspector, root: { accounts: {
@@ -384,12 +348,7 @@ mod tests {
         let mut accounts = InnerMap::new();
         accounts.insert(CORRUPT_HANDLER_ACCOUNT_ID.clone(), None);
         accounts.insert(UNKNOWN_ERROR_ACCOUNT_ID.clone(), None);
-        let mut map = TestAccountMap::new(
-            accounts,
-            data_dir.path().into(),
-            ACCOUNT_HANDLER_CONTEXT.clone(),
-            inspector.root(),
-        );
+        let mut map = TestAccountMap::new(accounts, data_dir.path().into(), inspector.root());
         // Initial state
         assert_data_tree!(inspector, root: { accounts: {
             total: 2u64,
@@ -425,12 +384,7 @@ mod tests {
         let inspector = Inspector::new();
         let mut accounts = InnerMap::new();
         accounts.insert(TEST_ACCOUNT_ID_1.clone(), None);
-        let mut map = TestAccountMap::new(
-            accounts,
-            data_dir.path().into(),
-            ACCOUNT_HANDLER_CONTEXT.clone(),
-            inspector.root(),
-        );
+        let mut map = TestAccountMap::new(accounts, data_dir.path().into(), inspector.root());
         // Initial state
         assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,

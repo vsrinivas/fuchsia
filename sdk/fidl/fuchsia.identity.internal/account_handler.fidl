@@ -169,23 +169,3 @@ protocol AccountHandlerControl {
     /// component if it hasn't already exited.
     Terminate();
 };
-
-/// An interface that supplies the account and authentication services that
-/// an AccountHandler needs to perform its role in the system.
-///
-/// This service is supplied into the namespace of AccountHandler by the
-/// component that launches it (i.e. the AccountManager).
-@discoverable
-protocol AccountHandlerContext {
-    /// Connects to a `StorageUnlockMechanism` implementation identified by its
-    /// auth mechanism ID, launching the associated Authenticator if necessary.
-    ///
-    /// `auth_mechanism_id` An identifier matching an authentication mechanism
-    ///                     configured by the account system.
-    /// `storage_unlock_mechanism` The server end of an `StorageUnlockMechanism`
-    ///                            channel
-    GetStorageUnlockAuthMechanism(resource struct {
-        auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
-        storage_unlock_mechanism server_end:fuchsia.identity.authentication.StorageUnlockMechanism;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
-};

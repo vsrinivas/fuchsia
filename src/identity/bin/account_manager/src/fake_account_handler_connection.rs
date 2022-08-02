@@ -9,10 +9,7 @@
 
 #![cfg(test)]
 use {
-    crate::{
-        account_handler_connection::AccountHandlerConnection,
-        account_handler_context::AccountHandlerContext,
-    },
+    crate::account_handler_connection::AccountHandlerConnection,
     account_common::{AccountId, AccountManagerError},
     async_trait::async_trait,
     fidl::endpoints::create_proxy_and_stream,
@@ -23,7 +20,6 @@ use {
     fuchsia_async as fasync,
     futures::prelude::*,
     lazy_static::lazy_static,
-    std::sync::Arc,
 };
 
 const EMPTY_PRE_AUTH_STATE: Vec<u8> = vec![];
@@ -37,9 +33,6 @@ lazy_static! {
 
     // Triggers an ApiError::Unknown while trying initialize an account.
     pub static ref UNKNOWN_ERROR_ACCOUNT_ID: AccountId = AccountId::new(30000);
-
-    static ref EMPTY_ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
-            Arc::new(AccountHandlerContext::new(&[]));
 }
 
 /// Fake implementation of AccountHandlerConnection which provides a rudimentary
@@ -53,23 +46,18 @@ pub struct FakeAccountHandlerConnection {
 }
 
 impl FakeAccountHandlerConnection {
-    /// Returns a new FakeAccountHandlerConnection with an empty
-    /// AccountHandlerContext, for convenience.
+    /// Returns a new FakeAccountHandlerConnection.
     pub async fn new_with_defaults(
         lifetime: Lifetime,
         account_id: AccountId,
     ) -> Result<Self, AccountManagerError> {
-        Self::new(account_id, lifetime, Arc::clone(&EMPTY_ACCOUNT_HANDLER_CONTEXT)).await
+        Self::new(account_id, lifetime).await
     }
 }
 
 #[async_trait]
 impl AccountHandlerConnection for FakeAccountHandlerConnection {
-    async fn new(
-        account_id: AccountId,
-        lifetime: Lifetime,
-        _context: Arc<AccountHandlerContext>,
-    ) -> Result<Self, AccountManagerError> {
+    async fn new(account_id: AccountId, lifetime: Lifetime) -> Result<Self, AccountManagerError> {
         if account_id == *CORRUPT_HANDLER_ACCOUNT_ID {
             return Err(AccountManagerError::new(ApiError::Resource));
         }
@@ -140,7 +128,6 @@ mod tests {
             FakeAccountHandlerConnection::new(
                 CORRUPT_HANDLER_ACCOUNT_ID.clone(),
                 Lifetime::Persistent,
-                Arc::clone(&EMPTY_ACCOUNT_HANDLER_CONTEXT)
             )
             .await
             .unwrap_err()
