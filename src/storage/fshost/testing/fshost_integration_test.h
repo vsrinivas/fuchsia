@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/inspect/cpp/hierarchy.h>
 
 #include <string_view>
 
@@ -42,6 +43,9 @@ class FshostIntegrationTest : public ::testing::Test {
   //
   // Times out after 10s.
   std::pair<fbl::unique_fd, uint64_t> WaitForMount(const std::string& name) const;
+
+  // Take a snapshot of the inspect hierarchy under diagnostics/fuchsia.inspect.Tree.
+  inspect::Hierarchy TakeSnapshot() const;
 
  private:
   fidl::WireSyncClient<fuchsia_io::Directory> exposed_dir_;

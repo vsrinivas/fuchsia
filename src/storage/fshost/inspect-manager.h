@@ -52,7 +52,7 @@ class FshostInspectManager {
   // If minfs to fxfs migration fails at boot time, this node will hold the reason.
   // This will only be set when a device boots with minfs and attempts to migrate to fxfs via the
   // disk-based migration path.
-  std::optional<inspect::UintProperty> migration_status_;
+  std::optional<inspect::IntProperty> migration_status_;
 
   // Fills information about the size of files and directories under the given `root` under the
   // given `node` and emplaces it in the given `inspector`. Returns the total size of `root`.

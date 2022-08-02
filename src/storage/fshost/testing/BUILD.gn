@@ -19,12 +19,16 @@ source_set("integration_test_fixture") {
     "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_hlcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fshost:headers",
   ]
-  deps = [ "//zircon/system/ulib/service:service-llcpp" ]
+  deps = [
+    "//sdk/lib/inspect/service/cpp:cpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
 }
 
 cmc_merge("test-fshost.cml") {

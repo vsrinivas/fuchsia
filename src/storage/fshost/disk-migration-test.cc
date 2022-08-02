@@ -189,8 +189,8 @@ TEST_F(DataMigrationIntegration, Success) {
   EXPECT_EQ(fs_type, VFS_TYPE_FXFS);
   CheckFilesystem(std::move(ramdisk.value()), std::move(fd), true);
 
-  // TODO(fxbug.dev/105354): Confirm inspect metric "migration_status" has been
-  // set correctly.
+  auto inspect = TakeSnapshot();
+  EXPECT_EQ(inspect.node().get_property<inspect::IntPropertyValue>("migration_status"), nullptr);
 }
 
 TEST_F(DataMigrationIntegration, InsufficientDiskFallback) {
@@ -217,8 +217,9 @@ TEST_F(DataMigrationIntegration, InsufficientDiskFallback) {
   EXPECT_EQ(fs_type, VFS_TYPE_MINFS);
   CheckFilesystem(std::move(ramdisk.value()), std::move(fd), false);
 
-  // TODO(fxbug.dev/105354): Confirm inspect metric "migration_status" has been
-  // set correctly.
+  auto inspect = TakeSnapshot();
+  EXPECT_EQ(inspect.node().get_property<inspect::IntPropertyValue>("migration_status")->value(),
+            ZX_ERR_NO_SPACE);
 }
 
 }  // namespace

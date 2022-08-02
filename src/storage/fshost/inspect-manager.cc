@@ -164,7 +164,7 @@ void FshostInspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> cur
 }
 
 void FshostInspectManager::LogMigrationStatus(zx_status_t status) {
-  migration_status_ = inspector_.GetRoot().CreateUint("migration_status", status);
+  migration_status_ = inspector_.GetRoot().CreateInt("migration_status", status);
 }
 
 void FshostInspectManager::LogCorruption(fs_management::DiskFormat format) {
