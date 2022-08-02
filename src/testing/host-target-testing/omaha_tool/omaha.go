@@ -179,30 +179,11 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, stdout io.Writer, s
 }
 
 // Returns nil if the process has already stopped.
-func (o *OmahaTool) Shutdown(ctx context.Context) error {
-	process := o.cmd.Process
-	if process == nil {
-		return nil
+func (o *OmahaTool) Shutdown() error {
+	if process := o.cmd.Process; process != nil {
+		return o.cmd.Process.Kill()
 	}
-	if err := process.Kill(); err != nil {
-		return err
-	}
-
-	ch := make(chan error)
-	go func() {
-		ch <- o.cmd.Wait()
-	}()
-	select {
-	case err := <-ch:
-		// If the process has been killed, ignore the error and report a
-		// successful shutdown.
-		if _, ok := err.(*exec.ExitError); ok {
-			return nil
-		}
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	return nil
 }
 
 func (o *OmahaTool) URL() string {
