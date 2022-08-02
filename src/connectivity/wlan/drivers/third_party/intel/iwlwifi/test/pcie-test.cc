@@ -25,9 +25,12 @@
 #include <array>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 extern "C" {
@@ -575,6 +578,7 @@ class TxTest : public PcieTest {
     base_params_.num_of_queues = 31;
     base_params_.max_tfd_queue_size = 256;
     trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
+    trans_pcie_->max_tbs = IWL_NUM_OF_TBS;
   }
 
   void TearDown() { iwl_pcie_tx_free(trans_); }
@@ -618,6 +622,26 @@ class TxTest : public PcieTest {
             },
     };
     dev_cmd_ = dev_cmd;
+  }
+
+  struct iwl_tfd* GetLastTfd() const {
+    return static_cast<struct iwl_tfd*>(iwl_pcie_get_tfd(trans_, txq_, txq_->write_ptr));
+  }
+
+  void CheckTb(zx_paddr_t expected_addr, uint16_t expected_len, uint32_t tb_idx) const {
+    auto* tfd = GetLastTfd();
+
+    ASSERT_TRUE(tfd->num_tbs > tb_idx);
+
+    auto& tb = tfd->tbs[tb_idx];
+
+    ASSERT_EQ(cpu_to_le32(expected_addr), tb.lo);
+
+    auto hi = tb.hi_n_len & TB_HI_N_LEN_ADDR_HI_MSK;
+    auto len = (tb.hi_n_len & TB_HI_N_LEN_LEN_MSK) >> 4;
+
+    ASSERT_EQ(iwl_get_dma_hi_addr(expected_addr), hi);
+    ASSERT_EQ(expected_len, len);
   }
 
  protected:
@@ -1067,6 +1091,90 @@ TEST_F(TxTest, TxSoManyPackets) {
   iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE);
   // We don't have much to check. But at least we can ensure the call doesn't crash.
   op_mode_queue_not_full_.VerifyAndClear();
+}
+
+//
+// Test that iwl_pcie_txq_build_tfd succeeds for expected cases.
+// This test adds 4 TBs to the last TFD and checks that the correct addresses/lengths are
+// added to the TB.
+// All calls to iwl_pcie_txq_build_tfd in this test are expected to succeed.
+//
+TEST_F(TxTest, BuildTfdSucceeds) {
+  SetupTxQueue();
+
+  std::vector<std::pair<zx_paddr_t, uint16_t>> tb_addr_and_len{
+      {1234, 1},
+      {456789, 1000},
+      {0xDABCDABCD, 123},  // check that hi address gets set
+      {123456, 0xfff},     // check max length
+  };
+
+  uint32_t num_tbs = 0;
+  uint32_t tb_idx = 0;
+
+  for (const auto& [addr, len] : tb_addr_and_len) {
+    zx_status_t status = iwl_pcie_txq_build_tfd(trans_, txq_, addr, len, false, &num_tbs);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(num_tbs, tb_idx);
+    CheckTb(addr, len, tb_idx);
+    ++tb_idx;
+  }
+
+  ASSERT_EQ(tb_addr_and_len.size(), GetLastTfd()->num_tbs);
+}
+
+//
+// Test that the `reset` parameter of iwl_pcie_txq_build_tfd works as expected.
+// The reset parameter is expected to erase any previous TBs in the TFD, so the test checks that
+// tfd->num_tbs is set back to 1 and the first TB in the TFD contains the address/len passed to
+// iwl_pcie_txq_build_tfd when reset was true.
+//
+TEST_F(TxTest, BuildTfdReset) {
+  SetupTxQueue();
+
+  uint32_t num_tbs = 0;
+
+  zx_status_t status = iwl_pcie_txq_build_tfd(trans_, txq_, 12345, 100, false, &num_tbs);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(0, num_tbs);
+  CheckTb(12345, 100, 0);
+
+  // build_tfd with reset and check that first tb is overwritten
+  status = iwl_pcie_txq_build_tfd(trans_, txq_, 45678, 1234, true, &num_tbs);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(0, num_tbs);
+  CheckTb(45678, 1234, 0);
+
+  ASSERT_EQ(1, GetLastTfd()->num_tbs);
+}
+
+TEST_F(TxTest, BuildTfdDmaAddressTooLarge) {
+  SetupTxQueue();
+  uint32_t num_tbs = 0;
+  zx_status_t status = iwl_pcie_txq_build_tfd(trans_, txq_, 0x1000000000, 100, false, &num_tbs);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
+}
+
+TEST_F(TxTest, BuildTfdTooManyTbs) {
+  SetupTxQueue();
+
+  zx_status_t status;
+  uint32_t num_tbs = 0;
+
+  for (unsigned i = 0; i < trans_pcie_->max_tbs; i++) {
+    status = iwl_pcie_txq_build_tfd(trans_, txq_, 1234, 100, false, &num_tbs);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(i, num_tbs);
+    CheckTb(1234, 100, i);
+  }
+
+  status = iwl_pcie_txq_build_tfd(trans_, txq_, 5678, 456, false, &num_tbs);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
+
+  // check that no tbs got overwritten after trying to add another tb when the tfd was full
+  for (unsigned i = 0; i < trans_pcie_->max_tbs; i++) {
+    CheckTb(1234, 100, i);
+  }
 }
 
 }  // namespace

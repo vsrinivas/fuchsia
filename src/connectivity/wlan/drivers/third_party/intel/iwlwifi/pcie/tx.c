@@ -404,12 +404,8 @@ void iwl_pcie_txq_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq) {
 }
 
 // Build TX queue transfer descriptor.
-//
-// TODO(fxbug.dev/61186): refactor this for testing.
-//
-static zx_status_t iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_txq* txq,
-                                          zx_paddr_t addr, uint16_t len, bool reset,
-                                          uint32_t* num_tbs) {
+zx_status_t iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_txq* txq, zx_paddr_t addr,
+                                   uint16_t len, bool reset, uint32_t* num_tbs) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   void* tfd;
 

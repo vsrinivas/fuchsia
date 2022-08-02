@@ -1011,6 +1011,10 @@ struct iwl_tso_hdr_page* get_page_hdr(struct iwl_trans* trans, size_t len);
 /* common functions that are used by gen3 transport */
 void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power);
 
+/* This function is exposed for unit testing */
+zx_status_t iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_txq* txq, zx_paddr_t addr,
+                                   uint16_t len, bool reset, uint32_t* num_tbs);
+
 #if 0   // NEEDS_PORTING
 /* transport gen 2 exported functions */
 int iwl_trans_pcie_gen2_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
