@@ -213,7 +213,9 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
                     expected.advance().await?;
                     continue;
                 }
-                if actual_item != expected_item {
+                // We can only reconstruct the key/value fields of Item.
+                if actual_item.key != expected_item.key || actual_item.value != expected_item.value
+                {
                     fsck.error(FsckError::AllocationMismatch(
                         expected_item.into(),
                         actual_item.into(),
