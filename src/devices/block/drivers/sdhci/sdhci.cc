@@ -913,6 +913,29 @@ void Sdhci::DdkUnbind(ddk::UnbindTxn txn) {
 void Sdhci::DdkRelease() { delete this; }
 
 zx_status_t Sdhci::Init() {
+  // Perform a software reset against both the DAT and CMD interface.
+  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_all(1).WriteTo(&regs_mmio_buffer_);
+
+  // Disable both clocks.
+  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
+  clock.set_internal_clock_enable(0).set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
+
+  // Wait for reset to take place. The reset is completed when all three
+  // of the following flags are reset.
+  const SoftwareReset target_mask =
+      SoftwareReset::Get().FromValue(0).set_reset_all(1).set_reset_cmd(1).set_reset_dat(1);
+  zx_status_t status = ZX_OK;
+  if ((status = WaitForReset(target_mask)) != ZX_OK) {
+    return status;
+  }
+
+  // The core has been reset, which should have stopped any DMAs that were happening when the driver
+  // started. It is now safe to release quarantined pages.
+  if ((status = bti_.release_quarantine()) != ZX_OK) {
+    zxlogf(ERROR, "Failed to release quarantined pages: %d", status);
+    return status;
+  }
+
   // Ensure that we're SDv3.
   const uint16_t vrsn =
       HostControllerVersion::Get().ReadFrom(&regs_mmio_buffer_).specification_version();
@@ -967,22 +990,6 @@ zx_status_t Sdhci::Init() {
   }
   if (quirks_ & SDHCI_QUIRK_NO_DDR) {
     info_.prefs |= SDMMC_HOST_PREFS_DISABLE_HSDDR | SDMMC_HOST_PREFS_DISABLE_HS400;
-  }
-
-  // Perform a software reset against both the DAT and CMD interface.
-  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_all(1).WriteTo(&regs_mmio_buffer_);
-
-  // Disable both clocks.
-  auto clock = ClockControl::Get().ReadFrom(&regs_mmio_buffer_);
-  clock.set_internal_clock_enable(0).set_sd_clock_enable(0).WriteTo(&regs_mmio_buffer_);
-
-  // Wait for reset to take place. The reset is completed when all three
-  // of the following flags are reset.
-  const SoftwareReset target_mask =
-      SoftwareReset::Get().FromValue(0).set_reset_all(1).set_reset_cmd(1).set_reset_dat(1);
-  zx_status_t status = ZX_OK;
-  if ((status = WaitForReset(target_mask)) != ZX_OK) {
-    return status;
   }
 
   // allocate and setup DMA descriptor
