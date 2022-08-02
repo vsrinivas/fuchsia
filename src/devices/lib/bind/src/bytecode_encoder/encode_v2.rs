@@ -16,7 +16,6 @@ pub fn encode_to_bytecode_v2(bind_rules: BindRules) -> Result<Vec<u8>, BindRules
     let mut symbol_table_encoder = SymbolTableEncoder::new();
     let mut instruction_bytecode =
         encode_instructions(bind_rules.instructions, &mut symbol_table_encoder)?;
-
     let mut bytecode: Vec<u8> = vec![];
 
     // Encode the header.
@@ -37,6 +36,12 @@ pub fn encode_to_bytecode_v2(bind_rules: BindRules) -> Result<Vec<u8>, BindRules
     bytecode.extend_from_slice(&INSTRUCTION_MAGIC_NUM.to_be_bytes());
     bytecode.extend_from_slice(&(instruction_bytecode.len() as u32).to_le_bytes());
     bytecode.append(&mut instruction_bytecode);
+
+    // Encode the debug section when enable_debug flag is true.
+    if bind_rules.enable_debug {
+        bytecode.extend_from_slice(&DEBG_MAGIC_NUM.to_be_bytes());
+        bytecode.extend_from_slice(&DEBUG_BYTE_COUNT.to_le_bytes());
+    }
 
     Ok(bytecode)
 }
@@ -122,6 +127,12 @@ pub fn encode_composite_to_bytecode(
     bytecode.extend_from_slice(&COMPOSITE_MAGIC_NUM.to_be_bytes());
     bytecode.extend_from_slice(&(inst_bytecode.len() as u32).to_le_bytes());
     bytecode.append(&mut inst_bytecode);
+
+    // Encode the debug section when enable_debug flag is true.
+    if bind_rules.enable_debug {
+        bytecode.extend_from_slice(&DEBG_MAGIC_NUM.to_be_bytes());
+        bytecode.extend_from_slice(&DEBUG_BYTE_COUNT.to_le_bytes());
+    }
 
     Ok(bytecode)
 }
@@ -239,6 +250,11 @@ mod test {
             // This isn't required in the bytecode specs, it's just how it's
             // implemented in encode_composite_to_bytecode().
             self.verify_next_u32(1);
+        }
+
+        pub fn verify_debug_header(&mut self, num_of_bytes: u32) {
+            self.verify_magic_num(DEBG_MAGIC_NUM);
+            self.verify_next_u32(num_of_bytes);
         }
 
         pub fn verify_symbol_table(&mut self, expected_symbols: &[&str]) {
@@ -431,6 +447,7 @@ mod test {
         checker.verify_sym_table_header(0);
         checker.verify_instructions_header(UNCOND_ABORT_BYTES);
         checker.verify_unconditional_abort();
+        checker.verify_debug_header(0);
         checker.verify_end();
     }
 

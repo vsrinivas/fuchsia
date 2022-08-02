@@ -16,6 +16,12 @@ pub const INSTRUCTION_MAGIC_NUM: u32 = 0x494E5354;
 // Magic number for COMP.
 pub const COMPOSITE_MAGIC_NUM: u32 = 0x434F4D50;
 
+// Magic number for DEBG.
+pub const DEBG_MAGIC_NUM: u32 = 0x44454247;
+
+// Empty debug information section
+pub const DEBUG_BYTE_COUNT: u32 = 0;
+
 pub const BYTECODE_VERSION: u32 = 2;
 
 pub const MAX_STRING_LENGTH: usize = 255;

@@ -998,7 +998,7 @@ mod tests {
             }],
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
-            enable_debug: true,
+            enable_debug: false,
         };
         let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
