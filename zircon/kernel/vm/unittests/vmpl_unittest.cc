@@ -79,6 +79,12 @@ static bool vmpl_basic_marker_test() {
   EXPECT_FALSE(pl.IsEmpty());
   EXPECT_TRUE(pl.HasNoPages());
 
+  VmPageOrMarker removed = pl.RemovePage(0);
+  EXPECT_TRUE(removed.IsMarker());
+
+  EXPECT_TRUE(pl.HasNoPages());
+  EXPECT_TRUE(pl.IsEmpty());
+
   END_TEST;
 }
 

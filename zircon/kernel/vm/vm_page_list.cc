@@ -136,8 +136,8 @@ VmPageOrMarker VmPageList::RemovePage(uint64_t offset) {
 
   // free this page
   VmPageOrMarker page = ktl::move(pln->Lookup(index));
-  if (page.IsPage() && pln->IsEmpty()) {
-    // if it was the last page in the node, remove the node from the tree
+  if (!page.IsEmpty() && pln->IsEmpty()) {
+    // if it was the last item in the node, remove the node from the tree
     LTRACEF_LEVEL(2, "%p freeing the list node\n", this);
     list_.erase(*pln);
   }
