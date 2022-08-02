@@ -135,7 +135,6 @@ source_set("timer") {
 # Sources for the driver core logic.
 source_set("core") {
   sources = [
-    "bits.cc",
     "bits.h",
     "btcoex.cc",
     "btcoex.h",

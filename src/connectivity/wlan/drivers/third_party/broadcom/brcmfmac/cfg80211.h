@@ -184,11 +184,8 @@
   X(SUPPRESS)
 
 #define X(SCAN_STATUS) SCAN_STATUS,
-enum class brcmf_scan_status_bit_t : size_t { BRCMF_SCAN_STATUS_LIST };
+enum class brcmf_scan_status_bit_t : uint8_t { BRCMF_SCAN_STATUS_LIST };
 #undef X
-
-template <typename T>
-constexpr auto get_enum_value(T value);
 
 #define X(SCAN_STATUS) brcmf_scan_status_bit_t::SCAN_STATUS,
 constexpr brcmf_scan_status_bit_t BRCMF_ALL_SCAN_STATUS_BITS[] = {BRCMF_SCAN_STATUS_LIST};
@@ -255,28 +252,31 @@ struct brcmf_cfg80211_profile {
 };
 
 /**
- * enum brcmf_vif_status - bit indices for vif status.
+ * enum class brcmf_vif_status_bit_t - bit indices for vif status.
  *
- * @BRCMF_VIF_STATUS_READY: ready for operation.
- * @BRCMF_VIF_STATUS_CONNECTING: connect/join in progress.
- * @BRCMF_VIF_STATUS_CONNECTED: connected/joined successfully.
- * @BRCMF_VIF_STATUS_DISCONNECTING: disconnect/disable in progress.
- * @BRCMF_VIF_STATUS_AP_START_PENDING: AP start pending.
- * @BRCMF_VIF_STATUS_AP_CREATED: AP operation started.
- * @BRCMF_VIF_STATUS_EAP_SUCCUSS: EAPOL handshake successful.
- * @BRCMF_VIF_STATUS_ASSOC_SUCCESS: successful SET_SSID received.
+ * @READY: ready for operation.
+ * @CONNECTING: connect/join in progress.
+ * @CONNECTED: connected/joined successfully.
+ * @DISCONNECTING: disconnect/disable in progress.
+ * @AP_START_PENDING: AP start pending.
+ * @AP_CREATED: AP operation started.
+ * @EAP_SUCCUSS: EAPOL handshake successful.
+ * @ASSOC_SUCCESS: successful SET_SSID received.
  */
-enum brcmf_vif_status {
-  BRCMF_VIF_STATUS_READY,
-  BRCMF_VIF_STATUS_CONNECTING,
-  BRCMF_VIF_STATUS_CONNECTED,
-  BRCMF_VIF_STATUS_DISCONNECTING,
-  BRCMF_VIF_STATUS_AP_START_PENDING,
-  BRCMF_VIF_STATUS_AP_CREATED,
-  BRCMF_VIF_STATUS_EAP_SUCCESS,
-  BRCMF_VIF_STATUS_ASSOC_SUCCESS,
-  BRCMF_VIF_STATUS_SAE_AUTHENTICATING,
-};
+#define BRCMF_VIF_STATUS_LIST \
+  X(READY)                    \
+  X(CONNECTING)               \
+  X(CONNECTED)                \
+  X(DISCONNECTING)            \
+  X(AP_START_PENDING)         \
+  X(AP_CREATED)               \
+  X(EAP_SUCCESS)              \
+  X(ASSOC_SUCCESS)            \
+  X(SAE_AUTHENTICATING)
+
+#define X(VIF_STATUS) VIF_STATUS,
+enum class brcmf_vif_status_bit_t : uint8_t { BRCMF_VIF_STATUS_LIST };
+#undef X
 
 /**
  * struct vif_saved_ie - holds saved IEs for a virtual interface.

@@ -96,7 +96,7 @@
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
+  if (!brcmf_test_bit(brcmf_vif_status_bit_t::READY, &vif->sme_state)) {
     BRCMF_INFO("device is not ready : status (%lu)", vif->sme_state.load());
     return false;
   }
@@ -131,11 +131,6 @@ struct parsed_vndr_ies {
   uint32_t count;
   struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
-
-template <typename T>
-constexpr auto brcmf_get_enum_value(T value) {
-  return static_cast<std::underlying_type_t<T>>(value);
-}
 
 #define X(SCAN_STATUS)                       \
   case brcmf_scan_status_bit_t::SCAN_STATUS: \
@@ -823,8 +818,7 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id, scan_result);
   }
 
-  if (!brcmf_test_and_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
-                                         &cfg->scan_status)) {
+  if (!brcmf_test_and_clear_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status)) {
     BRCMF_DBG(SCAN, "Scan complete, probably P2P scan");
   }
 }
@@ -1051,7 +1045,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
 
   if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SCAN_RANDOM_MAC) &&
       (params->params_le.scan_type == BRCMF_SCANTYPE_ACTIVE) &&
-      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+      !brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
     if ((err = brcmf_dev_escan_set_randmac(ifp)) != ZX_OK) {
       BRCMF_ERR("Failed to set random mac for active scan (%s), using interface mac",
                 zx_status_get_string(err));
@@ -1102,10 +1096,8 @@ zx_status_t brcmf_check_scan_status(unsigned long scan_status,
   zx_status_t out_scan_status = ZX_OK;
   std::ostringstream scan_status_ss;
 
-  // brcmf_test_bit_in_array() requires a std::atomic<unsigned long>*
-  std::atomic<unsigned long> atomic_scan_status = scan_status;
   for (auto scan_status_bit : BRCMF_ALL_SCAN_STATUS_BITS) {
-    if (brcmf_test_bit_in_array(brcmf_get_enum_value(scan_status_bit), &atomic_scan_status)) {
+    if (brcmf_test_bit(scan_status_bit, scan_status)) {
       out_scan_status = ZX_ERR_UNAVAILABLE;
       if (out_scan_status_report == nullptr) {
         return out_scan_status;
@@ -1147,7 +1139,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlan_fullmac_scan
     return scan_status;
   }
 
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &vif->sme_state)) {
     BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)", vif->sme_state.load());
     return ZX_ERR_SHOULD_WAIT;
   }
@@ -1159,7 +1151,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlan_fullmac_scan
   BRCMF_DBG(SCAN, "START ESCAN\n");
 
   cfg->scan_in_progress = true;
-  brcmf_set_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY), &cfg->scan_status);
+  brcmf_set_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status);
 
   cfg->escan_info.run = brcmf_run_escan;
 
@@ -1176,7 +1168,7 @@ scan_out:
   if (err != ZX_ERR_SHOULD_WAIT) {
     BRCMF_ERR("scan error (%d)", err);
   }
-  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY), &cfg->scan_status);
+  brcmf_clear_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status);
   cfg->scan_in_progress = false;
   return err;
 }
@@ -1360,7 +1352,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
 
   BRCMF_DBG(TRACE, "Enter");
 
-  if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state)) {
+  if (brcmf_test_and_clear_bit(brcmf_vif_status_bit_t::CONNECTED, &vif->sme_state)) {
     BRCMF_INFO("Link down while connected.");
     bcme_status_t fwerr = BCME_OK;
 
@@ -1376,10 +1368,9 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
   }
   brcmf_bss_reset(vif->ifp);
 
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state);
-  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::SUPPRESS),
-                           &cfg->scan_status);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTING, &vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTED, &vif->sme_state);
+  brcmf_clear_bit(brcmf_scan_status_bit_t::SUPPRESS, &cfg->scan_status);
   brcmf_btcoex_set_mode(vif, BRCMF_BTCOEX_ENABLED, 0);
   if (vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_NONE) {
     brcmf_set_pmk(vif->ifp, nullptr, 0);
@@ -1803,7 +1794,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_c
   }
   // Firmware is already processing a connect request. Don't clear the CONNECTING bit because the
   // operation is still expected to complete.
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state)) {
     err = ZX_ERR_BAD_STATE;
     BRCMF_WARN("Connection not possible. Another connection attempt in progress.");
     brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
@@ -1846,7 +1837,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_c
     }
   }
 
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+  brcmf_set_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state);
 
   // Override the channel bandwidth with 20Mhz because `channel_to_chanspec` doesn't support
   // encoding 80Mhz and the upper layer had always passed 20Mhz historically so also need to
@@ -1886,7 +1877,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlan_fullmac_c
 
 fail:
   if (err != ZX_OK) {
-    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+    brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state);
     BRCMF_DBG(CONN, "Failed during join: %s", zx_status_get_string(err));
     brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   }
@@ -2142,7 +2133,7 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
 
   BRCMF_DBG(TRACE, "Enter");
 
-  if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
+  if (brcmf_test_and_clear_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state)) {
     cfg->disconnect_timer->Stop();
     if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
       brcmf_notify_deauth(ndev, profile->bssid);
@@ -2207,7 +2198,7 @@ static void cfg80211_signal_ind(net_device* ndev) {
   }
 
   // Send signal report indication only if client is in connected state
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
     wlan_fullmac_signal_report_indication signal_ind;
     int8_t rssi, snr;
     if (brcmf_get_rssi_snr(ndev, &rssi, &snr) == ZX_OK) {
@@ -2284,8 +2275,8 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
     goto done;
   }
 
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state) &&
-      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+  if (!brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state) &&
+      !brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state)) {
     status = ZX_ERR_BAD_STATE;
     goto done;
   }
@@ -2302,8 +2293,8 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   // In case the connection is still in progress, stop the timer
   cfg->connect_timer->Stop();
 
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state);
 
   BRCMF_DBG(CONN, "Disconnecting");
 
@@ -2315,12 +2306,12 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
   memcpy(&scbval.ea, peer_sta_address, ETH_ALEN);
   scbval.val = reason_code;
   cfg->disconnect_mode = deauthenticate ? BRCMF_DISCONNECT_DEAUTH : BRCMF_DISCONNECT_DISASSOC;
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+  brcmf_set_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state);
   status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval), &fw_err);
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to disassociate: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+    brcmf_clear_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state);
     cfg->disconnect_timer->Stop();
   }
 
@@ -2585,8 +2576,7 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping scan result callback");
     return;
   }
-  if (!brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
-                               &cfg->scan_status)) {
+  if (!brcmf_test_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status)) {
     return;
   }
   wlan_fullmac_scan_result_t result = {};
@@ -2663,8 +2653,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   struct escan_info* escan = &cfg->escan_info;
   zx_status_t err = ZX_OK;
 
-  if (brcmf_test_and_set_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::ABORT),
-                                      &cfg->scan_status)) {
+  if (brcmf_test_and_set_bit(brcmf_scan_status_bit_t::ABORT, &cfg->scan_status)) {
     BRCMF_INFO("Abort scan already in progress.");
     return ZX_OK;
   }
@@ -2675,7 +2664,7 @@ static zx_status_t brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
       BRCMF_ERR("Abort scan failed -- error: %s", zx_status_get_string(err));
     }
   }
-  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::ABORT), &cfg->scan_status);
+  brcmf_clear_bit(brcmf_scan_status_bit_t::ABORT, &cfg->scan_status);
   return err;
 }
 
@@ -2747,8 +2736,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     goto chk_scan_end;
   }
 
-  if (!brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
-                               &cfg->scan_status)) {
+  if (!brcmf_test_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status)) {
     BRCMF_ERR("scan not ready, bsscfgidx=%d", ifp->bsscfgidx);
     return ZX_ERR_UNAVAILABLE;
   }
@@ -3054,7 +3042,7 @@ bool brcmf_is_ap_start_pending(brcmf_cfg80211_info* cfg) {
   }
 
   struct brcmf_cfg80211_vif* vif = ndev_to_vif(softap_ndev);
-  return brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &vif->sme_state);
+  return brcmf_test_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &vif->sme_state);
 }
 
 // Deauthenticate with specified STA.
@@ -3066,8 +3054,8 @@ static wlan_stop_result_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
   struct brcmf_join_params join_params;
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state) &&
-      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+  if (!brcmf_test_bit(brcmf_vif_status_bit_t::AP_CREATED, &ifp->vif->sme_state) &&
+      !brcmf_test_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &ifp->vif->sme_state)) {
     BRCMF_INFO("attempt to stop already stopped AP");
     return WLAN_STOP_RESULT_BSS_ALREADY_STOPPED;
   }
@@ -3118,8 +3106,8 @@ static wlan_stop_result_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
 
 skip_fw_cmds:
   cfg->ap_started = false;
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::AP_CREATED, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, false);
 
   return result;
@@ -3132,12 +3120,12 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev,
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::AP_CREATED, &ifp->vif->sme_state)) {
     BRCMF_ERR("AP already started");
     return WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED;
   }
 
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &ifp->vif->sme_state)) {
     BRCMF_ERR("AP start request received, start pending");
     return WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED;
   }
@@ -3155,10 +3143,9 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev,
   // Enter AP_START_PENDING mode before we abort any on-going scans. As soon as
   // we abort a scan we're open for other scans coming in and we want to make
   // sure those scans are blocked by setting this bit.
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
+  brcmf_set_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &ifp->vif->sme_state);
 
-  if (brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
-                              &cfg->scan_status)) {
+  if (brcmf_test_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status)) {
     std::string scan_status_report;
     brcmf_check_scan_status(cfg->scan_status.load(), &scan_status_report);
     BRCMF_INFO("AP start request incoming during scan_status %s", scan_status_report.c_str());
@@ -3708,7 +3695,7 @@ static void brcmf_ap_start_timeout_worker(WorkItem* work) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
   // Indicate status only if AP start pending is set
-  if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state)) {
+  if (brcmf_test_and_clear_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &ifp->vif->sme_state)) {
     // Indicate AP start failed
     brcmf_if_start_conf(ndev, WLAN_START_RESULT_NOT_SUPPORTED);
   }
@@ -4566,7 +4553,7 @@ zx_status_t brcmf_if_get_iface_counter_stats(net_device* ndev,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+  if (!brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
     return ZX_ERR_NOT_CONNECTED;
   }
 
@@ -4620,7 +4607,7 @@ zx_status_t brcmf_if_get_iface_histogram_stats(net_device* ndev,
     return ZX_ERR_NOT_CONNECTED;
   }
 
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+  if (!brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
     return ZX_ERR_NOT_CONNECTED;
   }
 
@@ -4704,7 +4691,7 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev,
     brcmf_return_assoc_result(ndev, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
   }
 
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &ifp->vif->sme_state);
 
   // Issue assoc_mgr_cmd to resume firmware from waiting for the success of SAE authentication.
   assoc_mgr_cmd_t cmd;
@@ -4906,19 +4893,19 @@ void brcmf_free_net_device_vif(struct net_device* ndev) {
 
 // Returns true if client is connected (also includes CONNECTING and DISCONNECTING).
 static bool brcmf_is_client_connected(brcmf_if* ifp) {
-  return (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state) ||
-          brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state) ||
-          brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state));
+  return (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state) ||
+          brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state) ||
+          brcmf_test_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state));
 }
 
 static const char* brcmf_get_client_connect_state_string(brcmf_if* ifp) {
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
     return "Connected";
   }
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state)) {
     return "Connecting";
   }
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state)) {
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state)) {
     return "Disconnecting";
   }
   return "Not connected";
@@ -5023,7 +5010,7 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   // For client IF, ensure it is connected.
   if (wdev->iftype == WLAN_MAC_ROLE_CLIENT) {
     // Status should be connected.
-    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    if (!brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("CSA on %s. Not associated.", ndev->name);
       return ZX_ERR_BAD_STATE;
     }
@@ -5061,7 +5048,7 @@ static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct br
   wlan_fullmac_sae_handshake_ind_t ind;
   brcmf_ext_auth* auth_start_evt = (brcmf_ext_auth*)data;
 
-  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+  if (!brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state)) {
     BRCMF_INFO("Receiving a BRCMF_E_START_AUTH event when we are not even connecting to an AP.");
     return ZX_ERR_BAD_STATE;
   }
@@ -5073,7 +5060,7 @@ static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct br
   memcpy(ind.peer_sta_address, &auth_start_evt->bssid, ETH_ALEN);
 
   // SAE four-way authentication start.
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+  brcmf_set_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &ifp->vif->sme_state);
 
   // Issue assoc_mgr_cmd to update the the state machine of firmware, so that the firmware will wait
   // for SAE frame from external supplicant.
@@ -5152,13 +5139,13 @@ static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
   struct brcmf_scb_val_le scbval;
   memcpy(&scbval.ea, ifp->connect_req.selected_bss.bssid, ETH_ALEN);
   scbval.val = static_cast<uint32_t>(wlan_ieee80211::ReasonCode::STA_LEAVING);
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+  brcmf_set_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state);
   status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_DISASSOC, &scbval, sizeof(scbval), &fw_err);
   if (status != ZX_OK) {
     BRCMF_ERR("Failed to issue BRCMF_C_DISASSOC to firmware: %s, fw err %s",
               zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
   }
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::DISCONNECTING, &ifp->vif->sme_state);
   status = brcmf_bss_reset(ifp);
   return status;
 }
@@ -5169,7 +5156,7 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
   struct net_device* ndev = ifp->ndev;
   BRCMF_DBG(TRACE, "Enter");
 
-  if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+  if (brcmf_test_and_clear_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state)) {
     // Stop connect timer no matter connect success or not, this timer only timeout when nothing
     // is heard from firmware.
     cfg->connect_timer->Stop();
@@ -5178,7 +5165,7 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
     switch (connect_status) {
       case brcmf_connect_status_t::CONNECTED: {
         brcmf_get_assoc_ies(cfg, ifp);
-        brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
+        brcmf_set_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state);
         if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
           // Start the signal report timer
           cfg->connect_log_cnt = 0;
@@ -5227,7 +5214,7 @@ static void brcmf_connect_timeout_worker(WorkItem* work) {
     BRCMF_ERR("Failed to clear firmware connection state.");
   }
   // In case the timeout happens in SAE process.
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &ifp->vif->sme_state);
   brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTING_TIMEOUT,
                          STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
 }
@@ -5411,7 +5398,7 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
     // specifically with WEP. Attempt to shutdown the IF.
     brcmf_bss_reset(ifp);
 
-    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state)) {
+    if (brcmf_test_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &ifp->vif->sme_state)) {
       // Issue assoc_mgr_cmd to resume firmware from waiting for the success of SAE authentication.
       bcme_status_t fwerr = BCME_OK;
       zx_status_t status;
@@ -5429,14 +5416,14 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
         BRCMF_ERR("Set iovar assoc_mgr_cmd fail. err: %s, fw_err: %s", zx_status_get_string(status),
                   brcmf_fil_get_errstr(fwerr));
       }
-      brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+      brcmf_clear_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &ifp->vif->sme_state);
     }
     brcmf_bss_connect_done(ifp, brcmf_connect_status_t::AUTHENTICATION_FAILED,
                            STATUS_CODE_REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED);
   }
 
   // Only care about the authentication frames during SAE process.
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state) &&
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &ifp->vif->sme_state) &&
       e->datalen > 0) {
     BRCMF_INFO("SAE frame received from driver.");
     return brcmf_rx_auth_frame(ifp, e->datalen, data);
@@ -5563,14 +5550,13 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
 
     // Indicate status only if AP is in start pending state (could have been cleared if
     // a stop request comes in before this event is received).
-    if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
-                                          &ifp->vif->sme_state)) {
+    if (brcmf_test_and_clear_bit(brcmf_vif_status_bit_t::AP_START_PENDING, &ifp->vif->sme_state)) {
       // Stop the timer when we get a result from firmware.
       cfg->ap_start_timer->Stop();
       // confirm AP Start
       brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
       // Set AP_CREATED
-      brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
+      brcmf_set_bit(brcmf_vif_status_bit_t::AP_CREATED, &ifp->vif->sme_state);
     }
   } else {
     BRCMF_DBG(CONN, "Client mode link event.");
@@ -5605,7 +5591,7 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
 
   // Sometimes FW sends E_DEAUTH when a unicast packet is received before association
   // is complete. Ignore it.
-  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state) &&
+  if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTING, &ifp->vif->sme_state) &&
       e->reason == BRCMF_E_REASON_UCAST_FROM_UNASSOC_STA) {
     BRCMF_DBG(EVENT, "E_DEAUTH because data rcvd before assoc...ignore");
     return ZX_OK;
@@ -5652,7 +5638,7 @@ static zx_status_t brcmf_notify_roaming_status(struct brcmf_if* ifp,
   BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
 
   if (event == BRCMF_E_ROAM && status == BRCMF_E_STATUS_SUCCESS) {
-    if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    if (brcmf_test_bit(brcmf_vif_status_bit_t::CONNECTED, &ifp->vif->sme_state)) {
       BRCMF_ERR("Received roaming notification - unsupported");
     } else {
       brcmf_bss_connect_done(ifp, brcmf_connect_status_t::CONNECTED, STATUS_CODE_SUCCESS);
@@ -6015,7 +6001,7 @@ default_conf_out:
 }
 
 static zx_status_t __brcmf_cfg80211_up(struct brcmf_if* ifp) {
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
+  brcmf_set_bit(brcmf_vif_status_bit_t::READY, &ifp->vif->sme_state);
 
   return brcmf_config_dongle(ifp->drvr->config);
 }
@@ -6037,7 +6023,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
   }
 
   brcmf_abort_scanning_immediately(cfg);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_READY, &ifp->vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::READY, &ifp->vif->sme_state);
 
   return ZX_OK;
 }
@@ -6079,11 +6065,11 @@ const char* brcmf_cfg80211_get_iface_str(struct net_device* ndev) {
     return "SoftAP";
 }
 
-bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state) {
+bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, brcmf_vif_status_bit_t state) {
   struct brcmf_cfg80211_vif* vif;
 
   list_for_every_entry (&cfg->vif_list, vif, struct brcmf_cfg80211_vif, list) {
-    if (brcmf_test_bit_in_array(state, &vif->sme_state)) {
+    if (brcmf_test_bit(state, &vif->sme_state)) {
       return true;
     }
   }
@@ -6138,8 +6124,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
   }
 
   if (ndev) {
-    if (brcmf_test_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY),
-                                &cfg->scan_status) &&
+    if (brcmf_test_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status) &&
         cfg->escan_info.ifp == ndev_to_if(ndev)) {
       BRCMF_WARN("Aborting scan, interface being removed");
       brcmf_abort_scanning_immediately(cfg);
@@ -6293,15 +6278,14 @@ zx_status_t brcmf_clear_states(struct brcmf_cfg80211_info* cfg) {
   cfg->connect_timer->Stop();
 
   // Clear all driver scan states.
-  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::BUSY), &cfg->scan_status);
-  brcmf_clear_bit_in_array(brcmf_get_enum_value(brcmf_scan_status_bit_t::SUPPRESS),
-                           &cfg->scan_status);
+  brcmf_clear_bit(brcmf_scan_status_bit_t::BUSY, &cfg->scan_status);
+  brcmf_clear_bit(brcmf_scan_status_bit_t::SUPPRESS, &cfg->scan_status);
 
   // Clear connect and disconnect states for primary iface.
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &client_vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &client_vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &client_vif->sme_state);
-  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &client_vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::SAE_AUTHENTICATING, &client_vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTING, &client_vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::CONNECTED, &client_vif->sme_state);
+  brcmf_clear_bit(brcmf_vif_status_bit_t::DISCONNECTING, &client_vif->sme_state);
 
   // Always return ZX_OK.
   return ZX_OK;

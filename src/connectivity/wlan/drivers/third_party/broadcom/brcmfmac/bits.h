@@ -15,17 +15,47 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BITS_H_
 
 #include <stddef.h>
+#include <zircon/assert.h>
 
 #include <atomic>
 
-bool brcmf_test_and_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
+template <typename T>
+constexpr uint64_t brcmf_bit(T bit_number) {
+  uint8_t value = static_cast<std::underlying_type_t<T>>(bit_number);
+  ZX_DEBUG_ASSERT(value < sizeof(unsigned long) * 8);
+  return static_cast<uint64_t>(1 << value);
+}
 
-bool brcmf_test_and_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
+template <typename T>
+inline bool brcmf_test_and_set_bit(T bit_number, std::atomic<unsigned long>* bit_array) {
+  uint64_t b = brcmf_bit(bit_number);
+  return !!(bit_array->fetch_or(b) & b);
+}
 
-bool brcmf_test_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
+template <typename T>
+inline bool brcmf_test_and_clear_bit(T bit_number, std::atomic<unsigned long>* bit_array) {
+  uint64_t b = brcmf_bit(bit_number);
+  return !!(bit_array->fetch_and(~b) & b);
+}
 
-void brcmf_clear_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
+template <typename T>
+inline bool brcmf_test_bit(T bit_number, std::atomic<unsigned long>* bit_array) {
+  return !!(bit_array->load() & brcmf_bit(bit_number));
+}
 
-void brcmf_set_bit_in_array(size_t bit_number, std::atomic<unsigned long>* addr);
+template <typename T>
+inline bool brcmf_test_bit(T bit_number, unsigned long bit_array) {
+  return !!(bit_array & brcmf_bit(bit_number));
+}
+
+template <typename T>
+inline void brcmf_clear_bit(T bit_number, std::atomic<unsigned long>* bit_array) {
+  (void)brcmf_test_and_clear_bit(bit_number, bit_array);
+}
+
+template <typename T>
+inline void brcmf_set_bit(T bit_number, std::atomic<unsigned long>* bit_array) {
+  (void)brcmf_test_and_set_bit(bit_number, bit_array);
+}
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BITS_H_

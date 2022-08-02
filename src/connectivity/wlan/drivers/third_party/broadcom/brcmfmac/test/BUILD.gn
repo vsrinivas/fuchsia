@@ -64,6 +64,20 @@ executable("bcmdhd_crossdriver_test") {
   ]
 }
 
+executable("bits_test") {
+  output_name = "bits_test"
+  testonly = true
+  sources = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h",
+    "bits_test.cc",
+  ]
+  deps = [
+    "//src/devices/testing/no_ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
 executable("brcmu_utils_test") {
   output_name = "brcmu_utils_test"
   testonly = true
@@ -251,6 +265,7 @@ executable("workqueue_test") {
 
 _tests = [
   "bcmdhd_crossdriver_test",
+  "bits_test",
   "brcmu_utils_test",
   "channel_conversion_test",
   "cfg80211_test",
