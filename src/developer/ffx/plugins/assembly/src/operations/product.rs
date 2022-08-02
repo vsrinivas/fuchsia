@@ -5,8 +5,9 @@
 use crate::operations::product::assembly_builder::ImageAssemblyConfigBuilder;
 use crate::util;
 use anyhow::{Context, Result};
-use assembly_config_schema::product_config::{
-    BuildType, FeatureSupportLevel, ProductAssemblyConfig,
+use assembly_config_schema::{
+    board_config::BoardInformation,
+    product_config::{BuildType, FeatureSupportLevel, ProductAssemblyConfig},
 };
 use ffx_assembly_args::ProductArgs;
 use std::path::PathBuf;
@@ -17,6 +18,7 @@ mod assembly_builder;
 pub fn assemble(args: ProductArgs) -> Result<()> {
     let ProductArgs {
         product,
+        board_info,
         outdir,
         gendir: _,
         input_bundles_dir,
@@ -29,6 +31,12 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
 
     let config: ProductAssemblyConfig =
         util::read_config(&product).context("Loading product configuration")?;
+
+    let board_info = board_info
+        .map(|path| {
+            util::read_config::<BoardInformation>(&path).context("Loading board information")
+        })
+        .transpose()?;
 
     let mut builder = ImageAssemblyConfigBuilder::default();
 
@@ -69,8 +77,11 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     // Set structured configuration
     builder.set_bootfs_structured_config(assembly_platform_configuration::define_bootfs_config(
         &config,
+        board_info.as_ref(),
     )?);
-    for (package, config) in assembly_platform_configuration::define_repackaging(&config)? {
+    for (package, config) in
+        assembly_platform_configuration::define_repackaging(&config, board_info.as_ref())?
+    {
         builder.set_structured_config(package, config)?;
     }
 

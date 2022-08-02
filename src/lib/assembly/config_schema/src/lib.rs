@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+pub mod board_config;
 pub mod product_config;
 
 /// The set of information that defines a fuchsia product.  All fields are

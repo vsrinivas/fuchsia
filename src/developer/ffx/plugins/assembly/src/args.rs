@@ -243,6 +243,11 @@ pub struct ProductArgs {
     #[argh(option)]
     pub product: PathBuf,
 
+    /// the file containing information about the board that the product is
+    /// being assembled to run on.
+    #[argh(option)]
+    pub board_info: Option<PathBuf>,
+
     /// the directory to write assembled outputs to.
     #[argh(option)]
     pub outdir: PathBuf,

@@ -23,6 +23,7 @@ if (is_host) {
       "//third_party/rust_crates:serde_json",
     ]
     sources = [
+      "src/board_config.rs",
       "src/lib.rs",
       "src/product_config.rs",
     ]

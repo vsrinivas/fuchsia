@@ -100,10 +100,9 @@ impl Default for FeatureSupportLevel {
 
 /// The platform BuildTypes.
 ///
-/// These control security and behavioral settings within the platform.
+/// These control security and behavioral settings within the platform, and can
+/// change the platform packages placed into the assembled product image.
 ///
-/// Not presently used to control the platform's contents, but available for
-/// configuring platform components via StructuredConfiguration.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum BuildType {
     #[serde(rename = "eng")]

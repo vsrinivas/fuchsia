@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use anyhow::ensure;
-use assembly_config_schema::product_config::{BuildType, FeatureControl, ProductAssemblyConfig};
+use assembly_config_schema::{
+    board_config::BoardInformation,
+    product_config::{BuildType, FeatureControl, ProductAssemblyConfig},
+};
 use fidl_fuchsia_logger::MAX_TAGS;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -34,7 +37,10 @@ const BASE_CONSOLE_DENIED_TAGS: &[&str] = &["NUD", "klog"];
 /// value files with concrete component tuples.
 ///
 /// Returns a map from components manifest paths to configuration fields.
-pub fn define_bootfs_config(config: &ProductAssemblyConfig) -> anyhow::Result<PackageConfigPatch> {
+pub fn define_bootfs_config(
+    config: &ProductAssemblyConfig,
+    _board_info: Option<&BoardInformation>,
+) -> anyhow::Result<PackageConfigPatch> {
     let mut bootfs_patches = PackageConfigPatch::default();
 
     // Configure the serial console.
@@ -66,6 +72,7 @@ pub fn define_bootfs_config(config: &ProductAssemblyConfig) -> anyhow::Result<Pa
 /// Returns a map from package names to configuration updates.
 pub fn define_repackaging(
     config: &ProductAssemblyConfig,
+    _board_info: Option<&BoardInformation>,
 ) -> anyhow::Result<StructuredConfigPatches> {
     let mut patches = PatchesBuilder::default();
 
