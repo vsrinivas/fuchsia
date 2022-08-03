@@ -71,12 +71,6 @@
     {
         "declaration": "uint32",
         "kind": "const",
-        "name": "fuchsia.process/MAX",
-        "value": "4294967295"
-    },
-    {
-        "declaration": "uint32",
-        "kind": "const",
         "name": "fuchsia.process/MAX_RESOLVE_NAME_SIZE",
         "value": "2048"
     },

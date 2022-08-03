@@ -97,9 +97,6 @@ type ProcessStartData = resource struct {
     base zx.vaddr;
 };
 
-// TODO(fxbug.dev/37281): replace with built-in constant
-const MAX uint32 = 0xFFFFFFFF;
-
 /// A low-level interface for launching processes.
 ///
 /// This interface is used for manually assembling a process. The caller supplies
