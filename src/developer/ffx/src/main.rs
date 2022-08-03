@@ -436,22 +436,16 @@ async fn run() -> Result<()> {
     // properly have the runtime parameters.
     let overrides = set_buildid_config(app.runtime_config_overrides())?;
 
-    let env = match app.env {
-        Some(ref env) => PathBuf::from(env),
-        None => match ffx_config::default_env_path() {
-            Ok(path) => path,
-            Err(e) => {
-                eprintln!(
-                    "ffx could not determine the default environment configuration path: {}",
-                    e
-                );
-                eprintln!("Ensure that $HOME is set, or pass the --env option to specify an environment configuration path");
-                return Ok(());
-            }
-        },
-    };
+    let env = ffx_config::init(&*app.config, overrides, app.env.as_ref().map(PathBuf::from))?;
 
-    ffx_config::init(&*app.config, overrides, env)?;
+    match env.env_path() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("ffx could not determine the environment configuration path: {}", e);
+            eprintln!("Ensure that $HOME is set, or pass the --env option to specify an environment configuration path");
+            return Ok(());
+        }
+    };
 
     let is_daemon = is_daemon(&app.subcommand);
     ffx_config::logging::init(is_daemon || app.verbose, !is_daemon).await?;

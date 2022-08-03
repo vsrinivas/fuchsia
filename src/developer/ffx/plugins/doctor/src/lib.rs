@@ -11,7 +11,10 @@ use {
     async_trait::async_trait,
     doctor_utils::{DaemonManager, DefaultDaemonManager, DoctorRecorder, Recorder},
     errors::ffx_bail,
-    ffx_config::{get, lockfile::LockfileCreateError, print_config},
+    ffx_config::{
+        environment::EnvironmentContext, get, global_env_context, lockfile::LockfileCreateError,
+        print_config,
+    },
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
     fidl::{endpoints::create_proxy, prelude::*},
@@ -317,6 +320,7 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
         cmd.restart_daemon,
         version_info,
         default_target,
+        &global_env_context().context("No global environment configured")?,
         DoctorRecorderParameters {
             record,
             user_config_enabled,
@@ -385,7 +389,7 @@ fn get_abi_revision(v: VersionInfo) -> String {
 
 async fn get_user_config() -> Result<String> {
     let mut writer = BufWriter::new(Vec::new());
-    print_config(&mut writer, None).await?;
+    print_config(&mut writer).await?;
     let config_str = String::from_utf8(writer.into_inner()?)?;
     Ok(config_str)
 }
@@ -400,6 +404,7 @@ async fn doctor<W: Write>(
     restart_daemon: bool,
     version_info: VersionInfo,
     default_target: Result<Option<String>, String>,
+    env_context: &EnvironmentContext,
     record_params: DoctorRecorderParameters,
 ) -> Result<()> {
     if restart_daemon {
@@ -412,6 +417,7 @@ async fn doctor<W: Write>(
             retry_delay,
             version_info,
             default_target,
+            env_context,
             ledger,
         )
         .await?;
@@ -758,6 +764,7 @@ async fn doctor_summary<W: Write>(
     retry_delay: Duration,
     version_info: VersionInfo,
     default_target: Result<Option<String>, String>,
+    env_context: &EnvironmentContext,
     ledger: &mut DoctorLedger<W>,
 ) -> Result<()> {
     match ledger.get_ledger_mode() {
@@ -797,34 +804,67 @@ async fn doctor_summary<W: Write>(
 
     ledger.close(main_node)?;
 
-    if let Some(env_file) = ffx_config::env_file() {
-        main_node = ledger.add_node("Config Lock Files", LedgerMode::Automatic)?;
+    main_node = ledger.add_node("FFX Environment Context", LedgerMode::Normal)?;
 
-        for (file, locked) in ffx_config::environment::Environment::check_locks(&env_file)? {
-            let (outcome, description) = match locked {
-                Err(LockfileCreateError { error, lock_path, owner: None, .. }) if error.kind() == ErrorKind::AlreadyExists=> (
-                    LedgerOutcome::Failure,
-                    format!("Lockfile `{lockfile}` exists, but is malformed. It should be removed.", lockfile=lock_path.display()),
-                ),
-                Err(LockfileCreateError { lock_path, owner: Some(owner), .. }) => (
-                    LedgerOutcome::Failure,
-                    format!("Lockfile `{lockfile}` was owned by another process that didn't release it in our timeout. Check that it's running? Pid {pid}", lockfile=lock_path.display(), pid=owner.pid),
-                ),
-                Err(LockfileCreateError { error, lock_path, .. }) => (
-                    LedgerOutcome::Failure,
-                    format!("Could not open lockfile `{lockfile}` due to error: {error:?}, check permissions on the directory.", lockfile=lock_path.display()),
-                ),
-                Ok(_) => (
-                    LedgerOutcome::Success,
-                    format!("Config file: {path}", path=file.display()),
-                )
-            };
-            let node = ledger.add_node(&description, LedgerMode::Automatic)?;
-            ledger.set_outcome(node, outcome)?;
+    let environment_kind_node = ledger.add_node(
+        &format!("Kind of Environment: {kind}", kind = env_context.env_kind()),
+        LedgerMode::Normal,
+    )?;
+    ledger.set_outcome(environment_kind_node, LedgerOutcome::Success)?;
+
+    let (outcome, description) = match env_context.env_path() {
+        Ok(env_file) => (
+            LedgerOutcome::Success,
+            format!("Environment File Location: {env_file}", env_file = env_file.display()),
+        ),
+        Err(e) => {
+            (LedgerOutcome::Failure, format!("Error find or loading the environment file: {e:?}"))
         }
+    };
+    let env_file_node = ledger.add_node(&description, LedgerMode::Verbose)?;
+    ledger.set_outcome(env_file_node, outcome)?;
 
-        ledger.close(main_node)?;
+    let build_dir_node = if let Some(build_dir) = env_context.build_dir() {
+        ledger.add_node(
+            &format!(
+                "Environment-default build directory: {build_dir}",
+                build_dir = build_dir.display()
+            ),
+            LedgerMode::Normal,
+        )?
+    } else {
+        ledger.add_node("No build directory discovered in the environment.", LedgerMode::Verbose)?
+    };
+    ledger.set_outcome(build_dir_node, LedgerOutcome::Success)?;
+
+    let lock_node = ledger.add_node("Config Lock Files", LedgerMode::Automatic)?;
+
+    for (file, locked) in ffx_config::environment::Environment::check_locks(env_context)? {
+        let (outcome, description) = match locked {
+            Err(LockfileCreateError { error, lock_path, owner: None, .. }) if error.kind() == ErrorKind::AlreadyExists=> (
+                LedgerOutcome::Failure,
+                format!("Lockfile `{lockfile}` exists, but is malformed. It should be removed.", lockfile=lock_path.display()),
+            ),
+            Err(LockfileCreateError { lock_path, owner: Some(owner), .. }) => (
+                LedgerOutcome::Failure,
+                format!("Lockfile `{lockfile}` was owned by another process that didn't release it in our timeout. Check that it's running? Pid {pid}", lockfile=lock_path.display(), pid=owner.pid),
+            ),
+            Err(LockfileCreateError { error, lock_path, .. }) => (
+                LedgerOutcome::Failure,
+                format!("Could not open lockfile `{lockfile}` due to error: {error:?}, check permissions on the directory.", lockfile=lock_path.display()),
+            ),
+            Ok(lockfile) => (
+                LedgerOutcome::Success,
+                format!("{path} locked by {lock}", path=file.display(), lock=lockfile.display()),
+            )
+        };
+        let node = ledger.add_node(&description, LedgerMode::Automatic)?;
+        ledger.set_outcome(node, outcome)?;
     }
+
+    ledger.close(lock_node)?;
+
+    ledger.close(main_node)?;
 
     main_node = ledger.add_node("Checking daemon", LedgerMode::Automatic)?;
 
@@ -1188,6 +1228,7 @@ mod test {
         super::*,
         async_lock::Mutex,
         async_trait::async_trait,
+        ffx_config::TestEnv,
         ffx_doctor_test_utils::MockWriter,
         fidl::endpoints::RequestStream,
         fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
@@ -1929,6 +1970,8 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_no_daemon_running_no_targets_with_default_target() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![false],
             vec![Ok(false)],
@@ -1955,6 +1998,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(Some(NODENAME.to_string())),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -1965,22 +2009,31 @@ mod test {
             format!(
                 "\
                    \n[✓] FFX doctor\
-                   \n    [✓] Frontend version: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
-                   \n    [i] Path to ffx: {}\
+                   \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
+                   \n    [i] Path to ffx: {ffx_path}\
+                   \n[✓] FFX Environment Context\
+                   \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                   \n    [✓] Environment File Location: {env_file}\
+                   \n    [✓] No build directory discovered in the environment.\
+                   \n    [✓] Config Lock Files\
+                   \n        [✓] {env_file} locked by {env_file}.lock\
+                   \n        [✓] {user_file} locked by {user_file}.lock\
                    \n[✗] Checking daemon\
                    \n    [✗] No running daemons found. Run `ffx doctor --restart-daemon`\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path()
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_no_targets() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -2006,6 +2059,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2016,34 +2070,39 @@ mod test {
             format!(
                 "\
                    \n[✓] FFX doctor\
-                   \n    [✓] Frontend version: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
-                   \n    [i] Path to ffx: {}\
+                   \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
+                   \n    [i] Path to ffx: {ffx_path}\
+                   \n[✓] FFX Environment Context\
+                   \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                   \n    [✓] Environment File Location: {env_file}\
+                   \n    [✓] No build directory discovered in the environment.\
+                   \n    [✓] Config Lock Files\
+                   \n        [✓] {env_file} locked by {env_file}.lock\
+                   \n        [✓] {user_file} locked by {user_file}.lock\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
-                   \n    [✓] Daemon version: {}\
-                   \n    [✓] path: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
+                   \n    [✓] Daemon version: {DAEMON_VERSION}\
+                   \n    [✓] path: {ffx_path}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_connection_error() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -2069,6 +2128,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(Some("".to_string())),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2079,23 +2139,32 @@ mod test {
             format!(
                 "\
                    \n[✓] FFX doctor\
-                   \n    [✓] Frontend version: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
-                   \n    [i] Path to ffx: {}\
+                   \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
+                   \n    [i] Path to ffx: {ffx_path}\
+                   \n[✓] FFX Environment Context\
+                   \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                   \n    [✓] Environment File Location: {env_file}\
+                   \n    [✓] No build directory discovered in the environment.\
+                   \n    [✓] Config Lock Files\
+                   \n        [✓] {env_file} locked by {env_file}.lock\
+                   \n        [✓] {user_file} locked by {user_file}.lock\
                    \n[✗] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✗] Error connecting to daemon: Some error message. Run `ffx doctor --restart-daemon`\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_no_targets_default_target_empty() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -2121,6 +2190,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(Some("".to_string())),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2131,34 +2201,39 @@ mod test {
             format!(
                 "\
                    \n[✓] FFX doctor\
-                   \n    [✓] Frontend version: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
-                   \n    [i] Path to ffx: {}\
+                   \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
+                   \n    [i] Path to ffx: {ffx_path}\
+                   \n[✓] FFX Environment Context\
+                   \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                   \n    [✓] Environment File Location: {env_file}\
+                   \n    [✓] No build directory discovered in the environment.\
+                   \n    [✓] Config Lock Files\
+                   \n        [✓] {env_file} locked by {env_file}.lock\
+                   \n        [✓] {user_file} locked by {user_file}.lock\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
-                   \n    [✓] Daemon version: {}\
-                   \n    [✓] path: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
+                   \n    [✓] Daemon version: {DAEMON_VERSION}\
+                   \n    [✓] path: {ffx_path}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_two_tries_daemon_running_list_fails() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true, false],
             vec![Ok(true), Ok(false)],
@@ -2184,6 +2259,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2194,28 +2270,31 @@ mod test {
             format!(
                 "\
             \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
+            \n    [✓] Frontend version: {FRONTEND_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n    [i] Path to ffx: {ffx_path}\
+            \n[✓] FFX Environment Context\
+            \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+            \n    [✓] Environment File Location: {env_file}\
+            \n    [✓] No build directory discovered in the environment.\
+            \n    [✓] Config Lock Files\
+            \n        [✓] {env_file} locked by {env_file}.lock\
+            \n        [✓] {user_file} locked by {user_file}.lock\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] path: {ffx_path}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
             \n    [✓] Default target: (none)\
             \n[✗] Searching for targets\
             \n    [✗] Error getting targets: <reason omitted>\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
@@ -2223,6 +2302,8 @@ mod test {
     #[fasync::run_singlethreaded(test)]
 
     async fn test_two_tries_no_daemon_running_echo_timeout() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let (tx, rx) = oneshot::channel::<()>();
 
         let fake = FakeDaemonManager::new(
@@ -2256,6 +2337,7 @@ mod test {
                 true,
                 frontend_version_info(true),
                 Ok(None),
+                &test_env.context,
                 record_params_no_record(),
             )
             .await
@@ -2294,6 +2376,7 @@ mod test {
                 true,
                 frontend_version_info(true),
                 Ok(None),
+                &test_env.context,
                 record_params_no_record(),
             )
             .await
@@ -2310,11 +2393,10 @@ mod test {
                     \n    [✓] Daemon spawned\
                     \n    [✓] Daemon PID: [3]\
                     \n    [✓] Connected to daemon\
-                    \n    [✓] Daemon version: {}\
-                    \n    [✓] abi-revision: {}\
-                    \n    [✓] api-level: {}\
+                    \n    [✓] Daemon version: {DAEMON_VERSION}\
+                    \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                    \n    [✓] api-level: {FAKE_API_LEVEL}\
                     \n",
-                    DAEMON_VERSION, ABI_REVISION_STR, FAKE_API_LEVEL
                 )
             );
         }
@@ -2352,6 +2434,7 @@ mod test {
     }
 
     async fn test_finds_target_connects_to_rcs_setup(
+        test_env: &TestEnv,
         modes: RcsTestArgs,
     ) -> DoctorLedger<MockWriter> {
         let (tx, rx) = oneshot::channel::<()>();
@@ -2386,6 +2469,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2397,7 +2481,10 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_with_ssh_error_verbose() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let ledger = test_finds_target_connects_to_rcs_setup(
+            &test_env,
             RcsTestArgs::default().verbose().with_ssh_error("some ssh error"),
         )
         .await;
@@ -2406,42 +2493,47 @@ mod test {
             format!(
                 "\
             \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
+            \n    [✓] Frontend version: {FRONTEND_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n    [i] Path to ffx: {ffx_path}\
+            \n[✓] FFX Environment Context\
+            \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+            \n    [✓] Environment File Location: {env_file}\
+            \n    [✓] No build directory discovered in the environment.\
+            \n    [✓] Config Lock Files\
+            \n        [✓] {env_file} locked by {env_file}.lock\
+            \n        [✓] {user_file} locked by {user_file}.lock\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] path: {ffx_path}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 1 targets found\
             \n[✗] Verifying Targets\
-            \n    [✗] Target: {}\
+            \n    [✗] Target: {SSH_ERR_NODENAME}\
             \n        [✓] Opened target handle\
             \n        [✓] Connecting to RCS\
             \n        [✗] Error while connecting to RCS: <reason omitted>\
             \n[✗] Doctor found issues in one or more categories.\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                SSH_ERR_NODENAME,
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ssh_connection_refused_recommends_tunnel() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let ledger = test_finds_target_connects_to_rcs_setup(
+            &test_env,
             RcsTestArgs::default().with_ssh_error("Connection refused").with_reason(),
         )
         .await;
@@ -2453,7 +2545,10 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ssh_permission_denied_recommends_repave() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let ledger = test_finds_target_connects_to_rcs_setup(
+            &test_env,
             RcsTestArgs::default()
                 .with_ssh_error("Permission denied (publickey,keyboard-interactive)")
                 .with_reason(),
@@ -2467,74 +2562,90 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_verbose() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let ledger =
-            test_finds_target_connects_to_rcs_setup(RcsTestArgs::default().verbose()).await;
+            test_finds_target_connects_to_rcs_setup(&test_env, RcsTestArgs::default().verbose())
+                .await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
                 "\
             \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
+            \n    [✓] Frontend version: {FRONTEND_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n    [i] Path to ffx: {ffx_path}\
+            \n[✓] FFX Environment Context\
+            \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+            \n    [✓] Environment File Location: {env_file}\
+            \n    [✓] No build directory discovered in the environment.\
+            \n    [✓] Config Lock Files\
+            \n        [✓] {env_file} locked by {env_file}.lock\
+            \n        [✓] {user_file} locked by {user_file}.lock\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] path: {ffx_path}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 2 targets found\
             \n[✓] Verifying Targets\
-            \n    [✓] Target: {}\
+            \n    [✓] Target: {NODENAME}\
             \n        [✓] Opened target handle\
             \n        [✓] Connecting to RCS\
             \n        [✓] Communicating with RCS\
-            \n    [✗] Target: {}\
+            \n    [✗] Target: {UNRESPONSIVE_NODENAME}\
             \n        [✓] Opened target handle\
             \n        [✓] Connecting to RCS\
             \n        [✗] Timeout while communicating with RCS\
             \n[✓] No issues found\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                NODENAME,
-                UNRESPONSIVE_NODENAME,
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_normal() {
-        let ledger = test_finds_target_connects_to_rcs_setup(RcsTestArgs::default()).await;
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
+        let ledger =
+            test_finds_target_connects_to_rcs_setup(&test_env, RcsTestArgs::default()).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
                 "\
-            \n[✓] Checking daemon\
-            \n    [✓] Daemon found: [1]\
-            \n    [✓] Connecting to daemon\
-            \n[✓] Searching for targets\
-            \n    [✓] 2 targets found\
-            \n[✓] Verifying Targets\
-            \n    [✓] Target: {}\
-            \n    [✗] Target: {}\
-            \n[✓] No issues found\n",
-                NODENAME, UNRESPONSIVE_NODENAME,
+                \n[✓] FFX Environment Context\
+                \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                \n    [✓] Config Lock Files\
+                \n        [✓] {env_file} locked by {env_file}.lock\
+                \n        [✓] {user_file} locked by {user_file}.lock\
+                \n[✓] Checking daemon\
+                \n    [✓] Daemon found: [1]\
+                \n    [✓] Connecting to daemon\
+                \n[✓] Searching for targets\
+                \n    [✓] 2 targets found\
+                \n[✓] Verifying Targets\
+                \n    [✓] Target: {NODENAME}\
+                \n    [✗] Target: {UNRESPONSIVE_NODENAME}\
+                \n[✓] No issues found\n",
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_with_filter() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let (tx, rx) = oneshot::channel::<()>();
 
         let fake = FakeDaemonManager::new(
@@ -2562,6 +2673,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2573,41 +2685,45 @@ mod test {
             format!(
                 "\
             \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
+            \n    [✓] Frontend version: {FRONTEND_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n    [i] Path to ffx: {ffx_path}\
+            \n[✓] FFX Environment Context\
+            \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+            \n    [✓] Environment File Location: {env_file}\
+            \n    [✓] No build directory discovered in the environment.\
+            \n    [✓] Config Lock Files\
+            \n        [✓] {env_file} locked by {env_file}.lock\
+            \n        [✓] {user_file} locked by {user_file}.lock\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] path: {ffx_path}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 1 targets found\
             \n[✓] Verifying Targets\
-            \n    [✓] Target: {}\
+            \n    [✓] Target: {NODENAME}\
             \n        [✓] Opened target handle\
             \n        [✓] Connecting to RCS\
             \n        [✓] Communicating with RCS\
             \n[✓] No issues found\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                NODENAME,
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_invalid_filter_finds_no_targets() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let (tx, rx) = oneshot::channel::<()>();
 
         let fake = FakeDaemonManager::new(
@@ -2636,6 +2752,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2647,34 +2764,39 @@ mod test {
             format!(
                 "\
             \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
+            \n    [✓] Frontend version: {FRONTEND_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n    [i] Path to ffx: {ffx_path}\
+            \n[✓] FFX Environment Context\
+            \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+            \n    [✓] Environment File Location: {env_file}\
+            \n    [✓] No build directory discovered in the environment.\
+            \n    [✓] Config Lock Files\
+            \n        [✓] {env_file} locked by {env_file}.lock\
+            \n        [✓] {user_file} locked by {user_file}.lock\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] path: {ffx_path}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
             \n    [✓] Default target: (none)\
             \n[✗] Searching for targets\
             \n    [✗] No targets found!\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_restart_daemon() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![false],
             vec![Ok(true), Ok(false)],
@@ -2700,6 +2822,7 @@ mod test {
             true,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2716,17 +2839,18 @@ mod test {
             \n    [✓] Daemon spawned\
             \n    [✓] Daemon PID: [4]\
             \n    [✓] Connected to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n",
-                DAEMON_VERSION, ABI_REVISION_STR, FAKE_API_LEVEL
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n"
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_restart_daemon_pid_error() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![false],
             vec![Ok(true), Ok(false)],
@@ -2756,6 +2880,7 @@ mod test {
             true,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2771,17 +2896,18 @@ mod test {
             \n[✓] Starting Daemon\
             \n    [✓] Daemon spawned\
             \n    [✓] Connected to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n",
-                DAEMON_VERSION, ABI_REVISION_STR, FAKE_API_LEVEL
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n"
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_no_targets_record_enabled() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -2811,6 +2937,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             params,
         )
         .await
@@ -2822,29 +2949,32 @@ mod test {
                 TestStepEntry::output_step(StepType::DoctorSummaryInitVerbose()),
                 TestStepEntry::output_step(StepType::Output(format!(
                     "\
-                [✓] FFX doctor\
-                \n    [✓] Frontend version: {}\
-                \n    [✓] abi-revision: {}\
-                \n    [✓] api-level: {}\
-                \n    [i] Path to ffx: {}\n\n\
-                [✓] Checking daemon\
-                \n    [✓] Daemon found: [1]\
-                \n    [✓] Connecting to daemon\
-                \n    [✓] Daemon version: {}\
-                \n    [✓] path: {}\
-                \n    [✓] abi-revision: {}\
-                \n    [✓] api-level: {}\
-                \n    [✓] Default target: (none)\n\n\
-                [✗] Searching for targets\
-                \n    [✗] No targets found!\n\n",
-                    FRONTEND_VERSION,
-                    ABI_REVISION_STR,
-                    FAKE_API_LEVEL,
-                    ffx_path(),
-                    DAEMON_VERSION,
-                    ffx_path(),
-                    ABI_REVISION_STR,
-                    FAKE_API_LEVEL,
+                    [✓] FFX doctor\
+                    \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                    \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                    \n    [✓] api-level: {FAKE_API_LEVEL}\
+                    \n    [i] Path to ffx: {ffx_path}\n\
+                    \n[✓] FFX Environment Context\
+                    \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                    \n    [✓] Environment File Location: {env_file}\
+                    \n    [✓] No build directory discovered in the environment.\
+                    \n    [✓] Config Lock Files\
+                    \n        [✓] {env_file} locked by {env_file}.lock\
+                    \n        [✓] {user_file} locked by {user_file}.lock\n\
+                    \n[✓] Checking daemon\
+                    \n    [✓] Daemon found: [1]\
+                    \n    [✓] Connecting to daemon\
+                    \n    [✓] Daemon version: {DAEMON_VERSION}\
+                    \n    [✓] path: {ffx_path}\
+                    \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                    \n    [✓] api-level: {FAKE_API_LEVEL}\
+                    \n    [✓] Default target: (none)\n\n\
+                    [✗] Searching for targets\
+                    \n    [✗] No targets found!\n\n",
+                    ffx_path=ffx_path(),
+                    isolated_root=test_env.isolate_root.path().display(),
+                    env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
                 ))),
                 TestStepEntry::step(StepType::GeneratingRecord),
                 TestStepEntry::result(StepResult::Success),
@@ -2858,6 +2988,8 @@ mod test {
         fake_recorder: Arc<Mutex<FakeRecorder>>,
         params: DoctorRecorderParameters,
     ) {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -2884,6 +3016,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             params,
         )
         .await
@@ -2895,29 +3028,32 @@ mod test {
                 TestStepEntry::output_step(StepType::DoctorSummaryInitVerbose()),
                 TestStepEntry::output_step(StepType::Output(format!(
                     "\
-                [✓] FFX doctor\
-                \n    [✓] Frontend version: {}\
-                \n    [✓] abi-revision: {}\
-                \n    [✓] api-level: {}\
-                \n    [i] Path to ffx: {}\n\n\
-                [✓] Checking daemon\
-                \n    [✓] Daemon found: [1]\
-                \n    [✓] Connecting to daemon\
-                \n    [✓] Daemon version: {}\
-                \n    [✓] path: {}\
-                \n    [✓] abi-revision: {}\
-                \n    [✓] api-level: {}\
-                \n    [✓] Default target: (none)\n\n\
-                [✗] Searching for targets\
-                \n    [✗] No targets found!\n\n",
-                    FRONTEND_VERSION,
-                    ABI_REVISION_STR,
-                    FAKE_API_LEVEL,
-                    ffx_path(),
-                    DAEMON_VERSION,
-                    ffx_path(),
-                    ABI_REVISION_STR,
-                    FAKE_API_LEVEL
+                    [✓] FFX doctor\
+                    \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                    \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                    \n    [✓] api-level: {FAKE_API_LEVEL}\
+                    \n    [i] Path to ffx: {ffx_path}\n\
+                    \n[✓] FFX Environment Context\
+                    \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                    \n    [✓] Environment File Location: {env_file}\
+                    \n    [✓] No build directory discovered in the environment.\
+                    \n    [✓] Config Lock Files\
+                    \n        [✓] {env_file} locked by {env_file}.lock\
+                    \n        [✓] {user_file} locked by {user_file}.lock\n\
+                    \n[✓] Checking daemon\
+                    \n    [✓] Daemon found: [1]\
+                    \n    [✓] Connecting to daemon\
+                    \n    [✓] Daemon version: {DAEMON_VERSION}\
+                    \n    [✓] path: {ffx_path}\
+                    \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                    \n    [✓] api-level: {FAKE_API_LEVEL}\
+                    \n    [✓] Default target: (none)\n\n\
+                    [✗] Searching for targets\
+                    \n    [✗] No targets found!\n\n",
+                    ffx_path=ffx_path(),
+                    isolated_root=test_env.isolate_root.path().display(),
+                    env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
                 ))),
                 // Error will occur here.
             ])
@@ -2944,6 +3080,7 @@ mod test {
     }
 
     async fn test_finds_target_with_missing_nodename_setup(
+        test_env: &TestEnv,
         mode: LedgerViewMode,
     ) -> DoctorLedger<MockWriter> {
         let (tx, rx) = oneshot::channel::<()>();
@@ -2970,6 +3107,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -2981,73 +3119,90 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_with_missing_nodename_verbose() {
-        let ledger = test_finds_target_with_missing_nodename_setup(LedgerViewMode::Verbose).await;
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
+        let ledger =
+            test_finds_target_with_missing_nodename_setup(&test_env, LedgerViewMode::Verbose).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
                 "\
-            \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
-            \n[✓] Checking daemon\
-            \n    [✓] Daemon found: [1]\
-            \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [✓] Default target: (none)\
-            \n[✓] Searching for targets\
-            \n    [✓] 2 targets found\
-            \n[✗] Verifying Targets\
-            \n    [✗] Target: UNKNOWN\
-            \n        [✓] Opened target handle\
-            \n        [✓] Connecting to RCS\
-            \n        [✗] Timeout while communicating with RCS\
-            \n    [✗] Target: {}\
-            \n        [✓] Opened target handle\
-            \n        [✓] Connecting to RCS\
-            \n        [✗] Timeout while communicating with RCS\
-            \n[✗] Doctor found issues in one or more categories.\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                UNRESPONSIVE_NODENAME,
+                \n[✓] FFX doctor\
+                \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                \n    [✓] api-level: {FAKE_API_LEVEL}\
+                \n    [i] Path to ffx: {ffx_path}\
+                \n[✓] FFX Environment Context\
+                \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                \n    [✓] Environment File Location: {env_file}\
+                \n    [✓] No build directory discovered in the environment.\
+                \n    [✓] Config Lock Files\
+                \n        [✓] {env_file} locked by {env_file}.lock\
+                \n        [✓] {user_file} locked by {user_file}.lock\
+                \n[✓] Checking daemon\
+                \n    [✓] Daemon found: [1]\
+                \n    [✓] Connecting to daemon\
+                \n    [✓] Daemon version: {DAEMON_VERSION}\
+                \n    [✓] path: {ffx_path}\
+                \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                \n    [✓] api-level: {FAKE_API_LEVEL}\
+                \n    [✓] Default target: (none)\
+                \n[✓] Searching for targets\
+                \n    [✓] 2 targets found\
+                \n[✗] Verifying Targets\
+                \n    [✗] Target: UNKNOWN\
+                \n        [✓] Opened target handle\
+                \n        [✓] Connecting to RCS\
+                \n        [✗] Timeout while communicating with RCS\
+                \n    [✗] Target: {UNRESPONSIVE_NODENAME}\
+                \n        [✓] Opened target handle\
+                \n        [✓] Connecting to RCS\
+                \n        [✗] Timeout while communicating with RCS\
+                \n[✗] Doctor found issues in one or more categories.\n",
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_with_missing_nodename_normal() {
-        let ledger = test_finds_target_with_missing_nodename_setup(LedgerViewMode::Normal).await;
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
+        let ledger =
+            test_finds_target_with_missing_nodename_setup(&test_env, LedgerViewMode::Normal).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
                 "\
-            \n[✓] Checking daemon\
-            \n    [✓] Daemon found: [1]\
-            \n    [✓] Connecting to daemon\
-            \n[✓] Searching for targets\
-            \n    [✓] 2 targets found\
-            \n[✗] Verifying Targets\
-            \n    [✗] Target: UNKNOWN\
-            \n    [✗] Target: {}\
-            \n[✗] Doctor found issues in one or more categories; \
-            run 'ffx doctor -v' for more details.\n",
-                UNRESPONSIVE_NODENAME,
+                \n[✓] FFX Environment Context\
+                \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                \n    [✓] Config Lock Files\
+                \n        [✓] {env_file} locked by {env_file}.lock\
+                \n        [✓] {user_file} locked by {user_file}.lock\
+                \n[✓] Checking daemon\
+                \n    [✓] Daemon found: [1]\
+                \n    [✓] Connecting to daemon\
+                \n[✓] Searching for targets\
+                \n    [✓] 2 targets found\
+                \n[✗] Verifying Targets\
+                \n    [✗] Target: UNKNOWN\
+                \n    [✗] Target: {UNRESPONSIVE_NODENAME}\
+                \n[✗] Doctor found issues in one or more categories; \
+                run 'ffx doctor -v' for more details.\n",
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_fastboot_target() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -3073,6 +3228,7 @@ mod test {
             false,
             frontend_version_info(true),
             Ok(None),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -3083,38 +3239,42 @@ mod test {
             format!(
                 "\
             \n[✓] FFX doctor\
-            \n    [✓] Frontend version: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
-            \n    [i] Path to ffx: {}\
+            \n    [✓] Frontend version: {FRONTEND_VERSION}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
+            \n    [i] Path to ffx: {ffx_path}\
+            \n[✓] FFX Environment Context\
+            \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+            \n    [✓] Environment File Location: {env_file}\
+            \n    [✓] No build directory discovered in the environment.\
+            \n    [✓] Config Lock Files\
+            \n        [✓] {env_file} locked by {env_file}.lock\
+            \n        [✓] {user_file} locked by {user_file}.lock\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
-            \n    [✓] Daemon version: {}\
-            \n    [✓] path: {}\
-            \n    [✓] abi-revision: {}\
-            \n    [✓] api-level: {}\
+            \n    [✓] Daemon version: {DAEMON_VERSION}\
+            \n    [✓] path: {ffx_path}\
+            \n    [✓] abi-revision: {ABI_REVISION_STR}\
+            \n    [✓] api-level: {FAKE_API_LEVEL}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 1 targets found\
             \n[✓] Verifying Targets\
-            \n    [✓] Target found in fastboot mode: {}\
+            \n    [✓] Target found in fastboot mode: {SERIAL_NUMBER}\
             \n[✓] No issues found\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL,
-                SERIAL_NUMBER,
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_try_daemon_running_different_api_level() {
+        let test_env = ffx_config::test_init().await.expect("Setting up test environment");
+
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -3140,6 +3300,7 @@ mod test {
             false,
             frontend_version_info(false),
             Ok(Some("".to_string())),
+            &test_env.context,
             record_params_no_record(),
         )
         .await
@@ -3150,29 +3311,32 @@ mod test {
             format!(
                 "\
                    \n[✓] FFX doctor\
-                   \n    [✓] Frontend version: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
-                   \n    [i] Path to ffx: {}\
+                   \n    [✓] Frontend version: {FRONTEND_VERSION}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {ANOTHER_FAKE_API_LEVEL}\
+                   \n    [i] Path to ffx: {ffx_path}\
+                   \n[✓] FFX Environment Context\
+                   \n    [✓] Kind of Environment: Isolated environment with an isolated root of {isolated_root}\
+                   \n    [✓] Environment File Location: {env_file}\
+                   \n    [✓] No build directory discovered in the environment.\
+                   \n    [✓] Config Lock Files\
+                   \n        [✓] {env_file} locked by {env_file}.lock\
+                   \n        [✓] {user_file} locked by {user_file}.lock\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
-                   \n    [✓] Daemon version: {}\
-                   \n    [✓] path: {}\
-                   \n    [✓] abi-revision: {}\
-                   \n    [✓] api-level: {}\
+                   \n    [✓] Daemon version: {DAEMON_VERSION}\
+                   \n    [✓] path: {ffx_path}\
+                   \n    [✓] abi-revision: {ABI_REVISION_STR}\
+                   \n    [✓] api-level: {FAKE_API_LEVEL}\
                    \n    [!] Daemon and frontend are at different API levels. Run `ffx doctor --restart-daemon`\
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
-                FRONTEND_VERSION,
-                ABI_REVISION_STR,
-                ANOTHER_FAKE_API_LEVEL,
-                ffx_path(),
-                DAEMON_VERSION,
-                ffx_path(),
-                ABI_REVISION_STR,
-                FAKE_API_LEVEL
+                ffx_path=ffx_path(),
+                isolated_root=test_env.isolate_root.path().display(),
+                env_file=test_env.env_file.path().display(),
+                user_file=test_env.user_file.path().display(),
             )
         );
     }
