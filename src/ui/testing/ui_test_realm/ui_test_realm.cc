@@ -260,6 +260,13 @@ void UITestRealm::ConfigureClientSubrealm() {
   RouteServices(DefaultSystemServices(), /* source = */ ParentRef(),
                 /* targets = */ {ChildRef{kClientSubrealmName}});
 
+  // Route any passthrough capabilities to the client subrealm.
+  if (!config_.passthrough_capabilities.empty()) {
+    realm_builder_.AddRoute(Route{.capabilities = config_.passthrough_capabilities,
+                                  .source = ParentRef(),
+                                  .targets = {ChildRef{kClientSubrealmName}}});
+  }
+
   // Route services to parent that client requested to expose.
   RouteServices(config_.exposed_client_services, /* source = */ ChildRef{kClientSubrealmName},
                 /* targets = */ {ParentRef()});

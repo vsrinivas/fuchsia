@@ -141,6 +141,9 @@ class UITestRealm {
     // client subrealm.
     std::vector<std::string> ui_to_client_services;
 
+    // List of capabilities to pass-through from the parent to the client subrealm.
+    std::vector<component_testing::Capability> passthrough_capabilities;
+
     // List of non-ui services the test manager needs to expose to the test fixture.
     // By specifying services here, the client promises to expose them from its subrealm.
     std::vector<std::string> exposed_client_services;
