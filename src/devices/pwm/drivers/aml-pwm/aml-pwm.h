@@ -32,14 +32,14 @@ class AmlPwm {
       : ids_{id1, id2}, enabled_{false, false}, mmio_(std::move(mmio)) {}
 
   void Init() {
-    if (!ids_[0].protect) {
+    if (ids_[0].init) {
       mode_configs_[0].mode = OFF;
       mode_configs_[0].regular = {};
       configs_[0] = {false, 0, 0.0, reinterpret_cast<uint8_t*>(&mode_configs_[0]),
                      sizeof(mode_config)};
       SetMode(0, OFF);
     }
-    if (!ids_[1].protect) {
+    if (ids_[1].init) {
       mode_configs_[1].mode = OFF;
       mode_configs_[1].regular = {};
       configs_[1] = {false, 0, 0.0, reinterpret_cast<uint8_t*>(&mode_configs_[1]),

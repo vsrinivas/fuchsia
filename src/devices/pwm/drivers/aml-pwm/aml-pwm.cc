@@ -65,9 +65,6 @@ zx_status_t AmlPwm::PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (ids_[idx].protect) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
   return CopyConfig(out_config, &configs_[idx]);
 }
 
@@ -76,9 +73,6 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
   Mode mode = static_cast<Mode>(mode_cfg->mode);
   if (idx > 1 || mode >= UNKNOWN) {
     return ZX_ERR_INVALID_ARGS;
-  }
-  if (ids_[idx].protect) {
-    return ZX_ERR_ACCESS_DENIED;
   }
 
   zx_status_t status;
@@ -176,9 +170,6 @@ zx_status_t AmlPwm::PwmImplEnable(uint32_t idx) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (ids_[idx].protect) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
   zx_status_t status = ZX_OK;
   if (enabled_[idx] || ((status = EnableClock(idx, true)) == ZX_OK)) {
     enabled_[idx] = true;
@@ -189,9 +180,6 @@ zx_status_t AmlPwm::PwmImplEnable(uint32_t idx) {
 zx_status_t AmlPwm::PwmImplDisable(uint32_t idx) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
-  }
-  if (ids_[idx].protect) {
-    return ZX_ERR_ACCESS_DENIED;
   }
   zx_status_t status = ZX_OK;
   if (!enabled_[idx] || ((status = EnableClock(idx, false)) == ZX_OK)) {

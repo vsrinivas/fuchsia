@@ -50,7 +50,7 @@ static const pwm_id_t pwm_ids[] = {
     {T931_PWM_AO_A},
     // T931_PWM_AO_B controls VDDEE_800 which is configured by the bootloader.
     // Marked as protect so we don't try to initialize it.
-    {T931_PWM_AO_B, /*protect = */ true},
+    {T931_PWM_AO_B, /*init = */ false},
     {T931_PWM_AO_C},
     {T931_PWM_AO_D},
 };

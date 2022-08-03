@@ -61,25 +61,16 @@ zx_status_t PwmDevice::PwmGetConfig(pwm_config_t* out_config) {
 
 zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) {
   std::scoped_lock lock(lock_);
-  if (id_.protect) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
   return pwm_.SetConfig(id_.id, config);
 }
 
 zx_status_t PwmDevice::PwmEnable() {
   std::scoped_lock lock(lock_);
-  if (id_.protect) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
   return pwm_.Enable(id_.id);
 }
 
 zx_status_t PwmDevice::PwmDisable() {
   std::scoped_lock lock(lock_);
-  if (id_.protect) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
   return pwm_.Disable(id_.id);
 }
 

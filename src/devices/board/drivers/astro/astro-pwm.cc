@@ -41,13 +41,13 @@ static const pbus_mmio_t pwm_mmios[] = {
 };
 
 /*
-    PWM_AO_B used by bootloader to control PP800_EE rail.  The protect flag is set
-    to true to prevent access to that channel as the configuration set by the
+    PWM_AO_B used by bootloader to control PP800_EE rail. The init flag is set
+    to false to prevent access to that channel as the configuration set by the
     bootloader must be preserved for proper SoC operation.
 */
 static const pwm_id_t pwm_ids[] = {
     {S905D2_PWM_A},    {S905D2_PWM_B},    {S905D2_PWM_C},    {S905D2_PWM_D},
-    {S905D2_PWM_E},    {S905D2_PWM_F},    {S905D2_PWM_AO_A}, {S905D2_PWM_AO_B, true},
+    {S905D2_PWM_E},    {S905D2_PWM_F},    {S905D2_PWM_AO_A}, {S905D2_PWM_AO_B, /* init = */ false},
     {S905D2_PWM_AO_C}, {S905D2_PWM_AO_D},
 };
 

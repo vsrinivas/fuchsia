@@ -116,7 +116,8 @@ class AmlPwmDeviceTest : public zxtest::Test {
     fdf::MmioBuffer mmio3(mock_mmio3_->GetMmioBuffer());
     fdf::MmioBuffer mmio4(mock_mmio4_->GetMmioBuffer());
     // Protect channel 3 for protect tests
-    std::vector<pwm_id_t> ids = {{0}, {1}, {2}, {3, true}, {4}, {5}, {6}, {7}, {8}, {9}};
+    std::vector<pwm_id_t> ids = {{0}, {1}, {2}, {3, /* init = */ false}, {4}, {5}, {6},
+                                 {7}, {8}, {9}};
     pwm_ = FakeAmlPwmDevice::Create(std::move(mmio0), std::move(mmio1), std::move(mmio2),
                                     std::move(mmio3), std::move(mmio4), ids);
     ASSERT_NOT_NULL(pwm_);

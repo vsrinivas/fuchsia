@@ -42,7 +42,7 @@ static const pbus_mmio_t pwm_mmios[] = {
 
 static const pwm_id_t pwm_ids[] = {
     {S905D3_PWM_A},    {S905D3_PWM_B},    {S905D3_PWM_C},    {S905D3_PWM_D},
-    {S905D3_PWM_E},    {S905D3_PWM_F},    {S905D3_PWM_AO_A}, {S905D3_PWM_AO_B, /*protect = */ true},
+    {S905D3_PWM_E},    {S905D3_PWM_F},    {S905D3_PWM_AO_A}, {S905D3_PWM_AO_B, /*init = */ false},
     {S905D3_PWM_AO_C}, {S905D3_PWM_AO_D},
 };
 
