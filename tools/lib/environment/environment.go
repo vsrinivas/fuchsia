@@ -33,8 +33,9 @@ type osEnv struct{}
 // Ensure ensures that all expected environment variables are set.
 //
 // This includes various TMP variable variations.
-func Ensure() (func(), error) {
-	return ensure(osEnv{})
+// If isolated=true, this will set all TMP variables to a new temp directory.
+func Ensure(isolated bool) (func(), error) {
+	return ensure(osEnv{}, isolated)
 }
 
 // TempDirEnvVars returns all the environment variable keys that will be set to
@@ -59,7 +60,7 @@ func TempDirEnvVars() []string {
 	}
 }
 
-func ensure(e environment) (func(), error) {
+func ensure(e environment, isolated bool) (func(), error) {
 	needsCleanup := false
 	td, ok := e.lookupEnv("TMPDIR")
 
@@ -69,7 +70,7 @@ func ensure(e environment) (func(), error) {
 		}
 	}
 
-	if !ok {
+	if !ok || isolated {
 		tmp, err := ioutil.TempDir("", "wt")
 		if err != nil {
 			return nil, err
@@ -85,7 +86,7 @@ func ensure(e environment) (func(), error) {
 	}
 
 	for _, env := range TempDirEnvVars() {
-		if _, ok := e.lookupEnv(env); !ok {
+		if _, ok := e.lookupEnv(env); !ok || isolated {
 			if err := e.setenv(env, td); err != nil {
 				cleanupFunc()
 				return nil, err

@@ -652,7 +652,10 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 		return subcommands.ExitUsageError
 	}
 
-	cleanUp, err := environment.Ensure()
+	// If the TestOutDirEnvKey was set, that means botanist is being run in an infra
+	// setting and thus needs an isolated environment.
+	_, needsIsolatedEnv := os.LookupEnv(testrunnerconstants.TestOutDirEnvKey)
+	cleanUp, err := environment.Ensure(needsIsolatedEnv)
 	if err != nil {
 		logger.Errorf(ctx, "failed to setup environment: %s", err)
 		return subcommands.ExitFailure

@@ -172,8 +172,19 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 		addr = *addrPtr
 	}
 	sshKeyFile := os.Getenv(botanistconstants.SSHKeyEnvKey)
-
-	cleanUp, err := environment.Ensure()
+	serialSocketPath := os.Getenv(botanistconstants.SerialSocketEnvKey)
+	// If the TestOutDirEnvKey was set, that means testrunner is being run
+	// in an infra setting and thus needs an isolated environment.
+	_, needsIsolatedEnv := os.LookupEnv(constants.TestOutDirEnvKey)
+	// However, if testrunner is called from botanist, it doesn't need to set
+	// up its own isolated environment because botanist will already have
+	// done that. Botanist will set either the sshKeyFile or serialSocketPath,
+	// so if neither are set, then testrunner was NOT called from botanist
+	// and thus needs its own isolated environment.
+	if needsIsolatedEnv {
+		needsIsolatedEnv = sshKeyFile == "" && serialSocketPath == ""
+	}
+	cleanUp, err := environment.Ensure(needsIsolatedEnv)
 	if err != nil {
 		return fmt.Errorf("failed to setup environment: %w", err)
 	}
@@ -186,7 +197,6 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 		return fmt.Errorf("failed to create test outputs: %w", err)
 	}
 
-	serialSocketPath := os.Getenv(botanistconstants.SerialSocketEnvKey)
 	execErr := execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir, flags)
 	if err := outputs.Close(); err != nil {
 		if execErr == nil {

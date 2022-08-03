@@ -33,71 +33,82 @@ type fakeEnv struct {
 	values map[string]string
 }
 
-func TestEnsureTmpUnset(t *testing.T) {
-	e := newFakeEnv()
-	cleanUp, err := ensure(e)
-	if err != nil {
-		t.Fatalf("ensure() failed: %v", err)
+func TestEnsure(t *testing.T) {
+	cases := []struct {
+		name        string
+		isolated    bool
+		env         map[string]string
+		expectedEnv map[string]string
+	}{
+		{
+			name:     "ensure with tmp unset and isolated",
+			isolated: true,
+		},
+		{
+			name: "ensure with tmp unset and not isolated",
+		},
+		{
+			name:     "ensure with tmp set and isolated",
+			isolated: true,
+			env:      map[string]string{"TMPDIR": "foo"},
+		},
+		{
+			name:        "ensure with tmp set and not isolated",
+			env:         map[string]string{"TMPDIR": "foo"},
+			expectedEnv: map[string]string{"TMPDIR": "foo"},
+		},
+		{
+			name:     "ensure with other set and isolated",
+			isolated: true,
+			env:      map[string]string{"TMPDIR": "foo", "ANDROID_TMP": "bar"},
+		},
+		{
+			name:        "ensure with other set and not isolated",
+			env:         map[string]string{"TMPDIR": "foo", "ANDROID_TMP": "bar"},
+			expectedEnv: map[string]string{"TMPDIR": "foo", "ANDROID_TMP": "bar"},
+		},
 	}
-	if cleanUp == nil {
-		t.Fatalf("ensure() returned unexpectedly nil cleanup func")
-	}
-	defer cleanUp()
-	if _, ok := e.lookupEnv("TMPDIR"); !ok {
-		t.Errorf("$TMPDIR unset")
-	}
-	for k, v := range e.values {
-		if diff := cmp.Diff(v, e.values["TMPDIR"]); diff != "" {
-			t.Errorf("$%s -want, +got: %s", k, diff)
-		}
-	}
-}
-
-func TestEnsureTmpSet(t *testing.T) {
-	e := newFakeEnv()
-	e.setenv("TMPDIR", "foo")
-	cleanUp, err := ensure(e)
-	if err != nil {
-		t.Fatalf("ensure() failed: %v", err)
-	}
-	if cleanUp == nil {
-		t.Fatalf("ensure() returned unexpectedly nil cleanup func")
-	}
-	defer cleanUp()
-	if diff := cmp.Diff(e.values["TMPDIR"], "foo"); diff != "" {
-		t.Errorf("$TMPDIR -want, +got: %s", diff)
-	}
-	for k, v := range e.values {
-		if diff := cmp.Diff(v, e.values["TMPDIR"]); diff != "" {
-			t.Errorf("$%s -want, +got: %s", k, diff)
-		}
-	}
-}
-
-func TestEnsureOtherSet(t *testing.T) {
-	e := newFakeEnv()
-	e.setenv("TMPDIR", "foo")
-	e.setenv("ANDROID_TMP", "bar")
-	cleanUp, err := ensure(e)
-	if err != nil {
-		t.Fatalf("ensure() failed: %v", err)
-	}
-	if cleanUp == nil {
-		t.Fatalf("ensure() returned unexpectedly nil cleanup func")
-	}
-	defer cleanUp()
-	if diff := cmp.Diff(e.values["TMPDIR"], "foo"); diff != "" {
-		t.Errorf("$TMPDIR -want, +got: %s", diff)
-	}
-	for k, v := range e.values {
-		if k == "ANDROID_TMP" {
-			if diff := cmp.Diff(v, "bar"); diff != "" {
-				t.Errorf("-want, +got: %s", diff)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newFakeEnv()
+			for k, v := range tc.env {
+				e.setenv(k, v)
 			}
-			continue
-		}
-		if diff := cmp.Diff(v, e.values["TMPDIR"]); diff != "" {
-			t.Errorf("$%s -want, +got: %s", k, diff)
-		}
+			cleanUp, err := ensure(e, tc.isolated)
+			if err != nil {
+				t.Fatalf("ensure() failed: %s", err)
+			}
+			if cleanUp == nil {
+				t.Fatalf("ensure() returned unexpectedly nil cleanup func")
+			}
+			defer cleanUp()
+			v, ok := e.lookupEnv("TMPDIR")
+			if !ok {
+				t.Errorf("$TMPDIR unset")
+			}
+			if expected, ok := tc.expectedEnv["TMPDIR"]; ok {
+				if diff := cmp.Diff(v, expected); diff != "" {
+					t.Errorf("$TMPDIR -got, +want: %s", diff)
+				}
+			} else if orig, ok := tc.env["TMPDIR"]; ok {
+				if diff := cmp.Diff(v, orig); diff == "" {
+					t.Errorf("got $TMPDIR=%s, want new temp dir", v)
+				}
+			}
+
+			for _, envVar := range TempDirEnvVars() {
+				v, ok := e.lookupEnv(envVar)
+				if !ok {
+					t.Errorf("$%s unset", envVar)
+				}
+				expected, ok := tc.expectedEnv[envVar]
+				if !ok {
+					expected = e.values["TMPDIR"]
+				}
+				if diff := cmp.Diff(v, expected); diff != "" {
+					t.Errorf("$%s -got, +want: %s", envVar, diff)
+				}
+			}
+		})
 	}
 }
