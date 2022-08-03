@@ -35,6 +35,7 @@ rustc_test("driver") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-boot-arguments:lib",
+    "//src/sys/pkg/testing/mock-metrics",
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/mock-verifier:lib",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",

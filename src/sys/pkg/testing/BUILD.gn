@@ -9,6 +9,7 @@ group("tests") {
     "mock-boot-arguments:tests",
     "mock-crash-reporter:tests",
     "mock-installer:tests",
+    "mock-metrics:tests",
     "mock-omaha-server:tests",
     "mock-paver:tests",
     "mock-reboot:tests",

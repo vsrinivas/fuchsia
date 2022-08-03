@@ -10,7 +10,6 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::DiscoverableProtocolMarker as _,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
         NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
@@ -27,6 +26,7 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::{future::BoxFuture, prelude::*},
     mock_boot_arguments::MockBootArgumentsService,
+    mock_metrics::MockMetricEventLoggerFactory,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
@@ -665,90 +665,5 @@ impl<B: Blobfs> TestEnv<B> {
         )
         .await
         .expect("open system")
-    }
-}
-
-struct MockMetricEventLogger {
-    cobalt_events: Mutex<Vec<MetricEvent>>,
-}
-
-impl MockMetricEventLogger {
-    fn new() -> Self {
-        Self { cobalt_events: Mutex::new(vec![]) }
-    }
-
-    async fn run_logger(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
-    ) {
-        while let Some(event) = stream.try_next().await.unwrap() {
-            match event {
-                fidl_fuchsia_metrics::MetricEventLoggerRequest::LogMetricEvents {
-                    events,
-                    responder,
-                } => {
-                    self.cobalt_events.lock().extend(events.into_iter());
-                    let _ = responder.send(&mut Ok(()));
-                }
-                _ => {
-                    panic!("unhandled Logger method {:?}", event);
-                }
-            }
-        }
-    }
-}
-
-pub struct MockMetricEventLoggerFactory {
-    loggers: Mutex<Vec<Arc<MockMetricEventLogger>>>,
-}
-
-impl MockMetricEventLoggerFactory {
-    fn new() -> Self {
-        Self { loggers: Mutex::new(vec![]) }
-    }
-
-    async fn run_logger_factory(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_metrics::MetricEventLoggerFactoryRequestStream,
-    ) {
-        while let Some(event) = stream.try_next().await.unwrap() {
-            match event {
-                fidl_fuchsia_metrics::MetricEventLoggerFactoryRequest::CreateMetricEventLogger {
-                    project_spec,
-                    logger,
-                    responder,
-                } => {
-                    assert_eq!(project_spec.project_id, Some(cobalt_sw_delivery_registry::PROJECT_ID));
-                    let mock_logger = Arc::new(MockMetricEventLogger::new());
-                    self.loggers.lock().push(mock_logger.clone());
-                    fasync::Task::spawn(mock_logger.run_logger(logger.into_stream().unwrap()))
-                        .detach();
-                    let _ = responder.send(&mut Ok(()));
-                }
-                _ => {
-                    panic!("unhandled LoggerFactory method: {:?}", event);
-                }
-            }
-        }
-    }
-
-    pub async fn wait_for_at_least_n_events_with_metric_id(
-        &self,
-        n: usize,
-        id: u32,
-    ) -> Vec<MetricEvent> {
-        loop {
-            let events: Vec<MetricEvent> = self
-                .loggers
-                .lock()
-                .iter()
-                .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
-                .filter(|MetricEvent { metric_id, .. }| *metric_id == id)
-                .collect();
-            if events.len() >= n {
-                return events;
-            }
-            fasync::Timer::new(Duration::from_millis(10)).await;
-        }
     }
 }
