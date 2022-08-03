@@ -9,7 +9,7 @@ use profile_client::ProfileClient;
 use crate::config::HandsFreeFeatureSupport;
 use crate::service_definition;
 
-fn register(
+pub fn register(
     proxy: bredr::ProfileProxy,
     features: HandsFreeFeatureSupport,
 ) -> anyhow::Result<ProfileClient> {

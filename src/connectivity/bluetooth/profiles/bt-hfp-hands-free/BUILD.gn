@@ -18,12 +18,20 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
+  ]
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [
     "src/config.rs",
+    "src/hfp.rs",
     "src/main.rs",
+    "src/peer.rs",
     "src/profile.rs",
     "src/service_definition.rs",
   ]

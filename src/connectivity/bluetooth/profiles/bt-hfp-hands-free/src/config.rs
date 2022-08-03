@@ -4,6 +4,7 @@
 
 use anyhow::Error;
 
+#[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Default))]
 pub struct HandsFreeFeatureSupport {
     pub ec_or_nr: bool,
