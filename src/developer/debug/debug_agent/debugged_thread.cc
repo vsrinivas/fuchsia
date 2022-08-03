@@ -167,7 +167,11 @@ void DebuggedThread::ResumeFromException() {
     if (in_exception() && exception_handle_->GetType(*thread_handle_) ==
                               debug_ipc::ExceptionType::kSoftwareBreakpoint) {
       auto regs = thread_handle_->GetGeneralRegisters();
-      if (regs && IsBreakpointInstructionAtAddress(regs->ip())) {
+      // It's possible that the software breakpoint we see is newly installed, e.g., when a user
+      // uninstall and reinstall a breakpoint at the same location. We shouldn't skip the breakpoint
+      // instruction in this case.
+      if (regs && process_->FindSoftwareBreakpoint(regs->ip()) == nullptr &&
+          IsBreakpointInstructionAtAddress(regs->ip())) {
         regs->set_ip(regs->ip() + arch::kBreakInstructionSize);
         thread_handle_->SetGeneralRegisters(*regs);
       }
