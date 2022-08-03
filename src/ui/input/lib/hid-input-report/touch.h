@@ -65,6 +65,7 @@ class Touch : public Device {
     std::optional<hid::Attributes> pressure;
     std::optional<hid::Attributes> contact_width;
     std::optional<hid::Attributes> contact_height;
+    std::optional<hid::Attributes> confidence;
   };
   ContactConfig contacts_[fuchsia_input_report::wire::kTouchMaxContacts] = {};
   size_t num_contacts_ = 0;

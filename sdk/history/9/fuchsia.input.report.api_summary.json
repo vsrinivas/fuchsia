@@ -117,6 +117,11 @@
         "name": "fuchsia.input.report/ContactInputDescriptor"
     },
     {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.input.report/ContactInputReport.confidence"
+    },
+    {
         "declaration": "int64",
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.contact_height"

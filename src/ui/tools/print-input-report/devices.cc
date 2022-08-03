@@ -491,6 +491,9 @@ void PrintTouchInputReport(Printer* printer,
       if (contact.has_contact_height()) {
         printer->Print("Contact Height: %08ld\n", contact.contact_height());
       }
+      if (contact.has_confidence()) {
+        printer->Print("Confidence: %d\n", contact.confidence());
+      }
 
       printer->DecreaseIndent();
     }

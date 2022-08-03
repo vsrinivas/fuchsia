@@ -105,6 +105,13 @@ type ContactInputReport = table {
     /// `contact_width` and `contact_height` should both have units of distance,
     /// and they should be in the same units as `position_x` and `position_y`.
     6: contact_height int64;
+
+    /// Also known as touch valid. Indicates the device’s confidence that the touch
+    /// contact was an intended, valid contact. The device should report 0 if the
+    /// contact is not a valid touch. The device should report 1 if the contact is
+    /// intended and valid (e.g. a pointing touch)
+    @available(added=9)
+    7: confidence bool;
 };
 
 /// `TouchInputReport` describes the current contacts recorded by the touchscreen.

@@ -274,6 +274,10 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kHeight)) {
       contact->contact_height = field.attr;
     }
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kConfidence)) {
+      contact->confidence = field.attr;
+    }
   }
 
   if (num_contacts == 0 && num_buttons == 0) {
@@ -416,6 +420,10 @@ ParseResult Touch::ParseInputReportInternal(const uint8_t* data, size_t len,
     if (contacts_[i].contact_height) {
       contact.set_contact_height(
           Extract<int64_t>(data, len, *contacts_[i].contact_height, allocator));
+    }
+    uint32_t confidence;
+    if (contacts_[i].confidence && ExtractUint(data, len, *contacts_[i].confidence, &confidence)) {
+      contact.set_confidence(confidence);
     }
 
     input_contacts[contact_index++] = std::move(contact);
