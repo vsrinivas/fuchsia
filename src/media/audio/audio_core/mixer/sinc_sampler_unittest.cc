@@ -493,8 +493,7 @@ void SincSamplerPositionTest::TestFractionalPositionAtFrameBoundary(bool mute) {
   Fixed expect_source_offset = source_offset + Fixed(expect_advance);
   int64_t expect_dest_offset = dest_offset + expect_advance;
 
-  auto& bk = mixer->bookkeeping();
-  bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
+  mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              true);
 
@@ -529,8 +528,7 @@ void SincSamplerPositionTest::TestFractionalPositionJustBeforeFrameBoundary(bool
   Fixed expect_source_offset = source_offset + Fixed(expect_advance);
   int64_t expect_dest_offset = dest_offset + expect_advance;
 
-  auto& bk = mixer->bookkeeping();
-  bk.gain.SetSourceMute(mute);
+  mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              true);
 
@@ -564,7 +562,7 @@ void SincSamplerPositionTest::TestSourceOffsetAtEnd(bool mute) {
   auto& bk = mixer->bookkeeping();
   bk.set_step_size(kOneFrame);
 
-  bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
+  mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, 0);
@@ -600,7 +598,7 @@ void SincSamplerPositionTest::TestRateModulo(bool include_rate_modulo, bool mute
               static_cast<uint64_t>(Fixed(Fixed(2) - (bk.step_size() * 3)).raw_value()));
   }
 
-  bk.gain.SetSourceMute(mute);
+  mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
 
@@ -639,7 +637,7 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
   bk.set_step_size(kOneFrame);
   bk.SetRateModuloAndDenominator(3333, 10000);
 
-  bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
+  mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
@@ -671,7 +669,7 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroNoRollover(bool mute)
   bk.SetRateModuloAndDenominator(3332, 10000);
   bk.set_source_pos_modulo(3);
 
-  bk.gain.SetSourceMute(mute);
+  mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
@@ -704,7 +702,7 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
   bk.set_step_size(kOneFrame);
   bk.SetRateModuloAndDenominator(5000, 10000);
 
-  bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
+  mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, static_cast<int64_t>(dest_frames));
@@ -736,7 +734,7 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroRollover(bool mute) {
   bk.SetRateModuloAndDenominator(3332, 10000);
   bk.set_source_pos_modulo(3336);
 
-  bk.gain.SetSourceMute(mute);
+  mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
@@ -772,7 +770,7 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   bk.SetRateModuloAndDenominator(2, 3);
   bk.set_source_pos_modulo(2);
 
-  bk.gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
+  mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, 2);

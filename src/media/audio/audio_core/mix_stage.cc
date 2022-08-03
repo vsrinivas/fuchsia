@@ -123,7 +123,7 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
   }
 
   if (initial_dest_gain_db) {
-    mixer->bookkeeping().gain.SetDestGain(*initial_dest_gain_db);
+    mixer->gain.SetDestGain(*initial_dest_gain_db);
   }
 
   auto original_stream = stream;
@@ -310,7 +310,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
       break;
     }
 
-    if constexpr (kMixerPositionTraceEvents) {
+    if constexpr (media_audio::kTracePositionEvents) {
       TRACE_DURATION("audio", "MixStage::MixStream position", "start",
                      source_buffer->start().Integral().Floor(), "start.frac",
                      source_buffer->start().Fraction().raw_value(), "length",
@@ -384,9 +384,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
 
       // We need to advance this many destination frames to find a D' as illustrated above,
       // but don't advance past the end of the destination buffer.
-      initial_dest_advance = Mixer::Bookkeeping::SourceLenToDestLen(
-          mix_to_packet_gap, bookkeeping.step_size(), bookkeeping.rate_modulo(),
-          bookkeeping.denominator(), bookkeeping.source_pos_modulo());
+      initial_dest_advance = bookkeeping.DestFromSourceLength(mix_to_packet_gap);
       initial_dest_advance = std::clamp(initial_dest_advance, 0l, dest_frames - dest_offset);
 
       // Advance our long-running positions.
@@ -401,7 +399,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
       source_offset =
           Fixed(initial_source_offset + info.next_source_frame - initial_source_running_position);
 
-      if constexpr (kMixerPositionTraceEvents) {
+      if constexpr (media_audio::kTracePositionEvents) {
         TRACE_DURATION("audio", "initial_dest_advance", "initial_dest_advance",
                        initial_dest_advance);
       }
@@ -457,16 +455,15 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
 
       // Check whether we are still ramping.
       float gain_db_to_report;
-      const bool ramping = bookkeeping.gain.IsRamping();
+      const bool ramping = mixer.gain.IsRamping();
       if (ramping) {
         // TODO(fxbug.dev/94160): make less error-prone
-        auto scale_arr_max = bookkeeping.gain.CalculateScaleArray(
-            bookkeeping.scale_arr.get(),
-            std::min(dest_frames - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
+        auto scale_arr_max = mixer.gain.CalculateScaleArray(
+            mixer.scale_arr.get(), std::min(dest_frames - dest_offset, Mixer::kScaleArrLen),
             dest_frames_per_dest_ref_clock_nsec);
         gain_db_to_report = media_audio::ScaleToDb(scale_arr_max);
       } else {
-        gain_db_to_report = bookkeeping.gain.GetUnadjustedGainDb();
+        gain_db_to_report = mixer.gain.GetUnadjustedGainDb();
       }
 
       StageMetricsTimer timer("Mixer::Mix");
@@ -500,8 +497,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
 
       // If src is ramping, advance that ramp by the amount of dest that was just mixed.
       if (ramping) {
-        bookkeeping.gain.Advance(dest_offset - dest_offset_before_mix,
-                                 dest_frames_per_dest_ref_clock_nsec);
+        mixer.gain.Advance(dest_offset - dest_offset_before_mix,
+                           dest_frames_per_dest_ref_clock_nsec);
       }
     }
 
@@ -526,10 +523,7 @@ std::optional<ReadableStream::Buffer> MixStage::NextSourceBuffer(Mixer& mixer,
   auto& bookkeeping = mixer.bookkeeping();
 
   // Request enough source_frames to produce dest_frames.
-  Fixed source_frames = Mixer::Bookkeeping::DestLenToSourceLen(
-                            dest_frames, bookkeeping.step_size(), bookkeeping.rate_modulo(),
-                            bookkeeping.denominator(), bookkeeping.source_pos_modulo()) +
-                        mixer.pos_filter_width();
+  Fixed source_frames = bookkeeping.SourceFromDestLength(dest_frames) + mixer.pos_filter_width();
 
   Fixed source_start = info.next_source_frame;
 

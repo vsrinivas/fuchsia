@@ -19,10 +19,6 @@ class SincSampler : public Sampler {
   // Creates new `SincSampler` for a given `source_format` and `dest_format`.
   static std::unique_ptr<Sampler> Create(const Format& source_format, const Format& dest_format);
 
-  // TODO(fxbug.dev/87651): This is temporary to preserve the existing `media::audio::Mixer` API, to
-  // be refactored once we switch to the new mixer service mix stage.
-  virtual PositionManager& position_manager() = 0;
-
   Type type() const final { return Type::kSincSampler; }
 
  protected:

@@ -153,8 +153,8 @@ void AudioDevice::SetSoftwareGainInfo(const fuchsia::media::AudioGainInfo& info)
             FX_LOGS(INFO) << "Source device gain=" << info.gain_db;
           }
         }
-        link.mixer->bookkeeping().gain.SetSourceMute(muted);
-        link.mixer->bookkeeping().gain.SetSourceGain(info.gain_db);
+        link.mixer->gain.SetSourceMute(muted);
+        link.mixer->gain.SetSourceGain(info.gain_db);
       }
     });
   }

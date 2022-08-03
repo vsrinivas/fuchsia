@@ -80,7 +80,6 @@ executable("mixer_unittest_bin") {
   output_name = "audio_mixer_unittests"
 
   sources = [
-    "bookkeeping_unittest.cc",
     "gain_unittest.cc",
     "intersect_unittest.cc",
     "no_op_unittest.cc",

@@ -13,24 +13,15 @@
 namespace media::audio::mixer {
 namespace {
 
-class StubMixer : public Mixer {
- public:
-  StubMixer() : Mixer(Fixed(0), Fixed(0), Gain::Limits{}) {}
-
-  void Mix(float*, int64_t, int64_t*, const void*, int64_t, Fixed*, bool) final {}
-};
-
 class SourceInfoTest : public testing::Test {
  protected:
   void TestPositionAdvanceNoRateModulo(bool advance_source_pos_modulo);
   void TestPositionAdvanceWithRateModulo(bool advance_source_pos_modulo);
   void TestPositionAdvanceNegative(bool advance_source_pos_modulo);
-
-  StubMixer mixer_;
 };
 
 TEST_F(SourceInfoTest, Defaults) {
-  auto& info = mixer_.source_info();
+  Mixer::SourceInfo info;
 
   EXPECT_EQ(info.next_dest_frame, 0);
   EXPECT_EQ(info.next_source_frame, 0);
@@ -51,10 +42,10 @@ TEST_F(SourceInfoTest, Defaults) {
 // next_source_frame is set according to dest_to_frac_source transform, source_pos_modulo
 // according to rate_modulo and denominator.
 TEST_F(SourceInfoTest, ResetPositions) {
-  auto& bookkeeping = mixer_.bookkeeping();
+  Mixer::Bookkeeping bookkeeping;
   bookkeeping.SetRateModuloAndDenominator(5, 7);
 
-  auto& info = mixer_.source_info();
+  Mixer::SourceInfo info;
   info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u, 1u));
   // All these values will be overwritten
   bookkeeping.set_source_pos_modulo(1u);
@@ -76,12 +67,12 @@ TEST_F(SourceInfoTest, ResetPositions) {
 // From current values, AdvanceAllPositionsTo advances running positions for dest, source and
 // source_modulo to a given dest frame, based on the step_size, rate_modulo and denominator.
 void SourceInfoTest::TestPositionAdvanceNoRateModulo(bool advance_source_pos_modulo) {
-  auto& bookkeeping = mixer_.bookkeeping();
+  Mixer::Bookkeeping bookkeeping;
   bookkeeping.set_step_size(kOneFrame + Fixed::FromRaw(2));
   bookkeeping.SetRateModuloAndDenominator(0, 1);
   bookkeeping.set_source_pos_modulo(1u);
 
-  auto& info = mixer_.source_info();
+  Mixer::SourceInfo info;
   info.next_source_frame = Fixed(3);
   info.source_pos_error = zx::duration(-17);
   info.next_dest_frame = 2;
@@ -112,12 +103,12 @@ TEST_F(SourceInfoTest, UpdateRunningPositions_NoRateModulo) {
 }
 
 void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_modulo) {
-  auto& bookkeeping = mixer_.bookkeeping();
+  Mixer::Bookkeeping bookkeeping;
   bookkeeping.set_step_size(kOneFrame + Fixed::FromRaw(2));
   bookkeeping.SetRateModuloAndDenominator(2, 5);
   bookkeeping.set_source_pos_modulo(2u);
 
-  auto& info = mixer_.source_info();
+  Mixer::SourceInfo info;
   info.next_dest_frame = 2;
   info.next_source_frame = Fixed(3);
   info.source_pos_error = zx::duration(-17);

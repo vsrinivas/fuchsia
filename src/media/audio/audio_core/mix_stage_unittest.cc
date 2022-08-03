@@ -613,11 +613,11 @@ TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
   // The buffer should return the union of the usage mask, and the largest of the input gains.
   input1->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}));
   input1->set_gain_db(1.0);
-  mixer1->bookkeeping().gain.SetSourceGain(-160);
+  mixer1->gain.SetSourceGain(-160);
   input2->set_usage_mask(
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
   input2->set_gain_db(0.0);
-  mixer2->bookkeeping().gain.SetSourceGain(-15);
+  mixer2->gain.SetSourceGain(-15);
   {
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);
@@ -650,11 +650,11 @@ TEST_F(MixStageTest, BufferMaxAmplitudeIncludesDestGain) {
   // The buffer should return the union of the usage mask, and the largest of the input gains.
   input1->set_usage_mask(StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::MEDIA)}));
   input1->set_gain_db(1.0);
-  mixer1->bookkeeping().gain.SetDestGain(-160);
+  mixer1->gain.SetDestGain(-160);
   input2->set_usage_mask(
       StreamUsageMask({StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION)}));
   input2->set_gain_db(0.0);
-  mixer2->bookkeeping().gain.SetDestGain(-15);
+  mixer2->gain.SetDestGain(-15);
   {
     auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
     ASSERT_TRUE(buf);

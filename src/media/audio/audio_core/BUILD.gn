@@ -207,6 +207,7 @@ source_set("audio_core_lib") {
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/cobalt/cpp:cobalt_logger",
+    "//src/lib/fidl/cpp",
     "//src/lib/fsl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/drivers/lib/audio-proto-utils",
@@ -236,6 +237,7 @@ source_set("audio_core_main") {
     ":audio_core_lib",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fidl/cpp",
     "//src/lib/fsl",
     "//zircon/system/ulib/trace-provider",
   ]

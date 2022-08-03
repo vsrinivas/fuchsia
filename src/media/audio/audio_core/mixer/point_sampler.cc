@@ -15,7 +15,6 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/processing/point_sampler.h"
-#include "src/media/audio/lib/processing/position_manager.h"
 #include "src/media/audio/lib/processing/sampler.h"
 
 namespace media::audio::mixer {
@@ -23,7 +22,6 @@ namespace media::audio::mixer {
 namespace {
 
 using ::media_audio::Fixed;
-using ::media_audio::PositionManager;
 using ::media_audio::Sampler;
 
 fuchsia_mediastreams::wire::AudioSampleFormat ToNewSampleFormat(
@@ -71,33 +69,26 @@ void PointSampler::Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offse
                        bool accumulate) {
   TRACE_DURATION("audio", "PointSampler::Mix");
 
-  const auto info = &bookkeeping();
-  PositionManager::CheckPositions(
-      dest_frames, dest_offset_ptr, source_frames, source_offset_ptr->raw_value(),
-      point_sampler_->pos_filter_length().raw_value(), info->step_size().raw_value(),
-      info->rate_modulo(), info->denominator(), info->source_pos_modulo());
-
   Sampler::Source source{source_void_ptr, source_offset_ptr, source_frames};
   Sampler::Dest dest{dest_ptr, dest_offset_ptr, dest_frames};
-  if (info->gain.IsSilent()) {
+  if (gain.IsSilent()) {
     // If the gain is silent, the mixer simply skips over the appropriate range in the destination
     // buffer, leaving whatever data is already there. We do not take further effort to clear the
     // buffer if `accumulate` is false. In fact, we IGNORE `accumulate` if silent. The caller is
     // responsible for clearing the destination buffer before Mix is initially called.
-    point_sampler_->Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kSilent},
-                            true);
-  } else if (info->gain.IsUnity()) {
-    point_sampler_->Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kUnity},
-                            accumulate);
-  } else if (info->gain.IsRamping()) {
-    point_sampler_->Process(
+    sampler().Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kSilent}, true);
+  } else if (gain.IsUnity()) {
+    sampler().Process(source, dest, Sampler::Gain{.type = media_audio::GainType::kUnity},
+                      accumulate);
+  } else if (gain.IsRamping()) {
+    sampler().Process(
         source, dest,
-        Sampler::Gain{.type = media_audio::GainType::kRamping, .scale_ramp = info->scale_arr.get()},
+        Sampler::Gain{.type = media_audio::GainType::kRamping, .scale_ramp = scale_arr.get()},
         accumulate);
   } else {
-    point_sampler_->Process(
+    sampler().Process(
         source, dest,
-        Sampler::Gain{.type = media_audio::GainType::kNonUnity, .scale = info->gain.GetGainScale()},
+        Sampler::Gain{.type = media_audio::GainType::kNonUnity, .scale = gain.GetGainScale()},
         accumulate);
   }
 }

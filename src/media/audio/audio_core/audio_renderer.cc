@@ -422,9 +422,8 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
 
         if constexpr (kLogRenderUsageVolumeGainActions) {
           // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
-          FX_LOGS(INFO) << static_cast<const void*>(this) << " (gain "
-                        << &(link.mixer->bookkeeping().gain) << ", mixer "
-                        << static_cast<const void*>(link.mixer.get()) << ") "
+          FX_LOGS(INFO) << static_cast<const void*>(this) << " (gain " << &(link.mixer->gain)
+                        << ", mixer " << static_cast<const void*>(link.mixer.get()) << ") "
                         << StreamUsage::WithRenderUsage(usage_).ToString() << " dest_gain("
                         << (volume_command.ramp.has_value() ? "ramping to " : "") << gain_db
                         << "db) = Vol(" << volume_command.volume << ") + GainAdjustment("
@@ -432,7 +431,7 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
         }
 
         link.mix_domain->PostTask([link, volume_command, gain_db, reporter = &reporter()]() {
-          auto& gain = link.mixer->bookkeeping().gain;
+          auto& gain = link.mixer->gain;
 
           // Stop any in-progress ramping; use this new ramp or gain_db instead
           if (volume_command.ramp.has_value()) {
@@ -442,7 +441,7 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
             gain.SetDestGain(gain_db);
           }
 
-          reporter->SetFinalGain(link.mixer->bookkeeping().gain.GetUnadjustedGainDb());
+          reporter->SetFinalGain(link.mixer->gain.GetUnadjustedGainDb());
         });
       });
 }
@@ -455,8 +454,8 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
     if constexpr (kLogRendererSetGainMuteRampActions) {
       // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
       std::stringstream stream;
-      stream << static_cast<const void*>(this) << " (gain " << &(link.mixer->bookkeeping().gain)
-             << ", mixer " << static_cast<const void*>(link.mixer.get()) << ") stream ("
+      stream << static_cast<const void*>(this) << " (gain " << &(link.mixer->gain) << ", mixer "
+             << static_cast<const void*>(link.mixer.get()) << ") stream ("
              << (gain_command.control == StreamGainCommand::Control::ADJUSTMENT ? "adjustment"
                                                                                 : "source")
              << ") Gain: ";
@@ -476,7 +475,7 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
     }
 
     link.mix_domain->PostTask([link, gain_command, reporter = &reporter()]() mutable {
-      auto& gain = link.mixer->bookkeeping().gain;
+      auto& gain = link.mixer->gain;
       switch (gain_command.control) {
         case StreamGainCommand::Control::ADJUSTMENT:
           if (gain_command.gain_db.has_value()) {

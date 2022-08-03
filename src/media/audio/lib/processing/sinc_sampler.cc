@@ -59,6 +59,13 @@ class SincSamplerImpl : public SincSampler {
                    "dest_rate", dest_frame_rate_, "source_chans", SourceChannelCount, "dest_chans",
                    DestChannelCount);
 
+    PositionManager::CheckPositions(dest.frame_count, dest.frame_offset_ptr, source.frame_count,
+                                    source.frame_offset_ptr->raw_value(),
+                                    pos_filter_length().raw_value(),
+                                    state().step_size().raw_value(), state().rate_modulo(),
+                                    state().denominator(), state().source_pos_modulo());
+    position_.SetRateValues(state().step_size().raw_value(), state().rate_modulo(),
+                            state().denominator(), state().source_pos_modulo());
     position_.SetSourceValues(source.samples, source.frame_count, source.frame_offset_ptr);
     position_.SetDestValues(dest.samples, dest.frame_count, dest.frame_offset_ptr);
 
@@ -94,9 +101,11 @@ class SincSamplerImpl : public SincSampler {
       default:
         break;
     }
-  }
 
-  PositionManager& position_manager() final { return position_; }
+    if (state().rate_modulo() > 0) {
+      state().set_source_pos_modulo(position_.source_pos_modulo());
+    }
+  }
 
  private:
   static void PopulateFramesToChannelStrip(const void* source_void_ptr,

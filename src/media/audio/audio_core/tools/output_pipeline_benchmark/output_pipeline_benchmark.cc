@@ -378,13 +378,13 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
     }
     for (auto m : mixers) {
       if (mute.has_value()) {
-        m->bookkeeping().gain.SetSourceMute(*mute);
+        m->gain.SetSourceMute(*mute);
       }
       if (gain_db.has_value()) {
-        m->bookkeeping().gain.SetSourceGain(*gain_db);
+        m->gain.SetSourceGain(*gain_db);
       }
       if (end_gain_db.has_value()) {
-        m->bookkeeping().gain.SetSourceGainWithRamp(*end_gain_db, mix_period);
+        m->gain.SetSourceGainWithRamp(*end_gain_db, mix_period);
       }
     }
 

@@ -11,11 +11,6 @@
 
 namespace media_audio {
 
-// Enable to emit trace events containing the position state.
-// TODO(fxbug.dev/87651): Move this constant to a common location if needed during audio core
-// `media::audio::Mixer` migration.
-inline constexpr bool kTracePositionEvents = false;
-
 // Class that handles the updating of source and destination positions, as a resampler steps through
 // source buffers with a specific step size (based on the resampling ratio). This class extracts a
 // significant amount of duplicate code across the samplers.

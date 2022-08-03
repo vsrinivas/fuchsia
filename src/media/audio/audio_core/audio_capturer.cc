@@ -206,8 +206,8 @@ void AudioCapturer::RealizeVolume(VolumeCommand volume_command) {
 
     // log_string is only included for log-display of loudness changes
     mix_domain().PostTask([link, gain_db, log_string]() {
-      if (gain_db != link.mixer->bookkeeping().gain.GetGainDb()) {
-        link.mixer->bookkeeping().gain.SetDestGain(gain_db);
+      if (gain_db != link.mixer->gain.GetGainDb()) {
+        link.mixer->gain.SetDestGain(gain_db);
 
         // TODO(fxbug.dev/51049) Logging should be removed upon creation of inspect tool or
         // other real-time method for gain observation

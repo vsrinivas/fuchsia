@@ -19,12 +19,10 @@
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
+#include "src/media/audio/lib/processing/sampler.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
-
-// Enable to emit trace events containing the Mixer position state.
-constexpr bool kMixerPositionTraceEvents = false;
 
 // The Mixer class provides format-conversion, rechannelization, rate-connversion, and gain/mute
 // scaling. Each source in a multi-stream mix has its own Mixer instance. When Mixer::Mix() is
@@ -32,7 +30,8 @@ constexpr bool kMixerPositionTraceEvents = false;
 // appropriately processed result, and summing this output into a common destination buffer.
 class Mixer {
  public:
-  class Bookkeeping;
+  // TODO(fxbug.dev/87651): Temporary alias to keep the existing audio_core changes minimum.
+  using Bookkeeping = media_audio::Sampler::State;
 
   // SourceInfo
   //
@@ -52,7 +51,7 @@ class Mixer {
     // discontinuity occurs. It sets next_dest_frame to the specified value and calculates
     // next_source_frame based on the dest_frames_to_frac_source_frames transform.
     void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
-      if (kMixerPositionTraceEvents) {
+      if constexpr (media_audio::kTracePositionEvents) {
         TRACE_DURATION("audio", __func__, "target_dest_frame", target_dest_frame);
       }
       next_dest_frame = target_dest_frame;
@@ -242,7 +241,7 @@ class Mixer {
                                  << " source_pos_mod=" << bookkeeping.source_pos_modulo();
 
       int64_t frac_source_frame_delta = bookkeeping.step_size().raw_value() * dest_frames;
-      if (kMixerPositionTraceEvents) {
+      if constexpr (media_audio::kTracePositionEvents) {
         TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "advance_source_pos_modulo",
                        advance_source_pos_modulo, "frac_source_frame_delta",
                        frac_source_frame_delta);
@@ -277,185 +276,13 @@ class Mixer {
       }
       next_source_frame = Fixed::FromRaw(next_source_frame.raw_value() + frac_source_frame_delta);
       next_dest_frame += dest_frames;
-      if (kMixerPositionTraceEvents) {
+      if constexpr (media_audio::kTracePositionEvents) {
         TRACE_DURATION("audio", "AdvancePositionsBy End", "nest_source_frame",
                        next_source_frame.Integral().Floor(), "next_source_frame.frac",
                        next_source_frame.Fraction().raw_value(), "next_dest_frame", next_dest_frame,
                        "source_pos_modulo", bookkeeping.source_pos_modulo());
       }
     }
-  };
-
-  // Bookkeeping
-  //
-  // This struct contains all of (and nothing but) the state needed by the Mix() function.
-  //
-  // Bookkeeping contains per-stream info related to gain (and gain ramping) and rate-conversion.
-  // Values are set by MixStage; the only parameter changed by Mix() is source_pos_modulo.
-  //
-  // When calling Mix(), we communicate rate-resampling details with three parameters found in the
-  // Bookkeeping. Step_size is augmented by rate_modulo and denominator arguments that capture the
-  // precision that cannot be expressed by the fixed-point step_size.
-  //
-  // Source_offset and step_size use the same fixed-point format, so they have identical precision
-  // limitations. Source_pos_modulo, then, represents fractions of source subframe position.
-  class Bookkeeping {
-   public:
-    explicit Bookkeeping(Gain::Limits gain_limits = Gain::Limits{}) : gain(gain_limits) {}
-
-    static Fixed DestLenToSourceLen(int64_t dest_frames, Fixed step_size, uint64_t rate_modulo,
-                                    uint64_t denominator, uint64_t initial_source_pos_modulo) {
-      // rate_modulo and denominator are arbitrarily large int64, so we must up-cast to 128-bit.
-      __int128_t running_modulo =
-          static_cast<__int128_t>(rate_modulo) * static_cast<__int128_t>(dest_frames) +
-          static_cast<__int128_t>(initial_source_pos_modulo);
-      // But rate_modulo and source_pos_modulo < denominator, so mod_contribution <= dest_frames
-      __int128_t mod_contribution = running_modulo / static_cast<__int128_t>(denominator);
-      FX_DCHECK(mod_contribution <= std::numeric_limits<int64_t>::max());
-
-      // Max step_size is 192, which is 21 bits in Fixed (8.13). Also, mod_contribution cannot
-      // exceed dest_frames, which means
-      //     source_length_raw <= (step_size.raw_value() + 1) * dest_frames
-      // Thus source_length_raw will overflow an int64 only if dest_frames >= 2^63/(192*2^13+1),
-      // which is dest_frames > 5.86e12, which is dest_frames > 353 days @ 192khz.
-      int64_t source_length_raw =
-          step_size.raw_value() * dest_frames + static_cast<int64_t>(mod_contribution);
-
-      return Fixed::FromRaw(source_length_raw);
-    }
-
-    // How many steps are needed to meet OR EXCEED the specified delta, using the specified
-    // step_size, rate_modulo, denominator and initial position modulo.
-    static int64_t SourceLenToDestLen(Fixed delta, Fixed step_size, uint64_t rate_modulo,
-                                      uint64_t denominator, uint64_t initial_pos_modulo) {
-      FX_DCHECK(delta >= Fixed(0));
-      FX_DCHECK(step_size >= Fixed::FromRaw(1));
-      FX_DCHECK(denominator > 0);
-      FX_DCHECK(rate_modulo < denominator);
-      FX_DCHECK(initial_pos_modulo < denominator);
-
-      if (rate_modulo == 0) {
-        // Ceiling discards any fractional remainder less than Fixed::FromRaw(1) because it floors
-        // to Fixed::FromRaw(1) precision before rounding up.
-        int64_t steps = delta.raw_value() / step_size.raw_value();
-        if (delta > step_size * steps) {
-          ++steps;
-        }
-        return steps;
-      }
-
-      // Both calculations fit into int128: delta.raw_value and step_size.raw_value are both int64,
-      // and denom|rate_modulo|initial_pos_modulo are each uint64_t.  The largest possible step_size
-      // and denominator still leave more than enough room for the max possible rate_mod, and the
-      // largest possible step_size_rebased exceeds the largest possible delta_rebased.
-      auto delta_rebased =
-          static_cast<__int128_t>(delta.raw_value()) * denominator - initial_pos_modulo;
-      auto step_size_rebased =
-          static_cast<__int128_t>(step_size.raw_value()) * denominator + rate_modulo;
-
-      // We know this DCHECK holds, because if we divide both top and bottom by denominator, then
-      // top is int64_t::max or less, and bottom is 1 or more.
-      FX_DCHECK(delta_rebased / step_size_rebased <= std::numeric_limits<int64_t>::max());
-
-      auto steps = static_cast<int64_t>(delta_rebased / step_size_rebased);
-      if (delta_rebased % step_size_rebased) {
-        ++steps;
-      }
-      return steps;
-    }
-
-    // This object maintains gain values in the mix path, including source gain and a snapshot of
-    // destination gain (the definitive value for destination gain is owned elsewhere). Gain accepts
-    // level in dB, and provides gainscale as float multiplier.
-    Gain gain;
-
-    static constexpr int64_t kScaleArrLen = 960;
-    std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
-
-    // Bookkeeping should contain the rechannel matrix eventually. Mapping from one channel
-    // configuration to another is essentially an MxN gain table that can be applied during Mix().
-
-    // This parameter (along with denominator) expresses leftover rate precision that step_size
-    // cannot express. When non-zero, rate_modulo and denominator express a fractional value of the
-    // step_size unit that src position should advance, for each dest frame.
-    uint64_t rate_modulo() const { return rate_modulo_; }
-
-    // This parameter (along with rate_modulo and source_pos_modulo) expresses leftover rate and
-    // position precision that step_size and source_offset (respectively) cannot express.
-    uint64_t denominator() const { return denominator_; }
-
-    // This fixed-point value is a fractional "stride" for the source: how much to increment our
-    // sampling position in the source stream, for each output (dest) frame produced.
-    Fixed step_size() const { return step_size_; }
-    void set_step_size(Fixed step_size) { step_size_ = step_size; }
-
-    // This parameter (along with denominator) expresses leftover position precision that Mix
-    // parameter cannot express. When present, source_pos_modulo and denominator express a
-    // fractional value of the source_offset unit, for additional precision on current position.
-    // Note: this field is also referenced when updating long-running position fields in SourceInfo.
-    // TODO(fxbug.dev/85108): Refactor Bookkeeping and SourceInfo.
-    uint64_t source_pos_modulo() const { return source_pos_modulo_; }
-    void set_source_pos_modulo(uint64_t source_pos_modulo) {
-      source_pos_modulo_ = source_pos_modulo;
-    }
-
-    // Update rate_modulo|denominator|source_pos_modulo as a trio.
-    // The 'source_pos' param and retval are relevant only after the long-running source position
-    // has been set. This is not the case during initial mixer setup, for example.
-    Fixed SetRateModuloAndDenominator(uint64_t new_rate_mod, uint64_t new_denom,
-                                      Fixed source_pos = Fixed(0)) {
-      if (kMixerPositionTraceEvents) {
-        TRACE_DURATION("audio", __func__, "new_rate_mod", new_rate_mod, "new_denom", new_denom);
-      }
-      FX_CHECK(new_denom > 0);
-      FX_CHECK(new_rate_mod < new_denom);
-      FX_CHECK(denominator_ > 0) << "denominator: " << denominator_;
-      FX_CHECK(rate_modulo_ < denominator_)
-          << "rate_modulo: " << rate_modulo_ << ", denominator: " << denominator_;
-      FX_CHECK(source_pos_modulo_ < denominator_)
-          << "source_pos_modulo: " << source_pos_modulo_ << ", denominator: " << denominator_;
-
-      // Only rescale source_pos_modulo if denominator changes. Even then, don't change denominator
-      // and source_pos_modulo if new rate is zero (even if they requested a different denominator).
-      // That way we largely retain our running sub-frame fraction, across rate_mod/denom changes.
-      if (new_denom != denominator_ && new_rate_mod) {
-        // Ensure that new_source_pos_mod/new_denom == source_pos_modulo/denominator_, which means
-        //   new_source_pos_mod = source_pos_modulo * new_denom / denominator_
-        // For higher precision, round the result by adding "1/2".
-        //   new_source_pos_mod = floor((source_pos_modulo * new_denom / denominator_) + 1/2)
-        // Avoid float math and floor, and let int-division do the truncation for us:
-        //   new_source_pos_mod = (source_pos_modulo * new_denom + denominator_/2) / denominator_.
-        //
-        // The max source_pos_modulo is UINT64_MAX-1. New and old denominators should never be
-        // equal; but even if both are UINT64_MAX, the maximum (old_source_pos_mod * new_denom)
-        // product is < (UINT128_MAX - UINT64_MAX). Even after adding UINT64_MAX/2 (for rounding),
-        // new_source_pos_mod cannot overflow its uint128.
-        //
-        // source_pos_modulo is strictly < denominator_, so the scaled source_pos_mod < new_denom.
-        // Our conceptual "+1/2" for rounding could only make new_source_pos_mod EQUAL to new_denom,
-        // never exceed it. So our new source_pos_modulo cannot overflow its uint64.
-        __uint128_t new_source_pos_mod = static_cast<__uint128_t>(source_pos_modulo_) * new_denom;
-        new_source_pos_mod += static_cast<__uint128_t>(denominator_ / 2);
-        new_source_pos_mod /= static_cast<__uint128_t>(denominator_);
-
-        if (static_cast<uint64_t>(new_source_pos_mod) == new_denom) {
-          new_source_pos_mod = 0;
-          source_pos += Fixed::FromRaw(1);
-        }
-
-        source_pos_modulo_ = static_cast<uint64_t>(new_source_pos_mod);
-        denominator_ = new_denom;
-      }
-      rate_modulo_ = new_rate_mod;
-
-      return source_pos;
-    }
-
-   private:
-    uint64_t rate_modulo_ = 0;
-    uint64_t denominator_ = 1;
-    Fixed step_size_ = kOneFrame;
-    uint64_t source_pos_modulo_ = 0;
   };
 
   virtual ~Mixer() = default;
@@ -573,13 +400,21 @@ class Mixer {
   SourceInfo& source_info() { return source_info_; }
   const SourceInfo& source_info() const { return source_info_; }
 
-  Bookkeeping& bookkeeping() { return bookkeeping_; }
-  const Bookkeeping& bookkeeping() const { return bookkeeping_; }
+  Bookkeeping& bookkeeping() { return sampler().state(); }
+  const Bookkeeping& bookkeeping() const { return sampler().state(); }
 
   // Eagerly precompute any needed data. If not called, that data should be lazily computed on the
   // first call to Mix().
   // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
   virtual void EagerlyPrepare() {}
+
+  // This object maintains gain values in the mix path, including source gain and a snapshot of
+  // destination gain (the definitive value for destination gain is owned elsewhere). Gain accepts
+  // level in dB, and provides gainscale as float multiplier.
+  Gain gain;
+
+  static constexpr int64_t kScaleArrLen = 960;
+  std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
 
  protected:
   // Template to read normalized source samples, and combine channels if required.
@@ -596,12 +431,23 @@ class Mixer {
         mapper_;
   };
 
-  Mixer(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits);
+  Mixer(Fixed pos_filter_width, Fixed neg_filter_width,
+        std::unique_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits);
+
+  media_audio::Sampler& sampler() {
+    FX_DCHECK(sampler_);
+    return *sampler_;
+  }
+  const media_audio::Sampler& sampler() const {
+    FX_DCHECK(sampler_);
+    return *sampler_;
+  }
 
  private:
   const Fixed pos_filter_width_;
   const Fixed neg_filter_width_;
-  Bookkeeping bookkeeping_;
+
+  std::unique_ptr<media_audio::Sampler> sampler_;
 
   // The subset of per-stream position accounting info not needed by the inner resampling mixer.
   // This is only located here temporarily; we will move this to the MixStage.

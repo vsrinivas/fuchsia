@@ -13,12 +13,14 @@
 
 namespace media::audio {
 
-constexpr int64_t Mixer::Bookkeeping::kScaleArrLen;
+constexpr int64_t Mixer::kScaleArrLen;
 
-Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits)
-    : pos_filter_width_(pos_filter_width),
+Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width,
+             std::unique_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits)
+    : gain(gain_limits),
+      pos_filter_width_(pos_filter_width),
       neg_filter_width_(neg_filter_width),
-      bookkeeping_(gain_limits) {}
+      sampler_(std::move(sampler)) {}
 
 //
 // Select an appropriate instance of a mixer based on the user-specified

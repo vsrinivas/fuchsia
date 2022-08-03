@@ -12,6 +12,7 @@
 #include <ffl/string.h>
 
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/processing/sampler.h"
 
 namespace media_audio {
 
@@ -178,8 +179,8 @@ int64_t PositionManager::AdvanceToEnd() {
       --prev_source_offset;
     }
 
-    // If the rough estimate advanced position too far, roll position back until it is correct. For
-    // the final destination frame we produce, `prev_source_offset` must be less than
+    // If the rough estimate advanced position too far, roll position back until it is correct.
+    // For the final destination frame we produce, `prev_source_offset` must be less than
     // `frac_source_end_`.
     while (prev_source_offset >= frac_source_end_) {
       if (source_pos_modulo_ < rate_modulo_) {

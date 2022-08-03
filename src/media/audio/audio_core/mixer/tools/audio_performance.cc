@@ -460,7 +460,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
       break;
   }
 
-  bk.gain.SetDestGain(media_audio::kUnityGainDb);
+  mixer->gain.SetDestGain(media_audio::kUnityGainDb);
   auto source_frames_fixed = Fixed(source_frames);
 
   Stats stats(results ? results->AddTestCase("fuchsia.audio.mixing",
@@ -472,12 +472,12 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   size_t iterations = 0;
   while (iterations <= limits.min_runs_per_config ||
          (stats.total < limits.duration_per_config && iterations <= limits.runs_per_config)) {
-    bk.gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
+    mixer->gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
 
     if (cfg.gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix
       // duration of less than two secs.
-      bk.gain.SetSourceGainWithRamp(media_audio::kMinGainDb + 1.0f, zx::sec(2));
+      mixer->gain.SetSourceGainWithRamp(media_audio::kMinGainDb + 1.0f, zx::sec(2));
     }
 
     // For repeatability, start each run at exactly the same position.
@@ -493,7 +493,8 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
                  &source_offset, cfg.accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
-      bk.gain.Advance(dest_offset - previous_dest_offset, TimelineRate(cfg.source_rate, ZX_SEC(1)));
+      mixer->gain.Advance(dest_offset - previous_dest_offset,
+                          TimelineRate(cfg.source_rate, ZX_SEC(1)));
 
       if (source_offset + mixer->pos_filter_width() >= source_frames_fixed) {
         source_offset -= source_frames_fixed;

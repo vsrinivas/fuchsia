@@ -29,11 +29,8 @@ class PointSampler : public Mixer {
  protected:
   PointSampler(Gain::Limits gain_limits, std::unique_ptr<media_audio::Sampler> point_sampler)
       : Mixer(point_sampler->pos_filter_length() - Fixed::FromRaw(1),
-              point_sampler->neg_filter_length() - Fixed::FromRaw(1), gain_limits),
-        point_sampler_(std::move(point_sampler)) {}
-
- private:
-  std::unique_ptr<media_audio::Sampler> point_sampler_;
+              point_sampler->neg_filter_length() - Fixed::FromRaw(1), std::move(point_sampler),
+              gain_limits) {}
 };
 
 }  // namespace media::audio::mixer
