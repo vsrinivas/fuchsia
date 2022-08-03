@@ -5,22 +5,29 @@
 use {
     anyhow::{Context as _, Result},
     rand::Rng,
-    std::fs::{create_dir_all, remove_file, rename, File, OpenOptions},
-    std::io::{ErrorKind, Read, Seek, SeekFrom, Write},
-    std::path::PathBuf,
-    std::str::FromStr,
-    std::sync::atomic::{AtomicBool, Ordering},
-    std::sync::Mutex,
+    std::{
+        fs::{create_dir_all, remove_file, rename, File, OpenOptions},
+        io::{ErrorKind, Read, Seek, SeekFrom, Write},
+        path::PathBuf,
+        str::FromStr,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Mutex,
+        },
+    },
     tracing::Metadata,
-    tracing_subscriber::filter::LevelFilter,
-    tracing_subscriber::prelude::*,
-    tracing_subscriber::Layer,
+    tracing_subscriber::{
+        filter::{self, LevelFilter},
+        prelude::*,
+        Layer,
+    },
 };
 
 const LOG_DIR: &str = "log.dir";
 const LOG_ROTATIONS: &str = "log.rotations";
 const LOG_ROTATE_SIZE: &str = "log.rotate_size";
 const LOG_ENABLED: &str = "log.enabled";
+const LOG_TARGET_LEVELS: &str = "log.target_levels";
 const LOG_LEVEL: &str = "log.level";
 pub const LOG_PREFIX: &str = "ffx";
 const TIME_FORMAT: &str = "%b %d %H:%M:%S";
@@ -159,7 +166,7 @@ pub async fn init(log_to_stdio: bool, log_to_file: bool) -> Result<()> {
 
     let level = filter_level().await;
 
-    configure_subscribers(log_to_stdio, file, level);
+    configure_subscribers(log_to_stdio, file, level).await;
 
     Ok(())
 }
@@ -176,13 +183,39 @@ impl<S> tracing_subscriber::layer::Filter<S> for DisableableFilter {
     }
 }
 
-fn configure_subscribers(stdio: bool, file: Option<File>, level: LevelFilter) {
+async fn target_levels() -> Vec<(String, LevelFilter)> {
+    // Parse the targets from the config. Ideally we'd log errors, but since there might be no log
+    // sink, filter out any unexpected values.
+
+    if let Ok(targets) = super::query(LOG_TARGET_LEVELS).get::<serde_json::Value>().await {
+        if let serde_json::Value::Object(o) = targets {
+            return o
+                .into_iter()
+                .filter_map(|(target, level)| {
+                    if let serde_json::Value::String(level) = level {
+                        if let Ok(level) = LevelFilter::from_str(&level) {
+                            return Some((target, level));
+                        }
+                    }
+                    None
+                })
+                .collect();
+        }
+    }
+
+    vec![]
+}
+
+async fn configure_subscribers(stdio: bool, file: Option<File>, level: LevelFilter) {
+    let filter_targets =
+        filter::Targets::new().with_targets(target_levels().await).with_default(level);
+
     let stdio_layer = if stdio {
         let event_format = LogFormat::new(*LOGGING_ID);
         let format = tracing_subscriber::fmt::layer()
             .event_format(event_format)
             .with_filter(DisableableFilter)
-            .with_filter(level);
+            .with_filter(filter_targets.clone());
         Some(format)
     } else {
         None
@@ -194,7 +227,7 @@ fn configure_subscribers(stdio: bool, file: Option<File>, level: LevelFilter) {
         let format = tracing_subscriber::fmt::layer()
             .event_format(event_format)
             .with_writer(writer)
-            .with_filter(level);
+            .with_filter(filter_targets);
         format
     });
 

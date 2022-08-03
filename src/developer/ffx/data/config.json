@@ -10,7 +10,11 @@
         ],
         "level": "Debug",
         "rotations": 5,
-        "rotate_size": 104857600
+        "rotate_size": 104857600,
+        "target_levels": {
+            "hyper": "info",
+            "rustls": "info"
+        }
     },
     "proxy": {
         "timeout_secs": 10.0
