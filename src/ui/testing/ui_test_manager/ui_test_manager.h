@@ -136,6 +136,9 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // Convenience method to inform the client if its view is focused.
   bool ClientViewIsFocused();
 
+  // Convenience method to inform if a view is focused by its koid.
+  bool ViewIsFocused(zx_koid_t view_ref_koid);
+
   // Convenience method to inform the client of its view scale factor.
   //
   // Returns the scale factor applied to the client view, as reported in the

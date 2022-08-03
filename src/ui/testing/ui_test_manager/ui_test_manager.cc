@@ -171,7 +171,11 @@ bool UITestManager::ClientViewIsRendering() {
 }
 
 bool UITestManager::ClientViewIsFocused() {
-  if (!last_focus_chain_ || !client_view_ref_koid_) {
+  return client_view_ref_koid_ && ViewIsFocused(*client_view_ref_koid_);
+}
+
+bool UITestManager::ViewIsFocused(zx_koid_t view_ref_koid) {
+  if (!last_focus_chain_) {
     return false;
   }
 
@@ -183,8 +187,7 @@ bool UITestManager::ClientViewIsFocused() {
     return false;
   }
 
-  return fsl::GetKoid(last_focus_chain_->focus_chain().back().reference.get()) ==
-         client_view_ref_koid_;
+  return fsl::GetKoid(last_focus_chain_->focus_chain().back().reference.get()) == view_ref_koid;
 }
 
 float UITestManager::ClientViewScaleFactor() {
