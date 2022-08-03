@@ -42,6 +42,9 @@
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"
 
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+using ::fuchsia::virtualization::Listener;
+
 namespace {
 
 constexpr char kZirconGuestUrl[] =
@@ -180,7 +183,13 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
   fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
   guest_manager_ = realm_root.ConnectSync<fuchsia::virtualization::GuestManager>(
       guest_launch_info.interface_name);
-  auto status =
+
+  auto status = SetupVsockServices(deadline, guest_launch_info);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status =
       guest_manager_->LaunchGuest(std::move(guest_launch_info.config), guest_.NewRequest(), &res);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failure launching guest " << guest_launch_info.url;
@@ -188,10 +197,8 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
   }
   guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
-  status = SetupVsockServices(deadline);
-  if (status != ZX_OK) {
-    return status;
-  }
+  // TODO(fxbug.dev/97355): Get from Guest protocol instead of guest manager after migration.
+  GetHostVsockEndpoint(vsock_.NewRequest());
 
   // Launch the guest.
   logger.Start("Launching guest", zx::sec(5));
@@ -476,24 +483,29 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
   return ZX_OK;
 }
 
-zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
-  fuchsia::virtualization::HostVsockEndpointPtr grpc_endpoint;
-
-  GetHostVsockEndpoint(vsock_.NewRequest());
-  GetHostVsockEndpoint(grpc_endpoint.NewRequest());
-  GrpcVsockServerBuilder builder(std::move(grpc_endpoint));
+zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline,
+                                                     GuestLaunchInfo& guest_launch_info) {
+  GrpcVsockServerBuilder builder;
   builder.AddListenPort(kTerminaStartupListenerPort);
   builder.RegisterService(this);
 
-  executor_.schedule_task(
-      builder.Build().and_then([this](std::unique_ptr<GrpcVsockServer>& result) mutable {
-        server_ = std::move(result);
+  std::vector<Listener> listeners;
+  executor_.schedule_task(builder.Build().and_then(
+      [this, &listeners](
+          std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>& args) mutable {
+        server_ = std::move(args.first);
+        listeners = std::move(args.second);
         return fpromise::ok();
       }));
   if (!RunLoopUntil(
           GetLoop(), [this] { return server_ != nullptr; }, deadline)) {
     return ZX_ERR_TIMED_OUT;
   }
+
+  for (auto& listener : listeners) {
+    guest_launch_info.config.mutable_vsock_listeners()->push_back(std::move(listener));
+  }
+
   return ZX_OK;
 }
 

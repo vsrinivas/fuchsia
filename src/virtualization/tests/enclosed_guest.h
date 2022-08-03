@@ -123,9 +123,13 @@ class EnclosedGuest {
   //
   // Any vsock ports that are listened on here are guaranteed to be ready to
   // accept connections before the guest attempts to connect to them.
-  virtual zx_status_t SetupVsockServices(zx::time deadline) { return ZX_OK; }
+  virtual zx_status_t SetupVsockServices(zx::time deadline, GuestLaunchInfo& guest_launch_info) {
+    return ZX_OK;
+  }
 
   async::Loop* GetLoop() { return &loop_; }
+
+  fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 
  private:
   async::Loop& loop_;
@@ -196,7 +200,7 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   std::string ShellPrompt() override { return "$ "; }
 
  private:
-  zx_status_t SetupVsockServices(zx::time deadline) override;
+  zx_status_t SetupVsockServices(zx::time deadline, GuestLaunchInfo& guest_launch_info) override;
 
   // |vm_tools::StartupListener::Service|
   grpc::Status VmReady(grpc::ServerContext* context, const vm_tools::EmptyMessage* request,
@@ -206,7 +210,6 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   async::Executor executor_;
   std::unique_ptr<GrpcVsockServer> server_;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
-  fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 };
 
 using AllGuestTypes =

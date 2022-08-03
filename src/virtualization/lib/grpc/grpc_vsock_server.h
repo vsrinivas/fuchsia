@@ -44,11 +44,7 @@ class GrpcVsockServer : public fuchsia::virtualization::HostVsockAcceptor {
 // ports with the |HostVsockEndpoint|.
 class GrpcVsockServerBuilder {
  public:
-  GrpcVsockServerBuilder(fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint)
-      : socket_endpoint_(std::make_shared<fuchsia::virtualization::HostVsockEndpointPtr>(
-            std::move(socket_endpoint))),
-        builder_(new grpc::ServerBuilder()),
-        server_(new GrpcVsockServer()) {}
+  GrpcVsockServerBuilder() : builder_(new grpc::ServerBuilder()), server_(new GrpcVsockServer()) {}
 
   // Registers the gRPC service.
   //
@@ -66,13 +62,15 @@ class GrpcVsockServerBuilder {
   // requests on the sockets.
   //
   // It is safe to free the builder immediately after a call to |Build|.
-  fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Build();
+  fpromise::promise<
+      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>,
+      zx_status_t>
+  Build();
 
  private:
-  std::vector<fpromise::promise<void, zx_status_t>> service_promises_;
-  std::shared_ptr<fuchsia::virtualization::HostVsockEndpointPtr> socket_endpoint_;
   std::unique_ptr<grpc::ServerBuilder> builder_;
   std::unique_ptr<GrpcVsockServer> server_;
+  std::vector<::fuchsia::virtualization::Listener> listeners_;
 };
 
 #endif  // SRC_VIRTUALIZATION_LIB_GRPC_GRPC_VSOCK_SERVER_H_

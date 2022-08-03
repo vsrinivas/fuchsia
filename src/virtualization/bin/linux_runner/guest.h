@@ -67,8 +67,11 @@ class Guest : public vm_tools::StartupListener::Service,
 
  private:
   fpromise::promise<> Start();
-  fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
-  void StartGuest();
+  fpromise::promise<
+      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>,
+      zx_status_t>
+  StartGrpcServer();
+  void StartGuest(std::vector<fuchsia::virtualization::Listener> vsock_listeners);
   void MountExtrasPartition();
   void MountVmTools();
   void ConfigureNetwork();

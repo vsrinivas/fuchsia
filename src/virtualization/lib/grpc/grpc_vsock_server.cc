@@ -9,59 +9,39 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include <unordered_set>
+
 #include "src/virtualization/lib/grpc/fdio_util.h"
 
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+using ::fuchsia::virtualization::Listener;
 
 void GrpcVsockServerBuilder::RegisterService(grpc::Service* service) {
   builder_->RegisterService(service);
 }
 
 void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
-  fpromise::bridge<void, zx_status_t> bridge;
-  (*socket_endpoint_)
-      ->Listen(vsock_port, server_->NewBinding(),
-               // The unused capture of |socket_endpoint_| here is important.
-               // This is a shared_ptr we need to keep alive longer than this
-               // closure so ensure the FIDL reply will be delivered. If we
-               // don't do this, the underlying channel may be closed if the
-               // builder is free'd after a call to Build().
-               [socket_endpoint = socket_endpoint_, completer = std::move(bridge.completer)](
-                   HostVsockEndpoint_Listen_Result result) mutable {
-                 if (result.is_err()) {
-                   completer.complete_error(result.err());
-                 } else {
-                   completer.complete_ok();
-                 }
-               });
-  service_promises_.push_back(bridge.consumer.promise());
+  listeners_.push_back({vsock_port, server_->NewBinding()});
 }
 
-fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuilder::Build() {
-  return fpromise::join_promise_vector(std::move(service_promises_))
-      .then(
-          [builder = std::move(builder_)](
-              const fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>&
-                  results) mutable -> fpromise::result<std::unique_ptr<grpc::Server>, zx_status_t> {
-            // join_promise_vector should never fail, but instead return a vector
-            // of results.
-            FX_CHECK(results.is_ok()) << "fpromise::join_promise_vector returns fpromise::error";
-            for (const auto& result : results.value()) {
-              if (result.is_error()) {
-                FX_CHECK(false) << "Failed to listen on vsock port: " << result.error();
-                return fpromise::error(result.error());
-              }
-            }
-            // All the vsock listeners have been initialized. Now start the gRPC
-            // server.
-            return fpromise::ok(builder->BuildAndStart());
-          })
-      .and_then([server = std::move(server_)](std::unique_ptr<grpc::Server>& server_impl) mutable {
-        server->SetServerImpl(std::move(server_impl));
-        return fpromise::ok(std::move(server));
-      });
+fpromise::promise<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>
+GrpcVsockServerBuilder::Build() {
+  if (listeners_.size() > 1) {
+    std::unordered_set<uint32_t> ports;
+    for (auto& listener : listeners_) {
+      if (!ports.insert(listener.port).second) {
+        return fpromise::make_result_promise<
+            std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>(
+            fpromise::error(ZX_ERR_ALREADY_BOUND));
+      }
+    }
+  }
+
+  server_->SetServerImpl(builder_->BuildAndStart());
+  return fpromise::make_result_promise<
+      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>(
+      fpromise::ok(std::make_pair(std::move(server_), std::move(listeners_))));
 }
 
 // This method is registered as a FIDL callback for all of our vsock port

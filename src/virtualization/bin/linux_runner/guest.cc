@@ -115,6 +115,8 @@ void MaitredBringUpNetwork(vm_tools::Maitred::Stub& maitred, uint32_t address, u
 
 namespace linux_runner {
 
+using ::fuchsia::virtualization::Listener;
+
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
                                   GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
@@ -135,7 +137,6 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallba
       config_(config),
       callback_(std::move(callback)),
       guest_manager_(std::move(guest_manager)) {
-  guest_manager_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   executor_.schedule_task(Start());
 }
 
@@ -149,24 +150,25 @@ Guest::~Guest() {
 fpromise::promise<> Guest::Start() {
   TRACE_DURATION("linux_runner", "Guest::Start");
   return StartGrpcServer()
-      .and_then([this](std::unique_ptr<GrpcVsockServer>& server) mutable
-                -> fpromise::result<void, zx_status_t> {
-        grpc_server_ = std::move(server);
-        StartGuest();
-        return fpromise::ok();
-      })
+      .and_then(
+          [this](std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>& args) mutable
+          -> fpromise::result<void, zx_status_t> {
+            grpc_server_ = std::move(args.first);
+            StartGuest(std::move(args.second));
+            return fpromise::ok();
+          })
       .or_else([](const zx_status_t& status) {
         FX_LOGS(ERROR) << "Failed to start guest: " << status;
         return fpromise::ok();
       });
 }
 
-fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrpcServer() {
+fpromise::promise<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>
+Guest::StartGrpcServer() {
   TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;
 
-  guest_manager_->GetHostVsockEndpoint(socket_endpoint.NewRequest());
-  GrpcVsockServerBuilder builder(std::move(socket_endpoint));
+  GrpcVsockServerBuilder builder;
 
   // CrashListener
   builder.AddListenPort(kCrashListenerPort);
@@ -190,7 +192,7 @@ fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrp
   return builder.Build();
 }
 
-void Guest::StartGuest() {
+void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
   TRACE_DURATION("linux_runner", "Guest::StartGuest");
   FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
   FX_LOGS(INFO) << "Launching guest...";
@@ -207,6 +209,7 @@ void Guest::StartGuest() {
   DropDevNamespace();
 
   fuchsia::virtualization::GuestConfig cfg;
+  *cfg.mutable_vsock_listeners() = std::move(vsock_listeners);
   cfg.set_virtio_gpu(false);
   cfg.set_block_devices(std::move(block_devices_result.value()));
   cfg.set_magma_device(fuchsia::virtualization::MagmaDevice());
@@ -227,6 +230,10 @@ void Guest::StartGuest() {
           TRACE_DURATION("linux_runner", "LaunchInstance Callback");
           TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
           FX_LOGS(INFO) << "Termina Guest launched";
+
+          // TODO(fxbug.dev/97355): Get endpoint from guest controller after migration.
+          guest_manager_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
+
           PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
           TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
         }

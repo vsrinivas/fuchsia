@@ -12,6 +12,10 @@
 #include "src/virtualization/lib/grpc/test_server.grpc.pb.h"
 
 namespace {
+
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+using ::fuchsia::virtualization::Listener;
+
 constexpr uint32_t kTestServicePort = 1234;
 constexpr const char* kTestMessage = "This is only a test";
 
@@ -51,24 +55,40 @@ class TestEchoServer : public vsock_test::Echo::Service {
 // Simulate a gRPC echo server running over virtio-vsock.
 TEST_F(GrpcVsockTest, Echo) {
   // Setup gRPC vsock server.
-  GrpcVsockServerBuilder server_builder(GetHostVsockEndpoint());
+  GrpcVsockServerBuilder server_builder;
   TestEchoServer server_impl;
   server_builder.AddListenPort(kTestServicePort);
   server_builder.RegisterService(&server_impl);
-  fpromise::result<std::unique_ptr<GrpcVsockServer>, zx_status_t> result;
+  fpromise::result<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>
+      result_promise;
   auto p = server_builder.Build().then(
-      [&result](fpromise::result<std::unique_ptr<GrpcVsockServer>, zx_status_t>& r) mutable {
-        result = std::move(r);
-      });
+      [&result_promise](
+          fpromise::result<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>,
+                           zx_status_t>& r) mutable { result_promise = std::move(r); });
   executor()->schedule_task(std::move(p));
   RunLoopUntilIdle();
 
   // Verify the server was started.
-  ASSERT_FALSE(result.is_pending());
-  ASSERT_FALSE(result.is_error());
-  ASSERT_TRUE(result.is_ok());
-  auto server = result.take_value();
+  ASSERT_FALSE(result_promise.is_pending());
+  ASSERT_FALSE(result_promise.is_error());
+  ASSERT_TRUE(result_promise.is_ok());
+  auto result = result_promise.take_value();
+
+  auto server = std::move(result.first);
+  auto listeners = std::move(result.second);
+
   ASSERT_TRUE(server != nullptr);
+  ASSERT_EQ(listeners.size(), 1ul);
+
+  auto endpoint = GetHostVsockEndpoint();
+  bool listen_callback_seen = false;
+  endpoint->Listen(listeners[0].port, std::move(listeners[0].acceptor),
+                   [&listen_callback_seen](HostVsockEndpoint_Listen_Result result) {
+                     ASSERT_TRUE(result.is_response());
+                     listen_callback_seen = true;
+                   });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(listen_callback_seen);
 
   // Connect to the service using the guest vsock endpoint.
   zx::handle guest_handle;
