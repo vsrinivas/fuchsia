@@ -253,7 +253,11 @@ void CompositeDeviceManager::RebindNodes() {
     if (!node) {
       continue;
     }
-    BindNode(node);
+    // Try and bind our node again. If this is successful, it was already re-added
+    // to nodes_. If it is not successful, we will manually add it.
+    if (!BindNode(node)) {
+      nodes_.push_back(node);
+    }
   }
 
   rebind_callback_();

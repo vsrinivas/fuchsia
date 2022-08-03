@@ -101,11 +101,13 @@ class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::Deprecated
 
   void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
 
+  // Trigger a rebind of all the nodes that are currently used in composite
+  // devices. This should only be used by tests.
+  void RebindNodes();
+
  private:
   void AddCompositeDevice(AddCompositeDeviceRequest& request,
                           AddCompositeDeviceCompleter::Sync& completer) override;
-
-  void RebindNodes();
 
   DriverBinder* binder_;
   async_dispatcher_t* dispatcher_;
