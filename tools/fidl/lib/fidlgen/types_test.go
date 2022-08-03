@@ -166,7 +166,7 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 
 	expected := []fidlgen.Enum{
 		{
-			Layout: fidlgen.Layout{
+			LayoutDecl: fidlgen.LayoutDecl{
 				Decl: fidlgen.Decl{
 					Name: "example/StrictEnum",
 				},
@@ -202,7 +202,7 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 			RawUnknownValue: fidlgen.Int64OrUint64FromUint64ForTesting(0),
 		},
 		{
-			Layout: fidlgen.Layout{
+			LayoutDecl: fidlgen.LayoutDecl{
 				Decl: fidlgen.Decl{
 					Name: "example/EmptyEnum",
 				},
@@ -213,7 +213,7 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 			RawUnknownValue: fidlgen.Int64OrUint64FromUint64ForTesting(math.MaxUint16),
 		},
 		{
-			Layout: fidlgen.Layout{
+			LayoutDecl: fidlgen.LayoutDecl{
 				Decl: fidlgen.Decl{
 					Name: "example/FlexibleEnum",
 				},
@@ -249,7 +249,7 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 			RawUnknownValue: fidlgen.Int64OrUint64FromInt64ForTesting(math.MaxInt64),
 		},
 		{
-			Layout: fidlgen.Layout{
+			LayoutDecl: fidlgen.LayoutDecl{
 				Decl: fidlgen.Decl{
 					Name: "example/FlexibleEnumWithPlaceholder",
 				},
@@ -317,8 +317,8 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 
 	for i, actual := range root.Enums {
 		// Sanitize Location and NamindContext values, as they're not relevant here.
-		actual.Layout.Decl.Location = fidlgen.Location{}
-		actual.Layout.NamingContext = nil
+		actual.LayoutDecl.Decl.Location = fidlgen.Location{}
+		actual.LayoutDecl.NamingContext = nil
 		if diff := cmp.Diff(actual, expected[i], opt); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}
@@ -358,7 +358,7 @@ func TestCanUnmarshalBits(t *testing.T) {
 
 	expected := []fidlgen.Bits{
 		{
-			Layout: fidlgen.Layout{
+			LayoutDecl: fidlgen.LayoutDecl{
 				Decl: fidlgen.Decl{
 					Name: "example/Perms",
 				},
@@ -411,7 +411,7 @@ func TestCanUnmarshalBits(t *testing.T) {
 			Strictness: fidlgen.IsFlexible,
 		},
 		{
-			Layout: fidlgen.Layout{
+			LayoutDecl: fidlgen.LayoutDecl{
 				Decl: fidlgen.Decl{
 					Name: "example/StrictBits",
 				},
@@ -459,8 +459,8 @@ func TestCanUnmarshalBits(t *testing.T) {
 
 	for i, actual := range root.Bits {
 		// Sanitize Location and NamindContext values, as they're not relevant here.
-		actual.Layout.Decl.Location = fidlgen.Location{}
-		actual.Layout.NamingContext = nil
+		actual.LayoutDecl.Decl.Location = fidlgen.Location{}
+		actual.LayoutDecl.NamingContext = nil
 		if diff := cmp.Diff(actual, expected[i]); len(diff) > 0 {
 			t.Errorf("\nexpected: %#v\nactual: %#v\n", expected[i], actual)
 		}

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -730,7 +731,9 @@ type FieldShape struct {
 }
 
 type Declaration interface {
+	GetAttributes() Attributes
 	GetName() EncodedCompoundIdentifier
+	GetLocation() Location
 }
 
 type Decl struct {
@@ -739,8 +742,16 @@ type Decl struct {
 	Location `json:"location"`
 }
 
-func (d *Decl) GetName() EncodedCompoundIdentifier {
+func (d Decl) GetAttributes() Attributes {
+	return d.Attributes
+}
+
+func (d Decl) GetName() EncodedCompoundIdentifier {
 	return d.Name
+}
+
+func (d Decl) GetLocation() Location {
+	return d.Location
 }
 
 // NamingContext represents the content of the `naming_context` JSON IR field,
@@ -803,20 +814,46 @@ outer:
 	return false
 }
 
-// Layout represents data specific to bits/enums/structs/tables/unions. All
-// layouts are decls, but not all decls are layouts (e.g. protocols).
-type Layout struct {
+// LayoutDeclaration represents data specific to
+// bits/enums/structs/tables/unions. All layouts are decls, but not all decls
+// are layouts (e.g. protocols).
+type LayoutDeclaration interface {
+	Declaration
+	GetNamingContext() NamingContext
+}
+
+type LayoutDecl struct {
 	Decl
 	NamingContext NamingContext `json:"naming_context"`
 }
 
-// IsAnonymous states whether this Layout has an anonymous naming context. We
+func (l LayoutDecl) GetNamingContext() NamingContext {
+	return l.NamingContext
+}
+
+// IsAnonymous states whether this LayoutDecl has an anonymous naming context. We
 // treat inner layouts (i.e. layouts defined within another layout) as
 // anonymous. All such layouts have a naming context with length greater than
 // one, since they include at least the top level name followed by one or more
 // inner names.
-func (l *Layout) IsAnonymous() bool {
+func (l *LayoutDecl) IsAnonymous() bool {
 	return l.NamingContext.IsAnonymous()
+}
+
+// A ResourceableLayoutDeclaration represents a layout that possesses
+// "resourceness" (i.e., the ability to contain a resource type),
+type ResourceableLayoutDeclaration interface {
+	LayoutDeclaration
+	GetResourceness() Resourceness
+}
+
+type ResourceableLayoutDecl struct {
+	LayoutDecl
+	Resourceness `json:"resource"`
+}
+
+func (rl ResourceableLayoutDecl) GetResourceness() Resourceness {
+	return rl.Resourceness
 }
 
 // Assert that declarations conform to the Declaration interface
@@ -832,6 +869,19 @@ var _ = []Declaration{
 	(*Enum)(nil),
 	(*Bits)(nil),
 	(*Const)(nil),
+}
+
+var _ = []LayoutDeclaration{
+	(*Union)(nil),
+	(*Table)(nil),
+	(*Struct)(nil),
+	(*Enum)(nil),
+}
+
+var _ = []ResourceableLayoutDeclaration{
+	(*Union)(nil),
+	(*Table)(nil),
+	(*Struct)(nil),
 }
 
 // TypeAlias represents the declaration of a FIDL type alias.
@@ -858,12 +908,11 @@ type NewType struct {
 
 // Union represents the declaration of a FIDL union.
 type Union struct {
-	Layout
-	Members      []UnionMember `json:"members"`
-	Strictness   `json:"strict"`
-	Resourceness `json:"resource"`
-	TypeShapeV1  TypeShape `json:"type_shape_v1"`
-	TypeShapeV2  TypeShape `json:"type_shape_v2"`
+	ResourceableLayoutDecl
+	Members     []UnionMember `json:"members"`
+	Strictness  `json:"strict"`
+	TypeShapeV1 TypeShape `json:"type_shape_v1"`
+	TypeShapeV2 TypeShape `json:"type_shape_v2"`
 }
 
 // UnionMember represents the declaration of a field in a FIDL extensible
@@ -880,11 +929,10 @@ type UnionMember struct {
 
 // Table represents a declaration of a FIDL table.
 type Table struct {
-	Layout
-	Members      []TableMember `json:"members"`
-	Resourceness `json:"resource"`
-	TypeShapeV1  TypeShape `json:"type_shape_v1"`
-	TypeShapeV2  TypeShape `json:"type_shape_v2"`
+	ResourceableLayoutDecl
+	Members     []TableMember `json:"members"`
+	TypeShapeV1 TypeShape     `json:"type_shape_v1"`
+	TypeShapeV2 TypeShape     `json:"type_shape_v2"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
@@ -928,11 +976,10 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
-	Layout
-	Members      []StructMember `json:"members"`
-	Resourceness `json:"resource"`
-	TypeShapeV1  TypeShape `json:"type_shape_v1"`
-	TypeShapeV2  TypeShape `json:"type_shape_v2"`
+	ResourceableLayoutDecl
+	Members     []StructMember `json:"members"`
+	TypeShapeV1 TypeShape      `json:"type_shape_v1"`
+	TypeShapeV2 TypeShape      `json:"type_shape_v2"`
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -1167,7 +1214,7 @@ func (m *Method) HasTransportError() bool {
 
 // Enum represents a FIDL declaration of an enum.
 type Enum struct {
-	Layout
+	LayoutDecl
 	Type            PrimitiveSubtype `json:"type"`
 	Members         []EnumMember     `json:"members"`
 	Strictness      `json:"strict"`
@@ -1231,7 +1278,7 @@ func (member *EnumMember) IsUnknown() bool {
 
 // Bits represents a FIDL declaration of an bits.
 type Bits struct {
-	Layout
+	LayoutDecl
 	Type       Type         `json:"type"`
 	Mask       string       `json:"mask"`
 	Members    []BitsMember `json:"members"`
@@ -1301,6 +1348,7 @@ func (r Resourceness) IsValueType() bool {
 
 type DeclType string
 
+// Note: Keep `DeclType` values in sync with `GetDeclType` below!
 const (
 	LibraryDeclType DeclType = "library"
 
@@ -1316,6 +1364,34 @@ const (
 	TypeAliasDeclType DeclType = "type_alias"
 	NewTypeDeclType   DeclType = "new_type"
 )
+
+func GetDeclType(decl Declaration) DeclType {
+	switch decl.(type) {
+	case *Const:
+		return ConstDeclType
+	case *Bits:
+		return BitsDeclType
+	case *Enum:
+		return EnumDeclType
+	case *Resource:
+		return ResourceDeclType
+	case *Protocol:
+		return ProtocolDeclType
+	case *Service:
+		return ServiceDeclType
+	case *Struct:
+		return StructDeclType
+	case *Table:
+		return TableDeclType
+	case *Union:
+		return UnionDeclType
+	case *TypeAlias:
+		return TypeAliasDeclType
+	case *NewType:
+		return NewTypeDeclType
+	}
+	panic(fmt.Sprintf("unhandled declaration type: %s", reflect.TypeOf(decl).Name()))
+}
 
 type DeclInfo struct {
 	Type DeclType `json:"kind"`
@@ -1362,31 +1438,68 @@ type Root struct {
 	Libraries       []Library                   `json:"library_dependencies,omitempty"`
 }
 
+// ForEachDecl calls a provided callback on each associated declaration. Logic
+// that needs to iterate over all declarations should rely on this method as
+// opposed to hardcoding the known (at the time) set of declaration types.
+func (r *Root) ForEachDecl(cb func(Declaration)) {
+	for i := range r.Consts {
+		cb(&r.Consts[i])
+	}
+	for i := range r.Bits {
+		cb(&r.Bits[i])
+	}
+	for i := range r.Enums {
+		cb(&r.Enums[i])
+	}
+	for i := range r.Resources {
+		cb(&r.Resources[i])
+	}
+	for i := range r.Protocols {
+		cb(&r.Protocols[i])
+	}
+	for i := range r.Services {
+		cb(&r.Services[i])
+	}
+	for i := range r.Structs {
+		cb(&r.Structs[i])
+	}
+	for i := range r.ExternalStructs {
+		cb(&r.ExternalStructs[i])
+	}
+	for i := range r.Tables {
+		cb(&r.Tables[i])
+	}
+	for i := range r.Unions {
+		cb(&r.Unions[i])
+	}
+	for i := range r.TypeAliases {
+		cb(&r.TypeAliases[i])
+	}
+	for i := range r.NewTypes {
+		cb(&r.NewTypes[i])
+	}
+}
+
 // DeclInfo returns information on the FIDL library's local and imported
 // declarations.
 func (r *Root) DeclInfo() DeclInfoMap {
-	resourceness := make(map[EncodedCompoundIdentifier]Resourceness, len(r.Structs)+len(r.Tables)+len(r.Unions))
-	for _, v := range r.Structs {
-		resourceness[v.Name] = v.Resourceness
-	}
-	for _, v := range r.Tables {
-		resourceness[v.Name] = v.Resourceness
-	}
-	for _, v := range r.Unions {
-		resourceness[v.Name] = v.Resourceness
-	}
-	info := DeclInfoMap{}
-	for k, v := range r.Decls {
-		ptr := new(Resourceness)
-		*ptr = resourceness[k]
-		info[k] = DeclInfo{Type: v, Resourceness: ptr}
-	}
+	m := DeclInfoMap{}
+	r.ForEachDecl(func(decl Declaration) {
+		info := DeclInfo{
+			Type: GetDeclType(decl),
+		}
+		if resDecl, ok := decl.(ResourceableLayoutDeclaration); ok {
+			info.Resourceness = new(Resourceness)
+			*info.Resourceness = resDecl.GetResourceness()
+		}
+		m[decl.GetName()] = info
+	})
 	for _, l := range r.Libraries {
 		for k, v := range l.Decls {
-			info[k] = v
+			m[k] = v
 		}
 	}
-	return info
+	return m
 }
 
 type EncodedCompoundIdentifierSet map[EncodedCompoundIdentifier]struct{}
@@ -1491,52 +1604,29 @@ func (r *Root) MethodTypeUsageMap() MethodTypeUsageMap {
 // function.
 func deniedContexts(r *Root, language string) []scopedNamingContext {
 	var denied []scopedNamingContext
+	r.ForEachDecl(func(decl Declaration) {
+		if layout, ok := decl.(LayoutDeclaration); ok {
+			if layout.GetAttributes().BindingsDenylistIncludes(language) {
+				denied = append(denied, scopedNamingContext{layout.GetName().LibraryName(), layout.GetNamingContext()})
+			}
+		}
 
-	for _, v := range r.Bits {
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), v.NamingContext})
-		}
-	}
-	for _, v := range r.Enums {
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), v.NamingContext})
-		}
-	}
-	for _, v := range r.Protocols {
-		protocolName := string(v.Name.Parse().Name)
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), []string{protocolName}})
-		} else {
-			for _, m := range v.Methods {
-				if m.BindingsDenylistIncludes(language) {
-					denied = append(denied, scopedNamingContext{
-						v.Name.LibraryName(),
-						[]string{protocolName, string(m.Name)},
-					})
+		if protocol, ok := decl.(*Protocol); ok {
+			protocolName := string(protocol.Name.Parse().Name)
+			if protocol.BindingsDenylistIncludes(language) {
+				denied = append(denied, scopedNamingContext{protocol.Name.LibraryName(), []string{protocolName}})
+			} else {
+				for _, m := range protocol.Methods {
+					if m.BindingsDenylistIncludes(language) {
+						denied = append(denied, scopedNamingContext{
+							protocol.Name.LibraryName(),
+							[]string{protocolName, string(m.Name)},
+						})
+					}
 				}
 			}
 		}
-	}
-	for _, v := range r.Structs {
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), v.NamingContext})
-		}
-	}
-	for _, v := range r.ExternalStructs {
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), v.NamingContext})
-		}
-	}
-	for _, v := range r.Tables {
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), v.NamingContext})
-		}
-	}
-	for _, v := range r.Unions {
-		if v.BindingsDenylistIncludes(language) {
-			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), v.NamingContext})
-		}
-	}
+	})
 
 	return denied
 }
@@ -1552,15 +1642,23 @@ func (r *Root) ForBindings(language string) Root {
 		Decls:     make(DeclMap, len(r.Decls)),
 	}
 
-	for _, v := range r.Consts {
-		if !v.BindingsDenylistIncludes(language) {
-			res.Consts = append(res.Consts, v)
-			res.Decls[v.Name] = r.Decls[v.Name]
+	r.ForEachDecl(func(decl Declaration) {
+		if decl.GetAttributes().BindingsDenylistIncludes(language) {
+			return
 		}
-	}
-	for _, v := range r.Bits {
-		if !v.BindingsDenylistIncludes(language) && !(scopedNamingContext{r.Name, v.NamingContext}.isDenied(denied)) {
-			newV := v
+		if layout, ok := decl.(LayoutDeclaration); ok {
+			scoped := scopedNamingContext{r.Name, layout.GetNamingContext()}
+			if scoped.isDenied(denied) {
+				return
+			}
+		}
+
+		switch v := decl.(type) {
+		case *Const:
+			res.Consts = append(res.Consts, *v)
+			res.Decls[v.Name] = r.Decls[v.Name]
+		case *Bits:
+			newV := *v
 			newV.Members = nil
 			for _, m := range v.Members {
 				if !m.BindingsDenylistIncludes(language) {
@@ -1569,11 +1667,8 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Bits = append(res.Bits, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.Enums {
-		if !v.BindingsDenylistIncludes(language) && !(scopedNamingContext{r.Name, v.NamingContext}.isDenied(denied)) {
-			newV := v
+		case *Enum:
+			newV := *v
 			newV.Members = nil
 			for _, m := range v.Members {
 				if !m.BindingsDenylistIncludes(language) {
@@ -1582,11 +1677,8 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Enums = append(res.Enums, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.Protocols {
-		if !v.BindingsDenylistIncludes(language) {
-			newV := v
+		case *Protocol:
+			newV := *v
 			newV.Methods = nil
 			for _, m := range v.Methods {
 				nc := NamingContext{string(v.Name), string(m.Name)}
@@ -1596,11 +1688,8 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Protocols = append(res.Protocols, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.Services {
-		if !v.BindingsDenylistIncludes(language) {
-			newV := v
+		case *Service:
+			newV := *v
 			newV.Members = nil
 			for _, m := range v.Members {
 				if !m.BindingsDenylistIncludes(language) {
@@ -1609,36 +1698,22 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Services = append(res.Services, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.Structs {
-		if !v.BindingsDenylistIncludes(language) && !(scopedNamingContext{r.Name, v.NamingContext}.isDenied(denied)) {
-			newV := v
+		case *Struct:
+			newV := *v
 			newV.Members = nil
 			for _, m := range v.Members {
 				if !m.BindingsDenylistIncludes(language) {
 					newV.Members = append(newV.Members, m)
 				}
 			}
-			res.Structs = append(res.Structs, newV)
+			if v.Name.LibraryName() == r.Name {
+				res.Structs = append(res.Structs, newV)
+			} else {
+				res.ExternalStructs = append(res.ExternalStructs, newV)
+			}
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.ExternalStructs {
-		if !v.BindingsDenylistIncludes(language) && !(scopedNamingContext{r.Name, v.NamingContext}.isDenied(denied)) {
-			newV := v
-			newV.Members = nil
-			for _, m := range v.Members {
-				if !m.BindingsDenylistIncludes(language) {
-					newV.Members = append(newV.Members, m)
-				}
-			}
-			res.ExternalStructs = append(res.ExternalStructs, newV)
-		}
-	}
-	for _, v := range r.Tables {
-		if !v.BindingsDenylistIncludes(language) && !(scopedNamingContext{r.Name, v.NamingContext}.isDenied(denied)) {
-			newV := v
+		case *Table:
+			newV := *v
 			newV.Members = nil
 			for _, m := range v.Members {
 				if !m.BindingsDenylistIncludes(language) {
@@ -1654,11 +1729,8 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Tables = append(res.Tables, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.Unions {
-		if !v.BindingsDenylistIncludes(language) && !(scopedNamingContext{r.Name, v.NamingContext}.isDenied(denied)) {
-			newV := v
+		case *Union:
+			newV := *v
 			newV.Members = nil
 			for _, m := range v.Members {
 				if !m.BindingsDenylistIncludes(language) {
@@ -1674,14 +1746,11 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Unions = append(res.Unions, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		}
-	}
-	for _, v := range r.TypeAliases {
-		if !v.BindingsDenylistIncludes(language) {
-			res.TypeAliases = append(res.TypeAliases, v)
+		case *TypeAlias:
+			res.TypeAliases = append(res.TypeAliases, *v)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
-	}
+	})
 
 	for _, d := range r.DeclOrder {
 		if _, ok := res.Decls[d]; ok {

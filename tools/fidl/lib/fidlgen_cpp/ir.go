@@ -674,7 +674,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	return r
 }
 
-func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
+func (c *compiler) getAnonymousChildren(layout fidlgen.LayoutDecl) []ScopedLayout {
 	return c.anonymousChildren[toKey(layout.NamingContext)]
 }
 
@@ -706,7 +706,7 @@ func compile(r fidlgen.Root) *Root {
 		anonymousChildren:  make(map[namingContextKey][]ScopedLayout),
 	}
 
-	addAnonymousLayouts := func(layout fidlgen.Layout) {
+	addAnonymousLayouts := func(layout fidlgen.LayoutDecl) {
 		if !layout.IsAnonymous() {
 			return
 		}
@@ -721,22 +721,22 @@ func compile(r fidlgen.Root) *Root {
 		})
 	}
 	for _, v := range r.Bits {
-		addAnonymousLayouts(v.Layout)
+		addAnonymousLayouts(v.LayoutDecl)
 	}
 	for _, v := range r.Enums {
-		addAnonymousLayouts(v.Layout)
+		addAnonymousLayouts(v.LayoutDecl)
 	}
 	for _, v := range r.Unions {
-		addAnonymousLayouts(v.Layout)
+		addAnonymousLayouts(v.LayoutDecl)
 	}
 	for _, v := range r.Tables {
-		addAnonymousLayouts(v.Layout)
+		addAnonymousLayouts(v.LayoutDecl)
 	}
 	for _, v := range r.Structs {
-		addAnonymousLayouts(v.Layout)
+		addAnonymousLayouts(v.LayoutDecl)
 	}
 	for _, v := range r.ExternalStructs {
-		addAnonymousLayouts(v.Layout)
+		addAnonymousLayouts(v.LayoutDecl)
 	}
 
 	decls := make(map[fidlgen.EncodedCompoundIdentifier]Kinded)
