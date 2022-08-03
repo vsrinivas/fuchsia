@@ -338,35 +338,31 @@ zx_status_t FileCache::EvictUnsafe(Page *page) {
 }
 
 std::vector<LockedPage> FileCache::GetLockedPagesUnsafe(pgoff_t start, pgoff_t end) {
-  pgoff_t prev_key = kPgOffMax;
   std::vector<LockedPage> pages;
-  while (!page_tree_.is_empty()) {
-    // Acquire Pages from the the lower bound of |start| to |end|.
-    auto key = (prev_key < kPgOffMax) ? prev_key : start;
-    auto current = page_tree_.lower_bound(key);
-    if (current == page_tree_.end() || current->GetKey() >= end) {
-      break;
-    }
+  auto current = page_tree_.lower_bound(start);
+  while (current != page_tree_.end() && current->GetKey() < end) {
     if (!current->IsActive()) {
-      // No reference to |current|. It is safe to make a reference.
-      prev_key = current->GetKey() + 1;
       LockedPage locked_page(fbl::ImportFromRawPtr(&(*current)));
       locked_page->SetActive();
       pages.push_back(std::move(locked_page));
     } else {
       auto page = fbl::MakeRefPtrUpgradeFromRaw(&(*current), tree_lock_);
       // When it is being recycled, wait and try it again.
+      auto prev_key = current->GetKey();
       if (page == nullptr) {
         recycle_cvar_.wait(tree_lock_);
+        // |current| might have been deleted during recycling.
+        current = page_tree_.lower_bound(prev_key);
         continue;
       }
       auto locked_page_or = GetLockedPage(std::move(page));
       if (locked_page_or.is_error()) {
+        current = page_tree_.lower_bound(prev_key);
         continue;
       }
-      prev_key = (*locked_page_or)->GetKey() + 1;
       pages.push_back(std::move(*locked_page_or));
     }
+    ++current;
   }
   return pages;
 }
@@ -408,28 +404,15 @@ void FileCache::Reset() {
 }
 
 std::vector<LockedPage> FileCache::GetLockedDirtyPagesUnsafe(const WritebackOperation &operation) {
-  pgoff_t prev_key = kPgOffMax;
   std::vector<LockedPage> pages;
   pgoff_t nwritten = 0;
-  while (nwritten <= operation.to_write) {
-    if (page_tree_.is_empty()) {
-      break;
-    }
-    // Acquire Pages from the the lower bound of |operation.start| to |operation.end|.
-    auto key = (prev_key < kPgOffMax) ? prev_key : operation.start;
-    auto current = page_tree_.lower_bound(key);
-    if (current == page_tree_.end() || current->GetKey() >= operation.end) {
-      break;
-    }
-    // Unless the |prev_key| Page is evicted, we should try the next Page.
-    if (prev_key == current->GetKey()) {
-      ++current;
-      if (current == page_tree_.end() || current->GetKey() >= operation.end) {
-        break;
-      }
-    }
-    prev_key = current->GetKey();
+
+  auto current = page_tree_.lower_bound(operation.start);
+  // Acquire Pages from the the lower bound of |operation.start| to |operation.end|.
+  while (nwritten <= operation.to_write && current != page_tree_.end() &&
+         current->GetKey() < operation.end) {
     auto raw_page = current.CopyPointer();
+    ++current;
     // Do not touch active Pages.
     if (raw_page->IsActive()) {
       continue;
