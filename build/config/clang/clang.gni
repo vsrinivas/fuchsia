@@ -15,6 +15,14 @@ declare_args() {
   # Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
   # primarily for external tools that use bitcode for analysis.
   clang_embed_bitcode = false
+
+  # Enable reproducers on error. This provides crash-like reproducers on
+  # compiler errors in addition to crashes.
+  # Note, this flag should be used by very few people at the moment
+  # because it depends on features that are not yet in prebuilt clang.
+  # It is only useful for clang canary builders, and folks with a custom
+  # clang.
+  clang_enable_error_reproducers = false
 }
 
 # The value of clang_prefix relative to root_build_dir, useful
