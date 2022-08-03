@@ -109,7 +109,7 @@ impl MediaState {
             fidl_avrcp::AvcPanelCommand::Forward => self.session_control.next_item(),
             fidl_avrcp::AvcPanelCommand::Backward => self.session_control.prev_item(),
             fidl_avrcp::AvcPanelCommand::VolumeUp | fidl_avrcp::AvcPanelCommand::VolumeDown => {
-                info!("Received Volume command - ignoring");
+                info!("Received relative {:?} command - ignoring", command);
                 Ok(())
             }
             _ => return Err(fidl_avrcp::TargetPassthroughError::CommandNotImplemented),
