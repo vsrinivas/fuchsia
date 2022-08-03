@@ -340,6 +340,33 @@ type Key = flexible enum : uint32 {
     RIGHT_META = 0x000700e7;
 
     /// Mute
+    ///
+    /// Silences played sounds.
+    @available(added=9)
+    MUTE = 0x0007007f;
+
+    /// Turn volume down
+    @available(added=9)
+    VOLUME_DOWN = 0x00070081;
+
+    /// Turn volume up
+    @available(added=9)
+    VOLUME_UP = 0x00070080;
+
+    // Consumer usage page (0x000c)
+    //
+    // E.g. Action keys appearing on Chromebook keyboards.  Although these
+    // appear on Chromebook keyboards, their codes come from the "consumer"
+    // usage page in HID.
+
+    /// Play media, or pause media if playing
+    @available(added=9)
+    PLAY_PAUSE = 0x000c00cd;
+
+    /// Media mute
+    ///
+    /// Silences media playback. Other sounds may still be heard, e.g. system
+    /// notification sounds.
     MEDIA_MUTE = 0x000c00e2;
 
     /// Volume Increment
@@ -347,6 +374,43 @@ type Key = flexible enum : uint32 {
 
     /// Volume Decrement
     MEDIA_VOLUME_DECREMENT = 0x000c00ea;
+
+    /// Back
+    ///
+    /// Go back to the previous page in the browser.
+    /// This, and other action keys are [defined in Chromium][1].
+    ///
+    /// [1]: https://source.chromium.org/chromium/chromium/src/+/main:ui/events/keycodes/dom/dom_code_data.inc
+    @available(added=9)
+    AC_BACK = 0x000c0224;
+
+    /// Refresh
+    ///
+    /// Refresh the current page in the browser.
+    @available(added=9)
+    AC_REFRESH = 0x000c0227;
+
+    /// Full screen view
+    ///
+    /// Zooms the focused window to full screen.
+    @available(added=9)
+    AC_FULL_SCREEN_VIEW = 0x000c0230;
+
+    /// Select task/application
+    ///
+    /// Shows the task selection window
+    @available(added=9)
+    AC_SELECT_TASK_APPLICATION = 0x000c01a2;
+
+    /// Reduce screen brightness
+    @available(added=9)
+    BRIGHTNESS_DOWN = 0x000c006f;
+
+    /// Increase screen brightness
+    @available(added=9)
+    BRIGHTNESS_UP = 0x000c0070;
+
+    // Self-defined (0xffff)
 
     /// NOTE: the following are self-defined and do not have to follow the HID usage pages.
     /// We use HID-Vendor-Specific page 0xFFFF to represent Fuchsia defined keys.

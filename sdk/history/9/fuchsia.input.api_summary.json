@@ -6,6 +6,26 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_BACK",
+        "value": "786980"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_FULL_SCREEN_VIEW",
+        "value": "786992"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_REFRESH",
+        "value": "786983"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_SELECT_TASK_APPLICATION",
+        "value": "786850"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.input/Key.APOSTROPHE",
         "value": "458804"
     },
@@ -28,6 +48,16 @@
         "kind": "enum/member",
         "name": "fuchsia.input/Key.BACKSPACE",
         "value": "458794"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.BRIGHTNESS_DOWN",
+        "value": "786543"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.BRIGHTNESS_UP",
+        "value": "786544"
     },
     {
         "kind": "enum/member",
@@ -396,6 +426,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.input/Key.MUTE",
+        "value": "458879"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.input/Key.N",
         "value": "458769"
     },
@@ -438,6 +473,11 @@
         "kind": "enum/member",
         "name": "fuchsia.input/Key.PAUSE",
         "value": "458824"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.PLAY_PAUSE",
+        "value": "786637"
     },
     {
         "kind": "enum/member",
@@ -543,6 +583,16 @@
         "kind": "enum/member",
         "name": "fuchsia.input/Key.V",
         "value": "458777"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.VOLUME_DOWN",
+        "value": "458881"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.VOLUME_UP",
+        "value": "458880"
     },
     {
         "kind": "enum/member",
