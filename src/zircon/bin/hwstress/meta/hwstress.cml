@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Enable system logging
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/hwstress",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.kernel.Stats",
+                "fuchsia.process.Launcher",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+        },
+        {
+            directory: "dev-class-block",
+            rights: [ "r*" ],
+            path: "/dev/class/block",
+        },
+        {
+            directory: "dev-class-light",
+            rights: [ "r*" ],
+            path: "/dev/class/light",
+        },
+        {
+            directory: "dev-class-temperature",
+            rights: [ "r*" ],
+            path: "/dev/class/temperature",
+        },
+        {
+            directory: "dev-class-thermal",
+            rights: [ "r*" ],
+            path: "/dev/class/thermal",
+        },
+        {
+            directory: "dev-sherlock-emmc",
+            rights: [ "r*" ],
+            path: "/dev/sherlock-emmc",
+        },
+        {
+            directory: "dev-sys",
+            rights: [ "r*" ],
+            path: "/dev/sys",
+        },
+    ],
+}

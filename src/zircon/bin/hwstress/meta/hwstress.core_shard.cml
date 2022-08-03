@@ -1,0 +1,122 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "cpu_v2",
+            url: "fuchsia-pkg://fuchsia.com/hwstress_v2_pkg#meta/cpu_v2.cm",
+        },
+        {
+            name: "memory_v2",
+            url: "fuchsia-pkg://fuchsia.com/hwstress_v2_pkg#meta/memory_v2.cm",
+        },
+        {
+            name: "flash_v2",
+            url: "fuchsia-pkg://fuchsia.com/hwstress_v2_pkg#meta/flash_v2.cm",
+        },
+        {
+            name: "led_v2",
+            url: "fuchsia-pkg://fuchsia.com/hwstress_v2_pkg#meta/led_v2.cm",
+        },
+        {
+            name: "hwstress_v2",
+            url: "fuchsia-pkg://fuchsia.com/hwstress_v2_pkg#meta/hwstress_v2.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.Stats",
+                "fuchsia.process.Launcher",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+            from: "parent",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-block",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+            subdir: "class/block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-light",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+            subdir: "class/light",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-temperature",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+            subdir: "class/temperature",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-thermal",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+            subdir: "class/thermal",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sherlock-emmc",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+            subdir: "sherlock-emmc",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sys",
+            to: [
+                "#cpu_v2",
+                "#flash_v2",
+                "#hwstress_v2",
+                "#led_v2",
+                "#memory_v2",
+            ],
+            subdir: "sys",
+        },
+    ],
+}

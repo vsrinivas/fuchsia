@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 source_set("lib") {
   sources = [
@@ -92,9 +93,28 @@ foreach(hwstress_name, _hwstress_binaries) {
   _hwstress_components += [ ":${hwstress_name}_component" ]
 }
 
+_hwstress_v2_components = []
+foreach(hwstress_name, _hwstress_binaries) {
+  fuchsia_component("${hwstress_name}_v2_component") {
+    component_name = "${hwstress_name}_v2"
+    manifest = "meta/hwstress.cml"
+    deps = [ ":bin" ]
+  }
+  _hwstress_v2_components += [ ":${hwstress_name}_v2_component" ]
+}
+
 fuchsia_package("hwstress_pkg") {
   package_name = "hwstress"
   deps = _hwstress_components
+}
+
+fuchsia_package("hwstress_v2_pkg") {
+  package_name = "hwstress_v2"
+  deps = _hwstress_v2_components
+}
+
+core_shard("hwstress_v2_shard") {
+  shard_file = "meta/hwstress.core_shard.cml"
 }
 
 # Tests using CFv1.
@@ -189,5 +209,7 @@ group("hwstress") {
   public_deps = [
     ":hwstress_cli",
     ":hwstress_pkg",
+    ":hwstress_v2_pkg",
+    ":hwstress_v2_shard",
   ]
 }
