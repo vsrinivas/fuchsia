@@ -124,7 +124,8 @@ environments.
 
    Then set any relevant breakpoints and run the test with:
 
-   ( \
+    ```posix-terminal
+    ( \
      source $DEV_ROOT/rust/fuchsia-env.sh && \
      $DEV_ROOT/rust/x.py \
        --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
@@ -135,7 +136,8 @@ environments.
        -C opt-level=0 -C panic=abort -Zpanic_abort_tests
        -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
        -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
-   )
+    )
+    ```
 
    and `zxdb` will catch any crashes and break at any breakpoints you define.
    This command is the same as the one above with the additional
