@@ -327,15 +327,17 @@ int main(int argc, char** argv) {
         FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
         return status;
       }
-      status = experimental_vsock->Start(guest.object(), cfg.vsock_listeners(), realm,
-                                         device_loop.dispatcher());
+      status = experimental_vsock->Start(guest.object(), std::move(*cfg.mutable_vsock_listeners()),
+                                         realm, device_loop.dispatcher());
       if (status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to start vsock device";
         return status;
       }
     }
   }
+
   FX_CHECK(!experimental_vsock != (!legacy_vsock && !vsock_loop));
+  guest_controller.ProvideVsockController(std::move(experimental_vsock));
 
   // Setup wayland device.
   VirtioWl wl(guest.phys_mem());
@@ -542,14 +544,6 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to add GPU public service";
     loop.Quit();
-  }
-
-  if constexpr (!VIRTIO_VSOCK_LEGACY_INPROCESS) {
-    status = experimental_vsock->AddPublicService(context.get());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to add vsock public service";
-      loop.Quit();
-    }
   }
 
   // Start the dispatch thread for communicating with the out of process

@@ -41,16 +41,12 @@ VirtioVsock::VirtioVsock(const PhysMem& phys_mem)
 zx_status_t VirtioVsock::Start(const zx::guest& guest, std::vector<Listener> listeners,
                                fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher) {
-  zx_status_t status =
-      CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
-                             [vsock = vsock_.NewRequest(), endpoint = endpoint_.NewRequest()](
-                                 std::shared_ptr<sys::ServiceDirectory> services) mutable {
-                               zx_status_t status = services->Connect(std::move(vsock));
-                               if (status != ZX_OK) {
-                                 return status;
-                               }
-                               return services->Connect(std::move(endpoint));
-                             });
+  zx_status_t status = CreateDynamicComponent(
+      realm, kComponentCollectionName, kComponentName, kComponentUrl,
+      [this, vsock = vsock_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+        services_ = std::move(services);
+        return services_->Connect(std::move(vsock));
+      });
   if (status != ZX_OK) {
     return status;
   }
@@ -70,10 +66,6 @@ zx_status_t VirtioVsock::Start(const zx::guest& guest, std::vector<Listener> lis
   return result.is_err() ? result.err() : ZX_OK;
 }
 
-zx_status_t VirtioVsock::AddPublicService(sys::ComponentContext* context) {
-  return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
-}
-
 zx_status_t VirtioVsock::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                                         zx_gpaddr_t avail, zx_gpaddr_t used) {
   return vsock_->ConfigureQueue(queue, size, desc, avail, used);
@@ -83,14 +75,10 @@ zx_status_t VirtioVsock::Ready(uint32_t negotiated_features) {
   return vsock_->Ready(negotiated_features);
 }
 
-void VirtioVsock::Connect2(uint32_t guest_port, VirtioVsock::Connect2Callback callback) {
-  endpoint_->Connect2(guest_port, std::move(callback));
-}
-
-void VirtioVsock::Listen(uint32_t port,
-                         fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
-                         VirtioVsock::ListenCallback callback) {
-  endpoint_->Listen(port, std::move(acceptor), std::move(callback));
+void VirtioVsock::GetHostVsockEndpoint(
+    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
+  FX_CHECK(services_) << "VirtioVsock::Start has not been called";
+  services_->Connect(std::move(endpoint));
 }
 
 }  // namespace controller

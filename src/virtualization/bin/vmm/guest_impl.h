@@ -9,6 +9,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/virtualization/bin/vmm/controller/virtio_vsock.h"
+
 // Provides an implementation of the |fuchsia::virtualization::Guest|
 // interface. This exposes some guest services over FIDL.
 class GuestImpl : public fuchsia::virtualization::Guest {
@@ -27,6 +29,11 @@ class GuestImpl : public fuchsia::virtualization::Guest {
   // The other end of this socket will be provided to clients via |GetSerial|.
   zx::socket SerialSocket();
 
+  // Provide the vsock controller for this guest.
+  //
+  // This controller connects the server end for |GetHostVsockEndpoint| to the vsock device.
+  void ProvideVsockController(std::unique_ptr<controller::VirtioVsock> controller);
+
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
   void GetConsole(GetConsoleCallback callback) override;
@@ -44,6 +51,9 @@ class GuestImpl : public fuchsia::virtualization::Guest {
   // Host/client end of the console socket.
   zx::socket console_socket_;
   zx::socket remote_console_socket_;
+
+  // Controller for the out of process vsock device.
+  std::unique_ptr<controller::VirtioVsock> vsock_controller_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_

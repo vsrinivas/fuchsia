@@ -13,6 +13,9 @@
 
 #include <src/lib/files/file.h>
 
+using ::fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
+
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                            std::string config_pkg_dir_path, std::string config_path,
                            bool use_legacy_vsock_device)
@@ -104,8 +107,7 @@ void GuestManager::LaunchGuest(
       bool callback_complete = false;
       host_vsock_endpoint_.Listen(
           listener.port, std::move(listener.acceptor),
-          [&status, &callback_complete](
-              fuchsia::virtualization::HostVsockEndpoint_Listen_Result result) mutable {
+          [&status, &callback_complete](HostVsockEndpoint_Listen_Result result) mutable {
             callback_complete = true;
             status = result.is_err() ? result.err() : ZX_OK;
           });
@@ -135,6 +137,8 @@ void GuestManager::LaunchGuest(
     local_guest_endpoint_ =
         std::make_unique<GuestVsockEndpoint>(fuchsia::virtualization::DEFAULT_GUEST_CID,
                                              std::move(vm_guest_endpoint), &host_vsock_endpoint_);
+  } else {
+    context_->svc()->Connect(guest_endpoint_.NewRequest());
   }
 
   callback(fpromise::ok());
@@ -162,7 +166,15 @@ void GuestManager::GetHostVsockEndpoint(
   if (use_legacy_vsock_device_) {
     host_vsock_endpoint_.AddBinding(std::move(endpoint));
   } else {
-    context_->svc()->Connect(std::move(endpoint));
+    // This is temporarily proxied through the guest manager to ease the migration from the legacy
+    // vsock device to the new out of process vsock device. Once this is no longer proxied through
+    // the guest manager, errors can be propagated correctly to the client.
+    // TODO(fxbug.dev/97355): Stop proxying this connection through the guest manager.
+    FX_CHECK(guest_endpoint_.is_bound())
+        << "Cannot call GetHostVsockEndpoint before launching the VMM";
+    guest_endpoint_->GetHostVsockEndpoint(
+        std::move(endpoint),
+        [](Guest_GetHostVsockEndpoint_Result result) { FX_CHECK(result.is_response()); });
   }
 }
 

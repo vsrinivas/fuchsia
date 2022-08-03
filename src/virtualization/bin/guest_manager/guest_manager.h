@@ -55,6 +55,7 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   const bool use_legacy_vsock_device_;
   std::unique_ptr<GuestVsockEndpoint> local_guest_endpoint_;
   HostVsockEndpoint host_vsock_endpoint_;
+  fuchsia::virtualization::GuestPtr guest_endpoint_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_MANAGER_H_

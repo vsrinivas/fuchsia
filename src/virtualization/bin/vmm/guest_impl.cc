@@ -31,6 +31,10 @@ zx::socket GuestImpl::SerialSocket() { return duplicate(serial_socket_); }
 
 zx::socket GuestImpl::ConsoleSocket() { return duplicate(console_socket_); }
 
+void GuestImpl::ProvideVsockController(std::unique_ptr<controller::VirtioVsock> controller) {
+  vsock_controller_ = std::move(controller);
+}
+
 void GuestImpl::GetSerial(GetSerialCallback callback) {
   callback(fuchsia::virtualization::Guest_GetSerial_Result::WithResponse(
       fuchsia::virtualization::Guest_GetSerial_Response{duplicate(remote_serial_socket_)}));
@@ -44,6 +48,11 @@ void GuestImpl::GetConsole(GetConsoleCallback callback) {
 void GuestImpl::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint,
     GetHostVsockEndpointCallback callback) {
-  // TODO(fxbug.dev/97355): Implement this.
-  FX_CHECK(false) << "Not implemented";
+  if (vsock_controller_) {
+    vsock_controller_->GetHostVsockEndpoint(std::move(endpoint));
+    callback(fpromise::ok());
+  } else {
+    FX_LOGS(WARNING) << "Attempted to get HostVsockEndpoint, but the vsock device is not present";
+    callback(fpromise::error(fuchsia::virtualization::GuestError::VSOCK_NOT_PRESENT));
+  }
 }
