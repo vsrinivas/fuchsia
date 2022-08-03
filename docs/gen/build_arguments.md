@@ -459,6 +459,13 @@ A list of binary host tool labels to also build.
 
 From //build/board.gni:31
 
+### board_information_for_assembly
+BoardInformation file for use with Product Assembly
+
+**Current value (from the default):** `false`
+
+From //build/board.gni:78
+
 ### board_is_emu
 Whether or not the board supports emulator/physical devices.
 This is used to determine if product bundle metadata should generate a
@@ -470,7 +477,7 @@ From //boards/arm64.gni:43
 
 **Overridden from the default:** `false`
 
-From //build/board.gni:80
+From //build/board.gni:83
 
 **Current value for `target_cpu = "x64"`:** `true`
 
@@ -478,7 +485,7 @@ From //boards/x64.gni:83
 
 **Overridden from the default:** `false`
 
-From //build/board.gni:80
+From //build/board.gni:83
 
 ### board_is_phys
 
@@ -488,11 +495,11 @@ From //boards/arm64.gni:44
 
 **Overridden from the default:** `true`
 
-From //build/board.gni:81
+From //build/board.gni:84
 
 **Current value (from the default):** `true`
 
-From //build/board.gni:81
+From //build/board.gni:84
 
 ### board_name
 Board name used for paving and amber updates.
@@ -906,6 +913,18 @@ primarily for external tools that use bitcode for analysis.
 **Current value (from the default):** `false`
 
 From //build/config/clang/clang.gni:17
+
+### clang_enable_error_reproducers
+Enable reproducers on error. This provides crash-like reproducers on
+compiler errors in addition to crashes.
+Note, this flag should be used by very few people at the moment
+because it depends on features that are not yet in prebuilt clang.
+It is only useful for clang canary builders, and folks with a custom
+clang.
+
+**Current value (from the default):** `false`
+
+From //build/config/clang/clang.gni:25
 
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size.
