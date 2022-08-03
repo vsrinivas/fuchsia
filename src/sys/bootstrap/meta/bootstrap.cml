@@ -185,14 +185,10 @@
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.pkg.PackageResolver",
                 "fuchsia.pkg.RepositoryManager",
                 "fuchsia.pkg.rewrite.Engine",
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
                 "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
             ],
             from: "parent",
             to: [
@@ -211,6 +207,18 @@
                 "#netsvc",
             ],
             source_availability: "unknown",
+        },
+        {
+            // Allow launching shell tools from the console,
+            // including from universe packages.
+            protocol: [
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: "#console-launcher",
         },
         {
             // Allow networking from programs running in the console.
