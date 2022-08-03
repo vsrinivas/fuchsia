@@ -367,40 +367,17 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   const size_t offset_end = safemath::CheckAdd<size_t>(offset, len).ValueOrDie();
   const pgoff_t block_index_end = CheckedDivRoundUp<pgoff_t>(offset_end, kBlockSize);
 
+  std::vector<LockedPage> data_pages;
+  if (auto result = WriteBegin(offset, len); result.is_error()) {
+    *out_actual = 0;
+    return result.error_value();
+  } else {
+    data_pages = std::move(result.value());
+  }
+
   size_t off_in_block = safemath::CheckMod<size_t>(offset, kBlockSize).ValueOrDie();
   size_t off_in_buf = 0;
   size_t left = len;
-
-  std::vector<LockedPage> data_pages(block_index_end - block_index_start);
-
-  for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
-    pgoff_t index = n - block_index_start;
-    size_t cur_len = safemath::CheckSub<size_t>(kBlockSize, off_in_block).ValueOrDie();
-    cur_len = std::min(cur_len, left);
-
-    ZX_ASSERT(index < data_pages.size());
-
-    if (zx_status_t ret = WriteBegin(n * kBlockSize + off_in_block, cur_len, &data_pages[index]);
-        ret != ZX_OK) {
-      // WriteBegin() tries to prepare in-memory buffers and direct node blocks for storing |data|
-      // If it succeeds, data_pages[index] has a page of valid virtual memory.
-      // If it fails with any reasons such as no space/memory,
-      // every data_pages[less than index] is released, and DoWrite() returns with the err code.
-      *out_actual = 0;
-      return ret;
-    }
-
-    off_in_block = 0;
-    off_in_buf += cur_len;
-    left -= cur_len;
-
-    if (left == 0)
-      break;
-  }
-
-  off_in_block = safemath::checked_cast<size_t>(offset % kBlockSize);
-  off_in_buf = 0;
-  left = len;
 
   for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
     pgoff_t index = n - block_index_start;

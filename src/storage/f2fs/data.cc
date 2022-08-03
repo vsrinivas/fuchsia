@@ -432,61 +432,83 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
   return ZX_OK;
 }
 
-zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, LockedPage *out) {
-  pgoff_t index = (static_cast<uint64_t>(pos)) >> kPageCacheShift;
-
-  Vfs()->GetSegmentManager().BalanceFs();
-
-  LockedPage page;
-  if (zx_status_t ret = GrabCachePage(index, &page); ret != ZX_OK) {
-    return ret;
-  }
-
-  fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-  page->WaitOnWriteback();
-  block_t data_blkaddr;
-  do {
-    LockedPage dnode_page;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
-        err != ZX_OK) {
-      return err;
-    }
-
-    uint32_t ofs_in_dnode;
-    if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
-      return result.error_value();
-    } else {
-      ofs_in_dnode = result.value();
-    }
-
-    data_blkaddr = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
-
-    if (data_blkaddr == kNullAddr) {
-      if (zx_status_t err = ReserveNewBlock(dnode_page.GetPage<NodePage>(), ofs_in_dnode);
-          err != ZX_OK) {
-        return err;
-      }
-      data_blkaddr = kNewAddr;
-    }
-  } while (false);
-
-  if ((len == kPageSize) || page->IsUptodate()) {
-    *out = std::move(page);
-    return ZX_OK;
-  }
-
-  if (data_blkaddr == kNewAddr) {
+zx_status_t VnodeF2fs::LoadDataPage(LockedPage &page, const block_t block_address) {
+  if (block_address == kNewAddr) {
     page->ZeroUserSegment(0, kPageSize);
   } else {
-    if (zx_status_t err = Vfs()->MakeOperation(storage::OperationType::kRead, page, data_blkaddr,
+    if (zx_status_t err = Vfs()->MakeOperation(storage::OperationType::kRead, page, block_address,
                                                PageType::kData);
         err != ZX_OK) {
       return err;
     }
   }
   page->SetUptodate();
-  *out = std::move(page);
   return ZX_OK;
+}
+
+zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, const size_t len) {
+  Vfs()->GetSegmentManager().BalanceFs();
+
+  const pgoff_t index_start = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();
+  const size_t offset_end = safemath::CheckAdd<size_t>(offset, len).ValueOrDie();
+  const pgoff_t index_end = CheckedDivRoundUp<pgoff_t>(offset_end, kBlockSize);
+
+  std::vector<LockedPage> data_pages(index_end - index_start);
+  for (pgoff_t i = index_start; i < index_end; ++i) {
+    if (zx_status_t ret = GrabCachePage(i, &data_pages[i - index_start]); ret != ZX_OK) {
+      return zx::error(ret);
+    }
+  }
+
+  fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+
+  for (auto &page : data_pages) {
+    page->WaitOnWriteback();
+  }
+
+  std::vector<block_t> data_block_addresses(index_end - index_start);
+  for (pgoff_t i = index_start; i < index_end; ++i) {
+    LockedPage dnode_page;
+    if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, i, &dnode_page);
+        err != ZX_OK) {
+      return zx::error(err);
+    }
+
+    uint32_t ofs_in_dnode;
+    if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, i); result.is_error()) {
+      return result.take_error();
+    } else {
+      ofs_in_dnode = result.value();
+    }
+
+    block_t data_blkaddr = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
+
+    if (data_blkaddr == kNullAddr) {
+      if (zx_status_t err = ReserveNewBlock(dnode_page.GetPage<NodePage>(), ofs_in_dnode);
+          err != ZX_OK) {
+        return zx::error(err);
+      }
+      data_blkaddr = kNewAddr;
+    }
+
+    data_block_addresses[i - index_start] = data_blkaddr;
+  }
+
+  if (!data_pages.front()->IsUptodate() && offset % kBlockSize > 0) {
+    if (zx_status_t err = LoadDataPage(data_pages.front(), data_block_addresses.front());
+        err != ZX_OK) {
+      return zx::error(err);
+    }
+  }
+
+  if (!data_pages.back()->IsUptodate() && offset_end % kBlockSize > 0) {
+    if (zx_status_t err = LoadDataPage(data_pages.back(), data_block_addresses.back());
+        err != ZX_OK) {
+      return zx::error(err);
+    }
+  }
+
+  return zx::ok(std::move(data_pages));
 }
 
 zx_status_t VnodeF2fs::WriteDirtyPage(LockedPage &page, bool is_reclaim) {

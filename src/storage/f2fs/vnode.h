@@ -149,7 +149,8 @@ class VnodeF2fs : public fs::Vnode,
 
   zx_status_t DoWriteDataPage(LockedPage &page);
   zx_status_t WriteDataPage(LockedPage &page, bool is_reclaim = false);
-  zx_status_t WriteBegin(size_t pos, size_t len, LockedPage *page);
+  zx_status_t LoadDataPage(LockedPage &page, const block_t block_address);
+  zx::status<std::vector<LockedPage>> WriteBegin(const size_t offset, const size_t len);
 
   virtual zx_status_t RecoverInlineData(NodePage &node_page) __TA_EXCLUDES(mutex_) {
     return ZX_ERR_NOT_SUPPORTED;

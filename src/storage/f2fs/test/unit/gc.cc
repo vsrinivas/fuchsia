@@ -97,9 +97,10 @@ TEST_F(GcManagerTest, PageColdData) {
   // If kPageColdData flag is not set, f2fs would execute IPU
   ASSERT_TRUE(fs_->GetSegmentManager().NeedInplaceUpdate(file.get()));
   {
-    LockedPage data_page;
-    ASSERT_EQ(file->WriteBegin(0, kPageSize, &data_page), ZX_OK);
-    data_page->SetDirty();
+    auto result = file->WriteBegin(0, kPageSize);
+    ASSERT_TRUE(result.is_ok());
+    std::vector<LockedPage> data_pages = std::move(result.value());
+    data_pages[0]->SetDirty();
   }
   ASSERT_NE(fs_->SyncDirtyDataPages(op), 0UL);
   auto new_blk_addr_or = file->FindDataBlkAddr(0);
@@ -109,10 +110,11 @@ TEST_F(GcManagerTest, PageColdData) {
   // If kPageColdData flag is set, f2fs would move data page
   ASSERT_TRUE(fs_->GetSegmentManager().NeedInplaceUpdate(file.get()));
   {
-    LockedPage data_page;
-    ASSERT_EQ(file->WriteBegin(0, kPageSize, &data_page), ZX_OK);
-    data_page->SetDirty();
-    data_page->SetColdData();
+    auto result = file->WriteBegin(0, kPageSize);
+    ASSERT_TRUE(result.is_ok());
+    std::vector<LockedPage> data_pages = std::move(result.value());
+    data_pages[0]->SetDirty();
+    data_pages[0]->SetColdData();
   }
   ASSERT_NE(fs_->SyncDirtyDataPages(op), 0UL);
   new_blk_addr_or = file->FindDataBlkAddr(0);

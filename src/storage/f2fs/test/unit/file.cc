@@ -200,6 +200,145 @@ TEST_F(FileTest, FileReadExceedFileSize) {
   test_file_vn = nullptr;
 }
 
+TEST_F(FileTest, MixedSizeWrite) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_file;
+  ASSERT_EQ(root_dir_->Create("test", S_IFREG, &test_file), ZX_OK);
+
+  fbl::RefPtr<VnodeF2fs> test_file_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_file));
+  File *test_file_ptr = static_cast<File *>(test_file_vn.get());
+
+  std::array<size_t, 5> num_pages = {1, 2, 4, 8, 16};
+  size_t total_pages = 0;
+  for (auto i : num_pages) {
+    total_pages += i;
+  }
+  size_t data_size = kPageSize * total_pages;
+  char w_buf[data_size];
+
+  for (size_t i = 0; i < data_size; ++i) {
+    w_buf[i] = static_cast<char>(rand() % 128);
+  }
+
+  // Write data for various sizes
+  char *w_buf_iter = w_buf;
+  for (auto i : num_pages) {
+    size_t cur_size = i * kPageSize;
+    FileTester::AppendToFile(test_file_ptr, w_buf_iter, cur_size);
+    w_buf_iter += cur_size;
+  }
+  ASSERT_EQ(test_file_ptr->GetSize(), data_size);
+
+  // Read verify for each page
+  char r_buf[kPageSize];
+  w_buf_iter = w_buf;
+  for (size_t i = 0; i < total_pages; ++i) {
+    size_t out;
+    ASSERT_EQ(test_file_ptr->Read(r_buf, kPageSize, i * kPageSize, &out), ZX_OK);
+    ASSERT_EQ(out, kPageSize);
+    ASSERT_EQ(memcmp(r_buf, w_buf_iter, kPageSize), 0);
+    w_buf_iter += kPageSize;
+  }
+
+  // Read verify again after clearing file cache
+  {
+    WritebackOperation op = {.bSync = true};
+    test_file_ptr->Writeback(op);
+    __UNUSED auto unused = test_file_ptr->InvalidatePages();
+  }
+  w_buf_iter = w_buf;
+  for (size_t i = 0; i < total_pages; ++i) {
+    size_t out;
+    ASSERT_EQ(test_file_ptr->Read(r_buf, kPageSize, i * kPageSize, &out), ZX_OK);
+    ASSERT_EQ(out, kPageSize);
+    ASSERT_EQ(memcmp(r_buf, w_buf_iter, kPageSize), 0);
+    w_buf_iter += kPageSize;
+  }
+
+  ASSERT_EQ(test_file_vn->Close(), ZX_OK);
+  test_file_vn = nullptr;
+}
+
+TEST_F(FileTest, MixedSizeWriteUnaligned) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_file;
+  ASSERT_EQ(root_dir_->Create("test", S_IFREG, &test_file), ZX_OK);
+
+  fbl::RefPtr<VnodeF2fs> test_file_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_file));
+  File *test_file_ptr = static_cast<File *>(test_file_vn.get());
+
+  std::array<size_t, 5> num_pages = {1, 2, 4, 8, 16};
+  size_t total_pages = 0;
+  for (auto i : num_pages) {
+    total_pages += i;
+  }
+  size_t unalign = 1000;
+  size_t data_size = kPageSize * total_pages + unalign;
+  char w_buf[data_size];
+
+  for (size_t i = 0; i < data_size; ++i) {
+    w_buf[i] = static_cast<char>(rand() % 128);
+  }
+
+  // Write some data for unalignment
+  FileTester::AppendToFile(test_file_ptr, w_buf, unalign);
+  ASSERT_EQ(test_file_ptr->GetSize(), unalign);
+
+  // Write data for various sizes
+  char *w_buf_iter = w_buf + unalign;
+  for (auto i : num_pages) {
+    size_t cur_size = i * kPageSize;
+    FileTester::AppendToFile(test_file_ptr, w_buf_iter, cur_size);
+    w_buf_iter += cur_size;
+  }
+  ASSERT_EQ(test_file_ptr->GetSize(), data_size);
+
+  // Read verify for each page
+  char r_buf[kPageSize];
+  w_buf_iter = w_buf;
+  for (size_t i = 0; i < total_pages; ++i) {
+    size_t out;
+    ASSERT_EQ(test_file_ptr->Read(r_buf, kPageSize, i * kPageSize, &out), ZX_OK);
+    ASSERT_EQ(out, kPageSize);
+    ASSERT_EQ(memcmp(r_buf, w_buf_iter, kPageSize), 0);
+    w_buf_iter += kPageSize;
+  }
+
+  // Read verify for last unaligned data
+  {
+    size_t out;
+    ASSERT_EQ(test_file_ptr->Read(r_buf, kPageSize, total_pages * kPageSize, &out), ZX_OK);
+    ASSERT_EQ(out, unalign);
+    ASSERT_EQ(memcmp(r_buf, w_buf_iter, unalign), 0);
+  }
+
+  // Read verify again after clearing file cache
+  {
+    WritebackOperation op = {.bSync = true};
+    test_file_ptr->Writeback(op);
+    __UNUSED auto unused = test_file_ptr->InvalidatePages();
+  }
+  w_buf_iter = w_buf;
+  for (size_t i = 0; i < total_pages; ++i) {
+    size_t out;
+    ASSERT_EQ(test_file_ptr->Read(r_buf, kPageSize, i * kPageSize, &out), ZX_OK);
+    ASSERT_EQ(out, kPageSize);
+    ASSERT_EQ(memcmp(r_buf, w_buf_iter, kPageSize), 0);
+    w_buf_iter += kPageSize;
+  }
+  {
+    size_t out;
+    ASSERT_EQ(test_file_ptr->Read(r_buf, kPageSize, total_pages * kPageSize, &out), ZX_OK);
+    ASSERT_EQ(out, unalign);
+    ASSERT_EQ(memcmp(r_buf, w_buf_iter, unalign), 0);
+  }
+
+  ASSERT_EQ(test_file_vn->Close(), ZX_OK);
+  test_file_vn = nullptr;
+}
+
 TEST(FileTest2, FailedNidReuse) {
   std::unique_ptr<Bcache> bc;
   constexpr uint64_t kBlockCount = 409600;
