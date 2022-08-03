@@ -256,7 +256,7 @@ struct LogFormat {
 
 impl LogFormat {
     fn new(id: u64) -> Self {
-        LogFormat { id, ..Default::default() }
+        LogFormat { id, display_target: true, ..Default::default() }
     }
 }
 
