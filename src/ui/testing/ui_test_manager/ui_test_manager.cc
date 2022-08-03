@@ -120,26 +120,29 @@ void UITestManager::WatchViewTree() {
       << "Geometry observer must be registered before calling WatchViewTree()";
 
   geometry_provider_->Watch([this](auto response) {
-    if (!response.has_error()) {
-      std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>* updates =
-          response.mutable_updates();
-      if (updates && !updates->empty()) {
-        last_view_tree_snapshot_ = std::move(updates->back());
+    std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>* updates =
+        response.mutable_updates();
+    if (updates && !updates->empty()) {
+      last_view_tree_snapshot_ = std::move(updates->back());
+    }
+
+    if (response.has_error()) {
+      const auto& error = response.error();
+      // For channel_overflow and buffer_overflow, we may have missed some older snapshots in the
+      // response. Since we only take the most recent snapshot these error situations are not too
+      // interesting.
+      if (error.has_channel_overflow() && error.channel_overflow()) {
+        FX_LOGS(DEBUG) << "Geometry provider channel overflowed";
       }
-
-      WatchViewTree();
-      return;
+      if (error.has_buffer_overflow() && error.buffer_overflow()) {
+        FX_LOGS(DEBUG) << "Geometry provider buffer overflowed";
+      }
+      if (error.has_views_overflow() && error.views_overflow()) {
+        // This one indicates some possible data loss, so we log with a high severity.
+        FX_LOGS(WARNING) << "Geometry provider attempted to report too many views";
+      }
     }
-
-    const auto& error = response.error();
-
-    if (error.has_channel_overflow() && error.channel_overflow()) {
-      FX_LOGS(FATAL) << "Geometry provider channel overflowed";
-    } else if (error.has_buffer_overflow() && error.buffer_overflow()) {
-      FX_LOGS(FATAL) << "Geometry provider buffer overflowed";
-    } else if (error.has_views_overflow() && error.views_overflow()) {
-      FX_LOGS(FATAL) << "Geometry provider attempted to report too many views";
-    }
+    WatchViewTree();
   });
 }
 
