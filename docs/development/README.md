@@ -24,8 +24,6 @@ operating system.
  - [Go](languages/go/README.md)
  - [Rust](languages/rust/README.md)
  - [Python](languages/python/README.md)
- - [Flutter modules](languages/dart/mods.md) - How to write a graphical module
-   using Flutter
  - [New language](languages/new/README.md) - How to bring a new language to Fuchsia
 
 ## API
