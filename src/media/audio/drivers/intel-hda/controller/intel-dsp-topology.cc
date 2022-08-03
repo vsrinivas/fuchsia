@@ -462,10 +462,14 @@ zx::status<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt
     return zx::error(microphones_id.status_value());
   }
 
+  AudioDataFormat i2s_actual_format = kFormatI2S0Bus;
+  // The slot size in Atlas' output pipeline to the Maxims is actually 16 bits.
+  i2s_actual_format.bit_depth = BitDepth::DEPTH_16BIT;
+
   std::vector<DspStream> streams;
   streams.push_back({.id = speakers_id.value(),
                      .host_format = kHostI2sFormat,
-                     .dai_format = kFormatI2S0Bus,
+                     .dai_format = i2s_actual_format,
                      .is_i2s = false,
                      .stream_id = 1,
                      .is_input = false,
