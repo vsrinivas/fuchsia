@@ -248,9 +248,9 @@ class DriverImpl
     }
   }
 
-  // TODO(fxbug.dev/102726): Give more freedom in setting the controls.
   template <class IoProvider>
-  void SetLineControl(IoProvider& io) {
+  void SetLineControl(IoProvider& io, std::optional<DataBits> data_bits,
+                      std::optional<Parity> parity, std::optional<StopBits> stop_bits) {
     constexpr uint32_t kDivisor = kMaxBaudRate / kDefaultBaudRate;
 
     LineControlRegister::Get().FromValue(0).set_divisor_latch_access(true).WriteTo(io.io());
@@ -264,12 +264,41 @@ class DriverImpl
         .set_data(static_cast<uint8_t>(kDivisor >> 8))
         .WriteTo(io.io());
 
-    LineControlRegister::Get()
-        .FromValue(0)
-        .set_divisor_latch_access(false)
-        .set_word_length(LineControlRegister::kWordLength8)
-        .set_stop_bits(LineControlRegister::kStopBits1)
-        .WriteTo(io.io());
+    auto lcr = LineControlRegister::Get().FromValue(0).set_divisor_latch_access(false);
+
+    if (data_bits) {
+      uint8_t word_length = [bits = *data_bits]() {
+        switch (bits) {
+          case DataBits::k5:
+            return LineControlRegister::kWordLength5;
+          case DataBits::k6:
+            return LineControlRegister::kWordLength6;
+          case DataBits::k7:
+            return LineControlRegister::kWordLength7;
+          case DataBits::k8:
+            return LineControlRegister::kWordLength8;
+        }
+      }();
+      lcr.set_word_length(word_length);
+    }
+
+    if (parity) {
+      lcr.set_parity_enable(*parity != Parity::kNone).set_even_parity(*parity == Parity::kEven);
+    }
+
+    if (stop_bits) {
+      uint8_t num_stop_bits = [bits = *stop_bits]() {
+        switch (bits) {
+          case StopBits::k1:
+            return LineControlRegister::kStopBits1;
+          case StopBits::k2:
+            return LineControlRegister::kStopBits2;
+        }
+      }();
+      lcr.set_stop_bits(num_stop_bits);
+    }
+
+    lcr.WriteTo(io.io());
   }
 
   template <class IoProvider>

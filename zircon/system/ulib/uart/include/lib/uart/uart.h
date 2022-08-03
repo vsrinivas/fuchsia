@@ -28,6 +28,32 @@ struct AcpiDebugPortDescriptor;
 
 namespace uart {
 
+//
+// These types are used in configuring the line control settings (i.e., in the
+// `SetLineControl()` method).
+//
+
+// Number of bits transmitted per character.
+enum class DataBits {
+  k5,
+  k6,
+  k7,
+  k8,
+};
+
+// The bit pattern mechanism to help detect transmission errors.
+enum class Parity {
+  kNone,  // No bits dedicated to parity.
+  kEven,  // Parity bit present; is 0 iff the number of 1s in the word is even.
+  kOdd,   // Parity bit present; is 0 iff the number of 1s in the word is odd.
+};
+
+// The duration of the stop period in terms of the transmitted bit rate.
+enum class StopBits {
+  k1,
+  k2,
+};
+
 // This template is specialized by payload configuration type (see below).
 // It parses bits out of strings from the "kernel.serial" boot option.
 template <typename Config>
@@ -132,6 +158,13 @@ class DriverBase {
     fprintf(out, "%.*s", static_cast<int>(Driver::config_name().size()),
             Driver::config_name().data());
     UnparseConfig<KdrvConfig>(cfg_, out);
+  }
+
+  // TODO(fxbug.dev/102726): Remove once all drivers define this method.
+  template <class IoProvider>
+  void SetLineControl(IoProvider& io, std::optional<DataBits> data_bits,
+                      std::optional<Parity> parity, std::optional<StopBits> stop_bits) {
+    static_assert(!std::is_same_v<IoProvider, IoProvider>, "TODO(fxbug.dev/102726): implment me");
   }
 
   // API for use in IoProvider setup.
@@ -367,13 +400,15 @@ class KernelDriver {
 
   // Configure the UART line control settings.
   //
-  // TODO(fxbug.dev/102726): Give more freedom in setting the controls.
-  void SetLineControl() {
-    // TODO(fxbug.dev/102726): Set it on all variants.
-    if constexpr (kCanSetLineControl) {
-      Guard lock(sync_);
-      uart_.SetLineControl(io_);
-    }
+  // An individual setting given by std::nullopt signifies that it should be
+  // left as previously configured.
+  //
+  // TODO(fxbug.dev/102726): Separate out the setting of baud rate.
+  void SetLineControl(std::optional<DataBits> data_bits = DataBits::k8,
+                      std::optional<Parity> parity = Parity::kNone,
+                      std::optional<StopBits> stop_bits = StopBits::k1) {
+    Guard lock(sync_);
+    uart_.SetLineControl(io_, data_bits, parity, stop_bits);
   }
 
   // TODO(mcgrathr): Add InitInterrupt for enabling interrupt-based i/o.
@@ -429,19 +464,6 @@ class KernelDriver {
     Sync& sync_;
     typename Sync::InterruptState state_;
   };
-
-  // SFINAE check for a UartType::SetLineControl method.
-  template <typename UartType = uart_type,                                                      //
-            typename Io = IoProvider<typename UartType::config_type>,                           //
-            typename = decltype(std::declval<UartType>().SetLineControl(std::declval<Io&>()))>  //
-  static constexpr bool SfinaeSetLineControl(int ignored) {
-    return true;
-  }
-
-  // This overload is chosen only if SFINAE detected a missing SetLineControl method.
-  static constexpr bool SfinaeSetLineControl(...) { return false; }
-
-  static constexpr bool kCanSetLineControl = SfinaeSetLineControl(0);
 };
 
 // These specializations are defined in the library to cover all the ZBI item

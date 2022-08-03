@@ -61,6 +61,10 @@ struct Driver {
   template <typename IoProvider>
   void Init(IoProvider& io) {}
 
+  template <class IoProvider>
+  void SetLineControl(IoProvider& io, std::optional<DataBits> data_bits,
+                      std::optional<Parity> parity, std::optional<StopBits> stop_bits) {}
+
   // Return true if Write can make forward progress right now.
   template <typename IoProvider>
   bool TxReady(IoProvider& io) {
