@@ -799,6 +799,11 @@
             from: "parent",
             to: "#session-manager",
         },
+        {
+            resolver: "full-resolver",
+            from: "#universe-resolver",
+            to: "#session-manager",
+        },
 
         // Route DRM protocols to the session on products where they are
         // availabile.

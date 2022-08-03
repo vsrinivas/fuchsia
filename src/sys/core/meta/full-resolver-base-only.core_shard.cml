@@ -2,28 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    children: [
-        {
-            name: "full-resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
-        },
-    ],
-    offer: [
-        {
-            // TODO(fxbug.dev/86464): remove.
-            protocol: "fuchsia.pkg.PackageResolver",
-            from: "void",
-            to: "#full-resolver",
-            availability: "optional",
-        },
-        {
-            resolver: "full-resolver",
-            from: "#universe-resolver",
-            to: "#session-manager",
-        },
-    ],
+    // These environments inherit realm's resolver capability instead of overriding with the
+    // universe-resolver's resolver capability (which is done by the non-base version of this
+    // shard).
     environments: [
-        // Components that simply need access to full-resolver can use this environment.
         {
             name: "full-resolver-env",
             extends: "realm",

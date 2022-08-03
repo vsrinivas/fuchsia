@@ -30,7 +30,7 @@
             extends: "realm",
             resolvers: [
                 {
-                    resolver: "full_resolver",
+                    resolver: "full-resolver",
                     from: "#universe-resolver",
                     scheme: "fuchsia-pkg",
                 },

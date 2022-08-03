@@ -81,7 +81,7 @@
         },
         {
             protocol: "fuchsia.component.resolution.Resolver",
-            from: "#full-resolver",
+            from: "#universe-resolver",
             to: "#test_manager",
         },
         {
