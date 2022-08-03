@@ -4,6 +4,7 @@
 
 use anyhow::{bail, Error};
 use fidl::endpoints::Proxy;
+use fidl::HandleBased;
 use fidl_fuchsia_io as fio;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -137,7 +138,15 @@ async fn main() -> Result<(), Error> {
     .into();
     let new_path = CString::new(new_path).unwrap();
     let ns_entry_action = fdio::SpawnAction::add_namespace_entry(&new_path, local_dir);
-    let mut actions = [ns_entry_action];
+
+    let utc_clock =
+        fuchsia_runtime::duplicate_utc_clock_handle(zx::Rights::SAME_RIGHTS).unwrap().into_handle();
+    let utc_clock_action = fdio::SpawnAction::add_handle(
+        fuchsia_runtime::HandleInfo::new(fuchsia_runtime::HandleType::ClockUtc, 0),
+        utc_clock,
+    );
+
+    let mut actions = [ns_entry_action, utc_clock_action];
 
     // Launch the binary
     let bin_path = CString::new(bin_path).unwrap();
