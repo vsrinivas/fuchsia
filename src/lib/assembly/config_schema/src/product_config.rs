@@ -144,6 +144,12 @@ impl Default for FeatureControl {
     }
 }
 
+impl PartialEq<FeatureControl> for &FeatureControl {
+    fn eq(&self, other: &FeatureControl) -> bool {
+        self.eq(&other)
+    }
+}
+
 /// The Product-provided configuration details.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ProductConfig {

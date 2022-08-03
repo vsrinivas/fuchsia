@@ -19,6 +19,30 @@ pub struct BoardInformation {
     pub provided_features: Vec<String>,
 }
 
+pub trait BoardInformationExt {
+    /// Returns whether or not this board provides the named feature.
+    fn provides_feature(&self, name: impl AsRef<str>) -> bool;
+}
+
+impl BoardInformationExt for BoardInformation {
+    /// Returns whether or not this board provides the named feature.
+    fn provides_feature(&self, name: impl AsRef<str>) -> bool {
+        // .contains(&str) doesn't work for Vec<String>, so it's neccessary
+        // to use .iter().any(...) instead.
+        let name = name.as_ref();
+        self.provided_features.iter().any(|f| f == name)
+    }
+}
+
+impl BoardInformationExt for Option<&BoardInformation> {
+    fn provides_feature(&self, name: impl AsRef<str>) -> bool {
+        match self {
+            Some(board_info) => board_info.provides_feature(name),
+            _ => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -53,5 +77,17 @@ mod test {
         };
 
         assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn test_provides_feature() {
+        let board_info = BoardInformation {
+            name: "sample".to_owned(),
+            provided_features: vec!["feature_a".into(), "feature_b".into()],
+        };
+
+        assert!(board_info.provides_feature("feature_a"));
+        assert!(board_info.provides_feature("feature_b"));
+        assert!(!board_info.provides_feature("feature_c"));
     }
 }

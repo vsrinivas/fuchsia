@@ -4,7 +4,7 @@
 
 use anyhow::ensure;
 use assembly_config_schema::{
-    board_config::BoardInformation,
+    board_config::{BoardInformation, BoardInformationExt},
     product_config::{BuildType, FeatureControl, ProductAssemblyConfig},
 };
 use fidl_fuchsia_logger::MAX_TAGS;
@@ -72,7 +72,7 @@ pub fn define_bootfs_config(
 /// Returns a map from package names to configuration updates.
 pub fn define_repackaging(
     config: &ProductAssemblyConfig,
-    _board_info: Option<&BoardInformation>,
+    board_info: Option<&BoardInformation>,
 ) -> anyhow::Result<StructuredConfigPatches> {
     let mut patches = PatchesBuilder::default();
 
@@ -99,17 +99,30 @@ pub fn define_repackaging(
         .field("session_url", config.product.session_url.to_owned());
 
     // Configure enabling pinweaver.
-    patches
-        .package("password_authenticator")
-        .component("meta/password-authenticator.cm")
-        .field(
-            "allow_pinweaver",
-            config.platform.identity.password_pinweaver != FeatureControl::Disabled,
-        )
-        .field(
-            "allow_scrypt",
-            config.platform.identity.password_pinweaver != FeatureControl::Required,
-        );
+    {
+        let (allow_scrypt, allow_pinweaver) = match (
+            board_info.provides_feature("fuchsia::cr50"),
+            &config.platform.identity.password_pinweaver,
+        ) {
+            // if the bpard doesn't support pinweaver:
+            // scrypt is always allowed, and pinweaver is not.
+            (false, _) => (true, false),
+            // if the board supports pinweaver, and pinweaver is required:
+            // scrypt is not allowed, and pinweaver is
+            (true, FeatureControl::Required) => (false, true),
+            // if the board supports pinweaver, and use of pinweaver is allowed:
+            // both are allowed
+            (true, FeatureControl::Allowed) => (true, true),
+            // if the board supports pinweaver, and use of pinweaver is disabled
+            // scrypt is allowed, pinweaver is not
+            (true, FeatureControl::Disabled) => (true, false),
+        };
+        patches
+            .package("password_authenticator")
+            .component("meta/password-authenticator.cm")
+            .field("allow_scrypt", allow_scrypt)
+            .field("allow_pinweaver", allow_pinweaver);
+    }
 
     Ok(patches.inner)
 }
