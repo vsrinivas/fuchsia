@@ -141,10 +141,14 @@ fuchsia_test_component("gfx_legacy_coordinate_transform_test2") {
 
 executable("gfx_touch_integration_test_bin") {
   testonly = true
-  sources = [ "gfx_integration_tests/gfx_touch_integration_test.cc" ]
+  sources = [
+    "gfx_integration_tests/gfx_touch_integration_test.cc",
+    "gfx_integration_tests/gfx_touch_local_hit_integration_test.cc",
+  ]
   deps = [
     ":common_deps_cts",
     "//sdk//fidl/fuchsia.ui.pointer",
+    "//sdk//fidl/fuchsia.ui.pointer.augment",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
   ]
 }

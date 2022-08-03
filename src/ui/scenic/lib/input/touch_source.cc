@@ -7,13 +7,14 @@
 namespace scenic_impl::input {
 
 TouchSource::TouchSource(zx_koid_t view_ref_koid,
-                         fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
+                         fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source,
                          fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
                          fit::function<void()> error_handler, GestureContenderInspector& inspector)
     : TouchSourceBase(
-          view_ref_koid, std::move(respond), [this](zx_status_t epitaph) { CloseChannel(epitaph); },
-          inspector),
-      binding_(this, std::move(event_provider)),
+          utils::ExtractKoid(touch_source.channel()), view_ref_koid, std::move(respond),
+          [this](zx_status_t epitaph) { CloseChannel(epitaph); },
+          /*augment*/ [](auto&...) {}, inspector),
+      binding_(this, std::move(touch_source)),
       error_handler_(std::move(error_handler)) {
   binding_.set_error_handler([this](zx_status_t epitaph) { error_handler_(); });
 }

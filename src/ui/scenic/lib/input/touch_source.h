@@ -19,7 +19,7 @@ class TouchSource : public TouchSourceBase, public fuchsia::ui::pointer::TouchSo
  public:
   // |respond_| must not destroy the TouchSource object.
   TouchSource(zx_koid_t view_ref_koid,
-              fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
+              fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source,
               fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
               fit::function<void()> error_handler, GestureContenderInspector& inspector);
 
@@ -28,7 +28,15 @@ class TouchSource : public TouchSourceBase, public fuchsia::ui::pointer::TouchSo
   // |fuchsia::ui::pointer::TouchSource|
   void Watch(std::vector<fuchsia::ui::pointer::TouchResponse> responses,
              WatchCallback callback) override {
-    TouchSourceBase::WatchBase(std::move(responses), std::move(callback));
+    TouchSourceBase::WatchBase(std::move(responses), [callback = std::move(callback)](
+                                                         std::vector<AugmentedTouchEvent> events) {
+      std::vector<fuchsia::ui::pointer::TouchEvent> out_events;
+      out_events.reserve(events.size());
+      for (auto& event : events) {
+        out_events.emplace_back(std::move(event.touch_event));
+      }
+      callback(std::move(out_events));
+    });
   }
 
   // |fuchsia::ui::pointer::TouchSource|

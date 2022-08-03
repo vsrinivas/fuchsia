@@ -166,6 +166,8 @@ source_set("touch") {
     "touch_source.h",
     "touch_source_base.cc",
     "touch_source_base.h",
+    "touch_source_with_local_hit.cc",
+    "touch_source_with_local_hit.h",
     "touch_system.cc",
     "touch_system.h",
   ]

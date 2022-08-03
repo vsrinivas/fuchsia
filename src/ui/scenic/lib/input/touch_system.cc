@@ -15,6 +15,7 @@
 #include "src/ui/scenic/lib/input/constants.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/input/touch_source.h"
+#include "src/ui/scenic/lib/input/touch_source_with_local_hit.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
@@ -126,6 +127,65 @@ TouchSystem::TouchSystem(sys::ComponentContext* context,
         a11y_legacy_contender_.reset();
         FX_LOGS(INFO) << "A11yLegacyContender destroyed";
       });
+  context->outgoing()->AddPublicService(local_hit_upgrade_registry_.GetHandler(this));
+}
+
+void TouchSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSource> original,
+                          fuchsia::ui::pointer::augment::LocalHit::UpgradeCallback callback) {
+  // TODO(fxbug.dev/84270): This currently requires the client to wait until the TouchSource has
+  // been hooked up before making the Upgrade() call. This is not a great user experience. Change
+  // this so we cache the channel if it arrives too early.
+  const zx_koid_t view_ref_koid = FindViewRefKoidOfRelatedChannel(original);
+  if (view_ref_koid == ZX_KOID_INVALID) {
+    auto error = fuchsia::ui::pointer::augment::ErrorForLocalHit::New();
+    error->error_reason = fuchsia::ui::pointer::augment::ErrorReason::DENIED;
+    error->original = std::move(original);
+    callback({}, std::move(error));
+    return;
+  }
+
+  // Delete the old channel.
+  EraseTouchContender(view_ref_koid);
+
+  // Create the new channel.
+  const ContenderId contender_id = next_contender_id_++;
+  fidl::InterfaceHandle<fuchsia::ui::pointer::augment::TouchSourceWithLocalHit> handle;
+  auto touch_source = std::make_unique<TouchSourceWithLocalHit>(
+      view_ref_koid, handle.NewRequest(),
+      /*respond*/
+      [this, contender_id](StreamId stream_id, const std::vector<GestureResponse>& responses) {
+        RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
+      },
+      /*error_handler*/
+      [this, view_ref_koid] { EraseTouchContender(view_ref_koid); },
+      /*get_local_hit*/
+      [this](const InternalTouchEvent& event) {
+        // Semantic hit test to find the top view a11y cares about.
+        // TODO(): If we have more than one TouchSourceWithLocalHit client, this hit test will be
+        // done multiple times per injectiom redundantly. We might need to improve this in the
+        // future, but as long as we're only expecting the one client this is fine.
+        const zx_koid_t top_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ true);
+        glm::vec2 local_point = glm::vec2(0.f, 0.f);
+        if (top_koid != ZX_KOID_INVALID) {
+          const std::array<float, 9> top_view_from_viewport_transform =
+              GetDestinationFromViewportTransform(event, top_koid, *view_tree_snapshot_);
+          local_point = utils::TransformPointerCoords(
+              event.position_in_viewport,
+              utils::ColumnMajorMat3VectorToMat4(top_view_from_viewport_transform));
+        }
+        return std::pair<zx_koid_t, std::array<float, 2>>{top_koid, {local_point.x, local_point.y}};
+      },
+      contender_inspector_);
+
+  const auto [it, success1] = touch_contenders_.emplace(
+      view_ref_koid,
+      TouchContender{.contender_id = contender_id, .touch_source = std::move(touch_source)});
+  FX_DCHECK(success1);
+  const auto [_, success2] = contenders_.emplace(contender_id, it->second.touch_source.get());
+  FX_DCHECK(success2);
+
+  // Return the new channel.
+  callback(std::move(handle), nullptr);
 }
 
 fuchsia::ui::input::accessibility::PointerEvent TouchSystem::CreateAccessibilityEvent(
@@ -207,11 +267,7 @@ void TouchSystem::RegisterTouchSource(
         RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
       },
       /*error_handler*/
-      [this, contender_id, client_view_ref_koid] {
-        // Erase from |contenders_| first to avoid re-entry.
-        contenders_.erase(contender_id);
-        touch_contenders_.erase(client_view_ref_koid);
-      },
+      [this, client_view_ref_koid] { EraseTouchContender(client_view_ref_koid); },
       contender_inspector_);
   const auto [it, success1] = touch_contenders_.emplace(
       client_view_ref_koid,
@@ -219,6 +275,16 @@ void TouchSystem::RegisterTouchSource(
   FX_DCHECK(success1);
   const auto [_, success2] = contenders_.emplace(contender_id, it->second.touch_source.get());
   FX_DCHECK(success2);
+}
+
+zx_koid_t TouchSystem::FindViewRefKoidOfRelatedChannel(
+    const fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSource>& original) const {
+  const zx_koid_t related_koid = utils::ExtractRelatedKoid(original.channel());
+  const auto it = std::find_if(touch_contenders_.begin(), touch_contenders_.end(),
+                               [related_koid](const auto& kv) {
+                                 return kv.second.touch_source->channel_koid() == related_koid;
+                               });
+  return it == touch_contenders_.end() ? ZX_KOID_INVALID : it->first;
 }
 
 void TouchSystem::InjectTouchEventExclusive(const InternalTouchEvent& event, StreamId stream_id) {
@@ -499,6 +565,18 @@ void TouchSystem::DestroyArenaIfComplete(StreamId stream_id) {
     // If both the contest and the stream is over, destroy the arena.
     gesture_arenas_.erase(stream_id);
   }
+}
+
+void TouchSystem::EraseTouchContender(zx_koid_t view_ref_koid) {
+  const auto it = touch_contenders_.find(view_ref_koid);
+  if (it == touch_contenders_.end()) {
+    return;
+  }
+
+  const ContenderId contender_id = it->second.contender_id;
+  // Erase from |contenders_| first to avoid re-entry in the destructor.
+  contenders_.erase(contender_id);
+  touch_contenders_.erase(view_ref_koid);
 }
 
 void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event,

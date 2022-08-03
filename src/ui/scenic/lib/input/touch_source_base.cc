@@ -132,12 +132,16 @@ bool IsHold(fuchsia::ui::pointer::TouchResponseType response) {
 }  // namespace
 
 TouchSourceBase::TouchSourceBase(
-    zx_koid_t view_ref_koid,
+    zx_koid_t channel_koid, zx_koid_t view_ref_koid,
     fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
-    fit::function<void(zx_status_t)> close_channel, GestureContenderInspector& inspector)
+    fit::function<void(zx_status_t)> close_channel,
+    fit::function<void(AugmentedTouchEvent&, const InternalTouchEvent&)> augment,
+    GestureContenderInspector& inspector)
     : GestureContender(view_ref_koid),
+      channel_koid_(channel_koid),
       respond_(std::move(respond)),
       close_channel_(std::move(close_channel)),
+      augment_(std::move(augment)),
       inspector_(inspector) {}
 
 TouchSourceBase::~TouchSourceBase() {
@@ -179,42 +183,48 @@ void TouchSourceBase::UpdateStream(StreamId stream_id, const InternalTouchEvent&
   }
 
   {  // Build the event.
-    auto out_event = NewTouchEvent(stream_id, event, is_end_of_stream);
+    AugmentedTouchEvent out_event;
+    {
+      out_event.touch_event = NewTouchEvent(stream_id, event, is_end_of_stream);
+      auto& touch_event = out_event.touch_event;
 
-    FX_DCHECK(!(won_streams_awaiting_first_message_.count(stream_id) != 0 && !is_new_stream))
-        << "Can't have a pre-decided win for an ongoing stream.";
-    if (is_new_stream) {
-      // First time we see a device we need to add DeviceInfo to the message.
-      if (seen_devices_.count(event.device_id) == 0) {
-        fuchsia::ui::pointer::TouchDeviceInfo device_info;
-        device_info.set_id(event.device_id);
-        out_event.set_device_info(std::move(device_info));
+      FX_DCHECK(!(won_streams_awaiting_first_message_.count(stream_id) != 0 && !is_new_stream))
+          << "Can't have a pre-decided win for an ongoing stream.";
+      if (is_new_stream) {
+        // First time we see a device we need to add DeviceInfo to the message.
+        if (seen_devices_.count(event.device_id) == 0) {
+          fuchsia::ui::pointer::TouchDeviceInfo device_info;
+          device_info.set_id(event.device_id);
+          touch_event.set_device_info(std::move(device_info));
 
-        seen_devices_.emplace(event.device_id);
+          seen_devices_.emplace(event.device_id);
+        }
+
+        // If the stream was won before the first message arrived, attach the "win" to the first
+        // message.
+        if (won_streams_awaiting_first_message_.count(stream_id) != 0) {
+          AddInteractionResultsToEvent(touch_event, stream_id, event.device_id, event.pointer_id,
+                                       true);
+          won_streams_awaiting_first_message_.erase(stream_id);
+        }
       }
 
-      // If the stream was won before the first message arrived, attach the "win" to the first
-      // message.
-      if (won_streams_awaiting_first_message_.count(stream_id) != 0) {
-        AddInteractionResultsToEvent(out_event, stream_id, event.device_id, event.pointer_id, true);
-        won_streams_awaiting_first_message_.erase(stream_id);
-      }
-    }
-
-    if (event.phase == Phase::kCancel) {
-      // For cancel events it's likely we're not in the view tree, so we can't trust viewport
-      // transforms or view bounds. Skip checking them since it's not necessary at the end of a
-      // stream anyway.
-    } else if (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
-               is_first_event_) {
       // Add ViewParameters to the message if the viewport or view bounds have changed (which is
       // always true for the first message).
-      is_first_event_ = false;
-      current_viewport_ = event.viewport;
-      current_view_bounds_ = view_bounds;
-      AddViewParametersToEvent(out_event, current_viewport_, current_view_bounds_);
+      // (For cancel events it's likely we're not in the view tree, so we can't trust viewport
+      //  transforms or view bounds. Skip checking them since it's not necessary at the end of a
+      //  stream anyway.)
+      if (event.phase != Phase::kCancel &&
+          (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
+           is_first_event_)) {
+        is_first_event_ = false;
+        current_viewport_ = event.viewport;
+        current_view_bounds_ = view_bounds;
+        AddViewParametersToEvent(touch_event, current_viewport_, current_view_bounds_);
+      }
     }
 
+    augment_(out_event, event);
     pending_events_.push({.stream_id = stream_id, .event = std::move(out_event)});
   }
 
@@ -245,9 +255,9 @@ void TouchSourceBase::EndContest(StreamId stream_id, bool awarded_win) {
   auto& stream = it->second;
   FX_DCHECK(!stream.was_won) << "Can't have two EndContest() calls for the same stream.";
   stream.was_won = awarded_win;
-  pending_events_.push(
-      {.stream_id = stream_id,
-       .event = NewEndEvent(stream_id, stream.device_id, stream.pointer_id, awarded_win)});
+  AugmentedTouchEvent event{
+      .touch_event = NewEndEvent(stream_id, stream.device_id, stream.pointer_id, awarded_win)};
+  pending_events_.push({.stream_id = stream_id, .event = std::move(event)});
   SendPendingIfWaiting();
 
   if (!awarded_win) {
@@ -293,9 +303,8 @@ zx_status_t TouchSourceBase::ValidateResponses(
   return ZX_OK;
 }
 
-void TouchSourceBase::WatchBase(
-    std::vector<fuchsia::ui::pointer::TouchResponse> responses,
-    fit::function<void(std::vector<fuchsia::ui::pointer::TouchEvent>)> callback) {
+void TouchSourceBase::WatchBase(std::vector<fuchsia::ui::pointer::TouchResponse> responses,
+                                fit::function<void(std::vector<AugmentedTouchEvent>)> callback) {
   TRACE_DURATION("input", "TouchSourceBase::Watch");
   const zx_status_t error = ValidateResponses(
       responses, return_tickets_, /*have_pending_callback*/ pending_callback_ != nullptr);
@@ -408,14 +417,14 @@ void TouchSourceBase::SendPendingIfWaiting() {
   }
   FX_DCHECK(return_tickets_.empty());
 
-  std::vector<fuchsia::ui::pointer::TouchEvent> events;
+  std::vector<AugmentedTouchEvent> events;
   for (size_t i = 0; !pending_events_.empty() && i < fuchsia::ui::pointer::TOUCH_MAX_EVENT; ++i) {
     auto [stream_id, event] = std::move(pending_events_.front());
-    TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", event.trace_flow_id());
+    TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", event.touch_event.trace_flow_id());
 
     pending_events_.pop();
     return_tickets_.push_back(
-        {.stream_id = stream_id, .expects_response = event.has_pointer_sample()});
+        {.stream_id = stream_id, .expects_response = event.touch_event.has_pointer_sample()});
     events.emplace_back(std::move(event));
   }
   FX_DCHECK(!events.empty());
