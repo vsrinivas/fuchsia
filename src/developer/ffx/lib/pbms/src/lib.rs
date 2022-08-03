@@ -23,7 +23,8 @@ use {
     crate::{
         pbms::{
             fetch_product_metadata, get_product_data_from_gcs, local_path_helper,
-            path_from_file_url, pb_names_from_path, pbm_repo_list, CONFIG_STORAGE_PATH, GS_SCHEME,
+            path_from_file_url, pb_dir_name, pb_names_from_path, pbm_repo_list,
+            CONFIG_STORAGE_PATH, GS_SCHEME,
         },
         repo_info::RepoInfo,
     },
@@ -35,17 +36,45 @@ use {
     std::path::{Path, PathBuf},
 };
 
+pub use crate::pbms::{get_product_dir, get_storage_dir};
+
 mod gcs;
 mod pbms;
 mod repo_info;
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
-pub async fn update_metadata<F>(progress: &mut F) -> Result<()>
+pub async fn update_metadata_all<F>(output_dir: &Path, progress: &mut F) -> Result<()>
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
+    tracing::debug!("update_metadata_all");
     let repos = pbm_repo_list().await.context("getting repo list")?;
-    fetch_product_metadata(&repos, progress).await.context("fetching product metadata")
+    async_fs::create_dir_all(&output_dir).await.context("create directory")?;
+    for repo_url in repos {
+        if repo_url.scheme() != GS_SCHEME {
+            // There's no need to fetch local files or unrecognized schemes.
+            continue;
+        }
+        fetch_product_metadata(&repo_url, &output_dir.join(pb_dir_name(&repo_url)), progress)
+            .await
+            .context("fetching product metadata")?;
+    }
+    Ok(())
+}
+
+/// Update metadata from given url.
+pub async fn update_metadata_from<F>(
+    product_url: &url::Url,
+    output_dir: &Path,
+    progress: &mut F,
+) -> Result<()>
+where
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+{
+    tracing::debug!("update_metadata_from");
+    fetch_product_metadata(&product_url, output_dir, progress)
+        .await
+        .context("fetching product metadata")
 }
 
 /// Gather a list of PBM reference URLs which include the product bundle entry
@@ -54,6 +83,7 @@ where
 /// Tip: Call `update_metadata()` to update the info (or not, if the intent is
 ///      to peek at what's there without updating).
 pub async fn product_bundle_urls() -> Result<Vec<url::Url>> {
+    tracing::debug!("product_bundle_urls");
     let mut result = Vec::new();
 
     // Collect product bundle URLs from the file paths in ffx config.
@@ -102,6 +132,7 @@ pub async fn product_bundle_urls() -> Result<Vec<url::Url>> {
 /// If `product_url` is None or not a URL, then an attempt will be made to find
 /// default entries.
 pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
+    tracing::debug!("fms_entries_from");
     let path = get_metadata_glob(product_url).await.context("getting metadata")?;
     let mut entries = Entries::new();
     entries.add_from_path(&path).context("adding entries")?;
@@ -120,6 +151,7 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
 /// Tip: Call `update_metadata()` to get up to date choices (or not, if the
 ///      intent is to select from what's already there).
 pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::Url> {
+    tracing::debug!("select_product_bundle");
     let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
     urls.sort();
     urls.reverse();
@@ -176,10 +208,15 @@ pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
 /// is used.
 ///
 /// `writer` is used to output user messages.
-pub async fn get_product_data<F>(product_url: &url::Url, progress: &mut F) -> Result<()>
+pub async fn get_product_data<F>(
+    product_url: &url::Url,
+    output_dir: &std::path::Path,
+    progress: &mut F,
+) -> Result<()>
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
+    tracing::debug!("get_product_data {:?} to {:?}", product_url, output_dir);
     if product_url.scheme() == "file" {
         tracing::info!("There's no data download necessary for local products.");
         return Ok(());
@@ -188,7 +225,9 @@ where
         tracing::info!("Only GCS downloads are supported at this time.");
         return Ok(());
     }
-    get_product_data_from_gcs(product_url, progress).await.context("reading pbms entries")?;
+    get_product_data_from_gcs(product_url, output_dir, progress)
+        .await
+        .context("reading pbms entries")?;
     Ok(())
 }
 
@@ -286,7 +325,10 @@ mod tests {
             .set(serde_json::json!([""]))
             .await
             .expect("set pbms metadata");
-        update_metadata(&mut |_d, _f| Ok(ProgressResponse::Continue)).await.expect("get pbms");
+        let output_dir = temp_dir.path().join("output_dir");
+        update_metadata_all(&output_dir, &mut |_d, _f| Ok(ProgressResponse::Continue))
+            .await
+            .expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
     }

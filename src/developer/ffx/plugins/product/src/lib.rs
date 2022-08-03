@@ -13,7 +13,7 @@ use {
     ffx_product_args::{GetCommand, ListCommand, ProductCommand, SubCommand},
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
-    pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata},
+    pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata_all},
     std::{
         convert::TryInto,
         io::{stdout, Write},
@@ -46,7 +46,8 @@ where
 /// `ffx product list` sub-command.
 async fn pb_list<W: Write + Sync>(writer: &mut W, cmd: &ListCommand) -> Result<()> {
     if !cmd.cached {
-        update_metadata(&mut |_d, _f| {
+        let base_dir = pbms::get_storage_dir().await?;
+        update_metadata_all(&base_dir, &mut |_d, _f| {
             write!(writer, ".")?;
             writer.flush()?;
             Ok(ProgressResponse::Continue)
@@ -76,8 +77,9 @@ async fn pb_get<W: Write + Sync>(
     cmd: &GetCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
+    let base_dir = pbms::get_storage_dir().await?;
     if !cmd.cached {
-        update_metadata(&mut |_d, _f| {
+        update_metadata_all(&base_dir, &mut |_d, _f| {
             write!(writer, ".")?;
             writer.flush()?;
             Ok(ProgressResponse::Continue)
@@ -85,7 +87,7 @@ async fn pb_get<W: Write + Sync>(
         .await?;
     }
     let product_url = pbms::select_product_bundle(&cmd.product_bundle_name).await?;
-    get_product_data(&product_url, &mut |_d, _f| {
+    get_product_data(&product_url, &base_dir, &mut |_d, _f| {
         write!(writer, ".")?;
         writer.flush()?;
         Ok(ProgressResponse::Continue)

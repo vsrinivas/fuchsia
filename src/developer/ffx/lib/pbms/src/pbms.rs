@@ -36,41 +36,33 @@ pub(crate) const CONFIG_METADATA: &str = "pbms.metadata";
 pub(crate) const CONFIG_STORAGE_PATH: &str = "pbms.storage.path";
 pub(crate) const GS_SCHEME: &str = "gs";
 
-/// Load FMS Entries for a given SDK `version`.
+/// Load FMS Entries.
 ///
 /// Expandable tags (e.g. "{foo}") in `repos` must already be expanded, do not
 /// pass in repo URIs with expandable tags.
-pub(crate) async fn fetch_product_metadata<F>(repos: &Vec<url::Url>, progress: &mut F) -> Result<()>
+pub(crate) async fn fetch_product_metadata<F>(
+    repo: &url::Url,
+    output_dir: &Path,
+    progress: &mut F,
+) -> Result<()>
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    tracing::info!("Getting product metadata.");
-    let storage_path: PathBuf =
-        ffx_config::get(CONFIG_STORAGE_PATH).await.context("get CONFIG_STORAGE_PATH")?;
-    async_fs::create_dir_all(&storage_path).await.context("create directory")?;
-    for repo_url in repos {
-        if repo_url.scheme() != GS_SCHEME {
-            // There's no need to fetch local files or unrecognized schemes.
-            continue;
-        }
-        let hash = pb_dir_name(&repo_url);
-        let local_path = storage_path.join(hash).join("product_bundles.json");
-        if let Some(local_dir) = local_path.parent() {
-            async_fs::create_dir_all(&local_dir).await.context("create directory")?;
+    tracing::info!("Getting product metadata for {:?}", repo);
+    async_fs::create_dir_all(&output_dir).await.context("create directory")?;
 
-            let mut info = RepoInfo::default();
-            info.metadata_url = repo_url.to_string();
-            info.save(&local_dir.join("info"))?;
+    let mut info = RepoInfo::default();
+    info.metadata_url = repo.to_string();
+    info.save(&output_dir.join("info"))?;
 
-            let temp_dir = tempfile::tempdir_in(&local_dir).context("create temp dir")?;
-            fetch_bundle_uri(&repo_url, &temp_dir.path(), progress)
-                .await
-                .context("fetch product bundle by URL")?;
-            let the_file = temp_dir.path().join("product_bundles.json");
-            if the_file.is_file() {
-                async_fs::rename(&the_file, &local_path).await.context("move temp file")?;
-            }
-        }
+    let temp_dir = tempfile::tempdir_in(&output_dir).context("create temp dir")?;
+    fetch_bundle_uri(&repo, &temp_dir.path(), progress)
+        .await
+        .context("fetch product bundle by URL")?;
+    let the_file = temp_dir.path().join("product_bundles.json");
+    if the_file.is_file() {
+        let local_path = output_dir.join("product_bundles.json");
+        async_fs::rename(&the_file, &local_path).await.context("move temp file")?;
     }
     Ok(())
 }
@@ -174,10 +166,22 @@ pub(crate) async fn local_path_helper(
         }
     } else {
         let url = url_sans_fragment(&product_url)?;
-        let storage_path: PathBuf =
-            ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
-        Ok(storage_path.join(pb_dir_name(&url)).join(add_dir))
+        Ok(get_product_dir(&url).await?.join(add_dir))
     }
+}
+
+/// Retrieve the storage directory path from the config.
+pub async fn get_storage_dir() -> Result<PathBuf> {
+    let storage_path: PathBuf =
+        ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
+    Ok(storage_path)
+}
+
+/// Retrieve the product directory path from the config.
+///
+/// This is the storage path plus a hash of the `product_url` provided.
+pub async fn get_product_dir(product_url: &url::Url) -> Result<PathBuf> {
+    Ok(get_storage_dir().await?.join(pb_dir_name(product_url)))
 }
 
 /// Separate the URL on the last "#" character.
@@ -195,23 +199,22 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
 /// Helper for `get_product_data()`, see docs there.
 pub(crate) async fn get_product_data_from_gcs<F>(
     product_url: &url::Url,
+    local_repo_dir: &std::path::Path,
     progress: &mut F,
 ) -> Result<()>
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
+    tracing::debug!("get_product_data_from_gcs {:?} to {:?}", product_url, local_repo_dir);
     assert_eq!(product_url.scheme(), GS_SCHEME);
     let product_name = product_url.fragment().expect("URL with trailing product_name fragment.");
     let url = url_sans_fragment(product_url)?;
 
-    fetch_product_metadata(&vec![url.to_owned()], progress).await.context("fetching metadata")?;
+    fetch_product_metadata(&url, local_repo_dir, progress).await.context("fetching metadata")?;
 
-    let storage_path: PathBuf =
-        ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
-    let local_repo_dir = storage_path.join(pb_dir_name(&url));
     let file_path = local_repo_dir.join("product_bundles.json");
     if !file_path.is_file() {
-        bail!("Failed to download metadata.");
+        bail!("product_bundles.json not found {:?}.", file_path);
     }
     let mut entries = Entries::new();
     entries.add_from_path(&file_path).context("adding entries from gcs")?;
@@ -255,13 +258,18 @@ where
 /// Generate a (likely) unique name for the URL.
 ///
 /// URLs don't always make good file paths.
-fn pb_dir_name(gcs_url: &url::Url) -> String {
+pub(crate) fn pb_dir_name(gcs_url: &url::Url) -> String {
+    let mut gcs_url = gcs_url.to_owned();
+    gcs_url.set_fragment(None);
+
     use std::collections::hash_map::DefaultHasher;
     use std::hash::Hash;
     use std::hash::Hasher;
     let mut s = DefaultHasher::new();
     gcs_url.as_str().hash(&mut s);
-    format!("{}", s.finish())
+    let out = s.finish();
+    tracing::debug!("pb_dir_name {:?}, hash {:?}", gcs_url, out);
+    format!("{}", out)
 }
 
 /// Fetch the product bundle package repository mirror list.
@@ -584,6 +592,7 @@ async fn fetch_by_format<F>(
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
+    tracing::debug!("fetch_by_format");
     match format {
         "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, progress).await,
         _ =>
@@ -613,6 +622,7 @@ async fn fetch_bundle_uri<F>(
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
+    tracing::debug!("fetch_bundle_uri");
     if product_url.scheme() == GS_SCHEME {
         fetch_from_gcs(product_url.as_str(), local_dir, progress)
             .await
