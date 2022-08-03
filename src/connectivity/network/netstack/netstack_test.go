@@ -584,7 +584,13 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	var wq waiter.Queue
 	eps := createEP(t, ns, &wq)
 
-	events := make(chan waiter.EventMask, 1)
+	// We trigger link resolution with a TCP segment being sent, and then send
+	// another segment after 1 second, and another after 2 seconds. This means we
+	// could send up to 3 TCP segments, meaning the waiter can get notified up to
+	// 3 times when link resolution fails. We only consume 1 waiter event in this
+	// test, so we need to leave room in the buffer for two events in order for
+	// the test not to deadlock.
+	events := make(chan waiter.EventMask, 2)
 	waitEntry := waiter.NewFunctionEntry(math.MaxUint64, func(m waiter.EventMask) {
 		events <- m
 	})
