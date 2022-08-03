@@ -150,8 +150,27 @@ where
             warn!("Unable to start SRP advertising proxy: {:?}", err);
         }
 
+        // Make sure we are a router.
+        driver_state
+            .ot_instance
+            .set_link_mode(
+                ot::LinkModeConfig::IS_FTD
+                    | ot::LinkModeConfig::NETWORK_DATA
+                    | ot::LinkModeConfig::RX_ON_WHEN_IDLE,
+            )
+            .unwrap();
+
+        // Make sure SLAAC addresses are turned on.
+        driver_state.ot_instance.ip6_set_slaac_enabled(true);
+
         // Enable the receive filter.
         driver_state.ot_instance.ip6_set_receive_filter_enabled(true);
+
+        // Turn off ICMPv6 ping auto-reply.
+        driver_state.ot_instance.icmp6_set_echo_mode(ot::Icmp6EchoMode::HandleDisabled);
+
+        // Enable SRP Server
+        driver_state.ot_instance.srp_server_set_enabled(true);
     }
 
     /// A single iteration of the main task loop
@@ -217,22 +236,6 @@ where
 
         {
             let driver_state = self.driver_state.lock();
-
-            // Make sure we are a router.
-            driver_state.ot_instance.set_link_mode(
-                ot::LinkModeConfig::IS_FTD
-                    | ot::LinkModeConfig::NETWORK_DATA
-                    | ot::LinkModeConfig::RX_ON_WHEN_IDLE,
-            )?;
-
-            // Make sure SLAAC addresses are turned on.
-            driver_state.ot_instance.ip6_set_slaac_enabled(true);
-
-            // Turn off ICMPv6 ping auto-reply.
-            driver_state.ot_instance.icmp6_set_echo_mode(ot::Icmp6EchoMode::HandleDisabled);
-
-            // Enable SRP Server
-            driver_state.ot_instance.srp_server_set_enabled(true);
 
             // Bring up the network interface.
             driver_state.ot_instance.ip6_set_enabled(true).context("ip6_set_enabled")?;
