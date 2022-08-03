@@ -5,3 +5,20 @@
 # The location of the build configuration file.
 buildconfig = "//build/BUILDCONFIG.gn"
 script_executable = ""
+
+# Read the latest API level entry present in the version_history.json file.
+max_api_level = ""
+platform_version_content =
+    read_file("//third_party/fuchsia-sdk/version_history.json", "json")
+version_history_data = platform_version_content.data
+version_history_data_data_versions = version_history_data.versions
+foreach(v, version_history_data_data_versions) {
+  # This assumes that the API levels are always stored in increasing order. If
+  # this assumption becomes invalid then this should still be correct as the
+  # version history file should only contain supported API levels.
+  max_api_level = v.api_level
+}
+
+default_args = {
+  fuchsia_target_api_level = max_api_level
+}
