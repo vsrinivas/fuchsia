@@ -317,23 +317,49 @@ impl AutoClient {
     }
 
     async fn run(self) {
+        // In order to cut down on log spam, only log the first connection attempt and connection
+        // error once until we successfully connect. Other errors will be logged as normal.
+        let mut log_connection_attempt = true;
+
         loop {
-            fx_log_info!("AutoClient for {:?} connecting.", self.auto_url);
+            if log_connection_attempt {
+                fx_log_info!("AutoClient for {:?} connecting", self.auto_url);
+            }
+
             match self.connect().await {
-                Ok(sse_client) => match self.handle_sse(sse_client).await {
-                    HandleSseEndState::Abort => {
-                        return;
+                Ok(sse_client) => {
+                    fx_log_info!("AutoClient for {:?} connected", self.auto_url);
+
+                    // Log any future connection errors.
+                    log_connection_attempt = true;
+
+                    match self.handle_sse(sse_client).await {
+                        HandleSseEndState::Abort => {
+                            return;
+                        }
+                        HandleSseEndState::Reconnect => (),
                     }
-                    HandleSseEndState::Reconnect => (),
-                },
+                }
+                Err(http_sse::ClientConnectError::MakeRequest(e)) if e.is_connect() => {
+                    if log_connection_attempt {
+                        log_connection_attempt = false;
+
+                        fx_log_err!(
+                            "AutoClient for {:?} error connecting: {:#}",
+                            self.auto_url,
+                            anyhow!(e)
+                        );
+                    }
+                }
                 Err(e) => {
                     fx_log_err!(
-                        "AutoClient for {:?} error connecting: {:#}",
+                        "AutoClient for {:?} making request: {:#}",
                         self.auto_url,
                         anyhow!(e)
                     );
                 }
             }
+
             Self::wait_before_reconnecting().await;
         }
     }
