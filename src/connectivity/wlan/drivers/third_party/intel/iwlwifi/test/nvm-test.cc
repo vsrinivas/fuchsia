@@ -18,7 +18,7 @@ namespace {
 
 class NvmTest : public FakeUcodeTest {
  public:
-  NvmTest() : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0, 0) {}
+  NvmTest() : FakeUcodeTest({IWL_UCODE_TLV_CAPA_LAR_SUPPORT}, {}) {}
   ~NvmTest() {}
 };
 

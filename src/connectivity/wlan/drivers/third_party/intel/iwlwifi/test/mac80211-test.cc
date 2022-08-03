@@ -29,8 +29,7 @@ namespace {
 //
 class ClientInterfaceHelper {
  public:
-  ClientInterfaceHelper(SimTransport* sim_trans) : mvmvif_{}, ap_sta_{}, txqs_ {}
-  {
+  ClientInterfaceHelper(SimTransport* sim_trans) : mvmvif_{}, ap_sta_{}, txqs_{} {
     mvm_ = iwl_trans_get_mvm(sim_trans->iwl_trans());
 
     // First find a free slot for the interface.
@@ -71,12 +70,8 @@ class ClientInterfaceHelper {
     mtx_unlock(&mvm_->mutex);
   }
 
-  struct iwl_mvm* mvm() {
-    return mvm_;
-  }
-  struct iwl_mvm_vif* mvmvif() {
-    return &mvmvif_;
-  }
+  struct iwl_mvm* mvm() { return mvm_; }
+  struct iwl_mvm_vif* mvmvif() { return &mvmvif_; }
 
  private:
   struct iwl_mvm* mvm_;
@@ -99,8 +94,7 @@ class Mac80211Test : public SingleApTest {
 class Mac80211UcodeTest : public FakeUcodeTest {
  public:
   Mac80211UcodeTest()
-      : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0,
-                      BIT(IWL_UCODE_TLV_API_WIFI_MCC_UPDATE)),
+      : FakeUcodeTest({IWL_UCODE_TLV_CAPA_LAR_SUPPORT}, {IWL_UCODE_TLV_API_WIFI_MCC_UPDATE}),
         mvm_(iwl_trans_get_mvm(sim_trans_.iwl_trans())) {}
   ~Mac80211UcodeTest() {}
 

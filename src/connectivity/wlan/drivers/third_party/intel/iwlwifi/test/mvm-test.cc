@@ -473,9 +473,7 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
   const uint8_t kFakeMacHdr[kFakeMacHdrLen] = {'F', 'a', 'k', 'e', 'H', 'e', 'a', 'd'};
 
   UmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS
-      : FakeUcodeTest(IWL_UCODE_TLV_CAPA_UMAC_SCAN / 32, BIT(IWL_UCODE_TLV_CAPA_UMAC_SCAN % 32),
-                      IWL_UCODE_TLV_API_ADAPTIVE_DWELL / 32,
-                      BIT(IWL_UCODE_TLV_API_ADAPTIVE_DWELL % 32)) {
+      : FakeUcodeTest({IWL_UCODE_TLV_CAPA_UMAC_SCAN}, {IWL_UCODE_TLV_API_ADAPTIVE_DWELL}) {
     mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;

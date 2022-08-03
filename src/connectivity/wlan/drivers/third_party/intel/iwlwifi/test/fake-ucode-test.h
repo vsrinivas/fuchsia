@@ -6,9 +6,11 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_FAKE_UCODE_TEST_H_
 
 #include <memory>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
@@ -22,17 +24,9 @@ namespace wlan::testing {
 //
 class FakeUcodeTest : public ::zxtest::Test {
  public:
-  // The constructor takes four parameters. They will be assigned to the API flags and capabilities.
-  // The *_index are the array index in iwl_ucode_capabilities._api[] and ._capa[]. The *_value are
-  // limited from 0 to 31. These 2 fields are used to present all values of IWL_UCODE_TLV_API_* and
-  // IWL_UCODE_TLV_CAPA_*.
-  //
-  // TODO(fxbug.dev/92106): support multiple bits.
-  //
-  // For how iwlwifi driver is parsing the ucode capabilities from firmware tlv binary, please refer
-  // to iwl_set_ucode_capabilities() in iwlwifi/iwl-drv.c. For the value options, please refer to
-  // enum iwl_ucode_tlv_capa and enum iwl_ucode_tlv_api in iwlwifi/fw/file.h.
-  FakeUcodeTest(uint32_t capa_index, uint32_t capa_val, uint32_t api_index, uint32_t api_val);
+  // Creates a fake firmware with the given capabilities/apis.
+  FakeUcodeTest(const std::vector<enum iwl_ucode_tlv_capa>& capas,
+                const std::vector<enum iwl_ucode_tlv_api>& apis);
   ~FakeUcodeTest() = default;
 
  protected:

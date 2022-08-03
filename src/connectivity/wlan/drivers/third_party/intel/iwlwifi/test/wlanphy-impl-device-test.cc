@@ -34,8 +34,7 @@ constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not Z
 class WlanphyImplDeviceTest : public FakeUcodeTest {
  public:
   WlanphyImplDeviceTest()
-      : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0,
-                      BIT(IWL_UCODE_TLV_API_WIFI_MCC_UPDATE)),
+      : FakeUcodeTest({IWL_UCODE_TLV_CAPA_LAR_SUPPORT}, {IWL_UCODE_TLV_API_WIFI_MCC_UPDATE}),
         mvmvif_sta_{
             .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
             .mac_role = WLAN_MAC_ROLE_CLIENT,
