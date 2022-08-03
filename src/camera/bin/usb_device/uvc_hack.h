@@ -14,10 +14,10 @@
 // device.
 namespace camera {
 
-constexpr uint32_t kUvcHackWidth = 1280;
-constexpr uint32_t kUvcHackHeight = 720;
-constexpr uint32_t kUvcHackFrameRateNumerator = 10;
-constexpr uint32_t kUvcHackFrameRateDenominator = 1;
+constexpr uint32_t kUvcHackWidth = 640;
+constexpr uint32_t kUvcHackHeight = 480;
+constexpr uint32_t kUvcHackFrameRateNumerator = 10000000;
+constexpr uint32_t kUvcHackFrameRateDenominator = 333333;
 
 // Client-facing side (NV12)
 constexpr auto kUvcHackClientPixelFormatType = fuchsia::sysmem::PixelFormatType::NV12;
