@@ -445,6 +445,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.feedback/RebootReason.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.feedback/RebootReason.USER_REQUEST",
         "value": "9"
     },
@@ -457,7 +462,7 @@
         "declaration": "uint16",
         "kind": "enum",
         "name": "fuchsia.feedback/RebootReason",
-        "strictness": "strict"
+        "strictness": "flexible"
     },
     {
         "declaration": "string:2048",
