@@ -5,6 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_DDI_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_REGISTERS_DDI_H_
 
+#include <zircon/assert.h>
+
 #include <hwreg/bitfields.h>
 
 namespace tgl_registers {
@@ -47,7 +49,7 @@ class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> 
   static constexpr uint32_t kSdeIntIdentity = 0xc4008;
   static constexpr uint32_t kSdeIntEnable = 0xc400c;
 
-  hwreg::BitfieldRef<uint32_t> ddi_bit(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> skl_ddi_bit(Ddi ddi) {
     uint32_t bit;
     switch (ddi) {
       case DDI_A:
@@ -67,11 +69,145 @@ class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> 
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
+  hwreg::BitfieldRef<uint32_t> icl_ddi_bit(Ddi ddi) {
+    uint32_t bit;
+    switch (ddi) {
+      case DDI_A:
+      case DDI_B:
+      case DDI_C:
+        bit = 16 + ddi - DDI_A;
+        break;
+      case DDI_TC_1:
+      case DDI_TC_2:
+      case DDI_TC_3:
+      case DDI_TC_4:
+      case DDI_TC_5:
+      case DDI_TC_6:
+        bit = 24 + ddi - DDI_TC_1;
+        break;
+      default:
+        bit = -1;
+    }
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
   static auto Get(uint32_t offset) { return hwreg::RegisterAddr<SdeInterruptBase>(offset); }
 };
 
-// SHOTPLUG_CTL + SHOTPLUG_CTL2
-class HotplugCtrl : public hwreg::RegisterBase<HotplugCtrl, uint32_t> {
+// DE_HPD_INTERRUPT : Display Engine HPD Interrupts for Type C / Thunderbolt (since gen11)
+class HpdInterruptBase : public hwreg::RegisterBase<HpdInterruptBase, uint32_t> {
+ public:
+  static constexpr uint32_t kHpdIntMask = 0x44474;
+  static constexpr uint32_t kHpdIntIdentity = 0x44478;
+  static constexpr uint32_t kHpdIntEnable = 0x4447c;
+
+  hwreg::BitfieldRef<uint32_t> tc_hotplug(Ddi ddi) {
+    ZX_DEBUG_ASSERT(ddi >= DDI_TC_1 && ddi <= DDI_TC_6);
+    uint32_t bit = 16 + ddi - DDI_TC_1;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> tbt_hotplug(Ddi ddi) {
+    ZX_DEBUG_ASSERT(ddi >= DDI_TC_1 && ddi <= DDI_TC_6);
+    uint32_t bit = ddi - DDI_TC_1;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<HpdInterruptBase>(offset); }
+};
+
+// TBT_HOTPLUG_CTL : Thunderbolt Hot Plug Control (since gen11)
+class TbtHotplugCtrl : public hwreg::RegisterBase<TbtHotplugCtrl, uint32_t> {
+ public:
+  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  static auto Get() { return hwreg::RegisterAddr<TbtHotplugCtrl>(kOffset); }
+
+ private:
+  static constexpr uint32_t kOffset = 0x44030;
+
+  static constexpr uint32_t kHpdShortPulseBitSubOffset = 0;
+  static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
+  static constexpr uint32_t kHpdEnableBitSubOffset = 3;
+
+  static uint32_t ddi_to_first_bit(Ddi ddi) {
+    switch (ddi) {
+      case DDI_A:
+      case DDI_B:
+      case DDI_C:
+        ZX_DEBUG_ASSERT_MSG(false, "Use south display hot plug registers for DDI A-C");
+        return -1;
+      case DDI_TC_1:
+      case DDI_TC_2:
+      case DDI_TC_3:
+      case DDI_TC_4:
+      case DDI_TC_5:
+      case DDI_TC_6:
+        return 4 * (ddi - DDI_TC_1);
+    }
+  }
+};
+
+// TC_HOTPLUG_CTL : Type-C Hot Plug Control (since gen11)
+class TcHotplugCtrl : public hwreg::RegisterBase<TcHotplugCtrl, uint32_t> {
+ public:
+  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  static auto Get() { return hwreg::RegisterAddr<TcHotplugCtrl>(kOffset); }
+
+ private:
+  static constexpr uint32_t kOffset = 0x44038;
+
+  static constexpr uint32_t kHpdShortPulseBitSubOffset = 0;
+  static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
+  static constexpr uint32_t kHpdEnableBitSubOffset = 3;
+
+  static uint32_t ddi_to_first_bit(Ddi ddi) {
+    switch (ddi) {
+      case DDI_A:
+      case DDI_B:
+      case DDI_C:
+        ZX_DEBUG_ASSERT_MSG(false, "Use south display hot plug registers for DDI A-C");
+        return -1;
+      case DDI_TC_1:
+      case DDI_TC_2:
+      case DDI_TC_3:
+      case DDI_TC_4:
+      case DDI_TC_5:
+      case DDI_TC_6:
+        return 4 * (ddi - DDI_TC_1);
+    }
+  }
+};
+
+// SHOTPLUG_CTL_DDI + SHOTPLUG_CTL_TC
+class IclSouthHotplugCtrl : public hwreg::RegisterBase<IclSouthHotplugCtrl, uint32_t> {
  public:
   hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
     uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
@@ -89,7 +225,56 @@ class HotplugCtrl : public hwreg::RegisterBase<HotplugCtrl, uint32_t> {
   }
 
   static auto Get(Ddi ddi) {
-    return hwreg::RegisterAddr<HotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
+    return hwreg::RegisterAddr<IclSouthHotplugCtrl>(ddi >= DDI_TC_1 ? kTcOffset : kDdiOffset);
+  }
+
+ private:
+  static constexpr uint32_t kDdiOffset = 0xc4030;
+  static constexpr uint32_t kTcOffset = 0xc4034;
+
+  static constexpr uint32_t kHpdShortPulseBitSubOffset = 0;
+  static constexpr uint32_t kHpdLongPulseBitSubOffset = 1;
+  static constexpr uint32_t kHpdEnableBitSubOffset = 3;
+
+  static uint32_t ddi_to_first_bit(Ddi ddi) {
+    switch (ddi) {
+      case DDI_A:
+      case DDI_B:
+      case DDI_C:
+        return 4 * (ddi - DDI_A);  // SHOTPLUG_CTL_DDI
+      case DDI_TC_1:
+      case DDI_TC_2:
+      case DDI_TC_3:
+      case DDI_TC_4:
+      case DDI_TC_5:
+      case DDI_TC_6:
+        return 4 * (ddi - DDI_TC_1);  // SHOTPLUG_CTL_TC
+      default:
+        return -1;
+    }
+  }
+};
+
+// SHOTPLUG_CTL + SHOTPLUG_CTL2
+class SouthHotplugCtrl : public hwreg::RegisterBase<SouthHotplugCtrl, uint32_t> {
+ public:
+  hwreg::BitfieldRef<uint32_t> hpd_enable(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdEnableBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> hpd_long_pulse(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdLongPulseBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  hwreg::BitfieldRef<uint32_t> hpd_short_pulse(Ddi ddi) {
+    uint32_t bit = ddi_to_first_bit(ddi) + kHpdShortPulseBitSubOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  static auto Get(Ddi ddi) {
+    return hwreg::RegisterAddr<SouthHotplugCtrl>(ddi == DDI_E ? kOffset2 : kOffset);
   }
 
  private:

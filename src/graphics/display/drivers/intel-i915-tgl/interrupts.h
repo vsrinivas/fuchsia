@@ -14,6 +14,7 @@
 #include <threads.h>
 #include <zircon/types.h>
 
+#include <bitset>
 #include <optional>
 
 #include <fbl/macros.h>
@@ -37,7 +38,7 @@ class Interrupts {
   // instance.
   zx_status_t Init(PipeVsyncCallback pipe_vsync_callback, HotplugCallback hotplug_callback,
                    zx_device_t* dev, const ddk::Pci& pci, fdf::MmioBuffer* mmio_space,
-                   cpp20::span<const tgl_registers::Ddi> ddis);
+                   uint16_t device_id);
   void FinishInit();
   void Resume();
   void Destroy();
@@ -64,7 +65,7 @@ class Interrupts {
   zx::interrupt irq_;
   pci_interrupt_mode_t irq_mode_;
   std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
-  cpp20::span<const tgl_registers::Ddi> ddis_;
+  uint16_t device_id_;
 
   intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
   uint32_t interrupt_mask_ __TA_GUARDED(lock_) = 0;

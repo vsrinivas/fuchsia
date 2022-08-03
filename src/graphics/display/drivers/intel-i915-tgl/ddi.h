@@ -7,9 +7,14 @@
 
 #include <lib/stdcompat/span.h>
 
+#include <array>
+
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 
 namespace i915_tgl {
+
+extern const std::array<tgl_registers::Ddi, 5> kSklDdis;
+extern const std::array<tgl_registers::Ddi, 9> kTglDdis;
 
 // Get the list of DDIs supported by the device of |device_id|.
 cpp20::span<const tgl_registers::Ddi> GetDdis(uint16_t device_id);

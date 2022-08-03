@@ -2019,7 +2019,7 @@ zx_status_t Controller::Init() {
   zxlogf(TRACE, "Initializing interrupts");
   status = interrupts_.Init(fit::bind_member<&Controller::HandlePipeVsync>(this),
                             fit::bind_member<&Controller::HandleHotplug>(this), parent(), pci_,
-                            mmio_space(), ddis_);
+                            mmio_space(), device_id_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to initialize interrupts");
     return status;

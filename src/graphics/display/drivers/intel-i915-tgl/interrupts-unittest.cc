@@ -24,8 +24,7 @@ void NopIrqCb(void*, uint32_t, uint64_t) {}
 
 zx_status_t InitInterrupts(i915_tgl::Interrupts* i, zx_device_t* dev, pci::FakePciProtocol* pci,
                            fdf::MmioBuffer* mmio) {
-  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci->get_pci(), mmio,
-                 i915_tgl::GetDdis(i915_tgl::kTestDeviceDid));
+  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci->get_pci(), mmio, i915_tgl::kTestDeviceDid);
 }
 
 // Test interrupt initialization with both MSI and Legacy interrupt modes.

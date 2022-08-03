@@ -128,16 +128,25 @@ class Dssm : public hwreg::RegisterBase<Dssm, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<Dssm>(0x51004); }
 };
 
-// MASTER_INT_CTL
-class MasterInterruptControl : public hwreg::RegisterBase<MasterInterruptControl, uint32_t> {
+// DISPLAY_INT_CTL (ICL+), a.k.a. MASTER_INT_CTL (SKL)
+class DisplayInterruptControl : public hwreg::RegisterBase<DisplayInterruptControl, uint32_t> {
  public:
   DEF_BIT(31, enable_mask);
   DEF_BIT(23, sde_int_pending);
+  DEF_BIT(21, de_hpd_int_pending);
   DEF_BIT(18, de_pipe_c_int_pending);
   DEF_BIT(17, de_pipe_b_int_pending);
   DEF_BIT(16, de_pipe_a_int_pending);
 
-  static auto Get() { return hwreg::RegisterAddr<MasterInterruptControl>(0x44200); }
+  static auto Get() { return hwreg::RegisterAddr<DisplayInterruptControl>(0x44200); }
+};
+
+// GFX_MSTR_INTR (gen11)
+class GfxMasterInterrupt : public hwreg::RegisterBase<GfxMasterInterrupt, uint32_t> {
+ public:
+  DEF_BIT(31, primary_interrupt);
+
+  static auto Get() { return hwreg::RegisterAddr<GfxMasterInterrupt>(0x190010); }
 };
 
 // GMBUS0
