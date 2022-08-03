@@ -82,15 +82,6 @@ python_binary("assembly_input_bundle_tool") {
   ]
 }
 
-python_binary("compare_image_assembly_configs") {
-  main_source = "compare_image_assembly_config_contents.py"
-  deps = [
-    "//build/python/modules/assembly",
-    "//build/python/modules/depfile",
-    "//build/python/modules/serialization",
-  ]
-}
-
 # The standard `install_host_tools()` template doesn't work for this, because it
 # assumes that all binaries are at `${root_build_dir}/<tool>`, and the
 # `python_binary()` uses `$target_out_dir/<tool>`.  But the import is still

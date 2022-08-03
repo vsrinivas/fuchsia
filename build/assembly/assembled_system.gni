@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/assembly/compare_image_assembly_configs.gni")
 import("//build/assembly/compare_json_list.gni")
 import("//build/assembly/generated_image_assembly_config.gni")
 import("//build/assembly/generated_images_config.gni")
@@ -229,8 +228,6 @@ template("assembled_system") {
     }
     image_assembly_config = "${image_name}.image_assembly_config"
     image_assembly_inputs = "${image_name}.image_assembly_inputs"
-    compare_image_assembly_configs =
-        "${image_name}.compare_image_assembly_configs"
     images_config = "${image_name}.images_config"
     product_assembler = "${image_name}.product_assembler"
     image_assembler = "${image_name}.image_assembler"
@@ -285,8 +282,6 @@ template("assembled_system") {
     # written to.
     regenerated_image_assembly_config = "${outdir}/image_assembly.json"
     config_data_manifest = "${outdir}/config_data/package_manifest.json"
-    compare_image_assembly_configs =
-        "${outdir}/compare_image_assembly_configs.verified"
 
     bootfs_files = "${gendir}/bootfs_files.list"
     devmgr_config = "${gendir}/devmgr_config.txt"
@@ -676,19 +671,6 @@ template("assembled_system") {
     }
   }
 
-  # Validate that the generated image assembly configuration matches the
-  # legacy + the product assembly configuration.
-  compare_image_assembly_configs(labels.compare_image_assembly_configs) {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-             ":${labels.image_assembly_config}",
-             ":${labels.product_assembler}",
-           ] + labels.product_assembly_config_deps
-    legacy_image_assembly_config = files.image_assembly_config
-    generated_image_assembly_config = files.regenerated_image_assembly_config
-    product_assembly_config = files.product_assembly_config
-  }
-
   hermetic_inputs_for_image_assembly(labels.image_assembly_inputs) {
     forward_variables_from(invoker,
                            [
@@ -957,7 +939,6 @@ template("assembled_system") {
     # public_deps is used, so that the outputs of these dependencies are
     # available to external targets.
     public_deps = [
-      ":${labels.compare_image_assembly_configs}",
       ":${labels.image_assembler}",
       ":${labels.image_assembly_config}",
       ":${labels.images_config}",
