@@ -9,7 +9,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -23,13 +23,13 @@ import (
 //
 // Example usage:
 //
-//     root := EndToEndTest{T: t}.Single(`library example; struct MyStruct {};`)
+//	root := EndToEndTest{T: t}.Single(`library example; struct MyStruct {};`)
 //
 // If dependencies are needed:
 //
-//     root := EndToEndTest{T: t}
-//         .WithDependency(`library dep; struct S{};`)
-//         .Single(`library example; struct MyStruct{ dep.S foo};`)
+//	root := EndToEndTest{T: t}
+//	    .WithDependency(`library dep; struct S{};`)
+//	    .Single(`library example; struct MyStruct{ dep.S foo};`)
 type EndToEndTest struct {
 	*testing.T
 	deps       []string
@@ -52,34 +52,63 @@ func (t EndToEndTest) WithExperiment(f string) EndToEndTest {
 
 // Single compiles a single FIDL file, and returns a Root.
 func (t EndToEndTest) Single(content string) fidlgen.Root {
+	return t.Multiple([]string{content})
+}
+
+// Multiple compiles multiple FIDL files, and returns a Root.
+func (t EndToEndTest) Multiple(contents []string) fidlgen.Root {
+	if len(contents) == 0 {
+		t.Fatal("no FIDL file contents provided")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	var (
 		base        = t.TempDir()
-		dotFidlFile = filepath.Join(base, "main.fidl")
 		dotJSONFile = filepath.Join(base, "main.fidl.json")
 		params      = []string{
 			"--json", dotJSONFile,
 		}
 	)
 
-	if err := ioutil.WriteFile(dotFidlFile, []byte(content), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	// And one file for each dependency.
 	for i, dep := range t.deps {
-		depFidlFile := filepath.Join(base, fmt.Sprintf("dep_%d.fidl", i))
-		if err := ioutil.WriteFile(depFidlFile, []byte(dep), 0o600); err != nil {
+		f, err := os.CreateTemp(base, fmt.Sprintf("dep_%d.fidl", i))
+		if err != nil {
 			t.Fatal(err)
 		}
-		params = append(params, "--files", depFidlFile)
+		if err := os.WriteFile(f.Name(), []byte(dep), 0o600); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		params = append(params, "--files", f.Name())
 	}
 
 	for _, e := range t.experiment {
 		params = append(params, "--experimental", e)
 	}
 
-	params = append(params, "--files", dotFidlFile)
+	// And one file for each of the given contents.
+	params = append(params, "--files")
+	for i, content := range contents {
+		f, err := os.CreateTemp(base, fmt.Sprintf("lib_%d.fidl", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(f.Name(), []byte(content), 0o600); err != nil {
+			f.Close()
+			t.Fatal(err)
+		}
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+		params = append(params, f.Name())
+	}
+
 	var (
 		cmd         = exec.CommandContext(ctx, *fidlcPath, params...)
 		fidlcStdout = new(bytes.Buffer)
