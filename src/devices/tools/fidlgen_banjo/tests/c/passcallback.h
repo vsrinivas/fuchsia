@@ -45,7 +45,7 @@ struct action_protocol_protocol_ops {
 
 
 struct action_protocol_protocol {
-    action_protocol_protocol_ops_t* ops;
+    const action_protocol_protocol_ops_t* ops;
     void* ctx;
 };
 

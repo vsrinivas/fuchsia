@@ -26,7 +26,7 @@ struct doer_protocol_ops {
 
 
 struct doer_protocol {
-    doer_protocol_ops_t* ops;
+    const doer_protocol_ops_t* ops;
     void* ctx;
 };
 

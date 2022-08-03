@@ -149,7 +149,7 @@ public:
     }
 
 private:
-    some_methods_protocol_ops_t* ops_;
+    const some_methods_protocol_ops_t* ops_;
     void* ctx_;
 };
 

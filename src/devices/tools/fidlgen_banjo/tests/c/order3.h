@@ -26,7 +26,7 @@ struct bar_protocol_ops {
 
 
 struct bar_protocol {
-    bar_protocol_ops_t* ops;
+    const bar_protocol_ops_t* ops;
     void* ctx;
 };
 

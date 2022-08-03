@@ -107,7 +107,7 @@ zx_status_t DeviceInterface::Init() {
     LOG_ERROR("init: null protocol ops");
     return ZX_ERR_INTERNAL;
   }
-  network_device_impl_protocol_ops_t& ops = *proto.ops;
+  const network_device_impl_protocol_ops_t& ops = *proto.ops;
   if (ops.init == nullptr || ops.get_info == nullptr || ops.stop == nullptr ||
       ops.start == nullptr || ops.queue_tx == nullptr || ops.queue_rx_space == nullptr ||
       ops.prepare_vmo == nullptr || ops.release_vmo == nullptr || ops.set_snoop == nullptr) {

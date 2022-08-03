@@ -47,7 +47,7 @@ struct synchronous_base_protocol_ops {
 
 
 struct synchronous_base_protocol {
-    synchronous_base_protocol_ops_t* ops;
+    const synchronous_base_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -57,7 +57,7 @@ struct driver_transport_protocol_ops {
 
 
 struct driver_transport_protocol {
-    driver_transport_protocol_ops_t* ops;
+    const driver_transport_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -75,7 +75,7 @@ struct async_base_protocol_ops {
 
 
 struct async_base_protocol {
-    async_base_protocol_ops_t* ops;
+    const async_base_protocol_ops_t* ops;
     void* ctx;
 };
 

@@ -61,7 +61,7 @@ struct synchronous_handle_protocol_ops {
 
 
 struct synchronous_handle_protocol {
-    synchronous_handle_protocol_ops_t* ops;
+    const synchronous_handle_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -87,7 +87,7 @@ struct async_handle_protocol_ops {
 
 
 struct async_handle_protocol {
-    async_handle_protocol_ops_t* ops;
+    const async_handle_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -97,7 +97,7 @@ struct another_synchronous_handle_protocol_ops {
 
 
 struct another_synchronous_handle_protocol {
-    another_synchronous_handle_protocol_ops_t* ops;
+    const another_synchronous_handle_protocol_ops_t* ops;
     void* ctx;
 };
 

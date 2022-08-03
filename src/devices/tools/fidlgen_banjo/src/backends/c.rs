@@ -263,7 +263,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                             if transform && not_callback(identifier, ir)? {
                                 let ty_name = protocol_to_ops_c_str(identifier, ir).unwrap();
                                 Ok(format!(
-                                    "void* {name}_ctx, {ty_name}* {name}_ops",
+                                    "void* {name}_ctx, const {ty_name}* {name}_ops",
                                     ty_name = ty_name,
                                     name = c_name
                                 ))

@@ -38,7 +38,7 @@ struct cookie_maker_protocol_ops {
 
 
 struct cookie_maker_protocol {
-    cookie_maker_protocol_ops_t* ops;
+    const cookie_maker_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -55,7 +55,7 @@ struct cookie_jarrer_protocol_ops {
 
 
 struct cookie_jarrer_protocol {
-    cookie_jarrer_protocol_ops_t* ops;
+    const cookie_jarrer_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -73,7 +73,7 @@ struct baker_protocol_ops {
 
 
 struct baker_protocol {
-    baker_protocol_ops_t* ops;
+    const baker_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -108,7 +108,7 @@ static inline cookie_kind_t cookie_jarrer_take(const cookie_jarrer_protocol_t* p
 
 // Registers a cookie maker device which the baker can use, and a cookie jar into
 // which they can place their completed cookies.
-static inline void baker_register(const baker_protocol_t* proto, void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, cookie_jarrer_protocol_ops_t* jar_ops) {
+static inline void baker_register(const baker_protocol_t* proto, void* intf_ctx, const cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, const cookie_jarrer_protocol_ops_t* jar_ops) {
     const cookie_maker_protocol_t intf2 = {
         .ops = intf_ops,
         .ctx = intf_ctx,

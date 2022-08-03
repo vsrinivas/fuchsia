@@ -136,7 +136,7 @@ std::vector<uint8_t> ArpTest::CreateEthernetFrame(common::MacAddr dstAddr, commo
 }
 
 zx_status_t ArpTest::SetMulticastPromisc(bool enable) {
-  wlan_fullmac_impl_protocol_ops_t* ops = sim_ifc_.if_impl_ops_;
+  const wlan_fullmac_impl_protocol_ops_t* ops = sim_ifc_.if_impl_ops_;
   void* ctx = sim_ifc_.if_impl_ctx_;
   return ops->set_multicast_promisc(ctx, enable);
 }

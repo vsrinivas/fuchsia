@@ -41,7 +41,7 @@ struct drawing_protocol_ops {
 
 
 struct drawing_protocol {
-    drawing_protocol_ops_t* ops;
+    const drawing_protocol_ops_t* ops;
     void* ctx;
 };
 

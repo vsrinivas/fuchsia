@@ -937,7 +937,7 @@ void EthDev0::DdkRelease() {
 
 zx_status_t EthDev0::AddDevice() {
   zx_status_t status;
-  ethernet_impl_protocol_ops_t* ops;
+  const ethernet_impl_protocol_ops_t* ops;
   ethernet_impl_protocol_t proto;
 
   if (!mac_.is_valid()) {

@@ -26,7 +26,7 @@ struct foo_protocol_ops {
 
 
 struct foo_protocol {
-    foo_protocol_ops_t* ops;
+    const foo_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -36,7 +36,7 @@ struct bar_protocol_ops {
 
 
 struct bar_protocol {
-    bar_protocol_ops_t* ops;
+    const bar_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -46,7 +46,7 @@ static inline void foo_hello(const foo_protocol_t* proto) {
     proto->ops->hello(proto->ctx);
 }
 
-static inline void bar_world(const bar_protocol_t* proto, void* foo_ctx, foo_protocol_ops_t* foo_ops) {
+static inline void bar_world(const bar_protocol_t* proto, void* foo_ctx, const foo_protocol_ops_t* foo_ops) {
     const foo_protocol_t foo2 = {
         .ops = foo_ops,
         .ctx = foo_ctx,

@@ -39,7 +39,7 @@ struct echo_protocol_ops {
 
 
 struct echo_protocol {
-    echo_protocol_ops_t* ops;
+    const echo_protocol_ops_t* ops;
     void* ctx;
 };
 

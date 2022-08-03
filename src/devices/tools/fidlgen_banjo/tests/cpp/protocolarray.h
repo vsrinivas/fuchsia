@@ -355,7 +355,7 @@ public:
     }
 
 private:
-    arrayof_arrays_protocol_ops_t* ops_;
+    const arrayof_arrays_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -548,7 +548,7 @@ public:
     }
 
 private:
-    array_protocol_ops_t* ops_;
+    const array_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -741,7 +741,7 @@ public:
     }
 
 private:
-    array2_protocol_ops_t* ops_;
+    const array2_protocol_ops_t* ops_;
     void* ctx_;
 };
 

@@ -478,7 +478,7 @@ public:
     }
 
 private:
-    synchronous_handle_protocol_ops_t* ops_;
+    const synchronous_handle_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -711,7 +711,7 @@ public:
     }
 
 private:
-    async_handle_protocol_ops_t* ops_;
+    const async_handle_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -820,7 +820,7 @@ public:
     }
 
 private:
-    another_synchronous_handle_protocol_ops_t* ops_;
+    const another_synchronous_handle_protocol_ops_t* ops_;
     void* ctx_;
 };
 

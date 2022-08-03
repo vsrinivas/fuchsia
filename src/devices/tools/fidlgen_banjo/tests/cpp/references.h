@@ -169,7 +169,7 @@ public:
     }
 
 private:
-    in_out_protocol_protocol_ops_t* ops_;
+    const in_out_protocol_protocol_ops_t* ops_;
     void* ctx_;
 };
 

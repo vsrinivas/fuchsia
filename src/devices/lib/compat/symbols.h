@@ -10,7 +10,7 @@
 namespace compat {
 
 struct device_proto_ops_t {
-  void* ops;
+  const void* ops;
   uint32_t id;
 };
 

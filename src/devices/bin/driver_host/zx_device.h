@@ -407,7 +407,7 @@ struct zx_device
     inspect_->set_protocol_id(protocol_id);
   }
 
-  void* protocol_ops = nullptr;
+  const void* protocol_ops = nullptr;
 
   cpp20::span<const char*> fidl_offers() { return {fidl_offers_.data(), fidl_offers_.size()}; }
 

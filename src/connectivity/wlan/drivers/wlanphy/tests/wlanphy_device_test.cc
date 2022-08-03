@@ -88,7 +88,7 @@ static constexpr uint8_t kFakeMacAddr[fuchsia_wlan_ieee80211::wire::kMacAddrLen]
                                                                                     3, 4, 5};
 TEST_F(WlanphyDeviceTest, GetSupportedMacRolesTest) {
   ConnectToWlanphyDevice();
-  fake_wlanphy_impl_protocol_.ops->get_supported_mac_roles =
+  fake_wlanphy_impl_protocol_ops_.get_supported_mac_roles =
       [](void* ctx,
          wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
          uint8_t* supported_mac_roles_count) -> zx_status_t {
@@ -124,7 +124,7 @@ TEST_F(WlanphyDeviceTest, CreateIfaceRequestConvertTest) {
             },
     };
 
-    fake_wlanphy_impl_protocol_.ops->create_iface = [](void* ctx,
+    fake_wlanphy_impl_protocol_ops_.create_iface = [](void* ctx,
                                                        const wlanphy_impl_create_iface_req_t* req,
                                                        uint16_t* out_iface_id) -> zx_status_t {
       EXPECT_EQ(WLAN_MAC_ROLE_AP, req->role);
@@ -151,7 +151,7 @@ TEST_F(WlanphyDeviceTest, CreateIfaceRequestConvertTest) {
             },
     };
 
-    fake_wlanphy_impl_protocol_.ops->create_iface = [](void* ctx,
+    fake_wlanphy_impl_protocol_ops_.create_iface = [](void* ctx,
                                                        const wlanphy_impl_create_iface_req_t* req,
                                                        uint16_t* out_iface_id) -> zx_status_t {
       EXPECT_EQ(WLAN_MAC_ROLE_AP, req->role);
@@ -170,7 +170,7 @@ TEST_F(WlanphyDeviceTest, DestroyIfaceTest) {
       .id = kFakeIfaceId,
   };
 
-  fake_wlanphy_impl_protocol_.ops->destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
+  fake_wlanphy_impl_protocol_ops_.destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
     EXPECT_EQ(kFakeIfaceId, id);
     return ZX_OK;
   };
@@ -186,7 +186,7 @@ TEST_F(WlanphyDeviceTest, SetCountryTest) {
               .data_ = {'U', 'S'},
           },
   };
-  fake_wlanphy_impl_protocol_.ops->set_country =
+  fake_wlanphy_impl_protocol_ops_.set_country =
       [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
     EXPECT_EQ('U', country->alpha2[0]);
     EXPECT_EQ('S', country->alpha2[1]);
@@ -198,7 +198,7 @@ TEST_F(WlanphyDeviceTest, SetCountryTest) {
 }
 
 TEST_F(WlanphyDeviceTest, GetCountryConvertsPrintableAndReturnsSuccess) {
-  fake_wlanphy_impl_protocol_.ops->get_country = [](void* ctx, wlanphy_country_t* out_country) {
+  fake_wlanphy_impl_protocol_ops_.get_country = [](void* ctx, wlanphy_country_t* out_country) {
     *out_country = {{'U', 'S'}};
     return ZX_OK;
   };
@@ -212,7 +212,7 @@ TEST_F(WlanphyDeviceTest, GetCountryConvertsPrintableAndReturnsSuccess) {
 }
 
 TEST_F(WlanphyDeviceTest, GetCountryConvertsNonPrintableAndReturnSuccess) {
-  fake_wlanphy_impl_protocol_.ops->get_country = [](void* ctx, wlanphy_country_t* out_country) {
+  fake_wlanphy_impl_protocol_ops_.get_country = [](void* ctx, wlanphy_country_t* out_country) {
     *out_country = {{0x00, 0xff}};
     return ZX_OK;
   };
@@ -227,7 +227,7 @@ TEST_F(WlanphyDeviceTest, GetCountryConvertsNonPrintableAndReturnSuccess) {
 
 TEST_F(WlanphyDeviceTest, ClearCountryTest) {
   ConnectToWlanphyDevice();
-  fake_wlanphy_impl_protocol_.ops->clear_country = [](void* ctx) -> zx_status_t { return ZX_OK; };
+  fake_wlanphy_impl_protocol_ops_.clear_country = [](void* ctx) -> zx_status_t { return ZX_OK; };
 
   auto result = client_.sync()->ClearCountry();
   ASSERT_TRUE(result.ok());
@@ -238,7 +238,7 @@ TEST_F(WlanphyDeviceTest, SetPsModeTest) {
   fuchsia_wlan_common::wire::PowerSaveType ps_mode_in =
       fuchsia_wlan_common::wire::PowerSaveType::kPsModeLowPower;
 
-  fake_wlanphy_impl_protocol_.ops->set_ps_mode =
+  fake_wlanphy_impl_protocol_ops_.set_ps_mode =
       [](void* ctx, const wlanphy_ps_mode_t* ps_mode) -> zx_status_t {
     EXPECT_EQ(POWER_SAVE_TYPE_PS_MODE_LOW_POWER, ps_mode->ps_mode);
     return ZX_OK;
@@ -248,7 +248,7 @@ TEST_F(WlanphyDeviceTest, SetPsModeTest) {
 }
 
 TEST_F(WlanphyDeviceTest, GetPsModeReturnsSuccess) {
-  fake_wlanphy_impl_protocol_.ops->get_ps_mode = [](void* ctx, wlanphy_ps_mode_t* ps_mode) {
+  fake_wlanphy_impl_protocol_ops_.get_ps_mode = [](void* ctx, wlanphy_ps_mode_t* ps_mode) {
     ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED;
     return ZX_OK;
   };

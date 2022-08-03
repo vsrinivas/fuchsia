@@ -24,7 +24,7 @@ struct view_protocol_ops {
 
 
 struct view_protocol {
-    view_protocol_ops_t* ops;
+    const view_protocol_ops_t* ops;
     void* ctx;
 };
 

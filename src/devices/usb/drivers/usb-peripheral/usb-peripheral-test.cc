@@ -33,7 +33,7 @@ struct zx_device : std::enable_shared_from_this<zx_device> {
   std::list<std::shared_ptr<zx_device>> devices;
   std::weak_ptr<zx_device> parent;
   std::vector<zx_device_prop_t> props;
-  void* proto_ops;
+  const void* proto_ops;
   uint32_t proto_id;
   void* ctx;
   zx_protocol_device_t dev_ops;

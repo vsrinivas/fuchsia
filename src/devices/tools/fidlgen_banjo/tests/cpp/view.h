@@ -150,7 +150,7 @@ public:
     }
 
 private:
-    view_protocol_ops_t* ops_;
+    const view_protocol_ops_t* ops_;
     void* ctx_;
 };
 

@@ -149,7 +149,7 @@ public:
     }
 
 private:
-    hello_protocol_ops_t* ops_;
+    const hello_protocol_ops_t* ops_;
     void* ctx_;
 };
 

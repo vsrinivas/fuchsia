@@ -41,7 +41,7 @@ struct ii_interface_protocol_ops {
 
 
 struct ii_interface_protocol {
-    ii_interface_protocol_ops_t* ops;
+    const ii_interface_protocol_ops_t* ops;
     void* ctx;
 };
 

@@ -160,7 +160,7 @@ public:
     }
 
 private:
-    doer_protocol_ops_t* ops_;
+    const doer_protocol_ops_t* ops_;
     void* ctx_;
 };
 

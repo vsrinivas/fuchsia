@@ -355,7 +355,7 @@ public:
     }
 
 private:
-    vector_of_vectors_protocol_ops_t* ops_;
+    const vector_of_vectors_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -548,7 +548,7 @@ public:
     }
 
 private:
-    vector_protocol_ops_t* ops_;
+    const vector_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -741,7 +741,7 @@ public:
     }
 
 private:
-    vector2_protocol_ops_t* ops_;
+    const vector2_protocol_ops_t* ops_;
     void* ctx_;
 };
 

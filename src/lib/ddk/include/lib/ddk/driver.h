@@ -168,7 +168,7 @@ typedef struct device_add_args {
   uint32_t proto_id;
 
   // Optional custom protocol operations for this device
-  void* proto_ops;
+  const void* proto_ops;
 
   // Optional list of fidl protocols to offer to child driver.
   // These protocols will automatically be added as bind properties which may be used in

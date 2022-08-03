@@ -52,7 +52,7 @@ struct in_out_protocol_protocol_ops {
 
 
 struct in_out_protocol_protocol {
-    in_out_protocol_protocol_ops_t* ops;
+    const in_out_protocol_protocol_ops_t* ops;
     void* ctx;
 };
 

@@ -819,8 +819,8 @@ void EthernetTestFixture::InitDeviceWithRole(wlan_mac_role_t role) {
   proto_ops_.query = hook_query;
   proto_ops_.query_mac_sublayer_support = hook_query_mac_sublayer_support;
   proto_ops_.start_req = hook_start_req;
-  eth_proto_.ops->status = hook_eth_status;
-  eth_proto_.ops->recv = hook_eth_recv;
+  eth_ops_.status = hook_eth_status;
+  eth_ops_.recv = hook_eth_recv;
   ASSERT_EQ(device_->Bind(), ZX_OK);
 }
 

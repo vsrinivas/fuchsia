@@ -121,7 +121,7 @@ public:
     }
 
 private:
-    cookie_maker_protocol_ops_t* ops_;
+    const cookie_maker_protocol_ops_t* ops_;
     void* ctx_;
 };
 // An interface for storing cookies.
@@ -180,7 +180,7 @@ public:
     }
 
 private:
-    cookie_jarrer_protocol_ops_t* ops_;
+    const cookie_jarrer_protocol_ops_t* ops_;
     void* ctx_;
 };
 // Protocol for a baker who outsources all of it's baking duties to others.
@@ -295,7 +295,7 @@ public:
 
     // Registers a cookie maker device which the baker can use, and a cookie jar into
     // which they can place their completed cookies.
-    void Register(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, cookie_jarrer_protocol_ops_t* jar_ops) const {
+    void Register(void* intf_ctx, const cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, const cookie_jarrer_protocol_ops_t* jar_ops) const {
         const cookie_maker_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
@@ -320,7 +320,7 @@ public:
     }
 
 private:
-    baker_protocol_ops_t* ops_;
+    const baker_protocol_ops_t* ops_;
     void* ctx_;
 };
 

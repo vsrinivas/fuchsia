@@ -63,7 +63,7 @@ struct api_protocol_ops {
 
 
 struct api_protocol {
-    api_protocol_ops_t* ops;
+    const api_protocol_ops_t* ops;
     void* ctx;
 };
 

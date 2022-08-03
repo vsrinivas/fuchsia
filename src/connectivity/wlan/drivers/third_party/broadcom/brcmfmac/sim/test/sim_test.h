@@ -155,7 +155,7 @@ class SimInterface {
 
   // This provides our DDK (wlanif-impl) API into the interface
   void* if_impl_ctx_ = nullptr;
-  wlan_fullmac_impl_protocol_ops_t* if_impl_ops_ = nullptr;
+  const wlan_fullmac_impl_protocol_ops_t* if_impl_ops_ = nullptr;
 
   // Unique identifier provided by the driver
   uint16_t iface_id_;

@@ -491,7 +491,7 @@ struct this_is_an_interface_protocol_ops {
 
 
 struct this_is_an_interface_protocol {
-    this_is_an_interface_protocol_ops_t* ops;
+    const this_is_an_interface_protocol_ops_t* ops;
     void* ctx;
 };
 

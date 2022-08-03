@@ -203,7 +203,7 @@ public:
     }
 
 private:
-    drawing_protocol_ops_t* ops_;
+    const drawing_protocol_ops_t* ops_;
     void* ctx_;
 };
 

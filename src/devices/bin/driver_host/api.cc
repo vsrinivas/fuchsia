@@ -289,7 +289,7 @@ __EXPORT zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t
 }
 
 struct GenericProtocol {
-  void* ops;
+  const void* ops;
   void* ctx;
 };
 

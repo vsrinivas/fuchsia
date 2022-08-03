@@ -31,7 +31,7 @@ struct interface_protocol_ops {
 
 
 struct interface_protocol {
-    interface_protocol_ops_t* ops;
+    const interface_protocol_ops_t* ops;
     void* ctx;
 };
 

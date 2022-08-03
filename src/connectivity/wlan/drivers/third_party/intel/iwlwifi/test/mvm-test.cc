@@ -78,8 +78,7 @@ class MvmTest : public SingleApTest {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
     mvmvif_->mac_role = WLAN_MAC_ROLE_CLIENT;
-    mvmvif_->ifc.ops = reinterpret_cast<wlan_softmac_ifc_protocol_ops_t*>(
-        calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
+    mvmvif_->ifc.ops = &protocol_ops_;
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
 
@@ -87,7 +86,6 @@ class MvmTest : public SingleApTest {
   }
 
   ~MvmTest() __TA_NO_THREAD_SAFETY_ANALYSIS {
-    free(mvmvif_->ifc.ops);
     free(mvmvif_);
     mtx_unlock(&mvm_->mutex);
   }
@@ -101,7 +99,7 @@ class MvmTest : public SingleApTest {
     // mvmvif.
     mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlan_softmac_ifc_protocol_t*', but we override it
                              // with 'TestCtx*'.
-    mvmvif_->ifc.ops->recv = [](void* ctx, const wlan_rx_packet_t* packet) {
+    protocol_ops_.recv = [](void* ctx, const wlan_rx_packet_t* packet) {
       TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
       test_ctx->rx_info = packet->info;
       test_ctx->frame_len = packet->mac_frame_size;
@@ -110,6 +108,7 @@ class MvmTest : public SingleApTest {
 
   struct iwl_mvm* mvm_;
   struct iwl_mvm_vif* mvmvif_;
+  wlan_softmac_ifc_protocol_ops_t protocol_ops_;
 };
 
 TEST_F(MvmTest, GetMvm) { EXPECT_NE(mvm_, nullptr); }
@@ -481,8 +480,7 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
     mvmvif_->mac_role = WLAN_MAC_ROLE_CLIENT;
-    mvmvif_->ifc.ops = reinterpret_cast<wlan_softmac_ifc_protocol_ops_t*>(
-        calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
+    mvmvif_->ifc.ops = &protocol_ops_;
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
 
@@ -522,7 +520,6 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
 
   ~UmacScanTest() __TA_NO_THREAD_SAFETY_ANALYSIS {
     mock_send_umac_scan_cmd_.VerifyAndClear();
-    free(mvmvif_->ifc.ops);
     free(mvmvif_);
     free(active_scan_args_.ssids);
     mtx_unlock(&mvm_->mutex);
@@ -563,6 +560,7 @@ class UmacScanTest : public FakeUcodeTest, public MockTrans {
  protected:
   struct iwl_mvm* mvm_;
   struct iwl_mvm_vif* mvmvif_;
+  wlan_softmac_ifc_protocol_ops_t protocol_ops_;
 
   // Expected fields.
   mock_function::MockFunction<zx_status_t,  // return value

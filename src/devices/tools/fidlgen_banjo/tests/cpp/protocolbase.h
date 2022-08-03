@@ -306,7 +306,7 @@ public:
     }
 
 private:
-    synchronous_base_protocol_ops_t* ops_;
+    const synchronous_base_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -412,7 +412,7 @@ public:
     }
 
 private:
-    driver_transport_protocol_ops_t* ops_;
+    const driver_transport_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -581,7 +581,7 @@ public:
     }
 
 private:
-    async_base_protocol_ops_t* ops_;
+    const async_base_protocol_ops_t* ops_;
     void* ctx_;
 };
 

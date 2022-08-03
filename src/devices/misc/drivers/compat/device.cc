@@ -497,7 +497,7 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
   }
 
   struct GenericProtocol {
-    void* ops;
+    const void* ops;
     void* ctx;
   };
 

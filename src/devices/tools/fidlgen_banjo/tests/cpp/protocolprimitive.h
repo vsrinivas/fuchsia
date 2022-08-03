@@ -306,7 +306,7 @@ public:
     }
 
 private:
-    synchronous_primitive_protocol_ops_t* ops_;
+    const synchronous_primitive_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -491,7 +491,7 @@ public:
     }
 
 private:
-    async_primitive_protocol_ops_t* ops_;
+    const async_primitive_protocol_ops_t* ops_;
     void* ctx_;
 };
 

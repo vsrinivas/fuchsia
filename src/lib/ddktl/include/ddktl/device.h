@@ -143,7 +143,7 @@
 namespace ddk {
 
 struct AnyProtocol {
-  void* ops;
+  const void* ops;
   void* ctx;
 };
 

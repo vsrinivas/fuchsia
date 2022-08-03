@@ -50,7 +50,7 @@ class InputReportDriver {
       return zx::error(ZX_ERR_NOT_FOUND);
     }
     proto.ctx = parent_symbol->context;
-    proto.ops = reinterpret_cast<hid_device_protocol_ops_t*>(parent_symbol->proto_ops.ops);
+    proto.ops = reinterpret_cast<const hid_device_protocol_ops_t*>(parent_symbol->proto_ops.ops);
 
     ddk::HidDeviceProtocolClient hiddev(&proto);
     if (!hiddev.is_valid()) {

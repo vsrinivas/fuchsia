@@ -208,7 +208,7 @@ public:
     }
 
 private:
-    echo_protocol_ops_t* ops_;
+    const echo_protocol_ops_t* ops_;
     void* ctx_;
 };
 

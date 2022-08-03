@@ -24,7 +24,7 @@ struct hello_protocol_ops {
 
 
 struct hello_protocol {
-    hello_protocol_ops_t* ops;
+    const hello_protocol_ops_t* ops;
     void* ctx;
 };
 

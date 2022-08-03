@@ -47,7 +47,7 @@ struct synchronous_primitive_protocol_ops {
 
 
 struct synchronous_primitive_protocol {
-    synchronous_primitive_protocol_ops_t* ops;
+    const synchronous_primitive_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -67,7 +67,7 @@ struct async_primitive_protocol_ops {
 
 
 struct async_primitive_protocol {
-    async_primitive_protocol_ops_t* ops;
+    const async_primitive_protocol_ops_t* ops;
     void* ctx;
 };
 

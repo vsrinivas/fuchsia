@@ -35,6 +35,6 @@ public:
 
 {client_definitions}
 private:
-    {protocol_name_snake}_protocol_ops_t* ops_;
+    const {protocol_name_snake}_protocol_ops_t* ops_;
     void* ctx_;
 }};

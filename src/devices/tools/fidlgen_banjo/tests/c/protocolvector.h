@@ -40,7 +40,7 @@ struct vector_of_vectors_protocol_ops {
 
 
 struct vector_of_vectors_protocol {
-    vector_of_vectors_protocol_ops_t* ops;
+    const vector_of_vectors_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -61,7 +61,7 @@ struct vector_protocol_ops {
 
 
 struct vector_protocol {
-    vector_protocol_ops_t* ops;
+    const vector_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -82,7 +82,7 @@ struct vector2_protocol_ops {
 
 
 struct vector2_protocol {
-    vector2_protocol_ops_t* ops;
+    const vector2_protocol_ops_t* ops;
     void* ctx;
 };
 

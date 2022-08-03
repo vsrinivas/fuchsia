@@ -26,10 +26,13 @@ class FakeIsp {
 
   void PopulateStreamProtocol(output_stream_protocol_t* out_s) {
     out_s->ctx = this;
-    out_s->ops->start = Start;
-    out_s->ops->stop = Stop;
-    out_s->ops->release_frame = ReleaseFrame;
-    out_s->ops->shutdown = Shutdown;
+    static constexpr output_stream_protocol_ops_t ops = {
+      .start = Start,
+      .stop = Stop,
+      .release_frame = ReleaseFrame,
+      .shutdown = Shutdown,
+    };
+    out_s->ops = &ops;
   }
 
   zx_status_t Start() {
@@ -57,10 +60,13 @@ class FakeIsp {
                                     output_stream_protocol_t* out_s) {
     frame_callback_ = frame_callback;
     out_s->ctx = this;
-    out_s->ops->start = Start;
-    out_s->ops->stop = Stop;
-    out_s->ops->release_frame = ReleaseFrame;
-    out_s->ops->shutdown = Shutdown;
+    static constexpr output_stream_protocol_ops_t ops = {
+      .start = Start,
+      .stop = Stop,
+      .release_frame = ReleaseFrame,
+      .shutdown = Shutdown,
+    };
+    out_s->ops = &ops;
     return ZX_OK;
   }
 

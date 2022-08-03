@@ -25,7 +25,7 @@ struct some_methods_protocol_ops {
 
 
 struct some_methods_protocol {
-    some_methods_protocol_ops_t* ops;
+    const some_methods_protocol_ops_t* ops;
     void* ctx;
 };
 

@@ -26,7 +26,7 @@ namespace fake_ddk {
 
 // Generic protocol.
 struct Protocol {
-  void* ops;
+  const void* ops;
   void* ctx;
 };
 

@@ -40,7 +40,7 @@ struct arrayof_arrays_protocol_ops {
 
 
 struct arrayof_arrays_protocol {
-    arrayof_arrays_protocol_ops_t* ops;
+    const arrayof_arrays_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -61,7 +61,7 @@ struct array_protocol_ops {
 
 
 struct array_protocol {
-    array_protocol_ops_t* ops;
+    const array_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -82,7 +82,7 @@ struct array2_protocol_ops {
 
 
 struct array2_protocol {
-    array2_protocol_ops_t* ops;
+    const array2_protocol_ops_t* ops;
     void* ctx;
 };
 

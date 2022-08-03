@@ -38,8 +38,8 @@ typedef void (*other_types_async_reference_string_sized_callback)(void* ctx, con
 typedef void (*other_types_async_reference_string_sized2_callback)(void* ctx, const char* s);
 typedef struct other_types_async_reference_protocol other_types_async_reference_protocol_t;
 typedef struct other_types_async_reference_protocol_ops other_types_async_reference_protocol_ops_t;
-typedef void (*interface_async_callback)(void* ctx, void* intf_ctx, other_types_protocol_ops_t* intf_ops);
-typedef void (*interface_async_refernce_callback)(void* ctx, void* intf_ctx, other_types_protocol_ops_t* intf_ops);
+typedef void (*interface_async_callback)(void* ctx, void* intf_ctx, const other_types_protocol_ops_t* intf_ops);
+typedef void (*interface_async_refernce_callback)(void* ctx, void* intf_ctx, const other_types_protocol_ops_t* intf_ops);
 typedef struct interface_protocol interface_protocol_t;
 typedef struct interface_protocol_ops interface_protocol_ops_t;
 
@@ -63,7 +63,7 @@ struct other_types_protocol_ops {
 
 
 struct other_types_protocol {
-    other_types_protocol_ops_t* ops;
+    const other_types_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -77,7 +77,7 @@ struct other_types_reference_protocol_ops {
 
 
 struct other_types_reference_protocol {
-    other_types_reference_protocol_ops_t* ops;
+    const other_types_reference_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -92,7 +92,7 @@ struct other_types_async_protocol_ops {
 
 
 struct other_types_async_protocol {
-    other_types_async_protocol_ops_t* ops;
+    const other_types_async_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -106,7 +106,7 @@ struct other_types_async_reference_protocol_ops {
 
 
 struct other_types_async_reference_protocol {
-    other_types_async_reference_protocol_ops_t* ops;
+    const other_types_async_reference_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -119,7 +119,7 @@ struct interface_protocol_ops {
 
 
 struct interface_protocol {
-    interface_protocol_ops_t* ops;
+    const interface_protocol_ops_t* ops;
     void* ctx;
 };
 
@@ -213,7 +213,7 @@ static inline void other_types_async_reference_string_sized2(const other_types_a
     proto->ops->string_sized2(proto->ctx, s, callback, cookie);
 }
 
-static inline void interface_value(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) {
+static inline void interface_value(const interface_protocol_t* proto, void* intf_ctx, const other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) {
     const other_types_protocol_t intf2 = {
         .ops = intf_ops,
         .ctx = intf_ctx,
@@ -222,7 +222,7 @@ static inline void interface_value(const interface_protocol_t* proto, void* intf
     proto->ops->value(proto->ctx, intf, out_intf);
 }
 
-static inline void interface_reference(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) {
+static inline void interface_reference(const interface_protocol_t* proto, void* intf_ctx, const other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) {
     const other_types_protocol_t intf2 = {
         .ops = intf_ops,
         .ctx = intf_ctx,
@@ -231,7 +231,7 @@ static inline void interface_reference(const interface_protocol_t* proto, void* 
     proto->ops->reference(proto->ctx, intf, out_intf);
 }
 
-static inline void interface_async(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) {
+static inline void interface_async(const interface_protocol_t* proto, void* intf_ctx, const other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) {
     const other_types_protocol_t intf2 = {
         .ops = intf_ops,
         .ctx = intf_ctx,
@@ -240,7 +240,7 @@ static inline void interface_async(const interface_protocol_t* proto, void* intf
     proto->ops->async(proto->ctx, intf, callback, cookie);
 }
 
-static inline void interface_async_refernce(const interface_protocol_t* proto, void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) {
+static inline void interface_async_refernce(const interface_protocol_t* proto, void* intf_ctx, const other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) {
     const other_types_protocol_t intf2 = {
         .ops = intf_ops,
         .ctx = intf_ctx,

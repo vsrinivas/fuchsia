@@ -10,7 +10,7 @@ class GttIntelGpuCore : public Gtt {
  public:
   class Owner : public Gtt::Owner {
    public:
-    virtual intel_gpu_core_protocol_ops_t* ops() = 0;
+    virtual const intel_gpu_core_protocol_ops_t* ops() = 0;
     virtual void* context() = 0;
   };
 
@@ -73,7 +73,7 @@ class MsdIntelPciMmio : public magma::PlatformMmio {
  public:
   class Owner {
    public:
-    virtual intel_gpu_core_protocol_ops_t* ops() = 0;
+    virtual const intel_gpu_core_protocol_ops_t* ops() = 0;
     virtual void* context() = 0;
   };
 
@@ -147,7 +147,7 @@ class MsdIntelPciDeviceShim : public MsdIntelPciDevice,
 
   Gtt* GetGtt() override { return &gtt_; }
 
-  intel_gpu_core_protocol_ops_t* ops() override { return intel_gpu_core_->ops; }
+  const intel_gpu_core_protocol_ops_t* ops() override { return intel_gpu_core_->ops; }
 
   void* context() override { return intel_gpu_core_->ctx; }
 
