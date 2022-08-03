@@ -153,13 +153,16 @@ do
   esac
 
   # Reject absolute paths, for the sake of build artifact portability,
-  # and remote-action cache hit benefits.
+  # and remote-action cache hit benefits.  Some exceptions:
   case "$opt" in
-    -fdebug-prefix-map="$project_root"*)
-      # -fdebug-prefix-map (clang, gcc) takes an absolute path for
+    -fdebug-prefix-map="$project_root"* | \
+    -ffile-prefix-map="$project_root"* | \
+    -fmacro-prefix-map="$project_root"* | \
+    -fcoverage-prefix-map="$project_root"* )
+      # -fdebug-prefix-map etc. (clang, gcc) takes an absolute path for
       # the sake of remapping debug paths to canonical prefixes, thus
       # making their outputs reproducible across different build environments.
-      # It is up to RBE/reclient to handle this flag transparently.
+      # It is up to RBE/reclient to handle these flags transparently.
       ;;
     *"$project_root"*)
       cat <<EOF

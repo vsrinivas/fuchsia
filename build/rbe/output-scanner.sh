@@ -127,6 +127,13 @@ then
   for tok
   do
     case "$tok" in
+      # C++: a few clang/gcc flags remap paths, and thus expect the self path
+      # as part of the option argument.
+      -fdebug-prefix-map=*"$build_subdir"* | \
+      -ffile-prefix-map=*"$build_subdir"* | \
+      -fmacro-prefix-map=*"$build_subdir"* | \
+      -fcoverage-prefix-map=*"$build_subdir"* )
+        ;;
       *"$build_subdir"* )
         err=1
         error_msg "Command token '$tok' contains '$build_subdir'." \
