@@ -793,7 +793,7 @@ impl FileObject {
             // this transformation in exactly the case where there was not
             // sufficient space in the DirentSink.
             Err(errno) if errno == ENOSPC && sink.actual() > 0 => Ok(()),
-            Err(errno) if errno == ENOSPC => Err(errno),
+            Err(errno) if errno == ENOSPC => error!(EINVAL),
             result => result,
         }
     }
