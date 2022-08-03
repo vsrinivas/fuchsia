@@ -42,7 +42,9 @@ const EXPOSE_WARNING: &str = r#"
 //          Either delete or uncomment and populate these lines:
 //
 // capabilities: [
-//     "fuchsia.example.Protocol",
+//     {
+//          protocol: [ "fuchsia.example.Protocol" ],
+//     },
 // ],
 // expose: [
 //     {

@@ -20,7 +20,9 @@
     //          Either delete or uncomment and populate these lines:
     //
     // capabilities: [
-    //     "fuchsia.example.Protocol",
+    //     {
+    //          protocol: [ "fuchsia.example.Protocol" ],
+    //     },
     // ],
     // expose: [
     //     {
