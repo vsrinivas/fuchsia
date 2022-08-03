@@ -25,6 +25,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   static constexpr zx::time kInitialTime = zx::time(1000);
   static const std::string kLocalHostName;
   static const std::string kLocalHostFullName;
+  static const std::string kAlternateCaseLocalHostFullName;
 
   // Sets the agent under test. This must be called before the test gets underway, and the agent
   // must survive until the end of the test.

@@ -37,6 +37,7 @@ class AddressProberTest : public AgentTest {
 };
 
 constexpr char kHostFullName[] = "test2host.local.";
+constexpr char kAlternateCaseHostFullName[] = "tEst2hOsT.lOcaL.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
 constexpr uint32_t kInterfaceId = 1;
@@ -100,11 +101,47 @@ TEST_F(AddressProberTest, Conflict) {
   EXPECT_FALSE(callback_called);
 
   // Send a reply.
-  ReplyAddress sender_address(
+  ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, kInterfaceId, inet::IpPort::From_uint16_t(5353)),
       inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
   under_test->ReceiveResource(DnsResource(kLocalHostFullName, inet::IpAddress(192, 168, 1, 1)),
-                              MdnsResourceSection::kAnswer, sender_address);
+                              MdnsResourceSection::kAnswer, sender_address0);
+
+  // Callback and removal are run in a task.
+  ExpectPostTaskForTimeAndInvoke(zx::msec(0), zx::msec(0));
+
+  // Expect the probe to fail (conflict).
+  EXPECT_TRUE(callback_called);
+  EXPECT_FALSE(callback_success);
+  ExpectRemoveAgentCall();
+  ExpectNoOther();
+
+  // Redoing test with a case insensitive conflict
+  callback_called = false;
+
+  // We need to make_shared here, because |RemoveSelf| calls |shared_from_this|.
+  under_test = std::make_shared<AddressProber>(this, Media::kBoth, IpVersions::kBoth,
+                                               [&callback_called, &callback_success](bool success) {
+                                                 callback_called = true;
+                                                 callback_success = success;
+                                               });
+  SetAgent(*under_test);
+
+  under_test->Start(kLocalHostFullName);
+
+  // Expect the first probe message after a delay of 0~250ms.
+  ExpectPostTaskForTimeAndInvoke(zx::msec(0), zx::msec(250));
+  ExpectProbe(Media::kBoth, IpVersions::kBoth);
+  ExpectPostTaskForTime(zx::msec(250), zx::msec(250));
+  EXPECT_FALSE(callback_called);
+
+  // Send a reply.
+  ReplyAddress sender_address1(
+      inet::SocketAddress(192, 168, 1, kInterfaceId, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWireless, IpVersions::kV4);
+  under_test->ReceiveResource(
+      DnsResource(kAlternateCaseLocalHostFullName, inet::IpAddress(192, 168, 1, 1)),
+      MdnsResourceSection::kAnswer, sender_address1);
 
   // Callback and removal are run in a task.
   ExpectPostTaskForTimeAndInvoke(zx::msec(0), zx::msec(0));
@@ -349,6 +386,42 @@ TEST_F(AddressProberTest, ConflictWiredV6) {
                                IpVersions::kV6);
   under_test->ReceiveResource(DnsResource(kHostFullName, inet::IpAddress(0xfe80, 1)),
                               MdnsResourceSection::kAnswer, sender_address2);
+
+  // Callback and removal are run in a task.
+  ExpectPostTaskForTimeAndInvoke(zx::msec(0), zx::msec(0));
+
+  // Expect the probe to fail (conflict).
+  EXPECT_TRUE(callback_called);
+  EXPECT_FALSE(callback_success);
+  ExpectRemoveAgentCall();
+  ExpectNoOther();
+
+  // Reset Variables and test case insensitive hostname conflict
+  callback_called = false;
+
+  // We need to make_shared here, because |RemoveSelf| calls |shared_from_this|.
+  under_test = std::make_shared<AddressProber>(this, kHostFullName, kAddresses, Media::kWired,
+                                               IpVersions::kV6,
+                                               [&callback_called, &callback_success](bool success) {
+                                                 callback_called = true;
+                                                 callback_success = success;
+                                               });
+  SetAgent(*under_test);
+
+  under_test->Start(kLocalHostFullName);
+
+  // Expect the first probe message after a delay of 0~250ms.
+  ExpectPostTaskForTimeAndInvoke(zx::msec(0), zx::msec(250));
+  ExpectProbe(kHostFullName, kAddresses, Media::kWired, IpVersions::kV6);
+  ExpectPostTaskForTime(zx::msec(250), zx::msec(250));
+  EXPECT_FALSE(callback_called);
+
+  // Send a reply wired/V6.
+  ReplyAddress sender_address3(inet::SocketAddress(0xfe80, 1, inet::IpPort::From_uint16_t(5353)),
+                               inet::IpAddress(0xfe80, 100), kInterfaceId, Media::kWired,
+                               IpVersions::kV6);
+  under_test->ReceiveResource(DnsResource(kAlternateCaseHostFullName, inet::IpAddress(0xfe80, 1)),
+                              MdnsResourceSection::kAnswer, sender_address3);
 
   // Callback and removal are run in a task.
   ExpectPostTaskForTimeAndInvoke(zx::msec(0), zx::msec(0));

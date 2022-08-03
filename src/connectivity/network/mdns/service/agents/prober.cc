@@ -41,7 +41,7 @@ void Prober::Start(const std::string& local_host_full_name) {
 void Prober::ReceiveResource(const DnsResource& resource, MdnsResourceSection section,
                              ReplyAddress sender_address) {
   if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_) ||
-      resource.name_.dotted_string_ != ResourceName()) {
+      strcasecmp(resource.name_.dotted_string_.c_str(), ResourceName().c_str()) != 0) {
     return;
   }
 

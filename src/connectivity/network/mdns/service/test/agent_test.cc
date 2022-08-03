@@ -14,6 +14,7 @@ namespace test {
 
 const std::string AgentTest::kLocalHostName = "testhost";
 const std::string AgentTest::kLocalHostFullName = "testhost.local.";
+const std::string AgentTest::kAlternateCaseLocalHostFullName = "tEsThOsT.loCal.";
 
 void AgentTest::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) {
   EXPECT_EQ(agent_, agent);
