@@ -4,13 +4,14 @@
 use {
     anyhow::{anyhow, Context as _, Error},
     async_lock::RwLock as AsyncRwLock,
-    cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
     fdio::Namespace,
+    fidl_contrib::{protocol_connector::ProtocolSender, ProtocolConnector},
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
     fuchsia_async as fasync,
-    fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
@@ -155,9 +156,11 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
     let futures = FuturesUnordered::new();
 
-    let (mut cobalt_sender, cobalt_fut) =
-        CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
-            .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    let (mut cobalt_sender, cobalt_fut) = ProtocolConnector::new_with_buffer_size(
+        metrics_util::CobaltConnectedService,
+        COBALT_CONNECTOR_BUFFER_SIZE,
+    )
+    .serve_and_log_errors();
     futures.push(cobalt_fut.boxed_local());
 
     let data_proxy = match fuchsia_fs::directory::open_in_namespace(
@@ -354,10 +357,9 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
     futures.push(fs.collect().boxed_local());
 
-    cobalt_sender.log_elapsed_time(
-        metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
-        0,
-        Instant::now().duration_since(startup_time).as_micros() as i64,
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::PKG_RESOLVER_STARTUP_DURATION_MIGRATED_METRIC_ID)
+            .as_integer(Instant::now().duration_since(startup_time).as_micros() as i64),
     );
 
     ftrace::instant!("app", "startup", ftrace::Scope::Process);
@@ -371,7 +373,7 @@ async fn load_repo_manager(
     node: inspect::Node,
     experiments: Experiments,
     config: &Config,
-    mut cobalt_sender: CobaltSender,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
     data_proxy: Option<fio::DirectoryProxy>,
@@ -392,24 +394,27 @@ async fn load_repo_manager(
         .load_static_configs_dir(STATIC_REPO_DIR)
     {
         Ok(builder) => {
-            cobalt_sender.log_event_count(
-                metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success
-                    .as_event_code(),
-                0,
-                1,
+            cobalt_sender.send(
+                MetricEvent::builder(
+                    metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_MIGRATED_METRIC_ID,
+                )
+                .with_event_codes(
+                    metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Success,
+                )
+                .as_occurrence(1),
             );
             builder
         }
         Err((builder, errs)) => {
             for err in errs {
-                let dimension_result: metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult
+                let dimension_result: metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult
                     = (&err).into();
-                cobalt_sender.log_event_count(
-                    metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-                    dimension_result.as_event_code(),
-                    0,
-                    1,
+                cobalt_sender.send(
+                    MetricEvent::builder(
+                        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_MIGRATED_METRIC_ID,
+                    )
+                    .with_event_codes(dimension_result)
+                    .as_occurrence(1),
                 );
                 match &err {
                     crate::repository_manager::LoadError::Io { path: _, error }
@@ -437,7 +442,7 @@ async fn load_rewrite_manager(
     repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     data_proxy: Option<fio::DirectoryProxy>,
     config_proxy: Option<fio::DirectoryProxy>,
 ) -> RewriteManager {
@@ -502,26 +507,25 @@ async fn load_rewrite_manager(
     }
 }
 
-fn load_font_package_manager(mut cobalt_sender: CobaltSender) -> FontPackageManager {
+fn load_font_package_manager(mut cobalt_sender: ProtocolSender<MetricEvent>) -> FontPackageManager {
     match FontPackageManagerBuilder::new().add_registry_file(STATIC_FONT_REGISTRY_PATH) {
         Ok(builder) => {
-            cobalt_sender.log_event_count(
-                metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-                metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Success
-                    .as_event_code(),
-                0,
-                1,
+            cobalt_sender.send(
+                MetricEvent::builder(metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID)
+                    .with_event_codes(
+                        metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Success,
+                    )
+                    .as_occurrence(1),
             );
             builder
         }
         Err((builder, err)) => {
-            let dimension_result: metrics::FontManagerLoadStaticRegistryMetricDimensionResult =
+            let dimension_result: metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult =
                 (&err).into();
-            cobalt_sender.log_event_count(
-                metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-                dimension_result.as_event_code(),
-                0,
-                1,
+            cobalt_sender.send(
+                MetricEvent::builder(metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID)
+                    .with_event_codes(dimension_result)
+                    .as_occurrence(1),
             );
 
             if err.is_not_found() {

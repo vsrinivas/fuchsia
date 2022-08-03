@@ -27,7 +27,7 @@
         {
             protocol: [
                 "fuchsia.boot.Arguments",
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.pkg.PackageCache",
             ],
             from: "parent",

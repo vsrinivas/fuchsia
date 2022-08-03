@@ -8,13 +8,16 @@ use {
         metrics_util::tuf_error_as_create_tuf_client_event_code, TCP_KEEPALIVE_TIMEOUT,
     },
     anyhow::{anyhow, format_err, Context as _},
-    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio,
+    cobalt_sw_delivery_registry as metrics,
+    fidl_contrib::protocol_connector::ProtocolSender,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{
         BlobId, MirrorConfig, RepositoryConfig, RepositoryKey, RepositoryStorageType,
     },
     fuchsia_async::TimeoutExt as _,
-    fuchsia_cobalt::CobaltSender,
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
@@ -85,7 +88,7 @@ impl Repository {
         data_proxy: Option<fio::DirectoryProxy>,
         persisted_repos_dir: Option<&str>,
         config: &RepositoryConfig,
-        mut cobalt_sender: CobaltSender,
+        mut cobalt_sender: ProtocolSender<MetricEvent>,
         node: inspect::Node,
         local_mirror: Option<LocalMirrorProxy>,
         tuf_metadata_timeout: Duration,
@@ -110,11 +113,10 @@ impl Repository {
                 .on_timeout(tuf_metadata_timeout, || Err(error::TufOrTimeout::Timeout))
                 .await
                 .map_err(|e| {
-                    cobalt_sender.log_event_count(
-                        metrics::CREATE_TUF_CLIENT_METRIC_ID,
-                        tuf_error_as_create_tuf_client_event_code(&e),
-                        0,
-                        1,
+                    cobalt_sender.send(
+                        MetricEvent::builder(metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID)
+                            .with_event_codes(tuf_error_as_create_tuf_client_event_code(&e))
+                            .as_occurrence(1),
                     );
                     anyhow!(e).context("creating rust-tuf client")
                 })?,
@@ -124,11 +126,10 @@ impl Repository {
                 cobalt_sender.clone(),
             );
 
-        cobalt_sender.log_event_count(
-            metrics::CREATE_TUF_CLIENT_METRIC_ID,
-            metrics::CreateTufClientMetricDimensionResult::Success,
-            0,
-            1,
+        cobalt_sender.send(
+            MetricEvent::builder(metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID)
+                .with_event_codes(metrics::CreateTufClientMigratedMetricDimensionResult::Success)
+                .as_occurrence(1),
         );
 
         // We no longer need to read from the local repository after we've created the client.
@@ -410,7 +411,7 @@ mod tests {
 
         async fn repo(&self, config: &RepositoryConfig) -> Result<Repository, anyhow::Error> {
             let (sender, _) = futures::channel::mpsc::channel(0);
-            let cobalt_sender = CobaltSender::new(sender);
+            let cobalt_sender = ProtocolSender::new(sender);
             let proxy = fuchsia_fs::directory::open_in_namespace(
                 self.data_dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
@@ -755,9 +756,9 @@ mod inspect_tests {
     const TEST_REPO_URL: &str = "fuchsia-pkg://test";
     const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
-    fn dummy_sender() -> CobaltSender {
+    fn dummy_sender() -> ProtocolSender<MetricEvent> {
         let (sender, _) = futures::channel::mpsc::channel(0);
-        CobaltSender::new(sender)
+        ProtocolSender::new(sender)
     }
 
     #[fasync::run_singlethreaded(test)]

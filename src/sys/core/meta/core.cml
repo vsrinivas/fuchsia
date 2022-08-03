@@ -908,7 +908,6 @@
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: [
-                "#pkg-resolver",
                 "#sampler",
 
                 // TODO(fxbug.dev/96053): remove once basemgr has migrated to
@@ -925,6 +924,7 @@
                 "#cobalt_system_metrics",
                 "#feedback",
                 "#log-stats",
+                "#pkg-resolver",
                 "#sampler",
                 "#session-manager",
             ],

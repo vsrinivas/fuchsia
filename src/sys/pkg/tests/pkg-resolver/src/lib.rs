@@ -10,9 +10,9 @@ use {
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl::encoding::encode_persistent_with_context,
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _},
-    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_pkg::{
         self as fpkg, CupMarker, CupProxy, ExperimentToggle as Experiment, FontResolverMarker,
         FontResolverProxy, GetInfoError, PackageCacheMarker, PackageResolverAdminMarker,
@@ -38,6 +38,7 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::prelude::*,
     mock_boot_arguments::MockBootArgumentsService,
+    mock_metrics::MockMetricEventLoggerFactory,
     parking_lot::Mutex,
     serde::Serialize,
     std::{
@@ -460,11 +461,11 @@ where
             )
             .unwrap();
 
-        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory = Arc::new(MockMetricEventLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
         local_child_svc_dir
             .add_entry(
-                fidl_fuchsia_cobalt::LoggerFactoryMarker::PROTOCOL_NAME,
+                fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker::PROTOCOL_NAME,
                 vfs::service::host(move |stream| {
                     Arc::clone(&logger_factory_clone).run_logger_factory(stream)
                 }),
@@ -589,7 +590,9 @@ where
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
                     .from(&service_reflector)
                     .to(&pkg_cache)
@@ -766,7 +769,7 @@ impl Proxies {
 }
 
 pub struct Mocks {
-    pub logger_factory: Arc<MockLoggerFactory>,
+    pub logger_factory: Arc<MockMetricEventLoggerFactory>,
 }
 
 pub struct TestEnv<B = BlobfsRamdisk> {
@@ -808,85 +811,6 @@ impl TestEnv<BlobfsRamdisk> {
         drop(self.proxies);
         drop(self.apps);
         self.blobfs.stop().await.expect("blobfs to stop gracefully");
-    }
-}
-
-struct MockLogger {
-    cobalt_events: Mutex<Vec<CobaltEvent>>,
-}
-
-impl MockLogger {
-    fn new() -> Self {
-        Self { cobalt_events: Mutex::new(vec![]) }
-    }
-
-    async fn run_logger(self: Arc<Self>, mut stream: fidl_fuchsia_cobalt::LoggerRequestStream) {
-        while let Some(event) = stream.try_next().await.unwrap() {
-            match event {
-                fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
-                    self.cobalt_events.lock().push(event);
-                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
-                }
-                _ => {
-                    panic!("unhandled Logger method {:?}", event);
-                }
-            }
-        }
-    }
-}
-
-pub struct MockLoggerFactory {
-    loggers: Mutex<Vec<Arc<MockLogger>>>,
-}
-
-impl MockLoggerFactory {
-    fn new() -> Self {
-        Self { loggers: Mutex::new(vec![]) }
-    }
-
-    async fn run_logger_factory(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
-    ) {
-        while let Some(event) = stream.try_next().await.unwrap() {
-            match event {
-                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
-                    project_id,
-                    logger,
-                    responder,
-                } => {
-                    assert_eq!(project_id, cobalt_sw_delivery_registry::PROJECT_ID);
-                    let mock_logger = Arc::new(MockLogger::new());
-                    self.loggers.lock().push(mock_logger.clone());
-                    fasync::Task::spawn(mock_logger.run_logger(logger.into_stream().unwrap()))
-                        .detach();
-                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
-                }
-                _ => {
-                    panic!("unhandled LoggerFactory method: {:?}", event);
-                }
-            }
-        }
-    }
-
-    pub async fn wait_for_at_least_n_events_with_metric_id(
-        &self,
-        n: usize,
-        id: u32,
-    ) -> Vec<CobaltEvent> {
-        loop {
-            let events: Vec<CobaltEvent> = self
-                .loggers
-                .lock()
-                .iter()
-                .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
-                .filter(|CobaltEvent { metric_id, .. }| *metric_id == id)
-                .collect();
-            if events.len() >= n {
-                return events;
-            }
-            fasync::Timer::new(Duration::from_millis(10)).await;
-        }
     }
 }
 
@@ -1037,14 +961,10 @@ impl<B: Blobfs> TestEnv<B> {
         {
             assert_matches!(
                 event,
-                CobaltEvent {
+                MetricEvent {
                     metric_id,
                     event_codes,
-                    component: None,
-                    payload: EventPayload::EventCount(CountEvent {
-                        period_duration_micros: 0,
-                        count: 1
-                    }),
+                    payload: MetricEventPayload::Count(1),
                 } if metric_id == expected_metric_id && event_codes == expected_codes
             )
         }

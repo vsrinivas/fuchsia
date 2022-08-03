@@ -79,9 +79,9 @@ async fn single_blob_resume_success() {
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![(
-            metrics::FetchBlobMetricDimensionResult::Success,
+            metrics::FetchBlobMigratedMetricDimensionResult::Success,
             metrics::FetchBlobMetricDimensionResumed::True,
         )],
     )
@@ -146,9 +146,9 @@ async fn two_blob_resume_success() {
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![(
-            metrics::FetchBlobMetricDimensionResult::Success,
+            metrics::FetchBlobMigratedMetricDimensionResult::Success,
             metrics::FetchBlobMetricDimensionResumed::True,
         )],
     )
@@ -224,10 +224,10 @@ async fn resume_validates_content_range() {
     );
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![
             (
-                metrics::FetchBlobMetricDimensionResult::InvalidContentRangeHeader,
+                metrics::FetchBlobMigratedMetricDimensionResult::InvalidContentRangeHeader,
                 metrics::FetchBlobMetricDimensionResumed::True,
             );
             2
@@ -314,10 +314,10 @@ async fn resume_validates_content_length() {
     );
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![
             (
-                metrics::FetchBlobMetricDimensionResult::ContentLengthContentRangeMismatch,
+                metrics::FetchBlobMigratedMetricDimensionResult::ContentLengthContentRangeMismatch,
                 metrics::FetchBlobMetricDimensionResumed::True,
             );
             2
@@ -369,10 +369,10 @@ async fn resume_validates_206_status() {
     );
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![
             (
-                metrics::FetchBlobMetricDimensionResult::ExpectedHttpStatus206,
+                metrics::FetchBlobMigratedMetricDimensionResult::ExpectedHttpStatus206,
                 metrics::FetchBlobMetricDimensionResumed::True,
             );
             2
@@ -422,10 +422,10 @@ async fn resume_enforces_max_resumption_limit() {
     );
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![
             (
-                metrics::FetchBlobMetricDimensionResult::ExceededResumptionAttemptLimit,
+                metrics::FetchBlobMigratedMetricDimensionResult::ExceededResumptionAttemptLimit,
                 metrics::FetchBlobMetricDimensionResumed::True,
             );
             2

@@ -8,7 +8,7 @@
     "sandbox": {
         "services": [
             "fuchsia.boot.Arguments",
-            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.net.name.Lookup",
             "fuchsia.pkg.LocalMirror",
             "fuchsia.pkg.PackageCache",

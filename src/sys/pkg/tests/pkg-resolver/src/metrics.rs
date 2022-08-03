@@ -8,7 +8,7 @@ use {
     cobalt_client::traits::AsEventCodes,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::create_endpoints,
-    fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
+    fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
         serve::{responder, HttpResponder},
@@ -20,7 +20,7 @@ use {
     std::{net::Ipv4Addr, sync::Arc},
 };
 
-async fn assert_elapsed_duration_events(
+async fn assert_integer_events(
     env: &TestEnv,
     expected_metric_id: u32,
     expected_event_codes: Vec<impl AsEventCodes>,
@@ -41,11 +41,10 @@ async fn assert_elapsed_duration_events(
     {
         assert_matches!(
             event,
-            CobaltEvent {
+            MetricEvent {
                 metric_id,
                 event_codes,
-                component: None,
-                payload: EventPayload::ElapsedMicros(_),
+                payload: MetricEventPayload::IntegerValue(_),
             } if metric_id == expected_metric_id && event_codes == expected_codes
         )
     }
@@ -91,8 +90,8 @@ async fn repository_manager_load_static_configs_success() {
         .await;
 
     env.assert_count_events(
-        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success],
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_MIGRATED_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Success],
     )
     .await;
 
@@ -103,23 +102,12 @@ async fn repository_manager_load_static_configs_success() {
 async fn pkg_resolver_startup_duration() {
     let env = TestEnvBuilder::new().build().await;
 
-    let events = env
-        .mocks
-        .logger_factory
-        .wait_for_at_least_n_events_with_metric_id(
-            1,
-            metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
-        )
-        .await;
-    assert_matches!(
-        events[0],
-        CobaltEvent {
-            metric_id: metrics::PKG_RESOLVER_STARTUP_DURATION_METRIC_ID,
-            ref event_codes,
-            component: None,
-            payload: EventPayload::ElapsedMicros(_)
-        } if event_codes == &vec![0]
-    );
+    assert_integer_events(
+        &env,
+        metrics::PKG_RESOLVER_STARTUP_DURATION_MIGRATED_METRIC_ID,
+        vec![()],
+    )
+    .await;
 
     env.stop().await;
 }
@@ -129,8 +117,8 @@ async fn repository_manager_load_static_configs_io() {
     let env = TestEnvBuilder::new().build().await;
 
     env.assert_count_events(
-        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io],
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_MIGRATED_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Io],
     )
     .await;
 
@@ -149,8 +137,8 @@ async fn repository_manager_load_static_configs_parse() {
         .await;
 
     env.assert_count_events(
-        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse],
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_MIGRATED_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Parse],
     )
     .await;
 
@@ -171,8 +159,8 @@ async fn repository_manager_load_static_configs_overridden() {
         .await;
 
     env.assert_count_events(
-        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
-        vec![metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden],
+        metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_MIGRATED_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Overridden],
     )
     .await;
 
@@ -202,8 +190,8 @@ async fn resolve_success_regular() {
     );
 
     env.assert_count_events(
-        metrics::RESOLVE_STATUS_METRIC_ID,
-        vec![(metrics::ResolveStatusMetricDimensionResult::Success,)],
+        metrics::RESOLVE_STATUS_MIGRATED_METRIC_ID,
+        vec![metrics::ResolveStatusMigratedMetricDimensionResult::Success],
     )
     .await;
     env.stop().await;
@@ -218,8 +206,8 @@ async fn resolve_failure_regular_unreachable() {
     );
 
     env.assert_count_events(
-        metrics::RESOLVE_STATUS_METRIC_ID,
-        vec![(metrics::ResolveStatusMetricDimensionResult::RepoNotFound,)],
+        metrics::RESOLVE_STATUS_MIGRATED_METRIC_ID,
+        vec![metrics::ResolveStatusMigratedMetricDimensionResult::RepoNotFound],
     )
     .await;
     env.stop().await;
@@ -248,11 +236,11 @@ async fn resolve_duration_success() {
         Ok(())
     );
 
-    assert_elapsed_duration_events(
+    assert_integer_events(
         &env,
-        metrics::RESOLVE_DURATION_METRIC_ID,
+        metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
         vec![(
-            metrics::ResolveDurationMetricDimensionResult::Success,
+            metrics::ResolveDurationMigratedMetricDimensionResult::Success,
             metrics::ResolveDurationMetricDimensionResolverType::Regular,
         )],
     )
@@ -268,11 +256,11 @@ async fn resolve_duration_failure() {
         Err(fidl_fuchsia_pkg::ResolveError::RepoNotFound),
     );
 
-    assert_elapsed_duration_events(
+    assert_integer_events(
         &env,
-        metrics::RESOLVE_DURATION_METRIC_ID,
+        metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
         vec![(
-            metrics::ResolveDurationMetricDimensionResult::Failure,
+            metrics::ResolveDurationMigratedMetricDimensionResult::Failure,
             metrics::ResolveDurationMetricDimensionResolverType::Regular,
         )],
     )
@@ -287,17 +275,17 @@ async fn resolve_duration_font_test_failure() {
     assert_eq!(
         env.proxies
             .font_resolver
-            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server,)
+            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server)
             .await
             .unwrap()
             .unwrap_err(),
         Status::NOT_FOUND.into_raw()
     );
-    assert_elapsed_duration_events(
+    assert_integer_events(
         &env,
-        metrics::RESOLVE_DURATION_METRIC_ID,
+        metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
         vec![(
-            metrics::ResolveDurationMetricDimensionResult::Failure,
+            metrics::ResolveDurationMigratedMetricDimensionResult::Failure,
             metrics::ResolveDurationMetricDimensionResolverType::Font,
         )],
     )
@@ -312,9 +300,9 @@ async fn pkg_resolver_fetch_blob_success() {
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Option::<responder::StaticResponseCode>::None,
         Ok(()),
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![(
-            metrics::FetchBlobMetricDimensionResult::Success,
+            metrics::FetchBlobMigratedMetricDimensionResult::Success,
             metrics::FetchBlobMetricDimensionResumed::False,
         )],
     )
@@ -334,10 +322,10 @@ async fn pkg_resolver_fetch_blob_failure() {
         pkg,
         Some(responder),
         Err(fidl_fuchsia_pkg::ResolveError::UnavailableBlob),
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![
             (
-                metrics::FetchBlobMetricDimensionResult::HttpNotFound,
+                metrics::FetchBlobMigratedMetricDimensionResult::HttpNotFound,
                 metrics::FetchBlobMetricDimensionResumed::False
             );
             2
@@ -352,8 +340,8 @@ async fn merkle_for_url_success() {
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Option::<responder::StaticResponseCode>::None,
         Ok(()),
-        metrics::MERKLE_FOR_URL_METRIC_ID,
-        vec![metrics::MerkleForUrlMetricDimensionResult::Success],
+        metrics::MERKLE_FOR_URL_MIGRATED_METRIC_ID,
+        vec![metrics::MerkleForUrlMigratedMetricDimensionResult::Success],
     )
     .await;
 }
@@ -372,8 +360,8 @@ async fn merkle_for_url_failure() {
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Some(responder::ForPath::new("/2.targets.json", delete_targets_stanza)),
         Err(fidl_fuchsia_pkg::ResolveError::Internal),
-        metrics::MERKLE_FOR_URL_METRIC_ID,
-        vec![metrics::MerkleForUrlMetricDimensionResult::TufError],
+        metrics::MERKLE_FOR_URL_MIGRATED_METRIC_ID,
+        vec![metrics::MerkleForUrlMigratedMetricDimensionResult::TufError],
     )
     .await;
 }
@@ -385,8 +373,8 @@ async fn create_tuf_client_success() {
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Option::<responder::StaticResponseCode>::None,
         Ok(()),
-        metrics::CREATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::CreateTufClientMetricDimensionResult::Success],
+        metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID,
+        vec![metrics::CreateTufClientMigratedMetricDimensionResult::Success],
     )
     .await;
 }
@@ -400,8 +388,8 @@ async fn create_tuf_client_error() {
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Some(responder),
         Err(fidl_fuchsia_pkg::ResolveError::Internal),
-        metrics::CREATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::CreateTufClientMetricDimensionResult::MissingMetadata],
+        metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID,
+        vec![metrics::CreateTufClientMigratedMetricDimensionResult::MissingMetadata],
     )
     .await;
 }
@@ -412,8 +400,8 @@ async fn update_tuf_client_success() {
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Option::<responder::StaticResponseCode>::None,
         Ok(()),
-        metrics::UPDATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::UpdateTufClientMetricDimensionResult::Success],
+        metrics::UPDATE_TUF_CLIENT_MIGRATED_METRIC_ID,
+        vec![metrics::UpdateTufClientMigratedMetricDimensionResult::Success],
     )
     .await;
 }
@@ -427,8 +415,8 @@ async fn update_tuf_client_error() {
             responder::StaticResponseCode::not_found(),
         )),
         Err(fidl_fuchsia_pkg::ResolveError::Internal),
-        metrics::UPDATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::UpdateTufClientMetricDimensionResult::MissingMetadata],
+        metrics::UPDATE_TUF_CLIENT_MIGRATED_METRIC_ID,
+        vec![metrics::UpdateTufClientMigratedMetricDimensionResult::MissingMetadata],
     )
     .await;
 }
@@ -455,7 +443,7 @@ async fn font_resolver_is_font_package_check_not_font() {
     assert_eq!(
         env.proxies
             .font_resolver
-            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server,)
+            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server)
             .await
             .unwrap()
             .unwrap_err(),
@@ -463,8 +451,8 @@ async fn font_resolver_is_font_package_check_not_font() {
     );
 
     env.assert_count_events(
-        metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
-        vec![metrics::IsFontPackageCheckMetricDimensionResult::NotFont],
+        metrics::IS_FONT_PACKAGE_CHECK_MIGRATED_METRIC_ID,
+        vec![metrics::IsFontPackageCheckMigratedMetricDimensionResult::NotFont],
     )
     .await;
     env.stop().await;
@@ -479,8 +467,8 @@ async fn font_manager_load_static_registry_success() {
         .await;
 
     env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Success],
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID,
+        vec![metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Success],
     )
     .await;
 
@@ -492,8 +480,8 @@ async fn font_manager_load_static_registry_failure_io() {
     let env = TestEnvBuilder::new().build().await;
 
     env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Io],
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID,
+        vec![metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Io],
     )
     .await;
 
@@ -510,8 +498,8 @@ async fn font_manager_load_static_registry_failure_parse() {
         .await;
 
     env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Parse],
+        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID,
+        vec![metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Parse],
     )
     .await;
 
@@ -523,8 +511,8 @@ async fn load_repository_for_channel_success_no_rewrite_rule() {
     let env = TestEnvBuilder::new().build().await;
 
     env.assert_count_events(
-        metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
-        vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success],
+        metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_MIGRATED_METRIC_ID,
+        vec![metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Success],
     )
     .await;
 
@@ -539,7 +527,7 @@ mod pkg_resolver_blob_fetch {
         min_code: u16,
         max_code: u16,
         count: usize,
-        status: metrics::FetchBlobMetricDimensionResult,
+        status: metrics::FetchBlobMigratedMetricDimensionResult,
     }
 
     // Macro to construct a test table table.
@@ -554,7 +542,7 @@ mod pkg_resolver_blob_fetch {
                                 min_code: $min,
                                 max_code: $max,
                                 count: $count,
-                                status: metrics::FetchBlobMetricDimensionResult::$status,
+                                status: metrics::FetchBlobMigratedMetricDimensionResult::$status,
                             },
                         )+
                     ];
@@ -651,7 +639,7 @@ mod pkg_resolver_blob_fetch {
             }
         }
 
-        env.assert_count_events(metrics::FETCH_BLOB_METRIC_ID, statuses).await;
+        env.assert_count_events(metrics::FETCH_BLOB_MIGRATED_METRIC_ID, statuses).await;
 
         env.stop().await;
     }
@@ -664,7 +652,7 @@ mod pkg_resolver_create_tuf_client {
     struct StatusTest {
         min_code: u16,
         max_code: u16,
-        status: metrics::CreateTufClientMetricDimensionResult,
+        status: metrics::CreateTufClientMigratedMetricDimensionResult,
     }
 
     // Macro to construct a test table table.
@@ -678,7 +666,7 @@ mod pkg_resolver_create_tuf_client {
                             StatusTest {
                                 min_code: $min,
                                 max_code: $max,
-                                status: metrics::CreateTufClientMetricDimensionResult::$status,
+                                status: metrics::CreateTufClientMigratedMetricDimensionResult::$status,
                             },
                         )+
                     ];
@@ -756,7 +744,7 @@ mod pkg_resolver_create_tuf_client {
             .unwrap();
         env.register_repo(&served_repository).await;
 
-        let mut statuses: Vec<metrics::CreateTufClientMetricDimensionResult> = Vec::new();
+        let mut statuses = vec![];
 
         for ent in test_table.iter() {
             for code in ent.min_code..=ent.max_code {
@@ -766,7 +754,7 @@ mod pkg_resolver_create_tuf_client {
             }
         }
 
-        env.assert_count_events(metrics::CREATE_TUF_CLIENT_METRIC_ID, statuses).await;
+        env.assert_count_events(metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID, statuses).await;
 
         env.stop().await;
     }
@@ -779,7 +767,7 @@ mod pkg_resolver_update_tuf_client {
     struct StatusTest {
         min_code: u16,
         max_code: u16,
-        status: metrics::UpdateTufClientMetricDimensionResult,
+        status: metrics::UpdateTufClientMigratedMetricDimensionResult,
     }
 
     // Macro to construct a test table table.
@@ -793,7 +781,7 @@ mod pkg_resolver_update_tuf_client {
                             StatusTest {
                                 min_code: $min,
                                 max_code: $max,
-                                status: metrics::UpdateTufClientMetricDimensionResult::$status,
+                                status: metrics::UpdateTufClientMigratedMetricDimensionResult::$status,
                             },
                         )+
                     ];
@@ -870,7 +858,7 @@ mod pkg_resolver_update_tuf_client {
             .start()
             .unwrap();
 
-        let mut statuses: Vec<metrics::UpdateTufClientMetricDimensionResult> = Vec::new();
+        let mut statuses = vec![];
 
         for ent in test_table.iter() {
             for code in ent.min_code..=ent.max_code {
@@ -886,7 +874,7 @@ mod pkg_resolver_update_tuf_client {
             }
         }
 
-        env.assert_count_events(metrics::UPDATE_TUF_CLIENT_METRIC_ID, statuses).await;
+        env.assert_count_events(metrics::UPDATE_TUF_CLIENT_MIGRATED_METRIC_ID, statuses).await;
 
         env.stop().await;
     }

@@ -4,10 +4,13 @@
 
 use {
     crate::{repository::Repository, repository_manager::Stats, TCP_KEEPALIVE_TIMEOUT},
-    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio,
+    cobalt_sw_delivery_registry as metrics,
+    fidl_contrib::protocol_connector::ProtocolSender,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId, BlobInfo, MirrorConfig, RepositoryConfig},
-    fuchsia_cobalt::CobaltSender,
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_info,
     fuchsia_trace as ftrace,
@@ -113,7 +116,7 @@ pub async fn cache_package<'a>(
     url: &'a AbsolutePackageUrl,
     cache: &'a pkg::cache::Client,
     blob_fetcher: &'a BlobFetcher,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     trace_id: ftrace::Id,
 ) -> Result<(BlobId, PackageDirectory), CacheError> {
     let (merkle, size) =
@@ -437,25 +440,16 @@ impl ToResolveError for FetchError {
     }
 }
 
-impl From<&MerkleForError> for metrics::MerkleForUrlMetricDimensionResult {
-    fn from(e: &MerkleForError) -> metrics::MerkleForUrlMetricDimensionResult {
+impl From<&MerkleForError> for metrics::MerkleForUrlMigratedMetricDimensionResult {
+    fn from(e: &MerkleForError) -> metrics::MerkleForUrlMigratedMetricDimensionResult {
+        use metrics::MerkleForUrlMigratedMetricDimensionResult as EventCodes;
         match e {
-            MerkleForError::MetadataNotFound { .. } => {
-                metrics::MerkleForUrlMetricDimensionResult::TufError
-            }
-            MerkleForError::TargetNotFound(_) => {
-                metrics::MerkleForUrlMetricDimensionResult::NotFound
-            }
-            MerkleForError::FetchTargetDescription(..) => {
-                metrics::MerkleForUrlMetricDimensionResult::TufError
-            }
-            MerkleForError::InvalidTargetPath(_) => {
-                metrics::MerkleForUrlMetricDimensionResult::InvalidTargetPath
-            }
-            MerkleForError::NoCustomMetadata => {
-                metrics::MerkleForUrlMetricDimensionResult::NoCustomMetadata
-            }
-            MerkleForError::SerdeError(_) => metrics::MerkleForUrlMetricDimensionResult::SerdeError,
+            MerkleForError::MetadataNotFound { .. } => EventCodes::TufError,
+            MerkleForError::TargetNotFound(_) => EventCodes::NotFound,
+            MerkleForError::FetchTargetDescription(..) => EventCodes::TufError,
+            MerkleForError::InvalidTargetPath(_) => EventCodes::InvalidTargetPath,
+            MerkleForError::NoCustomMetadata => EventCodes::NoCustomMetadata,
+            MerkleForError::SerdeError(_) => EventCodes::SerdeError,
         }
     }
 }
@@ -463,7 +457,7 @@ impl From<&MerkleForError> for metrics::MerkleForUrlMetricDimensionResult {
 pub async fn merkle_for_url<'a>(
     repo: Arc<AsyncMutex<Repository>>,
     url: &'a AbsolutePackageUrl,
-    mut cobalt_sender: CobaltSender,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<(BlobId, u64), MerkleForError> {
     let target_path = TargetPath::new(format!(
         "{}/{}",
@@ -473,14 +467,13 @@ pub async fn merkle_for_url<'a>(
     .map_err(MerkleForError::InvalidTargetPath)?;
     let mut repo = repo.lock().await;
     let res = repo.get_merkle_at_path(&target_path).await;
-    cobalt_sender.log_event_count(
-        metrics::MERKLE_FOR_URL_METRIC_ID,
-        match &res {
-            Ok(_) => metrics::MerkleForUrlMetricDimensionResult::Success,
-            Err(res) => res.into(),
-        },
-        0,
-        1,
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::MERKLE_FOR_URL_MIGRATED_METRIC_ID)
+            .with_event_codes(match &res {
+                Ok(_) => metrics::MerkleForUrlMigratedMetricDimensionResult::Success,
+                Err(res) => res.into(),
+            })
+            .as_occurrence(1),
     );
     res.map(|custom| (custom.merkle(), custom.size()))
 }
@@ -565,7 +558,7 @@ impl BlobFetcher {
         node: fuchsia_inspect::Node,
         max_concurrency: usize,
         stats: Arc<Mutex<Stats>>,
-        cobalt_sender: CobaltSender,
+        cobalt_sender: ProtocolSender<MetricEvent>,
         local_mirror_proxy: Option<LocalMirrorProxy>,
         blob_fetch_params: BlobFetchParams,
     ) -> (impl Future<Output = ()>, BlobFetcher) {
@@ -634,7 +627,7 @@ async fn fetch_blob(
     inspect: inspect::NeedsRemoteType,
     http_client: &fuchsia_hyper::HttpsClient,
     stats: Arc<Mutex<Stats>>,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     merkle: BlobId,
     context: FetchBlobContext,
     local_mirror_proxy: Option<&LocalMirrorProxy>,
@@ -726,7 +719,7 @@ async fn fetch_blob_http(
     expected_len: Option<u64>,
     blob_fetch_params: BlobFetchParams,
     stats: Arc<Mutex<Stats>>,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     trace_id: ftrace::Id,
 ) -> Result<(), FetchError> {
     // TODO try the other mirrors depending on the errors encountered trying this one.
@@ -806,7 +799,7 @@ async fn fetch_blob_http(
             }
 
             let result_event_code = match &res {
-                Ok(()) => metrics::FetchBlobMetricDimensionResult::Success,
+                Ok(()) => metrics::FetchBlobMigratedMetricDimensionResult::Success,
                 Err(e) => e.into(),
             };
             let resumed_event_code = if fetch_stats.resumptions() != 0 {
@@ -814,11 +807,10 @@ async fn fetch_blob_http(
             } else {
                 metrics::FetchBlobMetricDimensionResumed::False
             };
-            cobalt_sender.log_event_count(
-                metrics::FETCH_BLOB_METRIC_ID,
-                (result_event_code, resumed_event_code),
-                0,
-                1,
+            cobalt_sender.send(
+                MetricEvent::builder(metrics::FETCH_BLOB_MIGRATED_METRIC_ID)
+                    .with_event_codes((result_event_code, resumed_event_code))
+                    .as_occurrence(1),
             );
 
             res
@@ -1097,9 +1089,9 @@ pub enum FetchError {
     },
 }
 
-impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
+impl From<&FetchError> for metrics::FetchBlobMigratedMetricDimensionResult {
     fn from(error: &FetchError) -> Self {
-        use {metrics::FetchBlobMetricDimensionResult as EventCodes, FetchError::*};
+        use {metrics::FetchBlobMigratedMetricDimensionResult as EventCodes, FetchError::*};
         match error {
             CreateBlob { .. } => EventCodes::CreateBlob,
             BadHttpStatus { code, .. } => match *code {

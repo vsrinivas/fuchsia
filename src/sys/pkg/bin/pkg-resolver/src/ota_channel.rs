@@ -5,8 +5,10 @@ use {
     crate::repository_manager::RepositoryManager,
     anyhow::{anyhow, format_err, Error},
     cobalt_sw_delivery_registry as metrics,
+    fidl_contrib::protocol_connector::ProtocolSender,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
-    fuchsia_cobalt::CobaltSender,
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
     fuchsia_syslog::fx_log_info,
@@ -38,7 +40,7 @@ impl ChannelInspectState {
 pub async fn create_rewrite_rule_for_ota_channel(
     channel_inspect_state: &ChannelInspectState,
     repo_manager: &RepositoryManager,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<Option<Rule>, Error> {
     create_rewrite_rule_for_ota_channel_impl_cobalt(
         get_tuf_config_name_from_vbmeta,
@@ -53,7 +55,7 @@ async fn create_rewrite_rule_for_ota_channel_impl_cobalt<F>(
     vbmeta_fn: F,
     channel_inspect_state: &ChannelInspectState,
     repo_manager: &RepositoryManager,
-    mut cobalt_sender: CobaltSender,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<Option<Rule>, Error>
 where
     F: Fn() -> BoxFuture<'static, Result<String, Error>>,
@@ -61,18 +63,19 @@ where
     let res =
         create_rewrite_rule_for_ota_channel_impl(vbmeta_fn, channel_inspect_state, repo_manager)
             .await;
-    cobalt_sender.log_event_count(
-        metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
-        match &res {
+    cobalt_sender.send(
+        MetricEvent::builder(
+            metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_MIGRATED_METRIC_ID,
+        )
+        .with_event_codes(match &res {
             Ok(_) => {
-                metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success
+                metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Success
             }
             Err(_) => {
-                metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Failure
+                metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Failure
             }
-        },
-        0,
-        1,
+        })
+        .as_occurrence(1),
     );
     res
 }
@@ -148,10 +151,10 @@ mod test {
     use {
         super::*,
         crate::repository_manager::RepositoryManagerBuilder,
-        cobalt_client::traits::AsEventCode as _,
+        cobalt_client::traits::AsEventCodes,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsRequest},
-        fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
+        fidl_fuchsia_metrics::MetricEventPayload,
         fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey},
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
@@ -187,20 +190,16 @@ mod test {
     }
 
     fn verify_cobalt_emits_event(
-        mut cobalt_receiver: mpsc::Receiver<CobaltEvent>,
+        mut cobalt_receiver: mpsc::Receiver<MetricEvent>,
         metric_id: u32,
-        expected_event_codes: Vec<u32>,
+        expected_event_codes: impl AsEventCodes,
     ) {
         assert_eq!(
             cobalt_receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
+            MetricEvent {
                 metric_id,
-                event_codes: expected_event_codes,
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1
-                }),
+                event_codes: expected_event_codes.as_event_codes(),
+                payload: MetricEventPayload::Count(1),
             }
         );
     }
@@ -241,7 +240,7 @@ mod test {
 
         // Set up Cobalt.
         let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
+        let cobalt_sender = ProtocolSender::new(sender);
 
         let res = create_rewrite_rule_for_ota_channel_impl_cobalt(
             succeeding_vbmeta_fn,
@@ -267,9 +266,8 @@ mod test {
 
         verify_cobalt_emits_event(
             cobalt_receiver,
-            metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
-            vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success
-                .as_event_code()],
+            metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_MIGRATED_METRIC_ID,
+            metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Success,
         );
     }
 
@@ -279,7 +277,7 @@ mod test {
 
         // Set up Cobalt.
         let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
+        let cobalt_sender = ProtocolSender::new(sender);
 
         let res = create_rewrite_rule_for_ota_channel_impl_cobalt(
             failing_vbmeta_fn,
@@ -303,9 +301,8 @@ mod test {
 
         verify_cobalt_emits_event(
             cobalt_receiver,
-            metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_METRIC_ID,
-            vec![metrics::RepositoryManagerLoadRepositoryForChannelMetricDimensionResult::Success
-                .as_event_code()],
+            metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_MIGRATED_METRIC_ID,
+            metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Success,
         );
     }
 }

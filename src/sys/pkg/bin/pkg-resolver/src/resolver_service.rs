@@ -19,13 +19,15 @@ use {
     async_trait::async_trait,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
+    fidl_contrib::protocol_connector::ProtocolSender,
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{
         self as fpkg, FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
         PackageResolverRequestStream, ResolveError,
     },
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
-    fuchsia_cobalt::CobaltSender,
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as ftrace,
@@ -402,7 +404,7 @@ pub async fn run_resolver_service(
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     inspect: Arc<ResolverServiceInspectState>,
     eager_package_manager: Arc<Option<AsyncRwLock<EagerPackageManager<QueuedResolver>>>>,
 ) -> Result<(), Error> {
@@ -421,21 +423,23 @@ pub async fn run_resolver_service(
                     )
                     .await;
 
-                    cobalt_sender.log_event_count(
-                        metrics::RESOLVE_STATUS_METRIC_ID,
-                        (resolve_result_to_resolve_status_code(&response),),
-                        0,
-                        1,
+                    cobalt_sender.send(
+                        MetricEvent::builder(metrics::RESOLVE_STATUS_MIGRATED_METRIC_ID)
+                            .with_event_codes(resolve_result_to_resolve_status_code(&response))
+                            .as_occurrence(1),
                     );
 
-                    cobalt_sender.log_elapsed_time(
-                        metrics::RESOLVE_DURATION_METRIC_ID,
-                        (
-                            resolve_result_to_resolve_duration_code(&response),
-                            metrics::ResolveDurationMetricDimensionResolverType::Regular,
-                        ),
-                        Instant::now().duration_since(start_time).as_micros() as i64,
+                    cobalt_sender.send(
+                        MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
+                            .with_event_codes((
+                                resolve_result_to_resolve_duration_code(&response),
+                                metrics::ResolveDurationMetricDimensionResolverType::Regular,
+                            ))
+                            .as_integer(
+                                Instant::now().duration_since(start_time).as_micros() as i64
+                            ),
                     );
+
                     responder.send(&mut response.map_err(|status| status.into())).with_context(
                         || {
                             format!(
@@ -752,7 +756,7 @@ pub async fn run_font_resolver_service(
     font_package_manager: Arc<FontPackageManager>,
     package_resolver: QueuedResolver,
     stream: FontResolverRequestStream,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
@@ -771,23 +775,24 @@ pub async fn run_font_resolver_service(
 
             let response_legacy =
                 response.clone().map(|_resolution_context| ()).map_err(|s| s.to_resolve_status());
-            cobalt_sender.log_event_count(
-                metrics::RESOLVE_METRIC_ID,
-                (
-                    resolve_result_to_resolve_code(response_legacy),
-                    metrics::ResolveMetricDimensionResolverType::Font,
-                ),
-                0,
-                1,
+            cobalt_sender.send(
+                MetricEvent::builder(metrics::RESOLVE_MIGRATED_METRIC_ID)
+                    .with_event_codes((
+                        resolve_result_to_resolve_code(response_legacy),
+                        metrics::ResolveMetricDimensionResolverType::Font,
+                    ))
+                    .as_occurrence(1),
             );
-            cobalt_sender.log_elapsed_time(
-                metrics::RESOLVE_DURATION_METRIC_ID,
-                (
-                    resolve_result_to_resolve_duration_code(&response),
-                    metrics::ResolveDurationMetricDimensionResolverType::Font,
-                ),
-                Instant::now().duration_since(start_time).as_micros() as i64,
+
+            cobalt_sender.send(
+                MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
+                    .with_event_codes((
+                        resolve_result_to_resolve_duration_code(&response),
+                        metrics::ResolveDurationMetricDimensionResolverType::Font,
+                    ))
+                    .as_integer(Instant::now().duration_since(start_time).as_micros() as i64),
             );
+
             responder.send(&mut response_legacy.map_err(|s| s.into_raw()))?;
             Ok(())
         })
@@ -800,7 +805,7 @@ async fn resolve_font<'a>(
     package_resolver: &'a QueuedResolver,
     package_url: String,
     directory_request: ServerEnd<fio::DirectoryMarker>,
-    mut cobalt_sender: CobaltSender,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
     let parsed_package_url = AbsolutePackageUrl::parse(&package_url)
         .map_err(|e| handle_bad_package_url_error(e, &package_url))?;
@@ -808,15 +813,14 @@ async fn resolve_font<'a>(
         AbsolutePackageUrl::Unpinned(unpinned) => font_package_manager.is_font_package(unpinned),
         AbsolutePackageUrl::Pinned(_) => false,
     };
-    cobalt_sender.log_event_count(
-        metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
-        if is_font_package {
-            metrics::IsFontPackageCheckMetricDimensionResult::Font
-        } else {
-            metrics::IsFontPackageCheckMetricDimensionResult::NotFont
-        },
-        0,
-        1,
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::IS_FONT_PACKAGE_CHECK_MIGRATED_METRIC_ID)
+            .with_event_codes(if is_font_package {
+                metrics::IsFontPackageCheckMigratedMetricDimensionResult::Font
+            } else {
+                metrics::IsFontPackageCheckMigratedMetricDimensionResult::NotFont
+            })
+            .as_occurrence(1),
     );
     if is_font_package {
         let _resolution_context =
@@ -840,112 +844,85 @@ fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
 
 fn resolve_result_to_resolve_duration_code<T>(
     res: &Result<fpkg::ResolutionContext, T>,
-) -> metrics::ResolveDurationMetricDimensionResult {
+) -> metrics::ResolveDurationMigratedMetricDimensionResult {
+    use metrics::ResolveDurationMigratedMetricDimensionResult as EventCodes;
     match res {
-        Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
-        Err(_) => metrics::ResolveDurationMetricDimensionResult::Failure,
+        Ok(_) => EventCodes::Success,
+        Err(_) => EventCodes::Failure,
     }
 }
 
 fn resolve_result_to_resolve_status_code(
     result: &Result<fpkg::ResolutionContext, pkg::ResolveError>,
-) -> metrics::ResolveStatusMetricDimensionResult {
+) -> metrics::ResolveStatusMigratedMetricDimensionResult {
+    use metrics::ResolveStatusMigratedMetricDimensionResult as EventCodes;
     match *result {
-        Ok(_) => metrics::ResolveStatusMetricDimensionResult::Success,
-        Err(pkg::ResolveError::Internal) => metrics::ResolveStatusMetricDimensionResult::Internal,
-        Err(pkg::ResolveError::AccessDenied) => {
-            metrics::ResolveStatusMetricDimensionResult::AccessDenied
-        }
-        Err(pkg::ResolveError::Io) => metrics::ResolveStatusMetricDimensionResult::Io,
-        Err(pkg::ResolveError::BlobNotFound) => {
-            metrics::ResolveStatusMetricDimensionResult::BlobNotFound
-        }
-        Err(pkg::ResolveError::PackageNotFound) => {
-            metrics::ResolveStatusMetricDimensionResult::PackageNotFound
-        }
-        Err(pkg::ResolveError::RepoNotFound) => {
-            metrics::ResolveStatusMetricDimensionResult::RepoNotFound
-        }
-        Err(pkg::ResolveError::NoSpace) => metrics::ResolveStatusMetricDimensionResult::NoSpace,
-        Err(pkg::ResolveError::UnavailableBlob) => {
-            metrics::ResolveStatusMetricDimensionResult::UnavailableBlob
-        }
-        Err(pkg::ResolveError::UnavailableRepoMetadata) => {
-            metrics::ResolveStatusMetricDimensionResult::UnavailableRepoMetadata
-        }
-        Err(pkg::ResolveError::InvalidUrl) => {
-            metrics::ResolveStatusMetricDimensionResult::InvalidUrl
-        }
+        Ok(_) => EventCodes::Success,
+        Err(pkg::ResolveError::Internal) => EventCodes::Internal,
+        Err(pkg::ResolveError::AccessDenied) => EventCodes::AccessDenied,
+        Err(pkg::ResolveError::Io) => EventCodes::Io,
+        Err(pkg::ResolveError::BlobNotFound) => EventCodes::BlobNotFound,
+        Err(pkg::ResolveError::PackageNotFound) => EventCodes::PackageNotFound,
+        Err(pkg::ResolveError::RepoNotFound) => EventCodes::RepoNotFound,
+        Err(pkg::ResolveError::NoSpace) => EventCodes::NoSpace,
+        Err(pkg::ResolveError::UnavailableBlob) => EventCodes::UnavailableBlob,
+        Err(pkg::ResolveError::UnavailableRepoMetadata) => EventCodes::UnavailableRepoMetadata,
+        Err(pkg::ResolveError::InvalidUrl) => EventCodes::InvalidUrl,
     }
 }
 
 fn resolve_result_to_resolve_code(
     result: Result<(), Status>,
-) -> metrics::ResolveMetricDimensionResult {
+) -> metrics::ResolveMigratedMetricDimensionResult {
+    use metrics::ResolveMigratedMetricDimensionResult as EventCodes;
     match result {
-        Ok(()) => metrics::ResolveMetricDimensionResult::ZxOk,
-        Err(Status::INTERNAL) => metrics::ResolveMetricDimensionResult::ZxErrInternal,
-        Err(Status::NOT_SUPPORTED) => metrics::ResolveMetricDimensionResult::ZxErrNotSupported,
-        Err(Status::NO_RESOURCES) => metrics::ResolveMetricDimensionResult::ZxErrNoResources,
-        Err(Status::NO_MEMORY) => metrics::ResolveMetricDimensionResult::ZxErrNoMemory,
-        Err(Status::INTERRUPTED_RETRY) => {
-            metrics::ResolveMetricDimensionResult::ZxErrInternalIntrRetry
-        }
-        Err(Status::INVALID_ARGS) => metrics::ResolveMetricDimensionResult::ZxErrInvalidArgs,
-        Err(Status::BAD_HANDLE) => metrics::ResolveMetricDimensionResult::ZxErrBadHandle,
-        Err(Status::WRONG_TYPE) => metrics::ResolveMetricDimensionResult::ZxErrWrongType,
-        Err(Status::BAD_SYSCALL) => metrics::ResolveMetricDimensionResult::ZxErrBadSyscall,
-        Err(Status::OUT_OF_RANGE) => metrics::ResolveMetricDimensionResult::ZxErrOutOfRange,
-        Err(Status::BUFFER_TOO_SMALL) => metrics::ResolveMetricDimensionResult::ZxErrBufferTooSmall,
-        Err(Status::BAD_STATE) => metrics::ResolveMetricDimensionResult::ZxErrBadState,
-        Err(Status::TIMED_OUT) => metrics::ResolveMetricDimensionResult::ZxErrTimedOut,
-        Err(Status::SHOULD_WAIT) => metrics::ResolveMetricDimensionResult::ZxErrShouldWait,
-        Err(Status::CANCELED) => metrics::ResolveMetricDimensionResult::ZxErrCanceled,
-        Err(Status::PEER_CLOSED) => metrics::ResolveMetricDimensionResult::ZxErrPeerClosed,
-        Err(Status::NOT_FOUND) => metrics::ResolveMetricDimensionResult::ZxErrNotFound,
-        Err(Status::ALREADY_EXISTS) => metrics::ResolveMetricDimensionResult::ZxErrAlreadyExists,
-        Err(Status::ALREADY_BOUND) => metrics::ResolveMetricDimensionResult::ZxErrAlreadyBound,
-        Err(Status::UNAVAILABLE) => metrics::ResolveMetricDimensionResult::ZxErrUnavailable,
-        Err(Status::ACCESS_DENIED) => metrics::ResolveMetricDimensionResult::ZxErrAccessDenied,
-        Err(Status::IO) => metrics::ResolveMetricDimensionResult::ZxErrIo,
-        Err(Status::IO_REFUSED) => metrics::ResolveMetricDimensionResult::ZxErrIoRefused,
-        Err(Status::IO_DATA_INTEGRITY) => {
-            metrics::ResolveMetricDimensionResult::ZxErrIoDataIntegrity
-        }
-        Err(Status::IO_DATA_LOSS) => metrics::ResolveMetricDimensionResult::ZxErrIoDataLoss,
-        Err(Status::IO_NOT_PRESENT) => metrics::ResolveMetricDimensionResult::ZxErrIoNotPresent,
-        Err(Status::IO_OVERRUN) => metrics::ResolveMetricDimensionResult::ZxErrIoOverrun,
-        Err(Status::IO_MISSED_DEADLINE) => {
-            metrics::ResolveMetricDimensionResult::ZxErrIoMissedDeadline
-        }
-        Err(Status::IO_INVALID) => metrics::ResolveMetricDimensionResult::ZxErrIoInvalid,
-        Err(Status::BAD_PATH) => metrics::ResolveMetricDimensionResult::ZxErrBadPath,
-        Err(Status::NOT_DIR) => metrics::ResolveMetricDimensionResult::ZxErrNotDir,
-        Err(Status::NOT_FILE) => metrics::ResolveMetricDimensionResult::ZxErrNotFile,
-        Err(Status::FILE_BIG) => metrics::ResolveMetricDimensionResult::ZxErrFileBig,
-        Err(Status::NO_SPACE) => metrics::ResolveMetricDimensionResult::ZxErrNoSpace,
-        Err(Status::NOT_EMPTY) => metrics::ResolveMetricDimensionResult::ZxErrNotEmpty,
-        Err(Status::STOP) => metrics::ResolveMetricDimensionResult::ZxErrStop,
-        Err(Status::NEXT) => metrics::ResolveMetricDimensionResult::ZxErrNext,
-        Err(Status::ASYNC) => metrics::ResolveMetricDimensionResult::ZxErrAsync,
-        Err(Status::PROTOCOL_NOT_SUPPORTED) => {
-            metrics::ResolveMetricDimensionResult::ZxErrProtocolNotSupported
-        }
-        Err(Status::ADDRESS_UNREACHABLE) => {
-            metrics::ResolveMetricDimensionResult::ZxErrAddressUnreachable
-        }
-        Err(Status::ADDRESS_IN_USE) => metrics::ResolveMetricDimensionResult::ZxErrAddressInUse,
-        Err(Status::NOT_CONNECTED) => metrics::ResolveMetricDimensionResult::ZxErrNotConnected,
-        Err(Status::CONNECTION_REFUSED) => {
-            metrics::ResolveMetricDimensionResult::ZxErrConnectionRefused
-        }
-        Err(Status::CONNECTION_RESET) => {
-            metrics::ResolveMetricDimensionResult::ZxErrConnectionReset
-        }
-        Err(Status::CONNECTION_ABORTED) => {
-            metrics::ResolveMetricDimensionResult::ZxErrConnectionAborted
-        }
-        Err(_) => metrics::ResolveMetricDimensionResult::UnexpectedZxStatusValue,
+        Ok(()) => EventCodes::ZxOk,
+        Err(Status::INTERNAL) => EventCodes::ZxErrInternal,
+        Err(Status::NOT_SUPPORTED) => EventCodes::ZxErrNotSupported,
+        Err(Status::NO_RESOURCES) => EventCodes::ZxErrNoResources,
+        Err(Status::NO_MEMORY) => EventCodes::ZxErrNoMemory,
+        Err(Status::INTERRUPTED_RETRY) => EventCodes::ZxErrInternalIntrRetry,
+        Err(Status::INVALID_ARGS) => EventCodes::ZxErrInvalidArgs,
+        Err(Status::BAD_HANDLE) => EventCodes::ZxErrBadHandle,
+        Err(Status::WRONG_TYPE) => EventCodes::ZxErrWrongType,
+        Err(Status::BAD_SYSCALL) => EventCodes::ZxErrBadSyscall,
+        Err(Status::OUT_OF_RANGE) => EventCodes::ZxErrOutOfRange,
+        Err(Status::BUFFER_TOO_SMALL) => EventCodes::ZxErrBufferTooSmall,
+        Err(Status::BAD_STATE) => EventCodes::ZxErrBadState,
+        Err(Status::TIMED_OUT) => EventCodes::ZxErrTimedOut,
+        Err(Status::SHOULD_WAIT) => EventCodes::ZxErrShouldWait,
+        Err(Status::CANCELED) => EventCodes::ZxErrCanceled,
+        Err(Status::PEER_CLOSED) => EventCodes::ZxErrPeerClosed,
+        Err(Status::NOT_FOUND) => EventCodes::ZxErrNotFound,
+        Err(Status::ALREADY_EXISTS) => EventCodes::ZxErrAlreadyExists,
+        Err(Status::ALREADY_BOUND) => EventCodes::ZxErrAlreadyBound,
+        Err(Status::UNAVAILABLE) => EventCodes::ZxErrUnavailable,
+        Err(Status::ACCESS_DENIED) => EventCodes::ZxErrAccessDenied,
+        Err(Status::IO) => EventCodes::ZxErrIo,
+        Err(Status::IO_REFUSED) => EventCodes::ZxErrIoRefused,
+        Err(Status::IO_DATA_INTEGRITY) => EventCodes::ZxErrIoDataIntegrity,
+        Err(Status::IO_DATA_LOSS) => EventCodes::ZxErrIoDataLoss,
+        Err(Status::IO_NOT_PRESENT) => EventCodes::ZxErrIoNotPresent,
+        Err(Status::IO_OVERRUN) => EventCodes::ZxErrIoOverrun,
+        Err(Status::IO_MISSED_DEADLINE) => EventCodes::ZxErrIoMissedDeadline,
+        Err(Status::IO_INVALID) => EventCodes::ZxErrIoInvalid,
+        Err(Status::BAD_PATH) => EventCodes::ZxErrBadPath,
+        Err(Status::NOT_DIR) => EventCodes::ZxErrNotDir,
+        Err(Status::NOT_FILE) => EventCodes::ZxErrNotFile,
+        Err(Status::FILE_BIG) => EventCodes::ZxErrFileBig,
+        Err(Status::NO_SPACE) => EventCodes::ZxErrNoSpace,
+        Err(Status::NOT_EMPTY) => EventCodes::ZxErrNotEmpty,
+        Err(Status::STOP) => EventCodes::ZxErrStop,
+        Err(Status::NEXT) => EventCodes::ZxErrNext,
+        Err(Status::ASYNC) => EventCodes::ZxErrAsync,
+        Err(Status::PROTOCOL_NOT_SUPPORTED) => EventCodes::ZxErrProtocolNotSupported,
+        Err(Status::ADDRESS_UNREACHABLE) => EventCodes::ZxErrAddressUnreachable,
+        Err(Status::ADDRESS_IN_USE) => EventCodes::ZxErrAddressInUse,
+        Err(Status::NOT_CONNECTED) => EventCodes::ZxErrNotConnected,
+        Err(Status::CONNECTION_REFUSED) => EventCodes::ZxErrConnectionRefused,
+        Err(Status::CONNECTION_RESET) => EventCodes::ZxErrConnectionReset,
+        Err(Status::CONNECTION_ABORTED) => EventCodes::ZxErrConnectionAborted,
+        Err(_) => EventCodes::UnexpectedZxStatusValue,
     }
 }
 

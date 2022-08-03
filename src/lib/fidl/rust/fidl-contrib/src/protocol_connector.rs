@@ -143,7 +143,8 @@ pub enum ProtocolSenderStatus {
 }
 
 impl<Msg> ProtocolSender<Msg> {
-    fn new(sender: mpsc::Sender<Msg>) -> Self {
+    /// Create a new ProtocolSender which will use `sender` to send messages.
+    pub fn new(sender: mpsc::Sender<Msg>) -> Self {
         Self { sender, is_blocked: Arc::new(AtomicBool::new(false)) }
     }
 

@@ -100,8 +100,8 @@ async fn create_tuf_client_timeout() {
     assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
 
     env.assert_count_events(
-        metrics::CREATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::CreateTufClientMetricDimensionResult::DeadlineExceeded],
+        metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID,
+        vec![metrics::CreateTufClientMigratedMetricDimensionResult::DeadlineExceeded],
     )
     .await;
 
@@ -144,8 +144,8 @@ async fn update_tuf_client_timeout() {
     assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
 
     env.assert_count_events(
-        metrics::UPDATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::UpdateTufClientMetricDimensionResult::DeadlineExceeded],
+        metrics::UPDATE_TUF_CLIENT_MIGRATED_METRIC_ID,
+        vec![metrics::UpdateTufClientMigratedMetricDimensionResult::DeadlineExceeded],
     )
     .await;
 
@@ -180,10 +180,10 @@ async fn download_blob_header_timeout() {
     assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableBlob);
 
     env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
+        metrics::FETCH_BLOB_MIGRATED_METRIC_ID,
         vec![
             (
-                metrics::FetchBlobMetricDimensionResult::BlobHeaderDeadlineExceeded,
+                metrics::FetchBlobMigratedMetricDimensionResult::BlobHeaderDeadlineExceeded,
                 metrics::FetchBlobMetricDimensionResumed::False
             );
             2

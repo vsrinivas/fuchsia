@@ -4,18 +4,26 @@
 
 use {
     crate::error,
+    anyhow::{format_err, Context as _, Error},
     cobalt_sw_delivery_registry::{
-        CreateTufClientMetricDimensionResult, UpdateTufClientMetricDimensionResult,
+        self as metrics, CreateTufClientMigratedMetricDimensionResult,
+        UpdateTufClientMigratedMetricDimensionResult,
     },
+    fidl_contrib::protocol_connector::ConnectedProtocol,
+    fidl_fuchsia_metrics::{
+        MetricEvent, MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec,
+    },
+    fuchsia_component::client::connect_to_protocol,
+    futures::{future, FutureExt as _},
     hyper::StatusCode,
 };
 
 pub fn tuf_error_as_update_tuf_client_event_code(
     e: &error::TufOrTimeout,
-) -> UpdateTufClientMetricDimensionResult {
+) -> UpdateTufClientMigratedMetricDimensionResult {
     use {
         error::TufOrTimeout::*, tuf::error::Error::*,
-        UpdateTufClientMetricDimensionResult as EventCodes,
+        UpdateTufClientMigratedMetricDimensionResult as EventCodes,
     };
     match e {
         Tuf(BadSignature(_)) => EventCodes::BadSignature,
@@ -58,10 +66,10 @@ pub fn tuf_error_as_update_tuf_client_event_code(
 
 pub fn tuf_error_as_create_tuf_client_event_code(
     e: &error::TufOrTimeout,
-) -> CreateTufClientMetricDimensionResult {
+) -> CreateTufClientMigratedMetricDimensionResult {
     use {
         error::TufOrTimeout::*, tuf::error::Error::*,
-        CreateTufClientMetricDimensionResult as EventCodes,
+        CreateTufClientMigratedMetricDimensionResult as EventCodes,
     };
     match e {
         Tuf(BadSignature(_)) => EventCodes::BadSignature,
@@ -99,5 +107,48 @@ pub fn tuf_error_as_create_tuf_client_event_code(
         Tuf(Hyper { .. }) => EventCodes::Hyper,
         Timeout => EventCodes::DeadlineExceeded,
         _ => EventCodes::UnexpectedTufErrorVariant,
+    }
+}
+
+pub struct CobaltConnectedService;
+impl ConnectedProtocol for CobaltConnectedService {
+    type Protocol = MetricEventLoggerProxy;
+    type ConnectError = Error;
+    type Message = MetricEvent;
+    type SendError = Error;
+
+    fn get_protocol<'a>(
+        &'a mut self,
+    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+        async {
+            let (logger_proxy, server_end) =
+                fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;
+            let metric_event_logger_factory =
+                connect_to_protocol::<MetricEventLoggerFactoryMarker>()
+                    .context("Failed to connect to fuchsia::metrics::MetricEventLoggerFactory")?;
+
+            metric_event_logger_factory
+                .create_metric_event_logger(
+                    ProjectSpec { project_id: Some(metrics::PROJECT_ID), ..ProjectSpec::EMPTY },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| format_err!("Connection to MetricEventLogger refused {e:?}"))?;
+            Ok(logger_proxy)
+        }
+        .boxed()
+    }
+
+    fn send_message<'a>(
+        &'a mut self,
+        protocol: &'a MetricEventLoggerProxy,
+        mut msg: MetricEvent,
+    ) -> future::BoxFuture<'a, Result<(), Error>> {
+        async move {
+            let fut = protocol.log_metric_events(&mut std::iter::once(&mut msg));
+            fut.await?.map_err(|e| format_err!("Failed to log metric {e:?}"))?;
+            Ok(())
+        }
+        .boxed()
     }
 }

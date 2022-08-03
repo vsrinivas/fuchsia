@@ -116,12 +116,14 @@ impl LoadError {
     }
 }
 
-impl From<&LoadError> for metrics::FontManagerLoadStaticRegistryMetricDimensionResult {
+impl From<&LoadError> for metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult {
     fn from(error: &LoadError) -> Self {
         match error {
-            LoadError::Io { .. } => metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Io,
+            LoadError::Io { .. } => {
+                metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Io
+            }
             LoadError::Parse { .. } => {
-                metrics::FontManagerLoadStaticRegistryMetricDimensionResult::Parse
+                metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Parse
             }
         }
     }

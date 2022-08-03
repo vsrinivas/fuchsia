@@ -11,10 +11,12 @@ use {
         DEFAULT_TUF_METADATA_TIMEOUT,
     },
     anyhow::{anyhow, Context as _},
-    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io as fio,
+    cobalt_sw_delivery_registry as metrics,
+    fidl_contrib::protocol_connector::ProtocolSender,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, cache, BlobId, RepositoryConfig, RepositoryConfigs},
-    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -42,7 +44,7 @@ pub struct RepositoryManager {
     dynamic_configs: HashMap<RepositoryUrl, InspectableRepositoryConfig>,
     persisted_repos_dir: Arc<Option<String>>,
     repositories: Arc<RwLock<HashMap<RepositoryUrl, Arc<AsyncMutex<Repository>>>>>,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     inspect: RepositoryManagerInspectState,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
@@ -363,7 +365,7 @@ async fn open_cached_or_new_repository(
     repositories: Arc<RwLock<HashMap<RepositoryUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
     url: &RepositoryUrl,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     inspect_node: Arc<inspect::Node>,
     local_mirror: Option<LocalMirrorProxy>,
     tuf_metadata_timeout: Duration,
@@ -569,8 +571,8 @@ impl<N> RepositoryManagerBuilder<UnsetCobaltSender, N> {
     /// Use the given cobalt_sender in the [RepositoryManager].
     pub fn cobalt_sender(
         self,
-        cobalt_sender: CobaltSender,
-    ) -> RepositoryManagerBuilder<CobaltSender, N> {
+        cobalt_sender: ProtocolSender<MetricEvent>,
+    ) -> RepositoryManagerBuilder<ProtocolSender<MetricEvent>, N> {
         RepositoryManagerBuilder {
             dynamic_configs_path: self.dynamic_configs_path,
             persisted_repos_dir: self.persisted_repos_dir,
@@ -592,7 +594,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
     /// or Cobalt.
     pub fn build(self) -> RepositoryManager {
         let (sender, _) = futures::channel::mpsc::channel(0);
-        let cobalt_sender = CobaltSender::new(sender);
+        let cobalt_sender = ProtocolSender::new(sender);
         let node = inspect::Inspector::new().root().create_child("test");
         self.cobalt_sender(cobalt_sender).inspect_node(node).build()
     }
@@ -603,7 +605,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, inspect::Node> {
     /// In test configurations, allow building the [RepositoryManager] without configuring Cobalt.
     pub fn build(self) -> RepositoryManager {
         let (sender, _) = futures::channel::mpsc::channel(0);
-        let cobalt_sender = CobaltSender::new(sender);
+        let cobalt_sender = ProtocolSender::new(sender);
         self.cobalt_sender(cobalt_sender).build()
     }
 }
@@ -620,7 +622,7 @@ fn to_inspectable_map_with_node(
     out
 }
 
-impl RepositoryManagerBuilder<CobaltSender, inspect::Node> {
+impl RepositoryManagerBuilder<ProtocolSender<MetricEvent>, inspect::Node> {
     /// Build the [RepositoryManager].
     pub fn build(self) -> RepositoryManager {
         self.inspect_node
@@ -818,17 +820,17 @@ pub enum LoadError {
     Overridden { replaced_config: RepositoryConfig },
 }
 
-impl From<&LoadError> for metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult {
+impl From<&LoadError> for metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult {
     fn from(error: &LoadError) -> Self {
         match error {
             LoadError::Io { .. } | LoadError::Open { .. } | LoadError::Read { .. } => {
-                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Io
+                metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Io
             }
             LoadError::Parse { .. } => {
-                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Parse
+                metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Parse
             }
             LoadError::Overridden { .. } => {
-                metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Overridden
+                metrics::RepositoryManagerLoadStaticConfigsMigratedMetricDimensionResult::Overridden
             }
         }
     }

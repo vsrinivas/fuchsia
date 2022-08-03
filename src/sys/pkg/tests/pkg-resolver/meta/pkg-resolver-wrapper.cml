@@ -32,8 +32,8 @@
         {
             protocol: [
                 "fuchsia.boot.Arguments",
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.logger.LogSink",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.pkg.LocalMirror",
                 "fuchsia.pkg.PackageCache",

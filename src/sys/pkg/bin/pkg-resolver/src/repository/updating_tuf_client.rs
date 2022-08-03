@@ -9,9 +9,11 @@ use {
     },
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
+    fidl_contrib::protocol_connector::ProtocolSender,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg_ext::MirrorConfig,
     fuchsia_async::{self as fasync, TimeoutExt as _},
-    fuchsia_cobalt::CobaltSender,
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -54,7 +56,7 @@ pub struct UpdatingTufClient {
 
     inspect: UpdatingTufClientInspectState,
 
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
 }
 
 struct AbortHandleOnDrop {
@@ -128,7 +130,7 @@ impl UpdatingTufClient {
         config: Option<&MirrorConfig>,
         tuf_metadata_timeout: Duration,
         node: inspect::Node,
-        cobalt_sender: CobaltSender,
+        cobalt_sender: ProtocolSender<MetricEvent>,
     ) -> Arc<AsyncMutex<Self>> {
         let (auto_client_aborter, auto_client_node_and_registration) =
             if config.map_or(false, |c| c.subscribe()) {
@@ -263,14 +265,13 @@ impl UpdatingTufClient {
             self.inspect.update_check_failure_count.increment();
         }
 
-        self.cobalt_sender.log_event_count(
-            metrics::UPDATE_TUF_CLIENT_METRIC_ID,
-            match &res {
-                Ok(_) => metrics::UpdateTufClientMetricDimensionResult::Success,
-                Err(e) => tuf_error_as_update_tuf_client_event_code(&e),
-            },
-            0,
-            1,
+        self.cobalt_sender.send(
+            MetricEvent::builder(metrics::UPDATE_TUF_CLIENT_MIGRATED_METRIC_ID)
+                .with_event_codes(match &res {
+                    Ok(_) => metrics::UpdateTufClientMigratedMetricDimensionResult::Success,
+                    Err(e) => tuf_error_as_update_tuf_client_event_code(&e),
+                })
+                .as_occurrence(1),
         );
 
         res
