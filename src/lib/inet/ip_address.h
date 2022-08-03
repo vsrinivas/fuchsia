@@ -148,14 +148,14 @@ class IpAddress {
   // indicates the byte count. Not defined for invalid addresses.
   const uint8_t* as_bytes() const {
     FX_DCHECK(is_valid());
-    return v6_.s6_addr;
+    return is_v4() ? reinterpret_cast<const uint8_t*>(&v4_.s_addr) : v6_.s6_addr;
   }
 
   // Returns a pointer to the network-order words (big-endian) that make up the
-  // address. |word_count| indicates the byte count. Not defined for invalid
-  // addresses.
-  const uint16_t* as_words() const {
-    FX_DCHECK(is_valid());
+  // address. |word_count| indicates the byte count. This is only defined for
+  // V6 addresses.
+  const uint16_t* as_v6_words() const {
+    FX_DCHECK(is_v6());
     return v6_.s6_addr16;
   }
 
@@ -211,10 +211,18 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value);
 template <>
 struct std::hash<inet::IpAddress> {
   std::size_t operator()(const inet::IpAddress& address) const noexcept {
-    size_t hash = 0;
+    if (!address.is_valid())
+      return 0;
 
-    if (address.is_valid()) {
-      auto word_ptr = address.as_words();
+    size_t hash = 0;
+    if (address.is_v4()) {
+      auto byte_ptr = address.as_bytes();
+      for (size_t i = 0; i < address.byte_count(); ++i) {
+        hash = (hash << 1) ^ *byte_ptr;
+        ++byte_ptr;
+      }
+    } else {
+      auto word_ptr = address.as_v6_words();
       for (size_t i = 0; i < address.word_count(); ++i) {
         hash = (hash << 1) ^ *word_ptr;
         ++word_ptr;

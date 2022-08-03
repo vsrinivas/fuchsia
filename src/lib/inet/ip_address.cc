@@ -426,7 +426,7 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
     //    sequence if there's a tie.
     // 4) Use lower-case hexadecimal.
 
-    const uint16_t* words = value.as_words();
+    const uint16_t* words = value.as_v6_words();
 
     // Figure out where the longest span of zeros is.
     uint8_t start_of_zeros;

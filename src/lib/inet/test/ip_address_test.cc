@@ -35,8 +35,6 @@ TEST(IpAddressTest, V4) {
   EXPECT_EQ(2u, under_test.as_bytes()[1]);
   EXPECT_EQ(3u, under_test.as_bytes()[2]);
   EXPECT_EQ(4u, under_test.as_bytes()[3]);
-  EXPECT_EQ(0x0201u, under_test.as_words()[0]);
-  EXPECT_EQ(0x0403u, under_test.as_words()[1]);
   EXPECT_EQ(4u, under_test.byte_count());
   EXPECT_EQ(2u, under_test.word_count());
   EXPECT_EQ("1.2.3.4", under_test.ToString());
@@ -57,7 +55,7 @@ TEST(IpAddressTest, V6) {
   }
 
   for (size_t i = 0; i < 8; ++i) {
-    EXPECT_EQ((i * 2u) + 256u * (i * 2u + 1u), under_test.as_words()[i]);
+    EXPECT_EQ((i * 2u) + 256u * (i * 2u + 1u), under_test.as_v6_words()[i]);
   }
 
   EXPECT_EQ(16u, under_test.byte_count());
