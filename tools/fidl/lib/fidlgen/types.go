@@ -1362,9 +1362,9 @@ type Root struct {
 	Libraries       []Library                   `json:"library_dependencies,omitempty"`
 }
 
-// DeclsWithDependencies returns a single DeclInfoMap containing the FIDL
-// library's declarations and those of its dependencies.
-func (r *Root) DeclsWithDependencies() DeclInfoMap {
+// DeclInfo returns information on the FIDL library's local and imported
+// declarations.
+func (r *Root) DeclInfo() DeclInfoMap {
 	resourceness := make(map[EncodedCompoundIdentifier]Resourceness, len(r.Structs)+len(r.Tables)+len(r.Unions))
 	for _, v := range r.Structs {
 		resourceness[v.Name] = v.Resourceness
@@ -1375,18 +1375,18 @@ func (r *Root) DeclsWithDependencies() DeclInfoMap {
 	for _, v := range r.Unions {
 		resourceness[v.Name] = v.Resourceness
 	}
-	decls := DeclInfoMap{}
+	info := DeclInfoMap{}
 	for k, v := range r.Decls {
 		ptr := new(Resourceness)
 		*ptr = resourceness[k]
-		decls[k] = DeclInfo{Type: v, Resourceness: ptr}
+		info[k] = DeclInfo{Type: v, Resourceness: ptr}
 	}
 	for _, l := range r.Libraries {
 		for k, v := range l.Decls {
-			decls[k] = v
+			info[k] = v
 		}
 	}
-	return decls
+	return info
 }
 
 type EncodedCompoundIdentifierSet map[EncodedCompoundIdentifier]struct{}

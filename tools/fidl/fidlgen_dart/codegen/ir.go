@@ -139,22 +139,21 @@ type Struct struct {
 // so that they may be used in certain contexts, like rendering method
 // signatures. Thus, if we have a FIDL payload like:
 //
-//   type MyStruct = struct {
-//     a bool;
-//     b int8;
-//   };
-//   protocol MyProtocol {
-//     MyMethod(MyStruct);
-//   };
+//	type MyStruct = struct {
+//	  a bool;
+//	  b int8;
+//	};
+//	protocol MyProtocol {
+//	  MyMethod(MyStruct);
+//	};
 //
 // It will produce a "flattened" Dart function signature like:
 //
-//   Future<void> myMethod(bool a, int b);
+//	Future<void> myMethod(bool a, int b);
 //
 // Rather than an "unflattened" one like:
 //
-//   Future<void> myMethod(MyStruct value);
-//
+//	Future<void> myMethod(MyStruct value);
 func (s *Struct) AsParameters(_ Type) []Parameter {
 	var parameters []Parameter
 	if s.isEmptyStruct {
@@ -1363,9 +1362,9 @@ resource: %t,
 //
 // By way of example, consider the following FIDL:
 //
-//   MyMethod(struct{...}) -> (struct{...}) error uint32;
-//           |-----A-----|    |-----B-----| |-----C-----|
-//                            |------------D------------|
+//	MyMethod(struct{...}) -> (struct{...}) error uint32;
+//	        |-----A-----|    |-----B-----| |-----C-----|
+//	                         |------------D------------|
 //
 // Types `A` and `B` are payloads (included in the `methodTypes` set). These
 // types, or their parameterized representations, are ones that users of the
@@ -1392,7 +1391,7 @@ func isParamableType(name fidlgen.EncodedCompoundIdentifier, wireTypes fidlgen.E
 func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("dart")
 	c := compiler{
-		decls:          r.DeclsWithDependencies(),
+		decls:          r.DeclInfo(),
 		library:        r.Name.Parse(),
 		typesRoot:      r,
 		paramableTypes: map[fidlgen.EncodedCompoundIdentifier]Parameterizer{},

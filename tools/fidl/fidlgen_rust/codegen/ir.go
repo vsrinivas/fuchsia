@@ -1707,7 +1707,7 @@ func Compile(r fidlgen.Root) Root {
 	root := Root{}
 	thisLibParsed := r.Name.Parse()
 	c := compiler{
-		decls:                  r.DeclsWithDependencies(),
+		decls:                  r.DeclInfo(),
 		library:                thisLibParsed,
 		externCrates:           map[string]struct{}{},
 		methodTypeUses:         r.MethodTypeUsageMap(),

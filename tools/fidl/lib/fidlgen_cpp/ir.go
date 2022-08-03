@@ -326,14 +326,14 @@ func (r Result) ValueArity() int {
 // parameters described by a layout. For flattened parameter lists, this may
 // look like (assuming the supplied `varName` is "_response"):
 //
-//   MyLayoutArgType _response = MyLayoutArgType{
-//     .a = std::move(a),
-//     .b = std::move(b),
-//   };
+//	MyLayoutArgType _response = MyLayoutArgType{
+//	  .a = std::move(a),
+//	  .b = std::move(b),
+//	};
 //
 // Unflattened layouts are always rendered as:
 //
-//   MyLayoutArgType _response = std::move(my_layout_arg);
+//	MyLayoutArgType _response = std::move(my_layout_arg);
 func (r Result) BuildPayload(varName string) string {
 	if len(r.ValueParameters) == 0 {
 		return ""
@@ -697,7 +697,7 @@ func compile(r fidlgen.Root) *Root {
 
 	c := compiler{
 		symbolPrefix:       formatLibraryPrefix(root.Library),
-		decls:              r.DeclsWithDependencies(),
+		decls:              r.DeclInfo(),
 		library:            root.Library,
 		handleTypes:        make(map[fidlgen.HandleSubtype]struct{}),
 		resultForUnion:     make(map[fidlgen.EncodedCompoundIdentifier]*Result),

@@ -54,12 +54,13 @@ type Const struct {
 // Bits represents the idiomatic representation of an bits in golang.
 //
 // That is, something like:
-// type MyBits int32
-// const (
-//    MyBitsMember1 MyBits = 1
-//    MyBitsMember2        = 4
-//    ...
-// )
+//
+//	type MyBits int32
+//	const (
+//		MyBitsMember1 MyBits = 1
+//		MyBitsMember2        = 4
+//		...
+//	)
 type Bits struct {
 	fidlgen.Bits
 
@@ -91,9 +92,11 @@ type BitsMember struct {
 // That is, something like:
 // type MyEnum int32
 // const (
-//    MyEnumMember1 MyEnum = 1
-//    MyEnumMember2        = 2
-//    ...
+//
+//	MyEnumMember1 MyEnum = 1
+//	MyEnumMember2        = 2
+//	...
+//
 // )
 type Enum struct {
 	fidlgen.Enum
@@ -1261,7 +1264,7 @@ func Compile(fidlData fidlgen.Root) Root {
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls:              fidlData.DeclsWithDependencies(),
+		decls:              fidlData.DeclInfo(),
 		library:            libraryName,
 		libraryDeps:        godeps,
 		messageBodyLayouts: make(map[fidlgen.EncodedCompoundIdentifier]payloader),
