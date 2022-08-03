@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_utils::hanging_get::error::HangingGetServerError;
 use fidl_fuchsia_bluetooth_power::{Identifier, Information};
 use fuchsia_zircon as zx;
 use thiserror::Error;
@@ -15,6 +16,8 @@ pub enum Error {
     Identifier { identifier: Identifier },
     #[error("Invalid Battery Information: {}", .message)]
     BatteryInfo { message: String },
+    #[error("Error managing a hanging get request for a client: {}", .0)]
+    HangingGet(#[from] HangingGetServerError),
     #[error("Internal error: {}", .message)]
     Internal { message: String },
     #[error("Fidl Error: {}", .0)]

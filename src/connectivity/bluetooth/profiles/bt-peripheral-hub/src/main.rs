@@ -19,7 +19,7 @@ use peripheral_state::PeripheralState;
 async fn main() -> Result<(), Error> {
     let fs = ServiceFs::new();
 
-    let shared_state = Arc::new(PeripheralState::default());
+    let shared_state = Arc::new(PeripheralState::new());
     let service_handler = run_services(fs, shared_state);
 
     service_handler.await
