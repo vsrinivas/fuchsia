@@ -70,9 +70,13 @@ class GichState {
   GichState();
 
   bool Pending() { return interrupt_tracker_.Pending(); }
-  bool Pop(uint32_t* vector) { return interrupt_tracker_.Pop(vector); }
-  void Track(uint32_t vector) { interrupt_tracker_.Track(vector); }
-  void Interrupt(uint32_t vector) { interrupt_tracker_.Interrupt(vector); }
+  hypervisor::InterruptType Pop(uint32_t* vector) { return interrupt_tracker_.Pop(vector); }
+  void Track(uint32_t vector, hypervisor::InterruptType type) {
+    interrupt_tracker_.Track(vector, type);
+  }
+  void Interrupt(uint32_t vector, hypervisor::InterruptType type) {
+    interrupt_tracker_.Interrupt(vector, type);
+  }
   void Cancel() { interrupt_tracker_.Cancel(); }
   zx_status_t Wait(zx_time_t deadline) { return interrupt_tracker_.Wait(deadline).status_value(); }
 
@@ -107,7 +111,7 @@ class Vcpu {
 
   zx_status_t Enter(zx_port_packet_t* packet);
   void Kick();
-  void Interrupt(uint32_t vector);
+  void Interrupt(uint32_t vector, hypervisor::InterruptType type);
   zx_status_t ReadState(zx_vcpu_state_t* state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state) { return ZX_ERR_INVALID_ARGS; }

@@ -58,7 +58,7 @@ void VcpuDispatcher::Kick() {
 
 void VcpuDispatcher::Interrupt(uint32_t vector) {
   canary_.Assert();
-  vcpu_->Interrupt(vector);
+  vcpu_->Interrupt(vector, hypervisor::InterruptType::VIRTUAL);
 }
 
 zx_status_t VcpuDispatcher::ReadState(zx_vcpu_state_t* vcpu_state) const {
