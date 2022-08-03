@@ -99,6 +99,7 @@
                 "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.display.singleton.Info",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.observation.scope.Registry",
                 "fuchsia.ui.observation.test.Registry",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",

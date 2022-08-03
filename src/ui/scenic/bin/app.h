@@ -41,6 +41,7 @@
 #include "src/ui/scenic/lib/utils/metrics_impl.h"
 #include "src/ui/scenic/lib/view_tree/geometry_provider.h"
 #include "src/ui/scenic/lib/view_tree/observer_registry.h"
+#include "src/ui/scenic/lib/view_tree/scoped_observer_registry.h"
 #include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
 namespace scenic_impl {
@@ -148,6 +149,7 @@ class App {
   view_tree::ViewRefInstalledImpl view_ref_installed_impl_;
 
   std::unique_ptr<view_tree::Registry> observer_registry_;
+  std::unique_ptr<view_tree::ScopedRegistry> scoped_observer_registry_;
 
   std::shared_ptr<view_tree::GeometryProvider> geometry_provider_;
 

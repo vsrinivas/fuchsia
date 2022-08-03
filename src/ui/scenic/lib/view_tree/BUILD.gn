@@ -50,6 +50,20 @@ source_set("observer_registry") {
   ]
 }
 
+source_set("scoped_observer_registry") {
+  sources = [
+    "scoped_observer_registry.cc",
+    "scoped_observer_registry.h",
+  ]
+  deps = [ ":geometry_provider" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.observation.scope",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/ui/scenic/lib/utils",
+  ]
+}
+
 source_set("geometry_provider") {
   sources = [
     "geometry_provider.cc",

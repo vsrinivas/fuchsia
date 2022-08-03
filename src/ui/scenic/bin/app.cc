@@ -633,6 +633,9 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
   observer_registry_ = std::make_unique<view_tree::Registry>(geometry_provider_);
   observer_registry_->Publish(app_context_.get());
+
+  scoped_observer_registry_ = std::make_unique<view_tree::ScopedRegistry>(geometry_provider_);
+  scoped_observer_registry_->Publish(app_context_.get());
 }
 
 void App::InitializeInput() {

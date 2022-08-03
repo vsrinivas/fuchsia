@@ -39,6 +39,7 @@ executable("bin") {
     "//src/ui/scenic/lib/utils",
     "//src/ui/scenic/lib/view_tree:geometry_provider",
     "//src/ui/scenic/lib/view_tree:observer_registry",
+    "//src/ui/scenic/lib/view_tree:scoped_observer_registry",
     "//src/ui/scenic/lib/view_tree:view_ref_installed",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     "//third_party/rapidjson",

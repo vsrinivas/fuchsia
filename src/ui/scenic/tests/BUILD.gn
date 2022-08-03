@@ -302,6 +302,26 @@ fuchsia_test_component("observer_registry_integration_test") {
   deps = [ ":observer_registry_integration_test_bin" ]
 }
 
+executable("scoped_observer_registry_integration_test_bin") {
+  testonly = true
+  sources = [
+    "observer_integration_tests/scoped_observer_registry_integration_test.cc",
+  ]
+  deps = [
+    ":common_deps_cts",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk//fidl/fuchsia.ui.focus",
+    "//sdk//fidl/fuchsia.ui.observation.geometry",
+    "//sdk//fidl/fuchsia.ui.observation.scope",
+  ]
+}
+
+fuchsia_test_component("scoped_observer_registry_integration_test") {
+  component_name = "scoped_observer_registry_integration_test"
+  manifest = "meta/scoped_observer_registry_integration_test.cml"
+  deps = [ ":scoped_observer_registry_integration_test_bin" ]
+}
+
 executable("screen_capture_integration_test_bin") {
   testonly = true
   sources = [ "flatland_integration_tests/screen_capture_integration_test.cc" ]
@@ -417,7 +437,10 @@ fuchsia_test_package("flatland_integration_tests") {
 }
 
 fuchsia_test_package("observer_integration_tests") {
-  test_components = [ ":observer_registry_integration_test" ]
+  test_components = [
+    ":observer_registry_integration_test",
+    ":scoped_observer_registry_integration_test",
+  ]
   test_specs = {
     environments = vulkan_envs
   }
