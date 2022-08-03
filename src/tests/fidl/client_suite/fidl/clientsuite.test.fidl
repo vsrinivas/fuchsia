@@ -37,6 +37,6 @@ protocol Finisher {
 
 type Test = flexible enum : uint32 {
     SETUP = 1;
-    SERVER_CLOSES_CHANNEL = 2;
+    GRACEFUL_FAILURE_DURING_CALL_AFTER_PEER_CLOSE = 2;
     TWO_WAY_NO_PAYLOAD = 3;
 };

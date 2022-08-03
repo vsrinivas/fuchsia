@@ -9,7 +9,7 @@ using namespace channel_util;
 
 TEST_HANDLER(Setup) {}
 
-TEST_HANDLER(ServerClosesChannel) { channel().reset(); }
+TEST_HANDLER(GracefulFailureDuringCallAfterPeerClose) { channel().reset(); }
 
 TEST_HANDLER(TwoWayNoPayload) {
   VERIFY_OK(channel().wait_for_signal(ZX_CHANNEL_READABLE));
