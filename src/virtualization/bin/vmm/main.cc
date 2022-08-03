@@ -301,6 +301,9 @@ int main(int argc, char** argv) {
   std::unique_ptr<async::Loop> vsock_loop;
 
   if constexpr (VIRTIO_VSOCK_LEGACY_INPROCESS) {
+    FX_CHECK(cfg.vsock_listeners().empty())
+        << "Initial vsock listeners can't be passed via config when using the legacy vsock device";
+
     vsock_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     legacy_vsock =
         std::make_unique<VirtioVsock>(context.get(), guest.phys_mem(), vsock_loop->dispatcher());
@@ -324,7 +327,8 @@ int main(int argc, char** argv) {
         FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
         return status;
       }
-      status = experimental_vsock->Start(guest.object(), realm, device_loop.dispatcher());
+      status = experimental_vsock->Start(guest.object(), cfg.vsock_listeners(), realm,
+                                         device_loop.dispatcher());
       if (status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to start vsock device";
         return status;

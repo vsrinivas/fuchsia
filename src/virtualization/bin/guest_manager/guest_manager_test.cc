@@ -218,4 +218,131 @@ TEST_F(GuestManagerTest, LaunchAndUseVsock) {
   ASSERT_TRUE(get_callback_called);
 }
 
+TEST_F(GuestManagerTest, DuplicateListenersProvidedByUserGuestConfig) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  fuchsia::virtualization::GuestConfig user_guest_config;
+
+  // Two listeners with the same port.
+  const uint32_t host_port = 12345;
+  user_guest_config.mutable_vsock_listeners()->push_back(
+      {host_port, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor>()});
+  user_guest_config.mutable_vsock_listeners()->push_back(
+      {host_port, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor>()});
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  fuchsia::virtualization::GuestManager_LaunchGuest_Result result;
+  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
+                      [&result, &launch_callback_called](auto res) {
+                        result = std::move(res);
+                        launch_callback_called = true;
+                      });
+
+  ASSERT_TRUE(launch_callback_called);
+  ASSERT_EQ(result.err(), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(GuestManagerTest, UserProvidedInitialListeners) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       /*use_legacy_vsock_device=*/false);
+  fuchsia::virtualization::GuestConfig user_guest_config;
+
+  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor1, acceptor2;
+
+  // Give the handles valid channels (although the endpoint will go unused).
+  auto request1 = acceptor1.NewRequest();
+  auto request2 = acceptor2.NewRequest();
+
+  user_guest_config.mutable_vsock_listeners()->push_back({123, std::move(acceptor1)});
+  user_guest_config.mutable_vsock_listeners()->push_back({456, std::move(acceptor2)});
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  fuchsia::virtualization::GuestManager_LaunchGuest_Result result;
+  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
+                      [&launch_callback_called](auto res) {
+                        ASSERT_TRUE(res.is_response());
+                        launch_callback_called = true;
+                      });
+  ASSERT_TRUE(launch_callback_called);
+
+  bool get_callback_called = false;
+  manager.Get([&get_callback_called](fuchsia::virtualization::GuestConfig config) {
+    get_callback_called = true;
+
+    // Initial Listeners are passed to the VMM via the guest config.
+    ASSERT_TRUE(config.has_vsock_listeners());
+    ASSERT_EQ(config.vsock_listeners().size(), 2ul);
+  });
+  ASSERT_TRUE(get_callback_called);
+}
+
+TEST_F(GuestManagerTest, UserProvidedInitialListenersLegacyDevice) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       /*use_legacy_vsock_device=*/true);
+  fuchsia::virtualization::GuestConfig user_guest_config;
+
+  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor1, acceptor2;
+
+  // Give the handles valid channels (although the endpoint will go unused).
+  auto request1 = acceptor1.NewRequest();
+  auto request2 = acceptor2.NewRequest();
+
+  user_guest_config.mutable_vsock_listeners()->push_back({123, std::move(acceptor1)});
+  user_guest_config.mutable_vsock_listeners()->push_back({456, std::move(acceptor2)});
+
+  fuchsia::virtualization::GuestPtr guest;
+  bool launch_callback_called = false;
+  fuchsia::virtualization::GuestManager_LaunchGuest_Result result;
+  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
+                      [&launch_callback_called](auto res) {
+                        ASSERT_TRUE(res.is_response());
+                        launch_callback_called = true;
+                      });
+  ASSERT_TRUE(launch_callback_called);
+
+  bool get_callback_called = false;
+  manager.Get([&get_callback_called](fuchsia::virtualization::GuestConfig config) {
+    get_callback_called = true;
+
+    // Listener list should be empty when using the legacy vsock device.
+    ASSERT_TRUE(config.has_vsock_listeners());
+    ASSERT_TRUE(config.vsock_listeners().empty());
+  });
+  ASSERT_TRUE(get_callback_called);
+
+  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> endpoint;
+  manager.GetHostVsockEndpoint(endpoint.NewRequest());
+
+  auto ptr = endpoint.Bind();
+  bool listen_callback_called1 = false, listen_callback_called2 = false;
+  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor3, acceptor4;
+
+  // Unused server ends to make the channel valid.
+  auto request3 = acceptor3.NewRequest();
+  auto request4 = acceptor4.NewRequest();
+
+  // A listener passed via config should already be bound to this port, so the Listen should fail.
+  ptr->Listen(
+      123, std::move(acceptor3),
+      [&listen_callback_called1](fuchsia::virtualization::HostVsockEndpoint_Listen_Result result) {
+        ASSERT_TRUE(result.is_err());
+        listen_callback_called1 = true;
+      });
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(listen_callback_called1);
+
+  // This port is unused, and so should be Listen-able.
+  ptr->Listen(
+      789, std::move(acceptor4),
+      [&listen_callback_called2](fuchsia::virtualization::HostVsockEndpoint_Listen_Result result) {
+        ASSERT_TRUE(result.is_response());
+        listen_callback_called2 = true;
+      });
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(listen_callback_called2);
+}
+
 }  // namespace

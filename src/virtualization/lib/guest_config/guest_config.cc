@@ -427,6 +427,10 @@ void SetDefaults(GuestConfig* cfg) {
         .enable_bridge = false,
     });
   }
+
+  if (!cfg->has_vsock_listeners()) {
+    cfg->mutable_vsock_listeners();
+  }
 }
 
 zx_status_t ParseArguments(int argc, const char** argv, fuchsia::virtualization::GuestConfig* cfg) {

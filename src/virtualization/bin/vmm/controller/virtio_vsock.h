@@ -29,8 +29,9 @@ class VirtioVsock
   zx_status_t AddPublicService(sys::ComponentContext* context);
 
   // Only supports starting as a CFv2 component.
-  zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
-                    async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest,
+                    std::vector<fuchsia::virtualization::Listener> listeners,
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,

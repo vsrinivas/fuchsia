@@ -10,6 +10,7 @@
 
 namespace controller {
 
+using ::fuchsia::virtualization::Listener;
 using ::fuchsia::virtualization::hardware::StartInfo;
 using ::fuchsia::virtualization::hardware::VirtioVsock_Start_Result;
 
@@ -37,7 +38,8 @@ VirtioVsock::VirtioVsock(const PhysMem& phys_mem)
   config_.guest_cid = kGuestCid;
 }
 
-zx_status_t VirtioVsock::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+zx_status_t VirtioVsock::Start(const zx::guest& guest, std::vector<Listener> listeners,
+                               fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher) {
   zx_status_t status =
       CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
@@ -60,7 +62,7 @@ zx_status_t VirtioVsock::Start(const zx::guest& guest, fuchsia::component::Realm
   }
 
   VirtioVsock_Start_Result result;
-  status = vsock_->Start(std::move(start_info), kGuestCid, {}, &result);
+  status = vsock_->Start(std::move(start_info), kGuestCid, std::move(listeners), &result);
   if (status != ZX_OK) {
     return status;
   }

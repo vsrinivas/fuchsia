@@ -4,24 +4,22 @@
 
 #include "src/virtualization/bin/guest_manager/guest_manager.h"
 
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "fuchsia/virtualization/cpp/fidl.h"
-#include "lib/fpromise/result.h"
-#include "src/lib/files/file.h"
+#include <unordered_set>
 
-#ifdef USE_VIRTIO_VSOCK_LEGACY_INPROCESS
-#define VIRTIO_VSOCK_LEGACY_INPROCESS 1
-#else
-#define VIRTIO_VSOCK_LEGACY_INPROCESS 0
-#endif
+#include <src/lib/files/file.h>
 
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-                           std::string config_pkg_dir_path, std::string config_path)
+                           std::string config_pkg_dir_path, std::string config_path,
+                           bool use_legacy_vsock_device)
     : context_(context),
       config_pkg_dir_path_(std::move(config_pkg_dir_path)),
       config_path_(std::move(config_path)),
+      use_legacy_vsock_device_(use_legacy_vsock_device),
       host_vsock_endpoint_(dispatcher, fit::bind_member(this, &GuestManager::GetAcceptor)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(guest_config_bindings_.GetHandler(this));
@@ -86,13 +84,52 @@ void GuestManager::LaunchGuest(
   guest_config_.clear_cmdline_add();
   // Set any defaults, before returning the configuration.
   guest_config::SetDefaults(&guest_config_);
+
+  // If there are any initial vsock listeners, they must be bound to unique host ports.
+  if (guest_config_.vsock_listeners().size() > 1) {
+    std::unordered_set<uint32_t> ports;
+    for (auto& listener : guest_config_.vsock_listeners()) {
+      if (!ports.insert(listener.port).second) {
+        callback(fpromise::error(ZX_ERR_INVALID_ARGS));
+        return;
+      }
+    }
+  }
+
+  if (use_legacy_vsock_device_) {
+    // Initial vsock listeners aren't passed to the VMM via config when using the legacy vsock
+    // device, as they are instead handled in the guest manager.
+    for (auto& listener : *guest_config_.mutable_vsock_listeners()) {
+      zx_status_t status;
+      bool callback_complete = false;
+      host_vsock_endpoint_.Listen(
+          listener.port, std::move(listener.acceptor),
+          [&status, &callback_complete](
+              fuchsia::virtualization::HostVsockEndpoint_Listen_Result result) mutable {
+            callback_complete = true;
+            status = result.is_err() ? result.err() : ZX_OK;
+          });
+
+      FX_CHECK(callback_complete) << "Expected Listen to complete synchronously";
+      if (status != ZX_OK) {
+        callback(fpromise::error(status));
+        return;
+      }
+    }
+
+    // Clear any listeners and reset to the vector to a default value. The VMM will check that
+    // this vector is empty when using the legacy vsock device.
+    guest_config_.clear_vsock_listeners();
+    guest_config_.mutable_vsock_listeners();
+  }
+
   // Connect call will cause componont framework to start VMM and execute VMM's main which will
   // bring up all virtio devices and query guest_config via the
-  // fuchsia::virtualization::GuestConfigProvider::Get
+  // fuchsia::virtualization::GuestConfigProvider::Get. Note that this must happen after the
+  // config is finalized.
   context_->svc()->Connect(std::move(controller));
 
-  if constexpr (VIRTIO_VSOCK_LEGACY_INPROCESS) {
-    // Setup guest endpoint.
+  if (use_legacy_vsock_device_) {
     fuchsia::virtualization::GuestVsockEndpointPtr vm_guest_endpoint;
     context_->svc()->Connect(vm_guest_endpoint.NewRequest());
     local_guest_endpoint_ =
@@ -122,7 +159,7 @@ void GuestManager::ConnectToBalloon(
 
 void GuestManager::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  if constexpr (VIRTIO_VSOCK_LEGACY_INPROCESS) {
+  if (use_legacy_vsock_device_) {
     host_vsock_endpoint_.AddBinding(std::move(endpoint));
   } else {
     context_->svc()->Connect(std::move(endpoint));
