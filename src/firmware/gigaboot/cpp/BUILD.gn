@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/images/vboot/vboot.gni")
+import("//src/firmware/gigaboot/cpp/backends.gni")
 import("//zircon/kernel/phys/efi/efi_executable.gni")
 
 source_set("lib") {
@@ -40,6 +41,16 @@ source_set("lib") {
   }
 }
 
+# Some dependency does not exist in non efi toolchain, which will cause gn
+# preprocessing error.
+if (is_efi_toolchain) {
+  # Backend implementation for the NUC platform
+  source_set("backends_nuc") {
+    sources = [ "backends_nuc.cc" ]
+    deps = [ "legacy_c_gigaboot" ]
+  }
+}
+
 efi_executable("gigaboot") {
   sources = [
     "fastboot_tcp.cc",
@@ -60,6 +71,8 @@ efi_executable("gigaboot") {
     "//zircon/kernel/phys:boot-zbi",
     "//zircon/third_party/ulib/cksum",
   ]
+
+  deps += [ gigaboot_backends ]
 
   cflags = [ "-DAVB_COMPILATION" ]
 }

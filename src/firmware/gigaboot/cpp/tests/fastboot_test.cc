@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 
+#include "backends.h"
 #include "mock_boot_service.h"
 #include "utils.h"
 
@@ -17,6 +18,26 @@
 using namespace std::literals;
 
 namespace gigaboot {
+
+RebootMode test_reboot_mode;
+bool set_reboot_mode_res = true;
+bool SetRebootMode(RebootMode mode) {
+  test_reboot_mode = mode;
+  return set_reboot_mode_res;
+}
+
+class FakeRebootMode {
+ public:
+  FakeRebootMode(RebootMode test_mode, bool reboot_mode_res = true) {
+    test_reboot_mode = test_mode;
+    set_reboot_mode_res = reboot_mode_res;
+  }
+
+  ~FakeRebootMode() {
+    test_reboot_mode = RebootMode::kNormal;
+    set_reboot_mode_res = true;
+  }
+};
 
 namespace {
 
@@ -369,6 +390,122 @@ TEST_F(FastbootFlashTest, FlashPartitionFailedToLoadGptDevice) {
   auto sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+// TODO(b/235489025): Extends `StubBootServices` to cover the mock of efi_runtime_services.
+EFIAPI efi_status ResetSystemSucceed(efi_reset_type, efi_status, size_t, void*) {
+  return EFI_SUCCESS;
+}
+
+TEST_F(FastbootFlashTest, RebootNormal) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  efi_runtime_services runtime_services{
+      .ResetSystem = ResetSystemSucceed,
+  };
+  gEfiSystemTable->RuntimeServices = &runtime_services;
+
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  // Set to a different initial boot mode.
+  FakeRebootMode bootmode(RebootMode::kBootloader);
+
+  transport.AddInPacket(std::string("reboot"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(test_reboot_mode, RebootMode::kNormal);
+}
+
+TEST_F(FastbootFlashTest, RebootBootloader) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  efi_runtime_services runtime_services{
+      .ResetSystem = ResetSystemSucceed,
+  };
+  gEfiSystemTable->RuntimeServices = &runtime_services;
+
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  // Set to a different initial boot mode.
+  FakeRebootMode bootmode(RebootMode::kNormal);
+
+  transport.AddInPacket(std::string("reboot-bootloader"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(test_reboot_mode, RebootMode::kBootloader);
+}
+
+TEST_F(FastbootFlashTest, RebootRecovery) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  efi_runtime_services runtime_services{
+      .ResetSystem = ResetSystemSucceed,
+  };
+  gEfiSystemTable->RuntimeServices = &runtime_services;
+
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  // Set to a different initial boot mode.
+  FakeRebootMode bootmode(RebootMode::kNormal);
+
+  transport.AddInPacket(std::string("reboot-recovery"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(test_reboot_mode, RebootMode::kRecovery);
+}
+
+TEST_F(FastbootFlashTest, RebootSetRebootModeFail) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  efi_runtime_services runtime_services{
+      .ResetSystem = ResetSystemSucceed,
+  };
+  gEfiSystemTable->RuntimeServices = &runtime_services;
+
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  // Set returned value to false
+  FakeRebootMode bootmode(RebootMode::kNormal, false);
+
+  transport.AddInPacket(std::string("reboot"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+EFIAPI efi_status ResetSystemFailed(efi_reset_type, efi_status, size_t, void*) {
+  return EFI_ABORTED;
+}
+
+TEST_F(FastbootFlashTest, RebootResetSystemFail) {
+  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
+  efi_runtime_services runtime_services{
+      .ResetSystem = ResetSystemFailed,
+  };
+  gEfiSystemTable->RuntimeServices = &runtime_services;
+
+  Fastboot fastboot(download_buffer);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("reboot"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  // We should still receive an OKAY packet.
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 }
 
 }  // namespace

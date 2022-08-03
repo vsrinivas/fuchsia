@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include "backends.h"
 #include "fastboot_tcp.h"
 #include "gigaboot/src/netifc.h"
 #include "xefi.h"
@@ -42,11 +43,17 @@ int main(int argc, char** argv) {
 
   printf("netifc: network interface opened\n");
 
-  printf("Auto boot in 2 seconds. Press f to enter fastboot.\n");
-  // If time out, the first char in the `valid_keys` argument will be returned. Thus
-  // we put a random different char here, so that we don't always drop to fastboot.
-  char key = key_prompt("0f", 2);
-  if (key == 'f') {
+  gigaboot::RebootMode reboot_mode = gigaboot::GetRebootMode();
+  bool enter_fastboot = reboot_mode == gigaboot::RebootMode::kBootloader;
+  if (!enter_fastboot) {
+    printf("Auto boot in 2 seconds. Press f to enter fastboot.\n");
+    // If time out, the first char in the `valid_keys` argument will be returned. Thus
+    // we put a random different char here, so that we don't always drop to fastboot.
+    char key = key_prompt("0f", 2);
+    enter_fastboot = key == 'f';
+  }
+
+  if (enter_fastboot) {
     zx::status<> ret = gigaboot::FastbootTcpMain();
     if (ret.is_error()) {
       printf("Fastboot failed\n");
@@ -54,10 +61,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  // TODO(b/235489025): Implement mechanism for setting force recovery. The C gigaboot
-  // uses bootbyte (a non-volatile memory), which can be device specific. Consider using
-  // the abr one-shot-recovery mechanism.
-  ForceRecovery force_recovery_option = kForceRecoveryOff;
+  ForceRecovery force_recovery_option =
+      reboot_mode == gigaboot::RebootMode::kRecovery ? kForceRecoveryOn : kForceRecoveryOff;
 
   // TODO(b/236039205): Implement logic to construct these arguments for the API. This is currently
   // a placeholder for testing compilation/linking.

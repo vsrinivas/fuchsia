@@ -46,9 +46,47 @@ cpp20::span<Fastboot::CommandCallbackEntry> Fastboot::GetCommandCallbackTable() 
       {"getvar", &Fastboot::GetVar},
       {"flash", &Fastboot::Flash},
       {"continue", &Fastboot::Continue},
+      {"reboot", &Fastboot::Reboot},
+      {"reboot-bootloader", &Fastboot::RebootBootloader},
+      {"reboot-recovery", &Fastboot::RebootRecovery},
   };
 
   return cmd_entries;
+}
+
+zx::status<> Fastboot::Reboot(std::string_view cmd, fastboot::Transport *transport) {
+  return DoReboot(RebootMode::kNormal, cmd, transport);
+}
+
+zx::status<> Fastboot::RebootBootloader(std::string_view cmd, fastboot::Transport *transport) {
+  return DoReboot(RebootMode::kBootloader, cmd, transport);
+}
+
+zx::status<> Fastboot::RebootRecovery(std::string_view cmd, fastboot::Transport *transport) {
+  return DoReboot(RebootMode::kRecovery, cmd, transport);
+}
+
+zx::status<> Fastboot::DoReboot(RebootMode reboot_mode, std::string_view cmd,
+                                fastboot::Transport *transport) {
+  if (!SetRebootMode(reboot_mode)) {
+    return SendResponse(ResponseType::kFail, "Failed to set reboot mode", transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  // ResetSystem() below won't return. Thus sends a OKAY response first in case we succeed.
+  zx::status<> res = SendResponse(ResponseType::kOkay, "", transport);
+  if (res.is_error()) {
+    return res;
+  }
+
+  efi_status status =
+      gEfiSystemTable->RuntimeServices->ResetSystem(EfiResetCold, EFI_SUCCESS, 0, NULL);
+  if (status != EFI_SUCCESS) {
+    printf("Failed to reboot: %s\n", EfiStatusToString(status));
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  return zx::ok();
 }
 
 zx::status<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transport) {

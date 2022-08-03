@@ -10,6 +10,8 @@
 
 #include <fbl/vector.h>
 
+#include "backends.h"
+
 namespace gigaboot {
 
 class Fastboot : public fastboot::FastbootBase {
@@ -41,6 +43,11 @@ class Fastboot : public fastboot::FastbootBase {
   zx::status<> GetVar(std::string_view cmd, fastboot::Transport *transport);
   zx::status<> Flash(std::string_view cmd, fastboot::Transport *transport);
   zx::status<> Continue(std::string_view cmd, fastboot::Transport *transport);
+  zx::status<> DoReboot(RebootMode reboot_mode, std::string_view cmd,
+                        fastboot::Transport *transport);
+  zx::status<> Reboot(std::string_view cmd, fastboot::Transport *transport);
+  zx::status<> RebootBootloader(std::string_view cmd, fastboot::Transport *transport);
+  zx::status<> RebootRecovery(std::string_view cmd, fastboot::Transport *transport);
 
   cpp20::span<uint8_t> download_buffer_;
 
