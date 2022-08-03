@@ -173,7 +173,6 @@ impl FsNodeOps for RemoteNode {
         // Make sure the same permissions are granted to user, group, and other.
         let user_perms = mode.bits() & 0o700;
         let mode = mode | FileMode::from_bits((user_perms >> 3) | (user_perms >> 6));
-        tracing::info!("remote fs file {:?} mode {:?}", name, mode);
 
         let child = node.fs().create_node_with_id(ops, attrs.id, mode, FsCred::root());
 
