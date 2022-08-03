@@ -66,7 +66,6 @@ macro_rules! ptrs {(
 
 // TODO: Remove buffer collection bindings when they are upstream.
 pub type BufferCollectionFUCHSIA = u64;
-pub type BufferCollectionFUCHSIAX = u64;
 
 // VK_FUCHSIA_imagepipe_surface
 pub const STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA: u32 = 1000214000;
@@ -92,36 +91,17 @@ pub const STRUCTURE_TYPE_IMAGE_FORMAT_CONSTRAINTS_INFO_FUCHSIA: u32 = 1000366007
 pub const STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIA: u32 = 1000366008;
 pub const STRUCTURE_TYPE_BUFFER_COLLECTION_CONSTRAINTS_INFO_FUCHSIA: u32 = 1000366009;
 
-// VK_FUCHSIA_buffer_collection_x
-pub const STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIAX: u32 = 1000367000;
-pub const STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIAX: u32 = 1000367004;
-pub const STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIAX: u32 = 1000367005;
-pub const STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIAX: u32 = 1000367006;
-pub const STRUCTURE_TYPE_BUFFER_CONSTRAINTS_INFO_FUCHSIAX: u32 = 1000367007;
-pub const STRUCTURE_TYPE_BUFFER_COLLECTION_BUFFER_CREATE_INFO_FUCHSIAX: u32 = 1000367008;
-pub const STRUCTURE_TYPE_IMAGE_CONSTRAINTS_INFO_FUCHSIAX: u32 = 1000367009;
-pub const STRUCTURE_TYPE_IMAGE_FORMAT_CONSTRAINTS_INFO_FUCHSIAX: u32 = 1000367010;
-pub const STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES2_FUCHSIAX: u32 = 1000367011;
-pub const STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIAX: u32 = 1000367012;
-
 pub const IMAGE_CONSTRAINTS_INFO_CPU_READ_RARELY_FUCHSIA: u32 = 1;
 pub const IMAGE_CONSTRAINTS_INFO_CPU_READ_OFTEN_FUCHSIA: u32 = 2;
 pub const IMAGE_CONSTRAINTS_INFO_CPU_WRITE_RARELY_FUCHSIA: u32 = 4;
 pub const IMAGE_CONSTRAINTS_INFO_CPU_WRITE_OFTEN_FUCHSIA: u32 = 8;
 pub const IMAGE_CONSTRAINTS_INFO_PROTECTED_OPTIONAL_FUCHSIA: u32 = 16;
 
-pub const IMAGE_CONSTRAINTS_INFO_CPU_READ_RARELY_FUCHSIAX: u32 = 1;
-pub const IMAGE_CONSTRAINTS_INFO_CPU_READ_OFTEN_FUCHSIAX: u32 = 2;
-pub const IMAGE_CONSTRAINTS_INFO_CPU_WRITE_RARELY_FUCHSIAX: u32 = 4;
-pub const IMAGE_CONSTRAINTS_INFO_CPU_WRITE_OFTEN_FUCHSIAX: u32 = 8;
-pub const IMAGE_CONSTRAINTS_INFO_PROTECTED_OPTIONAL_FUCHSIAX: u32 = 16;
-
 pub const EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA: u32 = 128;
 
 pub const EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA: u32 = 2048;
 
 pub const OBJECT_TYPE_BUFFER_COLLECTION_FUCHSIA: u32 = 1000366000;
-pub const OBJECT_TYPE_BUFFER_COLLECTION_FUCHSIAX: u32 = 1000367002;
 
 pub type ImageFormatConstraintsFlagsFUCHSIA = vk::Flags;
 
@@ -294,20 +274,6 @@ pub struct SysmemColorSpaceFUCHSIA {
     pub colorSpace: u32,
 }
 
-// VK_FUCHSIA_buffer_collection_x
-
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Derivative)]
-#[derivative(Debug, Default)]
-pub struct SysmemColorSpaceFUCHSIAX {
-    #[derivative(Default(value = "STRUCTURE_TYPE_SYSMEM_COLOR_SPACE_FUCHSIAX"))]
-    pub sType: vk::StructureType,
-    #[derivative(Default(value = "ptr::null()"))]
-    pub pNext: *const ::std::os::raw::c_void,
-    pub colorSpace: u32,
-}
-
 #[repr(C)]
 #[allow(non_snake_case)]
 #[derive(Derivative)]
@@ -366,124 +332,6 @@ pub struct ImageConstraintsInfoFUCHSIA {
     pub flags: ImageConstraintsInfoFlagsFUCHSIA,
 }
 
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Debug, Copy, Clone)]
-pub struct ImageConstraintsInfoFUCHSIAX {
-    pub sType: vk::StructureType,
-    pub __bindgen_padding_0: [u8; 4usize],
-    pub pNext: *const ::std::os::raw::c_void,
-    pub createInfoCount: u32,
-    pub __bindgen_padding_1: [u8; 4usize],
-    pub pCreateInfos: *const vk::ImageCreateInfo,
-    pub pFormatConstraints: *const ImageFormatConstraintsInfoFUCHSIAX,
-    pub minBufferCount: u32,
-    pub maxBufferCount: u32,
-    pub minBufferCountForCamping: u32,
-    pub minBufferCountForDedicatedSlack: u32,
-    pub minBufferCountForSharedSlack: u32,
-    pub flags: vk::Flags,
-}
-impl Default for ImageConstraintsInfoFUCHSIAX {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Debug, Copy, Clone)]
-pub struct BufferConstraintsInfoFUCHSIAX {
-    pub sType: vk::StructureType,
-    pub pNext: *const ::std::os::raw::c_void,
-    pub pBufferCreateInfo: *const vk::BufferCreateInfo,
-    pub requiredFormatFeatures: vk::FormatFeatureFlags,
-    pub minCount: u32,
-}
-impl Default for BufferConstraintsInfoFUCHSIAX {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Debug, Copy, Clone)]
-pub struct BufferCollectionPropertiesFUCHSIAX {
-    pub sType: vk::StructureType,
-    pub pNext: *mut ::std::os::raw::c_void,
-    pub memoryTypeBits: u32,
-    pub count: u32,
-}
-impl Default for BufferCollectionPropertiesFUCHSIAX {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-
-#[repr(C)]
-#[allow(non_snake_case)]
-pub struct BufferCollectionProperties2FUCHSIAX {
-    pub sType: vk::StructureType,
-    pub pNext: *mut ::std::os::raw::c_void,
-    pub memoryTypeBits: u32,
-    pub bufferCount: u32,
-    pub createInfoIndex: u32,
-    pub sysmemFormat: u64,
-    pub formatFeatures: vk::FormatFeatureFlags,
-    pub colorSpace: SysmemColorSpaceFUCHSIAX,
-    pub samplerYcbcrConversionComponents: vk::ComponentMapping,
-    pub suggestedYcbcrModel: u32,
-    pub suggestedYcbcrRange: u32,
-    pub suggestedXChromaOffset: u32,
-    pub suggestedYChromaOffset: u32,
-}
-impl Default for BufferCollectionProperties2FUCHSIAX {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-
-#[repr(C)]
-#[allow(non_snake_case)]
-#[derive(Debug, Copy, Clone)]
-pub struct ImageFormatConstraintsInfoFUCHSIAX {
-    pub sType: vk::StructureType,
-    pub __bindgen_padding_0: [u8; 4usize],
-    pub pNext: *const ::std::os::raw::c_void,
-    pub requiredFormatFeatures: vk::FormatFeatureFlags,
-    pub flags: vk::Flags,
-    pub sysmemFormat: u64,
-    pub colorSpaceCount: u32,
-    pub __bindgen_padding_1: [u8; 4usize],
-    pub pColorSpaces: *const SysmemColorSpaceFUCHSIAX,
-}
-impl Default for ImageFormatConstraintsInfoFUCHSIAX {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-
 ptrs!(FuchsiaExtensionPointers, {
     // VK_FUCHSIA_external_memory
     GetMemoryZirconHandleFUCHSIA => (
@@ -534,37 +382,6 @@ ptrs!(FuchsiaExtensionPointers, {
         collection: BufferCollectionFUCHSIA,
         pProperties: *mut BufferCollectionPropertiesFUCHSIA
     ) -> vk::Result,
-
-    // VK_FUCHSIA_buffer_collection_x
-    CreateBufferCollectionFUCHSIAX => (
-        device: vk::Device,
-        pImportInfo: *const BufferCollectionCreateInfoFUCHSIA,
-        pAllocator: *const vk::AllocationCallbacks,
-        pCollection: *mut BufferCollectionFUCHSIA) -> vk::Result,
-    SetBufferCollectionConstraintsFUCHSIAX => (
-        device: vk::Device,
-        collection: BufferCollectionFUCHSIAX,
-        pImageInfo: *const vk::ImageCreateInfo) -> vk::Result,
-    SetBufferCollectionImageConstraintsFUCHSIAX => (
-        device: vk::Device,
-        collection: BufferCollectionFUCHSIAX,
-        pImageConstraintsInfo: *const ImageConstraintsInfoFUCHSIAX) -> vk::Result,
-    SetBufferCollectionBufferConstraintsFUCHSIAX => (
-        device: vk::Device,
-        collection: BufferCollectionFUCHSIAX,
-        pBufferConstraintsInfo: *const BufferConstraintsInfoFUCHSIAX) -> vk::Result,
-    DestroyBufferCollectionFUCHSIAX => (
-        device: vk::Device,
-        collection: BufferCollectionFUCHSIAX,
-        pAllocator: *const vk::AllocationCallbacks) -> (),
-    GetBufferCollectionPropertiesFUCHSIAX => (
-        device: vk::Device,
-        collection: BufferCollectionFUCHSIAX,
-        pProperties: *mut BufferCollectionPropertiesFUCHSIAX) -> vk::Result,
-    GetBufferCollectionProperties2FUCHSIAX => (
-        device: vk::Device,
-        collection: BufferCollectionFUCHSIAX,
-        pProperties: *mut BufferCollectionProperties2FUCHSIAX) -> vk::Result,
 });
 
 #[link(name = "vulkan")]
@@ -841,33 +658,6 @@ pub(crate) mod tests {
         assert_fn_valid!(vk_ext.SetBufferCollectionBufferConstraintsFUCHSIA);
         assert_fn_valid!(vk_ext.DestroyBufferCollectionFUCHSIA);
         assert_fn_valid!(vk_ext.GetBufferCollectionPropertiesFUCHSIA);
-
-        destroy_vk_device(instance, device);
-        destroy_vk_instance(instance);
-    }
-
-    #[test]
-    fn fuchsia_buffer_collection_x_function_valid() {
-        let instance = create_vk_instance();
-        let extension_names = vec![cstr!(b"VK_FUCHSIA_buffer_collection_x\0").as_ptr()];
-        if !physical_device_supports_extension(instance, &extension_names) {
-            println!("extension {:?} not supported, test skipped.", extension_names);
-            return;
-        }
-        let device = create_vk_device(instance, extension_names).unwrap();
-
-        let vk_i = super::instance_pointers(instance);
-        let vk_ext = super::FuchsiaExtensionPointers::load(|name| unsafe {
-            vk_i.GetDeviceProcAddr(device, name.as_ptr()) as *const _
-        });
-
-        assert_fn_valid!(vk_ext.CreateBufferCollectionFUCHSIAX);
-        assert_fn_valid!(vk_ext.SetBufferCollectionConstraintsFUCHSIAX);
-        assert_fn_valid!(vk_ext.SetBufferCollectionImageConstraintsFUCHSIAX);
-        assert_fn_valid!(vk_ext.SetBufferCollectionBufferConstraintsFUCHSIAX);
-        assert_fn_valid!(vk_ext.DestroyBufferCollectionFUCHSIAX);
-        assert_fn_valid!(vk_ext.GetBufferCollectionPropertiesFUCHSIAX);
-        assert_fn_valid!(vk_ext.GetBufferCollectionProperties2FUCHSIAX);
 
         destroy_vk_device(instance, device);
         destroy_vk_instance(instance);
