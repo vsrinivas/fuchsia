@@ -270,7 +270,7 @@ void HidDevice::IoQueue(void* cookie, const uint8_t* buf, size_t len, zx_time_t 
       // the rest of this payload and hope that the next one gets us back
       // on track.
       if (!rpt_sz) {
-        zxlogf(ERROR, "%s: failed to find input report size (report id %u)", hid->name_.data(),
+        zxlogf(DEBUG, "%s: failed to find input report size (report id %u)", hid->name_.data(),
                buf[0]);
         break;
       }
