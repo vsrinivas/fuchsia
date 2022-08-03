@@ -56,6 +56,7 @@ import (
 	_ "google.golang.org/protobuf/types/known/timestamppb"
 	_ "gopkg.in/yaml.v2"
 	_ "gvisor.dev/gvisor/pkg/atomicbitops"
+	_ "gvisor.dev/gvisor/pkg/bufferv2"
 	_ "gvisor.dev/gvisor/pkg/log"
 	_ "gvisor.dev/gvisor/pkg/tcpip"
 	_ "gvisor.dev/gvisor/pkg/tcpip/faketime"
