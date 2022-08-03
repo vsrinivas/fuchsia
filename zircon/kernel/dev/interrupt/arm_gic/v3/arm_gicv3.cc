@@ -122,9 +122,6 @@ static void gic_init_percpu_early() {
   // set priority threshold to max.
   gic_write_pmr(0xff);
 
-  // ICC_CTLR_EL1.EOImode.
-  gic_write_ctlr(1u << 1);
-
   // enable group 1 interrupts.
   gic_write_igrpen(1);
 }
@@ -353,13 +350,8 @@ static void gic_handle_irq(iframe_t* frame) {
 
   // deliver the interrupt
   interrupt_eoi eoi;
-  if (!pdev_invoke_int_if_present(vector, &eoi)) {
-    eoi = IRQ_EOI_DEACTIVATE;
-  }
+  pdev_invoke_int_if_present(vector, &eoi);
   gic_write_eoir(vector);
-  if (eoi == IRQ_EOI_DEACTIVATE) {
-    gic_write_dir(vector);
-  }
 
   LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
 

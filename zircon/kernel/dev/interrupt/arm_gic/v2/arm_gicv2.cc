@@ -115,8 +115,8 @@ static void gic_set_enable(uint vector, bool enable) {
 }
 
 static void gic_init_percpu_early() {
-  GICREG(0, GICC_CTLR) = 0x201;  // EnableGrp1 and EOImodeNS
-  GICREG(0, GICC_PMR) = 0xff;    // unmask interrupts at all priority levels
+  GICREG(0, GICC_CTLR) = 0x1;  // EnableGrp1
+  GICREG(0, GICC_PMR) = 0xff;  // unmask interrupts at all priority levels
 }
 
 static unsigned int arm_gic_max_cpu() { return (GICREG(0, GICD_TYPER) >> 5) & 0x7; }
@@ -275,13 +275,8 @@ static void gic_handle_irq(iframe_t* frame) {
 
   // deliver the interrupt
   interrupt_eoi eoi;
-  if (!pdev_invoke_int_if_present(vector, &eoi)) {
-    eoi = IRQ_EOI_DEACTIVATE;
-  }
+  pdev_invoke_int_if_present(vector, &eoi);
   GICREG(0, GICC_EOIR) = iar;
-  if (eoi == IRQ_EOI_DEACTIVATE) {
-    GICREG(0, GICC_DIR) = iar;
-  }
 
   LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
 
