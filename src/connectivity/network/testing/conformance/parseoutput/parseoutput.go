@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 )
 
 var (
@@ -18,6 +19,9 @@ var (
 	)
 	CaseEndPattern = regexp.MustCompile(
 		`\[network-conformance case end\] (.*)$`,
+	)
+	caseIdentifierPattern = regexp.MustCompile(
+		`(.+)--(.+)-(\d+).(\d+)`,
 	)
 )
 
@@ -38,6 +42,33 @@ func (i CaseIdentifier) String() string {
 		i.MajorNumber,
 		i.MinorNumber,
 	)
+}
+
+func ParseCaseIdentifier(s string) (CaseIdentifier, error) {
+	m := caseIdentifierPattern.FindStringSubmatch(s)
+	if m == nil {
+		return CaseIdentifier{}, fmt.Errorf(
+			"%q did not match regexp %s",
+			s,
+			caseIdentifierPattern,
+		)
+	}
+	platform := m[1]
+	suiteName := m[2]
+	majNum, err := strconv.Atoi(m[3])
+	if err != nil {
+		return CaseIdentifier{}, err
+	}
+	minNum, err := strconv.Atoi(m[4])
+	if err != nil {
+		return CaseIdentifier{}, err
+	}
+	return CaseIdentifier{
+		Platform:    platform,
+		SuiteName:   suiteName,
+		MajorNumber: majNum,
+		MinorNumber: minNum,
+	}, nil
 }
 
 type CaseStart struct {

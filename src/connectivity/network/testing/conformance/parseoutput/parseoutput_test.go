@@ -41,3 +41,26 @@ func TestParseNetworkConformanceCaseEnd(t *testing.T) {
 		t.Fatalf("Found mismatch in parsed CaseEnd from %q (-want +got):\n%s", line, diff)
 	}
 }
+
+func TestCaseIdentifierSerializationRoundtrip(t *testing.T) {
+	wantIdent := CaseIdentifier{
+		Platform:    "NS2",
+		SuiteName:   "SOME_Suite-name",
+		MajorNumber: 2,
+		MinorNumber: 3,
+	}
+	s := wantIdent.String()
+
+	got, err := ParseCaseIdentifier(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := cmp.Diff(wantIdent, got); diff != "" {
+		t.Fatalf(
+			"Found mismatch in parsed CaseIdentifier from %q (-want +got):\n%s",
+			s,
+			diff,
+		)
+	}
+}
