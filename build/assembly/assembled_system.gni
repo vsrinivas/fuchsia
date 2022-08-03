@@ -651,6 +651,13 @@ template("assembled_system") {
       rebase_path(files.outdir, root_build_dir),
     ]
 
+    if (board_information_for_assembly != false) {
+      args += [
+        "--board-info",
+        rebase_path(board_information_for_assembly, root_build_dir),
+      ]
+    }
+
     deps = [ ":${labels.legacy_assembly_input_bundle}" ] +
            labels.platform_common_aibs + labels.product_assembly_config_deps
 

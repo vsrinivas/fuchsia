@@ -4,6 +4,10 @@
 
 import("common/x64-common.gni")
 
+# BoardInformation for Product Assembly
+board_information_for_assembly =
+    "//boards/chromebook-x64/board_information.json5"
+
 # userspace PCI migration flags (Chromebook needs more testing)
 # fxbug.dev/32978
 platform_enable_user_pci = false

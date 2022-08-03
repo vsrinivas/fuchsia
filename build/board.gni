@@ -74,6 +74,9 @@ declare_args() {
   # Whether or not the board pulls in the system-update-configurator component.
   board_supports_update_configurator = false
 
+  # BoardInformation file for use with Product Assembly
+  board_information_for_assembly = false
+
   # Whether or not the board supports emulator/physical devices.
   # This is used to determine if product bundle metadata should generate a
   # physical/virtual device spec or both.
