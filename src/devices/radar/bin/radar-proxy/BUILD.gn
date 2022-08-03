@@ -29,9 +29,14 @@ executable("radar-proxy-bin") {
   deps = [ ":common" ]
 }
 
-fuchsia_package_with_single_component("radar-proxy") {
+fuchsia_component("radar-proxy-component") {
+  component_name = "radar-proxy"
   manifest = "meta/radar-proxy.cml"
   deps = [ ":radar-proxy-bin" ]
+}
+
+fuchsia_package("radar-proxy") {
+  deps = [ ":radar-proxy-component" ]
 }
 
 core_shard("radar-proxy-shard") {
