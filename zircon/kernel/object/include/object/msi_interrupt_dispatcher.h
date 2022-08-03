@@ -48,7 +48,7 @@ class MsiInterruptDispatcher : public InterruptDispatcher {
                                   uint32_t msi_id, RegisterIntFn = msi_register_handler);
   fbl::RefPtr<VmMapping>& mapping() { return mapping_; }
   fbl::RefPtr<MsiAllocation>& allocation() { return alloc_; }
-  static interrupt_eoi IrqHandler(void* ctx);
+  static void IrqHandler(void* ctx);
 
  private:
   // The MSI allocation block this dispatcher shares.

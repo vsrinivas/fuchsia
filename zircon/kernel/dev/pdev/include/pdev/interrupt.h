@@ -14,9 +14,9 @@
 
 __BEGIN_CDECLS
 
-// Invokes the handler for the given vector if one is registered. If true is returned a handler was
-// present and |result| contains the return value of the handler, otherwise false is returned.
-bool pdev_invoke_int_if_present(unsigned int vector, interrupt_eoi* result);
+// Invokes the handler for the given vector if one is registered. If true is
+// returned a handler was present, otherwise false is returned.
+bool pdev_invoke_int_if_present(unsigned int vector);
 
 // Interrupt Controller interface
 struct pdev_interrupt_ops {

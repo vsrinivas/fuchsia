@@ -124,7 +124,7 @@ static inline void uartreg_or_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) 
   *ptr = *ptr | flags;
 }
 
-static interrupt_eoi uart_irq(void* arg) {
+static void uart_irq(void* arg) {
   uintptr_t base = (uintptr_t)arg;
 
   /* read interrupt status and mask */
@@ -160,8 +160,6 @@ static interrupt_eoi uart_irq(void* arg) {
       uart_dputc_event.Signal();
     }
   }
-
-  return IRQ_EOI_DEACTIVATE;
 }
 
 void AmlogicS905UartInitLate() {

@@ -198,11 +198,10 @@ MsiInterruptDispatcher::~MsiInterruptDispatcher() {
 // This IrqHandler acts as a trampoline to call into the base
 // InterruptDispatcher's InterruptHandler() routine. Masking and signaling will
 // be handled there based on flags set in the constructor.
-interrupt_eoi MsiInterruptDispatcher::IrqHandler(void* ctx) {
+void MsiInterruptDispatcher::IrqHandler(void* ctx) {
   auto* self = reinterpret_cast<MsiInterruptDispatcher*>(ctx);
   self->InterruptHandler();
   kcounter_add(dispatcher_msi_interrupt_count, 1);
-  return IRQ_EOI_DEACTIVATE;
 }
 
 zx_status_t MsiInterruptDispatcher::RegisterInterruptHandler() {

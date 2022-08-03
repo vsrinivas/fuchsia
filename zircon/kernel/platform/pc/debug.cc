@@ -132,7 +132,7 @@ static void uart_write(uint8_t reg, uint8_t val) {
 // synchronization inside the IRQ path to a minimum, otherwise it is possible to
 // introduce long spin periods in IRQ context that can seriously degrade system
 // performance.
-static interrupt_eoi uart_irq_handler(void* arg) {
+static void uart_irq_handler(void* arg) {
   // see why we have gotten an irq
   for (;;) {
     uint8_t iir = uart_read(2);
@@ -162,8 +162,6 @@ static interrupt_eoi uart_irq_handler(void* arg) {
         panic("UART: unhandled ident %#x\n", ident);
     }
   }
-
-  return IRQ_EOI_DEACTIVATE;
 }
 
 // Read all pending inputs from the UART.

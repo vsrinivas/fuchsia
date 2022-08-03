@@ -121,7 +121,7 @@ static inline void uartreg_or_eq(ptrdiff_t reg, uint32_t flags) {
   *ptr = *ptr | flags;
 }
 
-static interrupt_eoi dw8250_uart_irq(void* arg) {
+static void dw8250_uart_irq(void* arg) {
   if ((UARTREG(UART_IIR) & UART_IIR_BUSY) == UART_IIR_BUSY) {
     // To clear the USR (UART Status Register) we need to read it.
     volatile uint32_t unused = UARTREG(UART_USR);
@@ -145,8 +145,6 @@ static interrupt_eoi dw8250_uart_irq(void* arg) {
     // 2. AutounsignalEvent only wakes up one thread per Signal().
     uart_dputc_event.Signal();
   }
-
-  return IRQ_EOI_DEACTIVATE;
 }
 
 /* panic-time getc/putc */

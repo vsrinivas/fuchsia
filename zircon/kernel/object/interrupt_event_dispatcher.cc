@@ -109,11 +109,10 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
   return ZX_OK;
 }
 
-interrupt_eoi InterruptEventDispatcher::IrqHandler(void* ctx) {
+void InterruptEventDispatcher::IrqHandler(void* ctx) {
   InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
 
   self->InterruptHandler();
-  return IRQ_EOI_DEACTIVATE;
 }
 
 InterruptEventDispatcher::InterruptEventDispatcher(uint32_t vector) : vector_(vector) {

@@ -258,10 +258,9 @@ static zx_ticks_t read_ct() {
   return cntpct;
 }
 
-static interrupt_eoi platform_tick(void* arg) {
+static void platform_tick(void* arg) {
   write_ctl(0);
   timer_tick(current_time());
-  return IRQ_EOI_DEACTIVATE;
 }
 
 zx_ticks_t platform_current_raw_ticks() { return read_ct(); }

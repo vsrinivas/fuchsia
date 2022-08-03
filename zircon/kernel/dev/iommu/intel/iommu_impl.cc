@@ -638,13 +638,13 @@ zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
   return ZX_ERR_TIMED_OUT;
 }
 
-interrupt_eoi IommuImpl::FaultHandler(void* ctx) {
+void IommuImpl::FaultHandler(void* ctx) {
   auto self = static_cast<IommuImpl*>(ctx);
   auto status = reg::FaultStatus::Get().ReadFrom(&self->mmio_);
 
   if (!status.primary_pending_fault()) {
     TRACEF("Non primary fault\n");
-    return IRQ_EOI_DEACTIVATE;
+    return;
   }
 
   auto caps = reg::Capability::Get().ReadFrom(&self->mmio_);
@@ -681,7 +681,6 @@ interrupt_eoi IommuImpl::FaultHandler(void* ctx) {
   // unprocessed?
   status.set_primary_fault_overflow(1);
   status.WriteTo(&self->mmio_);
-  return IRQ_EOI_DEACTIVATE;
 }
 
 zx_status_t IommuImpl::ConfigureFaultEventInterruptLocked() {

@@ -46,7 +46,7 @@ zx_status_t configure_interrupt(unsigned int vector, enum interrupt_trigger_mode
 zx_status_t get_interrupt_config(unsigned int vector, enum interrupt_trigger_mode* tm,
                                  enum interrupt_polarity* pol);
 
-typedef interrupt_eoi (*int_handler)(void* arg);
+typedef void (*int_handler)(void* arg);
 
 // Registers a handler+arg to be called for the given interrupt vector. The handler may be called
 // with internal spinlocks held and should not itself call register_int_handler. This handler may

@@ -99,7 +99,7 @@ static inline void pl011_unmask_rx() TA_REQ(uart_spinlock::Get()) {
   uartreg_or_eq(uart_base, UART_IMSC, (1 << 6) | (1 << 4));
 }
 
-static interrupt_eoi pl011_uart_irq(void* arg) {
+static void pl011_uart_irq(void* arg) {
   /* read interrupt status and mask */
   uint32_t isr = UARTREG(uart_base, UART_TMIS);
 
@@ -168,8 +168,6 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
       pl011_mask_tx();
     }
   }
-
-  return IRQ_EOI_DEACTIVATE;
 }
 
 void Pl011UartInitLate() {

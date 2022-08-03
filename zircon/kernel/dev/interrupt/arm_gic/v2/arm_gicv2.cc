@@ -274,8 +274,7 @@ static void gic_handle_irq(iframe_t* frame) {
                 Thread::Current::Get(), vector, (uintptr_t)IFRAME_PC(frame));
 
   // deliver the interrupt
-  interrupt_eoi eoi;
-  pdev_invoke_int_if_present(vector, &eoi);
+  pdev_invoke_int_if_present(vector);
   GICREG(0, GICC_EOIR) = iar;
 
   LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
@@ -294,15 +293,13 @@ static void gic_send_ipi(cpu_mask_t logical_target, mp_ipi_t ipi) {
   }
 }
 
-static interrupt_eoi arm_ipi_halt_handler(void*) {
+static void arm_ipi_halt_handler(void*) {
   LTRACEF("cpu %u\n", arch_curr_cpu_num());
 
   arch_disable_ints();
   while (true) {
     __wfi();
   }
-
-  return IRQ_EOI_DEACTIVATE;
 }
 
 static void gic_init_percpu() {

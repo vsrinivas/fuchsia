@@ -30,23 +30,23 @@ static struct int_handler_struct* pdev_get_int_handler(unsigned int vector) {
   return &int_handler_table[vector];
 }
 
-bool pdev_invoke_int_if_present(unsigned int vector, interrupt_eoi* result) {
+bool pdev_invoke_int_if_present(unsigned int vector) {
   auto h = pdev_get_int_handler(vector);
   // Use a relaxed load as permanent handlers are never modified once set, and they are only set in
   // startup code, and so there is nothing to race with.
   if (h->permanent.load(ktl::memory_order_relaxed)) {
     // Once permanent is set to true we know that handler and arg are immutable and so it is safe
     // to read them without holding the lock.
-    [&result, &h]() TA_NO_THREAD_SAFETY_ANALYSIS {
+    [&h]() TA_NO_THREAD_SAFETY_ANALYSIS {
       DEBUG_ASSERT(h->handler);
-      *result = h->handler(h->arg);
+      h->handler(h->arg);
     }();
     return true;
   }
   Guard<SpinLock, IrqSave> guard{pdev_lock::Get()};
 
   if (h->handler) {
-    *result = h->handler(h->arg);
+    h->handler(h->arg);
     return true;
   }
   return false;

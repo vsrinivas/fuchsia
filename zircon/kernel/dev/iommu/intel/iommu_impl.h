@@ -105,7 +105,7 @@ class IommuImpl final : public Iommu {
   zx_status_t EnableBiosReservedMappingsLocked() TA_REQ(lock_);
 
   void DisableFaultsLocked() TA_REQ(lock_);
-  static interrupt_eoi FaultHandler(void* ctx);
+  static void FaultHandler(void* ctx);
   zx_status_t GetOrCreateContextTableLocked(ds::Bdf bdf, ContextTableState** tbl) TA_REQ(lock_);
   zx_status_t GetOrCreateDeviceContextLocked(ds::Bdf bdf, DeviceContext** context) TA_REQ(lock_);
 

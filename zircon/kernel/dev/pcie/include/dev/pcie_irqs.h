@@ -156,10 +156,9 @@ class SharedLegacyIrqHandler
  private:
   explicit SharedLegacyIrqHandler(uint irq_id);
 
-  static interrupt_eoi HandlerThunk(void* arg) {
+  static void HandlerThunk(void* arg) {
     DEBUG_ASSERT(arg);
     reinterpret_cast<SharedLegacyIrqHandler*>(arg)->Handler();
-    return IRQ_EOI_DEACTIVATE;
   }
 
   void Handler();

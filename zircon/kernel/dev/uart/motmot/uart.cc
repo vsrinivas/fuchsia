@@ -107,7 +107,7 @@ static inline void motmot_uart_unmask_rx() TA_REQ(uart_spinlock::Get()) {
   uartreg_and_eq(uart_base, UART_UINTM, ~(1 << 0));  // rxd
 }
 
-static interrupt_eoi motmot_uart_irq(void* arg) {
+static void motmot_uart_irq(void* arg) {
   // read interrupt status
   uint32_t isr = UARTREG(uart_base, UART_UINTP);
 
@@ -210,8 +210,6 @@ static interrupt_eoi motmot_uart_irq(void* arg) {
   if (pending_ack) {
     UARTREG(uart_base, UART_UINTP) = pending_ack;
   }
-
-  return IRQ_EOI_DEACTIVATE;
 }
 
 static int motmot_uart_getc(bool wait) {
