@@ -54,6 +54,11 @@
             from: "#scene-manager",
             to: [ "#input-helper" ],
         },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#input-helper" ],
+        },
     ],
     expose: [
         {

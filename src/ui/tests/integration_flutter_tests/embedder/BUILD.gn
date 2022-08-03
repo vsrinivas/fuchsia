@@ -12,7 +12,7 @@ group("tests") {
   deps = [
     ":flutter-embedder-test",
     ":flutter-embedder-test-ip",
-    "//src/ui/testing/test_ui_stack:test-ui-stack",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",

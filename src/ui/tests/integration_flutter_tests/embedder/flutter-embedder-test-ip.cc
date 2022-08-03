@@ -29,8 +29,6 @@ static constexpr auto kParentFlutterRealm = "parent_flutter";
 static constexpr auto kParentFlutterRealmRef = ChildRef{kParentFlutterRealm};
 static constexpr auto kTestUIStack = "ui";
 static constexpr auto kTestUIStackRef = ChildRef{kTestUIStack};
-static constexpr auto kTestUIStackUrl =
-    "fuchsia-pkg://fuchsia.com/test-ui-stack#meta/test-ui-stack.cm";
 
 bool CheckViewExistsInSnapshot(const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot,
                                zx_koid_t view_ref_koid) {
@@ -92,7 +90,7 @@ void FlutterEmbedderTestIp::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
 
   // Add test UI stack component.
-  realm_builder_.AddChild(kTestUIStack, kTestUIStackUrl);
+  realm_builder_.AddChild(kTestUIStack, GetParam());
 
   // Add embedded child component to realm.
   realm_builder_.AddChild(kChildFlutterRealm, kChildViewUrl);
@@ -241,7 +239,13 @@ void FlutterEmbedderTestIp::TryInject(int32_t x, int32_t y) {
       dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
 }
 
-TEST_F(FlutterEmbedderTestIp, Embedding) {
+INSTANTIATE_TEST_SUITE_P(
+    FlutterEmbedderTestIpWithParams, FlutterEmbedderTestIp,
+    ::testing::Values(
+        "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm",
+        "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"));
+
+TEST_P(FlutterEmbedderTestIp, Embedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -254,7 +258,7 @@ TEST_F(FlutterEmbedderTestIp, Embedding) {
       }));
 }
 
-TEST_F(FlutterEmbedderTestIp, HittestEmbedding) {
+TEST_P(FlutterEmbedderTestIp, HittestEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -273,7 +277,7 @@ TEST_F(FlutterEmbedderTestIp, HittestEmbedding) {
   }));
 }
 
-TEST_F(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
+TEST_P(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -294,7 +298,7 @@ TEST_F(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
       }));
 }
 
-TEST_F(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
+TEST_P(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -311,7 +315,7 @@ TEST_F(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
       }));
 }
 
-TEST_F(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
+TEST_P(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.

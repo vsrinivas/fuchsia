@@ -30,7 +30,9 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(10);
 // Timeout to fail the test if it goes beyond this duration.
 constexpr zx::duration kTestTimeout = zx::min(1);
 
-class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop, public ::testing::Test {
+class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
+                              public ::testing::Test,
+                              public ::testing::WithParamInterface<std::string> {
  public:
   FlutterEmbedderTestIp() : realm_builder_(component_testing::RealmBuilder::Create()) {
     FX_VLOGS(1) << "Setting up base realm";
