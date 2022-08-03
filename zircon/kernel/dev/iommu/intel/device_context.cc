@@ -85,7 +85,8 @@ zx_status_t DeviceContext::InitCommon() {
     return status;
   }
 
-  constexpr size_t kMaxAllocatorMemoryUsage = 16 * PAGE_SIZE;
+  // TODO(fxbug.dev/105668): handle allocation better.
+  constexpr size_t kMaxAllocatorMemoryUsage = 256 * PAGE_SIZE;
   fbl::RefPtr<RegionAllocator::RegionPool> region_pool =
       RegionAllocator::RegionPool::Create(kMaxAllocatorMemoryUsage);
   if (region_pool == nullptr) {
