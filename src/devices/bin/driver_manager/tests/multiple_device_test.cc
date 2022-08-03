@@ -602,6 +602,12 @@ TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_DevicesRemoveC
                                     &boot_child_system_device_index));
   fbl::RefPtr<Device> boot_child_system_device = device(boot_child_system_device_index)->device;
 
+  size_t package_device_index;
+  ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "package-1", 0 /* protocol id */,
+                                    "fuchsia-pkg://my-package#meta/driver.so",
+                                    &package_device_index));
+  fbl::RefPtr<Device> package_device = device(package_device_index)->device;
+
   coordinator_loop()->RunUntilIdle();
 
   bool finished = false;
@@ -624,6 +630,8 @@ TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_DevicesRemoveC
 
   ASSERT_NO_FATAL_FAILURE(
       device(system_device_index)->CheckSuspendReceivedAndReply(DEVICE_SUSPEND_FLAG_REBOOT, ZX_OK));
+  ASSERT_NO_FATAL_FAILURE(device(package_device_index)
+                              ->CheckSuspendReceivedAndReply(DEVICE_SUSPEND_FLAG_REBOOT, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   // Check that the callback was called.
@@ -635,4 +643,5 @@ TEST_F(MultipleDeviceTestCase, UnregisterSystemStorageForShutdown_DevicesRemoveC
   ASSERT_EQ(child_boot_device->state(), Device::State::kSuspended);
   ASSERT_EQ(child_system_device->state(), Device::State::kSuspended);
   ASSERT_EQ(boot_child_system_device->state(), Device::State::kSuspended);
+  ASSERT_EQ(package_device->state(), Device::State::kSuspended);
 }

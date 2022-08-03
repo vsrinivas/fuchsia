@@ -27,6 +27,14 @@
 // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
 static constexpr bool kEnableAlwaysInit = false;
 
+namespace {
+
+bool StringHasPrefix(std::string_view prefix, std::string_view str) {
+  return str.find(prefix, 0) == 0;
+}
+
+}  // namespace
+
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
                fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
                zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir)
@@ -802,13 +810,7 @@ void Device::AddDeviceGroup(AddDeviceGroupRequestView request,
 }
 
 bool Device::DriverLivesInSystemStorage() const {
-  const std::string kSystemPrefix = "/system/";
-
-  if (libname().size() < kSystemPrefix.size()) {
-    return false;
-  }
-  return (kSystemPrefix.compare(0, kSystemPrefix.size() - 1, libname().c_str(),
-                                kSystemPrefix.size() - 1) == 0);
+  return StringHasPrefix("/system/", libname()) || StringHasPrefix("fuchsia-pkg://", libname());
 }
 
 bool Device::IsAlreadyBound() const {
