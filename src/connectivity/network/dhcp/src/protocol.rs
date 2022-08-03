@@ -54,6 +54,8 @@ const MIN_MESSAGE_SIZE: u16 = 576;
 // https://datatracker.ietf.org/doc/html/rfc2132#section-5.1
 const MIN_MTU_VAL: u16 = 68;
 
+const ASCII_NULL: char = '\x00';
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ProtocolError {
     #[error("invalid buffer length: {}", _0)]
@@ -1912,8 +1914,12 @@ fn get_byte(bytes: &[u8]) -> Result<u8, InvalidBufferLengthError> {
 
 // Converts input byte slice into a nonempty utf8 string.
 fn bytes_to_nonempty_str(bytes: &[u8]) -> Result<String, ProtocolError> {
-    String::from_utf8(nonempty(bytes)?.to_owned())
-        .map_err(|e| ProtocolError::Utf8(e.utf8_error().valid_up_to()))
+    // Spec states that strings should not be null terminated, yet receivers
+    // should be prepared to trim trailing nulls.
+    // See https://datatracker.ietf.org/doc/html/rfc2132#section-2
+    std::str::from_utf8(nonempty(bytes)?.into())
+        .map_err(|e| ProtocolError::Utf8(e.valid_up_to()))
+        .map(|string| string.trim_end_matches(ASCII_NULL).to_owned())
 }
 
 // Converts input byte slice into an Ipv4Addr.
@@ -1969,7 +1975,7 @@ pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Result<Ipv4Addr, Protoco
 fn buf_to_msg_string(buf: &[u8]) -> Result<String, ProtocolError> {
     Ok(std::str::from_utf8(buf)
         .map_err(|e| ProtocolError::Utf8(e.valid_up_to()))?
-        .trim_end_matches('\x00')
+        .trim_end_matches(ASCII_NULL)
         .to_string())
 }
 
@@ -2129,6 +2135,19 @@ mod tests {
         };
 
         assert_eq!(Message::from_buffer(&msg().serialize()), Ok(msg()));
+    }
+
+    #[test]
+    fn strips_null_from_option_strings() {
+        let ascii_str = String::from("Hello World");
+        let null_terminated_str = format!("{}{}", ascii_str, ASCII_NULL);
+        let msg = Message {
+            options: vec![DhcpOption::MeritDumpFile(null_terminated_str)],
+            ..new_test_msg()
+        };
+        let Message { options: parsed_options, .. } = Message::from_buffer(&msg.serialize())
+            .expect("Parsing serialized message should succeed.");
+        assert_eq!(parsed_options, vec![DhcpOption::MeritDumpFile(ascii_str)]);
     }
 
     #[test]
