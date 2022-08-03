@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::restore_agent;
 use crate::base::SettingType;
-use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::base::Request;
 use crate::handler::setting_handler::ControllerError;
 use crate::ingress::fidl::Interface;
@@ -19,52 +17,6 @@ use futures::lock::Mutex;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_factory_test_environment";
-
-// Makes sure that settings are restored from storage when service comes online.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_restore() {
-    // Ensure is_local_reset_allowed value is restored correctly.
-    validate_restore(true).await;
-    validate_restore(false).await;
-}
-
-async fn validate_restore(is_local_reset_allowed: bool) {
-    let service_registry = ServiceRegistry::create();
-    let recovery_policy_service_handler = RecoveryPolicy::create();
-    service_registry
-        .lock()
-        .await
-        .register_service(Arc::new(Mutex::new(recovery_policy_service_handler.clone())));
-
-    // Set stored value.
-    let storage_factory =
-        InMemoryStorageFactory::with_initial_data(&FactoryResetInfo { is_local_reset_allowed });
-
-    // Bring up environment with restore agent and factory reset.
-    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
-        .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .agents(&[restore_agent::blueprint::create()])
-        .fidl_interfaces(&[Interface::FactoryReset])
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .expect("env should be available");
-
-    // Connect to the proxy so we ensure the restore has occurred.
-    let factory_reset_proxy = env
-        .connect_to_protocol::<FactoryResetMarker>()
-        .expect("factory reset service should be available");
-
-    // Validate that the recovery policy service received the restored value.
-    {
-        let mutex = recovery_policy_service_handler.is_local_reset_allowed();
-        let local_reset_allowed = mutex.lock().await;
-        assert_eq!(*local_reset_allowed, Some(is_local_reset_allowed));
-    }
-
-    // Validate that the restored value is available on the next watch.
-    let settings = factory_reset_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.is_local_reset_allowed, Some(is_local_reset_allowed));
-}
 
 // Tests that the FIDL calls for the reset setting result in appropriate
 // commands sent to the service.

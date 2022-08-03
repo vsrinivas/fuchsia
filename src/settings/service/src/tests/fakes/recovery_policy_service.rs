@@ -20,10 +20,6 @@ impl RecoveryPolicy {
     pub(crate) fn create() -> Self {
         Self { is_local_reset_allowed: Arc::new(Mutex::new(None)) }
     }
-
-    pub(crate) fn is_local_reset_allowed(&self) -> Arc<Mutex<Option<bool>>> {
-        self.is_local_reset_allowed.clone()
-    }
 }
 
 impl Service for RecoveryPolicy {

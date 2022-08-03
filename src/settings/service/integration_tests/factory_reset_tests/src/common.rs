@@ -10,8 +10,7 @@ use fidl_fuchsia_settings::{FactoryResetMarker, FactoryResetProxy};
 use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
-use futures::lock::Mutex;
-use std::sync::Arc;
+use futures::channel::mpsc::Sender;
 use utils;
 
 const COMPONENT_URL: &str = "#meta/setui_service.cm";
@@ -20,16 +19,14 @@ const COMPONENT_URL: &str = "#meta/setui_service.cm";
 pub trait Mocks {
     async fn recovery_policy_impl(
         handles: LocalComponentHandles,
-        is_local_reset_allowed: Arc<Mutex<Option<bool>>>,
+        reset_allowed_sender: Sender<bool>,
     ) -> Result<(), Error>;
 }
 
 pub struct FactoryResetTest {}
 
 impl FactoryResetTest {
-    pub async fn create_realm(
-        is_allowed: Arc<Mutex<Option<bool>>>,
-    ) -> Result<RealmInstance, Error> {
+    pub async fn create_realm(reset_allowed_sender: Sender<bool>) -> Result<RealmInstance, Error> {
         let builder = RealmBuilder::new().await?;
         // Add setui_service as child of the realm builder.
         let setui_service =
@@ -50,7 +47,7 @@ impl FactoryResetTest {
                 move |handles: LocalComponentHandles| {
                     Box::pin(FactoryResetTest::recovery_policy_impl(
                         handles,
-                        Arc::clone(&is_allowed),
+                        reset_allowed_sender.clone(),
                     ))
                 },
                 ChildOptions::new().eager(),
