@@ -179,7 +179,9 @@ template("pm_build") {
     package_output_manifest = pkg_output_manifest
   }
 
-  _pm(target_name) {
+  compiled_action(target_name) {
+    tool = "//src/sys/pkg/bin/package-tool"
+    tool_output_name = "package-tool"
     forward_variables_from(invoker,
                            [
                              "data_deps",
@@ -224,9 +226,6 @@ template("pm_build") {
       # produced by seal, must be listed first because of depfile rules.
       "$package_out_dir/meta.far",
 
-      # update
-      "$package_out_dir/meta/contents",
-
       # seal
       "$package_out_dir/meta.far.merkle",
 
@@ -241,32 +240,28 @@ template("pm_build") {
     ]
 
     args = [
+      "build",
       "-o",
       rebase_path(package_out_dir, root_build_dir),
-      "-m",
-      rebase_path(pkg_manifest_file, root_build_dir),
-      "-n",
-      package_name,
-      "-r",
+      "--repository",
       repository,
-      "-api-level",
+      "--api-level",
       "$package_api_level",
     ]
 
     if (defined(meta_subpackages_file)) {
       args += [
-        "-subpackages",
+        "--subpackages-manifest-path",
         rebase_path(meta_subpackages_file, root_build_dir),
       ]
     }
 
     args += [
-      "build",
-      "-output-package-manifest",
-      rebase_path(pkg_output_manifest, root_build_dir),
-      "-depfile",
-      "-blobsfile",
-      "-blobs-manifest",
+      "--depfile",
+      "--meta-far-merkle",
+      "--blobs-json",
+      "--blobs-manifest",
+      rebase_path(pkg_manifest_file, root_build_dir),
     ]
 
     # Due to the content-based nature of these outputs, timestamps of these
