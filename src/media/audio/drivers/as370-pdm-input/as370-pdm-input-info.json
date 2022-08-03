@@ -1,0 +1,12 @@
+{
+    "short_description": "Synaptics AS370 audio subsystem PDM input driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [
+        "AS370"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

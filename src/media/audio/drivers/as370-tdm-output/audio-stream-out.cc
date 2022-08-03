@@ -113,8 +113,8 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   format.frame_rate = kWantedFrameRate;
   format.bits_per_sample = 32;
   format.bits_per_slot = 32;
-  status = codec_.SetDaiFormat(format);
-  if (status == ZX_OK) {
+  zx::status<CodecFormatInfo> info = codec_.SetDaiFormat(format);
+  if (info.is_ok()) {
     zxlogf(INFO, "audio: as370 audio output initialized");
   }
   return status;
@@ -252,17 +252,17 @@ zx_status_t As370AudioStreamOut::AddFormats() {
   }
 
   // Add the range for basic audio support.
-  audio_stream_format_range_t range;
+  SimpleAudioStream::SupportedFormat format = {};
 
-  range.min_channels = kNumberOfChannels;
-  range.max_channels = kNumberOfChannels;
-  range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+  format.range.min_channels = kNumberOfChannels;
+  format.range.max_channels = kNumberOfChannels;
+  format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   assert(kWantedFrameRate == 48000);
-  range.min_frames_per_second = kWantedFrameRate;
-  range.max_frames_per_second = kWantedFrameRate;
-  range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+  format.range.min_frames_per_second = kWantedFrameRate;
+  format.range.max_frames_per_second = kWantedFrameRate;
+  format.range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;  // No need to specify family when min == max.
 
-  supported_formats_.push_back(range);
+  supported_formats_.push_back(format);
 
   return ZX_OK;
 }

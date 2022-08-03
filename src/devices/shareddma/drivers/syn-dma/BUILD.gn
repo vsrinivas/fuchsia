@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
-bind_rules("syn_dhub_bind") {
+driver_bind_rules("syn_dhub_bind") {
   rules = "syn_dhub.bind"
-  output = "syn_dhub_bind.h"
+  header_output = "syn_dhub_bind.h"
+  bind_output = "syn_dhub.bindc"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
@@ -17,18 +17,11 @@ bind_rules("syn_dhub_bind") {
   ]
 }
 
-driver_module("syn-dma") {
+fuchsia_driver("syn-dma-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "syn-dhub.cc" ]
   deps = [
     ":syn_dhub_bind",
@@ -51,17 +44,8 @@ driver_module("syn-dma") {
   ]
 }
 
-test("syn-dhub-test-bin") {
-  if (is_fuchsia) {
-    configs += [
-      "//build/unification/config:zircon-migrated",
-      "//build/config:all_source",
-    ]
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+executable("syn-dhub-test-bin") {
+  testonly = true
   output_name = "syn-dhub-test"
   sources = [
     "syn-dhub-test.cc",
@@ -90,6 +74,13 @@ test("syn-dhub-test-bin") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+}
+
+fuchsia_driver_component("syn-dma") {
+  component_name = "syn-dma"
+  deps = [ ":syn-dma-driver" ]
+  info = "syn-dhub-doc.json"
+  colocate = true
 }
 
 fuchsia_unittest_package("syn-dhub-test") {

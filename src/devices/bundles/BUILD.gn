@@ -38,6 +38,7 @@ group("drivers") {
     "//src/devices/rtc:drivers",
     "//src/devices/securemem:drivers",
     "//src/devices/serial:drivers",
+    "//src/devices/shareddma:drivers",
     "//src/devices/spi:drivers",
     "//src/devices/sysmem:drivers",
     "//src/devices/tee:drivers",

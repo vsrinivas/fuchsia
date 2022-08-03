@@ -20,9 +20,6 @@
 #include "as370.h"
 #include "src/devices/board/drivers/as370/as370-bind.h"
 
-// TODO(fxbug.dev/94099): get this building again
-#if 0
-
 namespace board_as370 {
 
 static const zx_bind_inst_t ref_out_i2c_match[] = {
@@ -182,6 +179,8 @@ zx_status_t As370::AudioInit() {
       .props_count = std::size(props),
       .fragments = codec_fragments,
       .fragments_count = std::size(codec_fragments),
+      .primary_fragment = "i2c",
+      .spawn_colocated = false,
       .metadata_list = nullptr,
       .metadata_count = 0,
   };
@@ -192,25 +191,19 @@ zx_status_t As370::AudioInit() {
     return status;
   }
 
-  // coresident_device_index = 1 to share devhost with DHub.
-  // When autoproxying (fxbug.dev/33274) or its replacement is in place,
-  // we can have these drivers in different devhosts.
-  constexpr uint32_t controller_coresident_device_index = 1;
+  // Share devhost with DHub.
   status =
       pbus_.CompositeDeviceAdd(&controller_out, reinterpret_cast<uint64_t>(controller_fragments),
-                               std::size(controller_fragments), controller_coresident_device_index);
+                               std::size(controller_fragments), "dma");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
     return status;
   }
 
   // Input device.
-  // coresident_device_index = 1 to share devhost with DHub.
-  // When autoproxying (fxbug.dev/33274) or its replacement is in place,
-  // we can have these drivers in different devhosts.
-  constexpr uint32_t in_coresident_device_index = 1;
+  // Share devhost with DHub.
   status = pbus_.CompositeDeviceAdd(&dev_in, reinterpret_cast<uint64_t>(in_fragments),
-                                    std::size(in_fragments), in_coresident_device_index);
+                                    std::size(in_fragments), "dma");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
     return status;
@@ -219,10 +212,3 @@ zx_status_t As370::AudioInit() {
 }
 
 }  // namespace board_as370
-#else
-
-namespace board_as370 {
-zx_status_t As370::AudioInit() { return ZX_OK; }
-}  // namespace board_as370
-
-#endif

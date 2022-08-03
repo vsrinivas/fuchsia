@@ -7,6 +7,8 @@ group("drivers") {
     "aml-g12-pdm:aml-g12-pdm",
     "aml-g12-tdm",
     "aml-g12-tdm:aml-g12-tdm-dai",
+    "as370-pdm-input",
+    "as370-tdm-output",
     "codecs/alc5514",
     "codecs/alc5663",
     "codecs/da7219",

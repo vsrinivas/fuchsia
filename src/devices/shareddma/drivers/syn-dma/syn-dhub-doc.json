@@ -1,0 +1,11 @@
+{
+    "short_description": "Synaptics AS370 DMA engine driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [
+        "AS370"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}

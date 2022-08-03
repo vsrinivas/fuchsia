@@ -615,9 +615,6 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
       "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "dwc2-usb",
-      // TODO(fxbug.dev/94099): Add back when audio has been restored.
-      // "audio-max98373",
-      // "as370-audio-out",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fvm/ftl/block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normal/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normalB/skip-block",
@@ -638,6 +635,9 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "lp5018-light/lp50xx-light",
       "as370-touch",
       "as370-touch/cy8cmbr3108",
+      "audio-max98373",
+      "as370-audio-in",
+      "as370-audio-out",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

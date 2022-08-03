@@ -1,0 +1,12 @@
+{
+    "short_description": "Synaptics AS370 audio subsystem TDM output driver",
+    "manufacturer": "Synaptics",
+    "families": [],
+    "models": [
+        "AS370"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

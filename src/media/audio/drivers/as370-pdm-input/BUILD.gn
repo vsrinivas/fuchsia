@@ -3,21 +3,21 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 
-bind_rules("as370_audio_in_bind") {
+driver_bind_rules("as370_audio_in_bind") {
   rules = "as370_audio_in.bind"
-  output = "as370_audio_in_bind.h"
+  header_output = "as370_audio_in_bind.h"
+  bind_output = "as370_audio_in.bindc"
   tests = "tests.json"
   deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
-driver_module("as370-pdm-input") {
+fuchsia_driver("as370-pdm-input-driver") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "audio-stream-in.cc" ]
 
   deps = [
@@ -32,9 +32,9 @@ driver_module("as370-pdm-input") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/media/audio/drivers/lib/audio-driver-proto",
+    "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/simple-audio-stream",
-    "//zircon/system/ulib/audio-driver-proto",
-    "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
@@ -42,6 +42,13 @@ driver_module("as370-pdm-input") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
+}
+
+fuchsia_driver_component("as370-pdm-input") {
+  component_name = "as370-pdm-input"
+  deps = [ ":as370-pdm-input-driver" ]
+  info = "as370-pdm-input-info.json"
+  colocate = true
 }
 
 group("tests") {

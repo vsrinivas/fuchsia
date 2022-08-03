@@ -33,6 +33,9 @@ class As370AudioStreamIn : public SimpleAudioStream {
   zx_status_t Stop() TA_REQ(domain_token()) override;
   void RingBufferShutdown() TA_REQ(domain_token()) override;
   void ShutdownHook() TA_REQ(domain_token()) override;
+  zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
  private:
   static constexpr size_t kMaxRate = 48000;

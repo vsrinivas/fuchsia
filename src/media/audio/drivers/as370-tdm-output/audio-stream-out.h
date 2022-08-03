@@ -38,6 +38,9 @@ class As370AudioStreamOut : public SimpleAudioStream {
   zx_status_t Start(uint64_t* out_start_time) TA_REQ(domain_token()) override;
   zx_status_t Stop() TA_REQ(domain_token()) override;
   zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_token()) override;
+  zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   void ShutdownHook() TA_REQ(domain_token()) override;
 
  private:

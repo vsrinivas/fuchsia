@@ -190,15 +190,16 @@ zx_status_t As370AudioStreamIn::AddFormats() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  audio_stream_format_range_t range;
-  range.min_channels = SynAudioInDevice::kNumberOfChannels;
-  range.max_channels = SynAudioInDevice::kNumberOfChannels;
-  range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-  range.min_frames_per_second = kMaxRate;
-  range.max_frames_per_second = kMaxRate;
-  range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+  SimpleAudioStream::SupportedFormat format = {};
 
-  supported_formats_.push_back(range);
+  format.range.min_channels = SynAudioInDevice::kNumberOfChannels;
+  format.range.max_channels = SynAudioInDevice::kNumberOfChannels;
+  format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+  format.range.min_frames_per_second = kMaxRate;
+  format.range.max_frames_per_second = kMaxRate;
+  format.range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;  // No need to specify family when min == max.
+
+  supported_formats_.push_back(format);
 
   return ZX_OK;
 }

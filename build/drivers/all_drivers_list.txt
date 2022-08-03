@@ -190,6 +190,7 @@
 //src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm-driver
 //src/devices/serial/drivers/usb-cdc-acm:usb-cdc-acm-driver
 //src/devices/serial/drivers/virtio-console:virtio_console-driver
+//src/devices/shareddma/drivers/syn-dma:syn-dma-driver
 //src/devices/spi/drivers/aml-spi:aml-spi-driver
 //src/devices/spi/drivers/intel-gspi:fuchsia_driver
 //src/devices/spi/drivers/spi:spi-driver
@@ -261,9 +262,9 @@
 //src/devices/tpm/drivers/cr50-spi:fuchsia_driver
 //src/devices/tpm/drivers/tpm-lpc:fuchsia_driver
 //src/devices/tpm/drivers/tpm:fuchsia_driver
+//src/devices/usb/drivers/aml-usb-crg-phy-v2:aml-usb-crg-phy-v2-driver
 //src/devices/usb/drivers/aml-usb-phy-v2:aml-usb-phy-v2-driver
 //src/devices/usb/drivers/as370-usb-phy:as370-usb-phy-driver
-//src/devices/usb/drivers/aml-usb-crg-phy-v2:aml-usb-crg-phy-v2-driver
 //src/devices/usb/drivers/dwc2:dwc2-driver
 //src/devices/usb/drivers/dwc3:dwc3-driver
 //src/devices/usb/drivers/nelson-usb-phy:nelson-usb-phy-driver
@@ -313,6 +314,8 @@
 //src/media/audio/drivers/aml-g12-pdm:aml-g12-pdm-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-dai-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-driver
+//src/media/audio/drivers/as370-pdm-input:as370-pdm-input-driver
+//src/media/audio/drivers/as370-tdm-output:as370-tdm-output-driver
 //src/media/audio/drivers/codecs/alc5514:alc5514-driver
 //src/media/audio/drivers/codecs/alc5663:alc5663-driver
 //src/media/audio/drivers/codecs/da7219:driver

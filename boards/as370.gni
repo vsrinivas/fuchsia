@@ -9,7 +9,6 @@ board_description = "as370"
 
 board_configs += [ "//build/config/arm64:cortex-a53" ]
 
-# TODO(fxbug.dev/94099): Add back drivers that have been restored.
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:as370",
   "//src/devices/block/drivers/as370-sdhci",
@@ -23,17 +22,13 @@ _common_bootfs_deps = [
   "//src/devices/nand/drivers/nandpart",
   "//src/devices/nand/drivers/skip-block",
   "//src/devices/power/drivers/as370-power",
+  "//src/devices/shareddma/drivers/syn-dma",
   "//src/devices/thermal/drivers/as370-thermal",
   "//src/devices/usb/drivers/as370-usb-phy",
   "//src/devices/usb/drivers/dwc2",
-]
-
-# TODO(fxbug.dev/94099): drivers that exist but disable for now
-_common_bootfs_deps += [
-  #   "//src/devices/shareddma/drivers/syn-dma",
-  #   "//src/media/audio/drivers/as370-pdm-input",
-  #   "//src/media/audio/drivers/as370-tdm-output",
-  #   "//src/media/audio/drivers/codecs/max98373",
+  "//src/media/audio/drivers/as370-pdm-input",
+  "//src/media/audio/drivers/as370-tdm-output",
+  "//src/media/audio/drivers/codecs/max98373",
 ]
 
 _common_bootfs_deps += [
