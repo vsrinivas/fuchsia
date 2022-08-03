@@ -55,6 +55,59 @@ class BaseDsm : public hwreg::RegisterBase<BaseDsm, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<BaseDsm>(0); }
 };
 
+// DFSM (Display Fuse)
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 432-434
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 497-499
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 495-497
+class DisplayFuses : public hwreg::RegisterBase<DisplayFuses, uint32_t> {
+ public:
+  enum class CoreClockLimit : int {
+    k675Mhz = 0,
+    k540Mhz = 1,
+    k450Mhz = 2,
+    k337_5Mhz = 3,
+  };
+
+  // The registers names here use "_enabled" / "_disabled" prefixes
+  // inconsistently in order to reflect the semantics used in the hardware.
+
+  // Not on Tiger Lake.
+  DEF_BIT(31, graphics_disabled);
+
+  DEF_BIT(30, pipe_a_disabled);
+  DEF_BIT(28, pipe_c_disabled);
+  // FBC (Frame Buffer Compression) and DPST (Display Power Savings Technology).
+  DEF_BIT(27, power_management_disabled);
+
+  // Tiger Lake: All combo PHY ports disabled.
+  // Kaby Lake and Skylake: DDIA eDP support disabled.
+  DEF_BIT(26, edp_disabled);
+
+  // Not on Tiger Lake.
+  DEF_FIELD(24, 23, core_clock_limit_bits);
+  CoreClockLimit GetCoreClockLimit() const {
+    return static_cast<CoreClockLimit>(core_clock_limit_bits());
+  }
+
+  // Only Tiger Lake.
+  DEF_BIT(22, pipe_d_disabled);
+
+  DEF_BIT(21, pipe_b_disabled);
+  // Display capture is called WD (Wireless Display) in Intel docs.
+  DEF_BIT(20, display_capture_disabled);
+
+  // Only Tiger Lake.
+  DEF_BIT(16, isolated_decode_disabled);
+  DEF_FIELD(15, 8, audio_codec_id_low);
+  DEF_BIT(7, display_stream_compression_disabled);
+
+  DEF_BIT(6, remote_screen_blanking_enabled);
+  DEF_BIT(0, audio_codec_disabled);
+
+  static auto Get() { return hwreg::RegisterAddr<DisplayFuses>(0x51000); }
+};
+
 // DSSM (Display Strap State)
 //
 // Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 825-827

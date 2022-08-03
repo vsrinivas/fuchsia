@@ -40,6 +40,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dp-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/fuse-config.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl-bind.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
@@ -1966,9 +1967,6 @@ zx_status_t Controller::Init() {
   pci_.ReadConfig16(PCI_CONFIG_DEVICE_ID, &device_id_);
   zxlogf(TRACE, "Device id %x", device_id_);
 
-  zxlogf(TRACE, "Initializing DDIs");
-  ddis_ = GetDdis(device_id_);
-
   status = igd_opregion_.Init(pci_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to init VBT (%d)", status);
@@ -1990,6 +1988,13 @@ zx_status_t Controller::Init() {
     fbl::AllocChecker ac;
     mmio_space_ = fdf::MmioBuffer(mapped_bars_[0].mmio);
   }
+
+  zxlogf(TRACE, "Reading fuses and straps");
+  FuseConfig fuse_config = FuseConfig::ReadFrom(*mmio_space(), device_id_);
+  fuse_config.Log();
+
+  zxlogf(TRACE, "Initializing DDIs");
+  ddis_ = GetDdis(device_id_);
 
   zxlogf(TRACE, "Initializing Power");
   power_ = Power::New(mmio_space(), device_id_);
