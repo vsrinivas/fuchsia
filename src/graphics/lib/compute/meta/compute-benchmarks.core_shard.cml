@@ -1,0 +1,65 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "compute-benchmarks",
+            url: "fuchsia-pkg://fuchsia.com/compute-benchmarks#meta/compute-benchmarks.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#compute-benchmarks",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#compute-benchmarks",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#compute-benchmarks",
+        },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#compute-benchmarks",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: "#compute-benchmarks",
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: "#compute-benchmarks",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: "#compute-benchmarks",
+            subdir: "class/display-controller",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input",
+            to: "#compute-benchmarks",
+            subdir: "class/input",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#compute-benchmarks",
+            subdir: "class/input-report",
+        },
+    ],
+}

@@ -1,0 +1,36 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    use: [
+        {
+            storage: "cache",
+            rights: [ "rw*" ],
+            path: "/cache",
+        },
+        {
+            storage: "tmp",
+            rights: [ "w*" ],
+            path: "/tmp",
+        },
+        {
+            directory: "dev-display-controller",
+            rights: [ "rw*" ],
+            path: "/dev/class/display-controller",
+        },
+        {
+            directory: "dev-input",
+            rights: [ "rw*" ],
+            path: "/dev/class/input",
+        },
+        {
+            directory: "dev-input-report",
+            rights: [ "rw*" ],
+            path: "/dev/class/input-report",
+        },
+    ],
+}

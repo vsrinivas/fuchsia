@@ -61,7 +61,7 @@ impl_timestamp(void)
 {
   struct timespec ts;
 
-  timespec_get(&ts, TIME_UTC);
+  timespec_get(&ts, TIME_UTC);  // ignore return value
 
   uint64_t const timestamp = ts.tv_sec * 1000000000UL + ts.tv_nsec;
 

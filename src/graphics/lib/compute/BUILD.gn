@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/core/build/core_shard.gni")
 import("gn/build_rules.gni")
 
 #
@@ -21,6 +22,19 @@ group("compute") {
 }
 
 #
+# These tests require a Vulkan environment
+#
+group("vulkan-tests") {
+  testonly = true
+  public_deps = [
+    "radix_sort/platforms/vk/tests/radix_sort_vk_bench/tests",
+    "spinel-vk-rs:tests",
+    "spinel/platforms/vk/tests/spinel_vk_tests",
+    "tools/bench/platforms/vk/tests",
+  ]
+}
+
+#
 #
 #
 group("tests") {
@@ -33,13 +47,26 @@ group("tests") {
     "svg:svg_unittests",
   ]
 
-  #
-  # These tests require a Vulkan environment
-  #
-  public_deps += [
-    "radix_sort/platforms/vk/tests/radix_sort_vk_bench/tests",
-    "spinel-vk-rs:tests",
-    "spinel/platforms/vk/tests/spinel_vk_tests",
-    "tools/bench/platforms/vk/tests",
+  public_deps += [ ":vulkan-tests" ]
+}
+
+#
+# Support for `ffx component explore /core/compute-benchmarks`
+#
+core_shard("compute-benchmarks-shard") {
+  shard_file = "meta/compute-benchmarks.core_shard.cml"
+}
+
+fuchsia_component("compute-benchmarks-cmp") {
+  manifest = "meta/compute-benchmarks.cml"
+  component_name = "compute-benchmarks"
+}
+
+fuchsia_package("compute-benchmarks") {
+  deps = [
+    ":compute-benchmarks-cmp",
+    "radix_sort/platforms/vk/tests/radix_sort_vk_bench",
+    "spinel/platforms/vk/tests/spinel_vk_bench",
+    "tools/bench/platforms/vk:bench-vk",
   ]
 }

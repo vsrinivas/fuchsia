@@ -159,7 +159,6 @@ graphics_compute_vulkan_executable("radix-sort-vk-bench") {
 #
 #
 group("radix_sort_vk_bench") {
-  testonly = true
   public_deps = [ ":radix-sort-vk-bench" ]
 }
 

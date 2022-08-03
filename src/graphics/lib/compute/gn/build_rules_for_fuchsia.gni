@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#
 # These rules are only used by the Fuchsia platform build.
-
+#
 import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("build_settings.gni")
@@ -12,139 +13,30 @@ import("build_settings.gni")
 graphics_compute_vulkan_loader_target = "//src/lib/vulkan"
 
 # A target providing the GTest main() function.
+#
 # This version sets up logging appropriately for Fuchsia on startup.
+#
 graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 
-# Technical note:
-#
-# It might be useful to clarify what Fuchsia packages and components are
-# because the documentation is still a bit fuzzy, and using GN build rules
-# like package() incorrectly is very easy and leads to GN errors that are
-# really hard to understand. This will also make the content of this file
-# clearer for anyone wanting to understand how it works.
-#
-# In Fuchsia, a package is the unit of distribution, and a component is the
-# unit of execution. More precisely:
-#
-#  - A package is an archive with a specific filesystem layout, e.g.:
-#
-#      - executables can go under bin/ or test/ (by convention).
-#      - shared libraries the executable(s) depend on will go under lib/
-#      - non-executable files used by the executables will go under data/
-#      - the meta/ directory contains metadata describing the package's
-#        content.
-#      - each package can contain one or more components, and each one of
-#        them has a corresponding manifest file under meta/<component>.cmx
-#
-#  - A component's manifest describes how said component is run, i.e.:
-#
-#      - which binary executable must be launched to start it.
-#      - which specific sandbox features, devices and services it requires.
-#
-#  IMPORTANT: The format of component manifest file is going to change, which
-#             is why the documentation at fuchsia.dev does not match the
-#             descriptions below, which still correspond to the current format!
-#
-#   As an example, the manifest for a trivial unit-test would look like:
-#
-#     {
-#       "program": { "binary": "bin/foo_unittest" },
-#       "sandbox": {
-#         "features": [ "isolated-temp" ]
-#         "services": [ "fuchsia.logger.LogSink" ]
-#       }
-#     }
-#
-# Here the 'program' entry points to the actual executable.
-# The 'sandbox' entry lists the "isolated-temp" feature (to ensure that /tmp
-# exists when the program is run), and a service to ensure that logs can
-# be sent to the syslog, instead of disappearing into the void.
-#
-# One can imagine that this manifest is stored as `meta/foo_component.cmx` in
-# the `foo_package` package. In this case, one would invoke it with:
-#
-#     fx shell run fuchsia-pkg://fuchsia.com/foo_package#meta/foo_component.cmx
-#
-# However, most of the time, the package and component will have the same name
-# and the following will be equivalent (if there is no ambiguity):
-#
-#     fx shell run foo_package
-#     # Same as using fuchsia-pkg://fuchsia.com/foo_package#meta/foo_package.cmx
-#
-# Note that components are started in the environment of their caller. I.e.
-# foo_unittest will be connecting to the fuchsia.logger.LogSink service
-# running inside the shell process when started with "fx shell run ...".
-#
-# Simple executable components were just described above, but Fuchsia also
-# defines a different component type: a "test component". The difference
-# between a regular and test component are the following:
-#
-#  - Binaries are placed under test/ instead of bin/ (again, by convention).
-#
-#  - Test components can be launched with the "run" shell command, in which
-#    case they are launched like regular executables, i.e. they inherit the
-#    environment of their caller (which will normally be the shell).
-#
-#  - Test components can also be launched with the "runtests --names <name>" shell
-#    command. Compared to "run", the latter will first create a new hermetic
-#    Fuchsia process to run the test program inside, decoupled from the
-#    caller.
-#
-#    Incidentally, this is what "fx test <component>" does too, after
-#    eventually rebuilding the package then updating it on the target device.
-#
-#  - By default, said hermetic process environment is very limited, but the
-#    test component's manifest can also specify services to inject into the
-#    process before running it.
-#
-#    This is done by adding an entry under the "facets" dictionary in the
-#    manifest, for example, for a test that uses Vulkan would have something
-#    like the following:
-#
-#    {
-#        "facets": {
-#            "fuchsia.test": {
-#                "system-services": [
-#                    "fuchsia.sysmem.Allocator",
-#                    "fuchsia.vulkan.loader.Loader"
-#                ]
-#            }
-#        },
-#        "program": { "binary": "test/foo_vulkan_test" },
-#        "sandbox": {
-#            "features": [
-#              "vulkan"
-#            ],
-#            "services": [
-#                "fuchsia.sysmem.Allocator",
-#                "fuchsia.vulkan.loader.Loader",
-#            ]
-#        }
-#    }
-#
-# Notice how the same services appear twice in the manifest above.
-# But the "system-services" part is only used by "runtests", and ignored
-# when the test is launched with "run".
-#
-
 # Generate a Fuchsia package that contains a single component.
-# The binary executable target must be defined before calling this rule.
-# This will generate the component manifest automatically.
+#
+# The binary executable target must be defined before calling this
+# rule.  This will generate the component manifest automatically.
 #
 # Accept all variables from the GN executable() rule, as well as:
-# Variables:
-#    needs_vulkan (optional)
-#      [boolean] Set to true if Vulkan is required to run the component.
 #
-#    test_package (optional)
-#      [boolean] Set to true to turn this into a test package that can
-#      run with 'fx test' or 'fx shell runtests'. Will force |testonly|
-#      to be true.
+#   needs_vulkan (optional)
+#     [boolean] Set to true if Vulkan is required to run the component.
 #
-#    test_environments (optional)
-#      [list of strings] A list of test environments. Requires |test_package|
-#      to be true. Used to run the test in the right environment on the
-#      continuous integration bots.
+#  test_package (optional)
+#     [boolean] Set to true to turn this into a test package that can
+#     run with 'fx test' or 'fx shell runtests'. Will force |testonly|
+#     to be true.
+#
+#  test_environments (optional)
+#     [list of strings] A list of test environments. Requires
+#     |test_package| to be true. Used to run the test in the right
+#     environment on the continuous integration bots.
 #
 template("graphics_compute_single_component_package") {
   _component_name = target_name
@@ -180,7 +72,11 @@ template("graphics_compute_single_component_package") {
       if (!defined(deps)) {
         deps = []
       }
-      deps += [ graphics_compute_vulkan_loader_target ]
+      deps += [
+        "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+        "//src/lib/vulkan/validation_layers",
+        graphics_compute_vulkan_loader_target,
+      ]
     }
 
     # NOTE: The package() rule *requires* that for tests, the executable's
@@ -190,7 +86,7 @@ template("graphics_compute_single_component_package") {
   }
 
   # Generate a component manifest automatically.
-  _component_manifest = "${target_gen_dir}/meta/${_component_name}.cmx"
+  _component_manifest = "${target_gen_dir}/meta/${_component_name}.cml"
   _component_manifest_target = "${_component_name}__manifest"
 
   action(_component_manifest_target) {
@@ -227,14 +123,6 @@ template("graphics_compute_single_component_package") {
     deps = [ ":${_binary_target}" ]
     manifest_deps = [ ":${_component_manifest_target}" ]
     testonly = _testonly
-
-    if (_needs_vulkan) {
-      deps += [
-        "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
-        "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_skip_present_layer",
-        "//src/lib/vulkan/validation_layers",
-      ]
-    }
   }
 
   if (_test_package) {
@@ -247,9 +135,8 @@ template("graphics_compute_single_component_package") {
       }
     }
   } else {
-    fuchsia_package(target_name) {
-      deps = [ ":$_component_target" ]
-      testonly = _testonly
+    group(target_name) {
+      deps = [ ":$_binary_target" ]
     }
   }
 }

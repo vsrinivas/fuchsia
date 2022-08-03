@@ -30,6 +30,5 @@ graphics_compute_vulkan_executable("spinel-vk-bench") {
 }
 
 group("spinel_vk_bench") {
-  testonly = true
   deps = [ ":spinel-vk-bench" ]
 }

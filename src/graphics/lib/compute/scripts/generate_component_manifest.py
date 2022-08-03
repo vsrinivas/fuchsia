@@ -43,52 +43,57 @@ def main(argv):
 
     # Output is a JSON dictionary.
     content = {
-        'include': ['syslog/client.shard.cmx'],
+        'include': ["syslog/client.shard.cml"],
         'program': {
-            'binary': 'bin/' + args.name
-        },
-        'sandbox': {
-            'features': ['isolated-temp',],
+            'binary': "bin/" + args.name
         },
     }
 
-    # Our Vulkan test programs needs specific features and
-    # services. Note that 'isolated-cache-storage' is required for
-    # VkPipelineCache uses.
+    # Is this a gtest?
+    if args.type in ('test'):
+        content['include'] += [
+            "//src/sys/test_runners/gtest/default.shard.cml",
+            "sys/testing/system-test.shard.cml",
+        ]
+
+    # Is this an executable?
+    if args.type in ('executable'):
+        content['program']['runner'] = "elf"
+        content['program']['forward_stdout_to'] = "log"
+        content['program']['forward_stderr_to'] = "log"
+
+    # A Vulkan executable typically reads/writes a pipeline cache.
     if needs_vulkan:
-        content['sandbox']['features'] += [
-            'isolated-cache-storage',
+        content['include'] += [
+            "vulkan/client.shard.cml",
         ]
-        content['sandbox']['services'] = [
-            'fuchsia.sysmem.Allocator',
-            'fuchsia.tracing.provider.Registry',
-            'fuchsia.vulkan.loader.Loader',
-        ]
-
-    # Accessing the framebuffer requires this device driver
-    if args.needs_vulkan_framebuffer:
-        content['sandbox']['dev'] = [
-            'class/display-controller',
-            'class/input-report',
+        content['use'] = [
+            {
+                'storage': "cache",
+                'path': "/cache",
+                'rights': ["rw*"],
+            },
         ]
 
-    # Inject Vulkan-related services into test component manifest.
-    if args.type in ('test') and needs_vulkan:
-        content['facets'] = {
-            'fuchsia.test':
+        # Is this Vulkan and an executable?
+        if args.type in ('executable'):
+            content['use'] += [
                 {
-                    'injected-services':
-                        {
-                            "fuchsia.tracing.provider.Register":
-                                "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
-                        },
-                    'system-services':
-                        [
-                            "fuchsia.sysmem.Allocator",
-                            "fuchsia.vulkan.loader.Loader",
-                        ],
+                    'storage': "tmp",
+                    'path': "/tmp",
+                    'rights': ["w*"],
                 },
-        }
+                {
+                    'directory': "dev-display-controller",
+                    'path': "/dev/class/display-controller",
+                    'rights': ["rw*"],
+                },
+                {
+                    'directory': "dev-input-report",
+                    'path': "/dev/class/input-report",
+                    'rights': ["rw*"],
+                },
+            ]
 
     json.dump(content, output, indent=4, separators=(',', ': '), sort_keys=True)
     output.close()
