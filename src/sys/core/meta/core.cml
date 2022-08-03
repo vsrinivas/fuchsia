@@ -208,11 +208,6 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.component.resolution.Resolver",
-            from: "parent",
-            to: [ "#universe-resolver" ],
-        },
-        {
             protocol: [ "fuchsia.kernel.DebugResource" ],
             from: "parent",
             to: "#debug_serial",

@@ -19,10 +19,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.component.resolution.Resolver",
-                "fuchsia.pkg.PackageResolver",
-            ],
+            protocol: "fuchsia.pkg.PackageResolver",
             availability: "optional",
         },
     ],

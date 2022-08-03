@@ -1057,11 +1057,6 @@
             from: "#archivist",
             to: "#full_resolver",
         },
-        {
-            protocol: "fuchsia.component.resolution.Resolver",
-            from: "#base_resolver",
-            to: "#full_resolver",
-        },
     ],
     expose: [
         {
@@ -1119,10 +1114,6 @@
         {
             protocol: [ "fuchsia.vboot.FirmwareParam" ],
             from: "#vboot-fwparam",
-        },
-        {
-            protocol: "fuchsia.component.resolution.Resolver",
-            from: "#base_resolver",
         },
         {
             protocol: [ "fuchsia.virtualconsole.SessionManager" ],

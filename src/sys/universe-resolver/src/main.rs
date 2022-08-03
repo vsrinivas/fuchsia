@@ -537,7 +537,7 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(2);
         let tx = Arc::new(Mutex::new(Some(sender)));
         let resolver_url =
-            "fuchsia-pkg://fuchsia.com/universe-resolver-unittests#meta/universe-resolver-for-test.cm"
+            "fuchsia-pkg://fuchsia.com/universe-resolver-unittests#meta/universe-resolver.cm"
                 .to_string();
         let requested_url =
             "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();

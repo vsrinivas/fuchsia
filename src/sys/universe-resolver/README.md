@@ -3,8 +3,8 @@
 `universe-resolver` is a V2 component that implements the Component Resolver FIDL protocol
 [`fuchsia.component.resolution.Resolver`] and exposes this protocol as a resolver capability.
 
-The responsibility of `universe-resolver` is to resolve URLs to packages that are located
-in pkgfs or other external sources belonging to the `fuchsia.com` repo.
+The responsibility of `universe-resolver` is to resolve URLs to packages that are made available
+by the `pkg-resolver`.
 
 ## Building
 
@@ -14,7 +14,7 @@ Include in your local build with `fx set ... --with-base //src/sys/universe-reso
 ## Running
 
 To launch this component, include it as a child in the component topology using the URL
-`fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm`, and include its
+`fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm`, and include its
 exposed resolver capability in an environment.
 
 ```json5

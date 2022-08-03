@@ -11,10 +11,7 @@
     offer: [
         {
             // TODO(fxbug.dev/86464): remove.
-            protocol: [
-                "fuchsia.component.resolution.Resolver",
-                "fuchsia.pkg.PackageResolver",
-            ],
+            protocol: "fuchsia.pkg.PackageResolver",
             from: "void",
             to: "#full-resolver",
             availability: "optional",

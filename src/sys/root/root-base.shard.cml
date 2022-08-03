@@ -294,11 +294,6 @@
             from: "parent",
             to: "#bootstrap",
         },
-        {
-            protocol: [ "fuchsia.component.resolution.Resolver" ],
-            from: "#bootstrap",
-            to: "#core",
-        },
 
         // Offer events to `core` for debugger usage.
         {

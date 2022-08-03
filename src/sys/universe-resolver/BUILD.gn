@@ -23,7 +23,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    ":universe_resolver_config",
+    ":config_lib",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
@@ -67,57 +67,21 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_structured_config_rust_lib("universe_resolver_config") {
+fuchsia_structured_config_rust_lib("config_lib") {
   cm_label = ":manifest"
+  name = "universe_resolver_config"
+  visibility = [ ":*" ]
 }
 
-fuchsia_structured_config_values("values_from_gn") {
+fuchsia_structured_config_values("config_values_from_gn") {
   cm_label = ":manifest"
   values = {
     enable_subpackages = universe_resolver_enable_subpackages
   }
 }
 
-fuchsia_component_manifest("manifest-for-test") {
-  component_name = "universe-resolver-for-test"
-  manifest = "meta/universe-resolver-for-test.cml"
-}
-
-fuchsia_component("component-for-test") {
-  testonly = true
-  cm_label = ":manifest-for-test"
-  deps = [ ":bin" ]
-}
-
-fuchsia_structured_config_rust_lib("universe_resolver_config_for_test") {
-  cm_label = ":manifest-for-test"
-}
-
-fuchsia_structured_config_values("values_from_gn_for_test") {
-  cm_label = ":manifest-for-test"
-  values = {
-    enable_subpackages = universe_resolver_enable_subpackages
-  }
-}
-
-fuchsia_component_manifest("manifest-base-only-for-test") {
-  component_name = "universe-resolver-base-only-for-test"
-  manifest = "meta/universe-resolver-base-only-for-test.cml"
-}
-
-fuchsia_component("component-base-only-for-test") {
-  testonly = true
-  cm_label = ":manifest-base-only-for-test"
-  deps = [ ":bin" ]
-}
-
-fuchsia_structured_config_rust_lib(
-    "universe_resolver_config_base_only_for_test") {
-  cm_label = ":manifest-base-only-for-test"
-}
-
-fuchsia_structured_config_values("values_from_gn_base_only_for_test") {
-  cm_label = ":manifest-base-only-for-test"
+fuchsia_structured_config_values("config_values_from_gn_for_test") {
+  cm_label = ":manifest"
   values = {
     enable_subpackages = universe_resolver_enable_subpackages
   }
@@ -126,7 +90,7 @@ fuchsia_structured_config_values("values_from_gn_base_only_for_test") {
 fuchsia_package("universe-resolver") {
   deps = [
     ":component",
-    ":values_from_gn",
+    ":config_values_from_gn",
   ]
 }
 
@@ -134,21 +98,11 @@ fuchsia_component("example") {
   manifest = "meta/example.cml"
 }
 
-fuchsia_component("unittests") {
-  manifest = "meta/universe-resolver-unittests.cml"
-  component_name = "universe-resolver-unittests"
-  deps = [ ":bin_test" ]
-  testonly = true
-}
-
-# Run with `fx test universe-resolver-unittests`.
 fuchsia_unittest_package("universe-resolver-unittests") {
   manifest = "meta/universe-resolver-unittests.cml"
   deps = [
     ":bin_test",
-    ":component-base-only-for-test",
-    ":component-for-test",
-    ":values_from_gn_base_only_for_test",
-    ":values_from_gn_for_test",
+    ":component",
+    ":config_values_from_gn_for_test",
   ]
 }
