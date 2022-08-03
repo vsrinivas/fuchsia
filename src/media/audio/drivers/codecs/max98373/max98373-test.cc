@@ -100,9 +100,8 @@ TEST_F(Max98373Test, GetDaiFormats) {
     EXPECT_EQ(formats.value().frame_formats[0], FrameFormat::TDM1);
     EXPECT_EQ(formats.value().frame_rates.size(), 1);
     EXPECT_EQ(formats.value().frame_rates[0], 48'000);
-    EXPECT_EQ(formats.value().bits_per_slot.size(), 2);
+    EXPECT_EQ(formats.value().bits_per_slot.size(), 1);
     EXPECT_EQ(formats.value().bits_per_slot[0], 16);
-    EXPECT_EQ(formats.value().bits_per_slot[1], 32);
     EXPECT_EQ(formats.value().bits_per_sample.size(), 1);
     EXPECT_EQ(formats.value().bits_per_sample[0], 16);
   }

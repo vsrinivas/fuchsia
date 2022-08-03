@@ -44,8 +44,7 @@ static const std::vector<uint32_t> kSupportedNumberOfChannels = {8};
 static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
 static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::TDM1};
 static const std::vector<uint32_t> kSupportedRates = {48'000};
-// TODO(101508): Advertise only the supported and configured bits per slot.
-static const std::vector<uint8_t> kSupportedBitsPerSlot = {16, 32};
+static const std::vector<uint8_t> kSupportedBitsPerSlot = {16};
 static const std::vector<uint8_t> kSupportedBitsPerSample = {16};
 static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .number_of_channels = kSupportedNumberOfChannels,
