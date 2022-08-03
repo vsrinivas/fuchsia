@@ -190,8 +190,14 @@ func (h hdr) options() (options, error) {
 		if !h.isValid() {
 			return nil, fmt.Errorf("invalid header: %s", h)
 		}
+		hStart := h
+		var nextH hdr
 		h = h[headerBaseSize:]
 		var opts options
+		var overload optionOverloadValue
+		// To make sure overload is read only once, so another overload option
+		// inside overloaded field gets ignored.
+		overloadRead := false
 		for {
 			if len(h) < 1 {
 				return nil, fmt.Errorf("missing end option; options=%s", opts)
@@ -202,8 +208,28 @@ func (h hdr) options() (options, error) {
 			case 0:
 				// Padding.
 				continue
-			case 255:
+			case optEnd:
 				// End.
+				if nextH != nil {
+					h = nextH
+					nextH = nil
+					continue
+				}
+				switch overload {
+				case optOverloadValueFile:
+					h = hStart.file()
+					overload = 0
+					continue
+				case optOverloadValueSname:
+					h = hStart.sname()
+					overload = 0
+					continue
+				case optOverloadValueBoth:
+					h = hStart.file()
+					nextH = hStart.sname()
+					overload = 0
+					continue
+				}
 				return opts, nil
 			}
 
@@ -214,6 +240,10 @@ func (h hdr) options() (options, error) {
 			h = h[1:]
 			if len(h) < int(length) {
 				return nil, fmt.Errorf("%s length=%d remaining=%d; options=%s", code, length, len(h), opts)
+			}
+			if code == optOverload && !overloadRead && length == 1 {
+				overload = optionOverloadValue(h[0])
+				overloadRead = true
 			}
 			opts = append(opts, option{
 				code: code,
@@ -296,6 +326,7 @@ type optionCode byte
 
 const (
 	optSubnetMask optionCode = 1
+	optTimeOffset optionCode = 2
 	// RFC 2132 section 3.5:
 	//   3.5. Router Option
 	//
@@ -306,10 +337,12 @@ const (
 	//   router option is 4 octets, and the length MUST always be a multiple
 	//   of 4.
 	optRouter           optionCode = 3
+	optTimeServer       optionCode = 4
 	optDomainNameServer optionCode = 6
 	optDomainName       optionCode = 15
 	optReqIPAddr        optionCode = 50
 	optLeaseTime        optionCode = 51
+	optOverload         optionCode = 52
 	optDHCPMsgType      optionCode = 53 // dhcpMsgType
 	optDHCPServer       optionCode = 54
 	optParamReq         optionCode = 55
@@ -317,6 +350,15 @@ const (
 	optRenewalTime      optionCode = 58
 	optRebindingTime    optionCode = 59
 	optClientID         optionCode = 61
+	optEnd              optionCode = 255
+)
+
+type optionOverloadValue uint8
+
+const (
+	optOverloadValueFile  optionOverloadValue = 1
+	optOverloadValueSname optionOverloadValue = 2
+	optOverloadValueBoth  optionOverloadValue = 3
 )
 
 func (i optionCode) lenValid(l int) bool {
