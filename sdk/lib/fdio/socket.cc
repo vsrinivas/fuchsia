@@ -2559,8 +2559,8 @@ struct socket_with_event : virtual public base_socket<T> {
   friend class fbl::internal::MakeRefCountedHelper<socket_with_event<T>>;
   friend class fbl::RefPtr<socket_with_event<T>>;
 
-  socket_with_event<T>() = default;
-  ~socket_with_event<T>() override = default;
+  socket_with_event() = default;
+  ~socket_with_event() override = default;
 
   fidl::WireSyncClient<typename T::FidlProtocol>& GetClient() override {
     return zxio_socket_with_event().client;
@@ -2710,8 +2710,8 @@ struct network_socket_with_event : public socket_with_event<T>, public network_s
   friend class fbl::internal::MakeRefCountedHelper<network_socket_with_event<T>>;
   friend class fbl::RefPtr<network_socket_with_event<T>>;
 
-  network_socket_with_event<T>() = default;
-  ~network_socket_with_event<T>() override = default;
+  network_socket_with_event() = default;
+  ~network_socket_with_event() override = default;
 };
 
 using synchronous_datagram_socket = network_socket_with_event<SynchronousDatagramSocket>;
