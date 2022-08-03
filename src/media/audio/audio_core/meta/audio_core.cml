@@ -28,12 +28,15 @@
     use: [
         {
             protocol: [
-                "fuchsia.audio.effects.ProcessorCreator",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.tracing.provider.Registry",
             ],
+        },
+        {
+            protocol: "fuchsia.audio.effects.ProcessorCreator",
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.media.audio.EffectsController" ],

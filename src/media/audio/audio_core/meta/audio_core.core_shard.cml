@@ -18,5 +18,11 @@
             to: "#audio_core",
             subdir: "audio_core",
         },
+        {
+            protocol: "fuchsia.audio.effects.ProcessorCreator",
+            from: "void",
+            to: "#audio_core",
+            availability: "optional",
+        },
     ],
 }
