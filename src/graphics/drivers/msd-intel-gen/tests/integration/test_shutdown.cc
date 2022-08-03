@@ -62,9 +62,10 @@ class TestConnection : public magma::TestDeviceBase {
     }
 
     constexpr uint64_t kMapFlags =
-        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+        MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
-    status = magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, kMapFlags);
+    status =
+        magma_map_buffer(connection_, gpu_addr_, batch_buffer, 0, magma::page_size(), kMapFlags);
     if (!status.ok()) {
       magma_release_context(connection_, context_id);
       magma_release_buffer(connection_, batch_buffer);

@@ -153,6 +153,7 @@ pub const MAGMA_SYSMEM_FLAG_DISPLAY: u32 = 2;
 pub const MAGMA_SYSMEM_FLAG_FOR_CLIENT: u32 = 4;
 pub const MAGMA_MAX_IMAGE_PLANES: u32 = 4;
 pub const MAGMA_MAX_DRM_FORMAT_MODIFIERS: u32 = 16;
+pub const MAGMA_MAP_FLAG_VENDOR_SHIFT: u32 = 16;
 pub const MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT: u32 = 16;
 pub type __s8 = ::std::os::raw::c_schar;
 pub type __u8 = ::std::os::raw::c_uchar;
@@ -541,6 +542,12 @@ pub struct magma_buffer_offset {
     pub offset: u64,
     pub length: u64,
 }
+pub const MAGMA_MAP_FLAGS_MAGMA_MAP_FLAG_READ: MAGMA_MAP_FLAGS = 1;
+pub const MAGMA_MAP_FLAGS_MAGMA_MAP_FLAG_WRITE: MAGMA_MAP_FLAGS = 2;
+pub const MAGMA_MAP_FLAGS_MAGMA_MAP_FLAG_EXECUTE: MAGMA_MAP_FLAGS = 4;
+pub const MAGMA_MAP_FLAGS_MAGMA_MAP_FLAG_GROWABLE: MAGMA_MAP_FLAGS = 8;
+pub const MAGMA_MAP_FLAGS_MAGMA_MAP_FLAG_VENDOR_0: MAGMA_MAP_FLAGS = 65536;
+pub type MAGMA_MAP_FLAGS = ::std::os::raw::c_uint;
 pub const MAGMA_GPU_MAP_FLAGS_MAGMA_GPU_MAP_FLAG_READ: MAGMA_GPU_MAP_FLAGS = 1;
 pub const MAGMA_GPU_MAP_FLAGS_MAGMA_GPU_MAP_FLAG_WRITE: MAGMA_GPU_MAP_FLAGS = 2;
 pub const MAGMA_GPU_MAP_FLAGS_MAGMA_GPU_MAP_FLAG_EXECUTE: MAGMA_GPU_MAP_FLAGS = 4;
@@ -728,9 +735,9 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief Maps a number of pages from the given buffer onto the GPU in the connection's address"]
-    #[doc = "        space at the given address. Depending on the MSD this may automatically commit and"]
-    #[doc = "        populate that range."]
+    #[doc = " \\brief DEPRECATED. Maps a number of pages from the given buffer onto the GPU in the connection's"]
+    #[doc = "        address space at the given address. Depending on the MSD this may automatically commit"]
+    #[doc = "        and populate that range."]
     #[doc = " \\param connection An open connection."]
     #[doc = " \\param buffer A valid buffer."]
     #[doc = " \\param page_offset Offset into the buffer in pages."]
@@ -749,7 +756,7 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief Releases the mapping at the given address from the GPU."]
+    #[doc = " \\brief DEPRECATED. Releases the mapping at the given address from the GPU."]
     #[doc = " \\param connection An open connection."]
     #[doc = " \\param buffer A valid buffer."]
     #[doc = " \\param gpu_va A GPU virtual address associated with an existing mapping of the given buffer."]
@@ -789,7 +796,8 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief Submits a series of commands for execution on the GPU without using a command buffer."]
+    #[doc = " \\brief Submits a series of commands for execution on the hardware without using a command"]
+    #[doc = "        buffer."]
     #[doc = " \\param connection An open connection."]
     #[doc = " \\param context_id A valid context ID."]
     #[doc = " \\param command_count The number of commands in the provided buffer."]
@@ -968,7 +976,7 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief Enables a set of performance counters (the precise definition depends on the GPU driver)."]
+    #[doc = " \\brief Enables a set of performance counters (the precise definition depends on the driver)."]
     #[doc = "        Disables enabled performance counters that are not in the new set. Performance counters"]
     #[doc = "        will also be automatically disabled on connection close. Performance counter access must"]
     #[doc = "        have been enabled using magma_connection_enable_performance_counter_access before calling"]
@@ -1227,6 +1235,35 @@ extern "C" {
         descriptor: *mut magma_command_descriptor,
     ) -> magma_status_t;
 }
+extern "C" {
+    #[doc = ""]
+    #[doc = " \\brief Maps a buffer range onto the hardware in the connection's address space at the given"]
+    #[doc = "        address. Depending on the MSD this may automatically commit and populate that range."]
+    #[doc = " \\param connection An open connection."]
+    #[doc = " \\param hw_va Destination virtual address for the mapping."]
+    #[doc = " \\param buffer A valid buffer."]
+    #[doc = " \\param offset Offset into the buffer."]
+    #[doc = " \\param length Length in bytes of the range to map."]
+    #[doc = " \\param map_flags A valid MAGMA_MAP_FLAGS value."]
+    #[doc = ""]
+    pub fn magma_map_buffer(
+        connection: magma_connection_t,
+        hw_va: u64,
+        buffer: magma_buffer_t,
+        offset: u64,
+        length: u64,
+        map_flags: u64,
+    ) -> magma_status_t;
+}
+extern "C" {
+    #[doc = ""]
+    #[doc = " \\brief Releases the mapping at the given hardware address."]
+    #[doc = " \\param connection An open connection."]
+    #[doc = " \\param hw_va A hardware virtual address associated with an existing mapping of the given buffer."]
+    #[doc = " \\param buffer A valid buffer."]
+    #[doc = ""]
+    pub fn magma_unmap_buffer(connection: magma_connection_t, hw_va: u64, buffer: magma_buffer_t);
+}
 #[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct virtio_magma_config {
@@ -1292,6 +1329,8 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO: virtio_ma
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2: virtio_magma_ctrl_type = 4171;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_FLUSH: virtio_magma_ctrl_type = 4175;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXECUTE_COMMAND: virtio_magma_ctrl_type = 4176;
+pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_MAP_BUFFER: virtio_magma_ctrl_type = 4178;
+pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_UNMAP_BUFFER: virtio_magma_ctrl_type = 4179;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_INTERNAL_RELEASE_HANDLE: virtio_magma_ctrl_type =
     4172;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_INTERNAL_MAP2: virtio_magma_ctrl_type = 4173;
@@ -1359,6 +1398,8 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2: virtio_ma
     8267;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_FLUSH: virtio_magma_ctrl_type = 8271;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXECUTE_COMMAND: virtio_magma_ctrl_type = 8272;
+pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_MAP_BUFFER: virtio_magma_ctrl_type = 8274;
+pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_UNMAP_BUFFER: virtio_magma_ctrl_type = 8275;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_INTERNAL_RELEASE_HANDLE: virtio_magma_ctrl_type =
     8268;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_INTERNAL_MAP2: virtio_magma_ctrl_type = 8269;
@@ -2162,6 +2203,40 @@ pub struct virtio_magma_execute_command_resp {
     pub result_return: u64,
 }
 pub type virtio_magma_execute_command_resp_t = virtio_magma_execute_command_resp;
+#[repr(C, packed)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct virtio_magma_map_buffer_ctrl {
+    pub hdr: virtio_magma_ctrl_hdr_t,
+    pub connection: u64,
+    pub hw_va: u64,
+    pub buffer: u64,
+    pub offset: u64,
+    pub length: u64,
+    pub map_flags: u64,
+}
+pub type virtio_magma_map_buffer_ctrl_t = virtio_magma_map_buffer_ctrl;
+#[repr(C, packed)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct virtio_magma_map_buffer_resp {
+    pub hdr: virtio_magma_ctrl_hdr_t,
+    pub result_return: u64,
+}
+pub type virtio_magma_map_buffer_resp_t = virtio_magma_map_buffer_resp;
+#[repr(C, packed)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct virtio_magma_unmap_buffer_ctrl {
+    pub hdr: virtio_magma_ctrl_hdr_t,
+    pub connection: u64,
+    pub buffer: u64,
+    pub hw_va: u64,
+}
+pub type virtio_magma_unmap_buffer_ctrl_t = virtio_magma_unmap_buffer_ctrl;
+#[repr(C, packed)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct virtio_magma_unmap_buffer_resp {
+    pub hdr: virtio_magma_ctrl_hdr_t,
+}
+pub type virtio_magma_unmap_buffer_resp_t = virtio_magma_unmap_buffer_resp;
 #[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct virtio_magma_internal_release_handle_ctrl {

@@ -16,8 +16,7 @@
 
 namespace {
 
-constexpr uint64_t kMapFlags =
-    MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+constexpr uint64_t kMapFlags = MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
 class TestConnection : public magma::TestDeviceBase {
  public:
@@ -52,12 +51,12 @@ class TestConnection : public magma::TestDeviceBase {
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer));
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, PAGE_SIZE, &size, &result_buffer));
 
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, kMapFlags));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer(connection_, gpu_addr_, batch_buffer, 0,
+                                                magma::page_size(), kMapFlags));
     gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_map_buffer_gpu(connection_, result_buffer, 0, 1, gpu_addr_, kMapFlags));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer(connection_, gpu_addr_, result_buffer, 0,
+                                                magma::page_size(), kMapFlags));
 
     EXPECT_TRUE(InitBatchBuffer(batch_buffer, size, register_offset, gpu_addr_));
 

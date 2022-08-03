@@ -58,7 +58,7 @@ bool PerformanceCounters::Enable() {
     }
     auto gpu_mapping = std::make_unique<GpuMapping>(
         kPerfBufferStartOffset, 0, kPerfBufferSize,
-        MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_READ | kMagmaArmMaliGpuMapFlagInnerShareable,
+        MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_READ | kMagmaArmMaliGpuMapFlagInnerShareable,
         connection.get(), buffer);
     bool result = connection->AddMapping(std::move(gpu_mapping));
     if (!result) {

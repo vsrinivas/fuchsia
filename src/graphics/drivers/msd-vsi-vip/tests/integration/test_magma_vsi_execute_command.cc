@@ -21,8 +21,7 @@ extern "C" {
 
 namespace {
 
-constexpr uint64_t kMapFlags =
-    MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+constexpr uint64_t kMapFlags = MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
 // Provided by etnaviv_cl_test_gc7000.c
 extern "C" uint32_t hello_code[];
@@ -80,16 +79,13 @@ class MagmaExecuteMsdVsi : public testing::Test {
 
     etna_buffer->size_ = magma_get_buffer_size(etna_buffer->magma_buffer_);
 
-    uint64_t page_count = etna_buffer->size_ / PAGE_SIZE;
-    EXPECT_NE(page_count, 0ul);
-
     etna_buffer->gpu_address_ = next_gpu_addr_;
     next_gpu_addr_ += etna_buffer->size_;
 
-    magma_status_t status =
-        magma_map_buffer_gpu(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_,
-                             0,  // page offset
-                             page_count, etna_buffer->gpu_address_, kMapFlags);
+    magma_status_t status = magma_map_buffer(magma_vsi_.GetConnection(), etna_buffer->gpu_address_,
+                                             etna_buffer->magma_buffer_,
+                                             0,  // page offset
+                                             etna_buffer->size_, kMapFlags);
     if (status != MAGMA_STATUS_OK)
       return nullptr;
 
@@ -293,14 +289,10 @@ void etna_stall(struct etna_cmd_stream* stream, uint32_t from, uint32_t to) {
   static_cast<MagmaExecuteMsdVsi::EtnaCommandStream*>(stream)->EtnaStall(from, to);
 }
 
-struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) {
-  return nullptr;
-}
+struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) { return nullptr; }
 void* etna_bo_map(struct etna_bo* bo) { return nullptr; }
 void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {}
-struct drm_test_info* drm_test_setup(int argc, char** argv) {
-  return nullptr;
-}
+struct drm_test_info* drm_test_setup(int argc, char** argv) { return nullptr; }
 void drm_test_teardown(struct drm_test_info* info) {}
 
 TEST_F(MagmaExecuteMsdVsi, ExecuteCommand) { Test(); }

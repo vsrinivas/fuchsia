@@ -122,9 +122,9 @@ MAGMA_EXPORT magma_status_t magma_get_buffer_cache_policy(
     magma_cache_policy_t* cache_policy_out);
 
 ///
-/// \brief Maps a number of pages from the given buffer onto the GPU in the connection's address
-///        space at the given address. Depending on the MSD this may automatically commit and
-///        populate that range.
+/// \brief DEPRECATED. Maps a number of pages from the given buffer onto the GPU in the connection's
+///        address space at the given address. Depending on the MSD this may automatically commit
+///        and populate that range.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
 /// \param page_offset Offset into the buffer in pages.
@@ -141,7 +141,7 @@ MAGMA_EXPORT magma_status_t magma_map_buffer_gpu(
     uint64_t map_flags);
 
 ///
-/// \brief Releases the mapping at the given address from the GPU.
+/// \brief DEPRECATED. Releases the mapping at the given address from the GPU.
 /// \param connection An open connection.
 /// \param buffer A valid buffer.
 /// \param gpu_va A GPU virtual address associated with an existing mapping of the given buffer.
@@ -175,7 +175,8 @@ MAGMA_EXPORT magma_status_t magma_import(
     magma_buffer_t* buffer_out);
 
 ///
-/// \brief Submits a series of commands for execution on the GPU without using a command buffer.
+/// \brief Submits a series of commands for execution on the hardware without using a command
+///        buffer.
 /// \param connection An open connection.
 /// \param context_id A valid context ID.
 /// \param command_count The number of commands in the provided buffer.
@@ -340,7 +341,7 @@ MAGMA_EXPORT magma_status_t magma_connection_enable_performance_counter_access(
     magma_handle_t channel);
 
 ///
-/// \brief Enables a set of performance counters (the precise definition depends on the GPU driver).
+/// \brief Enables a set of performance counters (the precise definition depends on the driver).
 ///        Disables enabled performance counters that are not in the new set. Performance counters
 ///        will also be automatically disabled on connection close. Performance counter access must
 ///        have been enabled using magma_connection_enable_performance_counter_access before calling
@@ -567,6 +568,35 @@ MAGMA_EXPORT magma_status_t magma_execute_command(
     magma_connection_t connection,
     uint32_t context_id,
     struct magma_command_descriptor* descriptor);
+
+///
+/// \brief Maps a buffer range onto the hardware in the connection's address space at the given
+///        address. Depending on the MSD this may automatically commit and populate that range.
+/// \param connection An open connection.
+/// \param hw_va Destination virtual address for the mapping.
+/// \param buffer A valid buffer.
+/// \param offset Offset into the buffer.
+/// \param length Length in bytes of the range to map.
+/// \param map_flags A valid MAGMA_MAP_FLAGS value.
+///
+MAGMA_EXPORT magma_status_t magma_map_buffer(
+    magma_connection_t connection,
+    uint64_t hw_va,
+    magma_buffer_t buffer,
+    uint64_t offset,
+    uint64_t length,
+    uint64_t map_flags);
+
+///
+/// \brief Releases the mapping at the given hardware address.
+/// \param connection An open connection.
+/// \param hw_va A hardware virtual address associated with an existing mapping of the given buffer.
+/// \param buffer A valid buffer.
+///
+MAGMA_EXPORT void magma_unmap_buffer(
+    magma_connection_t connection,
+    uint64_t hw_va,
+    magma_buffer_t buffer);
 
 #if defined(__cplusplus)
 }

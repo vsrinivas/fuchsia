@@ -1,6 +1,6 @@
 {
     "magma-interface": {
-        "next-free-ordinal": 82,
+        "next-free-ordinal": 84,
         "exports": [
             {
                 "ordinal": 4,
@@ -204,7 +204,7 @@
                 "ordinal": 23,
                 "name": "magma_map_buffer_gpu",
                 "type": "magma_status_t",
-                "description": "Maps a number of pages from the given buffer onto the GPU in the connection's address space at the given address. Depending on the MSD this may automatically commit and populate that range.",
+                "description": "DEPRECATED. Maps a number of pages from the given buffer onto the GPU in the connection's address space at the given address. Depending on the MSD this may automatically commit and populate that range.",
                 "arguments": [
                     {
                         "name": "connection",
@@ -242,7 +242,7 @@
                 "ordinal": 24,
                 "name": "magma_unmap_buffer_gpu",
                 "type": "void",
-                "description": "Releases the mapping at the given address from the GPU.",
+                "description": "DEPRECATED. Releases the mapping at the given address from the GPU.",
                 "arguments": [
                     {
                         "name": "connection",
@@ -311,7 +311,7 @@
                 "ordinal": 33,
                 "name": "magma_execute_immediate_commands2",
                 "type": "magma_status_t",
-                "description": "Submits a series of commands for execution on the GPU without using a command buffer.",
+                "description": "Submits a series of commands for execution on the hardware without using a command buffer.",
                 "arguments": [
                     {
                         "name": "connection",
@@ -617,7 +617,7 @@
                 "ordinal": 56,
                 "name": "magma_connection_enable_performance_counters",
                 "type": "magma_status_t",
-                "description": "Enables a set of performance counters (the precise definition depends on the GPU driver). Disables enabled performance counters that are not in the new set. Performance counters will also be automatically disabled on connection close. Performance counter access must have been enabled using magma_connection_enable_performance_counter_access before calling this method.",
+                "description": "Enables a set of performance counters (the precise definition depends on the driver). Disables enabled performance counters that are not in the new set. Performance counters will also be automatically disabled on connection close. Performance counter access must have been enabled using magma_connection_enable_performance_counter_access before calling this method.",
                 "arguments": [
                     {
                         "name": "connection",
@@ -1026,6 +1026,67 @@
                         "name": "descriptor",
                         "type": "struct magma_command_descriptor*",
                         "description": "A pointer to the command descriptor."
+                    }
+                ]
+            },
+            {
+                "ordinal": 82,
+                "name": "magma_map_buffer",
+                "type": "magma_status_t",
+                "description": "Maps a buffer range onto the hardware in the connection's address space at the given address. Depending on the MSD this may automatically commit and populate that range.",
+                "arguments": [
+                    {
+                        "name": "connection",
+                        "type": "magma_connection_t",
+                        "description": "An open connection."
+                    },
+                    {
+                        "name": "hw_va",
+                        "type": "uint64_t",
+                        "description": "Destination virtual address for the mapping."
+                    },
+                    {
+                        "name": "buffer",
+                        "type": "magma_buffer_t",
+                        "description": "A valid buffer."
+                    },
+                    {
+                        "name": "offset",
+                        "type": "uint64_t",
+                        "description": "Offset into the buffer."
+                    },
+                    {
+                        "name": "length",
+                        "type": "uint64_t",
+                        "description": "Length in bytes of the range to map."
+                    },
+                    {
+                        "name": "map_flags",
+                        "type": "uint64_t",
+                        "description": "A valid MAGMA_MAP_FLAGS value."
+                    }
+                ]
+            },
+            {
+                "ordinal": 83,
+                "name": "magma_unmap_buffer",
+                "type": "void",
+                "description": "Releases the mapping at the given hardware address.",
+                "arguments": [
+                    {
+                        "name": "connection",
+                        "type": "magma_connection_t",
+                        "description": "An open connection."
+                    },
+                    {
+                        "name": "hw_va",
+                        "type": "uint64_t",
+                        "description": "A hardware virtual address associated with an existing mapping of the given buffer."
+                    },
+                    {
+                        "name": "buffer",
+                        "type": "magma_buffer_t",
+                        "description": "A valid buffer."
                     }
                 ]
             }

@@ -358,11 +358,11 @@ MsdArmConnection::~MsdArmConnection() {
 static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
                                     uint64_t* flags_out) {
   uint64_t access_flags = 0;
-  if (mapping_flags & MAGMA_GPU_MAP_FLAG_READ)
+  if (mapping_flags & MAGMA_MAP_FLAG_READ)
     access_flags |= kAccessFlagRead;
-  if (mapping_flags & MAGMA_GPU_MAP_FLAG_WRITE)
+  if (mapping_flags & MAGMA_MAP_FLAG_WRITE)
     access_flags |= kAccessFlagWrite;
-  if (!(mapping_flags & MAGMA_GPU_MAP_FLAG_EXECUTE))
+  if (!(mapping_flags & MAGMA_MAP_FLAG_EXECUTE))
     access_flags |= kAccessFlagNoExecute;
   if (mapping_flags & kMagmaArmMaliGpuMapFlagInnerShareable)
     access_flags |= kAccessFlagShareInner;
@@ -374,10 +374,9 @@ static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
 
   // Protected memory doesn't affect the access flags - instead sysmem should set up the memory
   // controller to ensure everything can be accessed correctly from protected mode.
-  if (mapping_flags &
-      ~(MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE |
-        MAGMA_GPU_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable |
-        kMagmaArmMaliGpuMapFlagBothShareable | kMagmaArmMaliGpuMapFlagProtected))
+  if (mapping_flags & ~(MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE |
+                        MAGMA_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable |
+                        kMagmaArmMaliGpuMapFlagBothShareable | kMagmaArmMaliGpuMapFlagProtected))
     return DRETF(false, "Unsupported map flags %lx", mapping_flags);
 
   if (flags_out)
@@ -578,7 +577,7 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
     }
     return false;
   }
-  if (!(mapping.flags() & MAGMA_GPU_MAP_FLAG_GROWABLE)) {
+  if (!(mapping.flags() & MAGMA_MAP_FLAG_GROWABLE)) {
     Region committed_region = mapping.committed_region();
     MAGMA_LOG(WARNING,
               "Address 0x%lx at offset 0x%lx in non-growable mapping at 0x%lx, size 0x%lx, pinned "
@@ -696,8 +695,8 @@ std::optional<ArmMaliResultCode> MsdArmConnection::AllocateNewJitMemoryRegion(
   // accessed by the CPU, but write-combining simplifies management of CPU cache
   // flushes, so use that.
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING);
-  uint64_t flags = MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE |
-                   MAGMA_GPU_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable;
+  uint64_t flags = MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_GROWABLE |
+                   kMagmaArmMaliGpuMapFlagInnerShareable;
 
   // SetCommittedPages can be done without |address_lock_| held since no GPU mapping exists.
   if (!buffer->SetCommittedPages(0, info.committed_page_count)) {

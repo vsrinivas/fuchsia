@@ -543,6 +543,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_SIGNAL_SEMAPHORE as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
+            // DEPRECATED.
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_MAP_BUFFER_GPU => {
                 let (control, mut response): (
                     virtio_magma_map_buffer_gpu_ctrl_t,
@@ -561,6 +562,26 @@ impl FileOps for MagmaFile {
                 };
 
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_MAP_BUFFER_GPU as u32;
+                current_task.mm.write_object(UserRef::new(response_address), &response)
+            }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_MAP_BUFFER => {
+                let (control, mut response): (
+                    virtio_magma_map_buffer_ctrl_t,
+                    virtio_magma_map_buffer_resp_t,
+                ) = read_control_and_response(current_task, &command)?;
+
+                response.result_return = unsafe {
+                    magma_map_buffer(
+                        control.connection as magma_connection_t,
+                        control.hw_va,
+                        control.buffer,
+                        control.offset,
+                        control.length,
+                        control.map_flags,
+                    ) as u64
+                };
+
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_MAP_BUFFER as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_POLL => {

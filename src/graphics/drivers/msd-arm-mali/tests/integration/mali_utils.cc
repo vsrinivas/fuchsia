@@ -13,9 +13,9 @@ bool AtomHelper::InitJobBuffer(magma_buffer_t buffer, JobBufferType type, uint64
     return DRETF(false, "couldn't map job buffer");
   *job_va = next_job_address_;
   next_job_address_ += 0x5000;
-  magma_map_buffer_gpu(
-      connection_, buffer, 0, 1, *job_va,
-      MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | kMagmaArmMaliGpuMapFlagInnerShareable);
+  magma_map_buffer(
+      connection_, *job_va, buffer, 0, magma::page_size(),
+      MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | kMagmaArmMaliGpuMapFlagInnerShareable);
   magma_buffer_range_op(connection_, buffer, MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES, 0,
                         magma::page_size());
   JobDescriptorHeader* header = static_cast<JobDescriptorHeader*>(vaddr);

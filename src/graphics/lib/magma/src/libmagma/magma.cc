@@ -200,6 +200,7 @@ magma_status_t magma_export(magma_connection_t connection, magma_buffer_t buffer
   return MAGMA_STATUS_OK;
 }
 
+// DEPRECATED
 magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
                                     uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
                                     uint64_t map_flags) {
@@ -210,16 +211,32 @@ magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_
                   page_count * magma::page_size(), map_flags);
 }
 
+magma_status_t magma_map_buffer(magma_connection_t connection, uint64_t hw_va,
+                                magma_buffer_t buffer, uint64_t offset, uint64_t length,
+                                uint64_t map_flags) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  uint64_t buffer_id = platform_buffer->id();
+  return magma::PlatformConnectionClient::cast(connection)
+      ->MapBuffer(buffer_id, hw_va, offset, length, map_flags);
+}
+
 magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
                                              magma_cache_policy_t* cache_policy_out) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   return platform_buffer->GetCachePolicy(cache_policy_out);
 }
 
+// DEPRECATED.
 void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   uint64_t buffer_id = platform_buffer->id();
   magma::PlatformConnectionClient::cast(connection)->UnmapBuffer(buffer_id, gpu_va);
+}
+
+void magma_unmap_buffer(magma_connection_t connection, uint64_t hw_va, magma_buffer_t buffer) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  uint64_t buffer_id = platform_buffer->id();
+  magma::PlatformConnectionClient::cast(connection)->UnmapBuffer(buffer_id, hw_va);
 }
 
 magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer_t buffer,

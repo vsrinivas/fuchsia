@@ -22,8 +22,7 @@
 
 namespace {
 
-constexpr uint64_t kMapFlags =
-    MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+constexpr uint64_t kMapFlags = MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
 constexpr uint32_t kValue = 0xabcddcba;
 
@@ -67,8 +66,8 @@ class TestConnection : public magma::TestDeviceBase {
     void* vaddr;
     ASSERT_TRUE(magma::MapCpuHelper(batch_buffer, 0 /*offset*/, buffer_size, &vaddr));
 
-    ASSERT_EQ(MAGMA_STATUS_OK,
-              magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, kMapFlags));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_map_buffer(connection_, gpu_addr_, batch_buffer, 0,
+                                                magma::page_size(), kMapFlags));
 
     // Write to the last dword
     InitBatchBuffer(

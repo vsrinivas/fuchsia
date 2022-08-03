@@ -155,17 +155,19 @@ enum {
 };
 
 enum {
-  // Eagerly populate GPU page tables with the pages mapping in this range, committing pages as
-  // needed. This is not needed for MAGMA_GPU_MAP_FLAG_GROWABLE allocations, since the page tables
+  // Eagerly populate hardware page tables with the pages mapping in this range, committing pages as
+  // needed. This is not needed for MAGMA_MAP_FLAG_GROWABLE allocations, since the page tables
   // will be populated on demand.
   MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES = 1,
-  // Commit memory on the client thread. GPU page tables may not be populated. This should be used
+  // Commit memory on the client thread. Hardware page tables may not be populated. This should be
+  // used
   // before POPULATE_TABLES to ensure the expensive work of committing pages happens with the
   // correct priority and without blocking the processing in the MSD of commands from other threads
   // from the same connection.
   MAGMA_BUFFER_RANGE_OP_COMMIT = 2,
-  // Depopulate GPU page table mappings for this range. This prevents the GPU from accessing pages
-  // in that range, but the pages retain their contents.
+  // Depopulate hardware page table mappings for this range. This prevents the hardware from
+  // accessing
+  // pages in that range, but the pages retain their contents.
   MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES = 3,
   // Decommit memory wholy on the client thread. This may fail if the MSD currently has the page
   // tables populated.
@@ -288,14 +290,26 @@ struct magma_buffer_offset {
 };
 
 // The top 16 bits are reserved for vendor-specific flags.
-#define MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT 16
+#define MAGMA_MAP_FLAG_VENDOR_SHIFT 16
 
+enum MAGMA_MAP_FLAGS {
+  MAGMA_MAP_FLAG_READ = (1 << 0),
+  MAGMA_MAP_FLAG_WRITE = (1 << 1),
+  MAGMA_MAP_FLAG_EXECUTE = (1 << 2),
+  MAGMA_MAP_FLAG_GROWABLE = (1 << 3),
+  MAGMA_MAP_FLAG_VENDOR_0 = (1 << MAGMA_MAP_FLAG_VENDOR_SHIFT),
+};
+
+// DEPRECATED. The top 16 bits are reserved for vendor-specific flags.
+#define MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT MAGMA_MAP_FLAG_VENDOR_SHIFT
+
+// DEPRECATED.
 enum MAGMA_GPU_MAP_FLAGS {
-  MAGMA_GPU_MAP_FLAG_READ = (1 << 0),
-  MAGMA_GPU_MAP_FLAG_WRITE = (1 << 1),
-  MAGMA_GPU_MAP_FLAG_EXECUTE = (1 << 2),
-  MAGMA_GPU_MAP_FLAG_GROWABLE = (1 << 3),
-  MAGMA_GPU_MAP_FLAG_VENDOR_0 = (1 << MAGMA_GPU_MAP_FLAG_VENDOR_SHIFT),
+  MAGMA_GPU_MAP_FLAG_READ = MAGMA_MAP_FLAG_READ,
+  MAGMA_GPU_MAP_FLAG_WRITE = MAGMA_MAP_FLAG_WRITE,
+  MAGMA_GPU_MAP_FLAG_EXECUTE = MAGMA_MAP_FLAG_EXECUTE,
+  MAGMA_GPU_MAP_FLAG_GROWABLE = MAGMA_MAP_FLAG_GROWABLE,
+  MAGMA_GPU_MAP_FLAG_VENDOR_0 = MAGMA_MAP_FLAG_VENDOR_0,
 };
 
 typedef struct magma_image_plane {

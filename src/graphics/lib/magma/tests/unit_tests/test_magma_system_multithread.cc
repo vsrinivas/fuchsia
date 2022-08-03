@@ -77,7 +77,7 @@ class TestMultithread {
       InitBatchBufferIntel(batch_buffer.get());
 
       constexpr uint64_t kMapFlags =
-          MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+          MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
       EXPECT_TRUE(connection->MapBuffer(id, gpu_addr, 0, batch_buffer->size(), kMapFlags));
       gpu_addr += batch_buffer->size() + extra_page_count * page_size();
 

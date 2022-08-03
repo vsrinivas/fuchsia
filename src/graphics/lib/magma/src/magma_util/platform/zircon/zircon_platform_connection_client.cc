@@ -19,11 +19,11 @@ static_assert(static_cast<uint32_t>(QueryId::kDeviceId) == MAGMA_QUERY_DEVICE_ID
 static_assert(static_cast<uint32_t>(QueryId::kIsTotalTimeSupported) == MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::kMaximumInflightParams) == MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, "mismatch");
 using fuchsia_gpu_magma::wire::MapFlags;
-static_assert(static_cast<uint64_t>(MapFlags::kRead) == MAGMA_GPU_MAP_FLAG_READ, "mismatch");
-static_assert(static_cast<uint64_t>(MapFlags::kWrite) == MAGMA_GPU_MAP_FLAG_WRITE, "mismatch");
-static_assert(static_cast<uint64_t>(MapFlags::kExecute) == MAGMA_GPU_MAP_FLAG_EXECUTE, "mismatch");
-static_assert(static_cast<uint64_t>(MapFlags::kGrowable) == MAGMA_GPU_MAP_FLAG_GROWABLE, "mismatch");
-static_assert(static_cast<uint64_t>(MapFlags::kVendorFlag0) == MAGMA_GPU_MAP_FLAG_VENDOR_0, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kRead) == MAGMA_MAP_FLAG_READ, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kWrite) == MAGMA_MAP_FLAG_WRITE, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kExecute) == MAGMA_MAP_FLAG_EXECUTE, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kGrowable) == MAGMA_MAP_FLAG_GROWABLE, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kVendorFlag0) == MAGMA_MAP_FLAG_VENDOR_0, "mismatch");
 
 // clang-format on
 

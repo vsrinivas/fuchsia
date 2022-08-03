@@ -43,7 +43,7 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
   // Validate one command streamer waits for a semaphore, another command streamer signals it.
   void SemaphoreWaitAndSignal(uint32_t context_count) {
     constexpr uint64_t kMapFlags =
-        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+        MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
     constexpr uint32_t kPattern = 0xabcd1234;
     constexpr uint32_t kSize = PAGE_SIZE;
@@ -61,18 +61,18 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
     magma_buffer_t semaphore_buffer;
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, kSize, &size, &semaphore_buffer));
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, wait_batch_buffer, 0,
-                                                    size / PAGE_SIZE, gpu_addr_, kMapFlags));
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_map_buffer(connection_, gpu_addr_, wait_batch_buffer, 0, size, kMapFlags));
 
     gpu_addr_ += size + extra_page_count_ * PAGE_SIZE;
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, signal_batch_buffer, 0,
-                                                    size / PAGE_SIZE, gpu_addr_, kMapFlags));
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_map_buffer(connection_, gpu_addr_, signal_batch_buffer, 0, size, kMapFlags));
 
     gpu_addr_ += size + extra_page_count_ * PAGE_SIZE;
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, semaphore_buffer, 0,
-                                                    size / PAGE_SIZE, gpu_addr_, kMapFlags));
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_map_buffer(connection_, gpu_addr_, semaphore_buffer, 0, size, kMapFlags));
 
     // wait for memory location to be > 0
     InitBatchSemaphoreWait(wait_batch_buffer, 0, gpu_addr_);
@@ -167,7 +167,7 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
 
   void MemoryWriteAndReadback(Mode mode, uint32_t count, uint32_t context_count) {
     constexpr uint64_t kMapFlags =
-        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+        MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
     constexpr uint32_t kPattern = 0xabcd1234;
     constexpr uint32_t kSize = PAGE_SIZE;
@@ -187,13 +187,13 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
       ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, kSize, &size, &result_buffer));
       result_buffers.push_back(result_buffer);
 
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, batch_buffer, 0,
-                                                      size / PAGE_SIZE, gpu_addr_, kMapFlags));
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                magma_map_buffer(connection_, gpu_addr_, batch_buffer, 0, size, kMapFlags));
 
       gpu_addr_ += size + extra_page_count_ * PAGE_SIZE;
 
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, result_buffer, 0,
-                                                      size / PAGE_SIZE, gpu_addr_, kMapFlags));
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                magma_map_buffer(connection_, gpu_addr_, result_buffer, 0, size, kMapFlags));
 
       InitBatchMemoryWrite(batch_buffer, kPattern, gpu_addr_);
 
@@ -268,7 +268,7 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
     ASSERT_EQ(submit_count % 2, 0);
 
     constexpr uint64_t kMapFlags =
-        MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+        MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
     constexpr uint32_t kPattern = 0xabcd1234;
     constexpr uint32_t kSize = PAGE_SIZE;
@@ -294,13 +294,13 @@ class TestExecuteWithCount : public testing::TestWithParam<uint32_t> {
       ASSERT_EQ(MAGMA_STATUS_OK,
                 magma_create_buffer(connection_, kSize, &size, &submit.result_buffer));
 
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, submit.batch_buffer, 0,
-                                                      size / PAGE_SIZE, gpu_addr_, kMapFlags));
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                magma_map_buffer(connection_, gpu_addr_, submit.batch_buffer, 0, size, kMapFlags));
 
       gpu_addr_ += size + extra_page_count_ * PAGE_SIZE;
 
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_map_buffer_gpu(connection_, submit.result_buffer, 0,
-                                                      size / PAGE_SIZE, gpu_addr_, kMapFlags));
+      EXPECT_EQ(MAGMA_STATUS_OK,
+                magma_map_buffer(connection_, gpu_addr_, submit.result_buffer, 0, size, kMapFlags));
 
       InitBatchMemoryWrite(submit.batch_buffer, kPattern, gpu_addr_);
 

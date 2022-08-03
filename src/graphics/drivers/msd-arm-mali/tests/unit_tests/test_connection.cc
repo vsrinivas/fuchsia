@@ -384,10 +384,10 @@ class TestConnection {
 
     EXPECT_TRUE(connection->AddMapping(
         std::make_unique<GpuMapping>(kGpuOffset[0] * PAGE_SIZE, 1, PAGE_SIZE * 95,
-                                     MAGMA_GPU_MAP_FLAG_GROWABLE, connection.get(), buffer)));
+                                     MAGMA_MAP_FLAG_GROWABLE, connection.get(), buffer)));
     EXPECT_TRUE(connection->AddMapping(
         std::make_unique<GpuMapping>(kGpuOffset[1] * PAGE_SIZE, 1, PAGE_SIZE * 95,
-                                     MAGMA_GPU_MAP_FLAG_GROWABLE, connection.get(), buffer)));
+                                     MAGMA_MAP_FLAG_GROWABLE, connection.get(), buffer)));
 
     EXPECT_TRUE(connection->CommitMemoryForBuffer(buffer.get(), 1, 1));
     mali_pte_t pte;

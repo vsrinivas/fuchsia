@@ -280,8 +280,7 @@ TEST(MagmaSystemConnection, MapBufferGpu) {
 
   constexpr uint64_t kBogusId = 0xabcd12345678cabd;
   constexpr uint64_t kGpuVa = 0;  // arbitrary
-  constexpr uint64_t kFlags =
-      MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+  constexpr uint64_t kFlags = MAGMA_MAP_FLAG_READ | MAGMA_MAP_FLAG_WRITE | MAGMA_MAP_FLAG_EXECUTE;
 
   // Bad id
   EXPECT_FALSE(
