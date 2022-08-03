@@ -88,6 +88,7 @@ macro_rules! gen_commands {
 gen_commands! {
     Cmd {
         Connect = ("connect", ["id|addr"], "connect to a peer"),
+        Bond = ("bond", ["id|addr"], "connect to a peer, accepting a pairing with that peer"),
         Disconnect = ("disconnect", ["id|addr"], "disconnect from a peer"),
         Pair = ("pair", ["id|addr", "security_level", "bondable_mode", "transport (optional)"], "pair to a peer"),
         AllowPairing = ("allow-pairing", ["input cap. (none|confirmation|keyboard)", "output cap. (none|display)"], "Enable pairing mode to allow incoming pairing requests. Capabilities default to none if no arguments are passed in."),
@@ -141,6 +142,7 @@ impl Completer for CmdHelper {
             let mut candidates = vec![];
             if command == "connect"
                 || command == "disconnect"
+                || command == "bond"
                 || command == "peer"
                 || command == "pair"
                 || command == "forget"
@@ -149,7 +151,7 @@ impl Completer for CmdHelper {
                 // can match against peer identifier or address
                 for peer in peers.values() {
                     let id = peer.id.to_string();
-                    let addr = peer.address.to_string();
+                    let addr = peer.address.as_hex_string();
                     for key in &[&id, &addr] {
                         if key.starts_with(partial_argument) {
                             candidates.push(format!("{} {}", command, key));

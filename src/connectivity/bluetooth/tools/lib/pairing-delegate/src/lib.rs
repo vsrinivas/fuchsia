@@ -115,7 +115,7 @@ fn prompt_for_local_input() -> Option<u32> {
 /// event using the provided  sig_channel.
 pub async fn handle_requests(
     mut stream: PairingDelegateRequestStream,
-    mut sig_channel: Sender<bool>,
+    mut sig_channel: Sender<(PeerId, bool)>,
 ) -> Result<(), Error> {
     while let Some(req) = stream.next().await {
         match req {
@@ -129,7 +129,7 @@ pub async fn handle_requests(
                             false => "failure".to_string(),
                         }
                     );
-                    sig_channel.try_send(success)?;
+                    sig_channel.try_send((id.into(), success))?;
                 }
                 PairingDelegateRequest::OnPairingRequest {
                     peer,

@@ -14,10 +14,7 @@ use {
     fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
     fuchsia_bluetooth::types::{HostId, HostInfo, Peer, PeerId},
     fuchsia_component::client::connect_to_protocol,
-    futures::{
-        channel::mpsc::{channel, SendError},
-        select, FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt,
-    },
+    futures::{channel::mpsc, select, FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt},
     pairing_delegate,
     parking_lot::Mutex,
     pin_utils::pin_mut,
@@ -256,6 +253,7 @@ async fn connect<'a>(
     args: &'a [&'a str],
     state: &'a Mutex<State>,
     access_proxy: &'a AccessProxy,
+    with_pairing: Option<&'a PairingProxy>,
 ) -> Result<String, Error> {
     if args.len() != 1 {
         return Ok(format!("usage: {}", Cmd::Connect.cmd_help()));
@@ -265,11 +263,27 @@ async fn connect<'a>(
         Some(id) => id,
         None => return Ok(format!("Unable to connect: Unknown address {}", args[0])),
     };
-    let response = access_proxy.connect(&mut peer_id.into()).await?;
-    match response {
-        Ok(_) => Ok(String::new()),
-        Err(err) => Ok(format!("Connect error: {:?}", err)),
+    if let Err(e) = access_proxy.connect(&mut peer_id.into()).await? {
+        return Ok(format!("connect error: {:?}", e));
     }
+
+    let pairing = with_pairing
+        .map(|p| create_pairing_task(InputCapability::None, OutputCapability::None, &p))
+        .transpose()?;
+    if let Some((pairing_task, mut recv)) = pairing {
+        if let Some((paired_id, paired)) = recv.next().await {
+            // If pairing was completed, exit.
+            let _ = pairing_task.cancel().await;
+            println!(
+                "Completed {} pairing for {}.",
+                if paired { "successful" } else { "unsuccessful" },
+                paired_id
+            );
+        } else {
+            println!("Note: No pairing occurred with {}.", peer_id);
+        }
+    }
+    Ok(String::new())
 }
 
 fn parse_disconnect<'a>(args: &'a [&'a str], state: &'a Mutex<State>) -> Result<PeerId, String> {
@@ -374,28 +388,17 @@ async fn pair(
     }
 }
 
-async fn allow_pairing(args: &[&str], pairing_svc: &PairingProxy) -> Result<String, Error> {
-    let mut input_cap = InputCapability::None;
-    let mut output_cap = OutputCapability::None;
-    match args.len() {
-        0 => {}
-        2 => {
-            input_cap = InputCapability::from_str(args[0]).map_err(|_| {
-                format_err!("invalid input capability: {}", Cmd::AllowPairing.cmd_help())
-            })?;
-            output_cap = OutputCapability::from_str(args[1]).map_err(|_| {
-                format_err!("invalid output capability: {}", Cmd::AllowPairing.cmd_help())
-            })?;
-        }
-        _ => return Err(format_err!("usage: {}", Cmd::AllowPairing.cmd_help())),
-    };
-
-    // Setup pairing delegate
-    let (pairing_delegate_client, pairing_delegate_server_stream) =
+// Creates a pairing task with the given input / output capabilities which will prompt for consent
+// to the pairing.  The returned task will continue prompting for requests until it is dropped.
+fn create_pairing_task(
+    input_cap: InputCapability,
+    output_cap: OutputCapability,
+    pairing_svc: &PairingProxy,
+) -> Result<(fasync::Task<()>, mpsc::Receiver<(PeerId, bool)>), Error> {
+    let (pairing_delegate_client, delegate_stream) =
         fidl::endpoints::create_request_stream::<PairingDelegateMarker>()?;
-    let (sig_sender, mut sig_receiver) = channel(0);
-    let pairing_delegate_server =
-        pairing_delegate::handle_requests(pairing_delegate_server_stream, sig_sender);
+    let (sender, recv) = mpsc::channel(0);
+    let pairing_delegate_server = pairing_delegate::handle_requests(delegate_stream, sender);
 
     let _ = pairing_svc.set_pairing_delegate(
         input_cap.into(),
@@ -403,20 +406,39 @@ async fn allow_pairing(args: &[&str], pairing_svc: &PairingProxy) -> Result<Stri
         pairing_delegate_client,
     );
 
-    let delegate_server_task =
-        fasync::Task::spawn(pairing_delegate_server.map(|res| println!("{res:?}")));
-
+    let task = fasync::Task::spawn(pairing_delegate_server.map(|res| println!("{res:?}")));
     println!(
-        "Now accepting pairing requests with input capability {:?} and output capability {:?}.",
+        "Pairing delegate setup with input capability {:?} and output capability {:?}.",
         input_cap, output_cap
     );
+    Ok((task, recv))
+}
 
-    if let Some(paired) = sig_receiver.next().await {
+async fn allow_pairing(args: &[&str], access_svc: &PairingProxy) -> Result<String, Error> {
+    let (input_cap, output_cap) = match args.len() {
+        0 => (InputCapability::None, OutputCapability::None),
+        2 => (
+            InputCapability::from_str(args[0]).map_err(|_| {
+                format_err!("unknown input capability: {}", Cmd::AllowPairing.cmd_help())
+            })?,
+            OutputCapability::from_str(args[1]).map_err(|_| {
+                format_err!("unknown output capability: {}", Cmd::AllowPairing.cmd_help())
+            })?,
+        ),
+        _ => return Err(format_err!("usage: {}", Cmd::AllowPairing.cmd_help())),
+    };
+    let (delegate_task, mut receiver) = create_pairing_task(input_cap, output_cap, access_svc)?;
+
+    if let Some((paired_id, paired)) = receiver.next().await {
         // If pairing was completed, exit.
-        let _ = delegate_server_task.cancel().await;
-        return Ok(format!("Completed pairing process with a peer (pair succeess? {}).", paired));
+        let _ = delegate_task.cancel().await;
+        return Ok(format!(
+            "Completed {} pairing with {}.",
+            if paired { "successful" } else { "unsuccessful" },
+            paired_id
+        ));
     }
-    Err(format_err!("Pairing delegate server will close without pairing with a peer"))
+    Err(format_err!("Pairing delegate closed without a pairing"))
 }
 
 async fn forget<'a>(
@@ -567,7 +589,8 @@ async fn handle_cmd(
     let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     let args: &[&str] = &*args;
     let res = match cmd {
-        Cmd::Connect => connect(args, &state, &access_svc).await,
+        Cmd::Connect => connect(args, &state, &access_svc, None).await,
+        Cmd::Bond => connect(args, &state, &access_svc, Some(&pairing_svc)).await,
         Cmd::Disconnect => disconnect(args, &state, &access_svc).await,
         Cmd::Pair => pair(args, &state, &access_svc).await,
         Cmd::AllowPairing => allow_pairing(args, &pairing_svc).await,
@@ -604,11 +627,11 @@ async fn handle_cmd(
 /// that rustyline should handle the next line of input.
 fn cmd_stream(
     state: Arc<Mutex<State>>,
-) -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>) {
+) -> (impl Stream<Item = String>, impl Sink<(), Error = mpsc::SendError>) {
     // Editor thread and command processing thread must be synchronized so that output
     // is printed in the correct order.
-    let (mut cmd_sender, cmd_receiver) = channel(512);
-    let (ack_sender, mut ack_receiver) = channel(512);
+    let (mut cmd_sender, cmd_receiver) = mpsc::channel(0);
+    let (ack_sender, mut ack_receiver) = mpsc::channel(0);
 
     let _ = thread::spawn(move || -> Result<(), Error> {
         let mut exec =
@@ -1184,7 +1207,7 @@ mod tests {
         20.seconds()
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_disconnect() {
         let peer = peer(true, false);
         let peer_id = peer.id;
@@ -1201,7 +1224,7 @@ mod tests {
         assert_eq!("".to_string(), result.expect("expected success"));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_disconnect_error() {
         let peer = peer(true, false);
         let peer_id = peer.id;
@@ -1280,7 +1303,7 @@ mod tests {
         assert!(allow_pairing(args.as_slice(), &proxy).await.is_err());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_forget() {
         let peer = peer(true, false);
         let peer_id = peer.id;
@@ -1297,7 +1320,7 @@ mod tests {
         assert_eq!("".to_string(), result.expect("expected success"));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_forget_error() {
         let peer = peer(true, false);
         let peer_id = peer.id;
@@ -1314,7 +1337,7 @@ mod tests {
         assert!(result.expect("expected a result").contains("Forget error"));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_pair() {
         let peer =
             custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false, None);
@@ -1339,7 +1362,7 @@ mod tests {
         assert_eq!("".to_string(), result.expect("expected success"));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn test_pair_error() {
         let peer =
             custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false, None);
