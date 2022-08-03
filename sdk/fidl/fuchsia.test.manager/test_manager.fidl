@@ -87,6 +87,11 @@ protocol RunBuilder {
         controller server_end:SuiteController;
     });
 
+    /// Specify scheduling options used for this run.
+    WithSchedulingOptions(struct {
+        options SchedulingOptions;
+    });
+
     /// Build and schedule the run.
     ///
     /// This runs all suites added with their respective filters and closes the
@@ -94,6 +99,13 @@ protocol RunBuilder {
     Build(resource struct {
         controller server_end:RunController;
     });
+};
+
+/// Optional instructions for how to execute and schedule suites in the test run.
+type SchedulingOptions = table {
+    /// The maximum number of hermetic test suites to run in parallel. If unspecified,
+    /// chosen by the server side.
+    1: max_parallel_suites uint16;
 };
 
 /// Optional additional instructions for executing a test suite.

@@ -61,6 +61,9 @@ pub async fn run_test_manager(
                     facets: facet::ResolveStatus::Unresolved,
                 });
             }
+            ftest_manager::RunBuilderRequest::WithSchedulingOptions { options: _, .. } => {
+                unimplemented!();
+            }
             ftest_manager::RunBuilderRequest::Build { controller, control_handle } => {
                 let controller = match controller.into_stream() {
                     Ok(c) => c,

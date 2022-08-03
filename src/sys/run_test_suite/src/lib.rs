@@ -1344,6 +1344,7 @@ mod test {
                     run_controller = Some(controller);
                     break;
                 }
+                _ => unreachable!(),
             }
         }
         assert!(
