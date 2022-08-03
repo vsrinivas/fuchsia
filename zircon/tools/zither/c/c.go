@@ -18,16 +18,15 @@ var templates embed.FS
 
 // Generator provides C data layout bindings.
 type Generator struct {
-	*fidlgen.Generator
-	outputFiles []string
+	fidlgen.Generator
 }
 
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("CTemplates", templates, formatter, template.FuncMap{})
-	return &Generator{gen, nil}
+	return &Generator{*gen}
 }
 
-func (gen *Generator) Generate(summary *zither.Summary, outputDir string) error {
+func (gen *Generator) Generate(summary zither.Summary, outputDir string) ([]string, error) {
 	parts := summary.Name.Parts()
 	dir := ""
 	if len(parts) > 1 {
@@ -36,10 +35,7 @@ func (gen *Generator) Generate(summary *zither.Summary, outputDir string) error 
 	name := parts[len(parts)-1] + ".h"
 	output := filepath.Join(outputDir, dir, "c", name)
 	if err := gen.GenerateFile(output, "GenerateCFile", summary); err != nil {
-		return err
+		return nil, err
 	}
-	gen.outputFiles = append(gen.outputFiles, output)
-	return nil
+	return []string{output}, nil
 }
-
-func (gen Generator) Outputs() []string { return gen.outputFiles }

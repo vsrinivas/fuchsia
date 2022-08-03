@@ -17,7 +17,7 @@ type Summary struct {
 }
 
 // NewSummary creates a Summary from FIDL IR.
-func NewSummary(ir *fidlgen.Root) (*Summary, error) {
+func NewSummary(ir fidlgen.Root) (*Summary, error) {
 	name, err := fidlgen.ReadLibraryName(string(ir.Name))
 	if err != nil {
 		return nil, err

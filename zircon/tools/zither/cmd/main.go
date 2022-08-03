@@ -71,7 +71,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := execute(ctx, gen, &ir, flags.outputDir, flags.outputManifest); err != nil {
+	if err := execute(ctx, gen, ir, flags.outputDir, flags.outputManifest); err != nil {
 		logger.Errorf(ctx, "%s", err)
 		os.Exit(1)
 	}
@@ -80,19 +80,17 @@ func main() {
 // generator represents an abstract generator of bindings.
 type generator interface {
 	// Generate generates bindings into the provided output directory.
-	Generate(summary *zither.Summary, outputDir string) error
-
-	// Outputs returns the files that Generate() emits.
-	Outputs() []string
+	Generate(summary zither.Summary, outputDir string) ([]string, error)
 }
 
-func execute(ctx context.Context, gen generator, ir *fidlgen.Root, outputDir, outputManifest string) error {
+func execute(ctx context.Context, gen generator, ir fidlgen.Root, outputDir, outputManifest string) error {
 	summary, err := zither.NewSummary(ir)
 	if err != nil {
 		return err
 	}
 
-	if err := gen.Generate(summary, outputDir); err != nil {
+	outputs, err := gen.Generate(*summary, outputDir)
+	if err != nil {
 		return err
 	}
 
@@ -104,7 +102,7 @@ func execute(ctx context.Context, gen generator, ir *fidlgen.Root, outputDir, ou
 
 		encoder := json.NewEncoder(f)
 		encoder.SetIndent("", "\t")
-		if err := encoder.Encode(gen.Outputs()); err != nil {
+		if err := encoder.Encode(outputs); err != nil {
 			f.Close()
 			return err
 		}

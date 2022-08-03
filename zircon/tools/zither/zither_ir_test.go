@@ -15,7 +15,7 @@ import (
 func TestCanSummarizeLibraryName(t *testing.T) {
 	name := "this.is.an.example.library"
 	ir := fidlgentest.EndToEndTest{T: t}.Single(fmt.Sprintf("library %s;", name))
-	sum, err := zither.NewSummary(&ir)
+	sum, err := zither.NewSummary(ir)
 	if err != nil {
 		t.Fatal(err)
 	}
