@@ -449,6 +449,7 @@ void Dispatcher::ShutdownAsync() {
 
 void Dispatcher::CompleteShutdown() {
   fbl::DoublyLinkedList<std::unique_ptr<AsyncIrq>> unbound_irqs;
+  std::unordered_set<fdf_token_t*> registered_tokens;
   {
     fbl::AutoLock lock(&callback_lock_);
 
@@ -483,6 +484,7 @@ void Dispatcher::CompleteShutdown() {
       // but we shouldn't do that before all the driver dispatchers have completed shutdown.
       ZX_ASSERT_MSG(irq.Unbind(), "Dispatcher::ShutdownAsync failed to unbind irq");
     }
+    registered_tokens = std::move(registered_tokens_);
   }
 
   for (auto irq = unbound_irqs.pop_front(); irq; irq = unbound_irqs.pop_front()) {
@@ -510,6 +512,11 @@ void Dispatcher::CompleteShutdown() {
     callback_lock_.Acquire();
   }
   callback_lock_.Release();
+
+  for (auto token : registered_tokens) {
+    token->handler(static_cast<fdf_dispatcher_t*>(this), token, ZX_ERR_CANCELED,
+                   FDF_HANDLE_INVALID);
+  }
 
   fdf_dispatcher_shutdown_observer_t* shutdown_observer = nullptr;
   {
@@ -1175,6 +1182,51 @@ zx_status_t Dispatcher::CompleteShutdownEventManager::Signal() {
   return status;
 }
 
+zx_status_t Dispatcher::RegisterPendingToken(fdf_token_t* token) {
+  fbl::AutoLock lock(&callback_lock_);
+  if (!IsRunningLocked()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  if (registered_tokens_.find(token) != registered_tokens_.end()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  registered_tokens_.insert(token);
+  return ZX_OK;
+}
+
+zx_status_t Dispatcher::ScheduleTokenCallback(fdf_token_t* token, fdf_status_t status,
+                                              fdf::Channel channel) {
+  CallbackRequest* callback_request_ptr = nullptr;
+
+  {
+    fbl::AutoLock lock(&callback_lock_);
+    if (!IsRunningLocked()) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+    auto callback_request = std::make_unique<CallbackRequest>();
+    driver_runtime::Callback callback =
+        [dispatcher = this, token, channel = std::move(channel)](
+            std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
+            fdf_status_t status) mutable {
+          token->handler(static_cast<fdf_dispatcher_t*>(dispatcher), token, status,
+                         channel.release());
+        };
+    callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback));
+
+    callback_request_ptr = callback_request.get();
+
+    registered_callbacks_.push_back(std::move(callback_request));
+    registered_tokens_.erase(token);
+  }
+
+  // If the dispatcher is shutdown in the meanwhile, the callback request will be completed
+  // with |ZX_ERR_CANCELED| in |CompleteShutdown|.
+  QueueRegisteredCallback(callback_request_ptr, status);
+
+  return ZX_OK;
+}
+
 // static
 void DispatcherCoordinator::WaitUntilDispatchersIdle() {
   std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
@@ -1246,6 +1298,19 @@ void DispatcherCoordinator::DestroyAllDispatchers() {
   for (auto& dispatcher : dispatchers) {
     dispatcher->Destroy();
   }
+}
+
+// static
+fdf_status_t DispatcherCoordinator::TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                                  fdf_token_t* handler) {
+  DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
+  return coordinator.token_manager_.Register(token, dispatcher, handler);
+}
+
+// static
+fdf_status_t DispatcherCoordinator::TokenExchange(zx_handle_t token, fdf_handle_t handle) {
+  DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
+  return coordinator.token_manager_.Exchange(token, handle);
 }
 
 fdf_status_t DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {

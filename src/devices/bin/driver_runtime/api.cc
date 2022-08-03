@@ -158,11 +158,11 @@ __EXPORT fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher() {
 
 __EXPORT fdf_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
                                          fdf_token_t* handler) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return driver_runtime::DispatcherCoordinator::TokenRegister(token, dispatcher, handler);
 }
 
-__EXPORT fdf_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handler) {
-  return ZX_ERR_NOT_SUPPORTED;
+__EXPORT fdf_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle) {
+  return driver_runtime::DispatcherCoordinator::TokenExchange(token, handle);
 }
 
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }

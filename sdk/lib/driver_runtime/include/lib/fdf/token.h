@@ -42,7 +42,8 @@ struct fdf_token {
 // Returns |ZX_OK| is the protocol was successfully registered.
 // Returns |ZX_ERR_BAD_HANDLE| if |token| is not a valid channel handle.
 // Returns |ZX_ERR_INVALID_ARGS| if |handler| or |dispatcher| is NULL.
-// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down, or |handler|
+// has already been registered.
 fdf_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
                                 fdf_token_t* handler);
 

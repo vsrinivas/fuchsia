@@ -28,6 +28,7 @@ source_set("driver_runtime_impl") {
     "driver_context.cc",
     "handle.cc",
     "message_packet.cc",
+    "token_manager.cc",
   ]
   public_configs = [ ":include" ]
   public_deps = [
@@ -69,6 +70,7 @@ test("driver_runtime_test") {
     "driver_context_test.cc",
     "handle_test.cc",
     "runtime_test_case.cc",
+    "token_test.cc",
   ]
   deps = [
     ":driver_runtime_impl",

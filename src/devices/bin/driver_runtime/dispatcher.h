@@ -11,12 +11,14 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/async/irq.h>
+#include <lib/fdf/token.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <unordered_set>
 #include <vector>
 
 #include <fbl/auto_lock.h>
@@ -30,6 +32,7 @@
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
 #include "src/devices/bin/driver_runtime/callback_request.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
+#include "src/devices/bin/driver_runtime/token_manager.h"
 
 namespace driver_runtime {
 
@@ -212,6 +215,18 @@ class Dispatcher : public async_dispatcher_t,
 
   // Blocks the current thread until the dispatcher is idle.
   void WaitUntilIdle();
+
+  // Registers |token| as waiting to be exchanged for a fdf handle. This |token| is already
+  // registered with the token manager, but this allows the dispatcher to call the token
+  // exchange cancellation callback in the case where the dispatcher shuts down before the
+  // exchange is completed. This is as the token manager would not be able to queue a
+  // cancellation callback once the dispatcher is in a shutdown state.
+  zx_status_t RegisterPendingToken(fdf_token_t* token);
+  // Queues a |CallbackRequest| for the token exchange callback and removes |token|
+  // from the pending list. This is called when |fdf_token_register| and |fdf_token_exchange|
+  // have been called for the same token.
+  // TODO(fxbug.dev/105578): replace fdf::Channel with a generic C++ handle type when available.
+  zx_status_t ScheduleTokenCallback(fdf_token_t* token, fdf_status_t status, fdf::Channel channel);
 
   // Returns the dispatcher options specified by the user.
   uint32_t options() const { return options_; }
@@ -503,6 +518,10 @@ class Dispatcher : public async_dispatcher_t,
   // The observer that should be called when shutting down the dispatcher completes.
   fdf_dispatcher_shutdown_observer_t* shutdown_observer_ __TA_GUARDED(&callback_lock_) = nullptr;
 
+  // Tokens waiting to be exchanged for fdf handles that have been registered with the token manager
+  // on this dispatcher.
+  std::unordered_set<fdf_token_t*> registered_tokens_;
+
   fbl::Canary<fbl::magic("FDFD")> canary_;
 };
 
@@ -512,6 +531,8 @@ class DispatcherCoordinator {
   // We default to one thread, and start additional threads when blocking dispatchers are created.
   DispatcherCoordinator() : config_(MakeConfig()), loop_(&config_) {
     loop_.StartThread("fdf-dispatcher-0");
+
+    token_manager_.SetGlobalDispatcher(loop_.dispatcher());
   }
 
   static void DestroyAllDispatchers();
@@ -519,6 +540,11 @@ class DispatcherCoordinator {
   static void WaitUntilDispatchersDestroyed();
   static fdf_status_t ShutdownDispatchersAsync(const void* driver,
                                                fdf_internal_driver_shutdown_observer_t* observer);
+
+  // Implementation of fdf_protocol_*.
+  static fdf_status_t TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                    fdf_token_t* handler);
+  static fdf_status_t TokenExchange(zx_handle_t token, fdf_handle_t channel);
 
   // Returns ZX_OK if |dispatcher| was added successfully.
   // Returns ZX_ERR_BAD_STATE if the driver is currently shutting down.
@@ -692,7 +718,11 @@ class DispatcherCoordinator {
   // Stores unbound irqs which will be garbage collected at a later time.
   CachedIrqs cached_irqs_;
 
+  TokenManager token_manager_;
+
   async_loop_config_t config_;
+  // |loop_| must be declared last, to ensure that the loop shuts down before
+  // other members are destructed.
   async::Loop loop_;
 };
 

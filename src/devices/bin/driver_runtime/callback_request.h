@@ -20,8 +20,10 @@ struct fdf_dispatcher;
 namespace driver_runtime {
 
 class CallbackRequest;
+// The inline target size is configured to fit the 3 arguments captured by the callback request
+// created in |Dispatcher::ScheduleTokenCallback|.
 using Callback =
-    fit::inline_callback<void(std::unique_ptr<CallbackRequest>, fdf_status_t), sizeof(void*) * 2>;
+    fit::inline_callback<void(std::unique_ptr<CallbackRequest>, fdf_status_t), sizeof(void*) * 3>;
 
 // Wraps a callback so that it can be added to a list.
 class CallbackRequest
