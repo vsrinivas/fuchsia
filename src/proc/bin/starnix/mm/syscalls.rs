@@ -116,9 +116,8 @@ pub fn sys_mmap(
         )?;
         vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap())
             .map_err(impossible_error)?;
-        if zx_flags.contains(zx::VmarFlags::PERM_EXECUTE) {
-            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
-        }
+        // TODO(fxbug.dev/105639): Audit replace_as_executable usage
+        vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
         let vmo = Arc::new(vmo);
         let user_address =
             current_task.mm.map(addr, vmo.clone(), vmo_offset, length, zx_flags, options, None)?;
