@@ -100,14 +100,12 @@ TEST_F(SegmentManagerTest, BalanceFs) {
 
   superblock_info.ClearOnRecovery();
   fs_->GetSegmentManager().BalanceFs();
-  fs_->GetSegmentManager().NeedToCheckpoint();
 
   ASSERT_EQ(fs_->GetSegmentManager().FreeSegments(), nfree_segs);
   ASSERT_FALSE(fs_->GetSegmentManager().PrefreeSegments());
 
   superblock_info.SetOnRecovery();
   fs_->GetSegmentManager().BalanceFs();
-  fs_->GetSegmentManager().NeedToCheckpoint();
 
   ASSERT_EQ(fs_->GetSegmentManager().FreeSegments(), nfree_segs);
   ASSERT_FALSE(fs_->GetSegmentManager().PrefreeSegments());

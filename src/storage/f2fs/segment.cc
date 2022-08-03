@@ -169,14 +169,6 @@ int SegmentManager::GetSsrSegment(CursegType type) {
   return 1;
 }
 
-// TODO: Without gc, we trigger checkpoint aggressively to secure free segments.
-// TODO: When gc is available, we can make it loose.(e.g., 5% of main segments)
-bool SegmentManager::NeedToCheckpoint() {
-  block_t threshold =
-      std::max(static_cast<block_t>(GetMainSegmentsCount() * 2 / 100), static_cast<block_t>(2));
-  return PrefreeSegments() >= threshold;
-}
-
 uint32_t SegmentManager::Utilization() {
   return static_cast<uint32_t>(static_cast<int64_t>(fs_->ValidUserBlocks()) * 100 /
                                static_cast<int64_t>(superblock_info_->GetUserBlockCount()));
@@ -317,11 +309,10 @@ bool SegmentManager::HasNotEnoughFreeSecs(uint32_t freed) {
 // This function balances dirty node and dentry pages.
 // In addition, it controls garbage collection.
 void SegmentManager::BalanceFs() {
-  if (superblock_info_->IsOnRecovery())
+  if (superblock_info_->IsOnRecovery()) {
     return;
-  if (NeedToCheckpoint()) {
-    fs_->WriteCheckpoint(false, false);
-  } else if (HasNotEnoughFreeSecs()) {
+  }
+  if (HasNotEnoughFreeSecs()) {
     if (auto ret = fs_->GetGcManager().F2fsGc(); ret.is_error()) {
       // F2fsGc() returns ZX_ERR_UNAVAILABLE when there is no available victim section, otherwise
       // BUG

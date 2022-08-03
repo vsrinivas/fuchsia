@@ -207,7 +207,6 @@ class SegmentManager {
   block_t SumBlkAddr(int base, int type);
   bool SecUsageCheck(uint32_t secno);
 
-  bool NeedToCheckpoint();
   void BalanceFs();
   void LocateDirtySegment(uint32_t segno, enum DirtyType dirty_type);
   void RemoveDirtySegment(uint32_t segno, enum DirtyType dirty_type);
