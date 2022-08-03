@@ -27,9 +27,8 @@ class Max98373 : public SimpleCodecServer {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Max98373(zx_device_t* device, ddk::I2cChannel i2c,
-                    const ddk::GpioProtocolClient& codec_reset)
-      : SimpleCodecServer(device), i2c_(std::move(i2c)), codec_reset_(codec_reset) {}
+  explicit Max98373(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient codec_reset)
+      : SimpleCodecServer(device), i2c_(std::move(i2c)), codec_reset_(std::move(codec_reset)) {}
   // Implementation for SimpleCodecServer.
   zx_status_t Shutdown() override;
 
@@ -57,6 +56,7 @@ class Max98373 : public SimpleCodecServer {
 
   zx_status_t WriteReg(uint16_t reg, uint8_t value);
   zx_status_t ReadReg(uint16_t reg, uint8_t* value);
+  uint8_t getTdmClockRatio(uint32_t number_of_channels, uint8_t bits_per_slot);
 
   GainState gain_state_ = {};
   ddk::I2cChannel i2c_;
