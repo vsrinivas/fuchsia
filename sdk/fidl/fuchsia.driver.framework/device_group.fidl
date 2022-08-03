@@ -49,7 +49,8 @@ type DeviceGroup = table {
     /// to these nodes. Must not be empty. The first node is the primary node.
     2: nodes vector<DeviceGroupNode>:MAX;
 
-    /// The list of nodes that the device group transforms into. Must not be empty.
+    /// The list of nodes that the device group transforms into. The driver index
+    /// matches a composite driver to the transformation. Must not be empty.
     /// The first node is the primary node.
     3: transformation vector<TransformNode>:MAX;
 };

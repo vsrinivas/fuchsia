@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::resolved_driver::ResolvedDriver,
     bind::ddk_bind_constants::BIND_PROTOCOL,
+    bind::interpreter::decode_bind_rules::DecodedCompositeBindRules,
     bind::interpreter::match_bind::{DeviceProperties, PropertyKey},
     fidl_fuchsia_driver_framework as fdf,
     fuchsia_zircon::{zx_status_t, Status},
@@ -46,6 +48,30 @@ pub fn node_to_device_property(
         device_properties.insert(key, value);
     }
     Ok(device_properties)
+}
+
+pub fn collect_node_names_from_composite_rules(
+    composite_rules: &DecodedCompositeBindRules,
+) -> Vec<String> {
+    let mut node_names = vec![];
+    node_names.push(composite_rules.symbol_table[&composite_rules.primary_node.name_id].clone());
+    for node in &composite_rules.additional_nodes {
+        node_names.push(composite_rules.symbol_table[&node.name_id].clone());
+    }
+
+    return node_names;
+}
+
+pub fn get_composite_rules_from_composite_driver<'a>(
+    composite_driver: &'a ResolvedDriver,
+) -> Result<&'a DecodedCompositeBindRules, i32> {
+    match &composite_driver.bind_rules {
+        bind::interpreter::decode_bind_rules::DecodedRules::Normal(_) => {
+            log::error!("Cannot extract composite bind rules from a non-composite driver.");
+            Err(Status::INTERNAL.into_raw())
+        }
+        bind::interpreter::decode_bind_rules::DecodedRules::Composite(rules) => Ok(rules),
+    }
 }
 
 #[cfg(test)]

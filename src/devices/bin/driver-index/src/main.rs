@@ -7,6 +7,7 @@ use {
     crate::match_common::node_to_device_property,
     crate::resolved_driver::{load_driver, DriverPackageType, ResolvedDriver},
     anyhow::{self, Context},
+    bind::interpreter::decode_bind_rules::DecodedRules,
     fidl_fuchsia_boot as fboot, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_driver_index as fdi,
     fidl_fuchsia_driver_index::{DriverIndexRequest, DriverIndexRequestStream},
@@ -265,8 +266,33 @@ impl Indexer {
     }
 
     fn add_device_group(&self, group: fdf::DeviceGroup) -> fdi::DriverIndexAddDeviceGroupResult {
+        let base_repo = self.base_repo.borrow();
+        let base_repo_iter = match base_repo.deref() {
+            BaseRepo::Resolved(drivers) => drivers.iter(),
+            BaseRepo::NotResolved(_) => [].iter(),
+        };
+        let (boot_drivers, base_drivers) = if self.include_fallback_drivers() {
+            (self.boot_repo.iter(), base_repo_iter.clone())
+        } else {
+            ([].iter(), [].iter())
+        };
+        let fallback_boot_drivers = boot_drivers.filter(|&driver| driver.fallback);
+        let fallback_base_drivers = base_drivers.filter(|&driver| driver.fallback);
+
+        let ephemeral = self.ephemeral_drivers.borrow();
+        let composite_drivers = self
+            .boot_repo
+            .iter()
+            .filter(|&driver| !driver.fallback)
+            .chain(base_repo_iter.filter(|&driver| !driver.fallback))
+            .chain(ephemeral.values())
+            .chain(fallback_boot_drivers)
+            .chain(fallback_base_drivers)
+            .filter(|&driver| matches!(driver.bind_rules, DecodedRules::Composite(_)))
+            .collect::<Vec<_>>();
+
         let mut device_group_manager = self.device_group_manager.borrow_mut();
-        device_group_manager.add_device_group(group)
+        device_group_manager.add_device_group(group, composite_drivers)
     }
 
     fn get_driver_info(&self, driver_filter: Vec<String>) -> Vec<fdd::DriverInfo> {
@@ -697,6 +723,41 @@ mod tests {
             is_fallback: Some(fallback),
             ..fdi::MatchedDriverInfo::EMPTY
         }
+    }
+
+    pub fn create_transform_vector(
+        primary: Vec<(fdf::NodePropertyKey, fdf::NodePropertyValue)>,
+        additionals: Vec<Vec<(fdf::NodePropertyKey, fdf::NodePropertyValue)>>,
+    ) -> Vec<fdf::TransformNode> {
+        let mut primary_props = vec![];
+        for prop_pair in primary {
+            primary_props.push(fdf::NodeProperty {
+                key: Some(prop_pair.0),
+                value: Some(prop_pair.1),
+                ..fdf::NodeProperty::EMPTY
+            });
+        }
+
+        let mut result = vec![fdf::TransformNode {
+            properties: Some(primary_props),
+            ..fdf::TransformNode::EMPTY
+        }];
+
+        for additional in additionals {
+            let mut props = vec![];
+            for prop_pair in additional {
+                props.push(fdf::NodeProperty {
+                    key: Some(prop_pair.0),
+                    value: Some(prop_pair.1),
+                    ..fdf::NodeProperty::EMPTY
+                });
+            }
+
+            result
+                .push(fdf::TransformNode { properties: Some(props), ..fdf::TransformNode::EMPTY });
+        }
+
+        return result;
     }
 
     async fn get_driver_info_proxy(
@@ -2378,6 +2439,158 @@ mod tests {
                 }),],
                 result
             );
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_device_group_matched_composite() {
+        fuchsia_syslog::init().unwrap();
+        // Create the Composite Bind rules.
+        let primary_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::Key("trembler".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("thrasher".to_string()),
+            },
+        }];
+
+        let additional_node_inst = vec![
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("thrasher".to_string(), ValueType::Str),
+                    rhs: Symbol::StringValue("catbird".to_string()),
+                },
+            },
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("catbird".to_string(), ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                },
+            },
+        ];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "mimid".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node: CompositeNode {
+                name: "catbird".to_string(),
+                instructions: primary_node_inst,
+            },
+            additional_nodes: vec![CompositeNode {
+                name: "mockingbird".to_string(),
+                instructions: additional_node_inst,
+            }],
+            enable_debug: false,
+        };
+
+        let bytecode = CompiledBindRules::CompositeBind(bind_rules).encode_to_bytecode().unwrap();
+        let rules = DecodedRules::new(bytecode).unwrap();
+
+        // Make the composite driver.
+        let url =
+            url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/dg_matched_composite.cm")
+                .unwrap();
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url.clone(),
+            v1_driver_path: None,
+            bind_rules: rules,
+            bind_bytecode: vec![],
+            colocate: false,
+            fallback: false,
+            package_type: DriverPackageType::Base,
+            package_hash: None,
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let node_properties = vec![
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(1),
+                    condition: fdf::Condition::Accept,
+                    values: vec![
+                        fdf::NodePropertyValue::IntValue(200),
+                        fdf::NodePropertyValue::IntValue(150),
+                    ],
+                },
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::StringValue("lapwing".to_string()),
+                    condition: fdf::Condition::Accept,
+                    values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
+                },
+            ];
+
+            let matching_transform = create_transform_vector(
+                vec![(
+                    fdf::NodePropertyKey::StringValue("trembler".to_string()),
+                    fdf::NodePropertyValue::StringValue("thrasher".to_string()),
+                )],
+                vec![vec![
+                    (
+                        fdf::NodePropertyKey::StringValue("catbird".to_string()),
+                        fdf::NodePropertyValue::IntValue(1),
+                    ),
+                    (
+                        fdf::NodePropertyKey::StringValue("thrasher".to_string()),
+                        fdf::NodePropertyValue::StringValue("catbird".to_string()),
+                    ),
+                ]],
+            );
+
+            let non_matching_transform = create_transform_vector(
+                vec![(
+                    fdf::NodePropertyKey::StringValue("trembler".to_string()),
+                    fdf::NodePropertyValue::StringValue("thrasher".to_string()),
+                )],
+                vec![vec![(
+                    fdf::NodePropertyKey::StringValue("catbird".to_string()),
+                    fdf::NodePropertyValue::IntValue(1),
+                )]],
+            );
+
+            let result = proxy
+                .add_device_group(fdf::DeviceGroup {
+                    topological_path: Some("test/path".to_string()),
+                    nodes: Some(vec![fdf::DeviceGroupNode {
+                        name: "whimbrel".to_string(),
+                        properties: node_properties.clone(),
+                    }]),
+                    transformation: Some(matching_transform),
+                    ..fdf::DeviceGroup::EMPTY
+                })
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(url.to_string(), result.driver_info.unwrap().url.unwrap());
+
+            let result = proxy
+                .add_device_group(fdf::DeviceGroup {
+                    topological_path: Some("test/path/another".to_string()),
+                    nodes: Some(vec![fdf::DeviceGroupNode {
+                        name: "whimbrel".to_string(),
+                        properties: node_properties,
+                    }]),
+                    transformation: Some(non_matching_transform),
+                    ..fdf::DeviceGroup::EMPTY
+                })
+                .await
+                .unwrap();
+            assert_eq!(Err(Status::NOT_FOUND.into_raw()), result);
         }
         .fuse();
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::match_common::collect_node_names_from_composite_rules,
     anyhow::{anyhow, Context, Error},
     bind::interpreter::{
         common::BytecodeError,
@@ -25,8 +26,7 @@ pub enum DriverPackageType {
     Universe = 3,
 }
 
-// TODO(fxbug.dev/92329): Use `fallback` and remove dead code attribute.
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub struct ResolvedDriver {
     pub component_url: url::Url,
     pub v1_driver_path: Option<String>,
@@ -136,13 +136,7 @@ impl ResolvedDriver {
                 }
 
                 let node_index = result.unwrap();
-
-                let mut node_names = vec![];
-                node_names.push(composite.symbol_table[&composite.primary_node.name_id].clone());
-                for node in &composite.additional_nodes {
-                    node_names.push(composite.symbol_table[&node.name_id].clone());
-                }
-
+                let node_names = collect_node_names_from_composite_rules(composite);
                 Ok(Some(fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                     node_index: Some(node_index),
                     num_nodes: Some((composite.additional_nodes.len() + 1) as u32),
@@ -166,7 +160,7 @@ impl ResolvedDriver {
         }
     }
 
-    fn create_matched_driver_info(&self) -> fdi::MatchedDriverInfo {
+    pub fn create_matched_driver_info(&self) -> fdi::MatchedDriverInfo {
         fdi::MatchedDriverInfo {
             url: Some(self.component_url.as_str().to_string()),
             driver_url: self.get_driver_url(),
