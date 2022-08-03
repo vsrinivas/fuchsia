@@ -20,15 +20,32 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.sys2.EventSource" ],
-        },
-        {
             event: [
                 "running",
                 "started",
                 "stopped",
             ],
             from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+
+        // TODO(https://fxbug.dev/81980): Remove once everything is migrated.
+        // Currently we have both legacy and new events. CM will temporarily
+        // conditionally route the old events if the new events fail to route.
+        // We'll never get both at the same time. This is because Archivist runs
+        // in several environments, all of which will need to be updated
+        // to support the new style of events.
+        {
+            event_stream_deprecated: "EventStream",
+            subscriptions: [
+                { event: "diagnostics_ready" },
+                { event: "log_sink_requested" },
+                { event: "running" },
+                { event: "started" },
+                { event: "stopped" },
+            ],
         },
         {
             event: "directory_ready",
@@ -43,14 +60,25 @@
             filter: { name: "fuchsia.logger.LogSink" },
         },
         {
-            event_stream_deprecated: "EventStream",
-            subscriptions: [
-                { event: "diagnostics_ready" },
-                { event: "log_sink_requested" },
-                { event: "running" },
-                { event: "started" },
-                { event: "stopped" },
+            event_stream: [
+                "running_v2",
+                "started_v2",
+                "stopped_v2",
             ],
+            from: "parent",
+            path: "/events/event_stream",
+        },
+        {
+            event_stream: [ "capability_requested_v2" ],
+            from: "parent",
+            path: "/events/capability_requested_event_stream",
+            filter: { name: "fuchsia.logger.LogSink" },
+        },
+        {
+            event_stream: [ "directory_ready_v2" ],
+            from: "parent",
+            path: "/events/directory_ready_event_stream",
+            filter: { name: "diagnostics" },
         },
     ],
     expose: [

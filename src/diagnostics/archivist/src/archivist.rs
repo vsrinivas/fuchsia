@@ -246,7 +246,9 @@ impl Archivist {
                     ],
                 });
                 self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
-                    event_source.spawn().await;
+                    // This should never exit.
+                    // If it does, it will print an error informing users why it did exit.
+                    let _ = event_source.spawn().await;
                 }));
             }
         }

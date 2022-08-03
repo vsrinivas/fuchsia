@@ -242,33 +242,14 @@ impl EventStreamProvider {
         Ok(())
     }
 
-    async fn on_component_resolved(
+    async fn try_route_v2_events(
         self: &Arc<Self>,
         target_moniker: &AbsoluteMoniker,
         decl: &ComponentDecl,
-    ) -> Result<(), ModelError> {
+    ) -> Result<bool, ModelError> {
+        let mut routed_v2 = false;
         for use_decl in &decl.uses {
             match use_decl {
-                UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                    name,
-                    subscriptions,
-                    ..
-                }) => {
-                    self.create_static_event_stream(
-                        &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
-                        name.to_string(),
-                        subscriptions
-                            .iter()
-                            .map(|subscription| {
-                                EventSubscription::new(
-                                    CapabilityName::from(subscription.event_name.clone()),
-                                    EventMode::Async,
-                                )
-                            })
-                            .collect(),
-                    )
-                    .await?;
-                }
                 UseDecl::EventStream(decl) => {
                     self.create_v2_static_event_stream(
                         &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
@@ -280,9 +261,64 @@ impl EventStreamProvider {
                         decl.target_path.to_string(),
                     )
                     .await?;
+                    routed_v2 = true;
                 }
                 _ => {}
             }
+        }
+        Ok(routed_v2)
+    }
+
+    async fn on_component_resolved(
+        self: &Arc<Self>,
+        target_moniker: &AbsoluteMoniker,
+        decl: &ComponentDecl,
+    ) -> Result<(), ModelError> {
+        // NOTE: We can't have deprecated and new events
+        // active in the same component.
+        // To prevent this from happening we use conditional routing.
+        // First, new events are routed, and if a single new event is routed
+        // successfully we don't attempt to route legacy capabilities.
+        // This logic will be removed once everything is switched to
+        // v2 events.
+        // TODO(https://fxbug.dev/81980): Remove once fully migrated.
+        // Note that a component can still use v1 and v2 events, and can get the v1
+        // events as long as all the v2 events fail to route.
+        let (routed_v2, err) = match self.try_route_v2_events(target_moniker, decl).await {
+            Ok(routed) => (routed, None),
+            Err(error) => (false, Some(error)),
+        };
+        let mut has_legacy_stream = false;
+        if !routed_v2 {
+            for use_decl in &decl.uses {
+                match use_decl {
+                    UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
+                        name,
+                        subscriptions,
+                        ..
+                    }) => {
+                        self.create_static_event_stream(
+                            &ExtendedMoniker::ComponentInstance(target_moniker.clone()),
+                            name.to_string(),
+                            subscriptions
+                                .iter()
+                                .map(|subscription| {
+                                    EventSubscription::new(
+                                        CapabilityName::from(subscription.event_name.clone()),
+                                        EventMode::Async,
+                                    )
+                                })
+                                .collect(),
+                        )
+                        .await?;
+                        has_legacy_stream = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        if let Some(error) = err && !has_legacy_stream {
+            return Err(error);
         }
         Ok(())
     }
