@@ -445,7 +445,7 @@ void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
   if (timer_enabled(guest_state)) {
     zx_ticks_t guest_ticks_deadline = convert_raw_ticks_to_ticks(guest_state->cntv_cval_el0);
     if (current_ticks() >= guest_ticks_deadline) {
-      gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
+      gich_state->Track(kTimerVector);
     }
   }
 }

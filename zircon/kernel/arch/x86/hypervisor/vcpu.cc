@@ -588,15 +588,15 @@ zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
   // NMIs, 2) interrupts, and 3) generated exceptions. See Volume 3, Section
   // 6.9, Table 6-2.
   uint32_t vector = X86_INT_COUNT;
-  hypervisor::InterruptType type = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
-  if (type != hypervisor::InterruptType::INACTIVE) {
+  bool pending = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
+  if (pending) {
     vector = X86_INT_NMI;
   } else {
     // Pop scans vectors from highest to lowest, which will correctly pop
     // interrupts before exceptions. All vectors <= X86_INT_VIRT except the NMI
     // vector are exceptions.
-    type = local_apic_state->interrupt_tracker.Pop(&vector);
-    if (type == hypervisor::InterruptType::INACTIVE) {
+    pending = local_apic_state->interrupt_tracker.Pop(&vector);
+    if (!pending) {
       return ZX_OK;
     }
     // If type isn't inactive, then Pop should have initialized vector to a
@@ -624,7 +624,7 @@ zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
     return ZX_ERR_NOT_SUPPORTED;
   } else if ((vector >= X86_INT_PLATFORM_BASE && !can_inject_external_int()) ||
              (vector == X86_INT_NMI && !can_inject_nmi())) {
-    local_apic_state->interrupt_tracker.Track(vector, type);
+    local_apic_state->interrupt_tracker.Track(vector);
     // If interrupts are disabled, we set VM exit on interrupt enable.
     vmcs->InterruptWindowExiting(true);
     return ZX_OK;
@@ -1119,8 +1119,8 @@ void Vcpu::Kick() {
   }
 }
 
-void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
-  local_apic_state_.interrupt_tracker.Interrupt(vector, type);
+void Vcpu::Interrupt(uint32_t vector) {
+  local_apic_state_.interrupt_tracker.Interrupt(vector);
   // Check if the VCPU is running and whether to send an IPI. We hold the thread
   // lock to guard against thread migration between CPUs during the check.
   //

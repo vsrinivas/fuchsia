@@ -130,12 +130,10 @@ zx::status<> El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
     return zx::error(status);
   }
   unmask_interrupt(kMaintenanceVector);
-  unmask_interrupt(kTimerVector);
   return zx::ok();
 }
 
 static void el2_off_task(void* arg) {
-  mask_interrupt(kTimerVector);
   mask_interrupt(kMaintenanceVector);
   zx_status_t status = arm64_el2_off();
   if (status != ZX_OK) {
