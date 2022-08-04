@@ -172,6 +172,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       // Thermal
       "sys/platform/05:07:a/thermal",
       "class/thermal/000",
+      "/dev/sys/platform/00:00:1b/sysmem",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

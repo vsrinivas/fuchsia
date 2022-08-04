@@ -27,6 +27,7 @@ _common_bootfs_deps = [
   "//src/devices/registers/drivers/registers",
   "//src/devices/rtc/drivers/aml-rtc",
   "//src/devices/spi/drivers/aml-spi",
+  "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
   "//src/devices/usb/drivers/aml-usb-crg-phy-v2",
   "//src/media/audio/drivers/aml-g12-pdm",

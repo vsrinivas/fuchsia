@@ -64,67 +64,72 @@ int Av400::Thread() {
 
   if ((status = GpioInit()) != ZX_OK) {
     zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = PwmInit()) != ZX_OK) {
     zxlogf(ERROR, "PwmInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = ClkInit()) != ZX_OK) {
     zxlogf(ERROR, "ClkInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = I2cInit()) != ZX_OK) {
     zxlogf(ERROR, "I2cInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = RegistersInit()) != ZX_OK) {
     zxlogf(ERROR, "RegistersInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = EmmcInit()) != ZX_OK) {
     zxlogf(ERROR, "EmmcInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = SpiInit()) != ZX_OK) {
     zxlogf(ERROR, "SpiInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = SdioInit()) != ZX_OK) {
     zxlogf(ERROR, "SdioInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = EthInit()) != ZX_OK) {
     zxlogf(ERROR, "EthInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = RtcInit()) != ZX_OK) {
     zxlogf(ERROR, "RtcInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = AudioInit()) != ZX_OK) {
     zxlogf(ERROR, "AudioInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = UsbInit()) != ZX_OK) {
     zxlogf(ERROR, "UsbInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
     return status;
   }
   if ((status = ThermalInit()) != ZX_OK) {
     zxlogf(ERROR, "ThermalInit() failed: %s", zx_status_get_string(status));
-    init_txn_->Reply(ZX_ERR_INTERNAL);
+    init_txn_->Reply(status);
+    return status;
+  }
+  if ((status = SysmemInit()) != ZX_OK) {
+    zxlogf(ERROR, "SysmemInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
     return status;
   }
   init_txn_->Reply(status);
