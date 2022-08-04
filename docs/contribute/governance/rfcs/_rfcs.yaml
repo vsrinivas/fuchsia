@@ -2352,3 +2352,17 @@
   reviewers: ['crjohns@google.com', 'dworsham@google.com', 'jaeheon@google.com', 'neelsa@google.com']
   submitted: '2022-06-16'
   reviewed: '2022-07-26'
+
+- name: 'RFC-0181'
+  title: 'Lockless Discardable VMO'
+  short_description: 'Allow reads and writes to discardable VMOs that are in an unlocked stated.'
+  authors: ['adanis@google.com']
+  file: '0181_lockless_discardable_vmo.md'
+  area: ['Kernel']
+  issue: []
+  gerrit_change_id: ['679185']
+  submitted: '2022-05-18'
+  status: 'Accepted'
+  reviewers: ['eieio@google.com', 'cpu@google.com', 'davemoore@google.com', 'nathanrogers@google.com', 'rashaeqbal@google.com']
+  consulted: []
+  reviewed: '2022-08-03'
