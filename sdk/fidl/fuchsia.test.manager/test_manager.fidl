@@ -44,6 +44,9 @@ type LaunchError = flexible enum {
     /// returned when a test filter is specified. In the case of a test suite
     /// with no test cases, the suite will pass.
     NO_MATCHING_CASES = 7;
+
+    /// Test manifest is invalid.
+    INVALID_MANIFEST = 8;
 };
 /// Human-readable name for a test case.
 alias CaseName = string:512;

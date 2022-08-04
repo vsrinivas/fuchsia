@@ -5,7 +5,7 @@
 use {
     anyhow, fidl_fuchsia_developer_remotecontrol::StreamError,
     fidl_fuchsia_test_manager::LaunchError,
-    fuchsia_component_test::error::Error as RealmBuilderError, thiserror::Error,
+    fuchsia_component_test::error::Error as RealmBuilderError, thiserror::Error, tracing::warn,
 };
 
 /// Error encountered running test manager
@@ -68,13 +68,17 @@ impl From<FacetError> for LaunchTestError {
 
 impl From<LaunchTestError> for LaunchError {
     fn from(e: LaunchTestError) -> Self {
+        // log the error so that we don't lose it while converting to
+        // fidl equivalent.
+        // TODO(fxbug.dev/105820): remove this warning.
+        warn!("Error launching test: {:?}", e);
         match e {
             LaunchTestError::InitializeTestRealm(_)
             | LaunchTestError::ConnectToArchiveAccessor(_)
-            | LaunchTestError::StreamIsolatedLogs(_)
-            | LaunchTestError::InvalidResolverData
+            | LaunchTestError::StreamIsolatedLogs(_) => Self::InternalError,
+            LaunchTestError::InvalidResolverData
             | LaunchTestError::InvalidManifest(_)
-            | LaunchTestError::ManifestIo(_) => Self::InternalError,
+            | LaunchTestError::ManifestIo(_) => Self::InvalidManifest,
             LaunchTestError::CreateTestRealm(_) | LaunchTestError::ResolveTest(_) => {
                 Self::InstanceCannotResolve
             }

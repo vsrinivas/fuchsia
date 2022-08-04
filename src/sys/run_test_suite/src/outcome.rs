@@ -154,6 +154,7 @@ fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
             elf_test_runner. In these cases, --test-filter will not work. Instead, \
             you can pass test arguments directly to the test instead. Refer to: \
             https://fuchsia.dev/go/components/test-runners",
+        ftest_manager::LaunchError::InvalidManifest => "The test manifest is invalid or has invalid facets/arguments. Please check logs for detailed error.",
         ftest_manager::LaunchErrorUnknown!() => "Unrecognized launch error",
     }
 }
