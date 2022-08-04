@@ -506,7 +506,7 @@ async fn use_cached_package() {
     // the package can't be resolved before the repository can be updated without error.
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
-        Err(fidl_fuchsia_pkg::ResolveError::Internal)
+        Err(fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata)
     );
 
     // package resolves as expected.

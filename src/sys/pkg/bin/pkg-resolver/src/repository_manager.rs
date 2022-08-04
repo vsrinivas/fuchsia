@@ -880,12 +880,12 @@ pub struct OpenRepoError {
 
 impl ToResolveStatus for OpenRepoError {
     fn to_resolve_status(&self) -> Status {
-        Status::INTERNAL
+        Status::UNAVAILABLE
     }
 }
 impl ToResolveError for OpenRepoError {
     fn to_resolve_error(&self) -> pkg::ResolveError {
-        pkg::ResolveError::Internal
+        pkg::ResolveError::UnavailableRepoMetadata
     }
 }
 

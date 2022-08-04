@@ -147,11 +147,11 @@ async fn test_cache_fallback_fails_if_url_merkle_differs() {
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}?hash={}", pkg_name, wrong_hash);
     assert_matches!(
         env.resolve_package(&pkg_url).await,
-        Err(fidl_fuchsia_pkg::ResolveError::Internal)
+        Err(fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata)
     );
 
     // Check that get_hash fallback behavior matches resolve.
-    assert_matches!(env.get_hash(pkg_url).await, Err(Status::INTERNAL));
+    assert_matches!(env.get_hash(pkg_url).await, Err(Status::UNAVAILABLE));
 
     env.stop().await;
 }

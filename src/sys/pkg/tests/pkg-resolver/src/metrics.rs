@@ -387,7 +387,7 @@ async fn create_tuf_client_error() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Some(responder),
-        Err(fidl_fuchsia_pkg::ResolveError::Internal),
+        Err(fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata),
         metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID,
         vec![metrics::CreateTufClientMigratedMetricDimensionResult::MissingMetadata],
     )

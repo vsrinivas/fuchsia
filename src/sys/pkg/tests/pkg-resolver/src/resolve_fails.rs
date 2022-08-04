@@ -37,7 +37,7 @@ async fn resolve_disallow_local_mirror_fails() {
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let result = env.resolve_package(&pkg_url).await;
 
-    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata);
 
     env.stop().await;
 }
@@ -71,7 +71,7 @@ async fn resolve_local_and_remote_mirrors_fails() {
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let result = env.resolve_package(&pkg_url).await;
 
-    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata);
 
     env.stop().await;
 }
@@ -97,7 +97,7 @@ async fn create_tuf_client_timeout() {
     // it obtains metadata.
     let result = env.resolve_package("fuchsia-pkg://test/missing-package").await;
 
-    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata);
 
     env.assert_count_events(
         metrics::CREATE_TUF_CLIENT_MIGRATED_METRIC_ID,
