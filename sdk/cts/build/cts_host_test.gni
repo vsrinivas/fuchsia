@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/testing/host_test.gni")
-import("//sdk/cts/build/cts_copy_to_sdk.gni")
 import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")

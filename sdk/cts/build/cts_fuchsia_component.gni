@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//sdk/cts/build/cts_copy_to_sdk.gni")
 import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
@@ -11,7 +10,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 # A Fuchsia component that can be used in CTS.
 #
 # An equivalent to fuchsia_component, but ensures dependencies are allowed in CTS.
-# Creates an SDK atom so that this target can be released in the CTS SDK.
 #
 # Example:
 # ```
@@ -23,13 +21,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 # ```
 #
 # Parameters
-#   dest (optional)
-#     Location to copy this target to in the CTS archive.
-#     Dest should only be specified if the target is not in //sdk/cts. If the
-#     target is in //sdk/cts, it will be placed in the same path in the CTS
-#     archive.
-#     Type: string
-#
 #   prebuilt_only (optional)
 #     Indicates whether a test is an ABI only test. When true, the template does
 #     not create an _sdk target.
@@ -62,32 +53,11 @@ template("cts_fuchsia_component") {
   }
 
   fuchsia_component(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "dest",
-                             "prebuilt_only",
-                           ])
+    forward_variables_from(invoker, "*", [ "prebuilt_only" ])
 
     if (defined(verify_target)) {
       deps += [ ":$verify_target" ]
     }
     deps += [ ":$write_file_target" ]
-  }
-
-  current_dir = get_label_info(":${target_name}", "dir")
-  is_prebuilt_cts =
-      string_replace(current_dir, "//prebuilt/cts", "") != current_dir ||
-      (defined(invoker.prebuilt_only) && invoker.prebuilt_only)
-  if (!is_prebuilt_cts) {
-    cts_copy_to_sdk(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "dest",
-                               "manifest",
-                               "testonly",
-                             ])
-      sources = [ manifest ]
-    }
   }
 }

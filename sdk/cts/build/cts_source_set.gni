@@ -3,14 +3,13 @@
 # found in the LICENSE file.
 
 import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_source_library.gni")
 import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # A source_set that can be used in CTS.
 #
 # An equivalent to the built-in source_set, but ensures dependencies are allowed
-# in CTS. Creates an SDK atom so that this target can be released in the CTS SDK.
+# in CTS.
 #
 # Example:
 # ```
@@ -21,15 +20,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 #   ]
 # }
 # ```
-#
-# Parameters:
-#
-#   dest (optional)
-#     Location to copy this target to in the CTS archive.
-#     Dest should only be specified if the target is not in //sdk/cts. If the
-#     target is in //sdk/cts, it will be placed in the same path in the CTS
-#     archive.
-#     Type: string
 template("cts_source_set") {
   invoker_deps = []
   if (defined(invoker.deps)) {
@@ -55,12 +45,7 @@ template("cts_source_set") {
   }
 
   source_set(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "dest",
-                             "non_cts_deps",
-                           ])
+    forward_variables_from(invoker, "*", [ "non_cts_deps" ])
     if (!defined(deps)) {
       deps = []
     }
@@ -69,24 +54,6 @@ template("cts_source_set") {
       deps += [ ":$verify_target" ]
     }
     deps += [ ":$write_file_target" ]
-  }
-
-  current_dir = get_label_info(":${target_name}", "dir")
-  is_prebuilt_cts =
-      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
-  if (!is_prebuilt_cts) {
-    cts_source_library(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "dest",
-                               "non_cts_deps",
-                               "public",
-                               "public_deps",
-                               "sources",
-                               "testonly",
-                             ])
-    }
   }
 }
 

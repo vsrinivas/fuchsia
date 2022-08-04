@@ -9,8 +9,6 @@ import("//sdk/cts/build/cts.gni")
 # target language types.
 cts_fidl("test.types") {
   testonly = true
-  dest = "pkg/fidl_test_support/types_tests"
-
   sources = [ "types.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

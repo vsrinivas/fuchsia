@@ -3,13 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/dist/resource.gni")
-import("//sdk/cts/build/cts_copy_to_sdk.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # A resource that can be used in CTS.
 #
 # An equivalent to the in-tree `resource`, but ensures dependencies are allowed
-# in CTS. Creates an SDK atom so that this target can be released in the CTS SDK.
+# in CTS.
 #
 # Example:
 # ```
@@ -31,13 +30,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     See copy() for details.
 #     Type: list(file)
 #
-#   dest (optional)
-#     Location to copy this target to in the CTS archive.
-#     Dest should only be specified if the target is not in //sdk/cts. If the
-#     target is in //sdk/cts, it will be placed in the same path in the CTS
-#     archive.
-#     Type: string
-#
 # See resource() for other parameters.
 #
 template("cts_resource") {
@@ -47,31 +39,13 @@ template("cts_resource") {
   write_cts_file(write_file_target) {
   }
 
+  # TODO(104318): Verify deps here.
   resource(target_name) {
-    forward_variables_from(invoker, "*", [ "dest" ])
+    forward_variables_from(invoker, "*")
 
     if (!defined(deps)) {
       deps = []
     }
     deps += [ ":$write_file_target" ]
-  }
-
-  current_dir = get_label_info(":${target_name}", "dir")
-  is_prebuilt_cts =
-      string_replace(current_dir, "//prebuilt/cts", "") != current_dir
-  if (!is_prebuilt_cts) {
-    cts_copy_to_sdk(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "sources",
-                               "dest",
-                               "testonly",
-                             ])
-
-      # This should only be used for generated_file().
-      if (defined(invoker.deps)) {
-        non_sdk_deps = invoker.deps
-      }
-    }
   }
 }

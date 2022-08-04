@@ -8,15 +8,11 @@ import("//sdk/cts/build/cts.gni")
 # writing unknown interaction tests for FIDL bindings.
 cts_fidl("test.unknown.interactions") {
   testonly = true
-  dest = "pkg/fidl_test_support/protocols_tests"
-
   sources = [ "unknown_interactions.test.fidl" ]
   experimental_flags = [ "unknown_interactions" ]
 }
 
 cts_fidl("test.protocol.connector") {
   testonly = true
-  dest = "pkg/fidl_test_support/protocol_connector_tests"
-
   sources = [ "protocol_connector.test.fidl" ]
 }
