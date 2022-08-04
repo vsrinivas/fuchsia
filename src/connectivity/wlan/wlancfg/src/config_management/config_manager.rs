@@ -11,13 +11,16 @@ use {
         },
         stash_conversion::*,
     },
-    crate::client::types,
+    crate::{
+        client::types,
+        telemetry::{TelemetryEvent, TelemetrySender},
+    },
     anyhow::format_err,
     async_trait::async_trait,
+    fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_common::ScanType,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async as fasync,
-    fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
     log::{error, info},
     rand::Rng,
@@ -28,9 +31,10 @@ use {
         path::Path,
     },
     wlan_metrics_registry::{
-        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations,
-        SavedNetworksMetricDimensionSavedNetworks,
-        SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID, SAVED_NETWORKS_METRIC_ID,
+        SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations,
+        SavedNetworksMigratedMetricDimensionSavedNetworks,
+        SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+        SAVED_NETWORKS_MIGRATED_METRIC_ID,
     },
     wlan_stash::policy::{PolicyStash as Stash, POLICY_STASH_ID},
 };
@@ -47,7 +51,7 @@ pub const LEGACY_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
 pub struct SavedNetworksManager {
     saved_networks: Mutex<NetworkConfigMap>,
     stash: Mutex<Stash>,
-    cobalt_api: Mutex<CobaltSender>,
+    telemetry_sender: TelemetrySender,
 }
 
 /// Save multiple network configs per SSID in able to store multiple connections with different
@@ -144,9 +148,9 @@ pub trait SavedNetworksManagerApi: Send + Sync {
 impl SavedNetworksManager {
     /// Initializes a new Saved Network Manager by reading saved networks from a secure storage
     /// (stash). It initializes in-memory storage and persistent storage with stash.
-    pub async fn new(cobalt_api: CobaltSender) -> Result<Self, anyhow::Error> {
+    pub async fn new(telemetry_sender: TelemetrySender) -> Result<Self, anyhow::Error> {
         let path = LEGACY_KNOWN_NETWORKS_PATH;
-        Self::new_with_stash_or_paths(POLICY_STASH_ID, Path::new(path), cobalt_api).await
+        Self::new_with_stash_or_paths(POLICY_STASH_ID, Path::new(path), telemetry_sender).await
     }
 
     /// Load from persistent data from stash. The path for the legacy storage is used to remove the
@@ -155,7 +159,7 @@ impl SavedNetworksManager {
     pub async fn new_with_stash_or_paths(
         stash_id: impl AsRef<str>,
         legacy_path: impl AsRef<Path>,
-        cobalt_api: CobaltSender,
+        telemetry_sender: TelemetrySender,
     ) -> Result<Self, anyhow::Error> {
         let stash = Stash::new_with_id(stash_id.as_ref())?;
         let stashed_networks = stash.load().await?;
@@ -187,7 +191,7 @@ impl SavedNetworksManager {
         Ok(Self {
             saved_networks: Mutex::new(saved_networks),
             stash: Mutex::new(stash),
-            cobalt_api: Mutex::new(cobalt_api),
+            telemetry_sender,
         })
     }
 
@@ -195,15 +199,19 @@ impl SavedNetworksManager {
     /// test
     #[cfg(test)]
     pub async fn new_for_test() -> Result<Self, anyhow::Error> {
-        use crate::util::testing::cobalt::create_mock_cobalt_sender;
-        use rand::{
-            distributions::{Alphanumeric, DistString as _},
-            thread_rng,
+        use {
+            futures::channel::mpsc,
+            rand::{
+                distributions::{Alphanumeric, DistString as _},
+                thread_rng,
+            },
         };
 
         let stash_id = Alphanumeric.sample_string(&mut thread_rng(), 20);
         let path = Alphanumeric.sample_string(&mut thread_rng(), 20);
-        Self::new_with_stash_or_paths(stash_id, Path::new(&path), create_mock_cobalt_sender()).await
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        Self::new_with_stash_or_paths(stash_id, Path::new(&path), telemetry_sender).await
     }
 
     /// Creates a new SavedNetworksManager and hands back the other end of the stash proxy used.
@@ -211,10 +219,12 @@ impl SavedNetworksManager {
     /// executor to step through futures.
     #[cfg(test)]
     pub async fn new_and_stash_server() -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
-        use crate::util::testing::cobalt::create_mock_cobalt_sender;
-        use rand::{
-            distributions::{Alphanumeric, DistString as _},
-            thread_rng,
+        use {
+            futures::channel::mpsc,
+            rand::{
+                distributions::{Alphanumeric, DistString as _},
+                thread_rng,
+            },
         };
 
         let id = Alphanumeric.sample_string(&mut thread_rng(), 20);
@@ -225,12 +235,14 @@ impl SavedNetworksManager {
         let (store, accessor_server) = create_proxy::<fidl_fuchsia_stash::StoreAccessorMarker>()
             .expect("failed to create accessor proxy");
         let stash = Stash::new_with_stash(store);
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
 
         (
             Self {
                 saved_networks: Mutex::new(NetworkConfigMap::new()),
                 stash: Mutex::new(stash),
-                cobalt_api: Mutex::new(create_mock_cobalt_sender()),
+                telemetry_sender,
             },
             accessor_server.into_stream().expect("failed to create stash request stream"),
         )
@@ -447,8 +459,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
 
     async fn record_periodic_metrics(&self) {
         let saved_networks = self.saved_networks.lock().await;
-        let mut cobalt_api = self.cobalt_api.lock().await;
-        log_cobalt_metrics(&*saved_networks, &mut cobalt_api);
+        log_cobalt_metrics(&*saved_networks, &self.telemetry_sender);
     }
 
     async fn record_scan_result(
@@ -624,23 +635,31 @@ fn evict_if_needed(configs: &mut Vec<NetworkConfig>) -> Option<NetworkConfig> {
 }
 
 /// Record Cobalt metrics related to Saved Networks
-fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut CobaltSender) {
+fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, telemetry_sender: &TelemetrySender) {
     // Count the total number of saved networks
+    let mut metric_events = vec![];
+
     let num_networks = match saved_networks.len() {
-        0 => SavedNetworksMetricDimensionSavedNetworks::Zero,
-        1 => SavedNetworksMetricDimensionSavedNetworks::One,
-        2..=4 => SavedNetworksMetricDimensionSavedNetworks::TwoToFour,
-        5..=40 => SavedNetworksMetricDimensionSavedNetworks::FiveToForty,
-        41..=500 => SavedNetworksMetricDimensionSavedNetworks::FortyToFiveHundred,
-        501..=usize::MAX => SavedNetworksMetricDimensionSavedNetworks::FiveHundredAndOneOrMore,
+        0 => SavedNetworksMigratedMetricDimensionSavedNetworks::Zero,
+        1 => SavedNetworksMigratedMetricDimensionSavedNetworks::One,
+        2..=4 => SavedNetworksMigratedMetricDimensionSavedNetworks::TwoToFour,
+        5..=40 => SavedNetworksMigratedMetricDimensionSavedNetworks::FiveToForty,
+        41..=500 => SavedNetworksMigratedMetricDimensionSavedNetworks::FortyToFiveHundred,
+        501..=usize::MAX => {
+            SavedNetworksMigratedMetricDimensionSavedNetworks::FiveHundredAndOneOrMore
+        }
         _ => unreachable!(),
     };
-    cobalt_api.log_event(SAVED_NETWORKS_METRIC_ID, num_networks);
+    metric_events.push(MetricEvent {
+        metric_id: SAVED_NETWORKS_MIGRATED_METRIC_ID,
+        event_codes: vec![num_networks as u32],
+        payload: MetricEventPayload::Count(1),
+    });
 
     // Count the number of configs for each saved network
     for saved_network in saved_networks {
         let configs = saved_network.1;
-        use SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations as ConfigCountDimension;
+        use SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations as ConfigCountDimension;
         let num_configs = match configs.len() {
             0 => ConfigCountDimension::Zero,
             1 => ConfigCountDimension::One,
@@ -650,8 +669,17 @@ fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut Cobalt
             501..=usize::MAX => ConfigCountDimension::FiveHundredAndOneOrMore,
             _ => unreachable!(),
         };
-        cobalt_api.log_event(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID, num_configs);
+        metric_events.push(MetricEvent {
+            metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+            event_codes: vec![num_configs as u32],
+            payload: MetricEventPayload::Count(1),
+        });
     }
+
+    telemetry_sender.send(TelemetryEvent::LogMetricEvents {
+        events: metric_events,
+        ctx: "SavedNetworksManager::log_cobalt_metrics",
+    });
 }
 
 #[cfg(test)]
@@ -664,16 +692,10 @@ mod tests {
                 PROB_HIDDEN_IF_CONNECT_ACTIVE, PROB_HIDDEN_IF_CONNECT_PASSIVE,
                 PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
-            util::testing::{
-                cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
-                random_connection_data,
-            },
+            util::testing::random_connection_data,
         },
-        cobalt_client::traits::AsEventCode,
-        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash,
-        fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
-        futures::{task::Poll, TryStreamExt},
+        futures::{channel::mpsc, task::Poll, TryStreamExt},
         pin_utils::pin_mut,
         rand::{
             distributions::{Alphanumeric, DistString as _},
@@ -738,10 +760,12 @@ mod tests {
         assert_eq!(2, saved_networks.known_network_count().await);
 
         // Saved networks should persist when we create a saved networks manager with the same ID.
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            create_mock_cobalt_sender(),
+            TelemetrySender::new(telemetry_sender),
         )
         .await
         .expect("failed to create saved networks store");
@@ -857,10 +881,11 @@ mod tests {
         );
 
         // Check that removal persists.
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            create_mock_cobalt_sender(),
+            TelemetrySender::new(telemetry_sender),
         )
         .await
         .expect("Failed to create SavedNetworksManager");
@@ -1065,10 +1090,11 @@ mod tests {
         });
 
         // Success connects should be saved as persistent data.
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            create_mock_cobalt_sender(),
+            TelemetrySender::new(telemetry_sender),
         )
         .await
         .expect("Failed to create SavedNetworksManager");
@@ -1605,10 +1631,11 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Load store from stash to verify it is also gone from persistent storage
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            create_mock_cobalt_sender(),
+            TelemetrySender::new(telemetry_sender),
         )
         .await
         .expect("failed to create saved networks manager");
@@ -1631,10 +1658,11 @@ mod tests {
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = "read_network_from_legacy_storage";
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            create_mock_cobalt_sender(),
+            TelemetrySender::new(telemetry_sender),
         )
         .await
         .expect("failed to create saved networks store");
@@ -1675,10 +1703,11 @@ mod tests {
         stash_id: impl AsRef<str>,
         path: impl AsRef<Path>,
     ) -> SavedNetworksManager {
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            create_mock_cobalt_sender(),
+            TelemetrySender::new(telemetry_sender),
         )
         .await
         .expect("Failed to create SavedNetworksManager");
@@ -1705,10 +1734,11 @@ mod tests {
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
 
         let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(&stash_id, &path, cobalt_api)
+            SavedNetworksManager::new_with_stash_or_paths(&stash_id, &path, telemetry_sender)
                 .await
                 .unwrap();
         let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
@@ -1737,49 +1767,39 @@ mod tests {
         // Record metrics
         saved_networks.record_periodic_metrics().await;
 
+        // Verify three metrics are logged
+        let metric_events = assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
+        assert_eq!(metric_events.len(), 3);
+
         // Two saved networks
         assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_NETWORKS_METRIC_ID)
-                    .with_event_code(
-                        SavedNetworksMetricDimensionSavedNetworks::TwoToFour.as_event_code()
-                    )
-                    .as_event()
-            )
+            metric_events[0],
+            MetricEvent {
+                metric_id: SAVED_NETWORKS_MIGRATED_METRIC_ID,
+                event_codes: vec![
+                    SavedNetworksMigratedMetricDimensionSavedNetworks::TwoToFour as u32
+                ],
+                payload: MetricEventPayload::Count(1),
+            }
         );
 
         // One config for each network
-        assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
-                    .with_event_code(
-                        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::One
-                            .as_event_code()
-                    )
-                    .as_event()
-            )
-        );
-        assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
-                    .with_event_code(
-                        SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::One
-                            .as_event_code()
-                    )
-                    .as_event()
-            )
-        );
-
-        // No more metrics
-        assert!(cobalt_events.try_next().is_err());
+        assert_eq!(metric_events[1], MetricEvent {
+            metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+            event_codes: vec![SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::One as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+        assert_eq!(metric_events[1], MetricEvent {
+            metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+            event_codes: vec![SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::One as u32],
+            payload: MetricEventPayload::Count(1),
+        });
     }
 
     #[fuchsia::test]
     async fn metrics_count_configs() {
-        let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
 
         let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let network_id_baz = NetworkIdentifier::try_from("baz", SecurityType::Wpa2).unwrap();
@@ -1808,44 +1828,44 @@ mod tests {
         .cloned()
         .collect();
 
-        log_cobalt_metrics(&networks, &mut cobalt_api);
+        log_cobalt_metrics(&networks, &telemetry_sender);
+
+        let metric_events = assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
+        assert_eq!(metric_events.len(), 3);
 
         // Two saved networks
         assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_NETWORKS_METRIC_ID)
-                    .with_event_code(
-                        SavedNetworksMetricDimensionSavedNetworks::TwoToFour.as_event_code()
-                    )
-                    .as_event()
-            )
+            metric_events[0],
+            MetricEvent {
+                metric_id: SAVED_NETWORKS_MIGRATED_METRIC_ID,
+                event_codes: vec![
+                    SavedNetworksMigratedMetricDimensionSavedNetworks::TwoToFour as u32
+                ],
+                payload: MetricEventPayload::Count(1),
+            }
         );
 
-        // Extract the next two events, their order is not guaranteed
-        let cobalt_metrics = vec![
-            cobalt_events.try_next().unwrap().unwrap(),
-            cobalt_events.try_next().unwrap().unwrap(),
-        ];
+        // For the next two events, the order is not guaranteed
         // Zero configs for one network
-        assert!(cobalt_metrics.iter().any(|metric| metric
-            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
-                .with_event_code(
-                    SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::Zero
-                        .as_event_code()
-                )
-                .as_event()));
+        assert!(metric_events[1..]
+            .iter()
+            .find(|event| **event == MetricEvent {
+                metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+                event_codes: vec![SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::Zero
+                     as u32],
+                payload: MetricEventPayload::Count(1),
+            })
+            .is_some());
         // Two configs for the other network
-        assert!(cobalt_metrics.iter().any(|metric| metric
-            == &CobaltEvent::builder(SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_METRIC_ID)
-                .with_event_code(
-                    SavedConfigurationsForSavedNetworkMetricDimensionSavedConfigurations::TwoToFour
-                        .as_event_code()
-                )
-                .as_event()));
-
-        // No more metrics
-        assert!(cobalt_events.try_next().is_err());
+        assert!(metric_events[1..]
+            .iter()
+            .find(|event| **event == MetricEvent {
+                metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
+                event_codes: vec![SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::TwoToFour
+                     as u32],
+                payload: MetricEventPayload::Count(1),
+            })
+            .is_some());
     }
 
     #[fuchsia::test]

@@ -15,7 +15,7 @@ use {
         telemetry::{TelemetryEvent, TelemetrySender},
         util::listener,
         util::testing::{
-            create_inspect_persistence_channel, create_mock_cobalt_sender, create_wlan_hasher,
+            create_inspect_persistence_channel, create_wlan_hasher,
             sme_stream::poll_for_and_validate_sme_scan_request_and_send_results,
         },
     },
@@ -89,7 +89,6 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
     let telemetry_sender = TelemetrySender::new(telemetry_sender);
     let network_selector = Arc::new(network_selection::NetworkSelector::new(
         saved_networks.clone(),
-        create_mock_cobalt_sender(),
         create_wlan_hasher(),
         inspect::Inspector::new().root().create_child("network_selector"),
         persistence_req_sender,
@@ -115,7 +114,6 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
         monitor_service_proxy.clone(),
         saved_networks.clone(),
         network_selector.clone(),
-        create_mock_cobalt_sender(),
         telemetry_sender.clone(),
     );
     let iface_manager_service = Box::pin(iface_manager_service);

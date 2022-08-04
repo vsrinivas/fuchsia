@@ -8,7 +8,6 @@ use {
         telemetry::TelemetrySender, util::listener,
     },
     anyhow::Error,
-    fuchsia_cobalt::CobaltSender,
     futures::{channel::mpsc, lock::Mutex, Future},
     std::sync::Arc,
     void::Void,
@@ -27,7 +26,6 @@ pub fn create_iface_manager(
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
-    cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
 ) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Void, Error>>) {
     let (sender, receiver) = mpsc::channel(0);
@@ -40,7 +38,6 @@ pub fn create_iface_manager(
         dev_monitor_proxy,
         saved_networks,
         network_selector.clone(),
-        cobalt_api,
         telemetry_sender,
         stats_sender,
     );

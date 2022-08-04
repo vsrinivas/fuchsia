@@ -44,7 +44,6 @@ rustc_library("lib") {
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/stash/:wlan-stash",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -67,12 +66,10 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/lib/fuchsia",
     "//src/lib/test_util",
-    "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:tempfile",
@@ -120,7 +117,6 @@ rustc_library("lib") {
     "src/util/mod.rs",
     "src/util/pseudo_energy.rs",
     "src/util/state_machine.rs",
-    "src/util/testing/cobalt.rs",
     "src/util/testing/fakes.rs",
     "src/util/testing/generate_struct.rs",
     "src/util/testing/mod.rs",
@@ -136,7 +132,6 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    ":wlan_metrics_registry_rustlib",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.power.clientlevel:fuchsia.power.clientlevel_rust",
@@ -145,7 +140,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
     "//src/diagnostics/persistence/fidl:persist_rust",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -233,7 +227,6 @@ rustc_fuzzer("fuzz_saved_networks_manager_store") {
   deps = [
     ":lib",
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fuzzing/rust:fuzz",
     "//third_party/rust_crates:arbitrary",
     "//third_party/rust_crates:futures",

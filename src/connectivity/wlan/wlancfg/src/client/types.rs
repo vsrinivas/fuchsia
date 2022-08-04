@@ -7,7 +7,8 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx, wlan_common,
     wlan_metrics_registry::{
-        PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
+        PolicyConnectionAttemptMigratedMetricDimensionReason,
+        PolicyDisconnectionMigratedMetricDimensionReason,
     },
 };
 
@@ -24,42 +25,42 @@ pub type WlanChan = wlan_common::channel::Channel;
 pub type Cbw = wlan_common::channel::Cbw;
 pub use ieee80211::Bssid;
 pub use ieee80211::Ssid;
-pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
-pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;
+pub type DisconnectReason = PolicyDisconnectionMigratedMetricDimensionReason;
+pub type ConnectReason = PolicyConnectionAttemptMigratedMetricDimensionReason;
 pub type ScanError = fidl_policy::ScanErrorCode;
 
 pub fn convert_to_sme_disconnect_reason(
-    disconnect_reason: PolicyDisconnectionMetricDimensionReason,
+    disconnect_reason: PolicyDisconnectionMigratedMetricDimensionReason,
 ) -> fidl_sme::UserDisconnectReason {
     match disconnect_reason {
-        PolicyDisconnectionMetricDimensionReason::Unknown => {
+        PolicyDisconnectionMigratedMetricDimensionReason::Unknown => {
             fidl_sme::UserDisconnectReason::Unknown
         }
-        PolicyDisconnectionMetricDimensionReason::FailedToConnect => {
+        PolicyDisconnectionMigratedMetricDimensionReason::FailedToConnect => {
             fidl_sme::UserDisconnectReason::FailedToConnect
         }
-        PolicyDisconnectionMetricDimensionReason::FidlConnectRequest => {
+        PolicyDisconnectionMigratedMetricDimensionReason::FidlConnectRequest => {
             fidl_sme::UserDisconnectReason::FidlConnectRequest
         }
-        PolicyDisconnectionMetricDimensionReason::FidlStopClientConnectionsRequest => {
+        PolicyDisconnectionMigratedMetricDimensionReason::FidlStopClientConnectionsRequest => {
             fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest
         }
-        PolicyDisconnectionMetricDimensionReason::ProactiveNetworkSwitch => {
+        PolicyDisconnectionMigratedMetricDimensionReason::ProactiveNetworkSwitch => {
             fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch
         }
-        PolicyDisconnectionMetricDimensionReason::DisconnectDetectedFromSme => {
+        PolicyDisconnectionMigratedMetricDimensionReason::DisconnectDetectedFromSme => {
             fidl_sme::UserDisconnectReason::DisconnectDetectedFromSme
         }
-        PolicyDisconnectionMetricDimensionReason::RegulatoryRegionChange => {
+        PolicyDisconnectionMigratedMetricDimensionReason::RegulatoryRegionChange => {
             fidl_sme::UserDisconnectReason::RegulatoryRegionChange
         }
-        PolicyDisconnectionMetricDimensionReason::Startup => {
+        PolicyDisconnectionMigratedMetricDimensionReason::Startup => {
             fidl_sme::UserDisconnectReason::Startup
         }
-        PolicyDisconnectionMetricDimensionReason::NetworkUnsaved => {
+        PolicyDisconnectionMigratedMetricDimensionReason::NetworkUnsaved => {
             fidl_sme::UserDisconnectReason::NetworkUnsaved
         }
-        PolicyDisconnectionMetricDimensionReason::NetworkConfigUpdated => {
+        PolicyDisconnectionMigratedMetricDimensionReason::NetworkConfigUpdated => {
             fidl_sme::UserDisconnectReason::NetworkConfigUpdated
         }
     }

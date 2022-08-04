@@ -10,6 +10,7 @@ use {
             select_subset_potentially_hidden_networks, SavedNetworksManagerApi, ScanResultType,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
+        telemetry::{TelemetryEvent, TelemetrySender},
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -17,7 +18,6 @@ use {
     fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_cobalt::CobaltSender,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
@@ -26,10 +26,6 @@ use {
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
     stream::FuturesUnordered,
     wlan_common,
-    wlan_metrics_registry::{
-        ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
-        ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
-    },
 };
 
 // TODO(fxbug.dev/80422): Remove this.
@@ -135,7 +131,7 @@ pub(crate) async fn perform_scan(
     scan_reason: ScanReason,
     // TODO(fxbug.dev/73821): This should be removed when ScanManager struct is implemented,
     // in favor of a field in the struct itself.
-    cobalt_api: Option<Arc<Mutex<CobaltSender>>>,
+    telemetry_sender: Option<TelemetrySender>,
 ) {
     async fn output_error(
         output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
@@ -189,27 +185,12 @@ pub(crate) async fn perform_scan(
 
     // Record active scan decisions to metrics. This is optional, based on
     // the scan reason and if the caller would like metrics logged.
-    if let Some(cobalt_sender) = cobalt_api {
+    if let Some(telemetry_sender) = telemetry_sender {
         match scan_reason {
             ScanReason::NetworkSelection => {
-                let active_scan_request_count_metric = match requested_active_scan_ids.len() {
-                    0 => ActiveScanSsidsRequested::Zero,
-                    1 => ActiveScanSsidsRequested::One,
-                    2..=4 => ActiveScanSsidsRequested::TwoToFour,
-                    5..=10 => ActiveScanSsidsRequested::FiveToTen,
-                    11..=20 => ActiveScanSsidsRequested::ElevenToTwenty,
-                    21..=50 => ActiveScanSsidsRequested::TwentyOneToFifty,
-                    51..=100 => ActiveScanSsidsRequested::FiftyOneToOneHundred,
-                    101..=usize::MAX => ActiveScanSsidsRequested::OneHundredAndOneOrMore,
-                    _ => unreachable!(),
-                };
-                let mut cobalt_sender_guard = cobalt_sender.lock().await;
-                let cobalt_lock = &mut *cobalt_sender_guard;
-                cobalt_lock.log_event(
-                    ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_METRIC_ID,
-                    active_scan_request_count_metric,
-                );
-                drop(cobalt_sender_guard);
+                telemetry_sender.send(TelemetryEvent::ActiveScanRequested {
+                    num_ssids_requested: requested_active_scan_ids.len(),
+                });
             }
             _ => {}
         }

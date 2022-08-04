@@ -21,7 +21,6 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -33,10 +32,6 @@ use {
     std::{convert::TryFrom, sync::Arc},
     void::ResultVoidErrExt,
     wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, stats::SignalStrengthAverage},
-    wlan_metrics_registry::{
-        POLICY_CONNECTION_ATTEMPT_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
-        POLICY_DISCONNECTION_METRIC_ID as DISCONNECTION_METRIC_ID,
-    },
 };
 
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
@@ -128,7 +123,6 @@ pub async fn serve(
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
     network_selector: Arc<network_selection::NetworkSelector>,
-    cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
 ) {
@@ -152,7 +146,6 @@ pub async fn serve(
         update_sender: update_sender,
         saved_networks_manager: saved_networks_manager,
         network_selector,
-        cobalt_api,
         telemetry_sender,
         iface_id,
         has_wpa3_support,
@@ -184,7 +177,6 @@ struct CommonStateOptions {
     update_sender: ClientListenerMessageSender,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<network_selection::NetworkSelector>,
-    cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
     iface_id: u16,
     has_wpa3_support: bool,
@@ -441,11 +433,6 @@ async fn connecting_state<'a>(
         );
     };
 
-    // Log a connect attempt in Cobalt
-    common_options
-        .cobalt_api
-        .log_event(CONNECTION_ATTEMPT_METRIC_ID, options.connect_request.reason);
-
     // Let the responder know we've successfully started this connection attempt
     match options.connect_responder.take() {
         Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
@@ -570,6 +557,7 @@ async fn connecting_state<'a>(
                     common_options.telemetry_sender.send(TelemetryEvent::ConnectResult {
                         latest_ap_state: (*connect_result.bss_description).clone(),
                         result: sme_result,
+                        policy_connect_reason: Some(options.connect_request.reason),
                         multiple_bss_candidates: connect_result.multiple_bss_candidates,
                         iface_id: common_options.iface_id,
                     });
@@ -735,10 +723,6 @@ async fn connected_state(
                     let is_sme_idle = match event {
                         fidl_sme::ConnectTransactionEvent::OnDisconnect { info: fidl_info } => {
                             // Log a disconnect in Cobalt
-                            common_options.cobalt_api.log_event(
-                                DISCONNECTION_METRIC_ID,
-                                types::DisconnectReason::DisconnectDetectedFromSme
-                            );
                             let now = fasync::Time::now();
                             let info = DisconnectInfo {
                                 connected_duration: now - connect_start_time,
@@ -771,6 +755,7 @@ async fn connected_state(
                             common_options.telemetry_sender.send(TelemetryEvent::ConnectResult {
                                 iface_id: common_options.iface_id,
                                 result,
+                                policy_connect_reason: None,
                                 // It's not necessarily true that there are still multiple BSS
                                 // candidates in the network at this point in time, but we use the
                                 // heuristic that if previously there were multiple BSS's, then
@@ -862,7 +847,6 @@ async fn connected_state(
                             next_network: None,
                             reason,
                         };
-                        common_options.cobalt_api.log_event(DISCONNECTION_METRIC_ID, options.reason);
                         let info = DisconnectInfo {
                             connected_duration: now - connect_start_time,
                             is_sme_reconnecting: false,
@@ -904,7 +888,6 @@ async fn connected_state(
                                 reason: disconnect_reason,
                             };
                             info!("Connection to new network requested, disconnecting from current network");
-                            common_options.cobalt_api.log_event(DISCONNECTION_METRIC_ID, options.reason);
                             let info = DisconnectInfo {
                                 connected_duration: now - connect_start_time,
                                 is_sme_reconnecting: false,
@@ -1006,21 +989,16 @@ mod tests {
             util::{
                 listener,
                 testing::{
-                    create_inspect_persistence_channel, create_mock_cobalt_sender,
-                    create_mock_cobalt_sender_and_receiver, create_wlan_hasher,
+                    create_inspect_persistence_channel, create_wlan_hasher,
                     generate_disconnect_info, poll_sme_req, random_connection_data,
                     validate_sme_scan_request_and_send_results, ConnectResultRecord,
                     ConnectionRecord, FakeSavedNetworksManager,
                 },
             },
-            validate_cobalt_events, validate_no_cobalt_events,
         },
-        cobalt_client::traits::AsEventCode,
         fidl::endpoints::create_proxy_and_stream,
         fidl::prelude::*,
-        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_policy as fidl_policy,
-        fuchsia_cobalt::CobaltEventExt,
         fuchsia_inspect::{self as inspect},
         fuchsia_zircon::prelude::*,
         futures::{task::Poll, Future},
@@ -1031,7 +1009,7 @@ mod tests {
         wlan_common::{
             assert_variant, bss::Protection, random_bss_description, random_fidl_bss_description,
         },
-        wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
+        wlan_metrics_registry::PolicyDisconnectionMigratedMetricDimensionReason,
     };
 
     struct TestValues {
@@ -1040,7 +1018,6 @@ mod tests {
         saved_networks_manager: Arc<FakeSavedNetworksManager>,
         client_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
-        cobalt_events: mpsc::Receiver<CobaltEvent>,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
         stats_receiver: mpsc::UnboundedReceiver<PeriodicConnectionStats>,
     }
@@ -1053,13 +1030,11 @@ mod tests {
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
         let saved_networks = FakeSavedNetworksManager::new();
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -1074,7 +1049,6 @@ mod tests {
                 update_sender: update_sender,
                 saved_networks_manager: saved_networks_manager.clone(),
                 network_selector,
-                cobalt_api,
                 telemetry_sender,
                 iface_id: 1,
                 has_wpa3_support: false,
@@ -1084,7 +1058,6 @@ mod tests {
             saved_networks_manager,
             client_req_sender,
             update_receiver,
-            cobalt_events,
             telemetry_receiver,
             stats_receiver,
         }
@@ -1269,13 +1242,6 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::FidlConnectRequest
-        );
     }
 
     #[fuchsia::test]
@@ -1425,9 +1391,10 @@ mod tests {
         // Check that connected telemetry event is sent
         assert_variant!(
             test_values.telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, multiple_bss_candidates, latest_ap_state })) => {
+            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, policy_connect_reason, result, multiple_bss_candidates, latest_ap_state })) => {
                 assert_eq!(bss_description, latest_ap_state.into());
                 assert!(!multiple_bss_candidates);
+                assert_eq!(policy_connect_reason, Some(types::ConnectReason::FidlConnectRequest));
                 assert_eq!(result, fake_successful_connect_result());
             }
         );
@@ -1439,13 +1406,6 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
-        );
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::FidlConnectRequest
         );
 
         // Send a disconnect and check that the connection data is correctly recorded
@@ -1495,14 +1455,12 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -1550,7 +1508,6 @@ mod tests {
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support: false,
@@ -1728,14 +1685,12 @@ mod tests {
         let (saved_networks, mut stash_server) =
             executor.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_tx, _cobalt_rx) = create_mock_cobalt_sender_and_receiver();
         let (persistence_tx, _persistence_rx) = create_inspect_persistence_channel();
         let (telementry_tx, _telemetry_rx) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telementry_tx);
         let (stats_tx, _stats_rx) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_tx,
@@ -1774,7 +1729,6 @@ mod tests {
             update_sender: update_tx,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_tx,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support: case.has_wpa3_support,
@@ -1855,14 +1809,12 @@ mod tests {
         let (saved_networks, mut stash_server) =
             executor.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_tx, _cobalt_rx) = create_mock_cobalt_sender_and_receiver();
         let (persistence_tx, _persistence_rx) = create_inspect_persistence_channel();
         let (telementry_tx, _telemetry_rx) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telementry_tx);
         let (stats_tx, _stats_rx) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_tx,
@@ -1916,7 +1868,6 @@ mod tests {
             update_sender: update_tx,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_tx,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support,
@@ -2027,9 +1978,10 @@ mod tests {
         // Check that connect result telemetry event is sent
         assert_variant!(
             test_values.telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, multiple_bss_candidates, latest_ap_state })) => {
+            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, policy_connect_reason, result, multiple_bss_candidates, latest_ap_state })) => {
                 assert_eq!(bss_description, latest_ap_state);
                 assert!(multiple_bss_candidates);
+                assert_eq!(policy_connect_reason, Some(types::ConnectReason::FidlConnectRequest));
                 assert_eq!(result, connect_result);
             }
         );
@@ -2103,18 +2055,6 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
-
-        // Three cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::FidlConnectRequest
-        );
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RetryAfterFailedConnectAttempt
-        );
     }
 
     #[fuchsia::test]
@@ -2129,14 +2069,12 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -2177,7 +2115,6 @@ mod tests {
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support: false,
@@ -2294,18 +2231,6 @@ mod tests {
                     .expect("failed to send connection completion");
             }
         );
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::FidlConnectRequest
-        );
-        validate_cobalt_events!(
-            cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RetryAfterFailedConnectAttempt
-        );
     }
 
     #[fuchsia::test]
@@ -2321,14 +2246,12 @@ mod tests {
                 .expect("Failed to create saved networks manager"),
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
-        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -2340,7 +2263,6 @@ mod tests {
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support: false,
@@ -2448,13 +2370,6 @@ mod tests {
             network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::GeneralFailure);
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::FidlConnectRequest
-        );
     }
 
     #[fuchsia::test]
@@ -2470,14 +2385,12 @@ mod tests {
                 .expect("Failed to create saved networks manager"),
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
-        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -2490,7 +2403,6 @@ mod tests {
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support: false,
@@ -2599,13 +2511,6 @@ mod tests {
             network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::CredentialRejected);
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::ProactiveNetworkSwitch
-        );
     }
 
     #[fuchsia::test]
@@ -2736,14 +2641,6 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RegulatoryChangeReconnect
-        );
-        validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
     #[fuchsia::test]
@@ -2947,18 +2844,6 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RegulatoryChangeReconnect
-        );
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::FidlConnectRequest
-        );
     }
 
     #[fuchsia::test]
@@ -3069,13 +2954,6 @@ mod tests {
 
         // Check the disconnect responder
         assert_variant!(exec.run_until_stalled(&mut disconnect_receiver), Poll::Ready(Ok(())));
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RegulatoryChangeReconnect
-        );
     }
 
     #[fuchsia::test]
@@ -3207,13 +3085,6 @@ mod tests {
             assert_eq!(updates, client_state_update);
         });
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            DISCONNECTION_METRIC_ID,
-            types::DisconnectReason::FidlStopClientConnectionsRequest
-        );
 
         // Disconnect telemetry event sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
@@ -3587,7 +3458,7 @@ mod tests {
         let mut exec =
             fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
         exec.set_fake_time(fasync::Time::from_nanos(0));
-        let mut test_values = test_setup();
+        let test_values = test_setup();
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = types::Ssid::try_from("test").unwrap();
@@ -3638,9 +3509,6 @@ mod tests {
 
         // Check the responder was acknowledged
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
-
-        // No cobalt metrics logged
-        validate_no_cobalt_events!(test_values.cobalt_events);
 
         // No telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Err(_));
@@ -3830,18 +3698,6 @@ mod tests {
             Poll::Pending
         );
 
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            DISCONNECTION_METRIC_ID,
-            types::DisconnectReason::ProactiveNetworkSwitch
-        );
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::ProactiveNetworkSwitch
-        );
-
         // Check that the first connection was recorded
         let expected_recorded_connection = ConnectionRecord {
             id: id_1.clone(),
@@ -3879,14 +3735,12 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
-        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -3927,7 +3781,6 @@ mod tests {
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
-            cobalt_api: cobalt_api,
             telemetry_sender,
             iface_id: 1,
             has_wpa3_support: false,
@@ -4059,18 +3912,6 @@ mod tests {
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            cobalt_events,
-            DISCONNECTION_METRIC_ID,
-            types::DisconnectReason::DisconnectDetectedFromSme
-        );
-        validate_cobalt_events!(
-            cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RetryAfterDisconnectDetected
-        );
     }
 
     #[fuchsia::test]
@@ -4136,14 +3977,6 @@ mod tests {
 
         // Check there were no state updates
         assert_variant!(test_values.update_receiver.try_next(), Err(_));
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            DISCONNECTION_METRIC_ID,
-            types::DisconnectReason::DisconnectDetectedFromSme
-        );
-        validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
     #[fuchsia::test]
@@ -4158,7 +3991,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -4332,18 +4164,6 @@ mod tests {
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            DISCONNECTION_METRIC_ID,
-            types::DisconnectReason::DisconnectDetectedFromSme
-        );
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RetryAfterDisconnectDetected
-        );
     }
 
     #[fuchsia::test]
@@ -4754,13 +4574,6 @@ mod tests {
                     .expect("failed to send connection completion");
             }
         );
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::ProactiveNetworkSwitch
-        );
     }
 
     #[fuchsia::test]
@@ -4823,7 +4636,6 @@ mod tests {
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
-            test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
         );
@@ -4884,7 +4696,6 @@ mod tests {
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
-            test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
         );
@@ -4911,7 +4722,7 @@ mod tests {
     #[fuchsia::test]
     fn serve_loop_handles_disconnect() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let test_values = test_setup();
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
         let (client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -4949,7 +4760,6 @@ mod tests {
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
-            test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
         );
@@ -4986,7 +4796,10 @@ mod tests {
         let mut client = Client::new(client_req_sender);
         let (sender, mut receiver) = oneshot::channel();
         client
-            .disconnect(PolicyDisconnectionMetricDimensionReason::NetworkConfigUpdated, sender)
+            .disconnect(
+                PolicyDisconnectionMigratedMetricDimensionReason::NetworkConfigUpdated,
+                sender,
+            )
             .expect("failed to make request");
 
         // Run the state machine so that it handles the disconnect message.
@@ -5003,18 +4816,6 @@ mod tests {
 
         // Expect the responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
-
-        // Cobalt metrics logged
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            CONNECTION_ATTEMPT_METRIC_ID,
-            types::ConnectReason::RegulatoryChangeReconnect
-        );
-        validate_cobalt_events!(
-            test_values.cobalt_events,
-            DISCONNECTION_METRIC_ID,
-            types::DisconnectReason::NetworkConfigUpdated
-        );
     }
 
     #[fuchsia::test]
@@ -5049,7 +4850,6 @@ mod tests {
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
-            test_values.common_options.cobalt_api,
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
         );

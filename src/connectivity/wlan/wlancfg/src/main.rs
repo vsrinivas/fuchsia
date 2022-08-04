@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
-    fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::component,
     fuchsia_inspect_contrib::auto_persist,
@@ -20,7 +19,7 @@ use {
     futures::{
         self,
         channel::{mpsc, oneshot},
-        future::{try_join, OptionFuture},
+        future::OptionFuture,
         lock::Mutex,
         prelude::*,
         select, TryFutureExt,
@@ -31,7 +30,6 @@ use {
     std::sync::Arc,
     void::Void,
     wlan_common::hasher::WlanHasher,
-    wlan_metrics_registry::{self as metrics},
     wlancfg_lib::{
         access_point::AccessPoint,
         client::{self, network_selection::NetworkSelector},
@@ -179,15 +177,6 @@ async fn saved_networks_manager_metrics_loop(saved_networks: Arc<dyn SavedNetwor
     }
 }
 
-/// Runs the recording and sending of metrics to Cobalt.
-async fn serve_metrics(
-    saved_networks: Arc<dyn SavedNetworksManagerApi>,
-    cobalt_fut: impl Future<Output = ()>,
-) -> Result<(), Error> {
-    let record_metrics_fut = saved_networks_manager_metrics_loop(saved_networks);
-    try_join(record_metrics_fut.map(|()| Ok(())), cobalt_fut.map(|()| Ok(()))).await.map(|_| ())
-}
-
 // wlancfg expects to be able to get updates from the RegulatoryRegionWatcher UNLESS the
 // service is not present in wlancfg's sandbox OR the product configuration does not offer the
 // service to wlancfg.  If the RegulatoryRegionWatcher is not available for either of these
@@ -278,8 +267,6 @@ async fn run_low_power_manager(
 async fn run_all_futures() -> Result<(), Error> {
     let monitor_svc = fuchsia_component::client::connect_to_protocol::<DeviceMonitorMarker>()
         .context("failed to connect to device monitor")?;
-    let (cobalt_api, cobalt_fut) =
-        CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
     let persistence_proxy = fuchsia_component::client::connect_to_protocol_at_path::<
         fidl_fuchsia_diagnostics_persist::DataPersistenceMarker,
     >(PERSISTENCE_SERVICE_PATH);
@@ -337,10 +324,9 @@ async fn run_all_futures() -> Result<(), Error> {
     );
     component::inspector().root().record(external_inspect_node);
 
-    let saved_networks = Arc::new(SavedNetworksManager::new(cobalt_api.clone()).await?);
+    let saved_networks = Arc::new(SavedNetworksManager::new(telemetry_sender.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
         saved_networks.clone(),
-        cobalt_api.clone(),
         hasher,
         component::inspector().root().create_child("network_selector"),
         persistence_req_sender.clone(),
@@ -366,7 +352,6 @@ async fn run_all_futures() -> Result<(), Error> {
         monitor_svc.clone(),
         saved_networks.clone(),
         network_selector.clone(),
-        cobalt_api.clone(),
         telemetry_sender.clone(),
     );
 
@@ -404,7 +389,7 @@ async fn run_all_futures() -> Result<(), Error> {
             future::ready(result)
         });
 
-    let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
+    let saved_networks_metrics_fut = saved_networks_manager_metrics_loop(saved_networks.clone());
     let regulatory_fut = run_regulatory_manager(iface_manager.clone(), regulatory_sender);
     let low_power_fut = run_low_power_manager(phy_manager.clone(), telemetry_sender);
 
@@ -412,7 +397,7 @@ async fn run_all_futures() -> Result<(), Error> {
         fidl_fut,
         dev_watcher_fut,
         iface_manager_service,
-        metrics_fut,
+        saved_networks_metrics_fut.map(Ok),
         regulatory_fut,
         low_power_fut,
         telemetry_fut.map(Ok),

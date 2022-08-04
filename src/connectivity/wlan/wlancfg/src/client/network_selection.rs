@@ -17,9 +17,9 @@ use {
         telemetry::{self, TelemetryEvent, TelemetrySender},
     },
     async_trait::async_trait,
+    fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async as fasync,
-    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{Node as InspectNode, StringReference},
     fuchsia_inspect_contrib::{
         auto_persist::{self, AutoPersist},
@@ -34,11 +34,13 @@ use {
     wlan_common::{self, hasher::WlanHasher},
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_metrics_registry::{
-        SavedNetworkInScanResultMetricDimensionBssCount,
-        SavedNetworkInScanResultWithActiveScanMetricDimensionActiveScanSsidsObserved as ActiveScanSsidsObserved,
-        ScanResultsReceivedMetricDimensionSavedNetworksCount,
-        LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID, SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID,
-        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID, SCAN_RESULTS_RECEIVED_METRIC_ID,
+        SavedNetworkInScanResultMigratedMetricDimensionBssCount,
+        SavedNetworkInScanResultWithActiveScanMigratedMetricDimensionActiveScanSsidsObserved as ActiveScanSsidsObserved,
+        ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount,
+        LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
+        SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID,
+        SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID,
     },
 };
 
@@ -70,7 +72,6 @@ const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 10;
 pub struct NetworkSelector {
     saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
-    cobalt_api: Arc<Mutex<CobaltSender>>,
     hasher: WlanHasher,
     _inspect_node_root: Arc<Mutex<InspectNode>>,
     inspect_node_for_network_selections: Arc<Mutex<AutoPersist<InspectBoundedListNode>>>,
@@ -240,7 +241,6 @@ impl<'a> WriteInspect for InternalBss<'a> {
 impl NetworkSelector {
     pub fn new(
         saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
-        cobalt_api: CobaltSender,
         hasher: WlanHasher,
         inspect_node: InspectNode,
         persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -261,7 +261,6 @@ impl NetworkSelector {
                 updated_at: zx::Time::ZERO,
                 results: Vec::new(),
             })),
-            cobalt_api: Arc::new(Mutex::new(cobalt_api)),
             hasher,
             _inspect_node_root: Arc::new(Mutex::new(inspect_node)),
             inspect_node_for_network_selections: Arc::new(Mutex::new(
@@ -275,7 +274,7 @@ impl NetworkSelector {
         NetworkSelectorScanUpdater {
             scan_result_cache: Arc::clone(&self.scan_result_cache),
             saved_network_manager: Arc::clone(&self.saved_network_manager),
-            cobalt_api: Arc::clone(&self.cobalt_api),
+            telemetry_sender: self.telemetry_sender.clone(),
             hasher: self.hasher.clone(),
         }
     }
@@ -289,14 +288,14 @@ impl NetworkSelector {
 
         // Log a metric for scan age, to help us optimize the STALE_SCAN_AGE
         if last_scan_result_time != zx::Time::ZERO {
-            let mut cobalt_api_guard = self.cobalt_api.lock().await;
-            let cobalt_api = &mut *cobalt_api_guard;
-            cobalt_api.log_elapsed_time(
-                LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID,
-                Vec::<u32>::new(),
-                scan_age.into_micros(),
-            );
-            drop(cobalt_api_guard);
+            self.telemetry_sender.send(TelemetryEvent::LogMetricEvents {
+                events: vec![MetricEvent {
+                    metric_id: LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::IntegerValue(scan_age.into_micros()),
+                }],
+                ctx: "NetworkSelector::perform_scan",
+            });
         }
 
         // Determine if a new scan is warranted
@@ -323,7 +322,7 @@ impl NetworkSelector {
                 self.generate_scan_result_updater(),
                 scan::LocationSensorUpdater { wpa3_supported },
                 NetworkSelectionScan,
-                Some(self.cobalt_api.clone()),
+                Some(self.telemetry_sender.clone()),
             )
             .await;
         } else {
@@ -460,7 +459,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
 pub struct NetworkSelectorScanUpdater {
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
     saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
-    cobalt_api: Arc<Mutex<CobaltSender>>,
+    telemetry_sender: TelemetrySender,
     hasher: WlanHasher,
 }
 #[async_trait]
@@ -480,10 +479,7 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
             &self.hasher,
         )
         .await;
-        let mut cobalt_api_guard = self.cobalt_api.lock().await;
-        let cobalt_api = &mut *cobalt_api_guard;
-        record_metrics_on_scan(merged_networks, cobalt_api);
-        drop(cobalt_api_guard);
+        record_metrics_on_scan(merged_networks, &self.telemetry_sender);
     }
 }
 
@@ -638,8 +634,9 @@ pub fn score_connection_quality(_connection_stats: &PeriodicConnectionStats) -> 
 
 fn record_metrics_on_scan(
     mut merged_networks: Vec<InternalBss<'_>>,
-    cobalt_api: &mut CobaltSender,
+    telemetry_sender: &TelemetrySender,
 ) {
+    let mut metric_events = vec![];
     let mut merged_network_map: HashMap<types::NetworkIdentifier, Vec<InternalBss<'_>>> =
         HashMap::new();
     for bss in merged_networks.drain(..) {
@@ -652,14 +649,20 @@ fn record_metrics_on_scan(
         // Record how many BSSs are visible in the scan results for this saved network.
         let num_bss = match bsss.len() {
             0 => unreachable!(), // The ::Zero enum exists, but we shouldn't get a scan result with no BSS
-            1 => SavedNetworkInScanResultMetricDimensionBssCount::One,
-            2..=4 => SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour,
-            5..=10 => SavedNetworkInScanResultMetricDimensionBssCount::FiveToTen,
-            11..=20 => SavedNetworkInScanResultMetricDimensionBssCount::ElevenToTwenty,
-            21..=usize::MAX => SavedNetworkInScanResultMetricDimensionBssCount::TwentyOneOrMore,
+            1 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::One,
+            2..=4 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwoToFour,
+            5..=10 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::FiveToTen,
+            11..=20 => SavedNetworkInScanResultMigratedMetricDimensionBssCount::ElevenToTwenty,
+            21..=usize::MAX => {
+                SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwentyOneOrMore
+            }
             _ => unreachable!(),
         };
-        cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
+        metric_events.push(MetricEvent {
+            metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+            event_codes: vec![num_bss as u32],
+            payload: MetricEventPayload::Count(1),
+        });
 
         // Check if the network was found via active scan.
         if bsss
@@ -671,15 +674,21 @@ fn record_metrics_on_scan(
     }
 
     let saved_network_count_metric = match num_saved_networks_observed {
-        0 => ScanResultsReceivedMetricDimensionSavedNetworksCount::Zero,
-        1 => ScanResultsReceivedMetricDimensionSavedNetworksCount::One,
-        2..=4 => ScanResultsReceivedMetricDimensionSavedNetworksCount::TwoToFour,
-        5..=20 => ScanResultsReceivedMetricDimensionSavedNetworksCount::FiveToTwenty,
-        21..=40 => ScanResultsReceivedMetricDimensionSavedNetworksCount::TwentyOneToForty,
-        41..=usize::MAX => ScanResultsReceivedMetricDimensionSavedNetworksCount::FortyOneOrMore,
+        0 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::Zero,
+        1 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::One,
+        2..=4 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::TwoToFour,
+        5..=20 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::FiveToTwenty,
+        21..=40 => ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::TwentyOneToForty,
+        41..=usize::MAX => {
+            ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::FortyOneOrMore
+        }
         _ => unreachable!(),
     };
-    cobalt_api.log_event(SCAN_RESULTS_RECEIVED_METRIC_ID, saved_network_count_metric);
+    metric_events.push(MetricEvent {
+        metric_id: SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID,
+        event_codes: vec![saved_network_count_metric as u32],
+        payload: MetricEventPayload::Count(1),
+    });
 
     let actively_scanned_networks_metrics = match num_actively_scanned_networks {
         0 => ActiveScanSsidsObserved::Zero,
@@ -692,10 +701,16 @@ fn record_metrics_on_scan(
         101..=usize::MAX => ActiveScanSsidsObserved::OneHundredAndOneOrMore,
         _ => unreachable!(),
     };
-    cobalt_api.log_event(
-        SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID,
-        actively_scanned_networks_metrics,
-    );
+    metric_events.push(MetricEvent {
+        metric_id: SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID,
+        event_codes: vec![actively_scanned_networks_metrics as u32],
+        payload: MetricEventPayload::Count(1),
+    });
+
+    telemetry_sender.send(TelemetryEvent::LogMetricEvents {
+        events: metric_events,
+        ctx: "network_selection::record_metrics_on_scan",
+    });
 }
 
 #[cfg(test)]
@@ -709,20 +724,16 @@ mod tests {
                 SavedNetworksManager,
             },
             util::testing::{
-                create_inspect_persistence_channel, create_mock_cobalt_sender_and_receiver,
-                create_wlan_hasher, generate_channel, generate_random_bss,
-                generate_random_scan_result,
+                create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
+                generate_random_bss, generate_random_scan_result,
                 poll_for_and_validate_sme_scan_request_and_send_results, random_connection_data,
                 validate_sme_scan_request_and_send_results,
             },
         },
         anyhow::Error,
-        cobalt_client::traits::AsEventCode,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
-        fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         fuchsia_inspect::{self as inspect, assert_data_tree},
         futures::{
             channel::{mpsc, oneshot},
@@ -731,10 +742,7 @@ mod tests {
         },
         pin_utils::pin_mut,
         rand::Rng,
-        std::{
-            convert::{TryFrom, TryInto},
-            sync::Arc,
-        },
+        std::{convert::TryFrom, sync::Arc},
         test_case::test_case,
         wlan_common::{assert_variant, random_fidl_bss_description},
     };
@@ -742,7 +750,6 @@ mod tests {
     struct TestValues {
         network_selector: Arc<NetworkSelector>,
         saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
-        cobalt_events: mpsc::Receiver<CobaltEvent>,
         iface_manager: Arc<Mutex<FakeIfaceManager>>,
         sme_stream: fidl_sme::ClientSmeRequestStream,
         inspector: inspect::Inspector,
@@ -750,8 +757,6 @@ mod tests {
     }
 
     async fn test_setup() -> TestValues {
-        // setup modules
-        let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("net_select_test");
@@ -760,7 +765,6 @@ mod tests {
 
         let network_selector = Arc::new(NetworkSelector::new(
             saved_network_manager.clone(),
-            cobalt_api,
             create_wlan_hasher(),
             inspect_node,
             persistence_req_sender,
@@ -773,7 +777,6 @@ mod tests {
         TestValues {
             network_selector,
             saved_network_manager,
-            cobalt_events,
             iface_manager,
             sme_stream: remote.into_stream().expect("failed to create stream"),
             inspector,
@@ -910,9 +913,9 @@ mod tests {
         let guard = network_selector.scan_result_cache.lock().await;
         assert_eq!(guard.results, mock_scan_results);
 
-        // check there are some metric events for the incoming scan results
+        // check there are some telemetry events for the incoming scan results
         // note: the actual metrics are checked in unit tests for the metric recording function
-        assert!(test_values.cobalt_events.try_next().unwrap().is_some());
+        assert!(test_values.telemetry_receiver.try_next().unwrap().is_some());
     }
 
     #[fuchsia::test]
@@ -1918,22 +1921,17 @@ mod tests {
         network_selector.perform_scan(test_values.iface_manager).await;
 
         // Metric logged for scan age
-        let metric = test_values.cobalt_events.try_next().unwrap().unwrap();
-        let expected_metric =
-            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID).as_elapsed_time(0);
+        let metric_events = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
+        assert_eq!(metric_events.len(), 1);
         // We need to individually check each field, since the elapsed time is non-deterministic
-        assert_eq!(metric.metric_id, expected_metric.metric_id);
-        assert_eq!(metric.event_codes, expected_metric.event_codes);
-        assert_eq!(metric.component, expected_metric.component);
-        assert_variant!(
-            metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
-                let elapsed_time = zx::Duration::from_micros(elapsed_micros.try_into().unwrap());
-                assert!(elapsed_time < STALE_SCAN_AGE);
-            }
+        assert_eq!(
+            metric_events[0].metric_id,
+            LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID
         );
-
-        // No scan performed
-        assert!(test_values.sme_stream.next().await.is_none());
+        assert_variant!(&metric_events[0].payload, MetricEventPayload::IntegerValue(value) => {
+            let duration = zx::Duration::from_micros(*value);
+            assert!(duration < STALE_SCAN_AGE);
+        });
     }
 
     #[fuchsia::test]
@@ -1956,18 +1954,16 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
 
         // Metric logged for scan age
-        let metric = test_values.cobalt_events.try_next().unwrap().unwrap();
-        let expected_metric =
-            CobaltEvent::builder(LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID).as_elapsed_time(0);
-        assert_eq!(metric.metric_id, expected_metric.metric_id);
-        assert_eq!(metric.event_codes, expected_metric.event_codes);
-        assert_eq!(metric.component, expected_metric.component);
-        assert_variant!(
-            metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
-                let elapsed_time = zx::Duration::from_micros(elapsed_micros.try_into().unwrap());
-                assert!(elapsed_time > STALE_SCAN_AGE);
-            }
+        let metric_events = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
+        assert_eq!(metric_events.len(), 1);
+        assert_eq!(
+            metric_events[0].metric_id,
+            LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID
         );
+        assert_variant!(&metric_events[0].payload, MetricEventPayload::IntegerValue(value) => {
+            let duration = zx::Duration::from_micros(*value);
+            assert!(duration > STALE_SCAN_AGE);
+        });
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
@@ -2428,7 +2424,38 @@ mod tests {
             },
         });
 
-        // Verify that NetworkSelectionDecision telemetry event is sent
+        // Verify two sets of TelemetryEvent for network selection were sent
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ActiveScanRequested { .. }))
+        );
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::LogMetricEvents {
+                ctx: "network_selection::record_metrics_on_scan",
+                ..
+            }))
+        );
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
+                network_selection_type: telemetry::NetworkSelectionType::Undirected,
+                num_candidates: Ok(2),
+                selected_any: true,
+            });
+        });
+
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, ctx: "NetworkSelector::perform_scan" })) => {
+            assert_eq!(events.len(), 1);
+            assert_eq!(events[0].metric_id, LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_MIGRATED_METRIC_ID);
+        });
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ActiveScanRequested { .. }))
+        );
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::LogMetricEvents { .. }))
+        );
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type: telemetry::NetworkSelectionType::Undirected,
@@ -2703,7 +2730,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn recorded_metrics_on_scan() {
-        let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
 
         // create some identifiers
         let test_ssid_1 = types::Ssid::try_from("foo").unwrap();
@@ -2774,94 +2802,94 @@ mod tests {
             hasher: hasher.clone(),
         });
 
-        record_metrics_on_scan(mock_scan_results, &mut cobalt_api);
+        record_metrics_on_scan(mock_scan_results, &telemetry_sender);
 
-        // The order of the first two cobalt events is not deterministic, so extract them into
-        // a vector that we're search through
-        let cobalt_events_vec =
-            vec![cobalt_events.try_next().unwrap(), cobalt_events.try_next().unwrap()];
+        let metric_events = assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
+        assert_eq!(metric_events.len(), 4);
 
+        // The order of the first two cobalt events is not deterministic
         // Three BSSs present for network 1 in scan results
-        assert!(cobalt_events_vec
+        assert!(metric_events[..2]
             .iter()
-            .find(|&event| event
-                == &Some(
-                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
-                        .with_event_code(
-                            SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour
-                                .as_event_code()
-                        )
-                        .as_event()
-                ))
+            .find(|event| **event
+                == MetricEvent {
+                    metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+                    event_codes: vec![
+                        SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwoToFour as u32
+                    ],
+                    payload: MetricEventPayload::Count(1),
+                })
             .is_some());
 
         // One BSS present for network 2 in scan results
-        assert!(cobalt_events_vec
+        assert!(metric_events[..2]
             .iter()
-            .find(|&event| event
-                == &Some(
-                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
-                        .with_event_code(
-                            SavedNetworkInScanResultMetricDimensionBssCount::One.as_event_code()
-                        )
-                        .as_event()
-                ))
+            .find(|event| **event
+                == MetricEvent {
+                    metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+                    event_codes: vec![
+                        SavedNetworkInScanResultMigratedMetricDimensionBssCount::One as u32
+                    ],
+                    payload: MetricEventPayload::Count(1),
+                })
             .is_some());
 
         // Total of two saved networks in the scan results
         assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_METRIC_ID)
-                    .with_event_code(
-                        ScanResultsReceivedMetricDimensionSavedNetworksCount::TwoToFour
-                            .as_event_code()
-                    )
-                    .as_event()
-            )
+            metric_events[2],
+            MetricEvent {
+                metric_id: SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID,
+                event_codes: vec![
+                    ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::TwoToFour as u32
+                ],
+                payload: MetricEventPayload::Count(1),
+            }
         );
+
         // One saved networks that was discovered via active scan
         assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID)
-                    .with_event_code(ActiveScanSsidsObserved::One.as_event_code())
-                    .as_event()
-            )
+            metric_events[3],
+            MetricEvent {
+                metric_id: SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID,
+                event_codes: vec![ActiveScanSsidsObserved::One as u32],
+                payload: MetricEventPayload::Count(1),
+            }
         );
-        // No more metrics
-        assert!(cobalt_events.try_next().is_err());
     }
 
     #[fuchsia::test]
     async fn recorded_metrics_on_scan_no_saved_networks() {
-        let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
+
         let mock_scan_results = vec![];
 
-        record_metrics_on_scan(mock_scan_results, &mut cobalt_api);
+        record_metrics_on_scan(mock_scan_results, &telemetry_sender);
+
+        let metric_events = assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::LogMetricEvents { events, .. })) => events);
+        assert_eq!(metric_events.len(), 2);
 
         // No saved networks in scan results
         assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SCAN_RESULTS_RECEIVED_METRIC_ID)
-                    .with_event_code(
-                        ScanResultsReceivedMetricDimensionSavedNetworksCount::Zero.as_event_code()
-                    )
-                    .as_event()
-            )
+            metric_events[0],
+            MetricEvent {
+                metric_id: SCAN_RESULTS_RECEIVED_MIGRATED_METRIC_ID,
+                event_codes: vec![
+                    ScanResultsReceivedMigratedMetricDimensionSavedNetworksCount::Zero as u32
+                ],
+                payload: MetricEventPayload::Count(1),
+            }
         );
+
         // Also no saved networks that were discovered via active scan
         assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_METRIC_ID)
-                    .with_event_code(ActiveScanSsidsObserved::Zero.as_event_code())
-                    .as_event()
-            )
+            metric_events[1],
+            MetricEvent {
+                metric_id: SAVED_NETWORK_IN_SCAN_RESULT_WITH_ACTIVE_SCAN_MIGRATED_METRIC_ID,
+                event_codes: vec![ActiveScanSsidsObserved::Zero as u32],
+                payload: MetricEventPayload::Count(1),
+            }
         );
-        // No more metrics
-        assert!(cobalt_events.try_next().is_err());
     }
 
     fn connect_failure_with_bssid(bssid: types::Bssid) -> ConnectFailure {

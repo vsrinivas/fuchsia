@@ -55,10 +55,7 @@
             to: "#wlancfg",
         },
         {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.metrics.MetricEventLoggerFactory",
-            ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "#cobalt",
             to: "#wlancfg",
         },

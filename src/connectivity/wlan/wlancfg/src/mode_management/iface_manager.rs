@@ -25,9 +25,7 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme,
-    fuchsia_async as fasync,
-    fuchsia_cobalt::CobaltSender,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         future::{ready, BoxFuture},
@@ -39,7 +37,6 @@ use {
     log::{error, info, warn},
     std::{sync::Arc, unimplemented},
     void::Void,
-    wlan_metrics_registry,
 };
 
 // Maximum allowed interval between scans when attempting to reconnect client interfaces.  This
@@ -89,7 +86,6 @@ async fn create_client_state_machine(
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
-    cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
 ) -> Result<
@@ -124,7 +120,6 @@ async fn create_client_state_machine(
         saved_networks,
         connect_req,
         network_selector,
-        cobalt_api,
         telemetry_sender,
         stats_sender,
     );
@@ -149,8 +144,6 @@ pub(crate) struct IfaceManagerService {
     network_selector: Arc<NetworkSelector>,
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
-    cobalt_api: CobaltSender,
-    clients_enabled_time: Option<zx::Time>,
     telemetry_sender: TelemetrySender,
     // A sender to be cloned for each connection to send periodic data about connection quality.
     stats_sender: ConnectionStatsSender,
@@ -164,7 +157,6 @@ impl IfaceManagerService {
         dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
         saved_networks: Arc<dyn SavedNetworksManagerApi>,
         network_selector: Arc<NetworkSelector>,
-        cobalt_api: CobaltSender,
         telemetry_sender: TelemetrySender,
         stats_sender: ConnectionStatsSender,
     ) -> Self {
@@ -178,8 +170,6 @@ impl IfaceManagerService {
             saved_networks: saved_networks,
             network_selector,
             fsm_futures: FuturesUnordered::new(),
-            cobalt_api,
-            clients_enabled_time: None,
             telemetry_sender,
             stats_sender,
         }
@@ -464,7 +454,6 @@ impl IfaceManagerService {
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
                     Some((connect_req, sender)),
-                    self.cobalt_api.clone(),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
@@ -554,7 +543,6 @@ impl IfaceManagerService {
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
                     Some((connect_req.clone(), sender)),
-                    self.cobalt_api.clone(),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
@@ -597,7 +585,6 @@ impl IfaceManagerService {
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
                     None,
-                    self.cobalt_api.clone(),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
@@ -694,15 +681,6 @@ impl IfaceManagerService {
     ) -> BoxFuture<'static, Result<(), Error>> {
         self.telemetry_sender.send(TelemetryEvent::ClearEstablishConnectionStartTime);
 
-        if let Some(start_time) = self.clients_enabled_time.take() {
-            let elapsed_time = zx::Time::get_monotonic() - start_time;
-            self.cobalt_api.log_elapsed_time(
-                wlan_metrics_registry::CLIENT_CONNECTIONS_ENABLED_DURATION_METRIC_ID,
-                (),
-                elapsed_time.into_micros(),
-            );
-        }
-
         let client_ifaces: Vec<ClientIfaceContainer> = self.clients.drain(..).collect();
         let phy_manager = self.phy_manager.clone();
         let update_sender = self.client_update_sender.clone();
@@ -767,10 +745,6 @@ impl IfaceManagerService {
                 error!("failed to resume client {}: {:?}", iface_id, e);
             };
         }
-
-        if self.clients_enabled_time.is_none() {
-            self.clients_enabled_time = Some(zx::Time::get_monotonic());
-        }
         Ok(())
     }
 
@@ -812,12 +786,8 @@ impl IfaceManagerService {
             let mut ap_container = self.aps.remove(removal_index);
 
             if let Some(start_time) = ap_container.enabled_time.take() {
-                let elapsed_time = zx::Time::get_monotonic() - start_time;
-                self.cobalt_api.log_elapsed_time(
-                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_METRIC_ID,
-                    (),
-                    elapsed_time.into_micros(),
-                );
+                let enabled_duration = zx::Time::get_monotonic() - start_time;
+                self.telemetry_sender.send(TelemetryEvent::StopAp { enabled_duration });
             }
 
             let fut = async move {
@@ -845,12 +815,8 @@ impl IfaceManagerService {
 
         for ap_container in aps.iter_mut() {
             if let Some(start_time) = ap_container.enabled_time.take() {
-                let elapsed_time = zx::Time::get_monotonic() - start_time;
-                self.cobalt_api.log_elapsed_time(
-                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_METRIC_ID,
-                    (),
-                    elapsed_time.into_micros(),
-                );
+                let enabled_duration = zx::Time::get_monotonic() - start_time;
+                self.telemetry_sender.send(TelemetryEvent::StopAp { enabled_duration });
             }
         }
 
@@ -1328,15 +1294,11 @@ mod tests {
             mode_management::phy_manager::{self, PhyManagerError},
             regulatory_manager::REGION_CODE_LEN,
             telemetry::{TelemetryEvent, TelemetrySender},
-            util::testing::{
-                create_inspect_persistence_channel, create_mock_cobalt_sender,
-                create_mock_cobalt_sender_and_receiver, create_wlan_hasher, poll_sme_req,
-            },
+            util::testing::{create_inspect_persistence_channel, create_wlan_hasher, poll_sme_req},
         },
         async_trait::async_trait,
         eui48::MacAddress,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_async::TestExecutor,
         fuchsia_inspect::{self as inspect},
@@ -1411,8 +1373,6 @@ mod tests {
         pub saved_networks: Arc<dyn SavedNetworksManagerApi>,
         pub network_selector: Arc<NetworkSelector>,
         pub node: inspect::Node,
-        pub cobalt_api: CobaltSender,
-        pub cobalt_receiver: mpsc::Receiver<CobaltEvent>,
         pub telemetry_sender: TelemetrySender,
         pub telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
         pub stats_sender: ConnectionStatsSender,
@@ -1436,13 +1396,11 @@ mod tests {
         let saved_networks = Arc::new(saved_networks);
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
-        let (cobalt_api, cobalt_receiver) = create_mock_cobalt_sender_and_receiver();
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(NetworkSelector::new(
             saved_networks.clone(),
-            cobalt_api.clone(),
             create_wlan_hasher(),
             inspector.root().create_child("network_selection"),
             persistence_req_sender,
@@ -1460,8 +1418,6 @@ mod tests {
             saved_networks: saved_networks,
             node: node,
             network_selector,
-            cobalt_api,
-            cobalt_receiver,
             telemetry_sender,
             telemetry_receiver,
             stats_sender,
@@ -1705,7 +1661,6 @@ mod tests {
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
-            test_values.cobalt_api.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
         );
@@ -1762,7 +1717,6 @@ mod tests {
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
-            test_values.cobalt_api.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
         );
@@ -2257,7 +2211,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2392,7 +2345,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2446,7 +2398,6 @@ mod tests {
         // Create a configured ClientIfaceContainer.
         let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
-        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
@@ -2478,12 +2429,6 @@ mod tests {
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
-
-        // Ensure a metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-
-        // Ensure the client connections enabled time was reset to None.
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Call stop_client_connections when the only available client is unconfigured.
@@ -2492,9 +2437,8 @@ mod tests {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
-        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Create a PhyManager with one known client.
         let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
@@ -2515,19 +2459,13 @@ mod tests {
 
         // Ensure there are no remaining client ifaces.
         assert!(iface_manager.clients.is_empty());
-
-        // Ensure a metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-
-        // Ensure the client connections enabled time was reset to None.
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where stop_client_connections is called, but there are no client ifaces.
     #[fuchsia::test]
     fn test_stop_no_clients() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup(&mut exec);
+        let test_values = test_setup(&mut exec);
 
         // Create and empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
@@ -2541,11 +2479,9 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
-        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Call stop_client_connections.
         {
@@ -2557,12 +2493,6 @@ mod tests {
             pin_mut!(stop_fut);
             assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
         }
-
-        // Ensure a metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-
-        // Ensure the client connections enabled time was reset to None.
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where client connections are stopped, but stopping one of the client state
@@ -2572,9 +2502,8 @@ mod tests {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
-        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
@@ -2600,13 +2529,6 @@ mod tests {
 
         // Ensure that no client interfaces are accounted for.
         assert!(iface_manager.clients.is_empty());
-
-        // Regardless of whether or not stop succeeds or fails, a metric should be logged.
-        // Ensure a metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-
-        // Ensure the client connections enabled time was reset to None.
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where the IfaceManager fails to tear down all of the client ifaces.
@@ -2615,9 +2537,8 @@ mod tests {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
-        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
         iface_manager.phy_manager = Arc::new(Mutex::new(FakePhyManager {
             create_iface_ok: true,
             destroy_iface_ok: false,
@@ -2647,13 +2568,6 @@ mod tests {
 
         // Ensure that no client interfaces are accounted for.
         assert!(iface_manager.clients.is_empty());
-
-        // Regardless of whether or not stop succeeds or fails, a metric should be logged.
-        // Ensure a metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-
-        // Ensure the client connections enabled time was reset to None.
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where StopClientConnections is called when the client interfaces are already
@@ -2675,7 +2589,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2694,12 +2607,6 @@ mod tests {
         // Verify that telemetry event has been sent
         let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
         assert_variant!(event, TelemetryEvent::ClearEstablishConnectionStartTime);
-
-        // Ensure no metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
-
-        // Ensure the client connections enabled is None.
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where an existing iface is marked as idle.
@@ -2811,7 +2718,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2826,8 +2732,6 @@ mod tests {
 
         // Ensure no update is sent
         assert_variant!(test_values.client_update_receiver.try_next(), Err(_));
-
-        assert!(iface_manager.clients_enabled_time.is_some());
     }
 
     /// Tests the case where starting client connections fails.
@@ -2853,8 +2757,6 @@ mod tests {
             pin_mut!(start_fut);
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Err(_)));
         }
-
-        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where there is a lingering client interface to ensure that it is resumed to
@@ -3019,7 +2921,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3052,7 +2953,10 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Ensure a metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     /// Tests the case where IfaceManager is requested to stop a config that is not accounted for.
@@ -3072,7 +2976,7 @@ mod tests {
         assert!(!iface_manager.aps.is_empty());
 
         // Ensure no metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_));
 
         // Ensure the AP start time has not been cleared.
         assert!(iface_manager.aps[0].enabled_time.is_some());
@@ -3099,7 +3003,10 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Ensure metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     /// Tests the case where IfaceManager stops the AP state machine, but the request to exit
@@ -3123,7 +3030,10 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Ensure metric was logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     /// Tests the case where stop is called on the IfaceManager, but there are no AP ifaces.
@@ -3144,7 +3054,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3183,8 +3092,14 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Ensure metrics are logged for both AP interfaces.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     /// Tests the case where stop_all_aps is called and the request to stop fails for an iface.
@@ -3217,8 +3132,14 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Ensure metrics are logged for both AP interfaces.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     /// Tests the case where stop_all_aps is called and the request to stop fails for an iface.
@@ -3251,8 +3172,14 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Ensure metrics are logged for both AP interfaces.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     /// Tests the case where stop_all_aps is called on the IfaceManager, but there are no AP
@@ -3274,7 +3201,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3284,7 +3210,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
 
         // Ensure no metrics are logged.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_));
     }
 
     /// Tests the case where there is a single AP interface and it is asked to start twice and then
@@ -3323,7 +3249,7 @@ mod tests {
         assert_eq!(initial_start_time, iface_manager.aps[0].enabled_time);
 
         // Verify that no metric has been recorded.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_));
 
         // Now issue a stop command.
         {
@@ -3334,7 +3260,10 @@ mod tests {
         assert!(iface_manager.aps.is_empty());
 
         // Make sure the metric has been sent.
-        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::StopAp { .. }))
+        );
     }
 
     #[fuchsia::test]
@@ -3580,7 +3509,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3686,7 +3614,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3756,7 +3683,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4101,7 +4027,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -4159,7 +4084,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -4206,7 +4130,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -4348,7 +4271,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4359,7 +4281,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -4481,7 +4402,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4583,7 +4503,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4658,7 +4577,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4885,7 +4803,6 @@ mod tests {
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector,
-            test_values.cobalt_api,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -5013,7 +4930,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -5286,7 +5202,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -5339,7 +5254,6 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
-            create_mock_cobalt_sender(),
             create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             persistence_req_sender,
@@ -5491,7 +5405,6 @@ mod tests {
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
-            test_values.cobalt_api.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender,
         );

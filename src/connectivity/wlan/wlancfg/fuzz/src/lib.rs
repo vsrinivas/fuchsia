@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_cobalt::CobaltSender,
     futures::channel::mpsc,
     fuzz::fuzz,
     tempfile::TempDir,
     wlan_common::assert_variant,
-    wlancfg_lib::config_management::{
-        network_config::{Credential, NetworkIdentifier},
-        SavedNetworksManager, SavedNetworksManagerApi,
+    wlancfg_lib::{
+        config_management::{
+            network_config::{Credential, NetworkIdentifier},
+            SavedNetworksManager, SavedNetworksManagerApi,
+        },
+        telemetry::{TelemetryEvent, TelemetrySender},
     },
 };
 
@@ -61,16 +63,11 @@ async fn create_saved_networks(stash_id: impl AsRef<str>) -> SavedNetworksManage
     // This file doesn't really matter, it will only be deleted if it exists.
     let temp_dir = TempDir::new().expect("failed to create temporary directory");
     let path = temp_dir.path().join("networks.json");
+    let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+    let telemetry_sender = TelemetrySender::new(telemetry_sender);
     let saved_networks =
-        SavedNetworksManager::new_with_stash_or_paths(stash_id, path, create_mock_cobalt_sender())
+        SavedNetworksManager::new_with_stash_or_paths(stash_id, path, telemetry_sender)
             .await
             .expect("Failed to create SavedNetworksManager");
     saved_networks
-}
-
-pub fn create_mock_cobalt_sender() -> CobaltSender {
-    // Arbitrary number that is (much) larger than the count of metrics we might send to it
-    const MOCK_COBALT_MSG_BUFFER: usize = 100;
-    let (cobalt_mpsc_sender, _cobalt_mpsc_receiver) = mpsc::channel(MOCK_COBALT_MSG_BUFFER);
-    CobaltSender::new(cobalt_mpsc_sender)
 }

@@ -7,7 +7,7 @@ pub mod experiment;
 mod windowed_stats;
 
 use {
-    crate::{telemetry::windowed_stats::WindowedStats, util::pseudo_energy::PseudoDecibel},
+    crate::{client, telemetry::windowed_stats::WindowedStats, util::pseudo_energy::PseudoDecibel},
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
@@ -171,6 +171,10 @@ pub enum TelemetryEvent {
     },
     /// Clear any existing start time of establish connection process tracked by telemetry.
     ClearEstablishConnectionStartTime,
+    /// Notify the telemetry event loop of an active scan being requested.
+    ActiveScanRequested {
+        num_ssids_requested: usize,
+    },
     /// Notify the telemetry event loop that network selection is complete.
     NetworkSelectionDecision {
         /// Type of network selection. If it's undirected and no candidate network is found,
@@ -192,6 +196,7 @@ pub enum TelemetryEvent {
     /// counter periodically.
     ConnectResult {
         iface_id: u16,
+        policy_connect_reason: Option<client::types::ConnectReason>,
         result: fidl_sme::ConnectResult,
         multiple_bss_candidates: bool,
         latest_ap_state: BssDescription,
@@ -219,10 +224,18 @@ pub enum TelemetryEvent {
     StartClientConnectionsRequest,
     // Notify telemetry of an API request to stop client connections.
     StopClientConnectionsRequest,
+    // Notify telemetry of when AP is stopped, and how long it was started.
+    StopAp {
+        enabled_duration: zx::Duration,
+    },
     /// Notify telemetry that its experiment group has changed and that a new metrics logger must
     /// be created.
     UpdateExperiment {
         experiment: experiment::ExperimentUpdate,
+    },
+    LogMetricEvents {
+        events: Vec<MetricEvent>,
+        ctx: &'static str,
     },
 }
 
@@ -686,6 +699,10 @@ pub struct Telemetry {
     // Storage for recalling what experiments are currently active.
     experiments: experiment::Experiments,
 
+    // For keeping track of how long client connections were enabled when turning client
+    // connections on and off.
+    last_enabled_client_connections: Option<fasync::Time>,
+
     // For keeping track of how long client connections were disabled when turning client
     // connections off and on again. None if a command to turn off client connections has never
     // been sent or if client connections are on.
@@ -744,6 +761,7 @@ impl Telemetry {
                 persistence_req_sender.clone(),
             ),
             experiments: experiment::Experiments::new(),
+            last_enabled_client_connections: None,
             last_disabled_client_connections: None,
         }
     }
@@ -854,6 +872,11 @@ impl Telemetry {
                     let _start_time = state.new_connect_start_time.take();
                 }
             },
+            TelemetryEvent::ActiveScanRequested { num_ssids_requested } => {
+                self.stats_logger
+                    .log_active_scan_requested_cobalt_metrics(num_ssids_requested)
+                    .await
+            }
             TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type,
                 num_candidates,
@@ -889,6 +912,7 @@ impl Telemetry {
             }
             TelemetryEvent::ConnectResult {
                 iface_id,
+                policy_connect_reason,
                 result,
                 multiple_bss_candidates,
                 latest_ap_state,
@@ -903,6 +927,7 @@ impl Telemetry {
                 };
                 self.stats_logger
                     .report_connect_result(
+                        policy_connect_reason,
                         result.code,
                         multiple_bss_candidates,
                         &latest_ap_state,
@@ -1062,18 +1087,31 @@ impl Telemetry {
                 self.stats_logger.log_roaming_scan_metrics().await;
             }
             TelemetryEvent::StartClientConnectionsRequest => {
+                let now = fasync::Time::now();
+                if self.last_enabled_client_connections.is_none() {
+                    self.last_enabled_client_connections = Some(now);
+                }
                 if let Some(disabled_time) = self.last_disabled_client_connections {
-                    let disabled_duration = fasync::Time::now() - disabled_time;
+                    let disabled_duration = now - disabled_time;
                     self.stats_logger.log_start_client_connections_request(disabled_duration).await
                 }
                 self.last_disabled_client_connections = None;
             }
             TelemetryEvent::StopClientConnectionsRequest => {
+                let now = fasync::Time::now();
                 // Do not change the time if the request to turn off connections comes in when
                 // client connections are already stopped.
                 if self.last_disabled_client_connections.is_none() {
                     self.last_disabled_client_connections = Some(fasync::Time::now());
                 }
+                if let Some(enabled_time) = self.last_enabled_client_connections {
+                    let enabled_duration = now - enabled_time;
+                    self.stats_logger.log_stop_client_connections_request(enabled_duration).await
+                }
+                self.last_enabled_client_connections = None;
+            }
+            TelemetryEvent::StopAp { enabled_duration } => {
+                self.stats_logger.log_stop_ap_cobalt_metrics(enabled_duration).await
             }
             TelemetryEvent::UpdateExperiment { experiment } => {
                 let cobalt_1dot1_svc = match connect_to_metrics_logger_factory().await {
@@ -1095,6 +1133,9 @@ impl Telemetry {
                         }
                     };
                 self.stats_logger = StatsLogger::new(cobalt_1dot1_proxy);
+            }
+            TelemetryEvent::LogMetricEvents { events, ctx } => {
+                self.stats_logger.log_metric_events(events, ctx).await
             }
         }
     }
@@ -1375,12 +1416,14 @@ impl StatsLogger {
 
     async fn report_connect_result(
         &mut self,
+        policy_connect_reason: Option<client::types::ConnectReason>,
         code: fidl_ieee80211::StatusCode,
         multiple_bss_candidates: bool,
         latest_ap_state: &BssDescription,
         connect_start_time: Option<fasync::Time>,
     ) {
         self.log_establish_connection_cobalt_metrics(
+            policy_connect_reason,
             code,
             multiple_bss_candidates,
             latest_ap_state,
@@ -1916,6 +1959,44 @@ impl StatsLogger {
         multiple_bss_candidates: bool,
     ) {
         let mut metric_events = vec![];
+        let policy_disconnect_reason_dim = {
+            use metrics::PolicyDisconnectionMigratedMetricDimensionReason::*;
+            match &disconnect_info.disconnect_source {
+                fidl_sme::DisconnectSource::User(reason) => match reason {
+                    fidl_sme::UserDisconnectReason::Unknown => Unknown,
+                    fidl_sme::UserDisconnectReason::FailedToConnect => FailedToConnect,
+                    fidl_sme::UserDisconnectReason::FidlConnectRequest => FidlConnectRequest,
+                    fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest => {
+                        FidlStopClientConnectionsRequest
+                    }
+                    fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch => {
+                        ProactiveNetworkSwitch
+                    }
+                    fidl_sme::UserDisconnectReason::DisconnectDetectedFromSme => {
+                        DisconnectDetectedFromSme
+                    }
+                    fidl_sme::UserDisconnectReason::RegulatoryRegionChange => {
+                        RegulatoryRegionChange
+                    }
+                    fidl_sme::UserDisconnectReason::Startup => Startup,
+                    fidl_sme::UserDisconnectReason::NetworkUnsaved => NetworkUnsaved,
+                    fidl_sme::UserDisconnectReason::NetworkConfigUpdated => NetworkConfigUpdated,
+                    fidl_sme::UserDisconnectReason::WlanstackUnitTesting
+                    | fidl_sme::UserDisconnectReason::WlanSmeUnitTesting
+                    | fidl_sme::UserDisconnectReason::WlanServiceUtilTesting
+                    | fidl_sme::UserDisconnectReason::WlanDevTool => Unknown,
+                },
+                fidl_sme::DisconnectSource::Ap(..) | fidl_sme::DisconnectSource::Mlme(..) => {
+                    DisconnectDetectedFromSme
+                }
+            }
+        };
+        metric_events.push(MetricEvent {
+            metric_id: metrics::POLICY_DISCONNECTION_MIGRATED_METRIC_ID,
+            event_codes: vec![policy_disconnect_reason_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
         metric_events.push(MetricEvent {
             metric_id: metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID,
             event_codes: vec![],
@@ -2053,14 +2134,38 @@ impl StatsLogger {
         );
     }
 
+    async fn log_active_scan_requested_cobalt_metrics(&mut self, num_ssids_requested: usize) {
+        use metrics::ActiveScanRequestedForNetworkSelectionMigratedMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested;
+        let active_scan_ssids_requested_dim = match num_ssids_requested {
+            0 => ActiveScanSsidsRequested::Zero,
+            1 => ActiveScanSsidsRequested::One,
+            2..=4 => ActiveScanSsidsRequested::TwoToFour,
+            5..=10 => ActiveScanSsidsRequested::FiveToTen,
+            11..=20 => ActiveScanSsidsRequested::ElevenToTwenty,
+            21..=50 => ActiveScanSsidsRequested::TwentyOneToFifty,
+            51..=100 => ActiveScanSsidsRequested::FiftyOneToOneHundred,
+            101..=usize::MAX => ActiveScanSsidsRequested::OneHundredAndOneOrMore,
+            _ => unreachable!(),
+        };
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_MIGRATED_METRIC_ID,
+            1,
+            &[active_scan_ssids_requested_dim as u32],
+        );
+    }
+
     async fn log_establish_connection_cobalt_metrics(
         &mut self,
+        policy_connect_reason: Option<client::types::ConnectReason>,
         code: fidl_ieee80211::StatusCode,
         multiple_bss_candidates: bool,
         latest_ap_state: &BssDescription,
         connect_start_time: Option<fasync::Time>,
     ) {
         let mut metric_events = self.build_establish_connection_cobalt_metrics(
+            policy_connect_reason,
             code,
             multiple_bss_candidates,
             latest_ap_state,
@@ -2075,12 +2180,21 @@ impl StatsLogger {
 
     fn build_establish_connection_cobalt_metrics(
         &mut self,
+        policy_connect_reason: Option<client::types::ConnectReason>,
         code: fidl_ieee80211::StatusCode,
         multiple_bss_candidates: bool,
         latest_ap_state: &BssDescription,
         connect_start_time: Option<fasync::Time>,
     ) -> Vec<MetricEvent> {
         let mut metric_events = vec![];
+        if let Some(policy_connect_reason) = policy_connect_reason {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::POLICY_CONNECTION_ATTEMPT_MIGRATED_METRIC_ID,
+                event_codes: vec![policy_connect_reason as u32],
+                payload: MetricEventPayload::Count(1),
+            });
+        }
+
         metric_events.push(MetricEvent {
             metric_id: metrics::CONNECT_ATTEMPT_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
             event_codes: vec![code as u32],
@@ -2131,20 +2245,6 @@ impl StatsLogger {
         metric_events.push(MetricEvent {
             metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
             event_codes: vec![channel_band_dim as u32],
-            payload: MetricEventPayload::Count(1),
-        });
-
-        let rssi_bucket_dim = convert::convert_rssi_bucket(latest_ap_state.rssi_dbm);
-        metric_events.push(MetricEvent {
-            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
-            event_codes: vec![rssi_bucket_dim as u32],
-            payload: MetricEventPayload::Count(1),
-        });
-
-        let snr_bucket_dim = convert::convert_snr_bucket(latest_ap_state.snr_db);
-        metric_events.push(MetricEvent {
-            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
-            event_codes: vec![snr_bucket_dim as u32],
             payload: MetricEventPayload::Count(1),
         });
 
@@ -2357,6 +2457,26 @@ impl StatsLogger {
         }
     }
 
+    async fn log_stop_client_connections_request(&mut self, enabled_duration: zx::Duration) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_integer,
+            metrics::CLIENT_CONNECTIONS_ENABLED_DURATION_MIGRATED_METRIC_ID,
+            enabled_duration.into_micros(),
+            &[],
+        );
+    }
+
+    async fn log_stop_ap_cobalt_metrics(&mut self, enabled_duration: zx::Duration) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_integer,
+            metrics::ACCESS_POINT_ENABLED_DURATION_MIGRATED_METRIC_ID,
+            enabled_duration.into_micros(),
+            &[],
+        );
+    }
+
     async fn log_signal_report_metrics(
         &mut self,
         rssi: PseudoDecibel,
@@ -2386,6 +2506,10 @@ impl StatsLogger {
             .entry(index)
             .or_insert(fidl_fuchsia_metrics::HistogramBucket { index, count: 0 });
         entry.count = entry.count + 1;
+    }
+
+    async fn log_metric_events(&mut self, mut metric_events: Vec<MetricEvent>, ctx: &'static str) {
+        log_cobalt_1dot1_batch!(self.cobalt_1dot1_proxy, &mut metric_events.iter_mut(), ctx,);
     }
 }
 
@@ -2582,14 +2706,10 @@ struct DailyDetailedStats {
         metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand,
         ConnectAttemptsCounter,
     >,
-    connect_per_rssi_bucket: HashMap<
-        metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket,
-        ConnectAttemptsCounter,
-    >,
-    connect_per_snr_bucket: HashMap<
-        metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket,
-        ConnectAttemptsCounter,
-    >,
+    connect_per_rssi_bucket:
+        HashMap<metrics::ConnectivityWlanMetricDimensionRssiBucket, ConnectAttemptsCounter>,
+    connect_per_snr_bucket:
+        HashMap<metrics::ConnectivityWlanMetricDimensionSnrBucket, ConnectAttemptsCounter>,
     connected_ouis: HashSet<String>,
 }
 
@@ -3208,6 +3328,9 @@ mod tests {
         for _ in 0..10 {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
                 multiple_bss_candidates: true,
                 latest_ap_state: random_bss_description!(Wpa1),
@@ -3971,6 +4094,9 @@ mod tests {
         for _ in 0..10 {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
                 multiple_bss_candidates: true,
                 latest_ap_state: random_bss_description!(Wpa1),
@@ -4294,6 +4420,15 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
+        let policy_disconnection_reasons =
+            test_helper.get_logged_metrics(metrics::POLICY_DISCONNECTION_MIGRATED_METRIC_ID);
+        assert_eq!(policy_disconnection_reasons.len(), 1);
+        assert_eq!(policy_disconnection_reasons[0].payload, MetricEventPayload::Count(1));
+        assert_eq!(
+            policy_disconnection_reasons[0].event_codes,
+            vec![client::types::DisconnectReason::DisconnectDetectedFromSme as u32]
+        );
+
         let disconnect_counts =
             test_helper.get_logged_metrics(metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID);
         assert_eq!(disconnect_counts.len(), 1);
@@ -4532,12 +4667,22 @@ mod tests {
         );
         let event = TelemetryEvent::ConnectResult {
             iface_id: IFACE_ID,
+            policy_connect_reason: Some(client::types::ConnectReason::FidlConnectRequest),
             result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
             multiple_bss_candidates: true,
             latest_ap_state,
         };
         test_helper.telemetry_sender.send(event);
         test_helper.drain_cobalt_events(&mut test_fut);
+
+        let policy_connect_reasons =
+            test_helper.get_logged_metrics(metrics::POLICY_CONNECTION_ATTEMPT_MIGRATED_METRIC_ID);
+        assert_eq!(policy_connect_reasons.len(), 1);
+        assert_eq!(
+            policy_connect_reasons[0].event_codes,
+            vec![client::types::ConnectReason::FidlConnectRequest as u32]
+        );
+        assert_eq!(policy_connect_reasons[0].payload, MetricEventPayload::Count(1));
 
         let breakdowns_by_status_code = test_helper
             .get_logged_metrics(metrics::CONNECT_ATTEMPT_BREAKDOWN_BY_STATUS_CODE_METRIC_ID);
@@ -4592,30 +4737,6 @@ mod tests {
         ]);
         assert_eq!(breakdowns_by_channel_band[0].payload, MetricEventPayload::Count(1));
 
-        let breakdowns_by_rssi_bucket = test_helper
-            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID);
-        assert_eq!(breakdowns_by_rssi_bucket.len(), 1);
-        assert_eq!(
-            breakdowns_by_rssi_bucket[0].event_codes,
-            vec![
-                metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From50To35
-                    as u32
-            ]
-        );
-        assert_eq!(breakdowns_by_rssi_bucket[0].payload, MetricEventPayload::Count(1));
-
-        let breakdowns_by_snr_bucket = test_helper
-            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID);
-        assert_eq!(breakdowns_by_snr_bucket.len(), 1);
-        assert_eq!(
-            breakdowns_by_snr_bucket[0].event_codes,
-            vec![
-                metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From16To25
-                    as u32
-            ]
-        );
-        assert_eq!(breakdowns_by_snr_bucket[0].payload, MetricEventPayload::Count(1));
-
         let per_oui = test_helper.get_logged_metrics(metrics::SUCCESSFUL_CONNECT_PER_OUI_METRIC_ID);
         assert_eq!(per_oui.len(), 1);
         assert_eq!(per_oui[0].payload, MetricEventPayload::StringValue("00F620".to_string()));
@@ -4627,6 +4748,7 @@ mod tests {
 
         let event = TelemetryEvent::ConnectResult {
             iface_id: IFACE_ID,
+            policy_connect_reason: None,
             result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedCapabilitiesMismatch),
             multiple_bss_candidates: true,
             latest_ap_state: random_bss_description!(Wpa2),
@@ -4649,6 +4771,9 @@ mod tests {
         for _ in 0..3 {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
                 multiple_bss_candidates: true,
                 latest_ap_state: random_bss_description!(Wpa1),
@@ -4687,6 +4812,9 @@ mod tests {
         for _ in 0..10 {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
                 multiple_bss_candidates: true,
                 latest_ap_state: random_bss_description!(Wpa1),
@@ -4835,16 +4963,16 @@ mod tests {
         (false, random_bss_description!(Wpa2, rssi_dbm: -79)),
         (false, random_bss_description!(Wpa2, rssi_dbm: -40)),
         metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
-        metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From79To77 as u32,
-        metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From50To35 as u32;
+        metrics::ConnectivityWlanMetricDimensionRssiBucket::From79To77 as u32,
+        metrics::ConnectivityWlanMetricDimensionRssiBucket::From50To35 as u32;
         "breakdown_by_rssi_bucket"
     )]
     #[test_case(
         (false, random_bss_description!(Wpa2, snr_db: 11)),
         (false, random_bss_description!(Wpa2, snr_db: 35)),
         metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
-        metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From11To15 as u32,
-        metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From26To40 as u32;
+        metrics::ConnectivityWlanMetricDimensionSnrBucket::From11To15 as u32,
+        metrics::ConnectivityWlanMetricDimensionSnrBucket::From26To40 as u32;
         "breakdown_by_snr_bucket"
     )]
     #[fuchsia::test(add_test_attr = false)]
@@ -4865,6 +4993,9 @@ mod tests {
             };
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(code),
                 multiple_bss_candidates: first_connect_result_params.0,
                 latest_ap_state: first_connect_result_params.1.clone(),
@@ -4879,6 +5010,9 @@ mod tests {
             };
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(code),
                 multiple_bss_candidates: second_connect_result_params.0,
                 latest_ap_state: second_connect_result_params.1.clone(),
@@ -5465,6 +5599,23 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn test_active_scan_requested_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::ActiveScanRequested { num_ssids_requested: 4 });
+
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics = test_helper.get_logged_metrics(
+            metrics::ACTIVE_SCAN_REQUESTED_FOR_NETWORK_SELECTION_MIGRATED_METRIC_ID,
+        );
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].event_codes, vec![metrics::ActiveScanRequestedForNetworkSelectionMigratedMetricDimensionActiveScanSsidsRequested::TwoToFour as u32]);
+        assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
     fn test_log_device_performed_roaming_scan() {
         let (mut test_helper, mut test_fut) = setup_test();
 
@@ -5477,6 +5628,25 @@ mod tests {
             test_helper.get_logged_metrics(metrics::POLICY_PROACTIVE_ROAMING_SCAN_COUNTS_METRIC_ID);
         assert_eq!(metrics.len(), 1);
         assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_connection_enabled_duration_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper.telemetry_sender.send(TelemetryEvent::StartClientConnectionsRequest);
+        assert_eq!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
+        test_helper.advance_by(10.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::StopClientConnectionsRequest);
+
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics = test_helper
+            .get_logged_metrics(metrics::CLIENT_CONNECTIONS_ENABLED_DURATION_MIGRATED_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(
+            metrics[0].payload,
+            MetricEventPayload::IntegerValue(10.seconds().into_micros())
+        );
     }
 
     #[fuchsia::test]
@@ -5572,6 +5742,53 @@ mod tests {
         let metrics =
             test_helper.get_logged_metrics(metrics::CLIENT_CONNECTIONS_STOP_AND_START_METRIC_ID);
         assert!(metrics.is_empty());
+    }
+
+    #[fuchsia::test]
+    fn test_stop_ap_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StopAp { enabled_duration: 50.seconds() });
+
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics = test_helper
+            .get_logged_metrics(metrics::ACCESS_POINT_ENABLED_DURATION_MIGRATED_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(
+            metrics[0].payload,
+            MetricEventPayload::IntegerValue(50.seconds().into_micros())
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_metric_events() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let metric_event_1 = MetricEvent {
+            metric_id: 1,
+            event_codes: vec![1],
+            payload: MetricEventPayload::Count(1),
+        };
+        let metric_event_2 = MetricEvent {
+            metric_id: 2,
+            event_codes: vec![2, 3],
+            payload: MetricEventPayload::IntegerValue(10),
+        };
+        test_helper.telemetry_sender.send(TelemetryEvent::LogMetricEvents {
+            events: vec![metric_event_1.clone(), metric_event_2.clone()],
+            ctx: "blah",
+        });
+
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let metrics = test_helper.get_logged_metrics(metric_event_1.metric_id);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0], metric_event_1);
+
+        let metrics = test_helper.get_logged_metrics(metric_event_2.metric_id);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0], metric_event_2);
     }
 
     #[fuchsia::test]
@@ -5806,6 +6023,9 @@ mod tests {
         fn send_connected_event(&mut self, latest_ap_state: BssDescription) {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
+                policy_connect_reason: Some(
+                    client::types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ),
                 result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
                 multiple_bss_candidates: true,
                 latest_ap_state,
