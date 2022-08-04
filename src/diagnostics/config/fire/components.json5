@@ -559,4 +559,9 @@
         label: "Scene Manager",
         moniker: "core/ui/scene_manager",
     },
+    {
+        id: 216,
+        label: "TEE Manager",
+        moniker: "core/tee_manager",
+    },
 ]
