@@ -56,14 +56,9 @@ static void gicv3_write_gich_state(IchState* state, uint32_t hcr) {
   arm64_el2_gicv3_write_gich_state(physmap_to_paddr(state), hcr);
 }
 
-static uint64_t gicv3_get_lr_from_vector(bool hw, uint8_t prio, InterruptState state,
-                                         uint32_t vector) {
-  uint64_t lr = (static_cast<uint64_t>(state) << ICH_LR_PENDING_BIT) | ICH_LR_GROUP1 |
-                ICH_LR_PRIORITY(prio) | ICH_LR_VIRTUAL_ID(vector);
-  if (hw) {
-    lr |= ICH_LR_HARDWARE | ICH_LR_PHYSICAL_ID(vector);
-  }
-  return lr;
+static uint64_t gicv3_get_lr_from_vector(uint8_t prio, InterruptState state, uint32_t vector) {
+  return (static_cast<uint64_t>(state) << ICH_LR_PENDING_BIT) | ICH_LR_GROUP1 |
+         ICH_LR_PRIORITY(prio) | ICH_LR_VIRTUAL_ID(vector);
 }
 
 static uint32_t gicv3_get_vector_from_lr(uint64_t lr, InterruptState* state) {
