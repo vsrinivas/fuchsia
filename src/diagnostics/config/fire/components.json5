@@ -574,4 +574,9 @@
         label: "Timekeeper",
         moniker: "core/timekeeper",
     },
+    {
+        id: 219,
+        label: "Audio Core",
+        moniker: "core/audio_core",
+    },
 ]
