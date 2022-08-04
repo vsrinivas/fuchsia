@@ -28,6 +28,7 @@ constexpr auto kRustComponentUrl =
 struct VirtioInputTestParam {
   std::string test_name;
   std::string component_url;
+  bool configure_status_queue;
 };
 
 class VirtioInputTest : public TestWithDevice,
@@ -88,6 +89,10 @@ class VirtioInputTest : public TestWithDevice,
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = input_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
+
+      if (!GetParam().configure_status_queue) {
+        break;
+      }
     }
 
     // Finish negotiating features.
@@ -245,11 +250,11 @@ TEST_P(VirtioInputTest, PointerUp) {
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_4->type);
 }
 
-INSTANTIATE_TEST_SUITE_P(VirtioInputComponentsTest, VirtioInputTest,
-                         testing::Values(VirtioInputTestParam{"cpp", kCppComponentUrl},
-                                         VirtioInputTestParam{"rust", kRustComponentUrl}),
-                         [](const testing::TestParamInfo<VirtioInputTestParam>& info) {
-                           return info.param.test_name;
-                         });
+INSTANTIATE_TEST_SUITE_P(
+    VirtioInputComponentsTest, VirtioInputTest,
+    testing::Values(VirtioInputTestParam{"cpp", kCppComponentUrl, true},
+                    VirtioInputTestParam{"rust", kRustComponentUrl, true},
+                    VirtioInputTestParam{"rust_nostatusq", kRustComponentUrl, false}),
+    [](const testing::TestParamInfo<VirtioInputTestParam>& info) { return info.param.test_name; });
 
 }  // namespace

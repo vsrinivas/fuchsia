@@ -51,7 +51,7 @@ async fn run_virtio_input(
         &guest_mem,
         receiver,
         device.take_stream(wire::EVENTQ)?,
-        device.take_stream(wire::STATUSQ)?,
+        device.take_stream(wire::STATUSQ).ok(),
     );
     ready_responder.send()?;
 

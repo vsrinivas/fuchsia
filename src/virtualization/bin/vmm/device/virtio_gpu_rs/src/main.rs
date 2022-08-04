@@ -65,15 +65,19 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     })
     .detach();
 
-    let control_stream = device.take_stream(wire::CONTROLQ)?;
-    let cursor_stream = device.take_stream(wire::CURSORQ)?;
+    let control_stream = device.take_stream(wire::CONTROLQ).context("Failed to find CONTROLQ")?;
+    // Zircon doesn't configure the cursor queue, so we continue if that queue doesn't exist.
+    let cursor_stream = device.take_stream(wire::CURSORQ);
+    if cursor_stream.is_err() {
+        tracing::warn!("Guest did not configure cursor queue; cursor support will be unavailable");
+    }
     ready_responder.send()?;
 
     futures::try_join!(
         device
             .run_device_notify(virtio_device_fidl)
             .map_err(|e| anyhow!("run_device_notify: {}", e)),
-        gpu_device.process_queues(control_stream, cursor_stream),
+        gpu_device.process_queues(control_stream, cursor_stream.ok()),
     )?;
     Ok(())
 }

@@ -43,6 +43,7 @@ constexpr auto kGraphicalPresenterUrl = "#meta/test_graphical_presenter.cm";
 struct VirtioGpuTestParam {
   std::string test_name;
   std::string component_url;
+  bool configure_cursor_queue;
 };
 
 class VirtioGpuTest : public TestWithDevice,
@@ -142,6 +143,9 @@ class VirtioGpuTest : public TestWithDevice,
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = gpu_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
+      if (!GetParam().configure_cursor_queue) {
+        break;
+      }
     }
 
     // Finish negotiating features.
@@ -333,10 +337,10 @@ TEST_P(VirtioGpuTest, InvalidTransferToHostParams) {
   EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
 }
 
-INSTANTIATE_TEST_SUITE_P(VirtioGpuComponentsTest, VirtioGpuTest,
-                         testing::Values(VirtioGpuTestParam{"cpp", kCppComponentUrl},
-                                         VirtioGpuTestParam{"rust", kRustComponentUrl}),
-                         [](const testing::TestParamInfo<VirtioGpuTestParam>& info) {
-                           return info.param.test_name;
-                         });
+INSTANTIATE_TEST_SUITE_P(
+    VirtioGpuComponentsTest, VirtioGpuTest,
+    testing::Values(VirtioGpuTestParam{"cpp", kCppComponentUrl, true},
+                    VirtioGpuTestParam{"rust", kRustComponentUrl, true},
+                    VirtioGpuTestParam{"rust_nocursorq", kRustComponentUrl, false}),
+    [](const testing::TestParamInfo<VirtioGpuTestParam>& info) { return info.param.test_name; });
 }  // namespace

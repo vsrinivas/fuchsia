@@ -11,6 +11,7 @@ use {
     },
     futures::{
         channel::mpsc,
+        future::OptionFuture,
         select,
         stream::{Fuse, FusedStream, Stream},
         FutureExt, StreamExt,
@@ -33,7 +34,7 @@ pub struct InputDevice<
 > {
     listener_receiver: mpsc::Receiver<KeyboardListenerRequestStream>,
     event_stream: Q,
-    status_stream: Fuse<Q>,
+    status_stream: Option<Fuse<Q>>,
     keyboard_stream: Pin<Box<dyn FusedStream<Item = Result<KeyboardListenerRequest, fidl::Error>>>>,
     chain_buffer: VecDeque<DescChain<'a, 'b, N>>,
     mem: &'a M,
@@ -46,12 +47,12 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, Q: Stream<Item = DescChain<'a, 'b, N
         mem: &'a M,
         listener_receiver: mpsc::Receiver<KeyboardListenerRequestStream>,
         event_stream: Q,
-        status_stream: Q,
+        status_stream: Option<Q>,
     ) -> Self {
         Self {
             listener_receiver,
             event_stream,
-            status_stream: status_stream.fuse(),
+            status_stream: status_stream.map(StreamExt::fuse),
             // Initialize with an empty KeyboardStream. This will be updated when we receive a new
             // KeyboardListener FIDL connection.
             keyboard_stream: Box::pin(futures::stream::empty().fuse()),
@@ -82,7 +83,7 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, Q: Stream<Item = DescChain<'a, 'b, N
                         self.handle_keyboard_listener_request(request);
                     }
                 },
-                _chain = self.status_stream.next() => {
+                _chain = OptionFuture::from(self.status_stream.as_mut().map(StreamExt::next)) => {
                     // New status message
                 },
             }
@@ -178,7 +179,7 @@ mod tests {
             &mem,
             receiver,
             DescChainStream::new(&event_queue.queue),
-            DescChainStream::new(&status_queue.queue),
+            Some(DescChainStream::new(&status_queue.queue)),
         );
 
         // Create a keyboard listener proxy and send the request stream to the device.
@@ -249,7 +250,7 @@ mod tests {
             &mem,
             receiver,
             DescChainStream::new(&event_queue.queue),
-            DescChainStream::new(&status_queue.queue),
+            Some(DescChainStream::new(&status_queue.queue)),
         );
 
         // Create a keyboard listener proxy and send the request stream to the device.
