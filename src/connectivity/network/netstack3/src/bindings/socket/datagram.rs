@@ -3810,4 +3810,100 @@ mod tests {
         shutdown,
         icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
     );
+
+    async fn set_receive_buffer_after_delivery<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) where
+        <A::AddrType as IpAddress>::Version: SocketCollectionIpExt<Udp>,
+    {
+        let mut t =
+            TestSetupBuilder::new().add_stack(StackSetupBuilder::new()).build().await.unwrap();
+
+        let (socket, _events) = get_socket_and_event::<A>(t.get(0), proto).await;
+        let mut addr =
+            A::create(<<A::AddrType as IpAddress>::Version as Ip>::LOOPBACK_ADDRESS.get(), 200);
+        socket.bind(&mut addr).await.unwrap().expect("bind should succeed");
+
+        const SENT_PACKETS: u8 = 10;
+        for i in 0..SENT_PACKETS {
+            let buf = [i; MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE];
+            let sent = socket
+                .send_msg(
+                    Some(&mut addr),
+                    &buf,
+                    fposix_socket::DatagramSocketSendControlData::EMPTY,
+                    fposix_socket::SendMsgFlags::empty(),
+                )
+                .await
+                .unwrap()
+                .expect("send_msg should succeed");
+            assert_eq!(sent, MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE.try_into().unwrap());
+        }
+
+        // Wait for all packets to be delivered before changing the buffer size.
+        let stack = t.get(0);
+        let has_all_delivered = |(
+            _,
+            BindingData { available_data, local_event: _, peer_event: _, info: _, ref_count: _ },
+        ): (usize, &BindingData<_, _>)| {
+            available_data.available_messages.len() == SENT_PACKETS.into()
+        };
+        loop {
+            let all_delivered = stack
+                .with_ctx(|Ctx { sync_ctx: _, non_sync_ctx }| {
+                    let SocketCollection { binding_data, conns: _, listeners: _ } =
+                                <<A::AddrType as IpAddress>::Version as SocketCollectionIpExt<
+                                    Udp,
+                                >>::get_collection(non_sync_ctx);
+                    // Check the lone socket to see if the packets were
+                    // received.
+                    let socket = binding_data.iter().next().unwrap();
+                    has_all_delivered(socket)
+                })
+                .await;
+            if all_delivered {
+                break;
+            }
+            // Give other futures on the same executor a chance to run. In a
+            // single-threaded context, without the yield, this future would
+            // always be able to re-lock the stack after unlocking, and so no
+            // other future would make progress.
+            futures_lite::future::yield_now().await;
+        }
+
+        // Use a buffer size of 0, which will be substituted with the minimum size.
+        let () =
+            socket.set_receive_buffer(0).await.unwrap().expect("set buffer size should succeed");
+
+        let rx_count = futures::stream::unfold(socket, |socket| async {
+            let result = socket
+                .recv_msg(false, u32::MAX, false, fposix_socket::RecvMsgFlags::empty())
+                .await
+                .unwrap();
+            match result {
+                Ok((addr, data, control, size)) => {
+                    let _: (
+                        Option<Box<fnet::SocketAddress>>,
+                        fposix_socket::DatagramSocketRecvControlData,
+                        u32,
+                    ) = (addr, control, size);
+                    Some((data, socket))
+                }
+                Err(fposix::Errno::Eagain) => None,
+                Err(e) => panic!("unexpected error: {:?}", e),
+            }
+        })
+        .enumerate()
+        .map(|(i, data)| {
+            assert_eq!(&data, &[i.try_into().unwrap(); MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE])
+        })
+        .count()
+        .await;
+        assert_eq!(rx_count, SENT_PACKETS.into());
+    }
+
+    declare_tests!(
+        set_receive_buffer_after_delivery,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 }
