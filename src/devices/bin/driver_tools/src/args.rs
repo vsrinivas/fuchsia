@@ -14,6 +14,18 @@ use {
     argh::FromArgs,
 };
 
+// Driver conformance testing is run on the host against a target device's driver.
+// So, this subcommand is only relevant on the host side.
+// If we are host-side, then we will import the conformance library.
+// Otherwise, we will use the placeholder subcommand declared below.
+#[cfg(target_os = "fuchsia")]
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "conformance", description = "This command no-ops on this platform.")]
+pub struct ConformanceCommand {}
+
+#[cfg(not(target_os = "fuchsia"))]
+use conformance_lib::args::ConformanceCommand;
+
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(name = "driver", description = "Support driver development workflows")]
 pub struct DriverCommand {
@@ -24,6 +36,7 @@ pub struct DriverCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum DriverSubCommand {
+    Conformance(ConformanceCommand),
     DebugBind(DebugBindCommand),
     Device(DeviceCommand),
     Dump(DumpCommand),

@@ -16,6 +16,7 @@ ffx_plugin("ffx_driver") {
     "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_rust",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/devices/bin/driver_tools:lib",
     "//src/devices/bin/driver_tools/connector:lib",
     "//src/lib/component_hub",

@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{self, Proxy},
     fidl_fuchsia_device_manager as fdm, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_playground as fdp, fidl_fuchsia_driver_registrar as fdr,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftm, fuchsia_async as fasync,
     fuchsia_component::client,
     std::fs::File,
 };
@@ -66,6 +66,10 @@ impl driver_connector::DriverConnector for DriverConnector {
         }
         client::connect_to_protocol::<fdp::ToolRunnerMarker>()
             .context("Failed to connect to tool runner service")
+    }
+
+    async fn get_run_builder_proxy(&self) -> Result<ftm::RunBuilderProxy> {
+        unreachable!();
     }
 }
 

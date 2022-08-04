@@ -19,6 +19,12 @@ use {
 
 pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) -> Result<()> {
     match cmd.subcommand {
+        DriverSubCommand::Conformance(_subcmd) => {
+            #[cfg(not(target_os = "fuchsia"))]
+            conformance_lib::conformance(_subcmd, &driver_connector)
+                .await
+                .context("Conformance subcommand failed")?;
+        }
         DriverSubCommand::DebugBind(subcmd) => {
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)

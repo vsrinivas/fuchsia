@@ -53,6 +53,9 @@ rustc_library("lib") {
     "//third_party/rust_crates:zstd",
     "//third_party/zstd",
   ]
+  if (is_host) {
+    deps += [ "//src/devices/lib/driver-conformance:lib" ]
+  }
   test_deps = [
     "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust",
     "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
@@ -130,6 +133,7 @@ rustc_binary("driver_tools") {
     "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_rust",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

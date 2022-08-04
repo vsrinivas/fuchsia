@@ -21,6 +21,7 @@ group("tests") {
     "dev-operation:tests",
     "dma-buffer:tests",
     "driver:tests",
+    "driver-conformance:tests",
     "fidl-metadata:tests",
     "goldfish/pipe_io:tests",
     "mmio:tests",

@@ -10,10 +10,11 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_device_manager as fdm,
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_playground as fdp,
-    fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio,
+    fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftm,
     fuchsia_zircon_status::Status,
     selectors::{self, VerboseError},
 };
+
 struct DriverConnector {
     remote_control: Option<rc::RemoteControlProxy>,
 }
@@ -168,6 +169,16 @@ impl driver_connector::DriverConnector for DriverConnector {
         )
         .await
         .context("Failed to get tool runner component")
+    }
+
+    async fn get_run_builder_proxy(&self) -> Result<ftm::RunBuilderProxy> {
+        self.get_component_with_capability::<ftm::RunBuilderMarker>(
+            "",
+            "core/test_manager:expose:fuchsia.test.manager.RunBuilder",
+            false,
+        )
+        .await
+        .context("Failed to get RunBuilder component")
     }
 }
 

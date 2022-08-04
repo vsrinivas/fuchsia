@@ -17,6 +17,7 @@ rustc_library("lib") {
     "tests/*",
     "//src/developer/ffx/lib/testing/*",
     "//src/developer/ffx/plugins/test/*",
+    "//src/devices/lib/driver-conformance/*",
     "//src/sys/test_runners/rust/tests/*",
   ]
 
