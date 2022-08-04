@@ -60,7 +60,7 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
  public:
   explicit InterceptingProcessObserver(InterceptionWorkflow* workflow) : workflow_(workflow) {}
 
-  void DidCreateProcess(zxdb::Process* process, bool autoattached, uint64_t timestamp) override;
+  void DidCreateProcess(zxdb::Process* process, uint64_t timestamp) override;
   void WillDestroyProcess(zxdb::Process* process, DestroyReason reason, int exit_code,
                           uint64_t timestamp) override;
   void OnSymbolLoadFailure(zxdb::Process* process, const zxdb::Err& err) override;

@@ -55,7 +55,6 @@ class Process : public ClientObject {
     kComponent,
     kLaunch,
   };
-  const char* StartTypeToString(StartType);
 
   Process(Session* session, StartType);
   ~Process() override;

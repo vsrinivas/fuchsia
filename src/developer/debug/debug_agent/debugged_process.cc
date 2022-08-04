@@ -231,8 +231,7 @@ void DebuggedProcess::PopulateCurrentThreads() {
     if (threads_.find(thread_koid) != threads_.end())
       continue;
 
-    auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread),
-                                                       ThreadCreationOption::kRunningKeepRunning);
+    auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread));
     threads_.emplace(thread_koid, std::move(new_thread));
   }
 }
@@ -244,21 +243,18 @@ std::vector<debug_ipc::ThreadRecord> DebuggedProcess::GetThreadRecords() const {
   return result;
 }
 
-DebuggedProcess::LoaderBreakpointResult DebuggedProcess::HandleLoaderBreakpoint(uint64_t address) {
+bool DebuggedProcess::HandleLoaderBreakpoint(uint64_t address) {
   // The loader breakpoint is a hardcodeed breakpoint with a known address.
   if (address != process_handle().GetLoaderBreakpointAddress())
-    return LoaderBreakpointResult::kNotLoader;
+    return false;
 
   if (module_list_.Update(process_handle())) {
     // The debugged process could be multithreaded and have just dynamically loaded a new
     // module. Suspend all threads so the client can resolve breakpoint addresses before
     // continuing.
     SuspendAndSendModulesIfKnown();
-    return LoaderBreakpointResult::kKeepSuspended;
   }
-
-  // Modules haven't changed, resume.
-  return LoaderBreakpointResult::kContinue;
+  return true;
 }
 
 void DebuggedProcess::SuspendAndSendModulesIfKnown() {
@@ -491,9 +487,7 @@ void DebuggedProcess::OnThreadStarting(std::unique_ptr<ExceptionHandle> exceptio
     return;
   }
 
-  auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread_handle),
-                                                     ThreadCreationOption::kSuspendedKeepSuspended,
-                                                     std::move(exception));
+  auto new_thread = std::make_unique<DebuggedThread>(debug_agent_, this, std::move(thread_handle));
   auto added = threads_.emplace(thread_id, std::move(new_thread));
 
   // Notify the client.

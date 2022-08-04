@@ -28,8 +28,6 @@ struct ClientSettings {
     static const char* kAutoCastToDerived;
     static const char* kDebugMode;
     static const char* kAutoAttachLimbo;
-    static const char* kPauseOnLaunch;
-    static const char* kPauseOnAttach;
     static const char* kShowFilePaths;
     static const char* kShowStdout;
 

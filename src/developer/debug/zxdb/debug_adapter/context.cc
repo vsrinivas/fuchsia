@@ -233,8 +233,7 @@ void DebugAdapterContext::OnThreadFramesInvalidated(Thread* thread) {
   }
 }
 
-void DebugAdapterContext::DidCreateProcess(Process* process, bool autoattached_to_new_process,
-                                           uint64_t timestamp) {
+void DebugAdapterContext::DidCreateProcess(Process* process, uint64_t timestamp) {
   dap::ProcessEvent event;
   event.name = process->GetName();
   event.isLocalProcess = false;
@@ -247,12 +246,6 @@ void DebugAdapterContext::DidCreateProcess(Process* process, bool autoattached_t
     case Process::StartType::kLaunch:
       event.startMethod = "launch";
       break;
-  }
-
-  bool pause_on_attach =
-      session()->system().settings().GetBool(ClientSettings::System::kPauseOnAttach);
-  if (autoattached_to_new_process && pause_on_attach) {
-    event.startMethod = "attachForSuspendedLaunch";
   }
 
   dap_->send(event);

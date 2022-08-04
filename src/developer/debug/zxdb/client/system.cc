@@ -53,16 +53,6 @@ const char* ClientSettings::System::kAutoAttachLimbo = "auto-attach-limbo";
 static const char* kAutoAttachLimboDescription =
     R"(  Automatically attach to processes found in Process Limbo.)";
 
-const char* ClientSettings::System::kPauseOnLaunch = "pause-on-launch";
-static const char* kPauseOnLaunchDescription =
-    R"(  Whether a process launched through zxdb should be stopped on startup.
-  This will also affect components launched through zxdb.)";
-
-const char* ClientSettings::System::kPauseOnAttach = "pause-on-attach";
-static const char* kPauseOnAttachDescription =
-    R"(  Whether the process should be paused when zxdb attached to it.
-  This will also affect when zxdb attached a process through a filter.)";
-
 const char* ClientSettings::System::kShowFilePaths = "show-file-paths";
 static const char* kShowFilePathsDescription =
     R"(  Displays full path information when file names are displayed. Otherwise
@@ -149,8 +139,6 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kAutoCastToDerived, kAutoCastToDerivedDescription, true);
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
   schema->AddBool(ClientSettings::System::kAutoAttachLimbo, kAutoAttachLimboDescription, true);
-  schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
-  schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kShowFilePaths, kShowFilePathsDescription, false);
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",

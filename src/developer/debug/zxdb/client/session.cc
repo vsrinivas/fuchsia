@@ -530,28 +530,7 @@ void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify
     return;
   }
 
-  // If this is the initial thread, we need to check if we need to resume it depending on the user
-  // defined setting for new processes.
-  auto threads = process->GetThreads();
-
-  bool resume_thread = false;
-  if (!threads.empty()) {
-    resume_thread = true;
-  } else {
-    // Depending on how the process was started, we need to see what setting is the one that
-    // determines the behaviour.
-    switch (process->start_type()) {
-      case Process::StartType::kComponent:
-      case Process::StartType::kLaunch:
-        resume_thread = !system_.settings().GetBool(ClientSettings::System::kPauseOnLaunch);
-        break;
-      case Process::StartType::kAttach:
-        resume_thread = !system_.settings().GetBool(ClientSettings::System::kPauseOnAttach);
-        break;
-    }
-  }
-
-  process->OnThreadStarting(notify.record, resume_thread);
+  process->OnThreadStarting(notify.record);
 }
 
 void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify) {

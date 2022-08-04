@@ -20,10 +20,8 @@ class ProcessObserver {
   enum class DestroyReason { kExit, kDetach, kKill };
   static const char* DestroyReasonToString(DestroyReason);
 
-  // The |autoattached| flag will be set when this process is a result of attaching automatically to
-  // a new process in a job. The process in this state will exist but will not have started running
-  // yet.
-  virtual void DidCreateProcess(Process* process, bool autoattached, uint64_t timestamp) {}
+  // Called after a process is created.
+  virtual void DidCreateProcess(Process* process, uint64_t timestamp) {}
 
   // Called after detaching from or destroying a process. The Process object will still exist on the
   // Target but the Target will report |state == kNone|.

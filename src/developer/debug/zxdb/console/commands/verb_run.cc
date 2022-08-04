@@ -40,7 +40,7 @@ Why "run" is usually wrong
 
     • The debugger's "run <file name>" command (base system process stuff).
     • The system console or "fx shell" (adds some libraries).
-    • The base component environment via the shell‘s run and the debugger’s
+    • The base component environment via the shell's run and the debugger's
       "run -c <package url>" (adds component capabilities).
     • The test environment via "fx test".
     • The user environment when launched from a “story” (adds high-level

@@ -142,8 +142,7 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::Thread* thread,
   breakpoint->SetSettings(settings);
 }
 
-void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, bool autoattached,
-                                                   uint64_t timestamp) {
+void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, uint64_t timestamp) {
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
   workflow_->SetBreakpoints(process, timestamp);
 }

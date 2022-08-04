@@ -12,17 +12,4 @@ Process::~Process() = default;
 
 fxl::WeakPtr<Process> Process::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-const char* Process::StartTypeToString(Process::StartType start_type) {
-  switch (start_type) {
-    case StartType::kAttach:
-      return "Attach";
-    case StartType::kComponent:
-      return "Component";
-    case StartType::kLaunch:
-      return "Launch";
-  }
-  FX_NOTREACHED();
-  return "";
-}
-
 }  // namespace zxdb

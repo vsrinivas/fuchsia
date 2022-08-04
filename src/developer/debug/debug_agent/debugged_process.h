@@ -105,11 +105,9 @@ class DebuggedProcess : public ProcessHandleObserver {
   // Returns the information for all current threads. This gets minimal stacks.
   std::vector<debug_ipc::ThreadRecord> GetThreadRecords() const;
 
-  // Checks if this breakpoint is the loader's internal one. If it is, handles it and returns
-  // either kContinue or kKeepSuspended depending on whether the module list changes.
-  // If it's not, does nothing and returns kNotLoader.
-  enum class LoaderBreakpointResult { kNotLoader, kContinue, kKeepSuspended };
-  LoaderBreakpointResult HandleLoaderBreakpoint(uint64_t address);
+  // Checks if a breakpoint at the given address is the loader's internal one.
+  // If it is, handles it and returns true. If it's not, does nothing and returns false.
+  bool HandleLoaderBreakpoint(uint64_t address);
 
   // If the process can know its modules, suspend all thread and send the module list. This does not
   // refresh the module list.

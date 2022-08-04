@@ -63,7 +63,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
       fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandle>> handles)> callback) override;
 
   // Notifications from the agent that a thread has started or exited.
-  void OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume);
+  void OnThreadStarting(const debug_ipc::ThreadRecord& record);
   void OnThreadExiting(const debug_ipc::ThreadRecord& record);
 
   // Notification that the list of loaded modules may have been updated.

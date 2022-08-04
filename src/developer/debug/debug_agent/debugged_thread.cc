@@ -81,25 +81,11 @@ void LogExceptionNotification(debug::FileLineFunction location, const DebuggedTh
 }  // namespace
 
 DebuggedThread::DebuggedThread(DebugAgent* debug_agent, DebuggedProcess* process,
-                               std::unique_ptr<ThreadHandle> handle,
-                               ThreadCreationOption creation_option,
-                               std::unique_ptr<ExceptionHandle> exception)
+                               std::unique_ptr<ThreadHandle> handle)
     : thread_handle_(std::move(handle)),
       debug_agent_(debug_agent),
       process_(process),
-      exception_handle_(std::move(exception)),
-      weak_factory_(this) {
-  switch (creation_option) {
-    case ThreadCreationOption::kRunningKeepRunning:
-      // do nothing
-      break;
-    case ThreadCreationOption::kSuspendedKeepSuspended:
-      break;
-    case ThreadCreationOption::kSuspendedShouldRun:
-      InternalResumeException();
-      break;
-  }
-}
+      weak_factory_(this) {}
 
 DebuggedThread::~DebuggedThread() = default;
 
@@ -277,8 +263,6 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
                                               GeneralRegisters& regs) {
   switch (UpdateForSoftwareBreakpoint(regs, exception->hit_breakpoints,
                                       exception->other_affected_threads)) {
-    case OnStop::kIgnore:
-      return;
     case OnStop::kNotify:
       SendExceptionNotification(exception, regs);
       return;
@@ -551,20 +535,11 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   } else if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
 
-    switch (process_->HandleLoaderBreakpoint(breakpoint_address)) {
-      case DebuggedProcess::LoaderBreakpointResult::kContinue: {
-        DEBUG_LOG(Thread) << ThreadPreamble(this)
-                          << "Hardcoded loader breakpoint, internally resuming.";
-        return OnStop::kResume;
-      }
-      case DebuggedProcess::LoaderBreakpointResult::kKeepSuspended: {
-        DEBUG_LOG(Thread) << ThreadPreamble(this)
-                          << "Hardcoded loader breakpoint, keeping stopped.";
-        current_breakpoint_ = nullptr;
-        return OnStop::kIgnore;
-      }
-      case DebuggedProcess::LoaderBreakpointResult::kNotLoader:
-        break;
+    if (process_->HandleLoaderBreakpoint(breakpoint_address)) {
+      // |HandleLoaderBreakpoint| may suspend the task and it's safe for us to always resume.
+      DEBUG_LOG(Thread) << ThreadPreamble(this)
+                        << "Hardcoded loader breakpoint, internally resuming.";
+      return OnStop::kResume;
     }
   } else {
     // Not a breakpoint instruction. Probably the breakpoint instruction used to be ours but its

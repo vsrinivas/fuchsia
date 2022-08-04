@@ -162,7 +162,7 @@ void BreakpointImpl::WillDestroyTarget(Target* target) {
   }
 }
 
-void BreakpointImpl::DidCreateProcess(Process* process, bool autoattached, uint64_t timestamp) {
+void BreakpointImpl::DidCreateProcess(Process* process, uint64_t timestamp) {
   if (CouldApplyToProcess(process)) {
     if (RegisterProcess(process)) {
       SyncBackend();

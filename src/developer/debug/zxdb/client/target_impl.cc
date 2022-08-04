@@ -57,7 +57,7 @@ void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_n
       CreateProcessImpl(koid, process_name, Process::StartType::kAttach, std::move(component_info));
 
   for (auto& observer : session()->process_observers())
-    observer.DidCreateProcess(process_.get(), true, timestamp);
+    observer.DidCreateProcess(process_.get(), timestamp);
 }
 
 void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name,
@@ -69,7 +69,7 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& pro
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kComponent, std::nullopt);
 
   for (auto& observer : session()->process_observers())
-    observer.DidCreateProcess(process_.get(), false, timestamp);
+    observer.DidCreateProcess(process_.get(), timestamp);
 }
 
 void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& process_name) {
@@ -268,7 +268,7 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
 
   if (state_ == State::kRunning) {
     for (auto& observer : session()->process_observers())
-      observer.DidCreateProcess(process_.get(), false, timestamp);
+      observer.DidCreateProcess(process_.get(), timestamp);
   }
 }
 

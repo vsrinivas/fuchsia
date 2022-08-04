@@ -186,7 +186,7 @@ struct StackFrame {
 
 struct ThreadRecord {
   enum class State : uint32_t {
-    kNew = 0,
+    kNew = 0,  // The thread is newly created and running.
     kRunning,
     kSuspended,
     kBlocked,

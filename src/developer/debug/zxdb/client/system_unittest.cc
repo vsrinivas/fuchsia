@@ -83,7 +83,7 @@ class MockSystemObserver : public TargetObserver, public ProcessObserver {
   void DidCreateTarget(Target*) override { target_create_count_++; }
 
   // ProcessObserver.
-  void DidCreateProcess(Process*, bool, uint64_t) override { process_create_count_++; }
+  void DidCreateProcess(Process*, uint64_t) override { process_create_count_++; }
 
   int target_create_count() const { return target_create_count_; }
   int process_create_count() const { return process_create_count_; }

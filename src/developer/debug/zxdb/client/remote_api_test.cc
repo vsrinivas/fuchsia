@@ -20,11 +20,7 @@
 
 namespace zxdb {
 
-void RemoteAPITest::SetUp() {
-  session_ = std::make_unique<Session>(GetRemoteAPIImpl(), GetArch());
-  session_->system().settings().SetBool(ClientSettings::System::kPauseOnAttach, true);
-  session_->system().settings().SetBool(ClientSettings::System::kPauseOnLaunch, true);
-}
+void RemoteAPITest::SetUp() { session_ = std::make_unique<Session>(GetRemoteAPIImpl(), GetArch()); }
 
 void RemoteAPITest::TearDown() { session_.reset(); }
 

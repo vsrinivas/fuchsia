@@ -249,7 +249,7 @@ void ProcessImpl::LoadInfoHandleTable(
       });
 }
 
-void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume) {
+void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
   if (threads_.find(record.id.thread) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
     // this, like the client requesting a thread list (which will add missing
@@ -263,9 +263,6 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
 
   for (auto& observer : session()->thread_observers())
     observer.DidCreateThread(thread_ptr);
-
-  if (resume)
-    thread_ptr->Continue(false);
 }
 
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
@@ -287,15 +284,6 @@ void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
   FixupEmptyModuleNames(modules);
   symbols_.SetModules(modules);
 
-  // If this is the first thread, we see if we need to restart.
-  if (start_type() == StartType::kLaunch || start_type() == StartType::kComponent) {
-    bool pause_on_launch =
-        session()->system().settings().GetBool(ClientSettings::System::kPauseOnLaunch);
-    if (stopped_threads.size() == 1u && pause_on_launch) {
-      return;
-    }
-  }
-
   // The threads loading the library will be stopped so we have time to load symbols and enable any
   // pending breakpoints. Now that the notification is complete, the thread(s) can continue.
   //
@@ -303,7 +291,6 @@ void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
   // currently running. It will issue a sync call shortly.
   if (!stopped_threads.empty()) {
     debug_ipc::ResumeRequest request;
-    request.ids.push_back({.process = koid_, .thread = 0});
     request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
     request.ids = stopped_threads;
     session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
@@ -331,7 +318,7 @@ void ProcessImpl::UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_
     auto found_existing = threads_.find(record.id.thread);
     if (found_existing == threads_.end()) {
       // New thread added.
-      OnThreadStarting(record, false);
+      OnThreadStarting(record);
     } else {
       // Existing one, update everything. Thread list updates don't include full stack frames for
       // performance reasons.

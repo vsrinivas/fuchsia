@@ -23,22 +23,9 @@ class DebuggedProcess;
 class ProcessBreakpoint;
 class Watchpoint;
 
-enum class ThreadCreationOption {
-  // Already running, don't do anything
-  kRunningKeepRunning,
-
-  // Already suspended, keep it suspended
-  kSuspendedKeepSuspended,
-
-  // Already suspended, run it
-  kSuspendedShouldRun
-};
-
 class DebuggedThread {
  public:
-  DebuggedThread(DebugAgent*, DebuggedProcess* process, std::unique_ptr<ThreadHandle> handle,
-                 ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning,
-                 std::unique_ptr<ExceptionHandle> exception = nullptr);
+  DebuggedThread(DebugAgent*, DebuggedProcess* process, std::unique_ptr<ThreadHandle> handle);
 
   virtual ~DebuggedThread();
 
@@ -136,7 +123,6 @@ class DebuggedThread {
 
  private:
   enum class OnStop {
-    kIgnore,  // Don't do anything, keep the thread stopped and don't notify.
     kNotify,  // Send client notification like normal.
     kResume,  // The thread should be resumed from this exception.
   };
