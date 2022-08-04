@@ -4,9 +4,12 @@
 
 use crate::execution::create_galaxy;
 use anyhow::Error;
+use fidl::endpoints::ControlHandle;
+use fidl_fuchsia_process_lifecycle as flifecycle;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use futures::StreamExt;
+use fuchsia_runtime as fruntime;
+use futures::{StreamExt, TryStreamExt};
 use std::sync::Arc;
 
 mod auth;
@@ -33,6 +36,27 @@ mod testing;
 async fn main() -> Result<(), Error> {
     let galaxy = Arc::new(create_galaxy().await?);
     let serve_galaxy = galaxy.clone();
+
+    if let Some(lifecycle) =
+        fruntime::take_startup_handle(fruntime::HandleInfo::new(fruntime::HandleType::Lifecycle, 0))
+    {
+        fasync::Task::local(async move {
+            if let Ok(mut stream) =
+                fidl::endpoints::ServerEnd::<flifecycle::LifecycleMarker>::new(lifecycle.into())
+                    .into_stream()
+            {
+                while let Ok(Some(request)) = stream.try_next().await {
+                    match request {
+                        flifecycle::LifecycleRequest::Stop { control_handle } => {
+                            control_handle.shutdown();
+                            std::process::exit(0);
+                        }
+                    }
+                }
+            }
+        })
+        .detach();
+    }
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
