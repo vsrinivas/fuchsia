@@ -294,7 +294,7 @@ void VmCowPages::fbl_recycle() {
     });
     page_remover.Flush();
 
-    FreePages(&list);
+    FreePages(&list, /*freeing_owned_pages=*/true);
 
     // We must Close() after removing pages, so that all pages will be loaned by the time
     // PhysicalPageProvider::OnClose() calls pmm_delete_lender() on the whole physical range.
@@ -373,7 +373,7 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
     vm_page_t* released_page = old_page.value();
     pmm_page_queues()->Remove(released_page);
     DEBUG_ASSERT(!list_in_list(&released_page->queue_node));
-    FreePage(released_page);
+    FreePage(released_page, /*freeing_owned_page=*/true);
 
     eviction_event_count_++;
     IncrementHierarchyGenerationCountLocked();
@@ -435,7 +435,7 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
       },
       0, VmPageList::MAX_SIZE);
 
-  FreePages(&freed_list);
+  FreePages(&freed_list, /*freeing_owned_pages=*/true);
 
   if (reclaim && count > 0) {
     IncrementHierarchyGenerationCountLocked();
@@ -969,6 +969,12 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
 
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
+    // We are going to perform a delayed free on pages removed here by concatenating |covered_pages|
+    // to |freed_pages|. As a result |freed_pages| will end up with mixed ownership of pages, so
+    // FreePages() will simply free the pages to the PMM. Make sure that the |child| did not have
+    // a source that was handling frees, which would require more work that simply freeing pages to
+    // the PMM.
+    DEBUG_ASSERT(!child.is_source_handling_free());
     child.page_list_.MergeOnto(page_list_,
                                [&covered_remover](vm_page_t* p) { covered_remover.Push(p); });
     child.page_list_ = ktl::move(page_list_);
@@ -1016,7 +1022,11 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
 
   page_remover.Flush();
   if (!list_is_empty(&freed_pages)) {
-    FreePages(&freed_pages);
+    // |freed_pages| might also contain pages removed from a child or an ancestor, so we do not own
+    // all the pages. Make sure we did not have a page source that was handling frees which would
+    // require additional work on the owned pages on top of a simple free to the PMM.
+    DEBUG_ASSERT(!is_source_handling_free());
+    FreePages(&freed_pages, /*freeing_owned_pages=*/false);
   }
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
 }
@@ -1445,7 +1455,7 @@ zx_status_t VmCowPages::AddNewPagesLocked(uint64_t start_offset, list_node_t* pa
       }
 
       // Free all the pages back as we had ownership of them.
-      FreePages(pages);
+      FreePages(pages, /*freeing_owned_pages=*/true);
       return status;
     }
     offset += PAGE_SIZE;
@@ -1651,6 +1661,10 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
     // Make sure we didn't already merge the page in this direction.
     DEBUG_ASSERT(!(left && page->object.cow_left_split));
     DEBUG_ASSERT(!(!left && page->object.cow_right_split));
+    // We are going to be inserting removed pages into a shared free list. So make sure the parent
+    // did not have a page source that was handling frees which would require additional work on the
+    // owned pages on top of a simple free to the PMM.
+    DEBUG_ASSERT(!parent_->is_source_handling_free());
     vm_page* removed = parent_->page_list_.RemovePage(offset + parent_offset_).ReleasePage();
     DEBUG_ASSERT(removed == page);
     pmm_page_queues()->Remove(removed);
@@ -2429,7 +2443,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     if (status != ZX_OK) {
       // AddPageLocked failing for any other reason is a programming error.
       DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "status=%d\n", status);
-      FreePage(insert.ReleasePage());
+      // We are freeing a page we just got from the PMM (or from the alloc_list), so we do not own
+      // it yet.
+      FreePage(insert.ReleasePage(), /*freeing_owned_page=*/false);
       return status;
     }
     // Interpret a software fault as an explicit desire to have potential zero pages and don't
@@ -2543,9 +2559,10 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     }
   }
 
-  auto list_cleanup = fit::defer([this, &page_list]() {
+  auto list_cleanup = fit::defer([&page_list, this]() {
     if (!list_is_empty(&page_list)) {
-      FreePages(&page_list);
+      // We are freeing pages we got from the PMM and did not end up using, so we do not own them.
+      FreePages(&page_list, /*freeing_owned_pages=*/false);
     }
   });
 
@@ -2744,7 +2761,7 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
     return status;
   }
 
-  FreePages(&freed_list);
+  FreePages(&freed_list, /*freeing_owned_pages=*/true);
 
   return status;
 }
@@ -2878,13 +2895,21 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   // We stack-own loaned pages from when they're removed until they're freed.
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
+  // Pages removed from this object are put into freed_list, while pages removed from any ancestor
+  // are put into ancestor_freed_list. This is so that freeing of both the lists can be handled
+  // correctly, by passing the correct value for freeing_owned_pages in the call to FreePages().
   list_node_t freed_list;
   list_initialize(&freed_list);
+  list_node_t ancestor_freed_list;
+  list_initialize(&ancestor_freed_list);
 
   // See also free_any_pages below, which intentionally frees incrementally.
-  auto auto_free = fit::defer([this, &freed_list]() {
+  auto auto_free = fit::defer([this, &freed_list, &ancestor_freed_list]() {
     if (!list_is_empty(&freed_list)) {
-      FreePages(&freed_list);
+      FreePages(&freed_list, /*freeing_owned_pages=*/true);
+    }
+    if (!list_is_empty(&ancestor_freed_list)) {
+      FreePages(&ancestor_freed_list, /*freeing_owned_pages=*/false);
     }
   });
 
@@ -2905,7 +2930,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     if (hidden_parent) {
       // Release any COW pages that are no longer necessary. This will also
       // update the parent limit.
-      __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
+      __UNINITIALIZED BatchPQRemove page_remover(&ancestor_freed_list);
       ReleaseCowParentPagesLocked(start, parent_limit_, &page_remover);
       page_remover.Flush();
     } else {
@@ -3004,9 +3029,12 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Ideally we just collect up pages and hand them over to the pmm all at the end, but if we need
     // to allocate any pages then we would like to ensure that we do not cause total memory to peak
     // higher due to squirreling these pages away.
-    auto free_any_pages = [this, &freed_list] {
+    auto free_any_pages = [this, &freed_list, &ancestor_freed_list] {
       if (!list_is_empty(&freed_list)) {
-        FreePages(&freed_list);
+        FreePages(&freed_list, /*freeing_owned_pages=*/true);
+      }
+      if (!list_is_empty(&ancestor_freed_list)) {
+        FreePages(&ancestor_freed_list, /*freeing_owned_pages=*/false);
       }
     };
 
@@ -3134,7 +3162,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     if (slot->IsEmpty() && content.page_owner->is_hidden_locked()) {
       free_any_pages();
       zx_status_t result =
-          CloneCowPageAsZeroLocked(offset, &freed_list, content.page_owner, content.page,
+          CloneCowPageAsZeroLocked(offset, &ancestor_freed_list, content.page_owner, content.page,
                                    content.owner_offset, page_request);
       if (result != ZX_OK) {
         return result;
@@ -3525,6 +3553,10 @@ void VmCowPages::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end,
   // Free any pages that either aren't visible, or were already split into the other child. For
   // pages that haven't been split into the other child, we need to ensure they're univisible.
   AssertHeld(parent_->lock_);
+  // We are going to be inserting removed pages into a shared free list. So make sure the parent did
+  // not have a page source that was handling frees which would require additional work on the owned
+  // pages on top of a simple free to the PMM.
+  DEBUG_ASSERT(!parent_->is_source_handling_free());
   parent_->page_list_.RemovePages(
       [skip_split_bits, sibling_visible, page_remover,
        left = this == &parent_->left_child_locked()](VmPageOrMarker* page_or_mark,
@@ -3698,11 +3730,6 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   // We stack-own loaned pages from removal until freed.
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
-  list_node_t freed_list;
-  list_initialize(&freed_list);
-
-  __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
-
   // see if we're shrinking or expanding the vmo
   if (s < size_) {
     // shrinking
@@ -3813,6 +3840,11 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       }
     }
 
+    // We might need to free pages from an ancestor and/or this object.
+    list_node_t freed_list;
+    list_initialize(&freed_list);
+    __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
+
     bool hidden_parent = false;
     if (parent_) {
       AssertHeld(parent_->lock_ref());
@@ -3822,6 +3854,12 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       // Release any COW pages that are no longer necessary. This will also
       // update the parent limit.
       ReleaseCowParentPagesLocked(start, end, &page_remover);
+
+      // Flush the page remover and free the pages, so that we don't mix ownership of ancestor pages
+      // with pages removed from this object below.
+      page_remover.Flush();
+      FreePages(&freed_list, /*freeing_owned_pages=*/false);
+
       // Validate that the parent limit was correctly updated as it should never remain larger than
       // our actual size.
       DEBUG_ASSERT(parent_limit_ <= s);
@@ -3832,7 +3870,16 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
     // again, even if the parent is later reenlarged. So update the child parent limits.
     UpdateChildParentLimitsLocked(s);
 
+    // We should not have any outstanding pages to free as we flushed ancestor pages already. So
+    // this flush should be a no-op.
+    page_remover.Flush();
+    DEBUG_ASSERT(list_length(&freed_list) == 0);
+
+    // Remove and free pages from this object.
     page_list_.RemovePages(page_remover.RemovePagesCallback(), start, end);
+    page_remover.Flush();
+    FreePages(&freed_list, /*freeing_owned_pages=*/true);
+
   } else if (s > size_) {
     uint64_t temp;
     // Check that this VMOs new size would not cause it to overflow if projected onto the root.
@@ -3852,9 +3899,6 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
 
   // save bytewise size
   size_ = s;
-
-  page_remover.Flush();
-  FreePages(&freed_list);
 
   IncrementHierarchyGenerationCountLocked();
 
@@ -4175,7 +4219,8 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
   }
 
   if (!list_is_empty(&freed_list)) {
-    FreePages(&freed_list);
+    // Even though we did not insert these pages successfully, we had logical ownership of them.
+    FreePages(&freed_list, /*freeing_owned_pages=*/true);
   }
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
@@ -4406,7 +4451,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
             supply_zero_offset_, end_offset);
 
         if (!list_is_empty(&freed_list)) {
-          FreePages(&freed_list);
+          FreePages(&freed_list, /*freeing_owned_pages=*/true);
         }
       }
     });
@@ -4933,7 +4978,7 @@ void VmCowPages::DetachSourceLocked() {
       0, size_);
 
   page_remover.Flush();
-  FreePages(&freed_list);
+  FreePages(&freed_list, /*freeing_owned_pages=*/true);
 
   IncrementHierarchyGenerationCountLocked();
 }
@@ -5223,7 +5268,7 @@ zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offse
   }
 
   // We stack-own a loaned page from pmm_alloc_page() to SwapPageLocked() OR from SwapPageLocked()
-  // until pmm_free_page().
+  // until FreePage().
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   vm_page_t* new_page;
@@ -5237,7 +5282,7 @@ zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offse
   }
   SwapPageLocked(offset, old_page, new_page);
   pmm_page_queues()->Remove(old_page);
-  pmm_free_page(old_page);
+  FreePage(old_page, /*freeing_owned_page=*/true);
   if (after_page) {
     *after_page = new_page;
   }
