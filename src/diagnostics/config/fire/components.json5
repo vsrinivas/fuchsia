@@ -579,4 +579,9 @@
         label: "Audio Core",
         moniker: "core/audio_core",
     },
+    {
+        id: 220,
+        label: "Media Session",
+        moniker: "core/mediasession",
+    },
 ]
