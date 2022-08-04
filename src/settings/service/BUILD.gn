@@ -37,6 +37,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_rust",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy_rust",
@@ -85,6 +86,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:test-case",
   ]
 
   # TODO(fxbug.dev/61386): Fix the leaks and remove this
@@ -333,6 +335,7 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",

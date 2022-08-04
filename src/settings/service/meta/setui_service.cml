@@ -36,7 +36,6 @@
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.sounds.Player",
                 "fuchsia.media.UsageReporter",
-                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.stash.Store",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.brightness.Control",
@@ -45,6 +44,7 @@
         {
             protocol: [
                 "fuchsia.media.sessions2.Discovery",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],

@@ -19,16 +19,20 @@
 //! migration_manager.run_migrations().await?;
 //! ```
 
-use anyhow::{bail, Context, Error};
+use anyhow::{anyhow, bail, Context, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_io::{DirectoryProxy, FileProxy, UnlinkOptions};
+use fidl_fuchsia_metrics::MetricEventLoggerProxy;
 use fuchsia_fs::directory::{readdir, DirEntry, DirentKind};
 use fuchsia_fs::file::WriteError;
 use fuchsia_fs::node::{OpenError, RenameError};
 use fuchsia_fs::OpenFlags;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
-use setui_metrics_registry::SetuiMetricDimensionError as ErrorMetric;
+use setui_metrics_registry::{
+    SetuiMetricDimensionError as ErrorMetric, SetuiMetricDimensionMigrationId as MigrationIdMetric,
+    ACTIVE_MIGRATIONS_METRIC_ID, MIGRATION_ERRORS_METRIC_ID,
+};
 use std::collections::{BTreeMap, HashSet};
 
 /// Errors that can occur during an individual migration.
@@ -118,14 +122,25 @@ impl MigrationManager {
     #[allow(dead_code)]
     /// Run all migrations, and then log the results to cobalt. Will only return an error if there
     /// was an error running the migrations, but not if there's an error logging to cobalt.
-    pub(crate) async fn run_tracked_migrations(self) -> Result<Option<u64>, MigrationError> {
+    pub(crate) async fn run_tracked_migrations(
+        self,
+        metric_event_logger_proxy: Option<MetricEventLoggerProxy>,
+    ) -> Result<Option<u64>, MigrationError> {
         let migration_result = self.run_migrations().await;
         let (last_migration, migration_result) = match migration_result {
             Ok(last_migration) => (last_migration, Ok(last_migration.map(|m| m.migration_id))),
             Err((last_migration, e)) => (last_migration, Err(e)),
         };
-        if let Err(e) = Self::log_migration_metrics(last_migration, &migration_result).await {
-            fx_log_err!("Failed to log migration metrics: {:?}", e);
+        if let Some(metric_event_logger_proxy) = metric_event_logger_proxy {
+            if let Err(e) = Self::log_migration_metrics(
+                last_migration,
+                &migration_result,
+                metric_event_logger_proxy,
+            )
+            .await
+            {
+                fx_log_err!("Failed to log migration metrics: {:?}", e);
+            }
         }
 
         migration_result
@@ -135,14 +150,27 @@ impl MigrationManager {
     async fn log_migration_metrics(
         last_migration: Option<LastMigration>,
         migration_result: &Result<Option<u64>, MigrationError>,
+        metric_event_logger_proxy: MetricEventLoggerProxy,
     ) -> Result<(), Error> {
         match last_migration {
             None => {
                 // When there is no migration id, then the storage is still using stash.
-                fx_log_info!("settings storage still on Stash");
+                metric_event_logger_proxy
+                    .log_occurrence(
+                        ACTIVE_MIGRATIONS_METRIC_ID,
+                        1,
+                        &[MigrationIdMetric::Stash as u32],
+                    )
+                    .await
+                    .context("failed fidl call")?
+                    .map_err(|e| anyhow!("failed to log migration id metric: {:?}", e))?;
             }
             Some(LastMigration { cobalt_id, .. }) => {
-                fx_log_info!("settings storage migrated to metric id {cobalt_id}");
+                metric_event_logger_proxy
+                    .log_occurrence(ACTIVE_MIGRATIONS_METRIC_ID, 1, &[cobalt_id])
+                    .await
+                    .context("failed fidl call")?
+                    .map_err(|e| anyhow!("failed to log migration id metric: {:?}", e))?;
             }
         }
 
@@ -152,7 +180,11 @@ impl MigrationManager {
                 MigrationError::DiskFull => ErrorMetric::DiskFull,
                 MigrationError::Unrecoverable(_) => ErrorMetric::Unrecoverable,
             } as u32;
-            fx_log_err!("Migration error: {event_code:?}");
+            metric_event_logger_proxy
+                .log_occurrence(MIGRATION_ERRORS_METRIC_ID, 1, &[event_code])
+                .await
+                .context("failed fidl call")?
+                .map_err(|e| anyhow!("failed to log migration error metric: {:?}", e))?;
         }
         Ok(())
     }
@@ -425,17 +457,22 @@ pub(crate) struct LastMigration {
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
-    use fidl::endpoints::{create_proxy, ServerEnd};
+    use fasync::Task;
+    use fidl::endpoints::{create_proxy, create_proxy_and_stream, ServerEnd};
     use fidl::Vmo;
     use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy};
+    use fidl_fuchsia_metrics::{
+        MetricEventLoggerMarker, MetricEventLoggerRequest, MetricEventLoggerRequestStream,
+    };
     use fuchsia_async as fasync;
     use fuchsia_fs::OpenFlags;
     use futures::future::BoxFuture;
     use futures::lock::Mutex;
-    use futures::FutureExt;
+    use futures::{FutureExt, StreamExt};
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use test_case::test_case;
     use vfs::directory::entry::DirectoryEntry;
     use vfs::directory::mutable::simple::tree_constructor;
     use vfs::execution_scope::ExecutionScope;
@@ -776,6 +813,182 @@ mod tests {
         .expect("migration file should exist");
         let data = fuchsia_fs::file::read(&data_file).await.expect("should be able to read file");
         assert_eq!(data, NEW_CONTENTS);
+    }
+
+    /// Setup the event logger, It will track whether the expected metric id and event get
+    /// triggered.
+    fn setup_event_logger(
+        mut stream: MetricEventLoggerRequestStream,
+        triggered: Arc<AtomicBool>,
+        expected_metric_ids: Vec<u32>,
+        expected_event_codes: Vec<u32>,
+    ) -> Task<()> {
+        fasync::Task::spawn(async move {
+            let mut index = 0;
+            while let Some(Ok(request)) = stream.next().await {
+                if let MetricEventLoggerRequest::LogOccurrence {
+                    metric_id,
+                    count,
+                    responder,
+                    event_codes,
+                } = request
+                {
+                    triggered.store(true, Ordering::SeqCst);
+                    assert_eq!(metric_id, expected_metric_ids[index]);
+                    assert_eq!(count, 1);
+                    assert_eq!(event_codes[0], expected_event_codes[index]);
+                    let _ = responder.send(&mut Ok(()));
+                    index += 1;
+                }
+            }
+        })
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn logs_migration_on_success() {
+        let (proxy, stream) = create_proxy_and_stream::<MetricEventLoggerMarker>().unwrap();
+
+        let triggered = Arc::new(AtomicBool::new(false));
+        let join_handle = setup_event_logger(
+            stream,
+            Arc::clone(&triggered),
+            vec![ACTIVE_MIGRATIONS_METRIC_ID],
+            vec![COBALT_ID],
+        );
+
+        let fs = mut_pseudo_directory! {
+            MIGRATION_FILE_NAME => read_write(
+                simple_init_vmo_with_capacity(ID.to_string().as_bytes(), ID_LEN)
+            ),
+            DATA_FILE_NAME => read_write(
+                simple_init_vmo_with_capacity(b"", 1)
+            ),
+        };
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
+        let mut builder = MigrationManagerBuilder::new();
+        let migration_ran = Arc::new(AtomicBool::new(false));
+
+        builder
+            .register((
+                ID,
+                COBALT_ID,
+                Box::new({
+                    let migration_ran = Arc::clone(&migration_ran);
+                    move |_| {
+                        let migration_ran = Arc::clone(&migration_ran);
+                        async move {
+                            migration_ran.store(true, Ordering::SeqCst);
+                            Ok(())
+                        }
+                        .boxed()
+                    }
+                }),
+            ))
+            .expect("can register");
+        builder.set_migration_dir(directory);
+        let migration_manager = builder.build();
+
+        let result = migration_manager.run_tracked_migrations(Some(proxy)).await;
+        assert_matches!(result, Ok(Some(ID)));
+
+        join_handle.await;
+        assert!(triggered.load(Ordering::SeqCst));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn logs_stash_on_no_migrations() {
+        let (proxy, stream) = create_proxy_and_stream::<MetricEventLoggerMarker>().unwrap();
+
+        let triggered = Arc::new(AtomicBool::new(false));
+        let join_handle = setup_event_logger(
+            stream,
+            Arc::clone(&triggered),
+            vec![ACTIVE_MIGRATIONS_METRIC_ID],
+            vec![MigrationIdMetric::Stash as u32],
+        );
+
+        let fs = mut_pseudo_directory! {};
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
+        let mut builder = MigrationManagerBuilder::new();
+        builder.set_migration_dir(Clone::clone(&directory));
+        let migration_manager = builder.build();
+
+        let result = migration_manager.run_tracked_migrations(Some(proxy)).await;
+        assert_matches!(result, Ok(None));
+
+        join_handle.await;
+        assert!(triggered.load(Ordering::SeqCst));
+    }
+
+    #[test_case(MigrationError::NoData, MigrationError::NoData, ErrorMetric::NoData)]
+    #[test_case(MigrationError::DiskFull, MigrationError::DiskFull, ErrorMetric::DiskFull)]
+    #[test_case(
+        MigrationError::Unrecoverable(anyhow!("abc")),
+        MigrationError::Unrecoverable(anyhow!("abc")),
+        ErrorMetric::Unrecoverable
+    )]
+    #[fasync::run_until_stalled(test)]
+    async fn logs_error_on_migration_error(
+        generated_error: MigrationError,
+        expected_error: MigrationError,
+        expected_event_code: ErrorMetric,
+    ) {
+        let generated_error = Arc::new(Mutex::new(Some(generated_error)));
+        let (proxy, stream) = create_proxy_and_stream::<MetricEventLoggerMarker>().unwrap();
+
+        let triggered = Arc::new(AtomicBool::new(false));
+        let join_handle = setup_event_logger(
+            stream,
+            Arc::clone(&triggered),
+            vec![ACTIVE_MIGRATIONS_METRIC_ID, MIGRATION_ERRORS_METRIC_ID],
+            vec![COBALT_ID, expected_event_code as u32],
+        );
+
+        let fs = mut_pseudo_directory! {
+            MIGRATION_FILE_NAME => read_write(
+                simple_init_vmo_with_capacity(ID.to_string().as_bytes(), ID_LEN)
+            ),
+            DATA_FILE_NAME => read_write(
+                simple_init_vmo_with_capacity(b"", 1)
+            ),
+        };
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
+        let mut builder = MigrationManagerBuilder::new();
+
+        builder
+            .register((ID, COBALT_ID, Box::new(move |_| async move { Ok(()) }.boxed())))
+            .expect("can register");
+
+        builder
+            .register((
+                ID2,
+                COBALT_ID2,
+                Box::new({
+                    let generated_error = Arc::clone(&generated_error);
+                    move |_| {
+                        let generated_error = Arc::clone(&generated_error);
+                        async move {
+                            let generated_error = generated_error.lock().await.take().unwrap();
+                            Err(generated_error)
+                        }
+                        .boxed()
+                    }
+                }),
+            ))
+            .expect("can register");
+        builder.set_migration_dir(directory);
+        let migration_manager = builder.build();
+
+        let result = migration_manager.run_tracked_migrations(Some(proxy)).await;
+        assert!(match (result, expected_error) {
+            (Err(MigrationError::NoData), MigrationError::NoData)
+            | (Err(MigrationError::DiskFull), MigrationError::DiskFull)
+            | (Err(MigrationError::Unrecoverable(_)), MigrationError::Unrecoverable(_)) => true,
+            _ => false,
+        });
+
+        join_handle.await;
+        assert!(triggered.load(Ordering::SeqCst));
     }
 
     // TODO(fxbug.dev/91407) Test for disk full behavior

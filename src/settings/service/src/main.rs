@@ -5,6 +5,7 @@
 #![warn(clippy::all)]
 
 use anyhow::{Context, Error};
+use fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_fs::OpenFlags;
@@ -107,6 +108,9 @@ fn main() -> Result<(), Error> {
             LISTENER_INSPECT_LOGGER.clone(),
         )
         .storage_dir(storage_dir)
+        .metric_event_logger_factory_proxy(
+            connect_to_protocol::<MetricEventLoggerFactoryMarker>().ok(),
+        )
         .spawn(executor)
         .context("Failed to spawn environment for setui")
 }
