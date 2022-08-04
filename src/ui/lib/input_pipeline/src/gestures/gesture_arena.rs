@@ -380,7 +380,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
                         }
                         ExamineEventResult::Mismatch(reason) => {
                             // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                            fx_log_info!("touchpad: {} mismatched due to {}", type_name, reason);
+                            fx_log_info!("touchpad: {} mismatched: {}", type_name, reason);
                         }
                     }
                     (contenders, matched_contenders)
@@ -435,7 +435,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
                     }
                     VerifyEventResult::Mismatch(reason) => {
                         // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                        fx_log_info!("touchpad: {} mismatched due to {}", type_name, reason);
+                        fx_log_info!("touchpad: {} mismatched: {}", type_name, reason);
                     }
                 }
                 matched_contenders
@@ -455,7 +455,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
                         }
                         ExamineEventResult::Mismatch(reason) => {
                             // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                            fx_log_info!("touchpad: {} mismatched due to {}", type_name, reason);
+                            fx_log_info!("touchpad: {} mismatched: {}", type_name, reason);
                         }
                     }
                     (contenders, matched_contenders)
@@ -509,7 +509,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
                 reason,
             ) => {
                 // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                fx_log_info!("touchpad: {} ended due to {}", type_name, reason);
+                fx_log_info!("touchpad: {} ended: {}", type_name, reason);
                 (MutableState::Idle, vec![generated_event])
             }
             ProcessNewEventResult::EndGesture(
@@ -517,12 +517,12 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
                 reason,
             ) => {
                 // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                fx_log_info!("touchpad: {} ended due to {}", type_name, reason);
+                fx_log_info!("touchpad: {} ended: {}", type_name, reason);
                 self.handle_event_while_idle(unconsumed_event)
             }
             ProcessNewEventResult::EndGesture(EndGestureEvent::NoEvent, reason) => {
                 // TODO(https://fxbug.dev/105588): Gate log message on dynamic opt-in.
-                fx_log_info!("touchpad: {} ended due to {}", type_name, reason);
+                fx_log_info!("touchpad: {} ended: {}", type_name, reason);
                 (MutableState::Idle, vec![])
             }
         }
