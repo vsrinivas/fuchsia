@@ -25,13 +25,13 @@ constexpr int kRunComponentSwitch = 1;
 
 const char kRunShortHelp[] = "run / r: Run the program.";
 const char kRunHelp[] =
-    R"(run [--component] [ <program name> <program args>* ]
+    R"(run [ -c / --component ] [ <program name> <program args>* ]
 
   Alias: "r"
 
-  Runs the program. With no arguments, "run" will run the binary stored in the
-  process context, if any. With an argument, the binary name will be set and
-  that binary will be run.
+  Runs the program. Without "-c", "run" will run the binary available in
+  debug_agent's namespace. With "-c", the argument will be interpreted as a v1
+  package URL. Additional program args can be supplied in both cases.
 
 Why "run" is usually wrong
 
