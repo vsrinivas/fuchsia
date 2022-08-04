@@ -64,6 +64,7 @@ pub fn dispatch_syscall(
         chroot[1],
         clock_getres[2],
         clock_gettime[2],
+        clock_nanosleep[4],
         clone[5],
         close[1],
         connect[3],

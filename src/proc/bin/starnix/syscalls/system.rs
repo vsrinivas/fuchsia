@@ -6,7 +6,7 @@ use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, Task};
 use tracing::warn;
 
-use crate::logging::not_implemented;
+use crate::logging::{not_implemented, strace};
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::*;
 use crate::task::Waiter;
@@ -134,16 +134,35 @@ pub fn sys_gettimeofday(
     return Ok(());
 }
 
-pub fn sys_nanosleep(
+pub fn sys_clock_nanosleep(
     current_task: &CurrentTask,
+    which_clock: u32,
+    flags: u32,
     user_request: UserRef<timespec>,
     user_remaining: UserRef<timespec>,
 ) -> Result<(), Errno> {
+    if which_clock != CLOCK_MONOTONIC || flags & !TIMER_ABSTIME != 0 {
+        not_implemented!(
+            current_task,
+            "clock_nanosleep, clock {:?}, flags {:?}",
+            which_clock,
+            flags
+        );
+        return error!(EINVAL);
+    }
+
     let request = current_task.mm.read_object(user_request)?;
-    let deadline = zx::Time::after(duration_from_timespec(request)?);
+    strace!(current_task, "clock_nanosleep({}, {}, {:?})", which_clock, flags, request);
+
+    let deadline = if flags & TIMER_ABSTIME != 0 {
+        time_from_timespec(request)?
+    } else {
+        zx::Time::after(duration_from_timespec(request)?)
+    };
+
     match Waiter::new().wait_until(&current_task, deadline) {
         Err(err) if err == EINTR => {
-            if !user_remaining.is_null() {
+            if !user_remaining.is_null() && flags & TIMER_ABSTIME == 0 {
                 let now = zx::Time::get_monotonic();
                 let remaining = timespec_from_duration(std::cmp::max(
                     zx::Duration::from_nanos(0),
@@ -156,6 +175,14 @@ pub fn sys_nanosleep(
         non_eintr => non_eintr?,
     }
     Ok(())
+}
+
+pub fn sys_nanosleep(
+    current_task: &CurrentTask,
+    user_request: UserRef<timespec>,
+    user_remaining: UserRef<timespec>,
+) -> Result<(), Errno> {
+    sys_clock_nanosleep(current_task, CLOCK_MONOTONIC, 0, user_request, user_remaining)
 }
 
 pub fn sys_time(
