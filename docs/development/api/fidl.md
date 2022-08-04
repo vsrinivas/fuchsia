@@ -645,9 +645,9 @@ Use `bytes` or `array<uint8>` for small non-text data:
  * Use `bytes` for HTTP header fields because HTTP header fields do not
    specify an encoding and therefore cannot necessarily be represented in UTF-8.
 
- * Use `array<uint8>:6` for MAC addresses because MAC address are binary data.
+ * Use `array<uint8, 6>` for MAC addresses because MAC address are binary data.
 
- * Use `array<uint8>:16` for UUIDs because UUIDs are (almost!) arbitrary binary
+ * Use `array<uint8, 16>` for UUIDs because UUIDs are (almost!) arbitrary binary
    data.
 
 Use shared-memory primitives for blobs:
