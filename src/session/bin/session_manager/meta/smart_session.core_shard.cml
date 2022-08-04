@@ -184,5 +184,12 @@
             from: "#tzdata-provider",
             to: "#session-manager",
         },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-radar",
+            to: "#session-manager",
+            subdir: "class/radar",
+        },
     ],
 }
