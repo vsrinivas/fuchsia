@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon as zx;
-
 use super::*;
 
 use crate::fs::buffers::*;
@@ -113,28 +111,5 @@ impl SocketOps for InetSocket {
 
     fn getpeername(&self, _socket: &Socket) -> Result<Vec<u8>, Errno> {
         error!(ENOTCONN)
-    }
-
-    fn setsockopt(
-        &self,
-        _socket: &Socket,
-        _task: &Task,
-        _level: u32,
-        _optname: u32,
-        _user_opt: UserBuffer,
-    ) -> Result<(), Errno> {
-        error!(ENOPROTOOPT)
-    }
-
-    fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {
-        error!(ENOPROTOOPT)
-    }
-
-    fn get_receive_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        None
-    }
-
-    fn get_send_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        None
     }
 }

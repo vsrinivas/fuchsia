@@ -122,7 +122,7 @@ impl SocketFile {
         if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
-            let deadline = self.socket.get_send_timeout().map(zx::Time::after);
+            let deadline = self.socket.send_timeout().map(zx::Time::after);
             file.blocking_op(current_task, op, FdEvents::POLLOUT | FdEvents::POLLHUP, deadline)
         }
     }
@@ -152,8 +152,7 @@ impl SocketFile {
         if flags.contains(SocketMessageFlags::DONTWAIT) {
             op()
         } else {
-            let deadline =
-                deadline.or_else(|| self.socket.get_receive_timeout().map(zx::Time::after));
+            let deadline = deadline.or_else(|| self.socket.receive_timeout().map(zx::Time::after));
             file.blocking_op(current_task, op, FdEvents::POLLIN | FdEvents::POLLHUP, deadline)
         }
     }

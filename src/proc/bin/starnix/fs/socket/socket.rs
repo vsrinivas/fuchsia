@@ -4,11 +4,13 @@
 
 use fuchsia_zircon as zx;
 use std::collections::VecDeque;
+use zerocopy::AsBytes;
 
 use super::*;
 
 use crate::fs::buffers::*;
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::as_any::*;
 use crate::types::*;
@@ -150,21 +152,19 @@ pub trait SocketOps: Send + Sync + AsAny {
     /// Sets socket-specific options.
     fn setsockopt(
         &self,
-        socket: &Socket,
-        task: &Task,
-        level: u32,
-        optname: u32,
-        user_opt: UserBuffer,
-    ) -> Result<(), Errno>;
+        _socket: &Socket,
+        _task: &Task,
+        _level: u32,
+        _optname: u32,
+        _user_opt: UserBuffer,
+    ) -> Result<(), Errno> {
+        error!(ENOPROTOOPT)
+    }
 
     /// Retrieves socket-specific options.
-    fn getsockopt(&self, socket: &Socket, level: u32, optname: u32) -> Result<Vec<u8>, Errno>;
-
-    /// Used for specifying timeouts for `recvmsg`.
-    fn get_receive_timeout(&self, socket: &Socket) -> Option<zx::Duration>;
-
-    /// Used for specifying timeouts for `sendmsg`.
-    fn get_send_timeout(&self, socket: &Socket) -> Option<zx::Duration>;
+    fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {
+        error!(ENOPROTOOPT)
+    }
 }
 
 /// A `Socket` represents one endpoint of a bidirectional communication channel.
@@ -176,6 +176,17 @@ pub struct Socket {
 
     /// The type of this socket.
     pub socket_type: SocketType,
+
+    state: Mutex<SocketState>,
+}
+
+#[derive(Default)]
+struct SocketState {
+    /// The value of SO_RCVTIMEO.
+    receive_timeout: Option<zx::Duration>,
+
+    /// The value for SO_SNDTIMEO.
+    send_timeout: Option<zx::Duration>,
 }
 
 pub type SocketHandle = Arc<Socket>;
@@ -195,7 +206,12 @@ impl Socket {
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
-        Arc::new(Socket { ops: create_socket_ops(domain, socket_type), domain, socket_type })
+        Arc::new(Socket {
+            ops: create_socket_ops(domain, socket_type),
+            domain,
+            socket_type,
+            state: Mutex::default(),
+        })
     }
 
     /// Creates a `FileHandle` where the associated `FsNode` contains a socket.
@@ -239,19 +255,50 @@ impl Socket {
         optname: u32,
         user_opt: UserBuffer,
     ) -> Result<(), Errno> {
-        self.ops.setsockopt(self, task, level, optname, user_opt)
+        let read_timeval = || {
+            let timeval_ref = UserRef::<timeval>::from_buf(user_opt).ok_or(errno!(EINVAL))?;
+            let duration = duration_from_timeval(task.mm.read_object(timeval_ref)?)?;
+            Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
+        };
+
+        match level {
+            SOL_SOCKET => match optname {
+                SO_RCVTIMEO => self.state.lock().receive_timeout = read_timeval()?,
+                SO_SNDTIMEO => self.state.lock().send_timeout = read_timeval()?,
+                _ => self.ops.setsockopt(self, task, level, optname, user_opt)?,
+            },
+            _ => self.ops.setsockopt(self, task, level, optname, user_opt)?,
+        }
+        Ok(())
     }
 
     pub fn getsockopt(&self, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
-        self.ops.getsockopt(self, level, optname)
+        let value = match level {
+            SOL_SOCKET => match optname {
+                SO_TYPE => self.socket_type.as_raw().to_ne_bytes().to_vec(),
+                SO_DOMAIN => self.domain.as_raw().to_ne_bytes().to_vec(),
+
+                SO_RCVTIMEO => {
+                    let duration = self.receive_timeout().unwrap_or(zx::Duration::default());
+                    timeval_from_duration(duration).as_bytes().to_owned()
+                }
+                SO_SNDTIMEO => {
+                    let duration = self.send_timeout().unwrap_or(zx::Duration::default());
+                    timeval_from_duration(duration).as_bytes().to_owned()
+                }
+                _ => self.ops.getsockopt(self, level, optname)?,
+            },
+            _ => self.ops.getsockopt(self, level, optname)?,
+        };
+        Ok(value)
     }
 
-    pub fn get_receive_timeout(&self) -> Option<zx::Duration> {
-        self.ops.get_receive_timeout(self)
+    pub fn receive_timeout(&self) -> Option<zx::Duration> {
+        self.state.lock().receive_timeout
     }
 
-    pub fn get_send_timeout(&self) -> Option<zx::Duration> {
-        self.ops.get_send_timeout(self)
+    pub fn send_timeout(&self) -> Option<zx::Duration> {
+        self.state.lock().send_timeout
     }
 
     pub fn bind(&self, socket_address: SocketAddress) -> Result<(), Errno> {

@@ -9,6 +9,7 @@ use std::mem;
 use std::ops;
 use zerocopy::{AsBytes, FromBytes};
 
+use super::UserBuffer;
 use crate::mm::vmo::round_up_to_increment;
 use crate::types::Errno;
 
@@ -146,20 +147,24 @@ impl fmt::Debug for UserAddress {
 #[repr(transparent)]
 pub struct UserRef<T> {
     addr: UserAddress,
-    phatom: PhantomData<T>,
+    phantom: PhantomData<T>,
 }
 
 impl<T> UserRef<T> {
-    pub fn new(addr: UserAddress) -> UserRef<T> {
-        UserRef::<T> { addr, phatom: PhantomData::<T>::default() }
+    pub fn new(addr: UserAddress) -> Self {
+        Self { addr, phantom: PhantomData }
+    }
+
+    /// Returns None if the buffer is too small for the type.
+    pub fn from_buf(buf: UserBuffer) -> Option<Self> {
+        if mem::size_of::<T>() < buf.length {
+            return None;
+        }
+        Some(Self::new(buf.address))
     }
 
     pub fn addr(&self) -> UserAddress {
         self.addr
-    }
-
-    pub fn len(&self) -> usize {
-        mem::size_of::<T>()
     }
 
     pub fn next(&self) -> UserRef<T> {

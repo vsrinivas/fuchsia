@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon as zx;
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
@@ -64,12 +63,6 @@ struct UnixSocketInner {
     /// ECONNRESET instead of 0 (eof).
     peer_closed_with_unread_data: bool,
 
-    /// See SO_RCVTIMEO.
-    receive_timeout: Option<zx::Duration>,
-
-    /// See SO_SNDTIMEO.
-    send_timeout: Option<zx::Duration>,
-
     /// See SO_LINGER.
     pub linger: uapi::linger,
 
@@ -93,8 +86,6 @@ impl UnixSocket {
                 address: None,
                 is_shutdown: false,
                 peer_closed_with_unread_data: false,
-                receive_timeout: None,
-                send_timeout: None,
                 linger: uapi::linger::default(),
                 passcred: false,
                 credentials: None,
@@ -229,14 +220,6 @@ impl UnixSocket {
             UnixSocketState::Listening(_) => true,
             _ => false,
         }
-    }
-
-    fn set_receive_timeout(&self, value: Option<zx::Duration>) {
-        self.lock().receive_timeout = value;
-    }
-
-    fn set_send_timeout(&self, value: Option<zx::Duration>) {
-        self.lock().send_timeout = value;
     }
 
     fn get_receive_capacity(&self) -> usize {
@@ -606,26 +589,12 @@ impl SocketOps for UnixSocket {
             task: &Task,
             user_opt: UserBuffer,
         ) -> Result<T, Errno> {
-            let user_ref = UserRef::<T>::new(user_opt.address);
-            if user_opt.length < user_ref.len() {
-                return error!(EINVAL);
-            }
+            let user_ref = UserRef::<T>::from_buf(user_opt).ok_or(errno!(EINVAL))?;
             Ok(task.mm.read_object(user_ref)?)
         }
 
-        let read_timeval = || {
-            let duration = duration_from_timeval(read::<timeval>(task, user_opt)?)?;
-            Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
-        };
-
         match level {
             SOL_SOCKET => match optname {
-                SO_RCVTIMEO => {
-                    self.set_receive_timeout(read_timeval()?);
-                }
-                SO_SNDTIMEO => {
-                    self.set_send_timeout(read_timeval()?);
-                }
                 SO_SNDBUF => {
                     let requested_capacity = read::<socklen_t>(task, user_opt)? as usize;
                     // See StreamUnixSocketPairTest.SetSocketSendBuf for why we multiply by 2 here.
@@ -656,24 +625,12 @@ impl SocketOps for UnixSocket {
     fn getsockopt(&self, socket: &Socket, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
         let opt_value = match level {
             SOL_SOCKET => match optname {
-                SO_TYPE => socket.socket_type.as_raw().to_ne_bytes().to_vec(),
-                // TODO(tbodt): Update when internet sockets exist
-                SO_DOMAIN => AF_UNIX.to_ne_bytes().to_vec(),
                 SO_PEERCRED => self
                     .peer_cred()
                     .unwrap_or(ucred { pid: 0, uid: uid_t::MAX, gid: gid_t::MAX })
                     .as_bytes()
                     .to_owned(),
                 SO_PEERSEC => "unconfined".as_bytes().to_vec(),
-                SO_RCVTIMEO => {
-                    let duration =
-                        self.get_receive_timeout(socket).unwrap_or(zx::Duration::default());
-                    timeval_from_duration(duration).as_bytes().to_owned()
-                }
-                SO_SNDTIMEO => {
-                    let duration = self.get_send_timeout(socket).unwrap_or(zx::Duration::default());
-                    timeval_from_duration(duration).as_bytes().to_owned()
-                }
                 SO_ACCEPTCONN => {
                     if self.is_listening(socket) { 1u32 } else { 0u32 }.to_ne_bytes().to_vec()
                 }
@@ -685,14 +642,6 @@ impl SocketOps for UnixSocket {
             _ => return error!(ENOPROTOOPT),
         };
         Ok(opt_value)
-    }
-
-    fn get_receive_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        self.lock().receive_timeout
-    }
-
-    fn get_send_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        self.lock().send_timeout
     }
 }
 

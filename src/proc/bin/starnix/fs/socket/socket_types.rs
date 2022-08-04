@@ -64,14 +64,23 @@ pub enum SocketDomain {
 impl SocketDomain {
     pub fn from_raw(raw: u16) -> Option<SocketDomain> {
         match raw {
-            AF_UNIX => Some(SocketDomain::Unix),
-            AF_VSOCK => Some(SocketDomain::Vsock),
+            AF_UNIX => Some(Self::Unix),
+            AF_VSOCK => Some(Self::Vsock),
             // Conflate AF_INET and AF_INET6 while they are both stubbed
-            AF_INET => Some(SocketDomain::Inet),
-            AF_INET6 => Some(SocketDomain::Inet),
-            AF_NETLINK => Some(SocketDomain::Netlink),
+            AF_INET => Some(Self::Inet),
+            AF_INET6 => Some(Self::Inet),
+            AF_NETLINK => Some(Self::Netlink),
 
             _ => None,
+        }
+    }
+
+    pub fn as_raw(self) -> u16 {
+        match self {
+            Self::Unix => AF_UNIX,
+            Self::Vsock => AF_VSOCK,
+            Self::Inet => AF_INET,
+            Self::Netlink => AF_NETLINK,
         }
     }
 }

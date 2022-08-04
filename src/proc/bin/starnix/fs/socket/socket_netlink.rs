@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon as zx;
-
 use super::*;
 
 use crate::fs::buffers::*;
@@ -132,18 +130,5 @@ impl SocketOps for NetlinkSocket {
     ) -> Result<(), Errno> {
         not_implemented!("?", "NetlinkSocket::setsockopt is stubbed");
         Ok(())
-    }
-
-    fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {
-        not_implemented!("?", "NetlinkSocket::getsockopt is stubbed");
-        error!(ENOPROTOOPT)
-    }
-
-    fn get_receive_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        None
-    }
-
-    fn get_send_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        None
     }
 }

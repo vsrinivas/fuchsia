@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon as zx;
-
 use super::*;
 
 use crate::fs::buffers::*;
@@ -284,37 +282,6 @@ impl SocketOps for VsockSocket {
             }
         }
     }
-
-    fn setsockopt(
-        &self,
-        _socket: &Socket,
-        _task: &Task,
-        _level: u32,
-        _optname: u32,
-        _user_opt: UserBuffer,
-    ) -> Result<(), Errno> {
-        error!(ENOPROTOOPT)
-    }
-
-    fn getsockopt(&self, socket: &Socket, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
-        let opt_value = match level {
-            SOL_SOCKET => match optname {
-                SO_TYPE => socket.socket_type.as_raw().to_ne_bytes().to_vec(),
-                SO_DOMAIN => AF_VSOCK.to_ne_bytes().to_vec(),
-                _ => return error!(ENOPROTOOPT),
-            },
-            _ => return error!(ENOPROTOOPT),
-        };
-        Ok(opt_value)
-    }
-
-    fn get_receive_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        None
-    }
-
-    fn get_send_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
-        None
-    }
 }
 
 impl VsockSocketInner {
@@ -341,6 +308,7 @@ mod tests {
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use fidl::SocketOpts as ZirconSocketOpts;
+    use fuchsia_zircon as zx;
     use fuchsia_zircon::HandleBased;
     use syncio::Zxio;
 
