@@ -584,4 +584,9 @@
         label: "Media Session",
         moniker: "core/mediasession",
     },
+    {
+        id: 221,
+        label: "LoWPAN Service",
+        moniker: "core/lowpanservice",
+    },
 ]
