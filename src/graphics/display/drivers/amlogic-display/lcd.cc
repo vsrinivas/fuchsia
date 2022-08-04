@@ -10,6 +10,7 @@
 #include <lib/mipi-dsi/mipi-dsi.h>
 
 #include <ddktl/device.h>
+#include <fbl/alloc_checker.h>
 
 #include "common.h"
 
@@ -91,7 +92,6 @@ zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
 }
 
 zx_status_t Lcd::Disable() {
-  ZX_DEBUG_ASSERT(initialized_);
   if (!enabled_) {
     return ZX_OK;
   }
@@ -102,7 +102,6 @@ zx_status_t Lcd::Disable() {
 }
 
 zx_status_t Lcd::Enable() {
-  ZX_DEBUG_ASSERT(initialized_);
   if (enabled_) {
     return ZX_OK;
   }
@@ -157,28 +156,26 @@ zx_status_t Lcd::Enable() {
   return status;
 }
 
-zx_status_t Lcd::Init(ddk::DsiImplProtocolClient dsiimpl, ddk::GpioProtocolClient gpio) {
-  if (initialized_) {
-    return ZX_OK;
-  }
-
-  dsiimpl_ = dsiimpl;
+zx::status<Lcd*> Lcd::Create(fbl::AllocChecker* ac, uint32_t panel_type,
+                             ddk::DsiImplProtocolClient dsiimpl, ddk::GpioProtocolClient gpio,
+                             bool already_enabled) {
+  std::unique_ptr<Lcd> lcd = fbl::make_unique_checked<Lcd>(ac, panel_type);
+  lcd->dsiimpl_ = dsiimpl;
 
   if (!gpio.is_valid()) {
     DISP_ERROR("Could not obtain GPIO protocol\n");
-    return ZX_ERR_NO_RESOURCES;
+    return zx::error(ZX_ERR_NO_RESOURCES);
   }
-  gpio_ = gpio;
+  lcd->gpio_ = gpio;
 
-  initialized_ = true;
-
-  if (kBootloaderDisplayEnabled) {
-    DISP_INFO("LCD Enabled by Bootloader. Disabling before proceeding\n");
-    enabled_ = true;
-    Disable();
+  lcd->enabled_ = already_enabled;
+  if (already_enabled) {
+    DISP_INFO("LCD Enabled by Bootloader. Skipping panel init\n");
+  } else {
+    lcd->Enable();
   }
 
-  return ZX_OK;
+  return zx::ok(lcd.release());
 }
 
 }  // namespace amlogic_display

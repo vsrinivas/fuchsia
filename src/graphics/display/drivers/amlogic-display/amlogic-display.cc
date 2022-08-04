@@ -105,15 +105,11 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   const bool skip_disp_init = vpu_->SetFirstTimeDriverLoad();
   if (skip_disp_init) {
     DISP_INFO("First time driver load. Skip display initialization\n");
-  } else {
-    DISP_INFO("Display driver reloaded. Initialize display system\n");
-  }
-
-  if (skip_disp_init) {
     // Make sure AFBC engine is on. Since bootloader does not use AFBC, it might not have powered
     // on AFBC engine.
     vpu_->AfbcPower(true);
   } else {
+    DISP_INFO("Display driver reloaded. Initialize display system\n");
     RestartDisplay();
   }
 

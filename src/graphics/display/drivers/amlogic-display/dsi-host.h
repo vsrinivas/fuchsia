@@ -45,15 +45,14 @@ class DsiHost {
   void Disable(const display_setting_t& disp_setting);
   void Dump();
 
+  uint32_t panel_type() const { return panel_type_; }
+
  private:
   DsiHost(zx_device_t* parent, uint32_t panel_type);
 
   void PhyEnable();
   void PhyDisable();
   zx_status_t HostModeInit(const display_setting_t& disp_setting);
-  // Rewrites panel_type_ if the display_id_ indicates that the GPIO-based
-  // identification was wrong.
-  void FixupPanelType();
 
   std::optional<fdf::MmioBuffer> mipi_dsi_mmio_;
   std::optional<fdf::MmioBuffer> hhi_mmio_;
@@ -65,10 +64,6 @@ class DsiHost {
   ddk::GpioProtocolClient lcd_gpio_;
 
   uint32_t panel_type_;
-
-  // Cached 3-byte ID read from MIPI regs. This is used on products where the
-  // board does not provide enough GPIO pins to distinguish all of the DDICs.
-  uint32_t display_id_ = 0;
 
   bool enabled_ = false;
 
