@@ -299,7 +299,6 @@
                 // eng builds only.
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
             ],
             from: "parent",
             to: "#driver_manager",

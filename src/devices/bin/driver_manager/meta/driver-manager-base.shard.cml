@@ -60,7 +60,6 @@
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
                 "fuchsia.scheduler.ProfileProvider",
             ],
         },
