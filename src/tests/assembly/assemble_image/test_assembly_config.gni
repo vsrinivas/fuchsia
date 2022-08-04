@@ -106,6 +106,7 @@ template("test_assembly_config") {
       # NOTE: legacy_assembly_input_bundle assumes this file path
       output_path = "$target_out_dir/image.image_assembly_config.json"
       kernel_image = "//zircon/kernel"
+      kernel_image_name = "kernel"
       base_packages = base_packages_param
     }
 

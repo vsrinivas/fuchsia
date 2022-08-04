@@ -18,6 +18,9 @@ import("//build/zbi/kernel_cmdline.gni")
 #   kernel_image (required)
 #     [label] Kernel to add to the ZBI.
 #
+#   kernel_image_name (required)
+#     [string] Key used to identify the zbi image to use.
+#
 #   base_packages (optional)
 #     [list of labels] The packages to include in the base package set.
 #
@@ -83,6 +86,8 @@ template("generated_image_assembly_config") {
   if (defined(invoker.boot_args)) {
     boot_args += invoker.boot_args
   }
+
+  kernel_image_name = invoker.kernel_image_name
 
   # Labels used in this file.
   labels = {
@@ -290,6 +295,8 @@ template("generated_image_assembly_config") {
       rebase_path(files.extra_base_deps_list, root_build_dir),
       "--kernel-image-metadata",
       rebase_path(files.kernel_image_metadata, root_build_dir),
+      "--kernel-image-name",
+      kernel_image_name,
       "--kernel-cmdline",
       rebase_path(files.kernel_cmdline_args, root_build_dir),
       "--kernel-clock-backstop",

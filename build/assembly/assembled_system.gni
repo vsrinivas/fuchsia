@@ -112,11 +112,16 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
 #
-#   kernel_zbi (optional); defaults: "//zircon/kernel"
+#   kernel_zbi (optional; default: "//zircon/kernel")
 #     [label] Label of the zircon kernel to use.  This needs to use the `images`
 #     metadata key to provide the `path` and `name` fields (see the
 #     build_api_module("images")` in `//BUILD.gn`).  The default value is most likely
 #     the correct one.  This should only be overridden in special circumstances.
+#
+#   kernel_image_name (optional; default: "kernel")
+#     [string] The image name of the 'kernel_zbi' as seen in images.json. This is used
+#     as an override, that in conjunction with 'kernel_zbi' allows selecting a custom zbi
+#     image as the kernel zbi.
 #
 # Board parameters:
 #
@@ -195,6 +200,11 @@ template("assembled_system") {
   kernel_zbi = "//zircon/kernel"
   if (defined(invoker.kernel_zbi)) {
     kernel_zbi = invoker.kernel_zbi
+  }
+
+  kernel_name = "kernel"
+  if (defined(invoker.kernel_image_name)) {
+    kernel_name = invoker.kernel_image_name
   }
 
   fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
@@ -513,6 +523,7 @@ template("assembled_system") {
 
     output_path = files.image_assembly_config
     kernel_image = kernel_zbi
+    kernel_image_name = kernel_name
 
     base_packages = []
     if (generate_fvm) {
@@ -532,7 +543,7 @@ template("assembled_system") {
     # Search for BootFS files in these targets.
     bootfs_labels = invoker.bootfs_labels
     bootfs_labels += component_id_index_dep
-    bootfs_labels += [ "//zircon/kernel" ]
+    bootfs_labels += [ kernel_image ]
     bootfs_labels += [ ":${labels.fshost_config}" ]
 
     # Only builds with an FVM need base-resolver/pkg-cache-resolver.

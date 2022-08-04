@@ -23,6 +23,7 @@ def main():
         '--kernel-clock-backstop', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--kernel-image-metadata', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--kernel-image-name', required=True)
     parser.add_argument('--boot-args', type=argparse.FileType('r'))
     parser.add_argument(
         '--bootfs-entries', type=argparse.FileType('r'), required=True)
@@ -69,7 +70,7 @@ def main():
     [kernel_path] = [
         image["path"]
         for image in kernel_metadata
-        if image["name"] == "kernel" and image["type"] == "zbi"
+        if image["name"] == args.kernel_image_name and image["type"] == "zbi"
     ]
     config["kernel"] = {
         "path": kernel_path,
