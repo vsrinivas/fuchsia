@@ -24,38 +24,8 @@
             moniker: "/core/linux_runner",
         },
         {
-            instance_id: "325b7490f2c61039b4e3e0c7a413c0197e18b1e6f83d1ba69b47790f18223432",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
-            instance_id: "e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
             instance_id: "f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f",
             moniker: "/core/setui_service",
-        },
-        {
-            instance_id: "2e3e35640b0f45265e268204779f7314cf5acae5883ac0d028232859672a7152",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
         },
         {
             instance_id: "e534c6322665ea3b4e7bf7bdce64d17bea86100be0eba25ed220a5e9b355c4ef",
@@ -96,16 +66,6 @@
             moniker: "/core/tee_manager",
         },
         {
-            instance_id: "ab7a3ec7a062f943c00f3f62eb1a0f4a2ad50356600efffab46c1969ce49f3d8",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
             instance_id: "d577f733dfbe1787d272e43f7e4423a01108a71d7e3a89b4e97081ad39372e4e",
             moniker: "/core/pkg-resolver",
         },
@@ -136,18 +96,6 @@
         {
             instance_id: "426871d8856f43fc8433ad9049bf188454d038dc6295e0c59fd3401d72f25a48",
             moniker: "/core/ui/root_presenter",
-        },
-        {
-            instance_id: "fbd62d3fb735db534eccc2221b3bb981f50a88f60cf326f80925ccd0d0e31443",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx",
-
-                // ot-stack.cmx is launched by lowpan-spinel-driver.cmx, which is launched by sysmgr.
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
         },
         {
             instance_id: "76777fb21aa060c86680f0fbd7cbd4734ef6b239b429ac4d9cb2a9d08792033d",
