@@ -318,9 +318,6 @@
             // Routed to session-manager from core.cml in all products.
             // i.e. not via a core realm shard.
             protocol: [
-                // TODO(fxbug.dev/96053): remove once basemgr has migrated to
-                // Cobalt 1.1.
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
