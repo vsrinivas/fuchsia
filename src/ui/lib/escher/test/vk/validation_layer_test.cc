@@ -16,28 +16,7 @@ namespace test {
 
 namespace {
 
-// This function will generate a |vk::ImageCreateInfo| which will cause the following validation
-// error when creating |vk::Image| using this create info:
-//     VUID-VkImageCreateInfo-usage-requiredbitmask(ERROR / SPEC): msgNum: 0 - vkCreateImage:
-//     value of pCreateInfo->usage must not be 0. The Vulkan spec states: usage must not be 0
-//     (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html
-//      #VUID-VkImageCreateInfo-usage-requiredbitmask)
-auto ErrorImageCreateInfo() {
-  vk::ImageCreateInfo create_info;
-  create_info.pNext = nullptr;
-  create_info.imageType = vk::ImageType::e2D;
-  create_info.format = vk::Format::eR8G8B8A8Unorm;
-  create_info.extent = vk::Extent3D{128, 128, 1};
-  create_info.mipLevels = 1;
-  create_info.arrayLayers = 1;
-  create_info.samples = vk::SampleCountFlagBits::e1;
-  create_info.tiling = vk::ImageTiling::eOptimal;
-  create_info.usage = vk::ImageUsageFlags();
-  create_info.sharingMode = vk::SharingMode::eExclusive;
-  create_info.initialLayout = vk::ImageLayout::eUndefined;
-  create_info.flags = vk::ImageCreateFlags();
-  return create_info;
-}
+vk::BindSparseInfo bind_sparse_info;
 
 // This function will generate a |vk::ImageCreateInfo| which will cause no errors / warnings in
 // Vulkan validation layers.
@@ -56,6 +35,27 @@ auto CorrectImageCreateInfo() {
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
   create_info.flags = vk::ImageCreateFlags();
+  return create_info;
+}
+
+// This function will generate a |vk::ImageCreateInfo| which will cause the following validation
+// error when creating |vk::Image| using this create info:
+// Validation Error: [ VUID-VkImageCreateInfo-pNext-pNext ] Object 0: handle = 0xa605cd0a8, type =
+// VK_OBJECT_TYPE_DEVICE; | MessageID = 0x69dad144 | vkCreateImage: pCreateInfo->pNext chain
+// includes a structure with unexpected VkStructureType VK_STRUCTURE_TYPE_BIND_SPARSE_INFO; [...]
+// This error is based on the Valid Usage documentation for version 198 of the Vulkan header.  It is
+// possible that you are using a struct from a private extension or an extension that was added to a
+// later version of the Vulkan header, in which case the use of pCreateInfo->pNext is undefined and
+// may not work correctly with validation enabled The Vulkan spec states: Each pNext member of any
+// structure (including this one) in the pNext chain must be either NULL or a pointer to a valid
+// instance of [...]
+// (https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#VUID-VkImageCreateInfo-pNext-pNext)
+auto ErrorImageCreateInfo() {
+  vk::ImageCreateInfo create_info = CorrectImageCreateInfo();
+  // VK_STRUCTURE_TYPE_BIND_SPARSE_INFO is not legal to chain onto
+  // vk::ImageCreateInfo and almost certainly will never be. It's unlikely to
+  // cause asserts in drivers, since they're likely to ignore invalid structs.
+  create_info.pNext = &bind_sparse_info;
   return create_info;
 }
 
