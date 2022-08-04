@@ -605,8 +605,8 @@ macro_rules! clone_get_service_proxy_assert_ok {
         clone_get_proxy_assert!(
             $proxy,
             $flags,
-            fio::FileMarker,
-            fio::FileEvent::OnOpen_ { s, info },
+            fio::NodeMarker,
+            fio::NodeEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 assert_eq!(info, Some(Box::new(fio::NodeInfo::Service(fio::Service))),);

@@ -8,7 +8,7 @@ use super::endpoint;
 
 // Macros are exported into the root of the crate.
 use crate::{
-    assert_close, assert_event, assert_get_attr, assert_read_err, clone_get_proxy_assert,
+    assert_close, assert_event, assert_get_attr, clone_get_proxy_assert,
     clone_get_service_proxy_assert_ok,
 };
 
@@ -106,7 +106,18 @@ fn clone() {
                 fio::OpenFlags::NODE_REFERENCE | fio::OpenFlags::DESCRIBE
             );
 
-            assert_read_err!(second_proxy, Status::ACCESS_DENIED);
+            assert_get_attr!(
+                second_proxy,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
 
             assert_get_attr!(
                 first_proxy,
@@ -151,7 +162,18 @@ fn clone_same_rights() {
                 fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE
             );
 
-            assert_read_err!(second_proxy, Status::ACCESS_DENIED);
+            assert_get_attr!(
+                second_proxy,
+                fio::NodeAttributes {
+                    mode: fio::MODE_TYPE_SERVICE | S_IRUSR | S_IWUSR,
+                    id: fio::INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
 
             assert_get_attr!(
                 first_proxy,

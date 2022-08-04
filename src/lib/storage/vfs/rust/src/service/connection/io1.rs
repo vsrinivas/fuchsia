@@ -15,7 +15,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_zircon::{
-        sys::{ZX_ERR_ACCESS_DENIED, ZX_ERR_NOT_SUPPORTED, ZX_OK},
+        sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
     },
     futures::stream::StreamExt,
@@ -28,7 +28,7 @@ pub struct Connection {
     scope: ExecutionScope,
 
     /// Wraps a FIDL connection, providing messages coming from the client.
-    requests: fio::FileRequestStream,
+    requests: fio::NodeRequestStream,
 }
 
 /// Return type for [`handle_request()`] functions.
@@ -73,17 +73,14 @@ impl Connection {
             }
         };
 
-        let (requests, control_handle) =
-            match ServerEnd::<fio::FileMarker>::new(server_end.into_channel())
-                .into_stream_and_control_handle()
-            {
-                Ok((requests, control_handle)) => (requests, control_handle),
-                Err(_) => {
-                    // As we report all errors on `server_end`, if we failed to send an error over
-                    // this connection, there is nowhere to send the error to.
-                    return;
-                }
-            };
+        let (requests, control_handle) = match server_end.into_stream_and_control_handle() {
+            Ok((requests, control_handle)) => (requests, control_handle),
+            Err(_) => {
+                // As we report all errors on `server_end`, if we failed to send an error over
+                // this connection, there is nowhere to send the error to.
+                return;
+            }
+        };
 
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
             let mut info = fio::NodeInfo::Service(fio::Service);
@@ -126,36 +123,35 @@ impl Connection {
         POSIX_READ_WRITE_PROTECTION_ATTRIBUTES
     }
 
-    /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
-    /// that operate on the connection-specific buffer.
-    async fn handle_request(&mut self, req: fio::FileRequest) -> Result<ConnectionState, Error> {
+    /// Handle a [`NodeRequest`].
+    async fn handle_request(&mut self, req: fio::NodeRequest) -> Result<ConnectionState, Error> {
         match req {
-            fio::FileRequest::Clone { flags, object, control_handle: _ } => {
+            fio::NodeRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(flags, object);
             }
-            fio::FileRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::NodeRequest::Reopen { options, object_request, control_handle: _ } => {
                 let _ = object_request;
                 todo!("https://fxbug.dev/77623: options={:?}", options);
             }
-            fio::FileRequest::Close { responder } => {
+            fio::NodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
             }
-            fio::FileRequest::Describe { responder } => {
+            fio::NodeRequest::Describe { responder } => {
                 let mut info = fio::NodeInfo::Service(fio::Service);
                 responder.send(&mut info)?;
             }
-            fio::FileRequest::Describe2 { query: _, responder } => {
+            fio::NodeRequest::Describe2 { query: _, responder } => {
                 let info = fio::ConnectionInfo {
                     representation: Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY)),
                     ..fio::ConnectionInfo::EMPTY
                 };
                 responder.send(info)?;
             }
-            fio::FileRequest::Sync { responder } => {
+            fio::NodeRequest::Sync { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            fio::FileRequest::GetAttr { responder } => {
+            fio::NodeRequest::GetAttr { responder } => {
                 let mut attrs = fio::NodeAttributes {
                     mode: fio::MODE_TYPE_SERVICE | self.posix_protection_attributes(),
                     id: fio::INO_UNKNOWN,
@@ -167,52 +163,24 @@ impl Connection {
                 };
                 responder.send(ZX_OK, &mut attrs)?;
             }
-            fio::FileRequest::SetAttr { flags: _, attributes: _, responder } => {
-                // According to https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.io/
-                // the only flag that might be modified through this call is OPEN_FLAG_APPEND, and
-                // it is not supported by the PseudoFile.
+            fio::NodeRequest::SetAttr { flags: _, attributes: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            fio::FileRequest::GetAttributes { query, responder } => {
+            fio::NodeRequest::GetAttributes { query, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: query={:?}", query);
             }
-            fio::FileRequest::UpdateAttributes { payload, responder } => {
+            fio::NodeRequest::UpdateAttributes { payload, responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623: payload={:?}", payload);
             }
-            fio::FileRequest::GetFlags { responder } => {
+            fio::NodeRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, fio::OpenFlags::NODE_REFERENCE)?;
             }
-            fio::FileRequest::SetFlags { flags: _, responder } => {
+            fio::NodeRequest::SetFlags { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            fio::FileRequest::AdvisoryLock { request: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
-            }
-            fio::FileRequest::Read { count: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::ReadAt { offset: _, count: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::Write { data: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::WriteAt { offset: _, data: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::Seek { origin: _, offset: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::Resize { length: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
-            }
-            fio::FileRequest::GetBackingMemory { flags: _, responder } => {
-                // There is no backing VMO.
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
-            }
-            fio::FileRequest::QueryFilesystem { responder } => {
+            fio::NodeRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
         }
