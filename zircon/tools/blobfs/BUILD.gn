@@ -19,6 +19,7 @@ source_set("blobfs_creator") {
     "blobfs_creator.h",
   ]
   public_deps = [
+    "//src/lib/chunked-compression:chunked-compression",
     "//src/lib/digest",
     "//src/storage/blobfs",
     "//zircon/system/ulib/fbl",
@@ -40,6 +41,11 @@ executable("blobfs") {
 
   if (!is_fuchsia) {
     deps += [ "//zircon/system/ulib/zx-panic-libc" ]
+
+    # fxbug.dev/105094: Optimizing for speed saves a considerable amount of
+    # time when constructing blobfs images with a large number of blobs.
+    configs -= [ "//build/config:default_optimize" ]
+    configs += [ "//build/config:optimize_speed" ]
 
     exclude_toolchain_tags = [
       # TODO(fxbug.dev/53356): blobfs performs poorly when built with asan

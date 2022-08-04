@@ -13,12 +13,12 @@ namespace {
 constexpr size_t kKiB = 1024;
 }  // namespace
 
-bool CompressionParams::IsValid() {
+bool CompressionParams::IsValid() const {
   return MinCompressionLevel() <= compression_level && compression_level <= MaxCompressionLevel() &&
          MinChunkSize() <= chunk_size && chunk_size % MinChunkSize() == 0;
 }
 
-size_t CompressionParams::ComputeOutputSizeLimit(size_t len) {
+size_t CompressionParams::ComputeOutputSizeLimit(size_t len) const {
   if (len == 0) {
     return 0ul;
   }

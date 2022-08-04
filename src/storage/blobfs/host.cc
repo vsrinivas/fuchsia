@@ -39,6 +39,7 @@
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
+#include "src/lib/chunked-compression/multithreaded-chunked-compressor.h"
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
@@ -51,6 +52,7 @@
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/configs/chunked_compression_params.h"
 #include "src/storage/blobfs/compression/decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
@@ -70,16 +72,6 @@ constexpr uint32_t kExtentCount = 5;
 
 namespace blobfs {
 namespace {
-
-// TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
-// choosing from multiple strategies. This has already been done in non-host code but host tools do
-// not use |BlobCompressor| the same way.
-using HostCompressor = ChunkedCompressor;
-using HostDecompressor = ChunkedDecompressor;
-
-constexpr CompressionSettings kCompressionSettings = {
-    .compression_algorithm = CompressionAlgorithm::kChunked,
-};
 
 zx::status<> ReadBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
                                   off_t file_offset, void* data) {
@@ -166,38 +158,6 @@ struct MerkleTreeInfo {
   std::vector<uint8_t> merkle_tree;
 };
 
-zx::status<std::vector<uint8_t>> CompressData(cpp20::span<const uint8_t> data) {
-  size_t max = HostCompressor::BufferMax(data.size());
-  std::vector<uint8_t> compressed_data(max, 0);
-
-  std::unique_ptr<HostCompressor> compressor;
-  size_t output_limit;
-  if (zx_status_t status =
-          HostCompressor::Create(kCompressionSettings, data.size(), &output_limit, &compressor);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
-    return zx::error(status);
-  }
-
-  if (zx_status_t status = compressor->SetOutput(compressed_data.data(), max); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
-    return zx::error(status);
-  }
-
-  if (zx_status_t status = compressor->Update(data.data(), data.size()); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to update blobfs compressor: " << status;
-    return zx::error(status);
-  }
-
-  if (zx_status_t status = compressor->End(); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to complete blobfs compressor: " << status;
-    return zx::error(status);
-  }
-
-  compressed_data.resize(compressor->Size());
-  return zx::ok(std::move(compressed_data));
-}
-
 // Returns ZX_OK and copies blobfs info_block_t, which is a block worth of data containing
 // superblock, into |out_info_block| if the block read from fd belongs to blobfs.
 zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_info_block,
@@ -283,8 +243,9 @@ FileMapping::~FileMapping() {
   }
 }
 
-zx::status<BlobInfo> BlobInfo::CreateCompressed(int fd, BlobLayoutFormat blob_layout_format,
-                                                std::filesystem::path file_path) {
+zx::status<BlobInfo> BlobInfo::CreateCompressed(
+    int fd, BlobLayoutFormat blob_layout_format, std::filesystem::path file_path,
+    chunked_compression::MultithreadedChunkedCompressor& compressor) {
   zx::status<BlobInfo> blob_info = CreateUncompressed(fd, blob_layout_format, std::move(file_path));
   if (blob_info.is_error()) {
     return blob_info;
@@ -297,7 +258,8 @@ zx::status<BlobInfo> BlobInfo::CreateCompressed(int fd, BlobLayoutFormat blob_la
     return blob_info;
   }
 
-  zx::status<std::vector<uint8_t>> compressed_data = CompressData(data);
+  zx::status<std::vector<uint8_t>> compressed_data =
+      compressor.Compress(GetDefaultChunkedCompressionParams(data.size()), data);
   if (compressed_data.is_error()) {
     return compressed_data.take_error();
   }
@@ -741,7 +703,7 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   inode->block_count = blob_layout.TotalBlockCount();
   blob_info.GetDigest().CopyTo(inode->merkle_root_hash);
   inode->header.flags |=
-      (blob_info.IsCompressed() ? HostCompressor::InodeHeaderCompressionFlags() : 0);
+      (blob_info.IsCompressed() ? ChunkedCompressor::InodeHeaderCompressionFlags() : 0);
 
   // Write out all nodes.
   // The nodes can't be in written in |on_node| because the NodePopulator modifies the nodes after
@@ -939,10 +901,10 @@ fpromise::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlo
   }
 
   // Decompress the data if necessary.
-  if (inode.header.flags & HostCompressor::InodeHeaderCompressionFlags()) {
+  if (inode.header.flags & ChunkedCompressor::InodeHeaderCompressionFlags()) {
     size_t file_size = inode.blob_size;
     std::vector<uint8_t> uncompressed_data(file_size, 0);
-    HostDecompressor decompressor;
+    ChunkedDecompressor decompressor;
     if ((status = decompressor.Decompress(uncompressed_data.data(), &file_size, data_blocks.data(),
                                           blob_layout->DataSizeUpperBound())) != ZX_OK) {
       return make_error("Failed to decompress with status " + std::to_string(status));

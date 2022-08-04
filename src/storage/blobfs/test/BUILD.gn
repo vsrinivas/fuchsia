@@ -153,6 +153,7 @@ fuchsia_test_package("blobfs-unittest-package") {
 test("blobfs_host") {
   sources = [ "host/host_test.cc" ]
   deps = [
+    "//src/lib/chunked-compression:chunked-compression",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
     "//third_party/googletest:gtest",

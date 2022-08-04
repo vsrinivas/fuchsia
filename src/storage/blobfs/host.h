@@ -40,6 +40,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/chunked-compression/multithreaded-chunked-compressor.h"
 #include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/allocator/host_allocator.h"
 #include "src/storage/blobfs/blob_layout.h"
@@ -81,8 +82,9 @@ class BlobInfo {
 
   // Creates a BlobInfo object for |fd| using the layout specified by |blob_layout_format|. If
   // compressing the blob would save space then the blob will be compressed.
-  static zx::status<BlobInfo> CreateCompressed(int fd, BlobLayoutFormat blob_layout_format,
-                                               std::filesystem::path file_path);
+  static zx::status<BlobInfo> CreateCompressed(
+      int fd, BlobLayoutFormat blob_layout_format, std::filesystem::path file_path,
+      chunked_compression::MultithreadedChunkedCompressor& compressor);
 
   // Creates a BlobInfo object for |fd| using the layout specified by |blob_layout_format|. The blob
   // will not be compressed.

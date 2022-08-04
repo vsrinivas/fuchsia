@@ -8,12 +8,14 @@
 #include <lib/fit/defer.h>
 
 #include <map>
+#include <optional>
 #include <vector>
 
 #include <fbl/array.h>
 #include <fbl/vector.h>
 #include <fs-host/common.h>
 
+#include "src/lib/chunked-compression/multithreaded-chunked-compressor.h"
 #include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/host.h"
@@ -36,7 +38,9 @@ class BlobfsCreator : public FsCreator {
   zx_status_t ProcessCustom(int argc, char** argv, uint8_t* processed) override;
 
   // Generate BlobInfo for a given blob path.
-  zx::status<blobfs::BlobInfo> ProcessBlobToBlobInfo(const std::filesystem::path& path);
+  zx::status<blobfs::BlobInfo> ProcessBlobToBlobInfo(
+      const std::filesystem::path& path,
+      std::optional<chunked_compression::MultithreadedChunkedCompressor>& compressor);
 
   // Calculates merkle trees for the processed blobs, and determines
   // the total size of the underlying storage necessary to contain them.

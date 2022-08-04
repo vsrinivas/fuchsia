@@ -17,15 +17,21 @@ source_set("chunked-compression") {
     "chunked-decompressor.h",
     "compression-params.cc",
     "compression-params.h",
+    "multithreaded-chunked-compressor.cc",
+    "multithreaded-chunked-compressor.h",
     "status.h",
     "streaming-chunked-compressor.cc",
     "streaming-chunked-compressor.h",
   ]
-  public_deps = [ "//zircon/system/ulib/fbl" ]
+  public_deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
+  ]
   deps = [
     "//src/lib/fxl",
     "//third_party/zstd",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]
 
@@ -74,6 +80,7 @@ test("chunked-compression-unittests") {
     "compression-params-test.cc",
     "header-reader-test.cc",
     "header-writer-test.cc",
+    "multithreaded-chunked-compressor-test.cc",
     "seek-table-test.cc",
     "streaming-chunked-compressor-test.cc",
   ]

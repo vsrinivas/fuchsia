@@ -13,11 +13,11 @@ namespace chunked_compression {
 struct CompressionParams {
  public:
   // Validates the configured parameters.
-  bool IsValid();
+  bool IsValid() const;
 
   // Returns the minimum size that a buffer must be to hold the result of compressing |len| bytes,
   // given the configured parameters.
-  size_t ComputeOutputSizeLimit(size_t len);
+  size_t ComputeOutputSizeLimit(size_t len) const;
 
   // How aggressively to compress.
   // MinCompressionLevel() <= compression_level <= MaxCompressionLevel()

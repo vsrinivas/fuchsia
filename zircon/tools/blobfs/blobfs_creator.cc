@@ -18,6 +18,7 @@
 #include <fstream>
 #include <ios>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -26,6 +27,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/chunked-compression/multithreaded-chunked-compressor.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
@@ -256,7 +258,8 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
 }
 
 zx::status<blobfs::BlobInfo> BlobfsCreator::ProcessBlobToBlobInfo(
-    const std::filesystem::path& path) {
+    const std::filesystem::path& path,
+    std::optional<chunked_compression::MultithreadedChunkedCompressor>& compressor) {
   if (zx_status_t res = AppendDepfile(path.c_str()); res != ZX_OK) {
     return zx::error(res);
   }
@@ -266,8 +269,9 @@ zx::status<blobfs::BlobInfo> BlobfsCreator::ProcessBlobToBlobInfo(
     return zx::error(ZX_ERR_BAD_PATH);
   }
   zx::status<blobfs::BlobInfo> blob_info =
-      ShouldCompress()
-          ? blobfs::BlobInfo::CreateCompressed(data_fd.get(), blob_layout_format_, path)
+      compressor.has_value()
+          ? blobfs::BlobInfo::CreateCompressed(data_fd.get(), blob_layout_format_, path,
+                                               *compressor)
           : blobfs::BlobInfo::CreateUncompressed(data_fd.get(), blob_layout_format_, path);
   if (blob_info.is_error()) {
     fprintf(stderr, "Error here: %d\n", blob_info.error_value());
@@ -290,6 +294,10 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   if (!n_threads) {
     n_threads = kDefaultConcurrency;
   }
+  std::optional<chunked_compression::MultithreadedChunkedCompressor> compressor =
+      ShouldCompress()
+          ? std::optional<chunked_compression::MultithreadedChunkedCompressor>(n_threads)
+          : std::nullopt;
   // Accessing this with relaxed memory ordering across threads. It doesn't matter much if we do
   // a little more work than we should, eventual consistency is fine.
   std::atomic<zx_status_t> status = ZX_OK;
@@ -306,7 +314,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
         if (i >= blob_list_.size()) {
           break;
         }
-        zx::status<blobfs::BlobInfo> info_or = ProcessBlobToBlobInfo(blob_list_[i]);
+        zx::status<blobfs::BlobInfo> info_or = ProcessBlobToBlobInfo(blob_list_[i], compressor);
         if (info_or.is_error()) {
           status.store(info_or.status_value(), std::memory_order_relaxed);
           return;

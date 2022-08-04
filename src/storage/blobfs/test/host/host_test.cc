@@ -21,6 +21,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/chunked-compression/multithreaded-chunked-compressor.h"
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/blob_layout.h"
@@ -129,6 +130,11 @@ std::unique_ptr<File> CreateFileWithRandomContent(uint64_t file_size, unsigned i
   return file;
 }
 
+zx::status<BlobInfo> CreateCompressedBlob(int fd, BlobLayoutFormat blob_layout_format) {
+  chunked_compression::MultithreadedChunkedCompressor compressor(/*thread_count=*/1);
+  return BlobInfo::CreateCompressed(fd, blob_layout_format, kSrcFilePath, compressor);
+}
+
 // Adds an uncompressed blob of size |data_size| to |blobfs| and returns the created blob's Inode.
 Inode AddUncompressedBlob(uint64_t data_size, Blobfs& blobfs) {
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
@@ -147,8 +153,7 @@ Inode AddUncompressedBlob(uint64_t data_size, Blobfs& blobfs) {
 // created blob's Inode.  The blobs data will be all zeros which will be significantly compressed.
 Inode AddCompressedBlob(uint64_t data_size, Blobfs& blobfs) {
   auto file = CreateEmptyFile(data_size);
-  auto blob_info =
-      BlobInfo::CreateCompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()), kSrcFilePath);
+  auto blob_info = CreateCompressedBlob(file->fd(), GetBlobLayoutFormat(blobfs.Info()));
   ZX_ASSERT(blob_info.is_ok());
   // Make sure that the blob was compressed.
   EXPECT_TRUE(blob_info->IsCompressed());
@@ -214,8 +219,8 @@ TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
   constexpr size_t kAllZeroSize{static_cast<size_t>(12) * 1024};
   auto file = CreateEmptyFile(kAllZeroSize);
 
-  auto blob_info = BlobInfo::CreateCompressed(
-      file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, kSrcFilePath);
+  auto blob_info =
+      CreateCompressedBlob(file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
   ASSERT_TRUE(blob_info.is_ok());
 
   EXPECT_TRUE(blob_info->IsCompressed());
@@ -497,16 +502,14 @@ TEST(BlobfsHostTest, CreateBlobfsWithNullBlobPassesFsck) {
 TEST(BlobfsHostTest, BlobInfoCreateCompressedWithUncompressableFileDoesNotCompressBlob) {
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
   auto file = CreateFileWithRandomContent(2 * kBlobfsBlockSize, &seed);
-  auto blob_info = BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd,
-                                              kSrcFilePath);
+  auto blob_info = CreateCompressedBlob(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
   ASSERT_TRUE(blob_info.is_ok());
   EXPECT_FALSE(blob_info->IsCompressed());
 }
 
 TEST(BlobfsHostTest, BlobInfoCreateCompressedWithTinyFileDoesNotCompressBlob) {
   auto file = CreateEmptyFile(kBlobfsBlockSize);
-  auto blob_info = BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd,
-                                              kSrcFilePath);
+  auto blob_info = CreateCompressedBlob(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
   ASSERT_TRUE(blob_info.is_ok());
   EXPECT_FALSE(blob_info->IsCompressed());
 }
@@ -519,15 +522,15 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCom
 
   // With the padded format, compressing the half block doesn't save any blocks so the file is not
   // compressed.
-  auto padded_blob_info = BlobInfo::CreateCompressed(
-      file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, kSrcFilePath);
+  auto padded_blob_info =
+      CreateCompressedBlob(file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
   ASSERT_TRUE(padded_blob_info.is_ok());
   EXPECT_FALSE(padded_blob_info->IsCompressed());
 
   // With the compact format, compressing the half block saves enough space to fit the Merkle tree
   // which saves a block so the file is compressed.
-  auto compact_blob_info = BlobInfo::CreateCompressed(
-      file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd, kSrcFilePath);
+  auto compact_blob_info =
+      CreateCompressedBlob(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
   ASSERT_TRUE(compact_blob_info.is_ok());
   EXPECT_TRUE(compact_blob_info->IsCompressed());
 }
