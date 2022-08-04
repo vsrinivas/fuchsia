@@ -225,7 +225,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		}
 	})
 
-	listener, err := net.Listen("tcp", *listen)
+	listener, err := getListener(*listen)
 	if err != nil {
 		return err
 	}

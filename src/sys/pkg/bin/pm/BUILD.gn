@@ -21,6 +21,7 @@ go_library("pm_lib") {
     "//third_party/golibs:github.com/fsnotify/fsnotify",
     "//third_party/golibs:github.com/theupdateframework/go-tuf",
     "//third_party/golibs:golang.org/x/crypto",
+    "//third_party/golibs:golang.org/x/sys",
   ]
 
   sources = [
@@ -53,6 +54,8 @@ go_library("pm_lib") {
     "cmd/pm/publish/publish_test.go",
     "cmd/pm/seal/seal.go",
     "cmd/pm/serve/incremental.go",
+    "cmd/pm/serve/listener_default.go",
+    "cmd/pm/serve/listener_unix.go",
     "cmd/pm/serve/monitor.go",
     "cmd/pm/serve/monitor_test.go",
     "cmd/pm/serve/serve.go",
