@@ -104,9 +104,9 @@ impl HostWatcher {
         self.active_host.as_ref().map(|host| host.address)
     }
 
-    /// Returns true if the active Host is in pairing mode.
-    pub fn pairing_mode(&self) -> bool {
-        self.active_host.as_ref().map_or(false, |h| h.discoverable)
+    /// Returns the current discoverable state of the active Host, or None if not set.
+    pub fn pairing_mode(&self) -> Option<bool> {
+        self.active_host.as_ref().map(|h| h.discoverable)
     }
 }
 

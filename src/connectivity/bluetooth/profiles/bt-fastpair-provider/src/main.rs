@@ -9,6 +9,7 @@ use tracing::{debug, info, warn};
 
 mod advertisement;
 mod config;
+mod fidl_client;
 mod fidl_service;
 mod gatt_service;
 mod host_watcher;

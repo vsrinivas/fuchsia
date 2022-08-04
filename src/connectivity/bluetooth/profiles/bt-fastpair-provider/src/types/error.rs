@@ -10,6 +10,10 @@ use thiserror::Error;
 /// Errors that occur during the operation of the Fast Pair Provider component.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// The Fast Pair service is already enabled.
+    #[error("Fast Pair service already enabled")]
+    AlreadyEnabled,
+
     /// `fuchsia.bluetooth.gatt2` API errors.
     #[error("Error in gatt2 FIDL: {0:?}")]
     GattError(gatt::Error),

@@ -3,18 +3,17 @@
 // found in the LICENSE file.
 
 use async_helpers::maybe_stream::MaybeStream;
+use fidl_fuchsia_bluetooth_fastpair::{ProviderEnableResponder, ProviderHandleProxy};
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
 use fidl_fuchsia_bluetooth_sys::{HostWatcherMarker, PairingMarker, PairingProxy};
 use fuchsia_bluetooth::types::PeerId;
-use futures::{
-    channel::mpsc,
-    select,
-    stream::{FusedStream, StreamExt},
-};
-use tracing::{debug, info, warn};
+use futures::stream::{FusedStream, StreamExt};
+use futures::{channel::mpsc, select, FutureExt};
+use tracing::{debug, info, trace, warn};
 
 use crate::advertisement::LowEnergyAdvertiser;
 use crate::config::Config;
+use crate::fidl_client::FastPairConnectionManager;
 use crate::gatt_service::{GattRequest, GattService, GattServiceResponder};
 use crate::host_watcher::{HostEvent, HostWatcher};
 use crate::pairing::{PairingArgs, PairingManager};
@@ -30,13 +29,18 @@ use crate::types::{AccountKey, AccountKeyList, Error, SharedSecret};
 pub enum ServiceRequest {
     /// A request to set the Pairing Delegate.
     Pairing(PairingArgs),
+    /// A request to enable the Fast Pair Provider service.
+    EnableFastPair { handle: ProviderHandleProxy, responder: ProviderEnableResponder },
 }
 
 /// The toplevel server that manages the current state of the Fast Pair Provider service.
 /// Owns the interfaces for interacting with various BT system services.
 pub struct Provider {
-    /// The configuration of the Fast Pair Provider component.
+    /// The configuration of the Fast Pair Provider server.
     config: Config,
+    /// The upstream client that has requested to enable the Fast Pair Provider service. If unset,
+    /// the component will not advertise the service over LE.
+    upstream: FastPairConnectionManager,
     /// The current set of saved Account Keys.
     account_keys: AccountKeyList,
     /// Manages the Fast Pair advertisement over LE.
@@ -62,6 +66,7 @@ impl Provider {
         let pairing_svc = fuchsia_component::client::connect_to_protocol::<PairingMarker>()?;
         Ok(Self {
             config,
+            upstream: FastPairConnectionManager::new(),
             account_keys: AccountKeyList::load()?,
             advertiser,
             gatt,
@@ -71,21 +76,37 @@ impl Provider {
         })
     }
 
-    async fn handle_host_watcher_update(&mut self, update: HostEvent) {
+    async fn advertise(&mut self, discoverable: bool) -> Result<(), Error> {
+        if discoverable {
+            self.advertiser.advertise_model_id(self.config.model_id).await
+        } else {
+            self.advertiser.advertise_account_keys(&self.account_keys).await
+        }
+    }
+
+    async fn disable_fast_pair(&mut self) {
+        // Stop advertising over LE.
+        let _ = self.advertiser.stop_advertising().await;
+        // TODO(fxbug.dev/105509): Close ongoing pairing procedures.
+
+        // Reset the upstream connection.
+        self.upstream.reset();
+    }
+
+    async fn handle_host_watcher_update(&mut self, update: HostEvent) -> Result<(), Error> {
         match update {
             HostEvent::Discoverable(discoverable) | HostEvent::NewActiveHost { discoverable } => {
-                let result = if discoverable {
-                    self.advertiser.advertise_model_id(self.config.model_id).await
-                } else {
-                    self.advertiser.advertise_account_keys(&self.account_keys).await
-                };
-                let _ = result.map_err(|e| warn!("Couldn't advertise: {:?}", e));
+                // Only advertise if Fast Pair is enabled.
+                if self.upstream.is_enabled() {
+                    self.advertise(discoverable).await?;
+                }
             }
             HostEvent::NotAvailable => {
                 // TODO(fxbug.dev/94166): It might make sense to shut down the GATT service.
                 let _ = self.advertiser.stop_advertising().await;
             }
         }
+        Ok(())
     }
 
     /// Processes the encrypted key-based pairing `request`.
@@ -105,7 +126,10 @@ impl Provider {
         let (encrypted_request, remote_public_key) = parse_key_based_pairing_request(request)?;
         let keys_to_try = if let Some(key) = remote_public_key {
             debug!("Trying remote public key");
-            if !self.host_watcher.pairing_mode() {
+            // The Public/Private key pairing flow is only accepted if the local Host is
+            // discoverable.
+            // This unwrap is safe because the active Host is guaranteed to exist at this point.
+            if !self.host_watcher.pairing_mode().unwrap() {
                 return Err(Error::internal("Active host is not discoverable"));
             }
 
@@ -279,6 +303,14 @@ impl Provider {
     }
 
     fn handle_gatt_update(&mut self, update: GattRequest) {
+        // GATT updates will only be processed if Fast Pair is enabled. Otherwise, reject the
+        // update.
+        if !self.upstream.is_enabled() {
+            trace!("Received GATT request while Fast Pair is disabled. Rejecting.");
+            update.responder()(Err(gatt::Error::WriteRequestRejected));
+            return;
+        }
+
         match update {
             GattRequest::KeyBasedPairing { peer_id, encrypted_request, response } => {
                 self.handle_key_based_pairing_request(peer_id, encrypted_request, response);
@@ -292,11 +324,40 @@ impl Provider {
         }
     }
 
+    async fn handle_fidl_request(&mut self, request: ServiceRequest) -> Result<(), Error> {
+        match request {
+            ServiceRequest::Pairing(client) => {
+                if self.pairing.inner_mut().map_or(true, |p| p.is_terminated()) {
+                    self.pairing.set(PairingManager::new(self.pairing_svc.clone(), client)?);
+                } else {
+                    warn!("Pairing Delegate is already active, ignoring..");
+                }
+            }
+            ServiceRequest::EnableFastPair { handle, responder } => {
+                match self.upstream.set(handle) {
+                    Ok(()) => {
+                        let _ = responder.send(&mut Ok(()));
+                        if let Some(discoverable) = self.host_watcher.pairing_mode() {
+                            self.advertise(discoverable).await?;
+                        }
+                    }
+                    Err(e) => {
+                        info!("Couldn't enable Fast Pair: {:?}", e);
+                        let _ = responder
+                            .send(&mut Err(fuchsia_zircon::Status::ALREADY_BOUND.into_raw()));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Run the Fast Pair Provider service to completion.
     /// Terminates if an irrecoverable error is encountered, or all Fast Pair related resources
     /// have been exhausted.
     pub async fn run(mut self, mut requests: mpsc::Receiver<ServiceRequest>) -> Result<(), Error> {
         loop {
+            let mut upstream_client_closed_fut = self.upstream.on_upstream_client_closed().fuse();
             select! {
                 // It's OK if the advertisement terminates for any reason. We use `select_next_some`
                 // to ignore cases where the stream is exhausted. It can always be set again if
@@ -316,7 +377,7 @@ impl Provider {
                     debug!("HostWatcher event: {:?}", watcher_update);
                     // Unexpected termination of the Host Watcher is a fatal error.
                     match watcher_update {
-                        Some(update) => self.handle_host_watcher_update(update).await,
+                        Some(update) => self.handle_host_watcher_update(update).await?,
                         None => return Err(Error::internal("HostWatcher unexpectedly terminated")),
                     }
                 }
@@ -330,22 +391,20 @@ impl Provider {
                         }
                         Some(id) => {
                             // Pairing completed for peer.
-                            // TODO(fxbug.dev/98420): Notify FIDL client of success.
                             info!("Fast Pair pairing completed with peer: {:?}", id);
+                            self.upstream.notify_pairing_complete(id);
                         }
                     }
                 }
                 service_request = requests.next() => {
                     match service_request {
                         None => return Err(Error::internal("FIDL service handler unexpectedly terminated")),
-                        Some(ServiceRequest::Pairing(client)) => {
-                            if self.pairing.inner_mut().map_or(true, |p| p.is_terminated()) {
-                                self.pairing.set(PairingManager::new(self.pairing_svc.clone(), client)?);
-                            } else {
-                                warn!("Pairing Delegate is already active, ignoring..");
-                            }
-                        }
+                        Some(request) => self.handle_fidl_request(request).await?,
                     }
+                }
+                _ = upstream_client_closed_fut => {
+                    info!("Upstream client disabled Fast Pair");
+                    self.disable_fast_pair().await;
                 }
                 complete => {
                     break;
@@ -377,6 +436,7 @@ mod tests {
     use futures::{pin_mut, FutureExt, SinkExt};
     use std::convert::{TryFrom, TryInto};
 
+    use crate::fidl_client::tests::MockUpstreamClient;
     use crate::gatt_service::{
         tests::setup_gatt_service, ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
         KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE, PASSKEY_CHARACTERISTIC_HANDLE,
@@ -389,9 +449,14 @@ mod tests {
     use crate::types::tests::expect_keys_at_path;
     use crate::types::{keys, ModelId};
 
-    async fn setup_provider(
-    ) -> (Provider, PeripheralRequestStream, LocalServiceProxy, HostWatcherRequestStream, MockPairing)
-    {
+    async fn setup_provider() -> (
+        Provider,
+        PeripheralRequestStream,
+        LocalServiceProxy,
+        HostWatcherRequestStream,
+        MockPairing,
+        MockUpstreamClient,
+    ) {
         let config = Config::example_config();
 
         let (peripheral_proxy, peripheral_server) =
@@ -406,8 +471,13 @@ mod tests {
 
         let (pairing, mock_pairing) = MockPairing::new_with_manager().await;
 
+        // By default, enable Fast Pair.
+        let (mock_upstream, c) = MockUpstreamClient::new();
+        let upstream = FastPairConnectionManager::new_with_upstream(c);
+
         let this = Provider {
             config,
+            upstream,
             account_keys: AccountKeyList::with_capacity_and_keys(10, vec![]),
             advertiser,
             gatt,
@@ -416,12 +486,12 @@ mod tests {
             pairing: Some(pairing).into(),
         };
 
-        (this, peripheral_server, local_service_proxy, watcher_server, mock_pairing)
+        (this, peripheral_server, local_service_proxy, watcher_server, mock_pairing, mock_upstream)
     }
 
     #[fuchsia::test]
     async fn terminates_if_host_watcher_closes() {
-        let (provider, _peripheral, _gatt, host_watcher_stream, _mock_pairing) =
+        let (provider, _peripheral, _gatt, host_watcher_stream, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         let (_sender, receiver) = mpsc::channel(0);
         let provider_fut = provider.run(receiver);
@@ -437,7 +507,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn terminates_if_gatt_closes() {
-        let (provider, _peripheral, gatt, _host_watcher, _mock_pairing) = setup_provider().await;
+        let (provider, _peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
         let (_sender, receiver) = mpsc::channel(0);
         let provider_fut = provider.run(receiver);
         pin_mut!(provider_fut);
@@ -451,7 +522,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn terminates_if_fidl_request_handler_closes() {
-        let (provider, _peripheral, _gatt, _host_watcher, _mock_pairing) = setup_provider().await;
+        let (provider, _peripheral, _gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
         let (sender, receiver) = mpsc::channel(0);
         let provider_fut = provider.run(receiver);
         pin_mut!(provider_fut);
@@ -463,7 +535,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn advertisement_changes_upon_host_discoverable_change() {
-        let (provider, mut le_peripheral, _gatt, mut host_watcher, _mock_pairing) =
+        let (provider, mut le_peripheral, _gatt, mut host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         let (_sender, _provider_server) = server_task(provider);
 
@@ -518,6 +590,142 @@ mod tests {
         let _ = responder.send(&mut Ok(())).unwrap();
     }
 
+    #[fuchsia::test]
+    async fn le_advertisement_is_stopped_when_fast_pair_disabled() {
+        let (provider, mut le_peripheral, _gatt, mut host_watcher, _mock_pairing, mock_upstream) =
+            setup_provider().await;
+        let (_sender, _provider_server) = server_task(provider);
+
+        // Expect the Provider server to watch active hosts.
+        let watch_request = host_watcher.select_next_some().await.expect("fidl request");
+        let watch_responder = watch_request.into_watch().expect("HostWatcher::Watch request");
+        // Set a local BT host that is discoverable.
+        let discoverable =
+            vec![example_host(HostId(1), /* active= */ true, /* discoverable= */ true)];
+        let _ = watch_responder.send(&mut discoverable.into_iter()).unwrap();
+        // Provider server should recognize this and attempt to advertise Model ID over LE.
+        let advertise_request = le_peripheral.select_next_some().await.expect("fidl request");
+        let (params, adv_client, _responder) =
+            advertise_request.into_advertise().expect("advertise request");
+        let service_data = &params.data.unwrap().service_data.unwrap()[0].data;
+        let expected_data: [u8; 3] = ModelId::try_from(1).expect("valid ID").into();
+        assert_eq!(service_data, &expected_data.to_vec());
+
+        // Advertisement should be active - e.g. not closed.
+        let advertisement = adv_client.into_proxy().unwrap();
+        let advertisement_fut = advertisement.on_closed();
+        assert_matches!(advertisement_fut.now_or_never(), None);
+
+        // Upstream Fast Pair client disables the service - should no longer be advertising over LE.
+        drop(mock_upstream);
+        let advertisement_fut = advertisement.on_closed();
+        assert_matches!(advertisement_fut.await, Ok(_));
+    }
+
+    #[fuchsia::test]
+    async fn subsequent_enabling_of_fast_pair_is_rejected() {
+        let (provider, _le_peripheral, _gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
+        let (mut sender, _provider_server) = server_task(provider);
+
+        // By default (see `setup_provider`), there is an active upstream client that has enabled
+        // Fast Pair. A subsequent request to enable the service is an Error and should be handled
+        // gracefully by the Provider server.
+        let (request_fut, service_request, _mock_upstream1) =
+            MockUpstreamClient::make_enable_request().await;
+        let () = sender.send(service_request).await.expect("component main loop active");
+
+        // Should be rejected.
+        let result = request_fut.await.expect("fidl response");
+        assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_BOUND.into_raw()));
+    }
+
+    #[fuchsia::test]
+    fn subsequent_enabling_when_previous_closed_is_ok() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let setup_fut = setup_provider();
+        pin_mut!(setup_fut);
+        let (provider, mut le_peripheral, _gatt, mut host_watcher, _mock_pairing, _mock_upstream) =
+            exec.run_singlethreaded(&mut setup_fut);
+
+        let (mut sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
+        pin_mut!(server_fut);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Existing client disables the service.
+        drop(_mock_upstream);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Simulate an active host so that we can verify the LE advertisement gets set.
+        let watch_request_fut = host_watcher.select_next_some();
+        pin_mut!(watch_request_fut);
+        let watch_request = exec
+            .run_until_stalled(&mut watch_request_fut)
+            .expect("watch request")
+            .expect("request is OK");
+        let watch_responder = watch_request.into_watch().expect("HostWatcher::Watch request");
+        let discoverable =
+            vec![example_host(HostId(1), /* active= */ true, /* discoverable= */ true)];
+        let _ = watch_responder.send(&mut discoverable.into_iter()).unwrap();
+        // Even though there is an active Host, there should be no LE advertisement as Fast Pair is
+        // currently disabled.
+        let _ = exec
+            .run_until_stalled(&mut le_peripheral.select_next_some())
+            .expect_pending("no advertise request");
+
+        // A new client can request to enable the service.
+        let enable_request_fut = MockUpstreamClient::make_enable_request();
+        pin_mut!(enable_request_fut);
+        let (request_fut, service_request, _mock_upstream1) =
+            exec.run_singlethreaded(enable_request_fut);
+
+        let send_fut = sender.send(service_request);
+        let (send_result, server_fut) = run_while(&mut exec, server_fut, send_fut);
+        assert_matches!(send_result, Ok(_));
+
+        // Expect the FIDL `request_fut` to be successful.
+        let (request_result, _server_fut) = run_while(&mut exec, server_fut, request_fut);
+        assert_matches!(request_result, Ok(_));
+        // Expect the LE advertisement for the Fast Pair service.
+        let _advertise_request = exec
+            .run_until_stalled(&mut le_peripheral.select_next_some())
+            .expect("advertise request received")
+            .expect("request is OK");
+    }
+
+    #[fuchsia::test]
+    fn gatt_update_when_disabled_is_rejected() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let setup_fut = setup_provider();
+        pin_mut!(setup_fut);
+        let (provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            exec.run_singlethreaded(&mut setup_fut);
+
+        let (_sender, receiver) = mpsc::channel(0);
+        let server_fut = provider.run(receiver);
+        pin_mut!(server_fut);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // Existing client disables the service.
+        drop(_mock_upstream);
+        let _ = exec.run_until_stalled(&mut server_fut).expect_pending("still active");
+
+        // A Key-based pairing GATT request should be rejected.
+        let mut encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
+        let write_fut = gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Err(gatt::Error::WriteRequestRejected),
+            /* expect_item= */ false,
+        );
+        let ((), _server_fut) = run_while(&mut exec, server_fut, write_fut);
+    }
+
+    /// Builds the Task associated with a running Provider server.
+    /// Returns a sender for FIDL service requests and a Task representing the server.
     fn server_task(provider: Provider) -> (mpsc::Sender<ServiceRequest>, fasync::Task<()>) {
         let (sender, receiver) = mpsc::channel(0);
         let provider_fut = provider.run(receiver);
@@ -571,8 +779,14 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let setup_fut = setup_provider();
         pin_mut!(setup_fut);
-        let (mut provider, _le_peripheral, gatt, _host_watcher, mut mock_pairing) =
-            exec.run_singlethreaded(&mut setup_fut);
+        let (
+            mut provider,
+            _le_peripheral,
+            gatt,
+            _host_watcher,
+            mut mock_pairing,
+            mut mock_upstream,
+        ) = exec.run_singlethreaded(&mut setup_fut);
 
         // To avoid a bunch of unnecessary boilerplate involving the `host_watcher`, set the active
         // host with a known address.
@@ -653,11 +867,17 @@ mod tests {
             AccountKeyList::TEST_PERSISTED_ACCOUNT_KEYS_FILEPATH,
             vec![AccountKey::new(ACCOUNT_KEY_REQUEST)],
         );
+
+        // Upstream client should be notified that Fast Pair pairing has successfully completed.
+        let pairing_complete_fut = mock_upstream.expect_on_pairing_complete(PEER_ID);
+        pin_mut!(pairing_complete_fut);
+        let () = exec.run_until_stalled(&mut pairing_complete_fut).expect("should resolve");
     }
 
     #[fuchsia::test]
     async fn public_key_pairing_request_with_no_host() {
-        let (provider, _le_peripheral, gatt, _host_watcher, _mock_pairing) = setup_provider().await;
+        let (provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
         let (_sender, _provider_server) = server_task(provider);
 
         // Initiating a valid key-based pairing request should succeed and be handled gracefully.
@@ -676,7 +896,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn public_key_pairing_request_with_not_discoverable_host() {
-        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing) =
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         provider.host_watcher.set_active_host(
             example_host(HostId(1), /* active= */ true, /* discoverable= */ false)
@@ -702,7 +922,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn pairing_request_no_saved_keys() {
-        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing) =
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         provider.host_watcher.set_active_host(
             example_host(HostId(1), /* active= */ true, /* discoverable= */ false)
@@ -726,7 +946,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn pairing_request_with_saved_key_notifies_gatt() {
-        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing) =
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         // A active host that is not discoverable - expect to go through the subsequent pairing flow
         provider.host_watcher.set_active_host(
@@ -759,7 +979,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn passkey_write_with_no_active_pairing_procedure() {
-        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing) =
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         provider.host_watcher.set_active_host(
             example_host(HostId(1), /* active= */ true, /* discoverable= */ false)
@@ -787,7 +1007,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let setup_fut = setup_provider();
         pin_mut!(setup_fut);
-        let (mut provider, _le_peripheral, gatt, _host_watcher, mut mock_pairing) =
+        let (mut provider, _le_peripheral, gatt, _host_watcher, mut mock_pairing, _mock_upstream) =
             exec.run_singlethreaded(&mut setup_fut);
 
         // Set the active host with a known address.
@@ -842,7 +1062,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let setup_fut = setup_provider();
         pin_mut!(setup_fut);
-        let (mut provider, _le_peripheral, gatt, _host_watcher, mut mock_pairing) =
+        let (mut provider, _le_peripheral, gatt, _host_watcher, mut mock_pairing, _mock_upstream) =
             exec.run_singlethreaded(&mut setup_fut);
 
         // To avoid a bunch of unnecessary boilerplate involving the `host_watcher`, set the active
@@ -914,7 +1134,7 @@ mod tests {
     #[fuchsia::test]
     async fn pairing_fidl_request_ignored_when_already_set() {
         // By default, the created `provider` server will have an active PairingManager.
-        let (provider, _le_peripheral, _gatt, _host_watcher, _mock_pairing) =
+        let (provider, _le_peripheral, _gatt, _host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
         let (mut sender, _provider_server) = server_task(provider);
 
@@ -940,7 +1160,7 @@ mod tests {
 
         let setup_fut = setup_provider();
         pin_mut!(setup_fut);
-        let (provider, _le_peripheral, _gatt, _host_watcher, mut mock_pairing) =
+        let (provider, _le_peripheral, _gatt, _host_watcher, mut mock_pairing, _mock_upstream) =
             exec.run_singlethreaded(&mut setup_fut);
         let (mut sender, receiver) = mpsc::channel(0);
         let server_fut = provider.run(receiver);

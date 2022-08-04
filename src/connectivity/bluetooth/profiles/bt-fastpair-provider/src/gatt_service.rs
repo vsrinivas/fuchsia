@@ -88,6 +88,16 @@ pub enum GattRequest {
     },
 }
 
+impl GattRequest {
+    pub fn responder(self) -> GattServiceResponder {
+        match self {
+            Self::KeyBasedPairing { response, .. } => response,
+            Self::VerifyPasskey { response, .. } => response,
+            Self::WriteAccountKey { response, .. } => response,
+        }
+    }
+}
+
 impl std::fmt::Debug for GattRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match &self {

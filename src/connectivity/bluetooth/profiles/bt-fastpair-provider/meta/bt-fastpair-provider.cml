@@ -9,7 +9,10 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.bluetooth.sys.Pairing" ],
+            protocol: [
+                "fuchsia.bluetooth.fastpair.Provider",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
         },
     ],
     use: [
@@ -29,7 +32,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.bluetooth.sys.Pairing" ],
+            protocol: [
+                "fuchsia.bluetooth.fastpair.Provider",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
             from: "self",
         },
     ],
