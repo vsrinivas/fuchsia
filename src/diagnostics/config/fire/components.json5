@@ -589,4 +589,9 @@
         label: "LoWPAN Service",
         moniker: "core/lowpanservice",
     },
+    {
+        id: 222,
+        label: "Spinel Driver",
+        moniker: "core/lowpan-spinel-driver",
+    },
 ]
