@@ -78,6 +78,7 @@
                 "fuchsia.net.mdns.Subscriber",
                 "fuchsia.net.routes.State",
                 "fuchsia.netstack.Netstack",
+                "fuchsia.nn.ModelExecutor",
                 "fuchsia.paver.Paver",
                 "fuchsia.power.battery.BatteryManager",
                 "fuchsia.power.button.Monitor",
