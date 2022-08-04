@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/b09e63a0d1dc17e340803393af3ec2bf2618d5eb/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/4d6a9ba0fb5269631828a8a068859a043c46954b/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/b09e63a0d1dc17e340803393af3ec2bf2618d5eb/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/4d6a9ba0fb5269631828a8a068859a043c46954b/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -321,6 +321,13 @@ Pass the empty string for no limit.
 **Current value (from the default):** `""`
 
 From //src/storage/fshost/generated_fshost_config.gni:13
+
+### blobfs_num_pager_threads
+The number of pager threads to spawn for blobfs.
+
+**Current value (from the default):** `2`
+
+From //src/storage/bin/blobfs-component/BUILD.gn:14
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -1049,9 +1056,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/253509ef9606528a3115de89274b20edabce185c/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/253509ef9606528a3115de89274b20edabce185c/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2162,7 +2169,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -4138,7 +4145,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"8P3h6JaRUZZLzSQBJ3kmj4XD5pAMaEDHMXFiU_1XVBwC"`
+**Current value (from the default):** `"_BAyhZfpgOShwqw9_DEY4bkQZqHJix57s9EcizGkneAC"`
 
 From //build/rust/config.gni:32
 
@@ -4602,7 +4609,7 @@ From //build/security.gni:172
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -4875,7 +4882,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
