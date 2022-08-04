@@ -8,6 +8,10 @@
 // This symbol at the return address identifies this as an approved call site.
     .hidden CODE_SYSRET_\name\()_VIA_\caller
 CODE_SYSRET_\name\()_VIA_\caller\():
+// The `nop` exists due to the difference in instruction size between `syscall`
+// (2 bytes) and `vmcall` (3 bytes). The `nop` padding allows us to patch the
+// vDSO code to use `vmcall` instead of `syscall`.
+    nop
 .endm
 
 // CFI aware push and pop macros.

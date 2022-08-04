@@ -19,10 +19,14 @@ zx_library("userabi") {
       ":vdso",
       "//zircon/kernel/lib/instrumentation",
     ]
-    public_configs = [ ":vdso-valid-sysret" ]
+    public_configs = [
+      ":sysret-offsets",
+      ":vdso-valid-sysret",
+    ]
     public_deps += [
       # Dependents can use the generated header via $public_configs
       # (above), and so need to depend on the generation action.
+      ":gen-sysret-offsets",
       ":gen-vdso-valid-sysret",
 
       # <lib/userabi/rodso.h> has #include <object/handle.h>.
@@ -204,6 +208,20 @@ if (is_kernel) {
     deps = [ ":vdso-code.h" ]
     sources = get_target_outputs(":vdso-code.h")
     outputs = [ "$target_gen_dir/vdso-valid-sysret.h" ]
+    args = rebase_path(sources + outputs, root_build_dir)
+  }
+
+  config("sysret-offsets") {
+    visibility = [ ":*" ]
+    include_dirs = [ target_gen_dir ]
+  }
+
+  action("gen-sysret-offsets") {
+    visibility = [ ":*" ]
+    script = "gen-sysret-offsets.sh"
+    deps = [ ":vdso-code.h" ]
+    sources = get_target_outputs(":vdso-code.h")
+    outputs = [ "$target_gen_dir/sysret-offsets.h" ]
     args = rebase_path(sources + outputs, root_build_dir)
   }
 

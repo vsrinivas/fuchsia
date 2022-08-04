@@ -19,7 +19,11 @@ namespace userboot {
 // This is only here for the count.  No userboot code cares which is which
 // except that the stable (default) variant is first and that kLastVdso (below)
 // is correct.
-enum class VdsoVariant { STABLE, NEXT, TEST1, TEST2, COUNT };
+//
+// TODO(fxbug.dev/95763):  Ideally, what we'd like is an alternate version of
+// every vDSO, where `syscall` is replaced with `vmcall`. For now, we have have
+// have a single `DIRECT` vDSO, that is an alternate version of `STABLE`.
+enum class VdsoVariant { STABLE, NEXT, DIRECT, TEST1, TEST2, COUNT };
 
 // The handles in the bootstrap message are as follows:
 enum HandleIndex : uint32_t {
