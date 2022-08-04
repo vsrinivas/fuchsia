@@ -1386,8 +1386,11 @@ mod tests {
     fn ddk_conversion_ht_operation() {
         let ht_op = crate::ie::fake_ies::fake_ht_operation();
         let ddk: banjo_wlan_associnfo::WlanHtOp = ht_op.into();
+        // Local reference to avoid referring to an unaligned_reference
+        let ht_op_ptr_head_0 = ht_op.ht_op_info_head.0;
+
         assert_eq!(ht_op.primary_channel, ddk.primary_channel);
-        assert_eq!(ht_op.ht_op_info_head.0, ddk.head);
+        assert_eq!(ht_op_ptr_head_0, ddk.head);
         assert_eq!(ht_op.ht_op_info_tail.0, ddk.tail);
         assert_eq!(ht_op.basic_ht_mcs_set.0.to_be_bytes(), ddk.mcs_set);
     }
@@ -1396,10 +1399,12 @@ mod tests {
     fn ddk_conversion_vht_operation() {
         let vht_op = crate::ie::fake_ies::fake_vht_operation();
         let ddk: banjo_wlan_associnfo::WlanVhtOp = vht_op.into();
+        // Local reference to avoid referring to an unaligned_reference
+        let vht_op_basic_mcs_nss_0 = vht_op.basic_mcs_nss.0;
 
         assert_eq!(vht_op.vht_cbw.0, ddk.vht_cbw);
         assert_eq!(vht_op.center_freq_seg0, ddk.center_freq_seg0);
         assert_eq!(vht_op.center_freq_seg1, ddk.center_freq_seg1);
-        assert_eq!(vht_op.basic_mcs_nss.0, ddk.basic_mcs);
+        assert_eq!(vht_op_basic_mcs_nss_0, ddk.basic_mcs);
     }
 }
