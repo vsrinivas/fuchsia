@@ -105,7 +105,6 @@ exceptions=(\
     "./src/devices/tests/ddk-metadata-test/meta/ddk-metadata-test.cmx"
     "./src/devices/tests/driver-inspect-test/meta/driver-inspect-test.cmx"
     "./src/lib/process/meta/process_unittests.cmx"
-    "./src/ui/bin/terminal/meta/terminal_core.cmx"
     "./src/ui/bin/terminal/meta/terminal.cmx"
 
     # requests pkgfs in its sandbox
