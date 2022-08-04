@@ -466,32 +466,13 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
     page->WaitOnWriteback();
   }
 
-  std::vector<block_t> data_block_addresses(index_end - index_start);
-  for (pgoff_t i = index_start; i < index_end; ++i) {
-    LockedPage dnode_page;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, i, &dnode_page);
-        err != ZX_OK) {
-      return zx::error(err);
-    }
-
-    uint32_t ofs_in_dnode;
-    if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, i); result.is_error()) {
-      return result.take_error();
-    } else {
-      ofs_in_dnode = result.value();
-    }
-
-    block_t data_blkaddr = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
-
-    if (data_blkaddr == kNullAddr) {
-      if (zx_status_t err = ReserveNewBlock(dnode_page.GetPage<NodePage>(), ofs_in_dnode);
-          err != ZX_OK) {
-        return zx::error(err);
-      }
-      data_blkaddr = kNewAddr;
-    }
-
-    data_block_addresses[i - index_start] = data_blkaddr;
+  std::vector<block_t> data_block_addresses;
+  if (auto result = Vfs()->GetNodeManager().GetDataBlockAddresses(*this, index_start,
+                                                                  index_end - index_start);
+      result.is_error()) {
+    return result.take_error();
+  } else {
+    data_block_addresses = std::move(result.value());
   }
 
   if (!data_pages.front()->IsUptodate() && offset % kBlockSize > 0) {

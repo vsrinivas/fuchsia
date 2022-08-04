@@ -38,6 +38,9 @@ constexpr size_t kNodeDIndBlock = kAddrsPerInode + 5;
 // maximum node block level of data block
 constexpr uint32_t kMaxNodeBlockLevel = 4;
 
+// For node offset
+constexpr block_t kInvalidOffset = std::numeric_limits<block_t>::max();
+
 // For node information
 struct NodeInfo {
   nid_t nid = 0;         // node id
@@ -108,6 +111,12 @@ class NodeManager {
   void DestroyNodeManager();
   zx_status_t ReadNodePage(LockedPage &page, nid_t nid, int type);
   zx_status_t GetNodePage(nid_t nid, LockedPage *out);
+
+  zx::status<bool> IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset);
+  // If indices use the same node page, read the node page once and reuse it. This
+  // can reduce repeated node page access overhead.
+  zx::status<std::vector<block_t>> GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
+                                                         size_t count);
 
   // If an unassigned node page is encountered while following the node path, a new node page is
   // assigned. Caller should acquire LockType:kFileOp.

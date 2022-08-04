@@ -745,5 +745,475 @@ TEST_F(NodeManagerTest, NodeFooter) {
   vnode.reset();
 }
 
+TEST_F(NodeManagerTest, GetDataBlockAddressesSinglePage) {
+  // Alloc inode
+  fbl::RefPtr<VnodeF2fs> vnode;
+  FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
+
+  NodeManager &node_manager = fs_->GetNodeManager();
+  uint64_t free_node_cnt = node_manager.GetFreeNidCount();
+  uint8_t buf[kPageSize] = {1};
+  size_t out_actual;
+
+  // Inode block
+  //   |- direct node
+  //   |- direct node
+  //   |- indirect node
+  //   |            `- direct node
+  //   |- indirect node
+  //   |            `- direct node
+  //   `- double indirect node
+  //                `- indirect node
+  //                      `- direct node
+
+  // Check inode (level 0)
+  const pgoff_t direct_index = 0;
+  pgoff_t file_offset = direct_index * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), direct_index, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or = fs_->GetNodeManager().GetDataBlockAddresses(*vnode, direct_index, 1);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt);
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, direct_index, &dnode_page), ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses.front());
+  }
+
+  // Check direct node (level 1)
+  const pgoff_t indirect_index_lv1 = direct_index + kAddrsPerInode;
+  file_offset = indirect_index_lv1 * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv1, 1);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 1);
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses.front());
+  }
+
+  // Check indirect node (level 2)
+  const pgoff_t direct_blks = kAddrsPerBlock;
+  const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * 2;
+  file_offset = indirect_index_lv2 * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv2, 1);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses.front());
+  }
+
+  // Check second indirect node (level 2)
+  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  file_offset = (indirect_index_lv2 + indirect_blks) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv2 + indirect_blks, 1);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2 + indirect_blks,
+                                                       &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses.front());
+  }
+
+  // Check double indirect node (level 3)
+  pgoff_t indirect_index_lv3 = indirect_index_lv2 + indirect_blks * 2;
+  file_offset = indirect_index_lv3 * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv3, 1);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 3);
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses.front());
+  }
+
+  vnode->SetBlocks(1);
+
+  ASSERT_EQ(vnode->Close(), ZX_OK);
+  vnode.reset();
+}
+
+TEST_F(NodeManagerTest, GetDataBlockAddressesMultiPage) {
+  // Alloc inode
+  fbl::RefPtr<VnodeF2fs> vnode;
+  FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
+
+  NodeManager &node_manager = fs_->GetNodeManager();
+  uint64_t free_node_cnt = node_manager.GetFreeNidCount();
+  uint8_t buf[kPageSize * 2] = {1};
+  size_t out_actual;
+
+  // Inode block
+  //   |- direct node
+  //   |- direct node
+  //   |- indirect node
+  //   |            `- direct node
+  //   |- indirect node
+  //   |            `- direct node
+  //   `- double indirect node
+  //                `- indirect node
+  //                      `- direct node
+
+  // Check inode (level 0)
+  const pgoff_t direct_index = 0;
+  pgoff_t file_offset = direct_index * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or = fs_->GetNodeManager().GetDataBlockAddresses(*vnode, direct_index, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt);  // inode dnode
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, direct_index, &dnode_page), ZX_OK);
+
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[0]);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{1}), block_addresses[1]);
+  }
+
+  // Check direct node (level 1)
+  const pgoff_t indirect_index_lv1 = direct_index + kAddrsPerInode;
+  file_offset = indirect_index_lv1 * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 1);  // direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1, &dnode_page),
+              ZX_OK);
+
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[0]);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{1}), block_addresses[1]);
+  }
+
+  // Check indirect node (level 2)
+  const pgoff_t direct_blks = kAddrsPerBlock;
+  const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * 2;
+  file_offset = indirect_index_lv2 * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv2, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);  // indirect + direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2, &dnode_page),
+              ZX_OK);
+
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[0]);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{1}), block_addresses[1]);
+  }
+
+  // Check second indirect node (level 2)
+  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  file_offset = (indirect_index_lv2 + indirect_blks) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv2 + indirect_blks, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);  // indirect + direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2 + indirect_blks,
+                                                       &dnode_page),
+              ZX_OK);
+
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[0]);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{1}), block_addresses[1]);
+  }
+
+  // Check double indirect node (level 3)
+  pgoff_t indirect_index_lv3 = indirect_index_lv2 + indirect_blks * 2;
+  file_offset = indirect_index_lv3 * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv3, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(),
+              free_node_cnt -= 3);  // double indirect + indirect + direct dnode
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3, &dnode_page),
+              ZX_OK);
+
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[0]);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{1}), block_addresses[1]);
+  }
+
+  vnode->SetBlocks(1);
+
+  ASSERT_EQ(vnode->Close(), ZX_OK);
+  vnode.reset();
+}
+
+TEST_F(NodeManagerTest, GetDataBlockAddressesCrossMultiPage) {
+  // Alloc inode
+  fbl::RefPtr<VnodeF2fs> vnode;
+  FileTester::VnodeWithoutParent(fs_.get(), S_IFREG, vnode);
+  ASSERT_TRUE(fs_->GetNodeManager().NewInodePage(*vnode).is_ok());
+
+  NodeManager &node_manager = fs_->GetNodeManager();
+  uint64_t free_node_cnt = node_manager.GetFreeNidCount();
+  uint8_t buf[kPageSize * 2] = {1};
+  size_t out_actual;
+
+  // Inode block
+  //   |- direct node
+  //   |- direct node
+  //   |- indirect node
+  //   |            `- direct node
+  //   |- indirect node
+  //   |            `- direct node
+  //   `- double indirect node
+  //                `- indirect node
+  //                      `- direct node
+
+  // Check inode + direct node (level 0 ~ 1)
+  pgoff_t file_offset = static_cast<pgoff_t>((kAddrsPerInode - 1)) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, kAddrsPerInode - 1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 1);  // direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, kAddrsPerInode - 1, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{kAddrsPerInode - 1}),
+              block_addresses[0]);
+    dnode_page.reset();
+
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, kAddrsPerInode, &dnode_page), ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
+  }
+
+  // Check direct node + direct node (level 1)
+  const pgoff_t direct_blks = kAddrsPerBlock;
+  const pgoff_t indirect_index_lv1 = kAddrsPerInode;
+  file_offset = (indirect_index_lv1 + direct_blks - 1) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or = fs_->GetNodeManager().GetDataBlockAddresses(
+        *vnode, indirect_index_lv1 + direct_blks - 1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 1);  // direct dnode
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1 + direct_blks - 1,
+                                                       &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{kAddrsPerBlock - 1}),
+              block_addresses[0]);
+    dnode_page.reset();
+
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1 + direct_blks,
+                                                       &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
+  }
+
+  // Check direct node + indirect node (level 1 ~ 2)
+  file_offset = (indirect_index_lv1 + direct_blks * 2 - 1) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or = fs_->GetNodeManager().GetDataBlockAddresses(
+        *vnode, indirect_index_lv1 + direct_blks * 2 - 1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);  // indirect + direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(
+                  *vnode, indirect_index_lv1 + direct_blks * 2 - 1, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{kAddrsPerBlock - 1}),
+              block_addresses[0]);
+    dnode_page.reset();
+
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1 + direct_blks * 2,
+                                                       &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
+  }
+
+  // Check indirect node (level 2)
+  const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * kAddrsPerBlock;
+  file_offset = (indirect_index_lv2 - 1) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or =
+        fs_->GetNodeManager().GetDataBlockAddresses(*vnode, indirect_index_lv2 - 1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);  //  direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2 - 1, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{kAddrsPerBlock - 1}),
+              block_addresses[0]);
+    dnode_page.reset();
+
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
+  }
+
+  // Check second indirect node (level 3)
+  const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
+  file_offset = (indirect_index_lv2 + indirect_blks + direct_blks - 1) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or = fs_->GetNodeManager().GetDataBlockAddresses(
+        *vnode, indirect_index_lv2 + indirect_blks + direct_blks - 1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(),
+              free_node_cnt -= 3);  // direct node + indirect + direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(
+                  *vnode, indirect_index_lv2 + indirect_blks + direct_blks - 1, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{kAddrsPerBlock - 1}),
+              block_addresses[0]);
+    dnode_page.reset();
+
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(
+                  *vnode, indirect_index_lv2 + indirect_blks + direct_blks, &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
+  }
+
+  // Check double indirect node (level 2 ~ 3)
+  pgoff_t indirect_index_lv3 = indirect_index_lv2 + indirect_blks * 2;
+  file_offset = (indirect_index_lv3 + direct_blks - 1) * kBlockSize;
+  {
+    vnode->TruncateBlocks(file_offset);
+    ASSERT_EQ(vnode->Write(buf, sizeof(buf), file_offset, &out_actual), ZX_OK);
+    ASSERT_EQ(vnode->SyncFile(0, safemath::checked_cast<loff_t>(vnode->GetSize()), 0), ZX_OK);
+
+    auto block_addresses_or = fs_->GetNodeManager().GetDataBlockAddresses(
+        *vnode, indirect_index_lv3 + direct_blks - 1, 2);
+    ASSERT_TRUE(block_addresses_or.is_ok());
+    auto block_addresses = block_addresses_or.value();
+    ASSERT_EQ(block_addresses.size(), 2u);
+    ASSERT_EQ(node_manager.GetFreeNidCount(),
+              free_node_cnt -= 4);  // direct node + double indirect + indirect + direct node
+
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3 + direct_blks - 1,
+                                                       &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{kAddrsPerBlock - 1}),
+              block_addresses[0]);
+    dnode_page.reset();
+
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3 + direct_blks,
+                                                       &dnode_page),
+              ZX_OK);
+    ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
+  }
+
+  vnode->SetBlocks(1);
+
+  ASSERT_EQ(vnode->Close(), ZX_OK);
+  vnode.reset();
+}
+
 }  // namespace
 }  // namespace f2fs

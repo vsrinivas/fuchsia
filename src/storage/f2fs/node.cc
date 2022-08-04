@@ -422,6 +422,64 @@ zx::status<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
   return zx::ok(level);
 }
 
+zx::status<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset) {
+  int32_t offset[4];
+  uint32_t noffset[4];
+
+  if (node_offset == kInvalidOffset) {
+    return zx::ok(false);
+  }
+
+  auto level_or = GetNodePath(vnode, index, offset, noffset);
+  if (level_or.is_error()) {
+    return level_or.take_error();
+  }
+  return zx::ok(noffset[level_or.value()] == node_offset);
+}
+
+zx::status<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
+                                                                    size_t count) {
+  std::vector<block_t> data_block_addresses(count);
+  uint32_t prev_node_offset = kInvalidOffset;
+  LockedPage dnode_page;
+
+  for (uint64_t i = index; i < index + count; ++i) {
+    auto is_same_or = IsSameDnode(vnode, i, prev_node_offset);
+    if (is_same_or.is_error()) {
+      return is_same_or.take_error();
+    }
+
+    if (!is_same_or.value()) {
+      dnode_page.reset();
+      if (zx_status_t err = GetLockedDnodePage(vnode, i, &dnode_page); err != ZX_OK) {
+        return zx::error(err);
+      }
+      prev_node_offset = dnode_page.GetPage<NodePage>().OfsOfNode();
+    }
+    ZX_DEBUG_ASSERT(dnode_page != nullptr);
+
+    uint32_t ofs_in_dnode;
+    if (auto result = GetOfsInDnode(vnode, i); result.is_error()) {
+      return result.take_error();
+    } else {
+      ofs_in_dnode = result.value();
+    }
+
+    block_t data_blkaddr = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
+
+    if (data_blkaddr == kNullAddr) {
+      if (zx_status_t err = vnode.ReserveNewBlock(dnode_page.GetPage<NodePage>(), ofs_in_dnode);
+          err != ZX_OK) {
+        return zx::error(err);
+      }
+      data_blkaddr = kNewAddr;
+    }
+
+    data_block_addresses[i - index] = data_blkaddr;
+  }
+  return zx::ok(std::move(data_block_addresses));
+}
+
 zx_status_t NodeManager::FindLockedDnodePage(VnodeF2fs &vnode, pgoff_t index, LockedPage *out) {
   int32_t offset[4];
   uint32_t noffset[4];
