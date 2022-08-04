@@ -1,0 +1,277 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+import("//build/images/custom_signing.gni")
+import("//build/product.gni")
+import("//build/security.gni")
+import("//build/security/verifier/verify_bootfs.gni")
+import("//build/security/verifier/verify_by_build_type.gni")
+import("//build/security/verifier/verify_component_resolvers.gni")
+import("//build/security/verifier/verify_kernel_cmdline.gni")
+import("//build/security/verifier/verify_route_sources.gni")
+import("//build/security/verifier/verify_routes.gni")
+import("//build/security/verifier/verify_static_pkgs.gni")
+
+# Instantiate scrutiny verifiers for an assembled system.
+#
+# Global gn args (see source gni files for documentation)
+#
+#   //build/config/BUILDCONFIG.gn
+#     is_coverage
+#
+#   //build/images/args.gni
+#     use_vboot
+#
+#   //build/images/custom_signing.gni
+#     custom_signing_script
+#
+#   //build/product.gni
+#     use_bringup_assembly
+#
+# Basic parameters
+#
+#   assembly_image_name (required)
+#     [string] The image name used to assemble the system.
+#
+#   update_package_target (required)
+#     [string] The label of the update package target for the assembled system.
+#
+#   product_assembly_config_file (required)
+#     [string] The product assembly configuration file for the assembled system.
+#     Usually copied from the global gn arg fuchsia_product_assembly_config_file
+#     (defined in //build/product.gni).
+#
+#   product_assembly_config_dep (optional)
+#     [string] The product assembly configuration dependency for the assembled
+#     system. Usually derived from the global gn arg
+#     fuchsia_product_assembly_config_label (defined in //build/product.gni).
+#
+# Global GN arg-based parameters
+#
+# These parameters are documented in //build/security.gni under
+# fuchsia_[param_name] and/or recovery_[param_name]. They are injected into this
+# template to facilitate selection of which flavour of [param_name] to use at
+# template instantiation time.
+#
+#   route_sources_config (required)
+#     [string]
+#
+#   static_pkgs_goldens (required)
+#     [list of files]
+#
+#   verify_component_resolvers_allowlist (required)
+#     [string]
+#
+#   verify_routes_component_tree_config (required)
+#     [string]
+#
+#   verify_routes_exceptions_allowlist (required)
+#     [string]
+#
+#   verify_routes_exceptions_allowlist_bootfs (required)
+#     [string]
+#
+#   verify_routes_exceptions_allowlist_product (required)
+#     [list of files]
+#
+#   zbi_bootfs_filelist_goldens (required)
+#     [list of files]
+#
+#   zbi_bootfs_packages_goldens (required)
+#     [list of files]
+#
+#   zbi_kernel_cmdline_goldens (required)
+#     [list of files]
+#
+#   testonly (optional)
+#     Usual GN meaning.
+template("scrutiny_verifiers") {
+  assert(defined(invoker.assembly_image_name),
+         "assembly_image_name is required for scrutiny_verifiers()")
+  assert(defined(invoker.update_package_target),
+         "update_package_target is required for scrutiny_verifiers()")
+
+  assert(defined(invoker.product_assembly_config_file),
+         "product_assembly_config_file is required for scrutiny_verifiers()")
+  assert(defined(invoker.route_sources_config),
+         "route_sources_config is required for scrutiny_verifiers()")
+  assert(defined(invoker.static_pkgs_goldens),
+         "static_pkgs_goldens is required for scrutiny_verifiers()")
+  assert(
+      defined(invoker.verify_component_resolvers_allowlist),
+      "verify_component_resolvers_allowlist is required for scrutiny_verifiers()")
+  assert(
+      defined(invoker.verify_routes_component_tree_config),
+      "verify_routes_component_tree_config is required for scrutiny_verifiers()")
+  assert(
+      defined(invoker.verify_routes_exceptions_allowlist_bootfs),
+      "verify_routes_exceptions_allowlist_bootfs is required for scrutiny_verifiers()")
+  assert(
+      defined(invoker.verify_routes_exceptions_allowlist_product),
+      "verify_routes_exceptions_allowlist_product is required for scrutiny_verifiers()")
+  assert(
+      defined(invoker.verify_routes_exceptions_allowlist),
+      "verify_routes_exceptions_allowlist is required for scrutiny_verifiers()")
+  assert(defined(invoker.zbi_bootfs_filelist_goldens),
+         "zbi_bootfs_filelist_goldens is required for scrutiny_verifiers()")
+  assert(defined(invoker.zbi_bootfs_packages_goldens),
+         "zbi_bootfs_packages_goldens is required for scrutiny_verifiers()")
+  assert(defined(invoker.zbi_kernel_cmdline_goldens),
+         "zbi_kernel_cmdline_goldens is required for scrutiny_verifiers()")
+
+  if (defined(invoker.testonly)) {
+    testonly = invoker.testonly
+  }
+
+  verifiers = []
+
+  # TODO(fxbug.dev/102968): There is a need for scrutiny verifiers that process
+  # structured configuration files. Until such verifiers are ready, structured
+  # configuration files for sensitive components are verified using the
+  # strategy below.
+  verify_structured_config_by_build_type(
+      "${invoker.assembly_image_name}_verify_base_resolver_config") {
+    product_assembly_config_file = invoker.product_assembly_config_file
+    structured_config_target = "//src/sys/base-resolver:values_from_gn"
+    non_eng_golden =
+        "//src/security/policy/build/base_resolver_golden_non_eng.cvf"
+    eng_golden = "//src/security/policy/build/base_resolver_golden_eng.cvf"
+    deps = []
+    if (defined(invoker.product_assembly_config_dep)) {
+      deps += [ invoker.product_assembly_config_dep ]
+    }
+  }
+  verifiers += [ ":${invoker.assembly_image_name}_verify_base_resolver_config" ]
+
+  verify_structured_config_by_build_type(
+      "${invoker.assembly_image_name}_verify_power_manager_config") {
+    product_assembly_config_file = invoker.product_assembly_config_file
+    structured_config_target =
+        "//src/power/power-manager:default_component_config"
+    non_eng_golden =
+        "//src/security/policy/build/power_manager_golden_non_eng.cvf"
+    eng_golden = "//src/security/policy/build/power_manager_golden_eng.cvf"
+    deps = []
+    if (defined(invoker.product_assembly_config_dep)) {
+      deps += [ invoker.product_assembly_config_dep ]
+    }
+  }
+  verifiers += [ ":${invoker.assembly_image_name}_verify_power_manager_config" ]
+
+  if (!is_coverage && custom_signing_script == "") {
+    if (invoker.zbi_bootfs_filelist_goldens != [] ||
+        invoker.zbi_bootfs_packages_goldens != []) {
+      verify_bootfs_filelist(
+          "${invoker.assembly_image_name}_verify_bootfs_filelist") {
+        testonly = invoker.testonly
+        assembly_image_name = invoker.assembly_image_name
+        zbi_is_signed = custom_signing_script != "" || use_vboot
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        goldens = invoker.zbi_bootfs_filelist_goldens
+        golden_packages = invoker.zbi_bootfs_packages_goldens
+      }
+      verifiers += [ ":${invoker.assembly_image_name}_verify_bootfs_filelist" ]
+    }
+
+    if (invoker.zbi_kernel_cmdline_goldens != []) {
+      verify_kernel_cmdline(
+          "${invoker.assembly_image_name}_verify_kernel_cmdline") {
+        testonly = invoker.testonly
+        assembly_image_name = invoker.assembly_image_name
+        zbi_is_signed = custom_signing_script != "" || use_vboot
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        goldens = invoker.zbi_kernel_cmdline_goldens
+      }
+      verifiers += [ ":${invoker.assembly_image_name}_verify_kernel_cmdline" ]
+    }
+
+    if (invoker.route_sources_config != "") {
+      verify_route_sources(
+          "${invoker.assembly_image_name}_verify_route_sources") {
+        testonly = invoker.testonly
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        config_path = invoker.route_sources_config
+      }
+      verifiers += [ ":${invoker.assembly_image_name}_verify_route_sources" ]
+    }
+
+    if (invoker.verify_component_resolvers_allowlist != "") {
+      verify_component_resolvers(
+          "${invoker.assembly_image_name}_verify_component_resolvers") {
+        testonly = invoker.testonly
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        allowlist = invoker.verify_component_resolvers_allowlist
+      }
+      verifiers +=
+          [ ":${invoker.assembly_image_name}_verify_component_resolvers" ]
+    }
+
+    if (invoker.verify_routes_exceptions_allowlist != "" ||
+        invoker.verify_routes_exceptions_allowlist_product != [] ||
+        invoker.verify_routes_exceptions_allowlist_bootfs != "") {
+      verify_routes("${invoker.assembly_image_name}_verify_capability_routes") {
+        testonly = invoker.testonly
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        allowlist = []
+        if (invoker.verify_routes_exceptions_allowlist != "") {
+          allowlist += [ invoker.verify_routes_exceptions_allowlist ]
+        }
+        allowlist += invoker.verify_routes_exceptions_allowlist_product
+        if (use_bringup_assembly) {
+          allowlist += [ invoker.verify_routes_exceptions_allowlist_bootfs ]
+        } else {
+          not_needed(invoker, [ "verify_routes_exceptions_allowlist_bootfs" ])
+        }
+        if (invoker.verify_routes_component_tree_config != "") {
+          component_tree_config = invoker.verify_routes_component_tree_config
+        }
+      }
+      verifiers +=
+          [ ":${invoker.assembly_image_name}_verify_capability_routes" ]
+    }
+
+    if (invoker.static_pkgs_goldens != []) {
+      verify_static_pkgs("${invoker.assembly_image_name}_verify_static_pkgs") {
+        testonly = invoker.testonly
+        assembly_image_name = invoker.assembly_image_name
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        goldens = invoker.static_pkgs_goldens
+      }
+      verifiers += [ ":${invoker.assembly_image_name}_verify_static_pkgs" ]
+    }
+  } else {
+    not_needed(invoker,
+               [
+                 "route_sources_config",
+                 "static_pkgs_goldens",
+                 "update_package_target",
+                 "verify_component_resolvers_allowlist",
+                 "verify_routes_component_tree_config",
+                 "verify_routes_exceptions_allowlist",
+                 "verify_routes_exceptions_allowlist_bootfs",
+                 "verify_routes_exceptions_allowlist_product",
+                 "zbi_bootfs_filelist_goldens",
+                 "zbi_bootfs_packages_goldens",
+                 "zbi_kernel_cmdline_goldens",
+               ])
+  }
+
+  group(target_name) {
+    deps = verifiers
+  }
+}

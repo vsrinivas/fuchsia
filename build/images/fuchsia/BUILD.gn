@@ -14,14 +14,7 @@ import("//build/product.gni")
 import("//build/security.gni")
 import("//build/security/policies.gni")
 import("//build/security/policies_swd.gni")
-import("//build/security/verifier/verify_bootfs.gni")
-import("//build/security/verifier/verify_by_build_type.gni")
-import("//build/security/verifier/verify_component_resolvers.gni")
-import("//build/security/verifier/verify_kernel_cmdline.gni")
-import("//build/security/verifier/verify_route_sources.gni")
-import("//build/security/verifier/verify_routes.gni")
-import("//build/security/verifier/verify_routes.gni")
-import("//build/security/verifier/verify_static_pkgs.gni")
+import("//build/security/verifier/scrutiny_verifiers.gni")
 import("//build/testing/host_test_data.gni")
 import("//build/testing/verify_files_match.gni")
 import("//src/sys/core/build/core.gni")
@@ -293,30 +286,8 @@ if (is_fuchsia) {
     if (include_fvm_blob_sparse) {
       public_deps += [ ":copy_fvm_blob_sparse" ]
     }
-    deps = [
-      ":verify_base_resolver_config",
-      ":verify_power_manager_config",
-    ]
-    if (!is_coverage && custom_signing_script == "") {
-      deps += [
-        ":verify_capability_routes",
-        ":verify_component_resolvers",
-      ]
-      if (fuchsia_static_pkgs_goldens != []) {
-        deps += [ ":verify_static_pkgs" ]
-      }
 
-      if (fuchsia_zbi_bootfs_filelist_goldens != [] ||
-          fuchsia_zbi_bootfs_packages_goldens != []) {
-        deps += [ ":verify_bootfs_filelist" ]
-      }
-      if (fuchsia_zbi_kernel_cmdline_goldens != []) {
-        deps += [ ":verify_kernel_cmdline" ]
-      }
-      if (fuchsia_route_sources_config != "") {
-        deps += [ ":verify_route_sources" ]
-      }
-    }
+    deps = [ ":scrutiny_verifiers" ]
 
     metadata = {
       assembly_inputs = [
@@ -664,98 +635,31 @@ if (is_fuchsia) {
     }
   }
 
-  ##################################################
-  # Scrutiny verifiers
-  ##################################################
+  scrutiny_verifiers("scrutiny_verifiers") {
+    assembly_image_name = "fuchsia"
+    update_package_target = ":update"
 
-  # TODO(fxbug.dev/102968): There is a need for scrutiny verifiers that process
-  # structured configuration files. Until such verifiers are ready, structured
-  # configuration files for sensitive components are verified using the
-  # strategy below.
-  verify_structured_config_by_build_type("verify_base_resolver_config") {
-    product_assembly_config_file = fuchsia_base.product_assembly_config_file
-    structured_config_target = "//src/sys/base-resolver:values_from_gn"
-    non_eng_golden =
-        "//src/security/policy/build/base_resolver_golden_non_eng.cvf"
-    eng_golden = "//src/security/policy/build/base_resolver_golden_eng.cvf"
-    deps = []
-    if (defined(fuchsia_base.product_assembly_config_dep)) {
-      deps += [ fuchsia_base.product_assembly_config_dep ]
-    }
-  }
-  verify_structured_config_by_build_type("verify_power_manager_config") {
-    product_assembly_config_file = fuchsia_base.product_assembly_config_file
-    structured_config_target =
-        "//src/power/power-manager:default_component_config"
-    non_eng_golden =
-        "//src/security/policy/build/power_manager_golden_non_eng.cvf"
-    eng_golden = "//src/security/policy/build/power_manager_golden_eng.cvf"
-    deps = []
-    if (defined(fuchsia_base.product_assembly_config_dep)) {
-      deps += [ fuchsia_base.product_assembly_config_dep ]
-    }
-  }
+    route_sources_config = fuchsia_route_sources_config
+    static_pkgs_goldens = fuchsia_static_pkgs_goldens
+    verify_component_resolvers_allowlist =
+        fuchsia_verify_component_resolvers_allowlist
+    verify_routes_component_tree_config =
+        fuchsia_verify_routes_component_tree_config
+    verify_routes_exceptions_allowlist =
+        fuchsia_verify_routes_exceptions_allowlist
+    verify_routes_exceptions_allowlist_bootfs =
+        fuchsia_verify_routes_exceptions_allowlist_bootfs
+    verify_routes_exceptions_allowlist_product =
+        fuchsia_verify_routes_exceptions_allowlist_product
+    zbi_bootfs_filelist_goldens = fuchsia_zbi_bootfs_filelist_goldens
+    zbi_bootfs_packages_goldens = fuchsia_zbi_bootfs_packages_goldens
+    zbi_kernel_cmdline_goldens = fuchsia_zbi_kernel_cmdline_goldens
 
-  # See //build/scrutiny/verifier/verify_*.gni and //build/security.gni for
-  # documentation.
-
-  if (custom_signing_script == "") {
-    verify_bootfs_filelist("verify_bootfs_filelist") {
-      testonly = fuchsia_base.testonly
-      zbi_is_signed = custom_signing_script != "" || use_vboot
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      goldens = fuchsia_zbi_bootfs_filelist_goldens
-      golden_packages = fuchsia_zbi_bootfs_packages_goldens
-    }
-
-    verify_kernel_cmdline("verify_kernel_cmdline") {
-      testonly = fuchsia_base.testonly
-      zbi_is_signed = custom_signing_script != "" || use_vboot
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      goldens = fuchsia_zbi_kernel_cmdline_goldens
-    }
-
-    if (fuchsia_route_sources_config != "") {
-      verify_route_sources("verify_route_sources") {
-        testonly = fuchsia_base.testonly
-        update_package_target = ":update"
-        image_assembler_target = ":fuchsia.image_assembler"
-        assembly_image_name = "fuchsia"
-        config_path = fuchsia_route_sources_config
-      }
-    }
-
-    verify_component_resolvers("verify_component_resolvers") {
-      testonly = fuchsia_base.testonly
-      update_package_target = ":update"
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      allowlist = fuchsia_verify_component_resolvers_allowlist
-    }
-
-    verify_routes("verify_capability_routes") {
-      testonly = fuchsia_base.testonly
-      update_package_target = ":update"
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
-                  fuchsia_verify_routes_exceptions_allowlist_product
-      if (bootfs_only) {
-        allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
-      }
-      if (fuchsia_verify_routes_component_tree_config != "") {
-        component_tree_config = fuchsia_verify_routes_component_tree_config
-      }
-    }
-
-    verify_static_pkgs("verify_static_pkgs") {
-      testonly = fuchsia_base.testonly
-      update_package_target = ":update"
-      image_assembler_target = ":fuchsia.image_assembler"
-      assembly_image_name = "fuchsia"
-      goldens = fuchsia_static_pkgs_goldens
-    }
+    forward_variables_from(fuchsia_base,
+                           [
+                             "product_assembly_config_dep",
+                             "testonly",
+                             "product_assembly_config_file",
+                           ])
   }
 }
