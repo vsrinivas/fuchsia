@@ -15,7 +15,6 @@ struct Bar {
   bool is_mmio;    // then the id represents the lowerindex of the two.
   bool is_64bit;   // This bar is the lower half of a 64 bit bar at |bar_id|.
   bool is_prefetchable;
-  // then this corresponds to the first half of the register pair
   std::unique_ptr<pci::PciAllocation> allocation;
 };
 

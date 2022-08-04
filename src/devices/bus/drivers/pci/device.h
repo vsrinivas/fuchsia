@@ -27,6 +27,7 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <hwreg/bitfields.h>
 #include <region-alloc/region-alloc.h>
 
 #include "fidl/fuchsia.hardware.pci/cpp/wire_types.h"
@@ -172,6 +173,29 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
     return ZX_OK;
   }
 
+  // This class helps BAR probing by limiting the numbers of reads & writes made
+  // to the device's command register when attempting to disable IO access. It
+  // also ensures that values for the command register are restored when this
+  // class goes out of scope, ensuring there are no corner cases where we leave
+  // a device's IO configuration in a bad state.
+  class DeviceIoDisable {
+   public:
+    explicit DeviceIoDisable(pci::Device* device) : device_(device) {
+      cmd_value_ = device_->ModifyCmdLocked(
+          /*clr_bits=*/PCI_CONFIG_COMMAND_IO_EN | PCI_CONFIG_COMMAND_MEM_EN, /*set_bits=*/0);
+    }
+
+    ~DeviceIoDisable() { device_->AssignCmdLocked(cmd_value_); }
+    bool io_was_enabled() {
+      config::Command cmd{.value = cmd_value_};
+      return cmd.io_space() || cmd.memory_space();
+    }
+
+   private:
+    pci::Device* device_;
+    uint16_t cmd_value_;
+  };
+
   // Create, but do not initialize, a device.
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
                             UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
@@ -219,7 +243,9 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // @param enable If true, allow the device to access its MMIO mapped registers.
   // @return A zx_status_t indicating success or failure of the operation.
   zx_status_t EnableMmio(bool enabled) __TA_EXCLUDES(dev_lock_);
-
+  // Does final configuration of a device after its upstream bridge windows have been allocated
+  // and sets up any driver related binding necessary.
+  zx::status<> Configure();
   // Requests a device unplug itself from its UpstreamNode and the Bus list.
   virtual void Unplug() __TA_EXCLUDES(dev_lock_);
   // TODO(cja): port void SetQuirksDone() __TA_REQUIRES(dev_lock_) { quirks_done_ = true; }
@@ -291,6 +317,11 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   }
   BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
 
+  // Read the value of the Command register, requires the dev_lock.
+  uint16_t ReadCmdLocked() __TA_REQUIRES(dev_lock_) __TA_EXCLUDES(cmd_reg_lock_) {
+    fbl::AutoLock cmd_lock(&cmd_reg_lock_);
+    return cfg_->Read(Config::kCommand);
+  }
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These
   // traits facilitate that for us.
@@ -302,17 +333,16 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   zx_status_t InitLocked() __TA_REQUIRES(dev_lock_);
   zx_status_t InitInterrupts() __TA_REQUIRES(dev_lock_);
 
-  // Read the value of the Command register, requires the dev_lock.
-  uint16_t ReadCmdLocked() __TA_REQUIRES(dev_lock_) __TA_EXCLUDES(cmd_reg_lock_) {
-    fbl::AutoLock cmd_lock(&cmd_reg_lock_);
-    return cfg_->Read(Config::kCommand);
-  }
-  void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) __TA_REQUIRES(dev_lock_)
+  uint16_t ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) __TA_REQUIRES(dev_lock_)
       __TA_EXCLUDES(cmd_reg_lock_);
   void AssignCmdLocked(uint16_t value) __TA_REQUIRES(dev_lock_) __TA_EXCLUDES(cmd_reg_lock_) {
     ModifyCmdLocked(UINT16_MAX, value);
   }
 
+  bool Enabled() __TA_EXCLUDES(dev_lock_) {
+    fbl::AutoLock dev_lock(&dev_lock_);
+    return !!(ReadCmdLocked() & (PCI_CONFIG_COMMAND_IO_EN | PCI_CONFIG_COMMAND_MEM_EN));
+  }
   bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CONFIG_COMMAND_IO_EN; }
   bool MmioEnabled() __TA_REQUIRES(dev_lock_) {
     return ReadCmdLocked() & PCI_CONFIG_COMMAND_MEM_EN;
@@ -328,8 +358,8 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   friend class Bridge;
   friend class Root;
   // Probes a BAR's configuration. If it is already allocated it will try to
-  // reserve the existing address window for it so that devices configured by system
-  // firmware can be maintained as much as possible.
+  // reserve the existing address window for it so that devices configured by
+  // system firmware can be maintained as much as possible.
   zx::status<> ProbeBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   void ProbeBars() __TA_REQUIRES(dev_lock_);
   // Allocates address space for a BAR out of any suitable allocators.
@@ -345,7 +375,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // Bridge implements it so it can allocate its bridge windows and own BARs before
   // configuring downstream BARs..
   virtual zx::status<> AllocateBars() __TA_EXCLUDES(dev_lock_);
-  zx_status_t ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
+  zx::status<> ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
   zx::status<std::pair<zx::msi, zx_info_msi_t>> AllocateMsi(uint32_t irq_cnt)
       __TA_REQUIRES(dev_lock_);
   zx_status_t VerifyAllMsisFreed() __TA_REQUIRES(dev_lock_);
