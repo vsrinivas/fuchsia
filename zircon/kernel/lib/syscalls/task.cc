@@ -394,7 +394,7 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
 
   uint64_t offset;
   {
-    Guard<Mutex> guard{vm_mapping->lock()};
+    Guard<CriticalMutex> guard{vm_mapping->lock()};
     offset = vaddr - vm_mapping->base() + vm_mapping->object_offset_locked();
     // TODO(fxbug.dev/31512): While this limits reading to the mapped address space of
     // this VMO, it should be reading from multiple VMOs, not a single one.
@@ -458,7 +458,7 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
 
   uint64_t offset;
   {
-    Guard<Mutex> guard{vm_mapping->lock()};
+    Guard<CriticalMutex> guard{vm_mapping->lock()};
     offset = vaddr - vm_mapping->base() + vm_mapping->object_offset_locked();
     // TODO(fxbug.dev/31512): While this limits writing to the mapped address space of
     // this VMO, it should be writing to multiple VMOs, not a single one.

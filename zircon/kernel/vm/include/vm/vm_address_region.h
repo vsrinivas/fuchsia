@@ -125,8 +125,8 @@ class VmAddressRegionOrMapping
   virtual void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) = 0;
 
   // Expose our backing lock for annotation purposes.
-  Lock<Mutex>* lock() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock(); }
-  Lock<Mutex>& lock_ref() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock_ref(); }
+  Lock<CriticalMutex>* lock() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock(); }
+  Lock<CriticalMutex>& lock_ref() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock_ref(); }
 
   bool is_in_range(vaddr_t base, size_t size) const {
     const size_t offset = base - base_;
@@ -881,13 +881,13 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Exposed for testing.
   CachedPageAttribution GetCachedPageAttribution() {
-    Guard<Mutex> guard{aspace_->lock()};
+    Guard<CriticalMutex> guard{aspace_->lock()};
     return cached_page_attribution_;
   }
 
   // Exposed for testing.
   uint64_t GetMappingGenerationCount() {
-    Guard<Mutex> guard{aspace_->lock()};
+    Guard<CriticalMutex> guard{aspace_->lock()};
     return GetMappingGenerationCountLocked();
   }
 

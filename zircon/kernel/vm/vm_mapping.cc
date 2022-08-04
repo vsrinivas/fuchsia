@@ -65,7 +65,7 @@ VmMapping::~VmMapping() {
 }
 
 fbl::RefPtr<VmObject> VmMapping::vmo() const {
-  Guard<Mutex> guard{aspace_->lock()};
+  Guard<CriticalMutex> guard{aspace_->lock()};
   return vmo_locked();
 }
 
@@ -146,7 +146,7 @@ zx_status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flag
 
   size = ROUNDUP(size, PAGE_SIZE);
 
-  Guard<Mutex> guard{aspace_->lock()};
+  Guard<CriticalMutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -252,7 +252,7 @@ zx_status_t VmMapping::Unmap(vaddr_t base, size_t size) {
     return ZX_ERR_BAD_STATE;
   }
 
-  Guard<Mutex> guard{aspace_->lock()};
+  Guard<CriticalMutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -578,7 +578,7 @@ zx_status_t VmMappingCoalescer::Flush() {
 }  // namespace
 
 zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit, bool ignore_existing) {
-  Guard<Mutex> aspace_guard{aspace_->lock()};
+  Guard<CriticalMutex> aspace_guard{aspace_->lock()};
   canary_.Assert();
 
   len = ROUNDUP(len, PAGE_SIZE);
@@ -691,7 +691,7 @@ zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
   canary_.Assert();
   LTRACEF("%p [%#zx+%#zx], offset %#zx, len %#zx\n", this, base_, size_, offset, len);
 
-  Guard<Mutex> guard{aspace_->lock()};
+  Guard<CriticalMutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return ZX_ERR_BAD_STATE;
   }
@@ -1139,7 +1139,7 @@ void VmMapping::TryMergeNeighborsLocked() {
 }
 
 void VmMapping::MarkMergeable(fbl::RefPtr<VmMapping>&& mapping) {
-  Guard<Mutex> guard{mapping->lock()};
+  Guard<CriticalMutex> guard{mapping->lock()};
   // Now that we have the lock check this mapping is still alive and we haven't raced with some
   // kind of destruction.
   if (mapping->state_ != LifeCycleState::ALIVE) {

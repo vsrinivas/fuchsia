@@ -54,7 +54,7 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
 }
 
 bool GuestPhysicalAddressSpace::IsMapped(zx_gpaddr_t guest_paddr) const {
-  Guard<Mutex> guard(guest_aspace_->lock());
+  Guard<CriticalMutex> guard(guest_aspace_->lock());
   return FindMapping(guest_paddr) != nullptr;
 }
 
@@ -102,7 +102,7 @@ zx::status<> GuestPhysicalAddressSpace::ForPage(zx_gpaddr_t guest_paddr, ForPage
   zx_status_t status;
   do {
     {
-      Guard<Mutex> guard(guest_aspace_->lock());
+      Guard<CriticalMutex> guard(guest_aspace_->lock());
       fbl::RefPtr<VmMapping> mapping = FindMapping(guest_paddr);
       if (!mapping) {
         return zx::error(ZX_ERR_NOT_FOUND);
@@ -137,7 +137,7 @@ zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   zx_status_t status;
   do {
     {
-      Guard<Mutex> guard(guest_aspace_->lock());
+      Guard<CriticalMutex> guard(guest_aspace_->lock());
       fbl::RefPtr<VmMapping> mapping = FindMapping(guest_paddr);
       if (!mapping) {
         return zx::error(ZX_ERR_NOT_FOUND);
@@ -183,7 +183,7 @@ zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest
   uint64_t mapping_object_offset;
   fbl::RefPtr<VmObject> vmo;
   {
-    Guard<Mutex> guard(guest_aspace_->lock());
+    Guard<CriticalMutex> guard(guest_aspace_->lock());
     fbl::RefPtr<VmMapping> guest_mapping = FindMapping(begin);
     if (!guest_mapping) {
       return zx::error(ZX_ERR_NOT_FOUND);

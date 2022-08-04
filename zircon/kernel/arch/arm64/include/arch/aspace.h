@@ -8,6 +8,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ASPACE_H_
 
+#include <lib/relaxed_atomic.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -152,7 +153,24 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // data fields
   fbl::Canary<fbl::magic("VAAS")> canary_;
 
-  DECLARE_MUTEX(ArmArchVmAspace) lock_;
+  DECLARE_CRITICAL_MUTEX(ArmArchVmAspace) lock_;
+
+  // Tracks the number of pending access faults. A non-zero value informs the access harvester to
+  // back off to avoid contention with access faults.
+  RelaxedAtomic<uint64_t> pending_access_faults_{0};
+
+  // Private RAII type to manage scoped inc/dec of pending_access_faults_.
+  class AutoPendingAccessFault {
+   public:
+    explicit AutoPendingAccessFault(ArmArchVmAspace* aspace);
+    ~AutoPendingAccessFault();
+
+    AutoPendingAccessFault(const AutoPendingAccessFault&) = delete;
+    AutoPendingAccessFault& operator=(const AutoPendingAccessFault&) = delete;
+
+   private:
+    ArmArchVmAspace* aspace_;
+  };
 
   // Whether or not changes to this instance are allowed.
   bool updates_enabled_ = true;
@@ -189,6 +207,16 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // Whether not this has been active since |ActiveSinceLastCheck| was called.
   ktl::atomic<bool> active_since_last_check_ = false;
 };
+
+inline ArmArchVmAspace::AutoPendingAccessFault::AutoPendingAccessFault(ArmArchVmAspace* aspace)
+    : aspace_{aspace} {
+  aspace_->pending_access_faults_.fetch_add(1);
+}
+
+inline ArmArchVmAspace::AutoPendingAccessFault::~AutoPendingAccessFault() {
+  __UNUSED const uint64_t previous_value = aspace_->pending_access_faults_.fetch_sub(1);
+  DEBUG_ASSERT(previous_value >= 1);
+}
 
 // TODO: Take advantage of information in the CTR to determine if icache is PIPT and whether
 // cleaning is required.

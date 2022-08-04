@@ -142,7 +142,7 @@ void vm_init_preheap_vmars() {
       fbl::AdoptRef<VmAddressRegion>(&kernel_physmap_vmar.Initialize(
           *root_vmar, PHYSMAP_BASE, PHYSMAP_SIZE, kKernelVmarFlags, "physmap vmar"));
   {
-    Guard<Mutex> guard(kernel_physmap_vmar->lock());
+    Guard<CriticalMutex> guard(kernel_physmap_vmar->lock());
     kernel_physmap_vmar->Activate();
   }
 
@@ -163,7 +163,7 @@ void vm_init_preheap_vmars() {
       &kernel_image_vmar.Initialize(*root_vmar, kernel_regions[0].base, kernel_image_size,
                                     kKernelVmarFlags, "kernel region vmar"));
   {
-    Guard<Mutex> guard(kernel_image_vmar->lock());
+    Guard<CriticalMutex> guard(kernel_image_vmar->lock());
     kernel_image_vmar->Activate();
   }
 
@@ -179,7 +179,7 @@ void vm_init_preheap_vmars() {
       &kernel_random_padding_vmar.Initialize(*root_vmar, PHYSMAP_BASE + PHYSMAP_SIZE, random_size,
                                              kKernelVmarFlags, "random padding vmar"));
   {
-    Guard<Mutex> guard(kernel_random_padding_vmar->lock());
+    Guard<CriticalMutex> guard(kernel_random_padding_vmar->lock());
     kernel_random_padding_vmar->Activate();
   }
   LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
@@ -191,7 +191,7 @@ void vm_init_preheap_vmars() {
         ROUNDUP(gBootOptions->heap_max_size_mb * MB, size_t(1) << ARCH_HEAP_ALIGN_BITS);
     vaddr_t kernel_heap_base = 0;
     {
-      Guard<Mutex> guard(root_vmar->lock());
+      Guard<CriticalMutex> guard(root_vmar->lock());
       zx_status_t status = root_vmar->AllocSpotLocked(
           heap_bytes, ARCH_HEAP_ALIGN_BITS, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
           &kernel_heap_base);
@@ -205,7 +205,7 @@ void vm_init_preheap_vmars() {
         VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE,
         "kernel heap"));
     {
-      Guard<Mutex> guard(kernel_heap_vmar->lock());
+      Guard<CriticalMutex> guard(kernel_heap_vmar->lock());
       kernel_heap_vmar->Activate();
     }
     dprintf(INFO, "VM: kernel heap placed in range [%#" PRIxPTR ", %#" PRIxPTR ")\n",

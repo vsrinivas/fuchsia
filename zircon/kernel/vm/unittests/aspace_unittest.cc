@@ -1104,7 +1104,7 @@ static bool vm_kernel_region_test() {
         // Every page from __code_start to _end should either be a VmMapping or a VMAR.
         EXPECT_NE(region.get(), nullptr);
         EXPECT_TRUE(region->is_mapping());
-        Guard<Mutex> guard{region->as_vm_mapping()->lock()};
+        Guard<CriticalMutex> guard{region->as_vm_mapping()->lock()};
         EXPECT_EQ(kernel_region.arch_mmu_flags,
                   region->as_vm_mapping()->arch_mmu_flags_locked(base));
         break;
@@ -1423,7 +1423,7 @@ class EnumeratorTestHelper {
     return test_vmar_->Unmap(vaddr, size);
   }
 
-  Lock<Mutex>* lock() const TA_RET_CAP(test_vmar_->lock()) { return test_vmar_->lock(); }
+  Lock<CriticalMutex>* lock() const TA_RET_CAP(test_vmar_->lock()) { return test_vmar_->lock(); }
 
  private:
   void Destroy() {
@@ -1447,7 +1447,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{true, 0, 1}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 1);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 1}}));
@@ -1459,7 +1459,7 @@ static bool address_region_enumerator_mapping_test() {
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(
         test.AddRegions({{false, 0, 7}, {true, 1, 2}, {true, 3, 4}, {true, 5, 6}, {true, 7, 8}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 10);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
@@ -1476,7 +1476,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{false, 0, 2}, {true, 1, 2}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 2);
     AssertHeld(enumerator.lock_ref());
     enumerator.pause();
@@ -1489,7 +1489,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{true, 0, 1}, {true, 1, 2}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 3);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 1}}));
@@ -1504,7 +1504,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{true, 0, 1}, {true, 1, 2}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 3);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 0, 1}}));
@@ -1522,7 +1522,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{true, 2, 3}, {true, 3, 4}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 4);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 2, 3}}));
@@ -1537,7 +1537,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{true, 1, 2}, {true, 2, 3}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 3);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
@@ -1555,7 +1555,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{true, 1, 2}, {true, 2, 3}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(0, 3);
     AssertHeld(enumerator.lock_ref());
     ASSERT_TRUE(test.ExpectRegions(enumerator, {{true, 1, 2}}));
@@ -1573,7 +1573,7 @@ static bool address_region_enumerator_mapping_test() {
     EnumeratorTestHelper test;
     ASSERT_OK(test.Init(aspace));
     EXPECT_OK(test.AddRegions({{false, 0, 6}, {true, 0, 2}, {true, 2, 4}, {true, 6, 7}}));
-    Guard<Mutex> guard{test.lock()};
+    Guard<CriticalMutex> guard{test.lock()};
     auto enumerator = test.Enumerator(3, 7);
     AssertHeld(enumerator.lock_ref());
     enumerator.pause();
