@@ -27,32 +27,18 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 Before you begin, complete the prerequisite steps below:
 
 *   [Check host machine requirements](#check-host-machine-requirements)
-*   [Install dependencies](#install-dependencies)
 *   [Generate Fuchsia-specific SSH keys](#generate-fuchsia-specific-ssh-keys)
 
 ### Check host machine requirements {:#check-host-machine-requirements}
 
 This guide requires that your host machine meets the following criteria:
 
-*  A Linux machine. **macOS** is not supported yet.
+*  A Linux machine. (**macOS** is not supported yet.)
 *  Has at least 15 GB of storage space.
-*  Supports [KVM][kvm]{:.external} (Kernel Virtual Machine) for running a [QEMU][qemu]{:.external}-based emulator.
+*  Supports [KVM][kvm]{:.external} (Kernel Virtual Machine) for running a
+   [QEMU][qemu]{:.external}-based emulator.
 *  IPv6 is enabled.
-
-### Install dependencies {:#install-dependencies}
-
-`git` and `bazel` need to be installed on the host machine.
-You need Bazel 5.1 or higher.
-
-Note: You only need to complete these steps once on your host machine.
-
-Do the following:
-
-1. [Install Git][git-install]{:.external}.
-
-1. [Install Bazel][bazel-install]{:.external} – the easiest install option is
-   to download the [Bazelisk binary][bazelisk-download]{:.external} and rename it to `bazel` in a
-   convenient place on your path.
+*  [Git][git-install]{:.external} is installed.
 
 ### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
 
@@ -150,10 +136,16 @@ Do the following:
    cd fuchsia-getting-started
    ```
 
+1. Run the bootstrap script to install Bazel and other required dependencies:
+
+   ```posix-terminal
+   scripts/bootstrap.sh
+   ```
+
 1. Build the SDK tools:
 
    ```posix-terminal
-   bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
+   tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
    ```
 
    The first build may take a few minutes to download dependencies, such as Bazel build rules,
@@ -162,7 +154,7 @@ Do the following:
    When finished successfully, it prints output similar to the following in the end:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
+   $ tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
    Starting local Bazel server and connecting to it...
    INFO: Analyzed target @fuchsia_sdk//:fuchsia_toolchain_sdk (2 packages loaded, 2 targets configured).
    INFO: Found 1 target...
@@ -184,18 +176,18 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx version -v
    ffx:
-     abi-revision: 0xA56735A6690E09D8
-     api-level: 8
-     build-version: 2022-06-09T20:02:48+00:00
-     integration-commit-hash: dfddeea2221689c800ca1db7a7c7d1f2cb0bd99f
-     integration-commit-time: Thu, 09 Jun 2022 20:02:48 +0000
+     abi-revision: 0xECDB841C251A8CB9
+     api-level: 9
+     build-version: 2022-07-28T07:03:08+00:00
+     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
+     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
 
    daemon:
-     abi-revision: 0xA56735A6690E09D8
-     api-level: 8
-     build-version: 2022-06-09T20:02:48+00:00
-     integration-commit-hash: dfddeea2221689c800ca1db7a7c7d1f2cb0bd99f
-     integration-commit-time: Thu, 09 Jun 2022 20:02:48 +0000
+     abi-revision: 0xECDB841C251A8CB9
+     api-level: 9
+     build-version: 2022-07-28T07:03:08+00:00
+     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
+     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
    ```
 
    At this point, you only need to confirm that you can run this `ffx` command
@@ -228,19 +220,22 @@ The tasks include:
 Do the following:
 
 1. Download the latest Fuchsia Workstation prebuilt image for the emulator
-   (`workstation.qemu-x64`):
+   (`workstation_eng.qemu-x64`):
 
    ```posix-terminal
-   tools/ffx product-bundle get workstation.qemu-x64
+   tools/ffx product-bundle get workstation_eng.qemu-x64 --repository workstation-packages
    ```
 
    This command may take a few minutes to download the image and product metadata.
 
+   Note: If the `product-bundle` command fails with an error due to multiple product bundle
+   instances or SDK versions, [clean up the environment](#clean-up-the-environment) before
+   proceeding.
+
    Once the download is finished, the `ffx product-bundle get` command creates
-   a local Fuchsia package repository named `workstation.qemu-x64` on your host
-   machine. This package repository hosts additional system packages for this
-   Workstation prebuilt image. Later in Step 11 you’ll register this package
-   repository to the emulator instance.
+   a local Fuchsia package repository named `workstation-packages` on your host machine.
+   This package repository hosts additional system packages for this Workstation prebuilt image.
+   Later in Step 12 you’ll register this package repository to the emulator instance.
 
 1. Stop all running emulator instances:
 
@@ -251,7 +246,7 @@ Do the following:
 1. Start a new Fuchsia emulator instance:
 
    ```posix-terminal
-   tools/ffx emu start workstation.qemu-x64 --headless
+   tools/ffx emu start workstation_eng.qemu-x64 --headless
    ```
 
    This command starts a headless emulator instance running a Fuchsia prebuilt
@@ -261,7 +256,7 @@ Do the following:
    following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx emu start workstation.qemu-x64 --headless
+   $ tools/ffx emu start workstation_eng.qemu-x64 --headless
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds)...........
    Emulator is ready.
@@ -288,11 +283,10 @@ Do the following:
 
    This command prints output similar to the following:
 
-
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx target list
-   NAME               SERIAL       TYPE                    STATE      ADDRS/IP                           RCS
-   fuchsia-emulator   <unknown>    Unknown                 Product    [fe80::d4e3:9a5b:c2e:2534%qemu]    Y
+   NAME                SERIAL       TYPE                        STATE      ADDRS/IP            RCS
+   fuchsia-emulator    <unknown>    Unknown                     Product    [172.16.243.142]    Y
    ```
 
 1. Set this emulator instance to be the default device:
@@ -335,7 +329,7 @@ Do the following:
    $ tools/ffx target show
    Target:
        Name: "fuchsia-emulator"
-       SSH Address: "127.0.0.1:39189"
+       SSH Address: "172.16.243.142:22"
    Board:
        Name: "default-board"
        Revision: "1"
@@ -343,19 +337,19 @@ Do the following:
    Device:
        ...
    Build:
-       Version: "8.20220609.3.1"
-       Product: "workstation"
+       Version: "9.20220728.1.1"
+       Product: "workstation_eng"
        Board: "qemu-x64"
-       Commit: "2022-06-09T20:02:48+00:00"
+       Commit: "2022-07-28T07:03:08+00:00"
    Last Reboot:
        Graceful: "false"
        Reason: "Cold"
    ...
    ```
 
-   The example output above shows that the target device is running a `workstation.qemu-x64`
-   prebuilt image whose version is `8.20220609.3.1` (which indicates that this image was
-   built and published on June 9, 2022).
+   The example output above shows that the target device is running a
+   `workstation_eng.qemu-x64` prebuilt image whose version is `9.20220728.1.1`
+   (which indicates that this image was built and published on July 28, 2022).
 
 1. Verify that you can stream the device logs:
 
@@ -391,10 +385,31 @@ Do the following:
    ffx repository server is listening on [::]:8083
    ```
 
-1. Register the system package repository (`workstation.qemu-x64`) to the target device:
+1. Check the list of Fuchsia package repositories available on
+   your host machine:
 
    ```posix-terminal
-   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
+   tools/ffx repository list
+   ```
+
+   This command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx repository list
+   +-----------------------+------+-------------------------------------------------------------------------------------------------+
+   | NAME                  | TYPE | EXTRA                                                                                           |
+   +=======================+======+=================================================================================================+
+   | workstation-packages* | pm   | /home/alice/.local/share/Fuchsia/ffx/pbms/4751486831982119909/workstation_eng.qemu-x64/packages |
+   +-----------------------+------+-------------------------------------------------------------------------------------------------+
+   ```
+
+   Notice a package repository (`workstation-packages`) is created
+   for the Workstation prebuilt image.
+
+1. Register the `workstation-packages` package repository to the target device:
+
+   ```posix-terminal
+   tools/ffx target repository register -r workstation-packages --alias fuchsia.com
    ```
 
    This command exits silently without output.
@@ -417,7 +432,7 @@ Do the following:
 1. Build and run the sample component:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
    When the build is successful, this command generates build artifacts in a temporary
    Fuchsia package repository, which is then removed after the component runs.
@@ -425,16 +440,16 @@ Do the following:
    The command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
+   $ tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    INFO: Build options --copt, --cpu, --crosstool_top, and 1 more have changed, discarding analysis cache.
-   INFO: Analyzed target //src/hello_world:pkg.component (46 packages loaded, 1160 targets configured).
+   INFO: Analyzed target //src/hello_world:pkg.component (53 packages loaded, 1553 targets configured).
    INFO: Found 1 target...
    Target //src/hello_world:pkg.component up-to-date:
      bazel-bin/src/hello_world/pkg.component_run_component.sh
-   INFO: Elapsed time: 60.410s, Critical Path: 1.62s
-   INFO: 44 processes: 29 internal, 14 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 44 total actions
-   INFO: Build completed successfully, 44 total actions
+   INFO: Elapsed time: 83.989s, Critical Path: 2.15s
+   INFO: 125 processes: 100 internal, 24 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 125 total actions
+   INFO: Build completed successfully, 125 total actions
    added repository bazel.pkg.component
    URL: fuchsia-pkg://bazel.pkg.component/hello_world#meta/hello_world.cm
    Moniker: /core/ffx-laboratory:hello_world
@@ -453,14 +468,15 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx component show hello_world
-                  Moniker: /core/ffx-laboratory:hello_world
-                      URL: fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm
-                     Type: CML dynamic component
-          Component State: Resolved
-    Incoming Capabilities: fuchsia.logger.LogSink
-                           pkg
-              Merkle root: b44de670cf30c77c55823af0fea67d19e0fabc86ddd0946646512be12eeb8dc0
-          Execution State: Stopped
+                  Moniker:  /core/ffx-laboratory:hello_world
+                      URL:  fuchsia-pkg://bazel.pkg.component/hello_world#meta/hello_world.cm
+              Instance ID:  None
+                     Type:  CML Component
+          Component State:  Resolved
+    Incoming Capabilities:  /svc/fuchsia.logger.LogSink
+     Exposed Capabilities:
+              Merkle root:  8575a55f5b894b0ca284786bf0f6c80f09a26d9a3a53157b4826a210d2f58f20
+          Execution State:  Stopped
    ```
 
    The output shows that the `hello_world` component has run and is now terminated (`Stopped`).
@@ -476,9 +492,11 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter hello_world dump
    ...
-   [1702.331][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://fuchsiasamples.com/hello_world: []
-   [1702.331][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsiasamples.com/hello_world as fuchsia-pkg://fuchsiasamples.com/hello_world to dbdc177180730f521849484c7a0e11dbe763b75804a7d1b97158a668b463526c with TUF
-   {{ '<strong>' }}[1702.405][core/ffx-laboratory:hello_world][][I] Hello, World!{{ '</strong>' }}
+   [pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/hello_world: [
+       98ac8f77f52618766aec226c11e2bbd894637d18583b80b29b21938b75d6633a,
+   ]
+   [pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to cca474915d74415e302017f567b557c034eed50019d6881f52db916756292662 with TUF
+   {{ '<strong>' }}[core/ffx-laboratory:hello_world][][I] Hello, World!{{ '</strong>' }}
    ```
 
 1. Use a text editor to edit the  `src/hello_world/hello_world.cc` file, for example:
@@ -503,7 +521,7 @@ Do the following:
 1. Build and run the sample component again:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
 
 1. Verify the `Hello again, World!` message in the device logs:
@@ -517,9 +535,11 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter hello_world dump
    ...
-   [2013.380][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://fuchsiasamples.com/hello_world: []
-   [2013.380][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsiasamples.com/hello_world as fuchsia-pkg://fuchsiasamples.com/hello_world to da1c95e829ec32f78e7b4e8eb845b697679d9cb82432da3cc85763dbc3269395 with TUF
-   {{ '<strong>' }}[2013.418][core/ffx-laboratory:hello_world][][I] Hello again, World!{{ '</strong>' }}
+   [pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/hello_world: [
+       98ac8f77f52618766aec226c11e2bbd894637d18583b80b29b21938b75d6633a,
+   ]
+   [pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to cca474915d74415e302017f567b557c034eed50019d6881f52db916756292662 with TUF
+   {{ '<strong>' }}[core/ffx-laboratory:hello_world][][I] Hello again, World!{{ '</strong>' }}
    ```
 
 ## 5. View symbolized logs {:#view-symbolized-logs}
@@ -565,7 +585,7 @@ Do the following:
 1. Build and run the sample component:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
 
    Building a component automatically generates and registers the component’s debug
@@ -677,7 +697,7 @@ Do the following:
    directory (for instance,  `cd $HOME/fuchsia-getting-started`).
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    ```
 
    In the `zxdb` terminal, the sample component is paused
@@ -713,10 +733,10 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --filter hello_world
    ...
-   [5538.385][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://fuchsiasamples.com/hello_world: []
-   [5538.385][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsiasamples.com/hello_world as fuchsia-pkg://fuchsiasamples.com/hello_world to 940cbd84428125a90e1fbeba7033af7cb0f857f8f0bb2879d6b07cd1001f2225 with TUF
-   [5538.408][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://fuchsiasamples.com/hello_world: []
-   [5538.409][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsiasamples.com/hello_world as fuchsia-pkg://fuchsiasamples.com/hello_world to 940cbd84428125a90e1fbeba7033af7cb0f857f8f0bb2879d6b07cd1001f2225 with TUF
+   [pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/hello_world: [
+       98ac8f77f52618766aec226c11e2bbd894637d18583b80b29b21938b75d6633a,
+   ]
+   [pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/hello_world as fuchsia-pkg://bazel.pkg.component/hello_world to cca474915d74415e302017f567b557c034eed50019d6881f52db916756292662 with TUF
 
    ```
 
@@ -752,7 +772,7 @@ Do the following:
    now printed:
 
    ```none {:.devsite-disable-click-to-copy}
-   [5694.479][core/ffx-laboratory:hello_world][][I] Hello again, World!
+   [core/ffx-laboratory:hello_world][][I] Hello again, World!
    ```
 
 1. To exit the `zxdb` terminal, type `exit` or press `Ctrl-D`.
@@ -889,7 +909,7 @@ Do the following:
 1. Build and run the sample test components:
 
    ```posix-terminal
-   bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg
+   tools/bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg
    ```
 
    This command runs all the tests in the Hello World component’s test package
@@ -898,8 +918,8 @@ Do the following:
    The command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg
-   INFO: Analyzed target //src/hello_world:test_pkg (11 packages loaded, 441 targets configured).
+   $ tools/bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg
+   INFO: Analyzed target //src/hello_world:test_pkg (10 packages loaded, 568 targets configured).
    INFO: Found 1 test target...
    INFO: From Testing //src/hello_world:test_pkg:
    ==================== Test output for //src/hello_world:test_pkg:
@@ -930,7 +950,7 @@ Do the following:
    INFO: Elapsed time: 16.866s, Critical Path: 9.80s
    INFO: 105 processes: 46 internal, 56 linux-sandbox, 3 local.
    INFO: Build completed successfully, 105 total actions
-   //src/hello_world:test_pkg                                               PASSED in 5.0s
+   //src/hello_world:test_pkg                                               PASSED in 3.3s
 
    Executed 1 out of 1 test: 1 test passes.
    INFO: Build completed successfully, 105 total actions
@@ -947,8 +967,9 @@ Do the following:
    The test should look like below:
 
    ```none {:.devsite-disable-click-to-copy}
-   TEST(HelloTest, BasicAssertions)
-   {
+   TEST(HelloTest, BasicAssertions) {
+     std::cout << "Example stdout." << std::endl;
+
      // Expect two strings not to be equal.
      {{ '<strong>' }}EXPECT_STREQ("hello", "world");{{ '</strong>' }}
      // Expect equality.
@@ -964,13 +985,13 @@ Do the following:
 1. To verify that the updated test now fails, build and run the `hello_gtest` component:
 
    ```posix-terminal
-   bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg.hello_gtest
+   tools/bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg.hello_gtest
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg.hello_gtest
+   $ tools/bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg.hello_gtest
    INFO: Analyzed target //src/hello_world:test_pkg.hello_gtest (0 packages loaded, 0 targets configured).
    INFO: Found 1 test target...
    FAIL: //src/hello_world:test_pkg.hello_gtest (see /home/alice/.cache/bazel/_bazel_alice/ea119f1048230a864836be3d62fead2c/execroot/__main__/bazel-out/x86_64-fastbuild/testlogs/src/hello_world/test_pkg.hello_gtest/test.log)
@@ -1023,19 +1044,11 @@ downloaded files, symlinks, configuration settings, and more).
 Remove the package repositories created in this guide:
 
 ```posix-terminal
-tools/ffx repository remove fuchsiasamples.com
-```
-
-```posix-terminal
-tools/ffx repository remove workstation.qemu-x64
+tools/ffx repository remove workstation-packages
 ```
 
 ```posix-terminal
 tools/ffx repository server stop
-```
-
-```posix-terminal
-rm -rf $HOME/.package_repos/sdk-samples
 ```
 
 Remove all existing configurations and data of `ffx`:
@@ -1048,6 +1061,21 @@ tools/ffx daemon stop
 rm -rf $HOME/.local/share/Fuchsia/ffx
 ```
 
+When Bazel fails to build, try the commands below:
+
+Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
+deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
+This means Bazel will need to download those dependencies again
+the next time you run `bazel build`.
+
+```posix-terminal
+tools/bazel clean --expunge
+```
+
+```posix-terminal
+tools/bazel shutdown && rm -rf $HOME/.cache/bazel
+```
+
 Remove the `fuchsia-getting-started` directory and its artifacts:
 
 Caution: If the SDK samples repository is cloned to a different location
@@ -1057,21 +1085,6 @@ below. Be extremely careful with the directory path when you run the
 
 ```posix-terminal
 rm -rf $HOME/fuchsia-getting-started
-```
-
-When Bazel fails to build, try the commands below:
-
-Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
-deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
-This means Bazel will need to download those dependencies again
-the next time you run `bazel build`.
-
-```posix-terminal
-bazel clean --expunge
-```
-
-```posix-terminal
-bazel shutdown && rm -rf $HOME/.cache/bazel
 ```
 
 Other clean up commands:
@@ -1086,8 +1099,7 @@ killall pm
 
 ### Update the firewall rules {:#update-the-firewall-rules}
 
-When you launch the sample component (for instance, using the command
-`tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm"`),
+When you launch the sample component (for instance, using the command `tools/bazel run`),
 you might run into an issue where the command hangs for a long time and
 eventually fails with the following error:
 
