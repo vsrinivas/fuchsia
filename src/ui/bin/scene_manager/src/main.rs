@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_ui_brightness::{
         ColorAdjustmentHandlerRequest, ColorAdjustmentHandlerRequestStream,
     },
-    fidl_fuchsia_ui_composition as flatland,
+    fidl_fuchsia_ui_composition as flatland, fidl_fuchsia_ui_display_color as color,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_policy::{
         DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
@@ -179,6 +179,8 @@ async fn inner_main() -> Result<(), Error> {
         }
     };
 
+    let color_converter = connect_to_protocol::<color::ConverterMarker>()?;
+
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
         // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
         // to the SceneManager, the same way we do for the Gfx branch.
@@ -199,6 +201,7 @@ async fn inner_main() -> Result<(), Error> {
                 display_rotation,
                 display_pixel_density,
                 viewing_distance,
+                color_converter,
             )
             .await?,
         )))
@@ -211,6 +214,7 @@ async fn inner_main() -> Result<(), Error> {
                 display_rotation,
                 display_pixel_density,
                 viewing_distance,
+                color_converter,
             )
             .await?,
         )));

@@ -25,6 +25,7 @@ rustc_binary("scene_manager_bin") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//sdk/fidl/fuchsia.ui.display.color:fuchsia.ui.display.color_rust",
     "//sdk/fidl/fuchsia.ui.input.config:fuchsia.ui.input.config_rust",
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration_rust",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",

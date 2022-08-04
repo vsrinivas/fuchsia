@@ -12,6 +12,7 @@ use {
     async_trait::async_trait,
     async_utils::hanging_get::server as hanging_get,
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
+    fidl_fuchsia_ui_display_color as color,
     fidl_fuchsia_ui_pointerinjector_configuration::{
         SetupRequest as PointerInjectorConfigurationSetupRequest,
         SetupRequestStream as PointerInjectorConfigurationSetupRequestStream,
@@ -94,6 +95,15 @@ pub trait SceneManager: Send {
         &self,
         view_ref: &mut ui_views::ViewRef,
     ) -> fidl::client::QueryResponseFut<ui_views::FocuserRequestFocusResult>;
+
+    /// Sets color correction for color blindness.
+    async fn set_color_conversion_values(
+        &self,
+        properties: color::ConversionProperties,
+    ) -> Result<(), Error>;
+
+    /// Sets the minimum value all pixel channels RGB can be from [0, 255] inclusive.
+    async fn set_display_minimum_rgb(&self, minimum_rgb: u8) -> Result<(), Error>;
 
     /// Inserts an a11y view into the scene.
     ///

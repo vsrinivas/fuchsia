@@ -26,6 +26,8 @@ use fidl_fuchsia_ui_gfx::{
     RendererArgs, ResourceArgs, RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs,
     ViewArgs3, ViewHolderArgs, ViewProperties,
 };
+
+use fidl_fuchsia_ui_display_color as _;
 use fidl_fuchsia_ui_scenic::{Command, Present2Args, SessionEventStream, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewRef, ViewRefControl, ViewToken};
 use fuchsia_zircon::{Event, HandleBased, Rights, Status, Vmo};
