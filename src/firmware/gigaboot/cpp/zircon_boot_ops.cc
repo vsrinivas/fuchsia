@@ -98,7 +98,7 @@ bool AddZbiItems(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSl
   // TODO(b/235489025): To implement. Append necessary ZBI items for booting the ZBI image. Refers
   // to the C Gigaboot implementation in function boot_zircon() in
   // `src/firmware/gigaboot/src/zircon.c` for what items are needed.
-  return AddGigabootZbiItems(image, capacity);
+  return AddGigabootZbiItems(image, capacity, slot);
 }
 
 }  // namespace

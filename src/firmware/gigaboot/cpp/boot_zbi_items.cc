@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zbi/zbi.h>
+#include <lib/zircon_boot/zbi_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/limits.h>
@@ -64,8 +65,12 @@ bool AddMemoryRanges(void* zbi, size_t capacity) {
 
 }  // namespace
 
-bool AddGigabootZbiItems(zbi_header_t* image, size_t capacity) {
+bool AddGigabootZbiItems(zbi_header_t* image, size_t capacity, AbrSlotIndex slot) {
   if (!AddMemoryRanges(image, capacity)) {
+    return false;
+  }
+
+  if (AppendCurrentSlotZbiItem(image, capacity, slot) != ZBI_RESULT_OK) {
     return false;
   }
 

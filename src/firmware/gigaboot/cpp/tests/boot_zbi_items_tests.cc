@@ -1,6 +1,8 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include <lib/abr/abr.h>
 #include <lib/zbitl/view.h>
 #include <zircon/limits.h>
 
@@ -29,10 +31,23 @@ std::vector<zbitl::ByteView> FindItems(const void *zbi, uint32_t type) {
   return ret;
 }
 
-TEST(GigabootTest, AddMemoryRanges) {
-  MockStubService stub_service;
-  Device image_device({"A", "B", "C", "image"});
-  auto cleanup = SetupEfiGlobalState(stub_service, image_device);
+class BootZbiItemTest : public testing::Test {
+ public:
+  BootZbiItemTest() : image_device_({"path-A", "path-B", "path-C", "image"}) {
+    stub_service_.AddDevice(&image_device_);
+  }
+
+  auto SetupEfiGlobalState() { return gigaboot::SetupEfiGlobalState(stub_service_, image_device_); }
+
+  MockStubService &stub_service() { return stub_service_; }
+
+ private:
+  MockStubService stub_service_;
+  Device image_device_;
+};
+
+TEST_F(BootZbiItemTest, AddMemoryRanges) {
+  auto cleanup = SetupEfiGlobalState();
 
   std::vector<uint8_t> buffer(1024, 0);
   ASSERT_EQ(zbi_init(buffer.data(), buffer.size()), ZBI_RESULT_OK);
@@ -57,9 +72,10 @@ TEST(GigabootTest, AddMemoryRanges) {
       },
   };
 
-  stub_service.SetMemoryMap(memory_map);
+  stub_service().SetMemoryMap(memory_map);
 
-  ASSERT_TRUE(AddGigabootZbiItems(reinterpret_cast<zbi_header_t *>(buffer.data()), buffer.size()));
+  ASSERT_TRUE(AddGigabootZbiItems(reinterpret_cast<zbi_header_t *>(buffer.data()), buffer.size(),
+                                  kAbrSlotIndexA));
 
   std::vector<zbitl::ByteView> items = FindItems(buffer.data(), ZBI_TYPE_MEM_CONFIG);
   EXPECT_EQ(items.size(), 1ULL);
@@ -78,6 +94,39 @@ TEST(GigabootTest, AddMemoryRanges) {
   EXPECT_EQ(zbi_mem_ranges[1].length, 0x10 * ZX_PAGE_SIZE);
   EXPECT_EQ(zbi_mem_ranges[1].type, EfiToZbiMemRangeType(EfiLoaderCode));
 }
+
+TEST_F(BootZbiItemTest, AppendAbrSlotA) {
+  auto cleanup = SetupEfiGlobalState();
+
+  std::vector<uint8_t> buffer(1024, 0);
+  ASSERT_EQ(zbi_init(buffer.data(), buffer.size()), ZBI_RESULT_OK);
+
+  ASSERT_TRUE(AddGigabootZbiItems(reinterpret_cast<zbi_header_t *>(buffer.data()), buffer.size(),
+                                  kAbrSlotIndexA));
+
+  std::vector<zbitl::ByteView> items = FindItems(buffer.data(), ZBI_TYPE_CMDLINE);
+  EXPECT_EQ(items.size(), 1ULL);
+
+  ASSERT_EQ(std::string_view(reinterpret_cast<const char *>(items[0].data())),
+            "zvb.current_slot=_a");
+}
+
+TEST_F(BootZbiItemTest, AppendAbrSlotB) {
+  auto cleanup = SetupEfiGlobalState();
+
+  std::vector<uint8_t> buffer(1024, 0);
+  ASSERT_EQ(zbi_init(buffer.data(), buffer.size()), ZBI_RESULT_OK);
+
+  ASSERT_TRUE(AddGigabootZbiItems(reinterpret_cast<zbi_header_t *>(buffer.data()), buffer.size(),
+                                  kAbrSlotIndexB));
+
+  std::vector<zbitl::ByteView> items = FindItems(buffer.data(), ZBI_TYPE_CMDLINE);
+  EXPECT_EQ(items.size(), 1ULL);
+
+  ASSERT_EQ(std::string_view(reinterpret_cast<const char *>(items[0].data())),
+            "zvb.current_slot=_b");
+}
+
 }  // namespace
 
 }  // namespace gigaboot

@@ -8,7 +8,7 @@
 #include <lib/zbi/zbi.h>
 
 namespace gigaboot {
-bool AddGigabootZbiItems(zbi_header_t* image, size_t capacity);
+bool AddGigabootZbiItems(zbi_header_t *image, size_t capacity, AbrSlotIndex slot);
 }  // namespace gigaboot
 
 #endif  // SRC_FIRMWARE_GIGABOOT_CPP_BOOT_ZBI_ITEMS_H_

@@ -24,6 +24,7 @@ source_set("lib") {
     "//sdk/lib/fit",
     "//src/firmware/lib/fastboot:fastboot-base",
     "//src/firmware/lib/zbi:in_tree",
+    "//src/firmware/lib/zircon_boot:in_tree",
     "//src/lib/utf_conversion",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/phys/efi:main",
@@ -64,7 +65,6 @@ efi_executable("gigaboot") {
   deps = [
     ":lib",
     "legacy_c_gigaboot",
-    "//src/firmware/lib/zircon_boot:in_tree",
     "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
