@@ -94,8 +94,6 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
                                    fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatWritingBlobDataVmoName(const digest::Digest& digest,
-                                  fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 
 std::ostream& operator<<(std::ostream& stream, const Superblock& info);
 

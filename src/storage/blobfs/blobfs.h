@@ -217,13 +217,14 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void CalculateFragmentationMetrics(FragmentationMetrics& fragmentation_metrics,
                                      FragmentationStats* out_stats = nullptr);
 
+  // Return true if streaming writes feature is enabled.
+  static bool StreamingWritesEnabled();
+
   // Loads the blob with inode |node_index| and verifies that the contents of the blob are valid.
   // Discards the blob's data after performing verification.
   [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   DecompressorCreatorConnector* decompression_connector() { return decompression_connector_; }
-
-  bool use_streaming_writes() const { return use_streaming_writes_; }
 
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
@@ -238,7 +239,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
          std::optional<CachePolicy> pager_backed_cache_policy,
-         DecompressorCreatorConnector* decompression_connector, bool use_streaming_writes);
+         DecompressorCreatorConnector* decompression_connector);
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
@@ -341,8 +342,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   std::shared_mutex fsck_at_end_of_transaction_mutex_;
 
   DecompressorCreatorConnector* decompression_connector_;
-
-  const bool use_streaming_writes_;
 };
 
 }  // namespace blobfs

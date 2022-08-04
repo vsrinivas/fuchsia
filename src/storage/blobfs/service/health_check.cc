@@ -45,7 +45,7 @@ void HealthCheckService::Verify(VerifyRequestView request, VerifyCompleter::Sync
       FX_LOGS(ERROR) << "Detected corrupted blob " << blob->digest();
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
-    bytes_verified += blob->FileSize();
+    bytes_verified += blob->SizeData();
     if (bytes_verified >= kMaxBytesToVerify) {
       return ZX_ERR_STOP;
     }

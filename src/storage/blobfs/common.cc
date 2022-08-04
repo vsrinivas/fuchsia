@@ -259,19 +259,14 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
   return BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
 }
 
-namespace {
-
 constexpr char kBlobVmoNamePrefix[] = "blob";
 constexpr char kInactiveBlobVmoNamePrefix[] = "inactive-blob";
-constexpr char kWritingBlobVmoNamePrefix[] = "writing-blob";
 
 void FormatVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out,
                    const char* prefix) {
   out->Clear();
   out->AppendPrintf("%s-%.8s", prefix, digest.ToString().c_str());
 }
-
-}  // namespace
 
 void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
   FormatVmoName(digest, out, kBlobVmoNamePrefix);
@@ -280,11 +275,6 @@ void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MA
 void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
                                    fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
   FormatVmoName(digest, out, kInactiveBlobVmoNamePrefix);
-}
-
-void FormatWritingBlobDataVmoName(const digest::Digest& digest,
-                                  fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  FormatVmoName(digest, out, kWritingBlobVmoNamePrefix);
 }
 
 }  // namespace blobfs
