@@ -141,6 +141,9 @@ fuchsia_structured_config_values("default_component_config") {
   cm_label = ":manifest"
   values = {
     enable_debug_service = enable_power_manager_debug
+
+    # Default value may be overridden by integration tests
+    node_config_path = "/pkg/config/power_manager/node_config.json"
   }
 }
 

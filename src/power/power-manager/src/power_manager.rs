@@ -25,9 +25,6 @@ use crate::{
     thermal_policy, thermal_shutdown, thermal_state_handler,
 };
 
-/// Path to the node config JSON file.
-const NODE_CONFIG_PATH: &'static str = "/pkg/config/power_manager/node_config.json";
-
 pub struct PowerManager {
     nodes: HashMap<String, Rc<dyn Node>>,
 }
@@ -53,7 +50,9 @@ impl PowerManager {
 
         // Create the nodes according to the config file
         let node_futures = FuturesUnordered::new();
-        self.create_nodes_from_config(&mut fs, &node_futures).await?;
+        self.create_nodes_from_config(&config.node_config_path, &mut fs, &node_futures)
+            .await
+            .context("Failed to create nodes from config")?;
 
         // Begin serving FIDL requests. It's important to do this after creating nodes but before
         // initializing them, since some nodes depend on incoming FIDL requests for their `init()`
@@ -82,14 +81,15 @@ impl PowerManager {
     /// Create the nodes by reading and parsing the node config JSON file.
     async fn create_nodes_from_config<'a, 'b, 'c>(
         &mut self,
+        node_config_path: &str,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
         node_futures: &FuturesUnordered<LocalBoxFuture<'c, ()>>,
     ) -> Result<(), Error> {
-        let contents = std::fs::read_to_string(NODE_CONFIG_PATH)?;
+        let contents = std::fs::read_to_string(node_config_path)?;
         let json_data: json::Value = serde_json5::from_str(&contents)
-            .context(format!("Failed to parse file {}", NODE_CONFIG_PATH))?;
+            .context(format!("Failed to parse file {}", node_config_path))?;
 
-        info!("Creating nodes from config file: {}", NODE_CONFIG_PATH);
+        info!("Creating nodes from config file: {}", node_config_path);
         self.create_nodes(json_data, service_fs, node_futures).await
     }
 
@@ -253,8 +253,11 @@ impl PowerManager {
 }
 
 fn log_config(config: &power_manager_config_lib::Config) {
-    let power_manager_config_lib::Config { enable_debug_service } = config;
-    info!("Configuration: enable_debug_service={}", enable_debug_service);
+    let power_manager_config_lib::Config { enable_debug_service, node_config_path } = config;
+    info!(
+        "Configuration: enable_debug_service={} node_config_path={}",
+        enable_debug_service, node_config_path
+    );
 }
 
 #[cfg(test)]
