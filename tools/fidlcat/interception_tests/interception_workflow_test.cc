@@ -172,10 +172,6 @@ void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
 
   SimulateSyscall(std::move(syscall1), controller, interleaved_test, multi_thread);
 
-  if (multi_thread) {
-    debug::MessageLoop::Current()->Run();
-  }
-
   if (syscall2 != nullptr) {
     data_.set_use_alternate_data();
     SimulateSyscall(std::move(syscall2), controller, interleaved_test, multi_thread);

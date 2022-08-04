@@ -25,21 +25,15 @@ const char kDisconnectHelp[] =
   There are no arguments.
 )";
 
-Err RunVerbDisconnect(ConsoleContext* context, const Command& cmd,
-                      CommandCallback callback = nullptr) {
+Err RunVerbDisconnect(ConsoleContext* context, const Command& cmd) {
   if (!cmd.args().empty())
     return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
 
-  context->session()->Disconnect([callback = std::move(callback)](const Err& err) mutable {
-    if (err.has_error())
-      Console::get()->Output(err);
-    else
-      Console::get()->Output("Disconnected successfully.");
-
-    // We call the given callback
-    if (callback)
-      callback(err);
-  });
+  Err e = context->session()->Disconnect();
+  if (e.has_error())
+    Console::get()->Output(e);
+  else
+    Console::get()->Output("Disconnected successfully.");
 
   return Err();
 }

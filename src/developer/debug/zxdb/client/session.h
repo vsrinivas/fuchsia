@@ -109,13 +109,13 @@ class Session : public SettingStoreObserver {
   // If there is no previous destination, this will be issue an error.
   void Connect(const SessionConnectionInfo& info, fit::callback<void(const Err&)> cb);
 
-  // Disconnects from the remote system. Calling when there is no connection connection will issue
-  // the callback with an error.
+  // Synchronously disconnects from the remote system. Calling when there is no connection will
+  // return an error.
   //
   // This can also be called when a connection is pending (Connect() has been called but the
   // callback has not been issued yet) which will cancel the pending connection. The Connect()
   // callback will still be issued but will indicate failure.
-  void Disconnect(fit::callback<void(const Err&)> callback);
+  Err Disconnect();
 
   // Open a minidump instead of connecting to a running system. The callback will be issued with an
   // error if the file cannot be opened or if there is already a connection.

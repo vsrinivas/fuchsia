@@ -167,9 +167,9 @@ class InterceptionWorkflow {
   static void Go();
 
   void Shutdown() {
-    session()->Disconnect([this](const zxdb::Err& err) {
-      loop_->PostTask(FROM_HERE, [this]() { loop_->QuitNow(); });
-    });
+    session()->Disconnect();
+
+    loop_->QuitNow();
   }
 
   zxdb::Target* GetTarget(zx_koid_t process_koid);

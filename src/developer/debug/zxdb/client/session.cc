@@ -467,21 +467,15 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
                      });
 }
 
-void Session::Disconnect(fit::callback<void(const Err&)> callback) {
+Err Session::Disconnect() {
   if (!stream_ && !is_minidump_) {
-    Err err;
     if (pending_connection_.get()) {
       // Cancel pending connection.
       pending_connection_ = nullptr;
+      return Err();
     } else {
-      err = Err("Not connected.");
+      return Err("Not connected.");
     }
-
-    if (callback) {
-      debug::MessageLoop::Current()->PostTask(
-          FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
-    }
-    return;
   }
 
   if (is_minidump_) {
@@ -491,20 +485,12 @@ void Session::Disconnect(fit::callback<void(const Err&)> callback) {
   } else if (!connection_storage_) {
     // The connection is persistent (passed in via the constructor) and can't
     // be disconnected.
-    if (callback) {
-      debug::MessageLoop::Current()->PostTask(
-          FROM_HERE, [callback = std::move(callback)]() mutable {
-            callback(Err(ErrType::kGeneral,
-                         "The connection can't be disconnected in this build "
-                         "of the debugger."));
-          });
-      return;
-    }
+    return Err(ErrType::kGeneral,
+               "The connection can't be disconnected in this build of the debugger.");
   }
 
   ClearConnectionData();
-  if (callback)
-    callback(Err());
+  return Err();
 }
 
 bool Session::ClearConnectionData() {
