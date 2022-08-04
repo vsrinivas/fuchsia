@@ -86,7 +86,10 @@ mod tests {
         input_device::UnhandledInputEvent {
             device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
             device_descriptor: input_device::InputDeviceDescriptor::Keyboard(
-                keyboard_binding::KeyboardDeviceDescriptor { keys: vec![Key::I, Key::J] },
+                keyboard_binding::KeyboardDeviceDescriptor {
+                    keys: vec![Key::I, Key::J],
+                    ..Default::default()
+                },
             ),
             event_time: fuchsia_zircon::Time::from_nanos(event_time),
             trace_id: None,

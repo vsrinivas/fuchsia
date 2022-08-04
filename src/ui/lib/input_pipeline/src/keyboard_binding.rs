@@ -104,6 +104,11 @@ impl KeyboardEvent {
         self.event_type
     }
 
+    /// Converts [KeyboardEvent] into the same one, but with specified event type.
+    pub fn into_with_event_type(self, event_type: KeyEventType) -> Self {
+        Self { event_type, ..self }
+    }
+
     /// Folds the key event type into an active event (Pressed, Released).
     pub fn into_with_folded_event(self) -> Self {
         Self { event_type: self.get_event_type_folded(), ..self }
@@ -207,6 +212,27 @@ impl KeyboardEvent {
 pub struct KeyboardDeviceDescriptor {
     /// All the [`fidl_fuchsia_input::Key`]s available on the keyboard device.
     pub keys: Vec<fidl_fuchsia_input::Key>,
+
+    /// The vendor ID, product ID and version.
+    pub device_info: fidl_fuchsia_input_report::DeviceInfo,
+
+    /// The unique identifier of this device.
+    pub device_id: u32,
+}
+
+#[cfg(test)]
+impl Default for KeyboardDeviceDescriptor {
+    fn default() -> Self {
+        KeyboardDeviceDescriptor {
+            keys: vec![],
+            device_info: fidl_fuchsia_input_report::DeviceInfo {
+                vendor_id: 0,
+                product_id: 0,
+                version: 0,
+            },
+            device_id: 0,
+        }
+    }
 }
 
 /// A [`KeyboardBinding`] represents a connection to a keyboard input device.
@@ -249,14 +275,17 @@ impl KeyboardBinding {
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
     /// - `input_event_sender`: The channel to send new InputEvents to.
+    /// - `device_id`: The unique identifier of this device.
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
     pub async fn new(
         device_proxy: InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
+        device_id: u32,
     ) -> Result<Self, Error> {
-        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
+        let device_binding =
+            Self::bind_device(&device_proxy, input_event_sender, device_id).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -301,6 +330,7 @@ impl KeyboardBinding {
     /// # Parameters
     /// - `device`: The device to use to initialize the binding.
     /// - `input_event_sender`: The channel to send new InputEvents to.
+    /// - `device_id`: The device ID being bound.
     ///
     /// # Errors
     /// If the device descriptor could not be retrieved, or the descriptor could not be parsed
@@ -308,15 +338,27 @@ impl KeyboardBinding {
     async fn bind_device(
         device: &InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
+        device_id: u32,
     ) -> Result<Self, Error> {
-        match device.get_descriptor().await?.keyboard {
+        let descriptor = device.get_descriptor().await?;
+        let device_info = descriptor.device_info.ok_or({
+            // Logging in addition to returning an error, as in some test
+            // setups the error may never be displayed to the user.
+            fx_log_err!("DRIVER BUG: empty device_info for device_id: {}", device_id);
+            format_err!("empty device info for device_id: {}", device_id)
+        })?;
+        match descriptor.keyboard {
             Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                 input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys3, .. }),
                 output: _,
                 ..
             }) => Ok(KeyboardBinding {
                 event_sender: input_event_sender,
-                device_descriptor: KeyboardDeviceDescriptor { keys: keys3.unwrap_or_default() },
+                device_descriptor: KeyboardDeviceDescriptor {
+                    keys: keys3.unwrap_or_default(),
+                    device_info,
+                    device_id,
+                },
             }),
             device_descriptor => Err(format_err!(
                 "Keyboard Device Descriptor failed to parse: \n {:?}",
@@ -499,6 +541,7 @@ mod tests {
     async fn pressed_key() {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![fidl_fuchsia_input::Key::A],
+            ..Default::default()
         });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
@@ -529,6 +572,7 @@ mod tests {
     async fn released_key() {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![fidl_fuchsia_input::Key::A],
+            ..Default::default()
         });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
@@ -573,6 +617,7 @@ mod tests {
     async fn multiple_pressed_event_filtering() {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![fidl_fuchsia_input::Key::A],
+            ..Default::default()
         });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
@@ -609,6 +654,7 @@ mod tests {
     async fn pressed_and_released_keys() {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![fidl_fuchsia_input::Key::A, fidl_fuchsia_input::Key::B],
+            ..Default::default()
         });
         let (event_time_i64, event_time) = testing_utilities::event_times();
 

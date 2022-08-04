@@ -15,7 +15,9 @@ use {
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest,
-    fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::{channel::mpsc::Sender, stream::StreamExt},
     std::path::PathBuf,
 };
@@ -106,7 +108,7 @@ pub enum InputDeviceDescriptor {
     Fake,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputDeviceType {
     Keyboard,
     ConsumerControls,
@@ -177,9 +179,14 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
         let mut previous_report: Option<InputReport> = None;
         let (report_reader, server_end) = match fidl::endpoints::create_proxy() {
             Ok(res) => res,
-            Err(_) => return, // TODO(fxbug.dev/54445): signal error
+            Err(e) => {
+                fx_log_err!("error creating InputReport proxy: {:?}", &e);
+                return; // TODO(fxbug.dev/54445): signal error
+            }
         };
-        if device_proxy.get_input_reports_reader(server_end).is_err() {
+        let result = device_proxy.get_input_reports_reader(server_end);
+        if result.is_err() {
+            fx_log_err!("error on GetInputReportsReader: {:?}", &result);
             return; // TODO(fxbug.dev/54445): signal error
         }
         let mut report_stream = HangingGetStream::new(
@@ -206,6 +213,7 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
         }
         // TODO(fxbug.dev/54445): Add signaling for when this loop exits, since it means the device
         // binding is no longer functional.
+        fx_log_warn!("initialize_report_stream exited - device binding no longer works");
     })
     .detach();
 }
@@ -225,7 +233,6 @@ pub async fn is_device_type(
             return false;
         }
     };
-
     // Return if the device type matches the desired `device_type`.
     match device_type {
         InputDeviceType::ConsumerControls => device_descriptor.consumer_control.is_some(),
@@ -263,7 +270,8 @@ pub async fn get_device_binding(
             touch_binding::TouchBinding::new(device_proxy, device_id, input_event_sender).await?,
         )),
         InputDeviceType::Keyboard => Ok(Box::new(
-            keyboard_binding::KeyboardBinding::new(device_proxy, input_event_sender).await?,
+            keyboard_binding::KeyboardBinding::new(device_proxy, input_event_sender, device_id)
+                .await?,
         )),
     }
 }
@@ -369,7 +377,7 @@ impl InputEvent {
         Self { device_descriptor, ..self }
     }
 
-    /// Returns true if this handler is marked as handled.
+    /// Returns true if this event is marked as handled.
     pub fn is_handled(&self) -> bool {
         self.handled == Handled::Yes
     }

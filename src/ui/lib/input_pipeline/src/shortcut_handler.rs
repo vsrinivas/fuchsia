@@ -142,7 +142,7 @@ mod tests {
         event_time: zx::Time,
     ) -> input_device::UnhandledInputEvent {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3], ..Default::default() },
         );
         let keyboard_event =
             keyboard_binding::KeyboardEvent::new(key3, event_type).into_with_modifiers(modifiers);
@@ -201,7 +201,7 @@ mod tests {
         );
 
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3], ..Default::default() },
         );
         let input_event = testing_utilities::create_keyboard_event(
             key3,
@@ -248,7 +248,7 @@ mod tests {
         );
 
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3] },
+            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![key3], ..Default::default() },
         );
         let input_event = testing_utilities::create_keyboard_event(
             key3,

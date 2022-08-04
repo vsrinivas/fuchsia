@@ -117,6 +117,7 @@ mod tests {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_fuchsia_input::Key::A, fidl_fuchsia_input::Key::B],
+                ..Default::default()
             },
         );
         let (_, event_time_u64) = testing_utilities::event_times();

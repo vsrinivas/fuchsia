@@ -233,7 +233,15 @@ impl DisplayOwnership {
 fn empty_keyboard_device_descriptor() -> input_device::InputDeviceDescriptor {
     input_device::InputDeviceDescriptor::Keyboard(
         // Should descriptor be something sensible?
-        KeyboardDeviceDescriptor { keys: vec![] },
+        KeyboardDeviceDescriptor {
+            keys: vec![],
+            device_info: fidl_fuchsia_input_report::DeviceInfo {
+                vendor_id: 0,
+                product_id: 0,
+                version: 0,
+            },
+            device_id: 0,
+        },
     )
 }
 

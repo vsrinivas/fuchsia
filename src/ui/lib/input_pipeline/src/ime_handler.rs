@@ -300,7 +300,10 @@ mod tests {
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![fidl_input::Key::A] },
+            keyboard_binding::KeyboardDeviceDescriptor {
+                keys: vec![fidl_input::Key::A],
+                ..Default::default()
+            },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events = vec![create_unhandled_keyboard_event(
@@ -333,7 +336,10 @@ mod tests {
             ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
 
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
-            keyboard_binding::KeyboardDeviceDescriptor { keys: vec![fidl_input::Key::A] },
+            keyboard_binding::KeyboardDeviceDescriptor {
+                keys: vec![fidl_input::Key::A],
+                ..Default::default()
+            },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events = vec![create_unhandled_keyboard_event(
@@ -367,6 +373,7 @@ mod tests {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::A, fidl_input::Key::B],
+                ..Default::default()
             },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -455,6 +462,7 @@ mod tests {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::A, fidl_input::Key::CapsLock],
+                ..Default::default()
             },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -536,6 +544,7 @@ mod tests {
                     fidl_input::Key::Tab,
                     fidl_input::Key::Backspace,
                 ],
+                ..Default::default()
             },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -614,6 +623,7 @@ mod tests {
                     fidl_input::Key::Tab,
                     fidl_input::Key::Backspace,
                 ],
+                ..Default::default()
             },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -649,6 +659,7 @@ mod tests {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::LeftCtrl, fidl_input::Key::Tab],
+                ..Default::default()
             },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -719,6 +730,7 @@ mod tests {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
                 keys: vec![fidl_input::Key::LeftCtrl, fidl_input::Key::Tab],
+                ..Default::default()
             },
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
