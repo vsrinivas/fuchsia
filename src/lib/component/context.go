@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package component
@@ -44,7 +45,7 @@ func GetStartupHandle(info HandleInfo) zx.Handle {
 }
 
 type Connector struct {
-	serviceRoot zx.Handle
+	serviceRoot *io.DirectoryWithCtxInterface
 }
 
 type OutDirectory mapDirectory
@@ -103,18 +104,18 @@ type Context struct {
 // NewContextFromStartupInfo connects to the service root directory and registers
 // debug services.
 func NewContextFromStartupInfo() *Context {
-	c0, c1, err := zx.NewChannel(0)
+	r, p, err := io.NewDirectoryWithCtxInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
 
 	// TODO(tamird): use "/svc" once it no longer causes crashes.
-	if err := fdio.ServiceConnect("/svc/.", zx.Handle(c0)); err != nil {
+	if err := fdio.ServiceConnect("/svc/.", zx.Handle(r.Channel)); err != nil {
 		panic(err)
 	}
 	c := &Context{
 		connector: Connector{
-			serviceRoot: zx.Handle(c1),
+			serviceRoot: p,
 		},
 		OutgoingService: make(OutDirectory),
 	}
@@ -184,7 +185,15 @@ func (c *Context) ConnectToEnvService(r fidl.ServiceRequest) {
 }
 
 func (c *Connector) ConnectToEnvService(r fidl.ServiceRequest) {
-	if err := fdio.ServiceConnectAt(c.serviceRoot, r.Name(), zx.Handle(r.ToChannel())); err != nil {
+	if err := c.serviceRoot.Open(
+		context.Background(),
+		io.OpenFlagsRightReadable|io.OpenFlagsRightWritable,
+		0,
+		r.Name(),
+		io.NodeWithCtxInterfaceRequest{
+			Channel: r.ToChannel(),
+		},
+	); err != nil {
 		panic(err)
 	}
 }
