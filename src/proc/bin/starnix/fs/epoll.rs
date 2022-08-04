@@ -431,6 +431,7 @@ mod tests {
     use super::*;
     use crate::fs::fuchsia::create_fuchsia_pipe;
     use crate::fs::pipe::new_pipe;
+    use crate::fs::socket::{SocketDomain, SocketType, UnixSocket};
     use crate::fs::FdEvents;
     use crate::mm::PAGE_SIZE;
     use crate::types::UserBuffer;
@@ -712,5 +713,50 @@ mod tests {
             0
         );
         // That shouldn't crash
+    }
+
+    #[::fuchsia::test]
+    fn test_add_then_modify() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let (socket1, _socket2) = UnixSocket::new_pair(
+            &current_task,
+            SocketDomain::Unix,
+            SocketType::Stream,
+            OpenFlags::RDWR,
+        );
+
+        let epoll_file_handle = EpollFileObject::new(&current_task);
+        let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
+
+        const EVENT_DATA: u64 = 42;
+        epoll_file
+            .add(
+                &current_task,
+                &socket1,
+                &epoll_file_handle,
+                EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA },
+            )
+            .unwrap();
+        assert_eq!(
+            epoll_file.wait(&current_task, 10, zx::Duration::from_seconds(0)).unwrap().len(),
+            0
+        );
+
+        let read_write_event = FdEvents::POLLIN | FdEvents::POLLOUT;
+        epoll_file
+            .modify(
+                &current_task,
+                &socket1,
+                EpollEvent { events: read_write_event.mask(), data: EVENT_DATA },
+            )
+            .unwrap();
+        let triggered_events =
+            epoll_file.wait(&current_task, 10, zx::Duration::from_seconds(0)).unwrap();
+        assert_eq!(1, triggered_events.len());
+        let event = &triggered_events[0];
+        let events = event.events;
+        assert_eq!(events, FdEvents::POLLOUT.mask());
+        let data = event.data;
+        assert_eq!(EVENT_DATA, data);
     }
 }

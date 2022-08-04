@@ -476,20 +476,18 @@ impl SocketOps for UnixSocket {
 
     fn wait_async(
         &self,
-        _socket: &Socket,
-        _current_task: &CurrentTask,
+        socket: &Socket,
+        current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
     ) -> WaitKey {
-        let mut inner = self.lock();
-
-        let present_events = inner.query_events();
+        let present_events = self.query_events(socket, current_task);
         if events & present_events && !options.contains(WaitAsyncOptions::EDGE_TRIGGERED) {
             waiter.wake_immediately(present_events.mask(), handler)
         } else {
-            inner.waiters.wait_async_mask(waiter, events.mask(), handler)
+            self.lock().waiters.wait_async_mask(waiter, events.mask(), handler)
         }
     }
 
