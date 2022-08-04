@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
@@ -23,7 +24,6 @@ using BurstReaderProvider = fuchsia_hardware_radar::RadarBurstReaderProvider;
 using BurstReader = fuchsia_hardware_radar::RadarBurstReader;
 using BurstResult = fuchsia_hardware_radar::wire::RadarBurstReaderOnBurstResult;
 
-constexpr char kRadarDevicePath[] = "/dev/class/radar/000";
 constexpr size_t kBurstSize = 23247;
 
 class RadarIntegrationTest : public zxtest::Test {
@@ -72,13 +72,11 @@ class RadarIntegrationTest : public zxtest::Test {
   void MakeRadarClient(fit::function<void(const BurstResult&)> burst_handler,
                        fidl::WireSharedClient<BurstReader>* out_client,
                        std::future<void>* out_client_torn_down) {
-    fbl::unique_fd device(open(kRadarDevicePath, O_RDWR));
-    ASSERT_TRUE(device.is_valid());
+    auto provider_client_end_or = service::Connect<BurstReaderProvider>();
+    ASSERT_TRUE(provider_client_end_or.is_ok());
 
-    fidl::ClientEnd<BurstReaderProvider> provider_client_end;
-    ASSERT_OK(fdio_get_service_handle(device.release(),
-                                      provider_client_end.channel().reset_and_get_address()));
-    fidl::WireSyncClient<BurstReaderProvider> provider_client(std::move(provider_client_end));
+    fidl::WireSyncClient<BurstReaderProvider> provider_client(
+        std::move(provider_client_end_or.value()));
 
     zx::status endpoints = fidl::CreateEndpoints<BurstReader>();
     ASSERT_OK(endpoints.status_value());
