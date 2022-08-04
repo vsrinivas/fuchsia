@@ -10,17 +10,14 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/main.rs" ]
@@ -28,7 +25,7 @@ rustc_binary("bin") {
 
 fuchsia_component("component") {
   component_name = "time_test_client"
-  manifest = "meta/time_test_client.cmx"
+  manifest = "meta/time_test_client.cml"
   deps = [ ":bin" ]
 }
 

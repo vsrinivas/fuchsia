@@ -8,12 +8,12 @@
 //! receives from the system to aid in debugging and (potentially in the future) automated testing.
 
 use {
-    anyhow::{Context as _, Error},
-    chrono::prelude::*,
+    anyhow::Error,
+    chrono::{DateTime, TimeZone as _, Timelike as _, Utc},
     fuchsia_async as fasync, fuchsia_runtime as runtime, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
-    log::{info, warn},
+    tracing::{info, warn},
 };
 
 /// Delay between polls of system and userspace clocks.
@@ -26,12 +26,8 @@ lazy_static! {
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging").unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
-
     let mut futures = vec![];
     RuntimeUtcMonitor::new();
-    futures.push(KernelUtcMonitor::new().execute().boxed());
     match ClockMonitor::new() {
         Ok(clock_monitor) => futures.push(clock_monitor.execute().boxed()),
         Err(err) => warn!("{}", err),
@@ -75,37 +71,6 @@ impl RuntimeUtcMonitor {
             let current = Utc::now();
             if current.hour() != last_logged.hour() || current.minute() != last_logged.minute() {
                 info!("Runtime UTC: {}", chrono_timestamp(&current));
-                last_logged = current;
-            }
-        }
-    }
-}
-
-/// A monitor for UTC as reported by the kernel.
-struct KernelUtcMonitor {
-    /// The UTC time when this monitor was initialized.
-    initial: DateTime<Utc>,
-}
-
-// Deprecated zx::Time::get calls are used here for debugging the kernel UTC clock. Do not copy.
-#[allow(deprecated)]
-impl KernelUtcMonitor {
-    /// Creates a new `KernelUtcMonitor`, logging the initial state.
-    pub fn new() -> Self {
-        let initial = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
-        info!("Kernel UTC at initialization: {}", initial);
-        KernelUtcMonitor { initial }
-    }
-
-    /// Async function to operate this monitor.
-    async fn execute(self) {
-        let mut last_logged = self.initial;
-        loop {
-            fasync::Timer::new(fasync::Time::after(POLL_DELAY)).await;
-            // Only log Kernel UTC when we reach a new minute.
-            let current = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
-            if current.hour() != last_logged.hour() || current.minute() != last_logged.minute() {
-                info!("Kernel UTC: {}", chrono_timestamp(&current));
                 last_logged = current;
             }
         }
