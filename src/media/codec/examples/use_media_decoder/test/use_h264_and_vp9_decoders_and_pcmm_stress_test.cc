@@ -56,83 +56,90 @@ void stress_pcmm(std::vector<zx::vmo>& vmos, std::mutex& vmos_lock,
                  std::function<uint32_t()> get_random);
 
 int main(int argc, char* argv[]) {
-  zx::time done_time = zx::deadline_after(zx::sec(30));
-
-  ZX_ASSERT(kAllocationChunkSize / zx_system_get_page_size());
-  LOGF("kMaxVmos: %u", kMaxVmos);
-
-  std::mutex vmos_lock;
-  std::vector<zx::vmo> vmos;
-  vmos.resize(kMaxVmos);
-
-  // Setting kForcedSeed isn't likely to help much in getting a repro, but might slightly help?
-  static constexpr std::optional<uint64_t> kForcedSeed{};
-  std::mutex random_lock;
-  std::random_device random_device;
-  std::uint_fast64_t seed{kForcedSeed ? *kForcedSeed : random_device()};
-  printf("seed (non-deterministic overall though): %" PRIu64 "\n", seed);
-  std::mt19937_64 prng{seed};
-  std::uniform_int_distribution<uint32_t> uint32_distribution(0,
-                                                              std::numeric_limits<uint32_t>::max());
-  auto get_random = [&] {
-    std::lock_guard<std::mutex> lock(random_lock);
-    return uint32_distribution(prng);
-  };
-
-  const UseVideoDecoderTestParams h264_test_params{
-      .mime_type = "video/h264",
-      //.golden_sha256 = kH264GoldenSha256,
-      .skip_formatting_output_pixels = true,
-  };
-
-  const UseVideoDecoderTestParams vp9_test_params{
-      .mime_type = "video/vp9",
-      //.golden_sha256 = kVp9GoldenSha256,
-      .skip_formatting_output_pixels = true,
-  };
-
   std::atomic_bool passing = true;
-  std::atomic_bool go = false;
-  std::unique_ptr<std::thread> threads[kThreadCount];
-  for (uint32_t i = 0; i < kThreadCount; ++i) {
-    threads[i] = std::make_unique<std::thread>([&] {
-      while (!go) {
-        zx::nanosleep(zx::deadline_after(zx::usec(1)));
-      }
-      zx::time now;
-      do {
-        int result = 0;
-        switch (get_random() % 3) {
-          case 0:
-            result =
-                use_video_decoder_test(kVp9InputFilePath, kVp9InputFileFrameCount, use_vp9_decoder,
-                                       /*is_secure_output=*/is_board_with_amlogic_secure(),
-                                       /*is_secure_input=*/false,
-                                       /*min_output_buffer_count=*/0, &vp9_test_params);
-            break;
-          case 1:
-            result = use_video_decoder_test(kH264InputFilePath, kH264InputFileFrameCount,
-                                            use_h264_decoder,
-                                            /*is_secure_output=*/is_board_with_amlogic_secure(),
-                                            /*is_secure_input=*/false,
-                                            /*min_output_buffer_count=*/0, &h264_test_params);
-            break;
-          case 2:
-            stress_pcmm(vmos, vmos_lock, get_random);
-            break;
-        }
-        if (result != 0) {
-          LOGF("passing = false");
-          passing = false;
-        }
-        now = zx::clock::get_monotonic();
-      } while (now < done_time && passing);
-    });
-  }
+  constexpr uint32_t kIterations = 1;
+  for (uint32_t iteration = 0; iteration < kIterations; ++iteration) {
+    zx::time done_time = zx::deadline_after(zx::sec(30));
 
-  go = true;
-  for (uint32_t i = 0; i < kThreadCount; ++i) {
-    threads[i]->join();
+    ZX_ASSERT(kAllocationChunkSize / zx_system_get_page_size());
+    LOGF("kMaxVmos: %u", kMaxVmos);
+
+    std::mutex vmos_lock;
+    std::vector<zx::vmo> vmos;
+    vmos.resize(kMaxVmos);
+
+    // Setting kForcedSeed isn't likely to help much in getting a repro, but might slightly help?
+    static constexpr std::optional<uint64_t> kForcedSeed{};
+    std::mutex random_lock;
+    std::random_device random_device;
+    std::uint_fast64_t seed{kForcedSeed ? *kForcedSeed : random_device()};
+    printf("seed (non-deterministic overall though): %" PRIu64 "\n", seed);
+    std::mt19937_64 prng{seed};
+    std::uniform_int_distribution<uint32_t> uint32_distribution(
+        0, std::numeric_limits<uint32_t>::max());
+    auto get_random = [&] {
+      std::lock_guard<std::mutex> lock(random_lock);
+      return uint32_distribution(prng);
+    };
+
+    const UseVideoDecoderTestParams h264_test_params{
+        .mime_type = "video/h264",
+        //.golden_sha256 = kH264GoldenSha256,
+        .skip_formatting_output_pixels = true,
+    };
+
+    const UseVideoDecoderTestParams vp9_test_params{
+        .mime_type = "video/vp9",
+        //.golden_sha256 = kVp9GoldenSha256,
+        .skip_formatting_output_pixels = true,
+    };
+
+    std::atomic_bool go = false;
+    std::unique_ptr<std::thread> threads[kThreadCount];
+    for (uint32_t i = 0; i < kThreadCount; ++i) {
+      threads[i] = std::make_unique<std::thread>([&] {
+        while (!go) {
+          zx::nanosleep(zx::deadline_after(zx::usec(1)));
+        }
+        zx::time now;
+        do {
+          int result = 0;
+          switch (get_random() % 3) {
+            case 0:
+              result = use_video_decoder_test(kVp9InputFilePath, kVp9InputFileFrameCount,
+                                              use_vp9_decoder,
+                                              /*is_secure_output=*/is_board_with_amlogic_secure(),
+                                              /*is_secure_input=*/false,
+                                              /*min_output_buffer_count=*/0, &vp9_test_params);
+              break;
+            case 1:
+              result = use_video_decoder_test(kH264InputFilePath, kH264InputFileFrameCount,
+                                              use_h264_decoder,
+                                              /*is_secure_output=*/is_board_with_amlogic_secure(),
+                                              /*is_secure_input=*/false,
+                                              /*min_output_buffer_count=*/0, &h264_test_params);
+              break;
+            case 2:
+              stress_pcmm(vmos, vmos_lock, get_random);
+              break;
+          }
+          if (result != 0) {
+            LOGF("passing = false");
+            passing = false;
+          }
+          now = zx::clock::get_monotonic();
+        } while (now < done_time && passing);
+      });
+    }
+
+    go = true;
+    for (uint32_t i = 0; i < kThreadCount; ++i) {
+      threads[i]->join();
+    }
+    if (!passing) {
+      LOGF("RESULT: FAIL");
+      return -1;
+    }
   }
   if (passing) {
     LOGF("RESULT: PASS");

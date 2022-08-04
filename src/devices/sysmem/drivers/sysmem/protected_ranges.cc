@@ -12,6 +12,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "lib/zx/time.h"
 #include "macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -40,6 +41,7 @@ static void DumpBacktrace() {
   uint32_t line = next_backtrace_line % kBacktraceLines;
   for (uint32_t i = 0; i < kBacktraceLines; ++i, line = (line + 1) % kBacktraceLines) {
     LOG(INFO, "%s", backtrace[line].c_str());
+    zx::nanosleep(zx::deadline_after(zx::msec(20)));
   }
   LOG(INFO, "################# BACKTRACE END ###################");
 }
@@ -76,6 +78,16 @@ bool IsAnyInternalOverlap(const Ranges& ranges) {
 // Is a covered by b?
 bool IsCoveredBy(const Range& a, const Range& b) {
   return b.begin() <= a.begin() && b.end() >= a.end();
+}
+
+bool IsOverlapping(const Range& a, const Range& b) {
+  if (a.end() <= b.begin()) {
+    return false;
+  }
+  if (b.end() <= a.begin()) {
+    return false;
+  }
+  return true;
 }
 
 // Return a - b, in the CSG sense of no negative ranges in the result.  The result.first is what's
@@ -330,6 +342,7 @@ void ProtectedRanges::DeleteRange(const Range& range) {
   DebugDumpRangesForUnitTest(requested_ranges_, "requested_ranges_");
   DebugDumpRangesForUnitTest(goal_ranges_, "goal_ranges_");
   DebugDumpRangesForUnitTest(ranges_, "ranges_");
+  DebugDumpRangeForUnitTest(range, "range");
 
   if (!is_dynamic_) {
     // At this layer, delete isn't possible if !is_dynamic_.
@@ -420,15 +433,47 @@ bool ProtectedRanges::FixupRangesDuringAdd(const Range& new_required_range) {
       // already covered; no modifications needed
       return true;
     }
+
     // The range_starting_at_or_before_iter can be extended to cover new_required_range.  We need
-    // to avoid creating overlap, so we clamp using range_starting_after_iter->begin().  We know if
-    // range_starting_after_iter->begin() is before new_required_range.end(), then the former will
-    // cover the rest of the latter.
+    // to avoid creating overlap, so we clamp using range_starting_after_iter->begin().
+    //
+    // We know (see paragraphs immediately below for why) that if range_starting_after_iter->begin()
+    // is before new_required_range.end(), then the former will cover the rest of the later.
+    //
+    // Why (1): During requested range deletion, we delete any range in ranges_ that doesn't overlap
+    // with any range in coalesced_required_ranges_.  This maintains the invariant (between ops)
+    // that there is never any range in ranges_ which has no overlap with any range in
+    // coalesced_required_ranges_.  Stated another way, (a) each range in ranges_ must have at least
+    // one granularity-sized block of overlap with coalesced_required_ranges_.  Further, because
+    // requested_ranges_ has no overlap, and because required_ranges_ is granularity-aligned form of
+    // requested_ranges_, and because coalesced_required_ranges_ is de-overlapped version of
+    // required_ranges_, (b) the new_required_range can overlap with (pre-existing before
+    // AddRange()) coalesced_required_ranges_ at most by one granularity-sized chunk at each end.
+    // We know (c) new_required_range.begin() < range_starting_after_iter->begin() (also asserted
+    // below).  Because (a), (b) and (c), we know that new_required_range.end() <=
+    // range_starting_after_iter->end().
+    //
+    // Why (2): To offer one more way to see this, it may be helpful to think of this as the
+    // potentially last block of range_starting_after_iter being the potentially worst-case block of
+    // overlap with coalesced_required_ranges_, and that (pre-existing) block of
+    // coalesced_required_ranges_ will prevent new_required_range from ending any later than
+    // range_starting_after_iter->end(), because there can be only up to one block overlap between
+    // new_required_range and the (before) coalesced_required_ranges_, and pushing that overlap
+    // (worst-case overlapping yes) block as far to the right as possible (worst case) still isn't
+    // enough because the right-most possible location is the last block of
+    // range_starting_after_iter, which then still has new_required_range ending at
+    // range_starting_after_iter->end() (and not ending after).
+    //
+    // Hopefully those two descriptions get the idea across, but if you think of a better way to
+    // describe it, please suggest.
     uint64_t new_begin = range_starting_at_or_before_iter->begin();
     uint64_t new_end = new_required_range.end();
     if (range_starting_after_iter != ranges_.end()) {
+      ZX_DEBUG_ASSERT(new_required_range.begin() < range_starting_after_iter->begin());
+      ZX_DEBUG_ASSERT(new_end <= range_starting_after_iter->end());
       new_end = std::min(new_end, range_starting_after_iter->begin());
     }
+
     // Since RegionAllocator will place new ranges as close as possible to a previous allocated
     // region, the strategy of just extending the previous block is more efficient in practice than
     // it would be if ranges were added completely randomly.  In tests we cover adding random ranges
@@ -439,6 +484,7 @@ bool ProtectedRanges::FixupRangesDuringAdd(const Range& new_required_range) {
       DLOG("!DoOpExtendRangeEnd()");
       return false;
     }
+
     // We coalesce so that we can assert that ranges_ is coalesced between ops.
     TryCoalesceAdjacentRangesAt(&ranges_, new_end);
 
@@ -502,6 +548,47 @@ void ProtectedRanges::FixupRangesDuringDelete(const Range& old_required_range) {
   // genereral incremental optimization as we can without needing to call UseRange().
   while (!StepTowardOptimalRangesInternal(false))
     ;
+
+  // The StepTowardOptimalRangesInternal() calls above only look at ranges_ and goal_ranges_.  It
+  // can happen that goal_ranges_ has a big range overlapping multiple ranges in ranges_, if we've
+  // hit the max range count.  Despite goal_ranges_ not giving us any immediate reason to delete
+  // said ranges from ranges_, some of those ranges may not overlap with any ranges in
+  // coalesced_required_ranges_, and we do want to delete such ranges for two reasons.
+  //
+  // (1) It's convenient (for benefit of FixupRangesDuringAdd()) to maintain an invariant that every
+  // range in ranges_ has at least one granularity-sized chunk of overlap with
+  // coalesced_required_ranges_.
+  //
+  // (2) By deleting such ranges, we're (possibly only temporarily) giving the pages back to Zircon,
+  // which may be (slightly) useful in avoiding a few OOMs that might have otherwise just barely
+  // happened. Reason (2) is not the main reason, but (2) is maybe a very minor additional reason
+  // beyond reason (1) alone.
+  Ranges::iterator next_range;
+  for (auto range = ranges_.begin(); range != ranges_.end(); range = next_range) {
+    next_range = range;
+    ++next_range;
+    auto [required_begin, required_end] =
+        IteratorsCoveringPotentialOverlapsOfRangeWithRanges(*range, coalesced_required_ranges_);
+    auto required = required_begin;
+    for (; required != required_end; ++required) {
+      if (IsOverlapping(*range, *required)) {
+        break;
+      }
+    }
+    if (required != required_end) {
+      // overlap found; keep range
+      continue;
+    }
+    // no overlap with coalesced_required_ranges_ found; delete range
+    //
+    // The granularity-sized blocks covered by this range are covered by goal_ranges_, else we would
+    // have already deleted this range in StepTowardOptimalRangesInternal(false) called above.  So
+    // StepTowardOptimalRangesInternal(true) called later may (if goal_ranges_ hasn't changed by
+    // then) create a range that again covers these blocks.  See the longer comment above re. why we
+    // delete this range for now, despite the deletion being in some sense "temporary" at least from
+    // a block coverage point of view.
+    DoOpDelRange(*range);
+  }
 }
 
 void ProtectedRanges::DebugDumpRangeForUnitTest(const Range& range, const char* info) {
@@ -651,7 +738,7 @@ bool ProtectedRanges::StepTowardOptimalRangesInternal(bool allow_use_range) {
   //  * clean delete
   //  * clean shorten
   //  * if ranges_.size() < max_logical_range_count_
-  //    * split (pick max size gap) or add(ever needed?)
+  //    * split (pick max size gap)
   //  * else
   //    * merge (pick min size gap) then split (pick max size gap)
 

@@ -161,7 +161,7 @@ class ProtectedRangesTest : public zxtest::Test, public protected_ranges::Protec
   void Add(const TestRange& range);
   void Remove(const TestRange& range);
 
-  void FlushIncrementalOptimization();
+  void IncrementalOptimization();
 
   bool TestRangesOverlap(const TestRange& a, const TestRange& b);
 
@@ -180,7 +180,7 @@ class ProtectedRangesTest : public zxtest::Test, public protected_ranges::Protec
   // Aligned only as well as range_granularity_, but no better.
   uint64_t paddr_begin_ = 127 * range_granularity_;
 
-  uint64_t max_upper_range_length_ = paddr_size_ / (max_range_count_ / 4);
+  uint64_t max_upper_range_length_ = paddr_size_ / (max_range_count_ / 2);
 
   // Ranges we've fed into ProtectedRanges's AddRange() and DeleteRange(), into the "top" of
   // ProtectedRanges.
@@ -208,10 +208,18 @@ class ProtectedRangesTest : public zxtest::Test, public protected_ranges::Protec
   std::random_device random_device_;
   std::uint_fast64_t seed_{kForcedSeed ? *kForcedSeed : random_device_()};
   std::mt19937_64 prng_{seed_};
+
+  bool sim_fail_ = true;
 };
 
 void ProtectedRangesTest::CheckInterOpInvariants() {
   CheckIntraOpInvariants();
+
+  uint64_t upper_used = 0;
+  for (auto& upper_range : upper_ranges_) {
+    upper_used += upper_range.length();
+  }
+  ZX_ASSERT(upper_used == upper_used_);
 
   // Every offset of each upper range must be covered by at least one lower range.
   for (auto& upper_range : upper_ranges_) {
@@ -406,6 +414,8 @@ void ProtectedRangesTest::RemoveRandomRange() {
 }
 
 void ProtectedRangesTest::Add(const TestRange& range) {
+  ZX_ASSERT(range.begin() < paddr_size_);
+  ZX_ASSERT(range.end() <= paddr_size_);
   CheckInterOpInvariants();
   bool add_result = protected_ranges_->AddRange(ConvertRangeFrom(range));
   if (!add_result) {
@@ -421,6 +431,8 @@ void ProtectedRangesTest::Add(const TestRange& range) {
 }
 
 void ProtectedRangesTest::Remove(const TestRange& range) {
+  ZX_ASSERT(range.begin() < paddr_size_);
+  ZX_ASSERT(range.end() <= paddr_size_);
   upper_ranges_.erase(range);
   for (uint64_t i = range.begin(); i != range.end(); ++i) {
     ZX_ASSERT(upper_bitmap_[i]);
@@ -524,10 +536,12 @@ void ProtectedRangesTest::ZeroProtectedSubRange(bool is_covering_range_explicit,
 
 bool ProtectedRangesTest::UseRange(const protected_ranges::Range& range) {
   CheckIntraOpInvariants();
-  std::uniform_int_distribution<uint32_t> sim_fail_distribution(0, 99);
-  uint32_t sim_fail_roll = sim_fail_distribution(prng_);
-  if (sim_fail_roll < 5) {
-    return false;
+  if (sim_fail_) {
+    std::uniform_int_distribution<uint32_t> sim_fail_distribution(0, 99);
+    uint32_t sim_fail_roll = sim_fail_distribution(prng_);
+    if (sim_fail_roll < 5) {
+      return false;
+    }
   }
   const TestRange test_range = ConvertRangeFrom(range);
   for (uint64_t i = test_range.begin(); i < test_range.end(); ++i) {
@@ -635,11 +649,9 @@ void ProtectedRangesTest::CheckRangeMod(const TestRange& old_range, const TestRa
   // penalize the code under test for using an extra range).
 }
 
-void ProtectedRangesTest::FlushIncrementalOptimization() {
+void ProtectedRangesTest::IncrementalOptimization() {
   CheckInterOpInvariants();
-  while (!protected_ranges_->StepTowardOptimalRanges()) {
-    CheckInterOpInvariants();
-  }
+  protected_ranges_->StepTowardOptimalRanges();
   CheckInterOpInvariants();
 }
 
@@ -696,7 +708,7 @@ TEST_F(ProtectedRangesTest, MiniStress) {
       case 80 ... 99: {
         // This intentionally sometimes causes StepTowardOptimalRanges() to be called extra times,
         // which is allowed.
-        FlushIncrementalOptimization();
+        IncrementalOptimization();
         break;
       }
       default: {
@@ -709,6 +721,98 @@ TEST_F(ProtectedRangesTest, MiniStress) {
   while (!upper_ranges_.empty()) {
     RemoveRandomRange();
   }
+
+  // TearDown() will call CheckInvariants(); CheckLeaks().
+}
+
+// The conditions for this bug didn't tend to come up when adding/removing ranges entirely randomly,
+// so we repro / regression test here directly.
+TEST_F(ProtectedRangesTest, Repro105541) {
+  sim_fail_ = false;
+  CheckInterOpInvariants();
+
+  // We need to create a situation where a goal range spans across current ranges, so that the
+  // current ranges are not deleted when their corresponding requested ranges are deleted, since
+  // StepTowardOptimalRangesInternal(false) won't delete a current range that's covered by a goal
+  // range, even if the current range has no corresponding requested range(s).  We need to avoid
+  // causing the goal range to split during this, which means we have to make sure the gap left
+  // even after deletion of spanned/covered current ranges is still smaller than other gaps left
+  // uncovered by goal ranges.
+  //
+  // We need to then do an AddRange() with begin < covered range B.begin(), so that the "previous"
+  // range will be range A (prior to B), but the AddRange() needs to end > B.end(), so that
+  // extending A will need to adjust A.end() to be larger than B.end() (which it won't, if the bug
+  // still exists or comes back after being fixed).
+  //
+  // In addition, current ranges need to be separated by gaps to avoid coalescing getting in the
+  // way.
+  //
+  // In addition, max current ranges need to exist continuously during part of this setup, to avoid
+  // the covering range getting split during range deletion.
+  //
+  // Hypothetically we could hit this in MiniStress, but the conditions and sequencing are demanding
+  // enough that MiniStress doesn't tend to actually hit the bug.  It's not clear how even
+  // coverage-based fuzzing would be induced to hit the bug either, unfortunately.
+  //
+  // After setup:
+  // goal ranges:
+  // 0000000......1......2......3...... etc
+  // (note 6 dots vs. 5 interior 0s)
+  // current ranges (and aligned requested ranges):
+  // 0.1.2.3......4......5......6...... etc
+  // (however, some current ranges after the first grouping will be spanned due to max current range
+  // count)
+  //
+  // Then, we'll delete requested range 2 (but range 2 won't be deleted if the bug still exists),
+  // and create a range that starts just after 1 and ends just before 3 (and after 2).  If the bug
+  // is still present, the new current range will end at the end of 2 instead of just before 3,
+  // which will break when we try to ZeroProtectedSubRange().
+
+  // Setup
+  // The first 4, positionally.
+  for (uint64_t i = 0; i < 4; ++i) {
+    Add(TestRange::BeginLength(2 * i * range_granularity_, range_granularity_));
+  }
+  // -2 is 1 held in reserve by protected_ranges.cc, 1 because (positionally) first 4 above act as a
+  // goal range
+  for (uint64_t i = 0; i < max_range_count_ - 2; ++i) {
+    if (i != 0) {
+      // temp
+      Add(TestRange::BeginLength((7 + 7 * i) * range_granularity_, 6 * range_granularity_));
+    }
+    Add(TestRange::BeginLength((7 + 6 + 7 * i) * range_granularity_, range_granularity_));
+  }
+  for (uint32_t i = 0; i < 3 * max_range_count_; ++i) {
+    IncrementalOptimization();
+  }
+  // Goal ranges and current ranges:
+  // 0.1.2.4......4tttttt5tttttt6tttttt etc
+
+  // Remove temp ranges to get goal ranges to cover the first group of 4 instead.
+  for (uint64_t i = 1; i < max_range_count_ - 2; ++i) {
+    Remove(TestRange::BeginLength((7 + 7 * i) * range_granularity_, 6 * range_granularity_));
+  }
+
+  // Intentionally don't do IncrementalOptimization() here.
+  // Goal ranges:
+  // 0000000......4......5......6...... etc
+  // Current ranges:
+  // 0.1.2.3......4......55555555?????? or similar
+
+  // Delete requested range 2.
+  Remove(TestRange::BeginLength(4 * range_granularity_, range_granularity_));
+
+  // Create requested range beginning just after 1, and ending just before 3.  If the bug is present
+  // then the requested range 2 is currently gone but current range 2 is still present.
+  Add(TestRange::BeginLength(3 * range_granularity_, 3 * range_granularity_));
+
+  // If we didn't just ZX_ASSERT() in ZeroProtectedSubRange(), then the bug is gone.
+
+  CheckInterOpInvariants();
+  while (!upper_ranges_.empty()) {
+    RemoveRandomRange();
+  }
+  CheckInterOpInvariants();
 
   // TearDown() will call CheckInvariants(); CheckLeaks().
 }

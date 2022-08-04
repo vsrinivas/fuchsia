@@ -669,13 +669,20 @@ zx_status_t SysmemSecureMemServer::ZeroSubRangeInternal(
     // situations where the first fiew chunks could zero successfully and then we could fail if the
     // next chunk isn't covered by any range.  This could occur because we zero incrementally to
     // avoid zeroing too much per call to the TEE.
-    auto covering = ranges_.upper_bound(to_zero);
+    const Range to_find = Range::BeginLength(to_zero.begin(), std::numeric_limits<uint64_t>::max());
+    auto covering = ranges_.upper_bound(to_find);
     if (covering != ranges_.begin()) {
       --covering;
     }
     if (covering == ranges_.end() || covering->begin() > to_zero.begin() ||
         covering->end() < to_zero.end()) {
       LOG(ERROR, "to_zero not entirely covered by a single range in ranges_");
+      LOG(ERROR, "to_zero: begin: 0x%" PRIx64 " length: 0x%" PRIx64 " end: 0x%" PRIx64,
+          to_zero.begin(), to_zero.length(), to_zero.end());
+      for (auto& range : ranges_) {
+        LOG(ERROR, "range: begin: 0x%" PRIx64 " length: 0x%" PRIx64 " end: 0x%" PRIx64,
+            range.begin(), range.length(), range.end());
+      }
       return ZX_ERR_NOT_FOUND;
     }
 
