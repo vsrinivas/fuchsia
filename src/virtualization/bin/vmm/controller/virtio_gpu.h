@@ -43,7 +43,7 @@ class VirtioGpu
   std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fidl::WireClient<fuchsia_virtualization_hardware::VirtioGpu> gpu_;
+  fidl::WireSharedClient<fuchsia_virtualization_hardware::VirtioGpu> gpu_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
                              zx_gpaddr_t used);
