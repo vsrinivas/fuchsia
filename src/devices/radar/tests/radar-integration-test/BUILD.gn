@@ -14,7 +14,6 @@ executable("bin") {
     "//sdk/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -24,12 +23,11 @@ executable("bin") {
 
 fuchsia_test_component("component") {
   deps = [ ":bin" ]
-  manifest = "meta/manifest.cml"
+  manifest = "meta/manifest.cmx"
 }
 
 fuchsia_test_package("radar-integration-test") {
   test_components = [ ":component" ]
-  deps = [ "//src/devices/radar/bin/radar-proxy:radar-proxy-component" ]
   test_specs = {
     environments = [ nelson_env ]
   }
