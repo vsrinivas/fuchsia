@@ -564,4 +564,9 @@
         label: "TEE Manager",
         moniker: "core/tee_manager",
     },
+    {
+        id: 217,
+        label: "Screen Saver",
+        moniker: "core/screensaver",
+    },
 ]
