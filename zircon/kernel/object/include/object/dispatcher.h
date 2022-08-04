@@ -265,9 +265,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   //
   // Note, there is one operation on |signals_| that may be performed without holding this lock,
   // clearing (i.e. deasserting) signals.  See the comment at |signals_|.
-  virtual Lock<Mutex>* get_lock() const = 0;
-
-  size_t GetObserverListSizeLocked() const TA_REQ(get_lock()) { return observers_.size(); }
+  virtual Lock<CriticalMutex>* get_lock() const = 0;
 
  private:
   friend class fbl::Recyclable<Dispatcher>;
@@ -321,7 +319,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   ktl::atomic<zx_signals_t> signals_;
 
   // List of observers watching for changes in signals on this dispatcher.
-  fbl::SizedDoublyLinkedList<SignalObserver*> observers_ TA_GUARDED(get_lock());
+  fbl::DoublyLinkedList<SignalObserver*> observers_ TA_GUARDED(get_lock());
 
   // Used to store this dispatcher on the dispatcher deleter list.
   fbl::SinglyLinkedListNodeState<Dispatcher*> deleter_ll_;
@@ -362,10 +360,16 @@ class SoloDispatcher : public Dispatcher {
   }
 
  protected:
-  Lock<Mutex>* get_lock() const final { return &lock_; }
+  Lock<CriticalMutex>* get_lock() const final { return &lock_; }
 
   const fbl::Canary<CanaryTag<Self>::magic> canary_;
-  mutable DECLARE_MUTEX(SoloDispatcher, Flags) lock_;
+
+  // This is a CriticalMutex to avoid lock thrash caused by a thread becoming
+  // preempted while holding the lock.  The critical sections guarded by this
+  // lock are typically short, but may be quite long in the worst case.  Using
+  // CriticalMutex here allows us to avoid thrash in common case while
+  // preserving system responsiveness in the worst case.
+  mutable DECLARE_CRITICAL_MUTEX(SoloDispatcher, Flags) lock_;
 };
 
 // PeeredDispatchers have opposing endpoints to coordinate state
@@ -400,9 +404,10 @@ class PeerHolder : public fbl::RefCounted<PeerHolder<Endpoint>> {
   PeerHolder() = default;
   ~PeerHolder() = default;
 
-  Lock<Mutex>* get_lock() const { return &lock_; }
+  Lock<CriticalMutex>* get_lock() const { return &lock_; }
 
-  mutable DECLARE_MUTEX(PeerHolder, Flags) lock_;
+  // See |SoloDispatcher::lock_| for explanation of why this is a CriticalMutex.
+  mutable DECLARE_CRITICAL_MUTEX(PeerHolder, Flags) lock_;
 };
 
 template <typename Self, zx_rights_t def_rights, zx_signals_t extra_signals = 0u,
@@ -425,7 +430,7 @@ class PeeredDispatcher : public Dispatcher {
     if ((set_mask & ~allowed_signals) || (clear_mask & ~allowed_signals))
       return ZX_ERR_INVALID_ARGS;
 
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     UpdateStateLocked(clear_mask, set_mask);
     return ZX_OK;
@@ -437,7 +442,7 @@ class PeeredDispatcher : public Dispatcher {
     if ((set_mask & ~allowed_signals) || (clear_mask & ~allowed_signals))
       return ZX_ERR_INVALID_ARGS;
 
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     // object_signal() may race with handle_close() on another thread.
     if (!peer_)
       return ZX_ERR_PEER_CLOSED;
@@ -449,7 +454,7 @@ class PeeredDispatcher : public Dispatcher {
   // |void on_zero_handles_locked()|. The peer lifetime management
   // (i.e. the peer zeroing) is centralized here.
   void on_zero_handles() final TA_NO_THREAD_SAFETY_ANALYSIS {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     auto peer = ktl::move(peer_);
     static_cast<Self*>(this)->on_zero_handles_locked();
 
@@ -466,12 +471,12 @@ class PeeredDispatcher : public Dispatcher {
   // Returns true if the peer has closed. Once the peer has closed it
   // will never re-open.
   bool PeerHasClosed() const {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     return peer_ == nullptr;
   }
 
  protected:
-  Lock<Mutex>* get_lock() const final { return holder_->get_lock(); }
+  Lock<CriticalMutex>* get_lock() const final { return holder_->get_lock(); }
 
   // Initialize this dispatcher's peer field.
   //

@@ -158,7 +158,7 @@ zx_status_t SocketDispatcher::SetDisposition(Disposition disposition,
 
   zx_signals_t clear_mask = 0u, set_mask = 0u, clear_mask_peer = 0u, set_mask_peer = 0u;
   ExtendMasksFromDisposition(disposition, clear_mask, set_mask, clear_mask_peer, set_mask_peer);
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (!IsDispositionStateValid(disposition_peer)) {
     return ZX_ERR_BAD_STATE;
@@ -186,7 +186,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const char> src, size_t len, siz
 
   LTRACE_ENTRY;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (peer() == nullptr)
     return ZX_ERR_PEER_CLOSED;
@@ -206,7 +206,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const char> src, size_t len, siz
 }
 
 zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const char> src, size_t len,
-                                              size_t* written, Guard<Mutex>& guard) {
+                                              size_t* written, Guard<CriticalMutex>& guard) {
   canary_.Assert();
 
   if (is_full())
@@ -273,7 +273,7 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
 
   LTRACE_ENTRY;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (len != (size_t)((uint32_t)len))
     return ZX_ERR_INVALID_ARGS;
@@ -348,7 +348,7 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
 
 void SocketDispatcher::GetInfo(zx_info_socket_t* info) const {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   *info = zx_info_socket_t{
       .options = flags_,
       .padding1 = {},
@@ -367,19 +367,19 @@ void SocketDispatcher::GetInfo(zx_info_socket_t* info) const {
 
 size_t SocketDispatcher::GetReadThreshold() const {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return read_threshold_;
 }
 
 size_t SocketDispatcher::GetWriteThreshold() const {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return write_threshold_;
 }
 
 zx_status_t SocketDispatcher::SetReadThreshold(size_t value) {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if (value > data_.max_size())
     return ZX_ERR_INVALID_ARGS;
   read_threshold_ = value;
@@ -400,7 +400,7 @@ zx_status_t SocketDispatcher::SetReadThreshold(size_t value) {
 
 zx_status_t SocketDispatcher::SetWriteThreshold(size_t value) {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if (peer() == NULL)
     return ZX_ERR_PEER_CLOSED;
   AssertHeld(*peer()->get_lock());

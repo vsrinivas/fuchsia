@@ -280,8 +280,8 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
   fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
   zx_status_t owner_validator_status = ValidateFutexOwner(new_futex_owner, &futex_owner_thread);
   if (futex_owner_thread) {
-    Guard<Mutex> futex_owner_guard{futex_owner_thread->get_lock()};
-    return FutexWaitInternal<Guard<Mutex>>(
+    Guard<CriticalMutex> futex_owner_guard{futex_owner_thread->get_lock()};
+    return FutexWaitInternal<Guard<CriticalMutex>>(
         value_ptr, current_value, futex_owner_thread.get(), futex_owner_thread->core_thread_,
         futex_owner_guard.take(), owner_validator_status, deadline);
   } else {
@@ -583,8 +583,8 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
       ValidateFutexOwner(new_requeue_owner_handle, &requeue_owner_thread);
 
   if (requeue_owner_thread) {
-    Guard<Mutex> requeue_owner_guard{requeue_owner_thread->get_lock()};
-    return FutexRequeueInternal<Guard<Mutex>>(
+    Guard<CriticalMutex> requeue_owner_guard{requeue_owner_thread->get_lock()};
+    return FutexRequeueInternal<Guard<CriticalMutex>>(
         wake_ptr, wake_count, current_value, owner_action, requeue_ptr, requeue_count,
         requeue_owner_thread.get(), requeue_owner_thread->core_thread_, requeue_owner_guard.take(),
         owner_validator_status);

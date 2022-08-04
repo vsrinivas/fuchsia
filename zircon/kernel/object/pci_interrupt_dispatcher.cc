@@ -57,7 +57,7 @@ zx_status_t PciInterruptDispatcher::Create(const fbl::RefPtr<PcieDevice>& device
     return ZX_ERR_NO_MEMORY;
   }
 
-  Guard<Mutex> guard{interrupt_dispatcher->get_lock()};
+  Guard<CriticalMutex> guard{interrupt_dispatcher->get_lock()};
 
   // The PcieDevice class contains a mutex that guards device access and can be
   // contended between the PciInterruptDispatcher and the protocol methods used

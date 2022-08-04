@@ -69,7 +69,7 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
   SocketDispatcher(fbl::RefPtr<PeerHolderType> holder, zx_signals_t starting_signals,
                    uint32_t flags);
   zx_status_t WriteSelfLocked(user_in_ptr<const char> src, size_t len, size_t* nwritten,
-                              Guard<Mutex>& guard) TA_REQ(get_lock());
+                              Guard<CriticalMutex>& guard) TA_REQ(get_lock());
   void UpdateReadStatus(Disposition disposition_peer) TA_REQ(get_lock());
   [[nodiscard]] bool IsDispositionStateValid(Disposition disposition_peer) const TA_REQ(get_lock());
 

@@ -77,7 +77,7 @@ zx_status_t LogDispatcher::Read(uint32_t flags, dlog_record_t* record, size_t* a
   if (!(flags_ & ZX_LOG_FLAG_READABLE))
     return ZX_ERR_BAD_STATE;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   zx_status_t status = reader_.Read(0, record, actual);
   if (status == ZX_ERR_SHOULD_WAIT) {

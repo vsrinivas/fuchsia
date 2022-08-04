@@ -92,7 +92,7 @@ zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const ui
   while (true) {
     ktl::variant<zx_status_t, UserCopyCaptureFaultsResult> write_result;
     {
-      Guard<Mutex> guard{get_lock()};
+      Guard<CriticalMutex> guard{get_lock()};
       if (!peer()) {
         return ZX_ERR_PEER_CLOSED;
       }
@@ -194,7 +194,7 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
   while (true) {
     ktl::variant<zx_status_t, UserCopyCaptureFaultsResult> read_result;
     {
-      Guard<Mutex> guard{get_lock()};
+      Guard<CriticalMutex> guard{get_lock()};
       read_result = ReadToUserLocked(elem_size, ptr, count, actual);
     }
     // Check for any regular error and return it.
