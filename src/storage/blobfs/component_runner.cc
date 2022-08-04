@@ -11,6 +11,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/service/admin.h"
 #include "src/storage/blobfs/service/health_check.h"
 #include "src/storage/blobfs/service/lifecycle.h"
@@ -18,14 +19,16 @@
 
 namespace blobfs {
 
-ComponentRunner::ComponentRunner(async::Loop& loop) : fs::PagedVfs(loop.dispatcher()), loop_(loop) {
+ComponentRunner::ComponentRunner(async::Loop& loop, ComponentOptions config)
+    : fs::PagedVfs(loop.dispatcher()), loop_(loop), config_(config) {
   outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>(this);
   auto startup = fbl::MakeRefCounted<fs::PseudoDir>(this);
   outgoing_->AddEntry("startup", startup);
 
   FX_LOGS(INFO) << "setting up startup service";
   auto startup_svc = fbl::MakeRefCounted<StartupService>(
-      loop_.dispatcher(), [this](std::unique_ptr<BlockDevice> device, const MountOptions& options) {
+      loop_.dispatcher(), config_,
+      [this](std::unique_ptr<BlockDevice> device, const MountOptions& options) {
         FX_LOGS(INFO) << "configure callback is called";
         zx::status<> status = Configure(std::move(device), options);
         if (status.is_error()) {

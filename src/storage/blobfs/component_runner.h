@@ -29,7 +29,7 @@ namespace blobfs {
 // its destructor which is required to ensure thread-safety at destruction time.
 class ComponentRunner final : public fs::PagedVfs {
  public:
-  explicit ComponentRunner(async::Loop& loop);
+  ComponentRunner(async::Loop& loop, ComponentOptions config);
 
   ComponentRunner(const ComponentRunner&) = delete;
   ComponentRunner& operator=(const ComponentRunner&) = delete;
@@ -53,6 +53,7 @@ class ComponentRunner final : public fs::PagedVfs {
   void RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback);
 
   async::Loop& loop_;
+  ComponentOptions config_;
 
   zx::resource vmex_resource_;
 

@@ -81,6 +81,13 @@ struct MountOptions {
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
                   fidl::ServerEnd<fuchsia_io::Directory> root, zx::resource vmex_resource);
 
+struct ComponentOptions {
+  int32_t pager_threads;
+
+  ComponentOptions(const ComponentOptions&) = default;
+  ComponentOptions& operator=(const ComponentOptions&) = default;
+};
+
 // Start blobfs as a component. Begin serving requests on the provided |root|. Initially it starts
 // the filesystem in an unconfigured state, only serving the fuchsia.fs.Startup protocol. Once
 // fuchsia.fs.Startup/Start is called with the block device and mount options, the filesystem is
@@ -96,7 +103,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
 // VmoFlags::EXECUTE.
 //
 // This function blocks until the filesystem terminates.
-zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
                             zx::resource vmex_resource);
 

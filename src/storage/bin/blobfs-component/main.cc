@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/processargs.h>
 
+#include "src/storage/bin/blobfs-component/blobfs_component_config.h"
 #include "src/storage/blobfs/mount.h"
 
 zx::resource AttemptToGetVmexResource() {
@@ -50,9 +51,13 @@ int main() {
     FX_LOGS(WARNING) << "VMEX resource unavailable, executable blobs are unsupported";
   }
 
+  auto config = blobfs_component_config::Config::TakeFromStartupHandle();
+  const blobfs::ComponentOptions options{
+      .pager_threads = config.pager_threads(),
+  };
   // blocks until blobfs exits
-  zx::status status = blobfs::StartComponent(std::move(outgoing_dir), std::move(lifecycle_request),
-                                             std::move(vmex));
+  zx::status status = blobfs::StartComponent(options, std::move(outgoing_dir),
+                                             std::move(lifecycle_request), std::move(vmex));
   if (status.is_error()) {
     return EXIT_FAILURE;
   }

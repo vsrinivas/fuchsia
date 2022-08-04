@@ -45,7 +45,7 @@ class Runner final : public fs::PagedVfs {
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
 
  private:
-  explicit Runner(async::Loop* loop, int32_t paging_threads = 1);
+  Runner(async::Loop* loop, int32_t paging_threads);
 
   // Check if filesystem is readonly.
   bool IsReadonly() __TA_EXCLUDES(vfs_lock_);

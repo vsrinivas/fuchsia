@@ -20,13 +20,15 @@ using ConfigureCallback =
 class StartupService final : public fidl::WireServer<fuchsia_fs_startup::Startup>,
                              public fs::Service {
  public:
-  StartupService(async_dispatcher_t* dispatcher, ConfigureCallback cb);
+  StartupService(async_dispatcher_t* dispatcher, const ComponentOptions& config,
+                 ConfigureCallback cb);
 
   void Start(StartRequestView request, StartCompleter::Sync& completer) final;
   void Format(FormatRequestView request, FormatCompleter::Sync& completer) final;
   void Check(CheckRequestView request, CheckCompleter::Sync& completer) final;
 
  private:
+  ComponentOptions component_config_;
   ConfigureCallback configure_;
 };
 

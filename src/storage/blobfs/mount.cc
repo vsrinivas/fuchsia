@@ -34,7 +34,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
   return ZX_OK;
 }
 
-zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
                             zx::resource vmex_resource) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -46,7 +46,7 @@ zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
                      << ". Assuming test environment and continuing";
   }
 
-  std::unique_ptr<ComponentRunner> runner(new ComponentRunner(loop));
+  std::unique_ptr<ComponentRunner> runner(new ComponentRunner(loop, options));
   auto status = runner->ServeRoot(std::move(root), std::move(lifecycle), std::move(*client_end),
                                   std::move(vmex_resource));
   if (status.is_error()) {

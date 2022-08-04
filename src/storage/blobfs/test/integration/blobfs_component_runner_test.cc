@@ -15,6 +15,7 @@
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/component_runner.h"
 #include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/mount.h"
 
 namespace blobfs {
 namespace {
@@ -40,7 +41,9 @@ class FakeDriverManagerAdmin final
 
 class BlobfsComponentRunnerTest : public testing::Test {
  public:
-  BlobfsComponentRunnerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  BlobfsComponentRunnerTest()
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        config_(ComponentOptions{.pager_threads = 1}) {}
 
   void SetUp() override {
     device_ = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
@@ -54,7 +57,7 @@ class BlobfsComponentRunnerTest : public testing::Test {
   void TearDown() override {}
 
   void StartServe(fidl::ClientEnd<fuchsia_device_manager::Administrator> device_admin_client) {
-    runner_ = std::make_unique<ComponentRunner>(loop_);
+    runner_ = std::make_unique<ComponentRunner>(loop_, config_);
     auto status = runner_->ServeRoot(std::move(server_end_),
                                      fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle>(),
                                      std::move(device_admin_client), zx::resource());
@@ -73,6 +76,7 @@ class BlobfsComponentRunnerTest : public testing::Test {
   }
 
   async::Loop loop_;
+  ComponentOptions config_;
   std::unique_ptr<block_client::FakeBlockDevice> device_;
   std::unique_ptr<ComponentRunner> runner_;
   fidl::WireSyncClient<fuchsia_io::Directory> root_;

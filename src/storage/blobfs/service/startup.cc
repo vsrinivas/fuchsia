@@ -10,6 +10,7 @@
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/mount.h"
 
 namespace blobfs {
 namespace {
@@ -64,12 +65,20 @@ FilesystemOptions ParseFormatOptions(fuchsia_fs_startup::wire::FormatOptions for
   return options;
 }
 
+MountOptions MergeComponentConfigIntoMountOptions(const ComponentOptions& config,
+                                                  MountOptions options) {
+  options.paging_threads = std::max(1, config.pager_threads);
+  return options;
+}
+
 }  // namespace
 
-StartupService::StartupService(async_dispatcher_t* dispatcher, ConfigureCallback cb)
+StartupService::StartupService(async_dispatcher_t* dispatcher, const ComponentOptions& config,
+                               ConfigureCallback cb)
     : fs::Service([dispatcher, this](fidl::ServerEnd<fuchsia_fs_startup::Startup> server_end) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }),
+      component_config_(config),
       configure_(std::move(cb)) {}
 
 void StartupService::Start(StartRequestView request, StartCompleter::Sync& completer) {
@@ -80,7 +89,9 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
     FX_LOGS(ERROR) << "Could not initialize block device";
     completer.ReplyError(status);
   }
-  zx::status<> res = configure_(std::move(device), ParseMountOptions(std::move(request->options)));
+  zx::status<> res = configure_(
+      std::move(device), MergeComponentConfigIntoMountOptions(
+                             component_config_, ParseMountOptions(std::move(request->options))));
   if (res.is_error()) {
     completer.ReplyError(res.status_value());
     return;

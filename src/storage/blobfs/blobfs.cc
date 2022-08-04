@@ -190,7 +190,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     return page_loader_or.take_error();
   }
   fs->page_loader_ = std::move(page_loader_or).value();
-  FX_LOGS(INFO) << "Initialized user pager";
+  FX_LOGS(INFO) << "Initialized user pager with " << options.paging_threads << " threads";
 
   JournalSuperblock journal_superblock;
   if (options.writability != blobfs::Writability::ReadOnlyDisk) {

@@ -92,4 +92,9 @@
             from: "self",
         },
     ],
+    config: {
+        // The number of pager threads to spawn.  Setting to <= 0 will result in an
+        // implementation-chosen value being used.
+        pager_threads: { type: "int32" },
+    },
 }
