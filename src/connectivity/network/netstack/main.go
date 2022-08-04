@@ -227,9 +227,12 @@ func InstallThreadProfiles(ctx context.Context, componentCtx *component.Context)
 
 				// Attempt to install our thread profile.
 				status, err := provider.SetProfileByRole(ctx, handleInfo.Handle, threadProfile)
-				if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrPeerClosed {
-					_ = syslog.Warnf("connection to %s closed; will not set thread profiles", req.Name())
-					return
+				if err, ok := err.(*zx.Error); ok {
+					switch err.Status {
+					case zx.ErrNotFound, zx.ErrPeerClosed, zx.ErrUnavailable:
+						_ = syslog.Warnf("connection to %s closed; will not set thread profiles; FIDL error: %s", req.Name(), err)
+						return
+					}
 				}
 				if err != nil {
 					_ = syslog.Errorf("failed to set thread profile for koid=%s; FIDL error: %s", koid, err)
