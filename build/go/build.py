@@ -309,8 +309,12 @@ def main():
             args.ldflag.extend(['-extar', os.path.relpath(args.ar, gopath_src)])
     if args.gcflag:
         cmd += ['-gcflags', ' '.join(args.gcflag)]
+    # Clear the buildid to make the build reproducible
     if args.ldflag:
-        cmd += ['-ldflags=' + ' '.join(args.ldflag)]
+        cmd += ['-ldflags=-buildid= ' + ' '.join(args.ldflag)]
+    else:
+        cmd += ['-ldflags=-buildid=']
+
     cmd += [
         '-pkgdir',
         os.path.join(project_path, 'pkg'),
