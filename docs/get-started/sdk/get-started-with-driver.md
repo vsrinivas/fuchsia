@@ -28,33 +28,18 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 Before you begin, complete the prerequisite steps below:
 
 *   [Check host machine requirements](#check-host-machine-requirements)
-*   [Install dependencies](#install-dependencies)
 *   [Generate Fuchsia-specific SSH keys](#generate-fuchsia-specific-ssh-keys)
 
 ### Check host machine requirements {:#check-host-machine-requirements}
 
 This guide requires that your host machine meets the following criteria:
 
-*  A Linux machine. **macOS** is not supported yet.
+*  A Linux machine. (**macOS** is not supported yet.)
 *  Has at least 15 GB of storage space.
 *  Supports [KVM][kvm]{:.external} (Kernel Virtual Machine) for running a
    [QEMU][qemu]{:.external}-based emulator.
 *  IPv6 is enabled.
-
-### Install dependencies {:#install-dependencies}
-
-`git` and `bazel` need to be installed on the host machine.
-You need Bazel 5.1 or higher.
-
-Note: You only need to complete these steps once on your host machine.
-
-Do the following:
-
-1. [Install Git][git-install]{:.external}.
-
-1. [Install Bazel][bazel-install]{:.external} – the easiest install option is
-   to download the [Bazelisk binary][bazelisk-download]{:.external} and rename
-   it to `bazel` in a convenient place on your path.
+*  [Git][git-install]{:.external} is installed.
 
 ### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
 
@@ -138,7 +123,7 @@ Do the following:
    cd $HOME
    ```
 
-2. Clone the SDK driver samples repository:
+1. Clone the SDK driver samples repository:
 
    ```posix-terminal
    git clone https://fuchsia.googlesource.com/sdk-samples/drivers --recurse-submodules
@@ -147,16 +132,22 @@ Do the following:
    This creates a new directory named `drivers`, which clones the content of the
    SDK driver samples repository.
 
-3. Go to the new directory:
+1. Go to the new directory:
 
    ```posix-terminal
    cd drivers
    ```
 
-4. To verify the Fuchsia SDK environment setup, build the sample drivers:
+1. Run the bootstrap script to install Bazel and other required dependencies:
 
    ```posix-terminal
-   bazel build --config=fuchsia_x64 //src/qemu_edu
+   scripts/bootstrap.sh
+   ```
+
+1. To verify the Fuchsia SDK environment setup, build the sample drivers:
+
+   ```posix-terminal
+   tools/bazel build --config=fuchsia_x64 //src/qemu_edu
    ```
 
    The first build may take a few minutes to download dependencies, such as
@@ -167,11 +158,11 @@ Do the following:
    end:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel build --config=fuchsia_x64 //src/qemu_edu
+   $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu
    ...
-   INFO: Elapsed time: 131.746s, Critical Path: 26.89s
-   INFO: 722 processes: 454 internal, 268 linux-sandbox.
-   INFO: Build completed successfully, 722 total actions
+   INFO: Elapsed time: 170.374s, Critical Path: 33.72s
+   INFO: 773 processes: 507 internal, 266 linux-sandbox.
+   INFO: Build completed successfully, 773 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
@@ -186,18 +177,18 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx version -v
    ffx:
-     abi-revision: 0xA56735A6690E09D8
-     api-level: 8
-     build-version: 2022-06-09T20:02:48+00:00
-     integration-commit-hash: dfddeea2221689c800ca1db7a7c7d1f2cb0bd99f
-     integration-commit-time: Thu, 09 Jun 2022 20:02:48 +0000
+     abi-revision: 0xECDB841C251A8CB9
+     api-level: 9
+     build-version: 2022-07-28T07:03:08+00:00
+     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
+     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
 
    daemon:
-     abi-revision: 0xA56735A6690E09D8
-     api-level: 8
-     build-version: 2022-06-09T20:02:48+00:00
-     integration-commit-hash: dfddeea2221689c800ca1db7a7c7d1f2cb0bd99f
-     integration-commit-time: Thu, 09 Jun 2022 20:02:48 +0000
+     abi-revision: 0xECDB841C251A8CB9
+     api-level: 9
+     build-version: 2022-07-28T07:03:08+00:00
+     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
+     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
    ```
 
    At this point, you only need to confirm that you can run this `ffx` command
@@ -229,28 +220,34 @@ Do the following:
 1. Download the latest Workstation image for the emulator:
 
    ```posix-terminal
-   tools/ffx product-bundle get workstation.qemu-x64
+   tools/ffx product-bundle get workstation_eng.qemu-x64 --repository workstation-packages
    ```
 
    This command may take a few minutes to download the image and product
    metadata.
 
-    Once the download is finished, the `ffx product-bundle get` command creates
-    a local Fuchsia package repository named `workstation.qemu-x64` on your host
-    machine. This package repository hosts additional system packages for this
-    Workstation prebuilt image. Later in Step 7 you’ll register this package
-    repository to the emulator instance.
+   Note: If the `product-bundle` command fails with an error due to multiple product bundle
+   instances or SDK versions, [clean up the environment](#clean-up-the-environment) before
+   proceeding.
 
-2. Stop all emulator instances:
+   Once the download is finished, the `ffx product-bundle get` command creates
+   a local Fuchsia package repository named `workstation-packages` on your host machine.
+   This package repository hosts additional system packages for this Workstation prebuilt image.
+   Later in Step 8 you’ll register this package repository to the emulator instance.
+
+1. Stop all emulator instances:
 
    ```posix-terminal
    tools/ffx emu stop --all
    ```
 
-3. Start the Fuchsia emulator:
+1. Start the Fuchsia emulator:
 
    ```posix-terminal
-   tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
+   tools/ffx emu start workstation_eng.qemu-x64 --headless \
+     --kernel-args "driver_manager.use_driver_framework_v2=true" \
+     --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" \
+     --kernel-args "devmgr.enable-ephemeral=true"
    ```
 
    This command starts a headless emulator instance running the Workstation
@@ -260,13 +257,16 @@ Do the following:
    the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" -- kernel-args "devmgr.enable-ephemeral=true"
+   $ tools/ffx emu start workstation_eng.qemu-x64 --headless \
+     --kernel-args "driver_manager.use_driver_framework_v2=true" \
+     --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" \
+     --kernel-args "devmgr.enable-ephemeral=true"
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds).
    Emulator is ready.
    ```
 
-4. Verify that the new emulator instance is running:
+1. Verify that the new emulator instance is running:
 
    ```posix-terminal
    tools/ffx emu list
@@ -279,7 +279,7 @@ Do the following:
    [Active]  fuchsia-emulator
    ```
 
-5. Set the default target device:
+1. Set the default target device:
 
    ```posix-terminal
    tools/ffx target default set fuchsia-emulator
@@ -287,7 +287,7 @@ Do the following:
 
    This command exits silently without output.
 
-6. Start the Fuchsia package server:
+1. Start the Fuchsia package server:
 
    ```posix-terminal
    tools/ffx repository server start
@@ -300,11 +300,31 @@ Do the following:
    ffx repository server is listening on [::]:8083
    ```
 
-7. Register the system package repository (`workstation.qemu-x64`) to the
-   target device:
+1. Check the list of Fuchsia package repositories available on
+   your host machine:
 
    ```posix-terminal
-   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
+   tools/ffx repository list
+   ```
+
+   This command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx repository list
+   +-----------------------+------+-------------------------------------------------------------------------------------------------+
+   | NAME                  | TYPE | EXTRA                                                                                           |
+   +=======================+======+=================================================================================================+
+   | workstation-packages* | pm   | /home/alice/.local/share/Fuchsia/ffx/pbms/4751486831982119909/workstation_eng.qemu-x64/packages |
+   +-----------------------+------+-------------------------------------------------------------------------------------------------+
+   ```
+
+   Notice a package repository (`workstation-packages`) is created
+   for the Workstation prebuilt image.
+
+1. Register the `workstation-packages` package repository to the target device:
+
+   ```posix-terminal
+   tools/ffx target repository register -r workstation-packages --alias fuchsia.com
    ```
 
    This command exits silently without output.
@@ -348,7 +368,6 @@ Do the following:
    fuchsia-boot:///#meta/block.core.cm
    fuchsia-boot:///#meta/bus-pci.cm
    fuchsia-boot:///#meta/fvm.cm
-   fuchsia-boot:///#meta/hid-input-report.cm
    fuchsia-boot:///#meta/hid.cm
    fuchsia-boot:///#meta/intel-rtc.cm
    fuchsia-boot:///#meta/netdevice-migration.cm
@@ -360,28 +379,27 @@ Do the following:
    fuchsia-boot:///#meta/sysmem.cm
    fuchsia-boot:///#meta/virtio_block.cm
    fuchsia-boot:///#meta/virtio_ethernet.cm
-   fuchsia-boot:///#meta/zxcrypt.cm
    fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
    ```
 
 2. Build and publish the `qemu_edu` driver component:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
-   INFO: Analyzed target //src/qemu_edu:pkg.component (6 packages loaded, 162 targets configured).
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
+   INFO: Analyzed target //src/qemu_edu:pkg.component (8 packages loaded, 498 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/pkg.component_run_component.sh
-   INFO: Elapsed time: 1.660s, Critical Path: 0.49s
-   INFO: 21 processes: 12 internal, 8 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 21 total actions
-   INFO: Build completed successfully, 21 total actions
+   INFO: Elapsed time: 47.995s, Critical Path: 38.38s
+   INFO: 791 processes: 516 internal, 274 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 791 total actions
+   INFO: Build completed successfully, 791 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
@@ -399,10 +417,8 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx driver list --loaded
-   fuchsia-boot:///#meta/block.core.cm
    fuchsia-boot:///#meta/bus-pci.cm
    fuchsia-boot:///#meta/fvm.cm
-   fuchsia-boot:///#meta/hid-input-report.cm
    fuchsia-boot:///#meta/hid.cm
    fuchsia-boot:///#meta/intel-rtc.cm
    fuchsia-boot:///#meta/netdevice-migration.cm
@@ -414,13 +430,12 @@ Do the following:
    fuchsia-boot:///#meta/sysmem.cm
    fuchsia-boot:///#meta/virtio_block.cm
    fuchsia-boot:///#meta/virtio_ethernet.cm
-   fuchsia-boot:///#meta/zxcrypt.cm
    fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
    {{ '<strong>' }}fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm{{ '</strong>' }}
+   fuchsia-boot:///#meta/block.core.cm
    ```
 
-   Notice that the `qemu_edu` driver is shown at the bottom of the loaded
-   drivers list.
+   Notice that the `qemu_edu` driver is shown in the loaded drivers list.
 
 4. View the `qemu_edu` component information:
 
@@ -432,40 +447,40 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx component show qemu_edu.cm
-                  Moniker: /bootstrap/universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_
-                      URL: fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
-                     Type: CML dynamic component
-          Component State: Resolved
-    Incoming Capabilities: fuchsia.device.fs.Exporter
-                           fuchsia.driver.compat.Service
-                           fuchsia.logger.LogSink
-                           pkg
-              Merkle root: a4832605ffe6bf6ddad3aad0d3d36c435ee2e66f79d43cd0b818d2aae20f7755
-          Execution State: Running
-             Start reason: Instance is in a single_run collection
-    Outgoing Capabilities: qemu-edu
+                  Moniker:  /bootstrap/universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_
+                      URL:  fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
+              Instance ID:  None
+                     Type:  CML Component
+          Component State:  Resolved
+    Incoming Capabilities:  /svc/fuchsia.device.fs.Exporter
+                            /svc/fuchsia.driver.compat.Service
+                            /svc/fuchsia.logger.LogSink
+     Exposed Capabilities:  fuchsia.hardware.qemuedu.Device
+              Merkle root:  957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d
+          Execution State:  Running
+             Start reason:  Instance is in a single_run collection
+    Outgoing Capabilities:  qemu-edu
    ```
 
-5. View device logs:
+5. View the device logs of the `qemu_edu` driver:
 
    ```posix-terminal
-   tools/ffx log --filter qemu_edu
+   tools/ffx log --filter qemu_edu dump
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx log --filter qemu_edu
+   $ tools/ffx log --filter qemu_edu dump
    ...
-   [176.540][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu to a4832605ffe6bf6ddad3aad0d3d36c435ee2e66f79d43cd0b818d2aae20f7755 with TUF
-   [176.542][bootstrap/driver_index][driver_index,driver][I] Registered driver successfully: fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm.
-   [176.571][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/qemu_edu: []
-   [176.573][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu to a4832605ffe6bf6ddad3aad0d3d36c435ee2e66f79d43cd0b818d2aae20f7755 with TUF
-   [176.577][bootstrap/driver_manager][driver_manager.cm][I]: [driver_runner.cc:858] Binding fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm to  00_06_0_
-   [176.908][bootstrap/driver-hosts:driver-host-3][driver_host2.cm][I]: [driver_host.cc:289] Started 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'
+   [173.618][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d with TUF
+   [173.618][pkg-resolver][pkg-resolver][I] get_hash for fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d with TUF
+   [173.623][driver_index][driver_index,driver][I] Registered driver successfully: fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm.
+   [173.653][pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.pkg.component/qemu_edu: []
+   [173.656][pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.pkg.component/qemu_edu as fuchsia-pkg://bazel.pkg.component/qemu_edu to 957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d with TUF
+   [173.662][driver_manager][driver_manager.cm][I]: [driver_runner.cc:377] Binding fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm to  00_06_0_
+   [173.891][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:117] edu device version major=1 minor=0
    ```
-
-   Press `CTRL+C` to exit.
 
 ## 5. Build and run a tools component {:#build-and-run-a-tools-component}
 
@@ -488,18 +503,18 @@ Do the following:
 1. Build and run the `eductl` component:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
-   INFO: Analyzed target //src/qemu_edu:eductl_pkg.eductl_component (0 packages loaded, 14 targets configured).
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   INFO: Analyzed target //src/qemu_edu:eductl_pkg.eductl_component (0 packages loaded, 19 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu:eductl_pkg.eductl_component up-to-date:
      bazel-bin/src/qemu_edu/eductl_pkg.eductl_component_run_component.sh
-   INFO: Elapsed time: 1.667s, Critical Path: 1.22s
+   INFO: Elapsed time: 2.028s, Critical Path: 1.50s
    INFO: 23 processes: 7 internal, 15 linux-sandbox, 1 local.
    INFO: Build completed successfully, 23 total actions
    INFO: Build completed successfully, 23 total actions
@@ -511,28 +526,24 @@ Do the following:
    Success! The component instance has been started.
    ```
 
-2. View the device logs of the `eductl` component:
+2. View the device logs:
 
    ```posix-terminal
-   tools/ffx log --filter eductl dump
+   tools/ffx log --filter qemu_edu --filter eductl dump
    ```
 
-   This command prints output similar to the following:
+   The device logs contain lines similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx log --filter eductl dump
+   $ tools/ffx log --filter qemu_edu --filter eductl dump
    ...
-   [367.076][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl to 4fe2e38ed56693bf720565c3ee5e6f8314a64c601cae67288db5e8d30f1a9265 with TUF
-   [367.080][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl: []
-   [367.081][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl to 4fe2e38ed56693bf720565c3ee5e6f8314a64c601cae67288db5e8d30f1a9265 with TUF
-   {{ '<strong>' }}[367.166][core/ffx-laboratory:eductl][][I] Factorial(12) = 479001600{{ '</strong>' }}
-   [367.173][core/pkg-resolver][pkg-resolver][I] removing repository fuchsia-pkg://bazel.eductl.pkg.eductl.component
-   [367.173][core/pkg-resolver][pkg-resolver][I] closing fuchsia-pkg://bazel.eductl.pkg.eductl.component
-   [367.176][core/pkg-resolver][pkg-resolver][I] AutoClient for "http://10.0.2.2:8083/bazel.eductl.pkg.eductl.component/auto" stopping
+   [214.156][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:234] Replying with factorial=479001600
+   [214.157][ffx-laboratory:eductl][][I] Factorial(12) = 479001600
+   ...
    ```
 
-   The output `Factorial(12) = 479001600` shows that the `eductl` component
-   passed 12 as input to the driver and received the result from the driver.
+   These lines show that the driver replied the result of `factorial=479001600`
+   to the `eductl` component, which previously passed 12 as input to the driver.
    (For the default input, see this [`eductl.cml`][eductl-cml] file.)
 
 ## 6. Debug the sample driver {:#debug-the-sample-driver}
@@ -642,9 +653,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    [zxdb] break QemuEduDriver::ComputeFactorial
    Created Breakpoint 1 @ QemuEduDriver::ComputeFactorial
-      177 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    ◉ 178                                      ComputeFactorialCompleter::Sync& completer) {
-      179   // Write a value into the factorial register.
+      217 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}◉ 218                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      219   // Write a value into the factorial register.
    [zxdb]
    ```
 
@@ -654,19 +665,19 @@ Do the following:
    directory (for instance, `cd $HOME/drivers`).
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
    ```
 
    In the `zxdb` terminal, verify that the debugger is stopped at the driver’s
    `ComputeFactorial` function, for example:
 
    ```none {:.devsite-disable-click-to-copy}
-   🛑 thread 2 on bp 1 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView,    fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:178
-      176
-      177 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    ▶ 178                                      ComputeFactorialCompleter::Sync& completer) {
-      179   // Write a value into the factorial register.
-      180   uint32_t input = request->input;
+   🛑 thread 2 on bp 1 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:218
+      216 // Driver Service: Compute factorial on the edu device
+      217 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}▶ 218                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      219   // Write a value into the factorial register.
+      220   uint32_t input = request->input;
    [zxdb]
    ```
 
@@ -680,28 +691,28 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    [zxdb] list
-      173       });
-      174   return outgoing_.Serve(std::move(outgoing_dir));
-      175 }
-      176
-      177 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    ▶ 178                                      ComputeFactorialCompleter::Sync& completer) {
-      179   // Write a value into the factorial register.
-      180   uint32_t input = request->input;
-      181
-      182   mmio_->Write32(input, regs::kFactorialCompoutationOffset);
-      183
-      184   // Busy wait on the factorial status bit.
-      185   while (true) {
-      186     const auto status = regs::Status::Get().ReadFrom(&*mmio_);
-      187     if (!status.busy())
-      188       break;
+      213   return zx::ok();
+      214 }
+      215
+      216 // Driver Service: Compute factorial on the edu device
+      217 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}▶ 218                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      219   // Write a value into the factorial register.
+      220   uint32_t input = request->input;
+      221
+      222   mmio_->Write32(input, edu_device_registers::kFactorialCompoutationOffset);
+      223
+      224   // Busy wait on the factorial status bit.
+      225   while (true) {
+      226     const auto status = edu_device_registers::Status::Get().ReadFrom(&*mmio_);
+      227     if (!status.busy())
+      228       break;
    [zxdb]
    ```
 
 7. In the `zxdb` terminal, step through the code using the `next`
    command until the value of `factorial` is read from the device (that is,
-   until the line 194 is reached):
+   until the line 234 is reached):
 
    <pre class="devsite-click-to-copy">
    <span class="no-select">[zxdb] </span>next
@@ -712,12 +723,12 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    ...
    [zxdb] next
-   🛑 thread 2 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:194
-      192   uint32_t factorial = mmio_->Read32(regs::kFactorialCompoutationOffset);
-      193
-    ▶ 194   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));
-      195   completer.Reply(factorial);
-      196 }
+   🛑 thread 2 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:234
+      232   uint32_t factorial = mmio_->Read32(edu_device_registers::kFactorialCompoutationOffset);
+      233
+    {{ '<strong>' }}▶ 234   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));{{ '</strong>' }}
+      235   completer.Reply(factorial);
+      236 }
    [zxdb]
    ```
 
@@ -765,7 +776,10 @@ Do the following:
 1. Start a new instance of the Fuchsia emulator:
 
    ```posix-terminal
-   tools/ffx emu start workstation.qemu-x64 --headless --kernel-args "driver_manager.use_driver_framework_v2=true" --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" --kernel-args "devmgr.enable-ephemeral=true"
+   tools/ffx emu start workstation_eng.qemu-x64 --headless \
+     --kernel-args "driver_manager.use_driver_framework_v2=true" \
+     --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" \
+     --kernel-args "devmgr.enable-ephemeral=true"
    ```
 
    This command starts a headless emulator instance running the Workstation
@@ -780,7 +794,7 @@ Do the following:
 1. In the `QemuEduDriver::ComputeFactorial` function,
    between the line
    `uint32_t factorial = mmio_->Read32(regs::kFactorialCompoutationOffset);`
-   (Line 192) and the `FDF_SLOG()` call (Line 194), add the following line:
+   (Line 232) and the `FDF_SLOG()` call (Line 234), add the following line:
 
    ```
    factorial=12345;
@@ -818,44 +832,40 @@ Do the following:
 1. Rebuild and run the modified sample driver:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
    ```
 
 1. Run the tools component:
 
    ```posix-terminal
-   bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
    ```
 
-1. To verify that change, view the device logs of the tools component:
+1. To verify that change, view the device logs:
 
    ```posix-terminal
-   tools/ffx log --filter eductl dump
+   tools/ffx log --filter qemu_edu --filter eductl dump
    ```
 
-   This command prints output similar to the following:
+   The device logs contain lines similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx log --filter eductl dump
+   $ tools/ffx log --filter qemu_edu --filter eductl dump
    ...
-   [43.349][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl to 4fe2e38ed56693bf720565c3ee5e6f8314a64c601cae67288db5e8d30f1a9265 with TUF
-   [43.354][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl: []
-   [43.355][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl to 4fe2e38ed56693bf720565c3ee5e6f8314a64c601cae67288db5e8d30f1a9265 with TUF
-   {{ '<strong>' }}[43.439][core/ffx-laboratory:eductl][][I] Factorial(12) = 12345{{ '</strong>' }}
-   [43.448][core/pkg-resolver][pkg-resolver][I] removing repository fuchsia-pkg://bazel.eductl.pkg.eductl.component
-   [43.449][core/pkg-resolver][pkg-resolver][I] closing fuchsia-pkg://bazel.eductl.pkg.eductl.component
-   [43.452][core/pkg-resolver][pkg-resolver][I] AutoClient for "http://10.0.2.2:8083/bazel.eductl.pkg.eductl.component/auto" stopping.
+   [94.914][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:234] Replying with factorial=12345
+   [94.916][ffx-laboratory:eductl][][I] Factorial(12) = 12345
+   ...
    ```
 
-   The line in the logs shows that the `qemu_edu` driver returned the
-   hardcoded value of `12345` as the factorial of 12 to the tools component.
+   These lines show that the `qemu_edu` driver replied with the
+   hardcoded value of `factorial=12345` to the `eductl` tools component.
 
 **Congratulations! You’re now all set with the Fuchsia driver development!**
 
 ## Next steps {:#next-steps}
 
-Learn more about how the `qemu_edu` driver works in the
-[Driver codelab][driver-codelab] guide.
+Learn more about how the `qemu_edu` driver works
+in [Codelab: QEMU edu driver][codelab-qemu-edu-driver].
 
 ## Appendices
 
@@ -869,15 +879,11 @@ downloaded files, symlinks, configuration settings, and more).
 Remove the package repositories created in this guide:
 
 ```posix-terminal
-tools/ffx repository remove workstation.qemu-x64
+tools/ffx repository remove workstation-packages
 ```
 
 ```posix-terminal
 tools/ffx repository server stop
-```
-
-```posix-terminal
-rm -rf $HOME/.package_repos/sdk-samples
 ```
 
 Remove all existing configurations and data of `ffx`:
@@ -890,6 +896,21 @@ tools/ffx daemon stop
 rm -rf $HOME/.local/share/Fuchsia/ffx
 ```
 
+When Bazel fails to build, try the commands below:
+
+Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
+deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
+This means Bazel will need to download those dependencies again
+the next time you run `bazel build`.
+
+```posix-terminal
+tools/bazel clean --expunge
+```
+
+```posix-terminal
+tools/bazel shutdown && rm -rf $HOME/.cache/bazel
+```
+
 Remove the `drivers` directory and its artifacts:
 
 Caution: If the SDK samples repository is cloned to a different location
@@ -899,21 +920,6 @@ Be extremely careful with the directory path when you run the `rm -rf
 
 ```posix-terminal
 rm -rf $HOME/drivers
-```
-
-When Bazel fails to build, try the commands below:
-
-Caution: Running `bazel clean` or deleting the `$HOME/.cache/bazel` directory
-deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
-This means Bazel will need to download those dependencies again
-the next time you run `bazel build`.
-
-```posix-terminal
-bazel clean --expunge
-```
-
-```posix-terminal
-bazel shutdown && rm -rf $HOME/.cache/bazel
 ```
 
 Other clean up commands:
@@ -948,6 +954,6 @@ killall pm
 [eductl-cml]: https://fuchsia.googlesource.com/sdk-samples/drivers/+/refs/heads/main/src/qemu_edu/meta/eductl.cml
 [zxdb-user-guide]: /docs/development/debugger/README.md
 [driver-concepts]: /docs/concepts/drivers/README.md
-[driver-codelab]: /docs/get-started/sdk/learn/driver/introduction.md
+[codelab-qemu-edu-driver]: /docs/get-started/sdk/learn/driver/introduction.md
 [driver-framework]: /docs/concepts/drivers/driver_framework.md
 [femu]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
