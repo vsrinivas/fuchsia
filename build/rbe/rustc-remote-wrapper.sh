@@ -223,7 +223,7 @@ comma_remote_outputs=
 
 # Compute a rustc command suitable for local and remote execution.
 # Prefix command with `env` in case it starts with local environment variables.
-rustc_command=("$env")
+original_rustc_command=("$env")
 
 # arch-vendor-os
 target_triple=
@@ -259,11 +259,11 @@ do
         # Sometimes, --extern names only a single crate without =path.
         test -z "$extern_path" || extern_paths+=("$build_subdir/$extern_path")
         dep_only_command+=( "$dep_only_token" )
-        rustc_command+=( "$opt" )
+        original_rustc_command+=( "$opt" )
         ;;
       # Copy all others.
       *) dep_only_command+=( "$dep_only_token" )
-        rustc_command+=( "$opt" )
+        original_rustc_command+=( "$opt" )
         ;;
     esac
     prev_opt=
@@ -291,8 +291,14 @@ EOF
   esac
 
   case "$opt" in
-    # This is the (likely prebuilt) rustc binary.
-    */rustc) rustc="$opt" ;;
+    # This is the (likely prebuilt) host rustc binary.
+    # This can be used for local dep-scanning.
+    */rustc)
+      local_rustc="$opt"
+      # remote executable is for running on RBE worker,
+      # which could be the same as the local one.
+      remote_rustc="${local_rustc/rust\/.*\//rust\/linux-x64\/}"
+      ;;
 
     # This is equivalent to --local, but passed as a rustc flag,
     # instead of wrapper script flag (before the -- ).
@@ -388,8 +394,10 @@ EOF
     -Cextra-filename) prev_opt=extra_filename ;;
 
     # --crate-type cdylib needs rust-lld (hard-coding this is a hack)
+    # This will always be linux, even when cross-compiling, because
+    # that is the only RBE remote backend option available.
     cdylib)
-      _rust_lld_rel="$(dirname "$rustc")"/../lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld
+      _rust_lld_rel="$(dirname "$remote_rustc")"/../lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld
       rust_lld=("$(relpath "$project_root" "$_rust_lld_rel")")
       ;;
 
@@ -496,7 +504,7 @@ EOF
   # Copy tokens to craft a local command for dep-info.
   dep_only_command+=( "$dep_only_token" )
   # Copy tokens to craft a command for local and remote execution.
-  rustc_command+=("$opt")
+  original_rustc_command+=("$opt")
   shift
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
@@ -511,7 +519,7 @@ test "$trace" = 0 || {
 }
 
 # Specify the rustc binary to be uploaded.
-rustc_relative="$(relpath "$project_root" "$rustc")"
+remote_rustc_relative="$(relpath "$project_root" "$remote_rustc")"
 
 # Collect extra inputs to upload for remote execution.
 # Note: these paths are relative to the current working dir ($build_subdir),
@@ -527,6 +535,7 @@ IFS=, read -ra extra_outputs <<< "$comma_remote_outputs"
 # TODO(fangism): if possible, determine these shlibs statically to avoid `ldd`-ing.
 # TODO(fangism): for host-independence, use llvm-otool and `llvm-readelf -d`,
 #   which requires uploading more tools.
+# TODO(fangism): need different tool from lld on Mac OS for linux binary
 function nonsystem_shlibs() {
   # $1 is a binary
   ldd "$1" | grep "=>" | cut -d\  -f3 | \
@@ -548,7 +557,7 @@ output="${output#./}"
 # The rustc binary might be linked against shared libraries.
 # Exclude system libraries in /usr/lib and /lib.
 # convert to paths relative to $project_root for rewrapper.
-mapfile -t rustc_shlibs < <(nonsystem_shlibs "$rustc")
+mapfile -t rustc_shlibs < <(nonsystem_shlibs "$remote_rustc")
 
 # Rust standard libraries.
 rust_stdlib_dir="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/lib"
@@ -769,7 +778,7 @@ test "${#link_sysroot[@]}" = 0 || {
 }
 
 # Inputs to upload include (all relative to $project_root):
-#   * rust tool(s) [$rustc_relative]
+#   * rust tool(s) [$remote_rustc_relative]
 #     * rust tool shared libraries [$rustc_shlibs]
 #   * rust standard libraries [$extra_rust_stdlibs]
 #   * direct source files [$top_source]
@@ -788,7 +797,7 @@ test "${#link_sysroot[@]}" = 0 || {
 #   * additional data dependencies [$extra_inputs_rel_project_root]
 
 remote_inputs=(
-  "$rustc_relative"
+  "$remote_rustc_relative"
   "${rust_lld[@]}"
   "${rustc_shlibs[@]}"
   "${extra_rust_stdlibs[@]}"
@@ -828,7 +837,8 @@ dump_vars() {
   debug_var "target triple" "$target_triple"
   debug_var "clang lib triple" "$clang_lib_triple"
   debug_var "outputs" "${relative_outputs[@]}"
-  debug_var "rustc binary" "$rustc_relative"
+  debug_var "rustc binary (local)" "$local_rustc"
+  debug_var "rustc binary (remote)" "$remote_rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
   debug_var "rust stdlibs" "${extra_rust_stdlibs[@]}"
   debug_var "rust lld" "${rust_lld[@]}"
@@ -877,7 +887,7 @@ then
   # Run original command and exit (no remote execution).
   "${check_determinism_prefix[@]}" \
     "${local_trace_prefix[@]}" \
-    "${rustc_command[@]}"
+    "${original_rustc_command[@]}"
   determinism_status="$?"
   case "$output" in
     host_arm64*/obj/third_party/rust_crates/*libpem-*.rlib)
@@ -926,8 +936,15 @@ remote_rustc_command=(
   --output_files="$remote_outputs_joined"
   "${rewrapper_options[@]}"
   --
-  "${rustc_command[@]}"
 )
+for tok in "${original_rustc_command[@]}"
+do
+  case "$tok" in
+    # When cross building from Mac, swap in the linux binary.
+    "$local_rustc") remote_rustc_command+=( "$remote_rustc" ) ;;
+    *) remote_rustc_command+=( "$tok" ) ;;
+  esac
+done
 
 if test "$dry_run" = 1
 then
