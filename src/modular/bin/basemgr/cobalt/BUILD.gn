@@ -20,18 +20,24 @@ metrics_registry("basemgr_metrics_registry") {
 
 source_set("cobalt") {
   sources = [
-    "cobalt.cc",
-    "cobalt.h",
+    "metrics.h",
+    "metrics_impl.cc",
+    "metrics_impl.h",
+    "metrics_logger.cc",
+    "metrics_logger.h",
   ]
 
   public_deps = [
     ":basemgr_metrics_registry",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/lib/fdio",
     "//src/lib/callback",
-    "//src/lib/cobalt/cpp:cobalt_logger",
   ]
 }

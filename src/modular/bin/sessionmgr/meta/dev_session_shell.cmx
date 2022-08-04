@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.modular.PuppetMaster",
             "fuchsia.modular.SessionShellContext",
             "fuchsia.sys.Environment",

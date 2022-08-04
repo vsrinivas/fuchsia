@@ -26,7 +26,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/bin/sessionmgr/puppet_master/make_production_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
@@ -183,7 +183,8 @@ void SessionmgrImpl::InitializeInternal(
 
   ServeSvcFromV1SessionmgrDir(std::move(svc_from_v1_sessionmgr));
 
-  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
+  LogLifetimeEvent(
+      cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::BootedToSessionMgr);
 }
 
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {

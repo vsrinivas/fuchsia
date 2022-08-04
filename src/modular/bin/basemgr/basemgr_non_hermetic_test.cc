@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -32,7 +32,7 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
     env_services->AddServiceWithLaunchInfo(
         fuchsia::sys::LaunchInfo{.url =
                                      "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
-        fuchsia::cobalt::LoggerFactory::Name_);
+        fuchsia::metrics::MetricEventLoggerFactory::Name_);
 
     env_services->AddService(std::make_unique<vfs::Service>(
                                  [presenter_channels = std::vector<zx::channel>()](

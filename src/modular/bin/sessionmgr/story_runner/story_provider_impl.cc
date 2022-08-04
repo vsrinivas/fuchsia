@@ -20,7 +20,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"

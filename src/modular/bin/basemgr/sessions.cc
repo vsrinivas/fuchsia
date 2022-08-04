@@ -7,19 +7,19 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/directory.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 
 namespace modular::sessions {
 
 void ReportNewSessionToCobalt() {
   if (files::IsDirectory(kSessionDirectoryPath)) {
     FX_LOGS(INFO) << "Creating session using existing account with fixed ID.";
-    ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType::
-                    CreateSessionExistingFixedAccount);
+    LogLifetimeEvent(cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::
+                         CreateSessionExistingFixedAccount);
   } else {
     FX_LOGS(INFO) << "Creating session using new persistent account with fixed ID.";
-    ReportEvent(cobalt_registry::ModularLifetimeEventsMetricDimensionEventType::
-                    CreateSessionNewPersistentAccount);
+    LogLifetimeEvent(cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::
+                         CreateSessionNewPersistentAccount);
   }
 }
 

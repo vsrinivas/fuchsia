@@ -29,7 +29,7 @@
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 #include "src/modular/bin/basemgr/child_listener.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -55,12 +55,12 @@ constexpr std::string_view kBackoffBaseFlag = "backoff-base-minutes";
 // is used exclusively for child components marked as "eager".
 constexpr std::string_view kBackoffBase = "2";
 
-fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
-                                               sys::ComponentContext* component_context) {
+fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt) {
   if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
-  return modular::InitializeCobalt(dispatcher, component_context);
+
+  return modular::InitializeMetricsImpl();
 }
 
 class LifecycleHandler : public fuchsia::process::lifecycle::Lifecycle {
@@ -100,9 +100,8 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     modular::ModularConfigAccessor config_accessor, std::vector<modular::Child> children,
     size_t backoff_base, bool use_flatland, sys::ComponentContext* component_context,
     modular::BasemgrInspector* inspector, async::Loop* loop) {
-  fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
-      config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
-
+  fit::deferred_action<fit::closure> cobalt_cleanup =
+      SetupCobalt(config_accessor.basemgr_config().enable_cobalt());
   auto child_listener = std::make_unique<modular::ChildListener>(
       component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base,
       inspector->CreateChildRestartTrackerNode());

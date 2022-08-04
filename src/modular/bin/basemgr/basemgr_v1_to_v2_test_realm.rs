@@ -111,7 +111,9 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol::<fidl_fuchsia_cobalt::LoggerFactoryMarker>())
+                .capability(Capability::protocol::<
+                    fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
+                >())
                 .from(&mock_cobalt)
                 .to(&basemgr),
         )

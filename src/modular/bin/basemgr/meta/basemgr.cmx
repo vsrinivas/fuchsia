@@ -11,8 +11,8 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.session.scene.Manager",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",

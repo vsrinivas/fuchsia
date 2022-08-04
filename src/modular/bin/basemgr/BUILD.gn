@@ -264,10 +264,10 @@ rustc_test("basemgr_v1_to_v2_test_realm_bin") {
   source_root = "basemgr_v1_to_v2_test_realm.rs"
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_rust",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.modular:fuchsia.modular_rust",
     "//sdk/fidl/fuchsia.session:fuchsia.session_rust",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
@@ -299,7 +299,7 @@ executable("basemgr_non_hermetic_test") {
 
   deps = [
     ":basemgr_bin",
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.sys",

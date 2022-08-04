@@ -10,8 +10,8 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.intl.PropertyProvider",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",

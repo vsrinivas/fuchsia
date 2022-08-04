@@ -77,7 +77,9 @@ impl TestFixture {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .from(&mock_cobalt)
                     .to(&basemgr),
             )

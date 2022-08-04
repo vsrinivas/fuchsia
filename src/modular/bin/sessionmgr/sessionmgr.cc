@@ -16,19 +16,18 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
-fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
-                                               async_dispatcher_t* dispatcher,
-                                               sys::ComponentContext* component_context) {
+fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt) {
   if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
-  return modular::InitializeCobalt(dispatcher, component_context);
+
+  return modular::InitializeMetricsImpl();
 }
 
 inspect::StringProperty AddConfigToInspect(const modular::ModularConfigReader& config_reader,
@@ -68,8 +67,8 @@ int main(int argc, const char** argv) {
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  auto cobalt_cleanup =
-      SetupCobalt(config_accessor.enable_cobalt(), loop.dispatcher(), component_context.get());
+  fit::deferred_action<fit::closure> cobalt_cleanup =
+      SetupCobalt(config_accessor.basemgr_config().enable_cobalt());
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       component_context->outgoing(),

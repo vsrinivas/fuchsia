@@ -25,7 +25,7 @@
 #include "src/lib/fostr/fidl/fuchsia/session/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/basemgr/child_listener.h"
-#include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/bin/basemgr/cobalt/metrics_logger.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/clone.h"
@@ -104,7 +104,8 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
   outgoing_services_->AddPublicService(GetLauncherHandler(),
                                        fuchsia::modular::session::Launcher::Name_);
 
-  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
+  LogLifetimeEvent(
+      cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::BootedToBaseMgr);
 }
 
 BasemgrImpl::~BasemgrImpl() = default;
@@ -263,7 +264,8 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
         FX_PLOGS(ERROR, error) << "Error on fuchsia.session.scene.Manager.";
       });
       (*scene_manager)
-          ->PresentRootViewLegacy(std::move(view_holder_token), std::move(view_ref_clone), [](auto) {});
+          ->PresentRootViewLegacy(std::move(view_holder_token), std::move(view_ref_clone),
+                                  [](auto) {});
     } else if (root_presenter) {
       root_presenter->set_error_handler([this](zx_status_t error) {
         FX_LOGS(ERROR) << "Error on fuchsia.ui.policy.Presenter: " << zx_status_get_string(error);
