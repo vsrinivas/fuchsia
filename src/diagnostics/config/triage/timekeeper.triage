@@ -1,16 +1,49 @@
 {
     select: {
-        backstop: "INSPECT:timekeeper.cmx:root:backstop",
-        current_mono: "INSPECT:timekeeper.cmx:root/current:monotonic",
-        current_utc: "INSPECT:timekeeper.cmx:root/current:clock_utc",
-        kernel_utc: "INSPECT:timekeeper.cmx:root/current:kernel_utc",
-        primary_source_status: "INSPECT:timekeeper.cmx:root/primary_time_source:status",
-        primary_estimate_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/estimate_0:counter",
-        primary_filter_state_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/filter_state_0:counter",
-        rtc_initialization: "INSPECT:timekeeper.cmx:root/real_time_clock:initialization",
-        rtc_write_failure_count: "INSPECT:timekeeper.cmx:root/real_time_clock:write_failures",
-        last_update_mono: "INSPECT:timekeeper.cmx:root/primary_track/last_update:retrieval_monotonic",
-        last_update_error: "INSPECT:timekeeper.cmx:root/primary_track/last_update:error_bounds",
+        backstop: [
+            "INSPECT:core/timekeeper:root:backstop",
+            "INSPECT:timekeeper.cmx:root:backstop",
+        ],
+        current_mono: [
+            "INSPECT:core/timekeeper:root/current:monotonic",
+            "INSPECT:timekeeper.cmx:root/current:monotonic",
+        ],
+        current_utc: [
+            "INSPECT:core/timekeeper:root/current:clock_utc",
+            "INSPECT:timekeeper.cmx:root/current:clock_utc",
+        ],
+        kernel_utc: [
+            "INSPECT:core/timekeeper:root/current:kernel_utc",
+            "INSPECT:timekeeper.cmx:root/current:kernel_utc",
+        ],
+        primary_source_status: [
+            "INSPECT:core/timekeeper:root/primary_time_source:status",
+            "INSPECT:timekeeper.cmx:root/primary_time_source:status",
+        ],
+        primary_estimate_0_counter: [
+            "INSPECT:core/timekeeper:root/primary_track/estimate_0:counter",
+            "INSPECT:timekeeper.cmx:root/primary_track/estimate_0:counter",
+        ],
+        primary_filter_state_0_counter: [
+            "INSPECT:core/timekeeper:root/primary_track/filter_state_0:counter",
+            "INSPECT:timekeeper.cmx:root/primary_track/filter_state_0:counter",
+        ],
+        rtc_initialization: [
+            "INSPECT:core/timekeeper:root/real_time_clock:initialization",
+            "INSPECT:timekeeper.cmx:root/real_time_clock:initialization",
+        ],
+        rtc_write_failure_count: [
+            "INSPECT:core/timekeeper:root/real_time_clock:write_failures",
+            "INSPECT:timekeeper.cmx:root/real_time_clock:write_failures",
+        ],
+        last_update_mono: [
+            "INSPECT:core/timekeeper:root/primary_track/last_update:retrieval_monotonic",
+            "INSPECT:timekeeper.cmx:root/primary_track/last_update:retrieval_monotonic",
+        ],
+        last_update_error: [
+            "INSPECT:core/timekeeper:root/primary_track/last_update:error_bounds",
+            "INSPECT:timekeeper.cmx:root/primary_track/last_update:error_bounds",
+        ],
     },
     eval: {
         primary_source_initializing: "Or(primary_source_status == \"Launched\", primary_source_status == \"Initializing\")",

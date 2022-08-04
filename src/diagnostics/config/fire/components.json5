@@ -569,4 +569,9 @@
         label: "Screen Saver",
         moniker: "core/screensaver",
     },
+    {
+        id: 218,
+        label: "Timekeeper",
+        moniker: "core/timekeeper",
+    },
 ]
