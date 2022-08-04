@@ -32,7 +32,7 @@ fi
 
 DEVICE="$1"
 if [[ -z "$DEVICE" ]]; then
-  options=($(find /dev -maxdepth 1 -name ttyUSB\* -or -name tty.SLAB_USBtoUART\* -or -name tty.usbserial\*))
+  options=($(find /dev -maxdepth 1 -name ttyUSB\* -or -name tty.SLAB_USBtoUART\* -or -name tty.usbserial\* | sort))
   if [[ "${#options}" = 0 ]]; then
     fx-error "No known serial devices found, specify one exactly."
     exit 1
