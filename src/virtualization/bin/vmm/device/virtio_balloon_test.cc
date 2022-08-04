@@ -139,31 +139,51 @@ TEST_P(VirtioBalloonTest, Deflate) {
 }
 
 TEST_P(VirtioBalloonTest, Stats) {
-  // TODO(fxbug.dev/100513): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
   zx_status_t status =
       DescriptorChainBuilder(stats_queue_).AppendReadableDescriptor(nullptr, 0).Build();
   ASSERT_EQ(ZX_OK, status);
 
-  auto entry = [](void* arg) {
-    auto test = static_cast<VirtioBalloonTest*>(arg);
-    zx_status_t status = test->WaitOnInterrupt();
+  struct Arg {
+    VirtioBalloonTest* test;
+    virtio_balloon_stat_t stat[2] = {{.tag = 2301, .val = 1985}, {.tag = 3412, .val = 41241}};
+    virtio_balloon_stat_t stat2[3] = {
+        {.tag = 11, .val = 112211}, {.tag = 22, .val = 223322}, {.tag = 33, .val = 334433}};
+  };
+
+  Arg arg{.test = this};
+
+  auto entry = [](void* varg) {
+    Arg* arg = static_cast<Arg*>(varg);
+    zx_status_t status = arg->test->WaitOnInterrupt();
     if (status != ZX_OK) {
       return status;
     }
-    virtio_balloon_stat_t stat = {.tag = 2301, .val = 1985};
-    status = DescriptorChainBuilder(test->stats_queue_)
-                 .AppendReadableDescriptor(&stat, sizeof(stat))
+    status = DescriptorChainBuilder(arg->test->stats_queue_)
+                 .AppendReadableDescriptor(&arg->stat, sizeof(arg->stat))
                  .Build();
     if (status != ZX_OK) {
       return status;
     }
-    return test->balloon_->NotifyQueue(2);
+    status = arg->test->balloon_->NotifyQueue(2);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = arg->test->WaitOnInterrupt();
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = DescriptorChainBuilder(arg->test->stats_queue_)
+                 .AppendReadableDescriptor(&arg->stat2, sizeof(arg->stat2))
+                 .Build();
+    if (status != ZX_OK) {
+      return status;
+    }
+    return arg->test->balloon_->NotifyQueue(2);
   };
   thrd_t thread;
-  int ret = thrd_create_with_name(&thread, entry, this, "balloon-stats");
+  int ret = thrd_create_with_name(&thread, entry, &arg, "balloon-stats");
   ASSERT_EQ(thrd_success, ret);
 
   zx_status_t stats_status;
@@ -171,10 +191,28 @@ TEST_P(VirtioBalloonTest, Stats) {
   status = balloon_->GetMemStats(&stats_status, &mem_stats);
   ASSERT_EQ(ZX_OK, status);
   ASSERT_EQ(ZX_OK, stats_status);
+  ASSERT_EQ(2u, mem_stats->size());
+  // We have to use EXPECT_TRUE instead of EXPECT_EQ here to avoid hitting unaligned read UB inside
+  // of the EXPECT_EQ EXPECT_EQ takes a reference to passed parameter to be able to log error
+  // virtio_balloon_stat_t contains tag is 16bit and val is 64bit.
+  // Data has to be packed according to the virtio device spec, making val unaligned
+  // Taking a reference to unaligned val causes UB
+  EXPECT_TRUE(arg.stat[0].tag == (*mem_stats)[0].tag);
+  EXPECT_TRUE(arg.stat[0].val == (*mem_stats)[0].val);
+  EXPECT_TRUE(arg.stat[1].tag == (*mem_stats)[1].tag);
+  EXPECT_TRUE(arg.stat[1].val == (*mem_stats)[1].val);
 
-  ASSERT_EQ(1u, mem_stats->size());
-  EXPECT_EQ(2301u, (*mem_stats)[0].tag);
-  EXPECT_EQ(1985u, (*mem_stats)[0].val);
+  status = balloon_->GetMemStats(&stats_status, &mem_stats);
+  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, stats_status);
+
+  ASSERT_EQ(3u, mem_stats->size());
+  EXPECT_TRUE(arg.stat2[0].tag == (*mem_stats)[0].tag);
+  EXPECT_TRUE(arg.stat2[0].val == (*mem_stats)[0].val);
+  EXPECT_TRUE(arg.stat2[1].tag == (*mem_stats)[1].tag);
+  EXPECT_TRUE(arg.stat2[1].val == (*mem_stats)[1].val);
+  EXPECT_TRUE(arg.stat2[2].tag == (*mem_stats)[2].tag);
+  EXPECT_TRUE(arg.stat2[2].val == (*mem_stats)[2].val);
 
   ret = thrd_join(thread, &status);
   ASSERT_EQ(thrd_success, ret);

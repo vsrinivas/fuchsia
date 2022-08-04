@@ -11,7 +11,9 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioBalloonRequestStream,
     fuchsia_component::server,
+    futures::channel::mpsc,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
+    machina_virtio_device::GuestBellTrap,
     tracing,
     virtio_device::chain::ReadableChain,
 };
@@ -46,15 +48,27 @@ async fn run_virtio_balloon(
     // Initialize all queues.
     let inflate_stream = device.take_stream(wire::INFLATEQ)?;
     let deflate_stream = device.take_stream(wire::DEFLATEQ)?;
-    let _stats_stream = device.take_stream(wire::STATSQ)?;
+    let stats_stream = device.take_stream(wire::STATSQ)?;
     ready_responder.send()?;
 
+    let negotiated_features =
+        wire::VirtioBalloonFeatureFlags::from_bits(device.get_features()).unwrap();
     let balloon_device = BalloonDevice::new(vmo);
 
+    let virtio_balloon_fidl: VirtioBalloonRequestStream = virtio_device_fidl.cast_stream();
+    let bell = GuestBellTrap::complete_or_pending(device.take_bell_traps(), &device)
+        .map_err(|e| anyhow!("GuestBellTrap: {}", e));
+
+    let (sender, receiver) = mpsc::channel(10);
     futures::try_join!(
-        device
-            .run_device_notify(virtio_device_fidl)
-            .map_err(|e| anyhow!("run_device_notify: {}", e)),
+        BalloonDevice::run_virtio_balloon_stream(virtio_balloon_fidl, &device, sender),
+        BalloonDevice::run_mem_stats_receiver(
+            stats_stream,
+            &guest_mem,
+            &negotiated_features,
+            receiver,
+        ),
+        bell,
         inflate_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
             let guest_mem = &guest_mem;
             let balloon_device = &balloon_device;

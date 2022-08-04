@@ -3,13 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::wire::{LE32, PAGE_SIZE},
-    anyhow::Error,
+    crate::wire::{VirtioBalloonFeatureFlags, VirtioBalloonMemStat, LE32, PAGE_SIZE},
+    anyhow::{anyhow, Error},
+    fidl_fuchsia_virtualization::MemStat,
+    fidl_fuchsia_virtualization_hardware::VirtioBalloonGetMemStatsResponder,
+    fidl_fuchsia_virtualization_hardware::{VirtioBalloonRequest, VirtioBalloonRequestStream},
     fuchsia_zircon::{self as zx},
+    futures::channel::mpsc,
+    futures::{StreamExt, TryStreamExt},
+    machina_virtio_device::Device,
+    machina_virtio_device::WrappedDescChainStream,
     std::io::Read,
     virtio_device::chain::ReadableChain,
     virtio_device::mem::DriverMem,
     virtio_device::queue::DriverNotify,
+    zerocopy::FromBytes,
 };
 
 fn read_pfn<'a, 'b, N: DriverNotify, M: DriverMem>(
@@ -18,6 +26,18 @@ fn read_pfn<'a, 'b, N: DriverNotify, M: DriverMem>(
     let mut arr = [0u8; std::mem::size_of::<LE32>()];
     if chain.read_exact(&mut arr).is_ok() {
         Some(u64::from(LE32::from_bytes(arr)))
+    } else {
+        None
+    }
+}
+
+/// Reads a `wire::VirtioBalloonMemStat` from the chain.
+fn read_mem_stat<'a, 'b, N: DriverNotify, M: DriverMem>(
+    chain: &mut ReadableChain<'a, 'b, N, M>,
+) -> Option<VirtioBalloonMemStat> {
+    let mut arr = [0; std::mem::size_of::<VirtioBalloonMemStat>()];
+    if chain.read_exact(&mut arr).is_ok() {
+        VirtioBalloonMemStat::read_from(arr.as_slice())
     } else {
         None
     }
@@ -74,12 +94,93 @@ impl BalloonDevice {
         }
         Ok(())
     }
+
+    pub fn process_stats_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+        chain: &mut ReadableChain<'a, 'b, N, M>,
+    ) -> Vec<MemStat> {
+        let mut mem_stats = Vec::new();
+        while let Some(mem_stat) = read_mem_stat(chain) {
+            mem_stats.push(MemStat { tag: u16::from(mem_stat.tag), val: u64::from(mem_stat.val) });
+        }
+        mem_stats
+    }
+
+    pub async fn run_mem_stats_receiver<'a, 'b, N: DriverNotify, M: DriverMem>(
+        mut stats_stream: WrappedDescChainStream<'a, 'b, N>,
+        guest_mem: &'a M,
+        features: &VirtioBalloonFeatureFlags,
+        mut receiver: mpsc::Receiver<VirtioBalloonGetMemStatsResponder>,
+    ) -> Result<(), Error> {
+        let mut prev_stat_chain = None;
+        while let Some(responder) = receiver.next().await {
+            if features.contains(VirtioBalloonFeatureFlags::VIRTIO_BALLOON_F_STATS_VQ) {
+                // See 5.5.6.3
+                // The stats virtqueue is atypical because communication is driven by the device
+                // (not the driver).
+                // The channel becomes active at driver initialization time when the driver adds an
+                // empty buffer and notifies the device. A request for memory statistics proceeds
+                // as follows:
+                // 1. The device uses the buffer and sends a used buffer notification.
+                // 2. The driver pops the used buffer and discards it.
+                // 3. The driver collects memory statistics and writes them into a new buffer.
+                // 4. The driver adds the buffer to the virtqueue and notifies the device.
+                // 5. The device pops the buffer (retaining it to initiate a subsequent request) and
+                //    consumes the statistics.
+                //
+                // Here are we are popping the previously retained buffer to signal the driver.
+                // If there is no previously retained buffer we'll pop an empty buffer of the chain.
+                // See 5.5.6.3
+                // The channel becomes active at driver initialization time when the driver
+                // adds an empty buffer and notifies the device.
+                // In both cases driver will get notified and perform steps 3 and 4
+                match prev_stat_chain {
+                    Some(chain) => drop(chain),
+                    None => drop(stats_stream.next().await),
+                };
+                // Fetch the memory stats which driver prepared for us
+                let mut stat_chain =
+                    ReadableChain::new(stats_stream.next().await.unwrap(), guest_mem);
+                let mut mem_stats = Self::process_stats_chain(&mut stat_chain);
+                responder.send(zx::sys::ZX_OK, Some(&mut mem_stats.iter_mut()))?;
+                // Retain memory stats, so we can drop it on the next request to signal the driver
+                // to get the new mem stats
+                prev_stat_chain = Some(stat_chain);
+            } else {
+                // If memory statistics are not supported, return.
+                responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn run_virtio_balloon_stream<'a, 'b, N: DriverNotify>(
+        virtio_balloon_fidl: VirtioBalloonRequestStream,
+        device: &Device<'a, N>,
+        sender: mpsc::Sender<VirtioBalloonGetMemStatsResponder>,
+    ) -> Result<(), Error> {
+        virtio_balloon_fidl
+            .err_into()
+            .try_for_each(|msg| {
+                futures::future::ready(match msg {
+                    VirtioBalloonRequest::NotifyQueue { queue, .. } => {
+                        device.notify_queue(queue).map_err(|e| anyhow!("NotifyQueue: {}", e))
+                    }
+                    VirtioBalloonRequest::GetMemStats { responder } => sender
+                        .clone()
+                        .try_send(responder)
+                        .map_err(|e| anyhow!("GetMemStats: {}", e)),
+                    msg => Err(anyhow!("Unexpected message: {:?}", msg)),
+                })
+            })
+            .await
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::wire::{LE16, LE64},
         virtio_device::chain::ReadableChain,
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
     };
@@ -156,5 +257,29 @@ mod tests {
         assert!(device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
             .is_err());
+    }
+
+    #[fuchsia::test]
+    fn test_parse_mem_stats_chain() {
+        let mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &mem);
+        let mem_stats: [VirtioBalloonMemStat; 3] = [
+            VirtioBalloonMemStat { tag: LE16::from(1), val: LE64::from(11) },
+            VirtioBalloonMemStat { tag: LE16::from(2), val: LE64::from(22) },
+            VirtioBalloonMemStat { tag: LE16::from(3), val: LE64::from(33) },
+        ];
+        state.fake_queue.publish(ChainBuilder::new().readable(&mem_stats, &mem).build()).unwrap();
+        let mem_stats = BalloonDevice::process_stats_chain(&mut ReadableChain::new(
+            state.queue.next_chain().unwrap(),
+            &mem,
+        ));
+        assert_eq!(
+            mem_stats,
+            vec![
+                MemStat { tag: mem_stats[0].tag, val: mem_stats[0].val },
+                MemStat { tag: mem_stats[1].tag, val: mem_stats[1].val },
+                MemStat { tag: mem_stats[2].tag, val: mem_stats[2].val }
+            ]
+        );
     }
 }
