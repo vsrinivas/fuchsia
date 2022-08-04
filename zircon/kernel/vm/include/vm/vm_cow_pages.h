@@ -1034,7 +1034,7 @@ class VmCowPages final
   // Returns the root parent's page source.
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
-  bool is_source_handling_free() const {
+  bool is_source_handling_free_locked() const TA_REQ(lock_) {
     return page_source_ && page_source_->properties().is_handling_free;
   }
 
@@ -1046,8 +1046,8 @@ class VmCowPages final
   //
   // Callers should avoid calling pmm_free() directly from inside VmCowPages, and instead should use
   // this helper.
-  void FreePages(list_node* pages, bool freeing_owned_pages) {
-    if (!freeing_owned_pages || !is_source_handling_free()) {
+  void FreePagesLocked(list_node* pages, bool freeing_owned_pages) TA_REQ(lock_) {
+    if (!freeing_owned_pages || !is_source_handling_free_locked()) {
       pmm_free(pages);
       return;
     }
@@ -1062,9 +1062,9 @@ class VmCowPages final
   //
   // Callers should avoid calling pmm_free_page() directly from inside VmCowPages, and instead
   // should use this helper.
-  void FreePage(vm_page_t* page, bool freeing_owned_page) {
+  void FreePageLocked(vm_page_t* page, bool freeing_owned_page) TA_REQ(lock_) {
     DEBUG_ASSERT(!list_in_list(&page->queue_node));
-    if (!freeing_owned_page || !is_source_handling_free()) {
+    if (!freeing_owned_page || !is_source_handling_free_locked()) {
       pmm_free_page(page);
       return;
     }
