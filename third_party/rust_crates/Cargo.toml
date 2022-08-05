@@ -255,7 +255,7 @@ trust-dns-proto = { version = "0.21.2", default-features = false, features = ["t
 trust-dns-resolver = { version = "0.21.2", default-features = false, features = ["testing"] }
 ttf-parser = "0.10.1"
 unicode-normalization = "0.1"
-vk-sys = "0.4.0"
+vk-sys = "0.7.0"
 void = "1.0.2"
 
 # Host-side only dependencies

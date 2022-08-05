@@ -1021,7 +1021,7 @@ group("valico") {
 
 if (current_os == "fuchsia") {
   group("vk-sys") {
-    public_deps = [ ":vk-sys-v0_4_0" ]
+    public_deps = [ ":vk-sys-v0_7_0" ]
   }
 }
 
@@ -11447,10 +11447,10 @@ rust_library("vec_map-v0_8_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("vk-sys-v0_4_0") {
+rust_library("vk-sys-v0_7_0") {
   crate_name = "vk_sys"
   crate_root = "//third_party/rust_crates/vendor/vk-sys/src/lib.rs"
-  output_name = "vk_sys-64c5d0becd520497"
+  output_name = "vk_sys-51e1ef19b2b5f263"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -11459,9 +11459,9 @@ rust_library("vk-sys-v0_4_0") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=64c5d0becd520497",
-    "-Cextra-filename=-64c5d0becd520497",
+    "--edition=2018",
+    "-Cmetadata=51e1ef19b2b5f263",
+    "-Cextra-filename=-51e1ef19b2b5f263",
   ]
 
   visibility = [ ":*" ]
