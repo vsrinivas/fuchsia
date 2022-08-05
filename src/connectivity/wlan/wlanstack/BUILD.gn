@@ -27,7 +27,6 @@ rustc_binary("bin") {
     ":wlanstack_config",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service_rust",
-    "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel_rust",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_rust",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme_rust",
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
@@ -51,10 +50,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:rand",
   ]
 
-  test_deps = [
-    "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats_rust",
-    "//third_party/rust_crates:void",
-  ]
+  test_deps = [ "//third_party/rust_crates:void" ]
 
   sources = [
     "src/device.rs",

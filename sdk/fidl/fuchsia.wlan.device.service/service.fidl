@@ -5,15 +5,10 @@ library fuchsia.wlan.device.service;
 
 using fuchsia.wlan.common;
 using fuchsia.wlan.ieee80211 as ieee80211;
-using fuchsia.wlan.minstrel;
 using fuchsia.wlan.mlme;
 using fuchsia.wlan.sme;
 using fuchsia.wlan.stats;
 using zx;
-
-type IfaceListItem = struct {
-    iface_id uint16;
-};
 
 type QueryIfaceResponse = struct {
     /// The role the iface is currently operating in, e.g., client role.
@@ -26,10 +21,6 @@ type QueryIfaceResponse = struct {
     phy_assigned_id uint16;
     /// The iface's MAC.
     sta_addr ieee80211.MacAddr;
-};
-
-type ListIfacesResponse = struct {
-    ifaces vector<IfaceListItem>;
 };
 
 type CreateIfaceRequest = struct {
@@ -117,117 +108,6 @@ protocol DeviceService {
     }) -> (struct {
         status int32;
         iface_id box<AddIfaceResponse>;
-    });
-    ListIfaces() -> (struct {
-        resp ListIfacesResponse;
-    });
-    QueryIface(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        resp box<QueryIfaceResponse>;
-    });
-
-    /// Return the given interface's support for features related to discovery
-    /// of potential BSSs.
-    /// + request `iface_id` an interface ID
-    /// - response `status` a zx_status value indicating success or failure.
-    /// - response `resp` the requested `fuchsia.wlan.common/DiscoverySupport`;
-    ///     or null if there was an error, or the given interface does not
-    ///     exist.
-    /// * see [`fuchsia.wlan.common/DiscoverySupport`]
-    QueryDiscoverySupport(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        resp box<fuchsia.wlan.common.DiscoverySupport>;
-    });
-
-    /// Return the given interface's support for features related to the MAC
-    /// sublayer.
-    /// + request `iface_id` an interface ID
-    /// - response `status` a zx_status value indicating success or failure.
-    /// - response `resp` the requested `fuchsia.wlan.common/MacSublayerSupport`;
-    ///     or null if there was an error, or the given interface does not
-    ///     exist.
-    /// * see [`fuchsia.wlan.common/MacSublayerSupport`]
-    QueryMacSublayerSupport(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        resp box<fuchsia.wlan.common.MacSublayerSupport>;
-    });
-
-    /// Return the given interface's support for features related to security /
-    /// access control and data confidentiality.
-    /// + request `iface_id` an interface ID
-    /// - response `status` a zx_status value indicating success or failure.
-    /// - response `resp` the requested `fuchsia.wlan.common/SecuritySupport`;
-    ///     or null if there was an error, or the given interface does not
-    ///     exist.
-    /// * see [`fuchsia.wlan.common/SecuritySupport`]
-    QuerySecuritySupport(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        resp box<fuchsia.wlan.common.SecuritySupport>;
-    });
-
-    /// Return the given interface's support for features related to spectrum
-    /// management.
-    /// + request `iface_id` an interface ID
-    /// - response `status` a zx_status value indicating success or failure.
-    /// - response `resp` the requested `fuchsia.wlan.common/SpectrumManagementSupport`;
-    ///     or null if there was an error, or the given interface does not
-    ///     exist.
-    /// * see [`fuchsia.wlan.common/SpectrumManagementSupport`]
-    QuerySpectrumManagementSupport(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        resp box<fuchsia.wlan.common.SpectrumManagementSupport>;
-    });
-
-    GetClientSme(resource struct {
-        iface_id uint16;
-        sme server_end:fuchsia.wlan.sme.ClientSme;
-    }) -> (struct {
-        status int32;
-    });
-    GetApSme(resource struct {
-        iface_id uint16;
-        sme server_end:fuchsia.wlan.sme.ApSme;
-    }) -> (struct {
-        status int32;
-    });
-    GetMeshSme(resource struct {
-        iface_id uint16;
-        sme server_end:fuchsia.wlan.sme.MeshSme;
-    }) -> (struct {
-        status int32;
-    });
-    GetIfaceCounterStats(struct {
-        iface_id uint16;
-    }) -> (struct {
-        resp GetIfaceCounterStatsResponse;
-    });
-    GetIfaceHistogramStats(struct {
-        iface_id uint16;
-    }) -> (struct {
-        resp GetIfaceHistogramStatsResponse;
-    });
-    GetMinstrelList(struct {
-        iface_id uint16;
-    }) -> (struct {
-        status int32;
-        peers fuchsia.wlan.minstrel.Peers;
-    });
-    GetMinstrelStats(struct {
-        iface_id uint16;
-        peer_addr ieee80211.MacAddr;
-    }) -> (struct {
-        status int32;
-        peer box<fuchsia.wlan.minstrel.Peer>;
     });
 };
 

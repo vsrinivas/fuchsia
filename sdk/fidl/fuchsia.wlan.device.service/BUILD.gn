@@ -10,7 +10,6 @@ fidl("fuchsia.wlan.device.service") {
     "disallowed-library-name-component",
     "protocol-name-includes-service",
     "string-bounds-not-specified",
-    "vector-bounds-not-specified",
   ]
 
   sources = [ "service.fidl" ]
@@ -18,7 +17,6 @@ fidl("fuchsia.wlan.device.service") {
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.minstrel",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.sme",
     "//sdk/fidl/fuchsia.wlan.stats",

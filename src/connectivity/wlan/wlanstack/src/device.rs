@@ -71,10 +71,7 @@ impl IfaceMap {
         hash_map.remove(iface_id);
     }
 
-    pub fn get_snapshot(&self) -> Arc<HashMap<u16, Arc<IfaceDevice>>> {
-        self.inner.lock().clone()
-    }
-
+    #[cfg(test)]
     pub fn get(&self, iface_id: &u16) -> Option<Arc<IfaceDevice>> {
         self.inner.lock().get(iface_id).map(|v| v.clone())
     }
@@ -567,42 +564,5 @@ mod tests {
         );
 
         assert!(iface_map.get(&0).is_none());
-    }
-
-    #[test]
-    fn test_get_snapshot() {
-        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
-
-        // The initial snapshot should be empty.
-        let iface_map = IfaceMap::new();
-        let hashmap = iface_map.get_snapshot();
-        assert!(hashmap.is_empty());
-
-        // Add an entry to the map and request another snapshot.  This one should contain a single
-        // interface record.
-        let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
-        let (sender, _) = mpsc::unbounded();
-        let (shutdown_sender, _) = mpsc::channel(1);
-        iface_map.insert(
-            5,
-            IfaceDevice {
-                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
-                sme_server: SmeServer::Client(sender),
-                mlme_proxy,
-                device_info: fake_device_info(),
-                shutdown_sender,
-            },
-        );
-
-        let hashmap = iface_map.get_snapshot();
-        assert!(!hashmap.is_empty());
-        let keys: Vec<u16> = hashmap.keys().cloned().collect();
-        assert_eq!(keys.len(), 1);
-        assert_eq!(keys[0], 5);
-
-        // Remove the interface and again expect the snapshot to be empty.
-        iface_map.remove(&5);
-        let hashmap = iface_map.get_snapshot();
-        assert!(hashmap.is_empty());
     }
 }
