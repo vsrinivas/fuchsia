@@ -50,9 +50,16 @@ def main():
     old_ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), old_ids)
 
     new_id_set = set(ids)
-    old_id_set = set(old_ids)
-    added_ids = new_id_set - old_id_set
-    removed_ids = old_id_set - new_id_set
+    required_id_set = set()
+    optional_id_set = set()
+    for i in old_ids:
+        if i.startswith('?'):
+            optional_id_set.add(i[1:])
+        else:
+            required_id_set.add(i)
+
+    added_ids = new_id_set - (required_id_set | optional_id_set)
+    removed_ids = required_id_set - new_id_set
 
     if added_ids:
         print('Elements added to SDK:')
@@ -69,6 +76,8 @@ def main():
         print(
             '  cp ' + os.path.abspath(args.updated) + ' ' +
             os.path.abspath(args.reference))
+        print('Elements can be marked optional with a leading question mark.')
+        print('Please remember to complete transitions by marking elements required!')
         if not args.warn:
             return 1
 
