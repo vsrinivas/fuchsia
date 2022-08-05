@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/dist/resource.gni")
@@ -9,6 +10,20 @@ import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 import("//src/recovery/system/system_recovery_args.gni")
 import("//src/sys/core/build/core_shard.gni")
+
+# Generate rust library for the config
+fuchsia_component_manifest("ui_config_manifest") {
+  # Note: This component name is unused since this manifest target is only added to
+  # generate the rust config library
+  component_name = "config_system_recovery"
+
+  # Config structure is currently defined in this shard
+  manifest = "meta/shards/ui.shard.cml"
+}
+
+fuchsia_structured_config_rust_lib("recovery_ui_config") {
+  cm_label = ":ui_config_manifest"
+}
 
 # TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
 config_data("config") {
@@ -95,6 +110,7 @@ rustc_binary("bin") {
   edition = "2021"
   with_unit_tests = true
   deps = [
+    ":recovery_ui_config",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_rust",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
@@ -114,7 +130,6 @@ rustc_binary("bin") {
     "//src/recovery/lib/recovery-util",
     "//src/sys/pkg/lib/isolated-ota",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bytes",
@@ -153,7 +168,14 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("system_recovery") {
+# Start system_recovery component
+fuchsia_component_manifest("manifest") {
+  component_name = "system_recovery"
+  manifest = "meta/system_recovery.cml"
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
   deps = [
     ":bin",
     ":recovery_logo",
@@ -161,14 +183,30 @@ fuchsia_package_with_single_component("system_recovery") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  manifest = "meta/system_recovery.cml"
 }
+
+fuchsia_structured_config_values("values_from_gn") {
+  cm_label = ":manifest"
+  values = {
+    display_rotation = board_display_rotation
+  }
+}
+
+fuchsia_package("system_recovery") {
+  deps = [
+    ":component",
+    ":values_from_gn",
+  ]
+}
+
+# End system_recovery component
 
 rustc_binary("bin_fdr") {
   name = "system_recovery_fdr"
   edition = "2018"
   with_unit_tests = true
   deps = [
+    ":recovery_ui_config",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
@@ -178,7 +216,6 @@ rustc_binary("bin_fdr") {
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:mockall",
@@ -191,7 +228,14 @@ rustc_binary("bin_fdr") {
   ]
 }
 
-fuchsia_package_with_single_component("system_recovery_fdr") {
+# Start system_recovery_fdr component TODO(fxbug.dev/105564)
+fuchsia_component_manifest("manifest_fdr") {
+  component_name = "system_recovery_fdr"
+  manifest = "meta/system_recovery_fdr.cml"
+}
+
+fuchsia_component("component_fdr") {
+  cm_label = ":manifest_fdr"
   deps = [
     ":bin_fdr",
     ":recovery_logo",
@@ -199,8 +243,23 @@ fuchsia_package_with_single_component("system_recovery_fdr") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  manifest = "meta/system_recovery_fdr.cml"
 }
+
+fuchsia_structured_config_values("values_from_gn_fdr") {
+  cm_label = ":manifest_fdr"
+  values = {
+    display_rotation = board_display_rotation
+  }
+}
+
+fuchsia_package("system_recovery_fdr") {
+  deps = [
+    ":component_fdr",
+    ":values_from_gn_fdr",
+  ]
+}
+
+# End system_recovery_fdr component
 
 fuchsia_component("system_recovery_bin_test") {
   testonly = true
@@ -235,6 +294,7 @@ rustc_binary("bin_installer") {
   source_root = "installer/main.rs"
   with_unit_tests = true
   deps = [
+    ":recovery_ui_config",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
@@ -254,7 +314,6 @@ rustc_binary("bin_installer") {
     "//src/recovery/lib/recovery-util",
     "//src/sys/lib/payload_streamer",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:regex",
@@ -271,7 +330,14 @@ rustc_binary("bin_installer") {
   ]
 }
 
-fuchsia_package_with_single_component("system_recovery_installer") {
+# Start system_recovery_installer component
+fuchsia_component_manifest("manifest_installer") {
+  component_name = "system_recovery_installer"
+  manifest = "meta/system_recovery_installer.cml"
+}
+
+fuchsia_component("component_installer") {
+  cm_label = ":manifest_installer"
   deps = [
     ":bin_installer",
     ":recovery_logo",
@@ -279,8 +345,23 @@ fuchsia_package_with_single_component("system_recovery_installer") {
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
   ]
-  manifest = "meta/system_recovery_installer.cml"
 }
+
+fuchsia_structured_config_values("values_from_gn_installer") {
+  cm_label = ":manifest_installer"
+  values = {
+    display_rotation = board_display_rotation
+  }
+}
+
+fuchsia_package("system_recovery_installer") {
+  deps = [
+    ":component_installer",
+    ":values_from_gn_installer",
+  ]
+}
+
+# End system_recovery_installer component
 
 fuchsia_component("system_recovery_installer_bin_test") {
   testonly = true

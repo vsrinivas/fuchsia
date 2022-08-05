@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Error};
-use argh::FromArgs;
 use carnelian::{
     app::Config,
     color::Color,
@@ -24,6 +23,7 @@ use fuchsia_async::{self as fasync};
 use fuchsia_watch::PathEvent;
 use fuchsia_zircon::Event;
 use futures::StreamExt;
+use recovery_ui_config::Config as UiConfig;
 use rive_rs::{self as rive};
 use std::path::PathBuf;
 
@@ -69,13 +69,6 @@ enum InstallerMessages {
 }
 
 /// Installer
-#[derive(Debug, FromArgs)]
-#[argh(name = "recovery")]
-struct Args {
-    /// rotate
-    #[argh(option)]
-    rotation: Option<DisplayRotation>,
-}
 #[derive(Clone, Debug, PartialEq)]
 struct InstallationPaths {
     install_source: Option<BlockDevice>,
@@ -104,13 +97,8 @@ struct InstallerAppAssistant {
 }
 
 impl InstallerAppAssistant {
-    fn new(app_sender: AppSender, automated: bool) -> Self {
-        let args: Args = argh::from_env();
-        Self {
-            app_sender,
-            display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0),
-            automated,
-        }
+    fn new(app_sender: AppSender, display_rotation: DisplayRotation, automated: bool) -> Self {
+        Self { app_sender, display_rotation: display_rotation, automated }
     }
 }
 
@@ -834,9 +822,26 @@ fn main() -> Result<(), Error> {
     display_result.context("Waiting for display controller")?;
     let automated = interactive_result.context("Fetching installer boot arguments")?;
 
+    let config = UiConfig::take_from_startup_handle();
+    let display_rotation = match config.display_rotation {
+        0 => DisplayRotation::Deg0,
+        180 => DisplayRotation::Deg180,
+        // Carnelian uses an inverted z-axis for rotation
+        90 => DisplayRotation::Deg270,
+        270 => DisplayRotation::Deg90,
+        val => {
+            eprintln!("Invalid display_rotation {}, defaulting to 0 degrees", val);
+            DisplayRotation::Deg0
+        }
+    };
+
     App::run(Box::new(move |app_sender: &AppSender| {
         Box::pin(async move {
-            let assistant = Box::new(InstallerAppAssistant::new(app_sender.clone(), automated));
+            let assistant = Box::new(InstallerAppAssistant::new(
+                app_sender.clone(),
+                display_rotation,
+                automated,
+            ));
             Ok::<AppAssistantPtr, Error>(assistant)
         })
     }))

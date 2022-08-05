@@ -21,7 +21,6 @@ mod setup;
 mod storage;
 
 use anyhow::{format_err, Error};
-use argh::FromArgs;
 use carnelian::{
     app::Config,
     color::Color,
@@ -52,6 +51,7 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
+use recovery_ui_config::Config as UiConfig;
 use rive_rs::{self as rive};
 use std::borrow::{Borrow, Cow};
 use std::path::Path;
@@ -91,13 +91,6 @@ fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderCo
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
     raster_builder.add(&path, None);
     raster_builder.build()
-}
-
-#[derive(Debug, FromArgs)]
-#[argh(name = "recovery", description="System Recovery")]
-struct Args {
-    #[argh(option, description="rotate screen orientation", default="DisplayRotation::Deg0")]
-    rotation: DisplayRotation,
 }
 
 enum RecoveryMessages {
@@ -167,14 +160,12 @@ struct RecoveryAppAssistant {
 }
 
 impl RecoveryAppAssistant {
-    pub fn new(app_sender: &AppSender, fdr_restriction: FdrRestriction) -> Self {
-        let args: Args = argh::from_env();
-
-        Self {
-            app_sender: app_sender.clone(),
-            display_rotation: args.rotation,
-            fdr_restriction,
-        }
+    pub fn new(
+        app_sender: &AppSender,
+        display_rotation: DisplayRotation,
+        fdr_restriction: FdrRestriction,
+    ) -> Self {
+        Self { app_sender: app_sender.clone(), display_rotation, fdr_restriction }
     }
 }
 
@@ -1116,7 +1107,21 @@ fn make_app_assistant_fut(
             }
         };
 
-        let assistant = Box::new(RecoveryAppAssistant::new(app_sender, fdr_restriction));
+        let config = UiConfig::take_from_startup_handle();
+        let display_rotation = match config.display_rotation {
+            0 => DisplayRotation::Deg0,
+            180 => DisplayRotation::Deg180,
+            // Carnelian uses an inverted z-axis for rotation
+            90 => DisplayRotation::Deg270,
+            270 => DisplayRotation::Deg90,
+            val => {
+                eprintln!("Invalid display_rotation {}, defaulting to 0 degrees", val);
+                DisplayRotation::Deg0
+            }
+        };
+
+        let assistant =
+            Box::new(RecoveryAppAssistant::new(app_sender, display_rotation, fdr_restriction));
         Ok::<AppAssistantPtr, Error>(assistant)
     };
     Box::pin(f)

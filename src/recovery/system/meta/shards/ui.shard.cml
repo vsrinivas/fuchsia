@@ -33,4 +33,7 @@
             to: "parent",
         },
     ],
+    config: {
+        display_rotation: { type: "uint16" },
+    },
 }

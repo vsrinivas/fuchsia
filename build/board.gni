@@ -9,6 +9,10 @@ declare_args() {
   # Human readable board description corresponding to the board name.
   board_description = ""
 
+  # Amount of rotation in degrees to apply to a board. Expected values are 0,
+  # 90, 180, or 270.
+  board_display_rotation = 0
+
   # Configs that are added when targeting this board.
   board_configs = []
 
