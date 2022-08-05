@@ -145,7 +145,10 @@ foreach(test, shard_test_list) {
 }
 
 if (is_host) {
-  metric_files = [ "fuchsia.fidlc_microbenchmarks" ]
+  metric_files = [
+    "fuchsia.fidlc_microbenchmarks",
+    "fuchsia.input_latency.simplest_app",
+  ]
 
   host_test_data("runtime_deps") {
     sources = [

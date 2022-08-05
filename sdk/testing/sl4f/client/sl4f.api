@@ -4581,6 +4581,20 @@
                   "type": "SimpleFormalParameterImpl",
                   "varType": "String"
                 },
+                "expectedMetricNamesFile": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "expectedMetricNamesFile",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                },
                 "metricsSpecSet": {
                   "isConst": false,
                   "isFinal": false,
