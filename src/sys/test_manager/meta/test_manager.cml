@@ -30,6 +30,10 @@
                     as: "g3_dart_jit_product_runner",
                 },
                 {
+                    runner: "fuzz_test_runner",
+                    from: "#fuzz_test_runner",
+                },
+                {
                     runner: "gtest_runner",
                     from: "#gtest_runner",
                 },

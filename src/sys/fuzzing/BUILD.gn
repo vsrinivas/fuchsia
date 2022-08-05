@@ -2,19 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 group("fuzzing") {
   testonly = true
   deps = [
+    ":fuzz-manager",
+    ":fuzz-registry",
     ":fuzzing-core-shard",
-    "manager",
-    "registry",
   ]
-}
-
-core_shard("fuzzing-core-shard") {
-  shard_file = "meta/fuzzing.core-shard.cml"
 }
 
 group("tests") {
@@ -26,4 +23,18 @@ group("tests") {
     "realmfuzzer:tests",
     "registry:tests",
   ]
+}
+
+core_shard("fuzzing-core-shard") {
+  shard_file = "meta/fuzzing.core-shard.cml"
+}
+
+fuchsia_package("fuzz-manager") {
+  testonly = true
+  deps = [ "manager" ]
+}
+
+fuchsia_package("fuzz-registry") {
+  testonly = true
+  deps = [ "registry" ]
 }

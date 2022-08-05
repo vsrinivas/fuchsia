@@ -1,0 +1,76 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fuzz_test_runner_integration_test",
+    },
+    children: [
+        {
+            name: "fuzz-manager",
+            url: "#meta/fuzz-manager.cm",
+        },
+        {
+            name: "fuzz-registry",
+            url: "#meta/fuzz-registry.cm",
+        },
+        {
+            name: "test_manager",
+            url: "#meta/test_manager_for_tests.cm",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.logger.LogSink" },
+        {
+            protocol: "fuchsia.fuzzer.Manager",
+            from: "#fuzz-manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#fuzz-manager",
+                "#fuzz-registry",
+                "#test_manager",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.component.resolution.Resolver",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.test.manager.RunBuilder",
+            from: "#test_manager",
+            to: "#fuzz-manager",
+        },
+        {
+            protocol: "fuchsia.fuzzer.Registrar",
+            from: "#fuzz-registry",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.fuzzer.Registry",
+            from: "#fuzz-registry",
+            to: "#fuzz-manager",
+        },
+    ],
+}

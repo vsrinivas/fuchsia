@@ -37,6 +37,10 @@
             url: "fuchsia-pkg://fuchsia.com/elf-test-ambient-exec-runner#meta/elf-test-ambient-exec-runner.cm",
         },
         {
+            name: "fuzz_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/fuzz-test-runner#meta/fuzz-test-runner.cm",
+        },
+        {
             name: "g3_dart_jit_product_runner",
             url: "fuchsia-pkg://fuchsia.com/g3_dart_jit_product_runner#meta/g3_dart_jit_product_runner.cm",
         },
@@ -303,6 +307,7 @@
                 "#early_boot_instrumentation",
                 "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
+                "#fuzz_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
                 "#gunit_runner",
@@ -360,6 +365,7 @@
             to: [
                 "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
+                "#fuzz_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
                 "#gunit_runner",
@@ -374,12 +380,18 @@
             to: [
                 "#elf_test_ambient_exec_runner",
                 "#elf_test_runner",
+                "#fuzz_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
                 "#gunit_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
             ],
+        },
+        {
+            protocol: "fuchsia.fuzzer.Registrar",
+            from: "parent",
+            to: "#fuzz_test_runner",
         },
         {
             event: "capability_requested",

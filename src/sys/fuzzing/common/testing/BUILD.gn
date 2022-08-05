@@ -27,7 +27,6 @@ source_set("testing") {
   ]
   public_deps = [
     "..:common",
-    "//sdk/fidl/fuchsia.url",
     "//sdk/testing/fidl:test_support",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/sync",
@@ -68,4 +67,20 @@ executable("fuzzer-bin") {
     "//src/lib/fxl",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
   ]
+}
+
+fuchsia_test_component("fuzzer") {
+  manifest = "meta/fuzzer.cml"
+  deps = [ ":fuzzer-bin" ]
+}
+
+# A standalone package containing a fake fuzzer. The normal fuzzing tools, e.g. `ffx fuzz`, should
+# work with the package produced.
+fuchsia_test_package("fuzzer-pkg") {
+  package_name = "fake-fuzzer"
+  test_components = [ ":fuzzer" ]
+  test_specs = {
+    build_rule = "fuchsia_fuzzer_package"
+  }
+  deps = [ "//src/sys/fuzzing" ]
 }

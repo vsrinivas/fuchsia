@@ -1,0 +1,58 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("fuzz") {
+  testonly = true
+  deps = [
+    ":fuzz-test-runner",
+    "//src/sys/fuzzing",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fuzz",
+    "tests",
+  ]
+}
+
+rustc_binary("bin") {
+  testonly = true
+  name = "fuzz_test_runner"
+  edition = "2021"
+  deps = [
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer-rustc",
+    "//src/sys/test_runners:lib",
+    "//src/sys/test_runners/elf:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+  ]
+
+  sources = [
+    "src/launcher.rs",
+    "src/main.rs",
+  ]
+}
+
+fuchsia_component("fuzz-test-runner-component") {
+  testonly = true
+  component_name = "fuzz-test-runner"
+  manifest = "meta/fuzz_test_runner.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("fuzz-test-runner") {
+  testonly = true
+  deps = [ ":fuzz-test-runner-component" ]
+}

@@ -65,7 +65,7 @@ class Runner {
   // Returns the current dictionary serialized into an |Input|.
   virtual Input GetDictionaryAsInput() const = 0;
 
-  // Fuzzing workflows.
+  // Fuzzing workflows corresponding to methods in `fuchsia.fuzzer.Controller`.
   virtual ZxPromise<> Configure(const OptionsPtr& options) = 0;
   virtual ZxPromise<FuzzResult> Execute(Input input) = 0;
   virtual ZxPromise<Input> Minimize(Input input) = 0;

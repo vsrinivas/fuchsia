@@ -39,6 +39,9 @@ class FakeRunner final : public Runner {
   void set_result(FuzzResult result) { result_ = result; }
   void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
+  // |Runner| methods. Since this runner does not have a "real" fuzzer engine, these use the
+  // object's local variables to simulate the responses for the various `fuchsia.fuzzer.Controller`
+  // methods, e.g. |Execute| returns whatever was passed to |set_result|.
   void AddDefaults(Options* options) override;
   __WARN_UNUSED_RESULT zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
 
@@ -56,16 +59,17 @@ class FakeRunner final : public Runner {
 
   ZxPromise<> Stop() override;
 
-  Promise<> AwaitStop();
-
   Status CollectStatus() override;
   using Runner::UpdateMonitors;
+
+  Promise<> AwaitStop();
 
  private:
   explicit FakeRunner(ExecutorPtr executor);
   ZxPromise<Artifact> Run();
 
   zx_status_t error_ = ZX_OK;
+  OptionsPtr options_;
   FuzzResult result_ = FuzzResult::NO_ERRORS;
   Input result_input_;
   Status status_;
