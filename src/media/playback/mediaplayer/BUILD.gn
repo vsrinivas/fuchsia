@@ -21,7 +21,7 @@ group("tests") {
 fuchsia_component("mediaplayer_component") {
   manifest = "meta/mediaplayer.cmx"
   component_name = "mediaplayer"
-  deps = [ ":mediaplayer_bin" ]
+  deps = [ ":mediaplayer_bin_cfv1" ]
 }
 
 fuchsia_component("mediaplayer_component_v2") {
@@ -30,20 +30,24 @@ fuchsia_component("mediaplayer_component_v2") {
   deps = [ ":mediaplayer_bin" ]
 }
 
+fuchsia_component("mediaplayer_isolate") {
+  manifest = "meta/mediaplayer_isolate.cml"
+  component_name = "mediaplayer_isolate"
+  deps = [ ":mediaplayer_bin" ]
+}
+
 fuchsia_package("mediaplayer") {
   deps = [
     ":mediaplayer_component",
     ":mediaplayer_component_v2",
+    ":mediaplayer_isolate",
   ]
 }
 
-executable("mediaplayer_bin") {
-  output_name = "mediaplayer"
-
+source_set("mediaplayer_lib") {
   sources = [
     "audio_consumer_impl.cc",
     "audio_consumer_impl.h",
-    "main.cc",
     "player_impl.cc",
     "player_impl.h",
     "source_impl.cc",
@@ -51,6 +55,76 @@ executable("mediaplayer_bin") {
   ]
 
   deps = [
+    # Some deps will have to be kept for the library, others will only
+    # be needed for the executable. For now, we'll just copy all of them.
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media.playback",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/media/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/ui/base_view",
+    "//src/media/playback/mediaplayer/core",
+    "//src/media/playback/mediaplayer/demux",
+    "//src/media/playback/mediaplayer/fidl",
+    "//src/media/playback/mediaplayer/graph",
+    "//src/media/playback/mediaplayer/graph_create",
+    "//src/media/playback/mediaplayer/process",
+    "//src/media/playback/mediaplayer/render",
+    "//src/media/playback/mediaplayer/util",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider",
+    "//zircon/third_party/uapp/dash:output_h",
+  ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+executable("mediaplayer_bin") {
+  output_name = "mediaplayer"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":mediaplayer_lib",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media.playback",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/media/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/ui/base_view",
+    "//src/media/playback/mediaplayer/core",
+    "//src/media/playback/mediaplayer/demux",
+    "//src/media/playback/mediaplayer/fidl",
+    "//src/media/playback/mediaplayer/graph",
+    "//src/media/playback/mediaplayer/graph_create",
+    "//src/media/playback/mediaplayer/process",
+    "//src/media/playback/mediaplayer/render",
+    "//src/media/playback/mediaplayer/util",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider",
+    "//zircon/third_party/uapp/dash:output_h",
+  ]
+
+  # TODO(fxb/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+executable("mediaplayer_bin_cfv1") {
+  output_name = "mediaplayer_cfv1"
+
+  sources = [ "main_for_cfv1.cc" ]
+
+  deps = [
+    ":mediaplayer_lib",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.ui.views",
@@ -109,8 +183,7 @@ executable("mediaplayer_test_util_bin") {
 }
 
 fuchsia_package_with_single_component("mediaplayer_test_util") {
-  manifest = "meta/mediaplayer_test_util.cmx"
-  testonly = true
+  manifest = "meta/mediaplayer_test_util.cml"
   deps = [ ":mediaplayer_test_util_bin" ]
 }
 
@@ -146,18 +219,18 @@ executable("mediaplayer_tests_bin") {
   ]
 
   deps = [
-    ":mediaplayer_bin",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/ui/base_view",
+    "//src/media/playback/mediaplayer:mediaplayer_lib",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -179,8 +252,9 @@ resource("webm_resource") {
   outputs = [ "data/media_test_data/sfx-opus-441.webm" ]
 }
 
-fuchsia_unittest_component("mediaplayer_tests_component") {
-  manifest = "meta/mediaplayer_tests.cmx"
+fuchsia_component("mediaplayer_tests_component") {
+  testonly = true
+  manifest = "meta/mediaplayer_tests.cml"
   deps = [ ":mediaplayer_tests_bin" ]
 }
 
@@ -220,6 +294,9 @@ fuchsia_test_package("mediaplayer_tests") {
   ]
 
   deps = [
+    ":mediaplayer_component",
+    ":mediaplayer_component_v2",
+    ":mediaplayer_isolate",
     ":mp4_resource",
     ":webm_resource",
   ]

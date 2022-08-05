@@ -1,16 +1,25 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include <fcntl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/time.h>
 
+#include <array>
+#include <memory>
+#include <optional>
 #include <queue>
+#include <string_view>
+#include <type_traits>
 
+#include <gtest/gtest.h>
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
+
+#include "lib/async-loop/cpp/loop.h"
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
@@ -21,48 +30,69 @@
 #include "src/media/playback/mediaplayer/test/fakes/fake_sysmem.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_wav_reader.h"
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
-
+#include "zircon/status.h"
 namespace media_player {
 namespace test {
-
+using namespace component_testing;
 static constexpr uint16_t kSamplesPerFrame = 2;      // Stereo
 static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
 static constexpr size_t kSinkFeedSize = 65536;
 static constexpr uint32_t kSinkFeedMaxPacketSize = 4096;
 static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
-
 constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 constexpr char kOpusFilePath[] = "/pkg/data/media_test_data/sfx-opus-441.webm";
-
 // Base class for mediaplayer tests.
-class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
+class MediaPlayerTests : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    auto services = CreateServices();
+    auto realm_builder = component_testing::RealmBuilder::Create();
 
-    // Add the service under test using its launch info.
-    fuchsia::sys::LaunchInfo launch_info{
-        "fuchsia-pkg://fuchsia.com/mediaplayer#meta/mediaplayer.cmx"};
-    zx_status_t status = services->AddServiceWithLaunchInfo(
-        std::move(launch_info), fuchsia::media::playback::Player::Name_);
-    EXPECT_EQ(ZX_OK, status);
+    realm_builder.AddChild("mediaplayer", "#meta/mediaplayer.cm");
+    realm_builder.AddLocalChild("audio", &fake_audio_);
+    realm_builder.AddLocalChild("sysmem", &fake_sysmem_);
+    realm_builder.AddLocalChild("scenic", &fake_scenic_);
 
-    services->AddService(fake_audio_.GetRequestHandler());
-    services->AddService(fake_scenic_.GetRequestHandler());
-    services->AddService(fake_sysmem_.GetRequestHandler());
+    // Route fuchsia.media.playback.Player up to the parent
+    realm_builder.AddRoute(component_testing::Route{
+        .capabilities = {component_testing::Protocol{fuchsia::media::playback::Player::Name_}},
+        .source = component_testing::ChildRef{"mediaplayer"},
+        .targets = {component_testing::ParentRef{}}});
+
+    // // Route fuchsia.media.Audio from audio child to mediaplayer child
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::media::Audio::Name_}},
+                                 .source = ChildRef{"audio"},
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.sysmem.Allocator"}},
+                                 .source = ChildRef{"sysmem"},
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.ui.scenic.Scenic"}},
+                                 .source = ChildRef{"scenic"},
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_builder.AddRoute(Route{.capabilities =
+                                     {
+                                         Protocol{"fuchsia.logger.LogSink"},
+                                         Protocol{"fuchsia.tracing.provider.Registry"},
+                                         Protocol{"fuchsia.scheduler.ProfileProvider"},
+                                         Protocol{"fuchsia.mediacodec.CodecFactory"},
+                                     },
+                                 .source = ParentRef(),
+                                 .targets = {ChildRef{"mediaplayer"}}});
 
     fake_scenic_.SetSysmemAllocator(&fake_sysmem_);
 
-    // Create the synthetic environment.
-    environment_ = CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services));
+    realm_ = std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher()));
 
-    // Instantiate the player under test.
-    environment_->ConnectToService(player_.NewRequest());
+    zx_status_t const status = realm_->Connect(player_.NewRequest());
+
+    FX_CHECK(status == ZX_OK);
 
     commands_.Init(player_.get());
 
     player_.set_error_handler([this](zx_status_t status) {
-      FX_LOGS(ERROR) << "Player connection closed, status " << status << ".";
+      FX_LOGS(ERROR) << "Player connection closed, status " << zx_status_get_string(status) << ".";
       player_connection_closed_ = true;
       QuitLoop();
     });
@@ -71,168 +101,140 @@ class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
       commands_.NotifyStatusChanged(status);
     };
   }
-
   void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
-
   zx::vmo CreateVmo(size_t size) {
     zx::vmo result;
     zx_status_t status = zx::vmo::create(size, 0, &result);
     FX_CHECK(status == ZX_OK);
     return result;
   }
-
   // Queues commands to wait for end of stream and to call |QuitLoop|.
   void QuitOnEndOfStream() {
     commands_.WaitForEndOfStream();
     commands_.Invoke([this]() { QuitLoop(); });
   }
-
   // Executes queued commands
   void Execute() {
     commands_.Execute();
     RunLoop();
   }
-
   // Creates a view.
   void CreateView() {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     player_->CreateView(std::move(view_token));
     view_holder_token_ = std::move(view_holder_token);
   }
-
   std::list<std::unique_ptr<FakeSysmem::Expectations>> BlackImageSysmemExpectations();
-
   std::list<std::unique_ptr<FakeSysmem::Expectations>> BearVideoImageSysmemExpectations();
-
   std::list<std::unique_ptr<FakeSysmem::Expectations>> BearSysmemExpectations();
-
   fuchsia::media::playback::PlayerPtr player_;
   bool player_connection_closed_ = false;
-
   FakeWavReader fake_reader_;
-  FakeAudio fake_audio_;
+  FakeAudio fake_audio_{dispatcher()};
   FakeScenic fake_scenic_;
   FakeSysmem fake_sysmem_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
   CommandQueue commands_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
-
 std::list<std::unique_ptr<FakeSysmem::Expectations>>
 MediaPlayerTests::BlackImageSysmemExpectations() {
   std::list<std::unique_ptr<FakeSysmem::Expectations>> result;
-  result
-      .push_back(std::
-                     make_unique<FakeSysmem::Expectations>(
-                         FakeSysmem::Expectations{
-
-                             .constraints_ = {fuchsia::sysmem::BufferCollectionConstraints{
-                                                  .usage =
-                                                      {
-                                                          .cpu =
-                                                              fuchsia::sysmem::cpuUsageRead |
-                                                              fuchsia::sysmem::cpuUsageReadOften |
-                                                              fuchsia::sysmem::cpuUsageWrite |
-                                                              fuchsia::sysmem::cpuUsageWriteOften,
-                                                      },
-                                                  .min_buffer_count = 1,
-                                                  .has_buffer_memory_constraints = true,
-                                                  .buffer_memory_constraints =
-                                                      {
-                                                          .min_size_bytes = 16,
-                                                          .ram_domain_supported = true,
-                                                      },
-                                                  .image_format_constraints_count = 1,
-                                                  .image_format_constraints =
-                                                      {
-                                                          fuchsia::sysmem::
-                                                              ImageFormatConstraints{
-                                                                  .pixel_format =
-                                                                      {
-                                                                          .type = fuchsia::
-                                                                              sysmem::PixelFormatType::R8G8B8A8},
-                                                                  .color_spaces_count = 1,
-                                                                  .color_space =
-                                                                      {
-                                                                          fuchsia::sysmem::
-                                                                              ColorSpace{.type =
-                                                                                             fuchsia::
-                                                                                                 sysmem::ColorSpaceType::SRGB},
-                                                                      },
-                                                                  .required_min_coded_width = 2,
-                                                                  .required_max_coded_width = 2,
-                                                                  .required_min_coded_height = 2,
-                                                                  .required_max_coded_height = 2,
-                                                              },
-                                                      },
-                                              },
-                                              fuchsia::sysmem::BufferCollectionConstraints{
-                                                  .usage =
-                                                      {
-                                                          .cpu =
-                                                              fuchsia::sysmem::cpuUsageRead |
-                                                              fuchsia::sysmem::cpuUsageReadOften,
-                                                      },
-                                                  .has_buffer_memory_constraints = true,
-                                                  .buffer_memory_constraints =
-                                                      {
-                                                          .ram_domain_supported = true,
-                                                      },
-                                              }},
-                             .collection_info_ =
-                                 {
-                                     .buffer_count = 2,
-                                     .settings =
-                                         {
-                                             .buffer_settings =
-                                                 {
-                                                     .size_bytes = 128,
-                                                     .coherency_domain =
-                                                         fuchsia::sysmem::CoherencyDomain::RAM,
-                                                     .heap = fuchsia::sysmem::HeapType::SYSTEM_RAM,
-                                                 },
-                                             .has_image_format_constraints = true,
-                                             .image_format_constraints =
-                                                 {
-                                                     .pixel_format =
-                                                         {.type =
-                                                              fuchsia::sysmem::PixelFormatType::
-                                                                  R8G8B8A8},
-                                                     .color_spaces_count = 1,
-                                                     .color_space =
-                                                         {fuchsia::sysmem::ColorSpace{.type =
-                                                                                          fuchsia::sysmem::ColorSpaceType::SRGB}},
-                                                     .min_coded_width = 0,
-                                                     .max_coded_width = 16384,
-                                                     .min_coded_height = 0,
-                                                     .max_coded_height = 16384,
-                                                     .min_bytes_per_row = 4,
-                                                     .max_bytes_per_row = 4294967295,
-                                                     .bytes_per_row_divisor = 64,
-                                                     .start_offset_divisor = 4,
-                                                     .required_min_coded_width = 2,
-                                                     .required_max_coded_width = 2,
-                                                     .required_min_coded_height = 2,
-                                                     .required_max_coded_height = 2,
-                                                     .required_min_bytes_per_row = 4294967295,
-                                                     .required_max_bytes_per_row = 0,
-                                                 }},
-                                     .buffers =
-                                         {
-                                             fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
-                                             fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
-                                         },
-                                 }}));
-
+  result.push_back(
+      std::make_unique<FakeSysmem::Expectations>(FakeSysmem::Expectations{
+          .constraints_ =
+              {fuchsia::sysmem::BufferCollectionConstraints{
+                   .usage =
+                       {
+                           .cpu =
+                               fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften |
+                               fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften,
+                       },
+                   .min_buffer_count = 1,
+                   .has_buffer_memory_constraints = true,
+                   .buffer_memory_constraints =
+                       {
+                           .min_size_bytes = 16,
+                           .ram_domain_supported =
+                               true,
+                       },
+                   .image_format_constraints_count = 1,
+                   .image_format_constraints =
+                       {
+                           fuchsia::sysmem::ImageFormatConstraints{
+                               .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8},
+                               .color_spaces_count = 1,
+                               .color_space =
+                                   {
+                                       fuchsia::sysmem::ColorSpace{
+                                           .type = fuchsia::sysmem::ColorSpaceType::SRGB},
+                                   },
+                               .required_min_coded_width = 2,
+                               .required_max_coded_width = 2,
+                               .required_min_coded_height = 2,
+                               .required_max_coded_height = 2,
+                           },
+                       },
+               },
+               fuchsia::sysmem::BufferCollectionConstraints{
+                   .usage =
+                       {
+                           .cpu =
+                               fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften,
+                       },
+                   .has_buffer_memory_constraints = true,
+                   .buffer_memory_constraints =
+                       {
+                           .ram_domain_supported = true,
+                       },
+               }},
+          .collection_info_ =
+              {
+                  .buffer_count = 2,
+                  .settings = {.buffer_settings =
+                                   {
+                                       .size_bytes = 128,
+                                       .coherency_domain = fuchsia::sysmem::CoherencyDomain::RAM,
+                                       .heap = fuchsia::sysmem::HeapType::SYSTEM_RAM,
+                                   },
+                               .has_image_format_constraints = true,
+                               .image_format_constraints =
+                                   {
+                                       .pixel_format =
+                                           {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8},
+                                       .color_spaces_count = 1,
+                                       .color_space =
+                                           {
+                                               fuchsia::sysmem::ColorSpace{
+                                                   .type = fuchsia::sysmem::ColorSpaceType::SRGB}},
+                                       .min_coded_width = 0,
+                                       .max_coded_width = 16384,
+                                       .min_coded_height = 0,
+                                       .max_coded_height = 16384,
+                                       .min_bytes_per_row = 4,
+                                       .max_bytes_per_row = 4294967295,
+                                       .bytes_per_row_divisor = 64,
+                                       .start_offset_divisor = 4,
+                                       .required_min_coded_width = 2,
+                                       .required_max_coded_width = 2,
+                                       .required_min_coded_height = 2,
+                                       .required_max_coded_height = 2,
+                                       .required_min_bytes_per_row = 4294967295,
+                                       .required_max_bytes_per_row = 0,
+                                   }},
+                  .buffers =
+                      {
+                          fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
+                          fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
+                      },
+              }}));
   return result;
 }
-
 std::list<std::unique_ptr<FakeSysmem::Expectations>>
 MediaPlayerTests::BearVideoImageSysmemExpectations() {
   std::list<std::unique_ptr<FakeSysmem::Expectations>> result;
-
   // Video buffers
   result.push_back(std::make_unique<FakeSysmem::Expectations>(FakeSysmem::Expectations{
       .constraints_ =
@@ -325,16 +327,13 @@ MediaPlayerTests::BearVideoImageSysmemExpectations() {
                       fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(1417216)},
                   },
           }}));
-
   return result;
 }
-
 std::list<std::unique_ptr<FakeSysmem::Expectations>> MediaPlayerTests::BearSysmemExpectations() {
   auto result = BlackImageSysmemExpectations();
   result.splice(result.end(), BearVideoImageSysmemExpectations());
   return result;
 }
-
 // Play a synthetic WAV file from beginning to end.
 TEST_F(MediaPlayerTests, PlayWav) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
@@ -353,23 +352,18 @@ TEST_F(MediaPlayerTests, PlayWav) {
                                         {13312, 4096, 0x812532fedd313800},
                                         {14336, 4096, 0xf7960542f1991800},
                                         {15360, 4052, 0x7308a9824acbd5ea}});
-
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
   fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
-
   fuchsia::media::playback::SourcePtr source;
   player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
   player_->SetSource(std::move(source));
-
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
 }
-
 // Play a synthetic WAV file from beginning to end, delaying the retirement of
 // the last packet to simulate delayed end-of-stream recognition.
 // TODO(fxbug.dev/35616): Flaking.
@@ -390,25 +384,19 @@ TEST_F(MediaPlayerTests, PlayWavDelayEos) {
                                         {13312, 4096, 0x812532fedd313800},
                                         {14336, 4096, 0xf7960542f1991800},
                                         {15360, 4052, 0x7308a9824acbd5ea}});
-
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
   fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
-
   fuchsia::media::playback::SourcePtr source;
   player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
   player_->SetSource(std::move(source));
-
   fake_audio_.renderer().DelayPacketRetirement(15360);
-
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
 }
-
 // Play a synthetic WAV file from beginning to end, retaining packets. This
 // tests the ability of the player to handle the case in which the audio
 // renderer is holding on to packets for too long.
@@ -448,39 +436,29 @@ TEST_F(MediaPlayerTests, PlayWavRetainPackets) {
       {61440, 4096, 0xb6f7990ab1991800}, {62464, 4096, 0x812532fedd313800},
       {63488, 2004, 0xfbff1847deca6dea},
   });
-
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
   fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
-
   // Need more than 1s of data.
   fake_reader_.SetSize(256000);
-
   fuchsia::media::playback::SourcePtr source;
   player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
   player_->SetSource(std::move(source));
-
   commands_.Play();
-
   // Wait a bit.
   commands_.Sleep(zx::sec(2));
-
   commands_.Invoke([this]() {
     // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
     // has been stalled by the renderer retaining packets.
     EXPECT_FALSE(commands_.at_end_of_stream());
-
     // Retire packets.
     fake_audio_.renderer().SetRetainPackets(false);
   });
-
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
 }
-
 // Play a short synthetic WAV file from beginning to end, retaining packets. This
 // tests the ability of the player to handle the case in which the audio
 // renderer not retiring packets, but all of the audio content fits into the
@@ -503,36 +481,27 @@ TEST_F(MediaPlayerTests, PlayShortWavRetainPackets) {
                                         {13312, 4096, 0x812532fedd313800},
                                         {14336, 4096, 0xf7960542f1991800},
                                         {15360, 4052, 0x7308a9824acbd5ea}});
-
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
   fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
       fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
-
   fuchsia::media::playback::SourcePtr source;
   player_->CreateReaderSource(std::move(fake_reader_ptr), source.NewRequest());
   player_->SetSource(std::move(source));
-
   commands_.Play();
-
   // Wait a bit.
   commands_.Sleep(zx::sec(2));
-
   commands_.Invoke([this]() {
     // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
     // has been stalled by the renderer retaining packets.
     EXPECT_FALSE(commands_.at_end_of_stream());
-
     // Retire packets.
     fake_audio_.renderer().SetRetainPackets(false);
   });
-
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
 }
-
 // Play an LPCM elementary stream using |ElementarySource|
 TEST_F(MediaPlayerTests, ElementarySource) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
@@ -551,10 +520,8 @@ TEST_F(MediaPlayerTests, ElementarySource) {
                                         {13312, 4096, 0x56d673aba3bf0000},
                                         {14336, 4096, 0x5ed87962e3bf0000},
                                         {15360, 4096, 0x66027b4aa3bf0000}});
-
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(0, false, false, nullptr, elementary_source.NewRequest());
-
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
@@ -562,7 +529,6 @@ TEST_F(MediaPlayerTests, ElementarySource) {
   fuchsia::media::StreamType stream_type;
   stream_type.medium_specific.set_audio(std::move(audio_stream_type));
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
-
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
@@ -570,7 +536,6 @@ TEST_F(MediaPlayerTests, ElementarySource) {
     sink_connection_closed_ = true;
     QuitLoop();
   });
-
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
@@ -579,23 +544,18 @@ TEST_F(MediaPlayerTests, ElementarySource) {
   // TODO(dalesat): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
-
   sink_feeder_.Init(std::move(sink), kSinkFeedSize, kSamplesPerFrame * sizeof(int16_t),
                     kSinkFeedMaxPacketSize, kSinkFeedMaxPacketCount);
-
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_FALSE(sink_connection_closed_);
 }
-
 // Opens an SBC elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
-
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
@@ -603,7 +563,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   fuchsia::media::StreamType stream_type;
   stream_type.medium_specific.set_audio(std::move(audio_stream_type));
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_SBC;
-
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
@@ -611,7 +570,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
     sink_connection_closed_ = true;
     QuitLoop();
   });
-
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
@@ -620,19 +578,15 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   // TODO(fxbug.dev/7664): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
-
   commands_.WaitForAudioConnected();
   commands_.Invoke([this]() { QuitLoop(); });
-
   Execute();
   EXPECT_FALSE(sink_connection_closed_);
 }
-
 // Opens an AAC elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
-
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
@@ -640,7 +594,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   fuchsia::media::StreamType stream_type;
   stream_type.medium_specific.set_audio(std::move(audio_stream_type));
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_AAC;
-
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
@@ -648,7 +601,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
     sink_connection_closed_ = true;
     QuitLoop();
   });
-
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
@@ -657,19 +609,15 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   // TODO(fxbug.dev/7664): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
-
   commands_.WaitForAudioConnected();
   commands_.Invoke([this]() { QuitLoop(); });
-
   Execute();
   EXPECT_FALSE(sink_connection_closed_);
 }
-
 // Opens an AACLATM elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
-
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
@@ -677,7 +625,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
   fuchsia::media::StreamType stream_type;
   stream_type.medium_specific.set_audio(std::move(audio_stream_type));
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_AACLATM;
-
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
@@ -685,7 +632,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
     sink_connection_closed_ = true;
     QuitLoop();
   });
-
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
@@ -694,19 +640,15 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
   // TODO(fxbug.dev/7664): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
-
   commands_.WaitForAudioConnected();
   commands_.Invoke([this]() { QuitLoop(); });
-
   Execute();
   EXPECT_FALSE(sink_connection_closed_);
 }
-
 // Tries to open a bogus elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
-
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
@@ -714,7 +656,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   fuchsia::media::StreamType stream_type;
   stream_type.medium_specific.set_audio(std::move(audio_stream_type));
   stream_type.encoding = "bogus encoding";
-
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
@@ -722,7 +663,6 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
     sink_connection_closed_ = true;
     QuitLoop();
   });
-
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
@@ -731,18 +671,14 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   // TODO(fxbug.dev/7664): Do this safely once is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
-
   commands_.WaitForProblem();
   commands_.Invoke([this]() { QuitLoop(); });
-
   Execute();
   EXPECT_FALSE(sink_connection_closed_);
 }
-
 // Play a real A/V file from beginning to end.
 TEST_F(MediaPlayerTests, PlayBear) {
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
-
   fake_audio_.renderer().ExpectPackets(
       {{1024, 8192, 0x0a68b3995a50a648},   {2048, 8192, 0x93bf522ee77e9d50},
        {3072, 8192, 0x89cc3bcedd6034be},   {4096, 8192, 0x40931af9f379dd00},
@@ -863,7 +799,6 @@ TEST_F(MediaPlayerTests, PlayBear) {
        {115712, 8192, 0x983976476c930d30}, {116736, 8192, 0xa597cd2125da8100},
        {117760, 8192, 0xa597cd2125da8100}, {118784, 8192, 0xa597cd2125da8100},
        {119808, 8192, 0xa597cd2125da8100}, {120832, 8192, 0xa597cd2125da8100}});
-
   fake_scenic_.session().SetExpectations(
       1,
       {
@@ -929,23 +864,19 @@ TEST_F(MediaPlayerTests, PlayBear) {
           {2715712708, 944640, 0x2d96bc09b6303a4b}, {2749079375, 944640, 0x2cdaab788c93a466},
           {2782446042, 944640, 0x979b90a096e76dbb}, {2815812708, 944640, 0x851ccb01ea035f4e},
       });
-
   CreateView();
   commands_.SetFile(kBearFilePath);
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.create_audio_renderer_called());
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }  // namespace test
-
 // Play a real A/V file from beginning to end with no audio.
 TEST_F(MediaPlayerTests, PlayBearSilent) {
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
-
   fake_scenic_.session().SetExpectations(
       1,
       {
@@ -1011,18 +942,15 @@ TEST_F(MediaPlayerTests, PlayBearSilent) {
           {2715712708, 944640, 0x2d96bc09b6303a4b}, {2749079375, 944640, 0x2cdaab788c93a466},
           {2782446042, 944640, 0x979b90a096e76dbb}, {2815812708, 944640, 0x851ccb01ea035f4e},
       });
-
   CreateView();
   commands_.SetFile(kBearFilePath, true);  // true -> silent
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_FALSE(fake_audio_.create_audio_renderer_called());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }  // namespace test
-
 // Play an opus file from beginning to end.
 TEST_F(MediaPlayerTests, PlayOpus) {
   // The decoder works a bit differently on x64 vs arm64, hence the two lists here.
@@ -1056,74 +984,56 @@ TEST_F(MediaPlayerTests, PlayOpus) {
                                         {10872, 1920, 0x661cc8ec834fb30a},
                                         {11832, 1920, 0x05fd64442f53c5cc},
                                         {12792, 1920, 0x3e2a98426c8680d0}});
-
   commands_.SetFile(kOpusFilePath);
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
 }
-
 // Play a real A/V file from beginning to end, retaining audio packets. This
 // tests the ability of the player to handle the case in which the audio
 // renderer is holding on to packets for too long.
 TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
-
   CreateView();
   fake_audio_.renderer().SetRetainPackets(true);
-
   commands_.SetFile(kBearFilePath);
   commands_.Play();
-
   // Wait a bit.
   commands_.Sleep(zx::sec(2));
-
   commands_.Invoke([this]() {
     // We should not be at end-of-stream in spite of waiting long enough, because the pipeline
     // has been stalled by the renderer retaining packets.
     EXPECT_FALSE(commands_.at_end_of_stream());
-
     // Retire packets.
     fake_audio_.renderer().SetRetainPackets(false);
   });
-
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }
-
 // Regression test for fxbug.dev/28417.
 TEST_F(MediaPlayerTests, RegressionTestUS544) {
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
-
   CreateView();
   commands_.SetFile(kBearFilePath);
-
   // Play for two seconds and pause.
   commands_.Play();
   commands_.WaitForPosition(zx::sec(2));
   commands_.Pause();
-
   // Wait a bit.
   commands_.Sleep(zx::sec(2));
-
   // Seek to the beginning and resume playing.
   commands_.Seek(zx::sec(0));
   commands_.Play();
-
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }
-
 // Regression test for QA-539.
 // Verifies that the player can play two files in a row.
 TEST_F(MediaPlayerTests, RegressionTestQA539) {
@@ -1131,26 +1041,20 @@ TEST_F(MediaPlayerTests, RegressionTestQA539) {
   // Expect the video image buffers to be allocated again.
   sysmem_expectations.splice(sysmem_expectations.end(), BearVideoImageSysmemExpectations());
   fake_sysmem_.SetExpectations(std::move(sysmem_expectations));
-
   CreateView();
   commands_.SetFile(kBearFilePath);
-
   // Play the file to the end.
   commands_.Play();
   commands_.WaitForEndOfStream();
-
   // Reload the file.
   commands_.SetFile(kBearFilePath);
-
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }
-
 // Play an LPCM elementary stream using |ElementarySource|. We delay calling SetSource to ensure
 // that the SimpleStreamSink defers taking any action until it's properly connected.
 TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
@@ -1170,10 +1074,8 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
                                         {13312, 4096, 0x56d673aba3bf0000},
                                         {14336, 4096, 0x5ed87962e3bf0000},
                                         {15360, 4096, 0x66027b4aa3bf0000}});
-
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(0, false, false, nullptr, elementary_source.NewRequest());
-
   fuchsia::media::AudioStreamType audio_stream_type;
   audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
@@ -1181,7 +1083,6 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
   fuchsia::media::StreamType stream_type;
   stream_type.medium_specific.set_audio(std::move(audio_stream_type));
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
-
   fuchsia::media::SimpleStreamSinkPtr sink;
   elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
@@ -1189,10 +1090,8 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
     sink_connection_closed_ = true;
     QuitLoop();
   });
-
   sink_feeder_.Init(std::move(sink), kSinkFeedSize, kSamplesPerFrame * sizeof(int16_t),
                     kSinkFeedMaxPacketSize, kSinkFeedMaxPacketCount);
-
   // Here we're upcasting from a
   // |fidl::InterfaceHandle<fuchsia::media::playback::ElementarySource>| to a
   // |fidl::InterfaceHandle<fuchsia::media::playback::Source>| the only way we
@@ -1201,36 +1100,29 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
   // TODO(dalesat): Do this safely once fxbug.dev/7664 is fixed.
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
-
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_FALSE(sink_connection_closed_);
 }
-
 // Play a real A/V file from beginning to end and rate 2.0.
 TEST_F(MediaPlayerTests, PlayBear2) {
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
-
   // Only a few packets will be seen by audio renderer, and none of them would be actually rendered
   // since Play won't be called due to 2.0 being an unsupported rate.
-
   // ARM64 hashes
   fake_audio_.renderer().ExpectPackets({{1024, 8192, 0x0a68b3995a50a648},
                                         {2048, 8192, 0x93bf522ee77e9d50},
                                         {3072, 8192, 0x89cc3bcedd6034be},
                                         {4096, 8192, 0x40931af9f379dd00},
                                         {5120, 8192, 0x79dc4cfe61738988}});
-
   // X64 hashes
   fake_audio_.renderer().ExpectPackets({{1024, 8192, 0x0a278d9cb22e24c4},
                                         {2048, 8192, 0xcac15dcabac1d262},
                                         {3072, 8192, 0x8e9eab619d7bc6a4},
                                         {4096, 8192, 0x71adf7d7c8ddda7c},
                                         {5120, 8192, 0x0b3e51a900e6b0b6}});
-
   fake_scenic_.session().SetExpectations(
       1,
       {
@@ -1296,18 +1188,15 @@ TEST_F(MediaPlayerTests, PlayBear2) {
           {1397368500, 944640, 0x2d96bc09b6303a4b}, {1414051833, 944640, 0x2cdaab788c93a466},
           {1430735167, 944640, 0x979b90a096e76dbb}, {1447418500, 944640, 0x851ccb01ea035f4e},
       });
-
   CreateView();
   commands_.SetFile(kBearFilePath);
   commands_.SetPlaybackRate(2.0);
   commands_.Play();
   QuitOnEndOfStream();
-
   Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
   EXPECT_TRUE(fake_sysmem_.expected());
 }
-
 }  // namespace test
 }  // namespace media_player
