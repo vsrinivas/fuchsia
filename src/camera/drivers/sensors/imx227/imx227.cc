@@ -143,13 +143,13 @@ zx_status_t Imx227Device::Write16(uint16_t addr, uint16_t val) {
   TRACE_DURATION("camera", "Imx227Device::Write16", "addr", addr, "val", val);
   // Convert the arguments to big endian to match the register spec.
   // First two bytes are the address, third and fourth are the value to be written.
-  addr = htobe16(addr);
-  val = htobe16(val);
+  auto reg_addr = htobe16(addr);
+  auto reg_val = htobe16(val);
   std::array<uint8_t, 4> buf;
-  buf[0] = static_cast<uint8_t>(addr & kByteMask);
-  buf[1] = static_cast<uint8_t>((addr >> kByteShift) & kByteMask);
-  buf[2] = static_cast<uint8_t>(val & kByteMask);
-  buf[3] = static_cast<uint8_t>((val >> kByteShift) & kByteMask);
+  buf[0] = static_cast<uint8_t>(reg_addr & kByteMask);
+  buf[1] = static_cast<uint8_t>((reg_addr >> kByteShift) & kByteMask);
+  buf[2] = static_cast<uint8_t>(reg_val & kByteMask);
+  buf[3] = static_cast<uint8_t>((reg_val >> kByteShift) & kByteMask);
   auto status = i2c_.WriteSync(buf.data(), buf.size());
   if (status != ZX_OK) {
     zxlogf(ERROR,
@@ -164,10 +164,10 @@ zx_status_t Imx227Device::Write8(uint16_t addr, uint8_t val) {
   TRACE_DURATION("camera", "Imx227Device::Write8", "addr", addr, "val", val);
   // Convert the arguments to big endian to match the register spec.
   // First two bytes are the address, third one is the value to be written.
-  addr = htobe16(addr);
+  auto reg_addr = htobe16(addr);
   std::array<uint8_t, 3> buf;
-  buf[0] = static_cast<uint8_t>(addr & kByteMask);
-  buf[1] = static_cast<uint8_t>((addr >> kByteShift) & kByteMask);
+  buf[0] = static_cast<uint8_t>(reg_addr & kByteMask);
+  buf[1] = static_cast<uint8_t>((reg_addr >> kByteShift) & kByteMask);
   buf[2] = val;
 
   auto status = i2c_.WriteSync(buf.data(), buf.size());
