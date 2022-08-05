@@ -6,6 +6,7 @@ use fuchsia_zircon as zx;
 use std::sync::Arc;
 
 use crate::fs::{buffers::*, socket::*, *};
+use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
@@ -58,6 +59,16 @@ impl FileOps for SocketFile {
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents {
         self.socket.query_events(current_task)
+    }
+
+    fn ioctl(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        request: u32,
+        user_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        self.socket.ioctl(current_task, request, user_addr)
     }
 
     fn close(&self, _file: &FileObject) {

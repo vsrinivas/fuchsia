@@ -9,6 +9,7 @@ use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::lock::Mutex;
+use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::*;
 use crate::types::*;
 
@@ -642,6 +643,24 @@ impl SocketOps for UnixSocket {
             _ => return error!(ENOPROTOOPT),
         };
         Ok(opt_value)
+    }
+
+    fn ioctl(
+        &self,
+        socket: &Socket,
+        current_task: &CurrentTask,
+        request: u32,
+        user_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        match request {
+            FIONREAD if socket.socket_type == SocketType::Stream => {
+                let length: i32 =
+                    self.lock().messages.len().try_into().map_err(|_| errno!(EINVAL))?;
+                current_task.mm.write_object(UserRef::<i32>::new(user_addr), &length)?;
+                Ok(SUCCESS)
+            }
+            _ => default_ioctl(current_task, request),
+        }
     }
 }
 

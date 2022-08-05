@@ -11,6 +11,7 @@ use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::lock::Mutex;
+use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::as_any::*;
 use crate::types::*;
@@ -165,6 +166,17 @@ pub trait SocketOps: Send + Sync + AsAny {
     fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {
         error!(ENOPROTOOPT)
     }
+
+    /// Implements ioctl.
+    fn ioctl(
+        &self,
+        _socket: &Socket,
+        current_task: &CurrentTask,
+        request: u32,
+        _address: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        default_ioctl(current_task, request)
+    }
 }
 
 /// A `Socket` represents one endpoint of a bidirectional communication channel.
@@ -299,6 +311,15 @@ impl Socket {
 
     pub fn send_timeout(&self) -> Option<zx::Duration> {
         self.state.lock().send_timeout
+    }
+
+    pub fn ioctl(
+        &self,
+        current_task: &CurrentTask,
+        request: u32,
+        address: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        self.ops.ioctl(self, current_task, request, address)
     }
 
     pub fn bind(&self, socket_address: SocketAddress) -> Result<(), Errno> {
