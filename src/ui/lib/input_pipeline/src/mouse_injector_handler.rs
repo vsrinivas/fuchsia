@@ -12,6 +12,7 @@ use {
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
     fidl::endpoints::create_proxy,
+    fidl_fuchsia_input_interaction_observation as interaction_observation,
     fidl_fuchsia_input_report::Range,
     fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fidl_fuchsia_ui_pointerinjector_configuration as pointerinjector_config,
@@ -46,6 +47,9 @@ pub struct MouseInjectorHandler {
 
     /// The FIDL proxy used to get configuration details for pointer injection.
     configuration_proxy: pointerinjector_config::SetupProxy,
+
+    /// The FIDL proxy used to report mouse activity to the activity service.
+    aggregator_proxy: interaction_observation::AggregatorProxy,
 }
 
 struct MutableState {
@@ -109,6 +113,11 @@ impl InputHandler for MouseInjectorHandler {
                     .await
                 {
                     fx_log_err!("send_event_to_scenic failed: {}", e);
+                }
+
+                // Report the event to the Activity Service.
+                if let Err(e) = self.report_mouse_activity(event_time).await {
+                    fx_log_err!("report_mouse_activity failed: {}", e);
                 }
 
                 // Consume the input event.
@@ -176,8 +185,10 @@ impl MouseInjectorHandler {
     ) -> Result<Rc<Self>, Error> {
         let configuration_proxy = connect_to_protocol::<pointerinjector_config::SetupMarker>()?;
         let injector_registry_proxy = connect_to_protocol::<pointerinjector::RegistryMarker>()?;
+        let aggregator_proxy = connect_to_protocol::<interaction_observation::AggregatorMarker>()?;
 
         Self::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             display_size,
@@ -206,8 +217,10 @@ impl MouseInjectorHandler {
         display_size: Size,
         cursor_message_sender: Sender<CursorMessage>,
     ) -> Result<Rc<Self>, Error> {
+        let aggregator_proxy = connect_to_protocol::<interaction_observation::AggregatorMarker>()?;
         let injector_registry_proxy = connect_to_protocol::<pointerinjector::RegistryMarker>()?;
         Self::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             display_size,
@@ -223,6 +236,7 @@ impl MouseInjectorHandler {
     /// fasync::Task::local(handler.clone().watch_viewport()).detach();
     ///
     /// # Parameters
+    /// - `aggregator_proxy`: A proxy used to report to the activity service
     /// - `configuration_proxy`: A proxy used to get configuration details for pointer
     ///    injection.
     /// - `injector_registry_proxy`: A proxy used to register new pointer injectors.
@@ -232,6 +246,7 @@ impl MouseInjectorHandler {
     /// # Errors
     /// If unable to get injection view refs from `configuration_proxy`.
     async fn new_handler(
+        aggregator_proxy: interaction_observation::AggregatorProxy,
         configuration_proxy: pointerinjector_config::SetupProxy,
         injector_registry_proxy: pointerinjector::RegistryProxy,
         display_size: Size,
@@ -257,6 +272,7 @@ impl MouseInjectorHandler {
             max_position: Position { x: display_size.width, y: display_size.height },
             injector_registry_proxy,
             configuration_proxy,
+            aggregator_proxy,
         });
 
         Ok(handler)
@@ -532,6 +548,11 @@ impl MouseInjectorHandler {
         }
     }
 
+    /// Reports the given event_time to the activity service.
+    async fn report_mouse_activity(&self, event_time: zx::Time) -> Result<(), fidl::Error> {
+        self.aggregator_proxy.report_discrete_activity(event_time.into_nanos()).await
+    }
+
     /// Watches for viewport updates from the scene manager.
     pub async fn watch_viewport(self: Rc<Self>) {
         let configuration_proxy = self.configuration_proxy.clone();
@@ -593,6 +614,7 @@ mod tests {
         maplit::hashmap,
         pretty_assertions::assert_eq,
         std::collections::HashSet,
+        std::ops::Add,
         test_case::test_case,
     };
 
@@ -751,6 +773,29 @@ mod tests {
         }
     }
 
+    /// Handles |fidl_fuchsia_interaction_observation::AggregatorRequest|s.
+    async fn handle_aggregator_request_stream(
+        mut stream: interaction_observation::AggregatorRequestStream,
+        expected_times: Vec<i64>,
+    ) {
+        for expected_time in expected_times {
+            if let Some(request) = stream.next().await {
+                match request {
+                    Ok(interaction_observation::AggregatorRequest::ReportDiscreteActivity {
+                        event_time,
+                        responder,
+                    }) => {
+                        assert_eq!(event_time, expected_time);
+                        responder.send().expect("failed to respond");
+                    }
+                    other => panic!("expected aggregator report request, but got {:?}", other),
+                };
+            } else {
+                panic!("AggregatorRequestStream failed.");
+            }
+        }
+    }
+
     // Creates a |pointerinjector::Viewport|.
     fn create_viewport(min: f32, max: f32) -> pointerinjector::Viewport {
         pointerinjector::Viewport {
@@ -819,6 +864,9 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
         // Set up fidl streams.
+        let (aggregator_proxy, _) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -829,6 +877,7 @@ mod tests {
 
         // Create mouse handler.
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -952,6 +1001,9 @@ mod tests {
         expected_relative_motion: [f32; 2],
     ) {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -964,6 +1016,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1017,10 +1070,15 @@ mod tests {
             injector_stream_sender,
         );
         let device_fut = handle_device_request_stream(injector_stream_receiver, expected_events);
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![event_time.into_nanos()],
+        );
 
         // Await all futures concurrently. If this completes, then the mouse event was handled and
         // matches `expected_events`.
-        let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
+        let (handle_result, _, _, _) =
+            futures::join!(handle_event_fut, registry_fut, device_fut, aggregator_fut);
         match receiver.next().await {
             Some(CursorMessage::SetPosition(position)) => {
                 pretty_assertions::assert_eq!(position, expected_position);
@@ -1045,6 +1103,9 @@ mod tests {
         const DEVICE_ID: u32 = 1;
 
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1057,6 +1118,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1138,10 +1200,15 @@ mod tests {
             injector_stream_sender,
         );
         let device_fut = handle_device_request_stream(injector_stream_receiver, expected_events);
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![event_time.into_nanos()],
+        );
 
         // Await all futures concurrently. If this completes, then the mouse event was handled and
         // matches `expected_events`.
-        let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
+        let (handle_result, _, _, _) =
+            futures::join!(handle_event_fut, registry_fut, device_fut, aggregator_fut);
         match receiver.next().await {
             Some(CursorMessage::SetPosition(position)) => {
                 assert_eq!(position, expected_position);
@@ -1175,6 +1242,9 @@ mod tests {
         pressed_buttons: Vec<mouse_binding::MouseButton>,
     ) {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1187,6 +1257,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1243,10 +1314,15 @@ mod tests {
             injector_stream_sender,
         );
         let device_fut = handle_device_request_stream(injector_stream_receiver, expected_events);
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![event_time.into_nanos()],
+        );
 
         // Await all futures concurrently. If this completes, then the mouse event was handled and
         // matches `expected_events`.
-        let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
+        let (handle_result, _, _, _) =
+            futures::join!(handle_event_fut, registry_fut, device_fut, aggregator_fut);
         match receiver.next().await {
             Some(CursorMessage::SetPosition(position)) => {
                 pretty_assertions::assert_eq!(position, expected_position);
@@ -1268,6 +1344,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn down_up_event() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1282,6 +1361,7 @@ mod tests {
         // update for every input event being sent.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(2);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1291,7 +1371,8 @@ mod tests {
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
         let cursor_location = mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 });
-        let event_time = zx::Time::get_monotonic();
+        let event_time1 = zx::Time::get_monotonic();
+        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
 
         let event1 = create_mouse_event(
             cursor_location,
@@ -1300,7 +1381,7 @@ mod tests {
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
-            event_time,
+            event_time1,
             &DESCRIPTOR,
         );
 
@@ -1311,7 +1392,7 @@ mod tests {
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::new(),
-            event_time,
+            event_time2,
             &DESCRIPTOR,
         );
 
@@ -1328,9 +1409,15 @@ mod tests {
             injector_registry_request_stream,
             injector_stream_sender,
         );
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![event_time1.into_nanos(), event_time2.into_nanos()],
+        );
 
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
+        let _aggregator_task = fasync::Task::local(aggregator_fut);
+
         mouse_handler.clone().handle_input_event(event1).await;
         assert_eq!(
             injector_stream_receiver.next().await.map(|events| events.concat()),
@@ -1342,7 +1429,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
@@ -1351,7 +1438,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 )
             ])
         );
@@ -1367,7 +1454,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
-                event_time,
+                event_time2,
             )])
         );
 
@@ -1395,6 +1482,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn down_down_up_up_event() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1409,6 +1499,7 @@ mod tests {
         // update for every input event being sent.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(4);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1418,7 +1509,10 @@ mod tests {
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
         let cursor_location = mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 });
-        let event_time = zx::Time::get_monotonic();
+        let event_time1 = zx::Time::get_monotonic();
+        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time3 = event_time2.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time4 = event_time3.add(fuchsia_zircon::Duration::from_micros(1));
 
         let event1 = create_mouse_event(
             cursor_location,
@@ -1427,7 +1521,7 @@ mod tests {
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
-            event_time,
+            event_time1,
             &DESCRIPTOR,
         );
         let event2 = create_mouse_event(
@@ -1437,7 +1531,7 @@ mod tests {
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![2]),
             HashSet::from_iter(vec![1, 2]),
-            event_time,
+            event_time2,
             &DESCRIPTOR,
         );
         let event3 = create_mouse_event(
@@ -1447,7 +1541,7 @@ mod tests {
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![2]),
-            event_time,
+            event_time3,
             &DESCRIPTOR,
         );
         let event4 = create_mouse_event(
@@ -1457,7 +1551,7 @@ mod tests {
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![2]),
             HashSet::new(),
-            event_time,
+            event_time4,
             &DESCRIPTOR,
         );
 
@@ -1474,9 +1568,19 @@ mod tests {
             injector_registry_request_stream,
             injector_stream_sender,
         );
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![
+                event_time1.into_nanos(),
+                event_time2.into_nanos(),
+                event_time3.into_nanos(),
+                event_time4.into_nanos(),
+            ],
+        );
 
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
+        let _aggregator_task = fasync::Task::local(aggregator_fut);
         mouse_handler.clone().handle_input_event(event1).await;
         assert_eq!(
             injector_stream_receiver.next().await.map(|events| events.concat()),
@@ -1488,7 +1592,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
@@ -1497,7 +1601,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 )
             ])
         );
@@ -1509,7 +1613,7 @@ mod tests {
             .await
             .map(|events| events.concat())
             .expect("Failed to receive pointer sample event.");
-        let expected_event_time: i64 = event_time.into_nanos();
+        let expected_event_time: i64 = event_time2.into_nanos();
         assert_eq!(pointer_sample_event2.len(), 1);
 
         // We must break this event result apart for assertions since the
@@ -1552,7 +1656,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
-                event_time,
+                event_time3,
             )])
         );
 
@@ -1567,7 +1671,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
-                event_time,
+                event_time4,
             )])
         );
 
@@ -1587,6 +1691,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn down_move_up_event() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1601,6 +1708,7 @@ mod tests {
         // update for every input event being sent.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(3);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1609,7 +1717,9 @@ mod tests {
         let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
         let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
 
-        let event_time = zx::Time::get_monotonic();
+        let event_time1 = zx::Time::get_monotonic();
+        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time3 = event_time2.add(fuchsia_zircon::Duration::from_micros(1));
         let zero_position = Position { x: 0.0, y: 0.0 };
         let expected_position = Position { x: 10.0, y: 15.0 };
         let expected_relative_motion = [10.0, 15.0];
@@ -1620,7 +1730,7 @@ mod tests {
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
-            event_time,
+            event_time1,
             &DESCRIPTOR,
         );
         let event2 = create_mouse_event(
@@ -1636,7 +1746,7 @@ mod tests {
             mouse_binding::MousePhase::Move,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
-            event_time,
+            event_time2,
             &DESCRIPTOR,
         );
         let event3 = create_mouse_event(
@@ -1649,7 +1759,7 @@ mod tests {
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![]),
-            event_time,
+            event_time3,
             &DESCRIPTOR,
         );
 
@@ -1664,9 +1774,14 @@ mod tests {
             injector_registry_request_stream,
             injector_stream_sender,
         );
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![event_time1.into_nanos(), event_time2.into_nanos(), event_time3.into_nanos()],
+        );
 
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
+        let _aggregator_task = fasync::Task::local(aggregator_fut);
         mouse_handler.clone().handle_input_event(event1).await;
         assert_eq!(
             injector_stream_receiver.next().await.map(|events| events.concat()),
@@ -1678,7 +1793,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
@@ -1687,7 +1802,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 )
             ])
         );
@@ -1714,7 +1829,7 @@ mod tests {
                 Some(expected_relative_motion),
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
-                event_time,
+                event_time2,
             )])
         );
 
@@ -1740,7 +1855,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
-                event_time,
+                event_time3,
             )])
         );
 
@@ -1760,6 +1875,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn handler_ignores_handled_events() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1772,6 +1890,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1806,6 +1925,7 @@ mod tests {
             mouse_handler,
             input_events,
             injector_registry_request_stream,
+            aggregator_request_stream,
         )
         .await;
 
@@ -1817,6 +1937,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn scroll() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1829,6 +1952,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, _) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1849,8 +1973,17 @@ mod tests {
             injector_stream_sender,
         );
 
+        let event_time1 = zx::Time::get_monotonic();
+        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
+
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![event_time1.into_nanos(), event_time2.into_nanos()],
+        );
+
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
+        let _aggregator_task = fasync::Task::local(aggregator_fut);
 
         let zero_location =
             mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -1858,8 +1991,6 @@ mod tests {
                 millimeters: Position { x: 0.0, y: 0.0 },
             });
         let expected_position = Position { x: 50.0, y: 50.0 };
-
-        let event_time = zx::Time::get_monotonic();
         let wheel_v_event = create_mouse_event(
             zero_location,
             Some(1),
@@ -1867,7 +1998,7 @@ mod tests {
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),
             HashSet::new(),
-            event_time,
+            event_time1,
             &DESCRIPTOR,
         );
 
@@ -1878,7 +2009,7 @@ mod tests {
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),
             HashSet::new(),
-            event_time,
+            event_time2,
             &DESCRIPTOR,
         );
 
@@ -1894,7 +2025,7 @@ mod tests {
                     None,    /*relative_motion*/
                     Some(1), /*wheel_delta_v*/
                     None,    /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
@@ -1903,12 +2034,12 @@ mod tests {
                     None,    /*relative_motion*/
                     Some(1), /*wheel_delta_v*/
                     None,    /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
             ])
         );
 
-        // Handle event 1 horizontal scroll.
+        // Handle event 2 horizontal scroll.
         mouse_handler.clone().handle_input_event(wheel_h_event).await;
         assert_eq!(
             injector_stream_receiver.next().await.map(|events| events.concat()),
@@ -1919,7 +2050,7 @@ mod tests {
                 None,    /*relative_motion*/
                 None,    /*wheel_delta_v*/
                 Some(1), /*wheel_delta_h*/
-                event_time,
+                event_time2,
             )])
         );
     }
@@ -1928,6 +2059,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn down_scroll_up_scroll() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -1940,6 +2074,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, _) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -1960,8 +2095,24 @@ mod tests {
             injector_stream_sender,
         );
 
+        let event_time1 = zx::Time::get_monotonic();
+        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time3 = event_time2.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time4 = event_time3.add(fuchsia_zircon::Duration::from_micros(1));
+
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![
+                event_time1.into_nanos(),
+                event_time2.into_nanos(),
+                event_time3.into_nanos(),
+                event_time4.into_nanos(),
+            ],
+        );
+
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
+        let _aggregator_task = fasync::Task::local(aggregator_fut);
 
         let zero_location =
             mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -1970,7 +2121,6 @@ mod tests {
             });
         let expected_position = Position { x: 50.0, y: 50.0 };
 
-        let event_time = zx::Time::get_monotonic();
         let down_event = create_mouse_event(
             zero_location,
             None,
@@ -1978,7 +2128,7 @@ mod tests {
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
-            event_time,
+            event_time1,
             &DESCRIPTOR,
         );
 
@@ -1989,7 +2139,7 @@ mod tests {
             mouse_binding::MousePhase::Wheel,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
-            event_time,
+            event_time2,
             &DESCRIPTOR,
         );
 
@@ -2000,7 +2150,7 @@ mod tests {
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::new(),
-            event_time,
+            event_time3,
             &DESCRIPTOR,
         );
 
@@ -2011,7 +2161,7 @@ mod tests {
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),
             HashSet::new(),
-            event_time,
+            event_time4,
             &DESCRIPTOR,
         );
 
@@ -2027,7 +2177,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
                 create_mouse_pointer_sample_event(
                     pointerinjector::EventPhase::Change,
@@ -2036,7 +2186,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
-                    event_time,
+                    event_time1,
                 ),
             ])
         );
@@ -2052,7 +2202,7 @@ mod tests {
                 None,    /*relative_motion*/
                 Some(1), /*wheel_delta_v*/
                 None,    /*wheel_delta_h*/
-                event_time,
+                event_time2,
             )])
         );
 
@@ -2067,7 +2217,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
-                event_time,
+                event_time3,
             )])
         );
 
@@ -2082,7 +2232,7 @@ mod tests {
                 None,    /*relative_motion*/
                 Some(1), /*wheel_delta_v*/
                 None,    /*wheel_delta_h*/
-                event_time,
+                event_time4,
             )])
         );
     }
@@ -2091,6 +2241,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn touch_hides_cursor() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -2103,6 +2256,7 @@ mod tests {
         // Create MouseInjectorHandler.
         let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(1);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -2130,6 +2284,7 @@ mod tests {
             mouse_handler,
             input_events,
             injector_registry_request_stream,
+            aggregator_request_stream,
         )
         .await;
 
@@ -2144,6 +2299,9 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn invisibility_suppresses_cursor_positions_updates() {
         // Set up fidl streams.
+        let (aggregator_proxy, aggregator_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
+                .expect("Failed to create interaction observation Aggregator proxy and stream.");
         let (configuration_proxy, mut configuration_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
                 .expect("Failed to create pointerinjector Setup proxy and stream.");
@@ -2157,6 +2315,7 @@ mod tests {
         let (cursor_message_sender, mut cursor_message_receiver) =
             futures::channel::mpsc::channel::<CursorMessage>(20);
         let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            aggregator_proxy,
             configuration_proxy,
             injector_registry_proxy,
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
@@ -2176,13 +2335,31 @@ mod tests {
             injector_registry_request_stream,
             injector_stream_sender,
         );
+
+        let event_time1 = zx::Time::get_monotonic();
+        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time3 = event_time2.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time4 = event_time3.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time5 = event_time4.add(fuchsia_zircon::Duration::from_micros(1));
+
+        let aggregator_fut = handle_aggregator_request_stream(
+            aggregator_request_stream,
+            vec![
+                event_time1.into_nanos(),
+                event_time2.into_nanos(),
+                event_time3.into_nanos(),
+                event_time4.into_nanos(),
+                event_time5.into_nanos(),
+            ],
+        );
+
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
+        let _aggregator_task = fasync::Task::local(aggregator_fut);
 
         // The first event is to initially add the pointer so that we can more directly compare
         // event2/event3 with event4/event5.
         let zero_position = Position { x: 0.0, y: 0.0 };
-        let event_time1 = zx::Time::get_monotonic();
         let event1 = create_mouse_event(
             mouse_binding::MouseLocation::Absolute(zero_position),
             None,
@@ -2218,13 +2395,9 @@ mod tests {
             "after event1"
         );
 
-        use std::ops::Add; // used to add Durations to Times below.
-
         // event2/event3 cause pointerinjector events to be sent, and since the cursor is visible,
         // also causes cursor position messages to be sent.
-        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
         let event2 = create_relative_mouse_move_event(Position { x: 3.0, y: 5.0 }, event_time2);
-        let event_time3 = event_time2.add(fuchsia_zircon::Duration::from_micros(1));
         let event3 = create_relative_mouse_move_event(Position { x: 4.0, y: 6.0 }, event_time3);
 
         mouse_handler.clone().handle_input_event(event2).await;
@@ -2264,9 +2437,7 @@ mod tests {
 
         // event4/event5 cause pointerinjector events to be sent.  However, now the handler is in
         // immersive mode; since the cursor is NOT visible, no cursor position messages are sent.
-        let event_time4 = event_time3.add(fuchsia_zircon::Duration::from_micros(1));
         let event4 = create_relative_mouse_move_event(Position { x: -2.0, y: -2.0 }, event_time4);
-        let event_time5 = event_time4.add(fuchsia_zircon::Duration::from_micros(1));
         let event5 = create_relative_mouse_move_event(Position { x: -1.0, y: -3.0 }, event_time5);
 
         mouse_handler.clone().handle_input_event(event4).await;

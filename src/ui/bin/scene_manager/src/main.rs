@@ -338,8 +338,9 @@ async fn inner_main() -> Result<(), Error> {
                 }
             }
             ExposedServices::UserInteractionObservation(stream) => {
+                let activity_manager = activity_manager.clone();
+                fasync::Task::local(async move {
                 match activity_manager
-                    .clone()
                     .handle_interaction_aggregator_request_stream(stream)
                     .await
                 {
@@ -349,23 +350,24 @@ async fn inner_main() -> Result<(), Error> {
                       "failure while serving fuchsia.input.interaction.observation.Aggregator: {:?}",
                       e
                   );
-                    }
-                }
+                    }}
+                }).detach();
             }
             ExposedServices::UserInteraction(stream) => {
-                match activity_manager
-                    .clone()
-                    .handle_interaction_notifier_request_stream(stream)
-                    .await
-                {
-                    Ok(()) => (),
-                    Err(e) => {
-                        fx_log_warn!(
-                            "failure while serving fuchsia.input.interaction.Notifier: {:?}",
-                            e
-                        );
+                let activity_manager = activity_manager.clone();
+                fasync::Task::local(async move {
+                    match activity_manager.handle_interaction_notifier_request_stream(stream).await
+                    {
+                        Ok(()) => (),
+                        Err(e) => {
+                            fx_log_warn!(
+                                "failure while serving fuchsia.input.interaction.Notifier: {:?}",
+                                e
+                            );
+                        }
                     }
-                }
+                })
+                .detach();
             }
         }
     }
