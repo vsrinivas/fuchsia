@@ -49,6 +49,7 @@ gvisor_tests = [
   "chroot_test",
   "clock_getres_test",
   "clock_gettime_test",
+  "clock_nanosleep_test",
   "creat_test",
   "dev_test",
   "dup_test",
