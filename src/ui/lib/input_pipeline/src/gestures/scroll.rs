@@ -473,39 +473,46 @@ impl gesture_arena::Winner for Winner {
     }
 }
 
+fn wheel_delta_mm(delta: f32) -> Option<mouse_binding::WheelDelta> {
+    Some(mouse_binding::WheelDelta {
+        raw_data: mouse_binding::RawWheelDelta::Millimeters(delta),
+        physical_pixel: None,
+    })
+}
+
 // filter out motion not in given direction.
 fn filter_off_direction_movement(
     direction: ScrollDirection,
     offset_v: f32,
     offset_h: f32,
-) -> (Option<i64>, Option<i64>) {
+) -> (Option<mouse_binding::WheelDelta>, Option<mouse_binding::WheelDelta>) {
     match direction {
         ScrollDirection::Left => {
             if offset_h > 0.0 {
-                (None, Some(0))
+                (None, wheel_delta_mm(0.0))
             } else {
-                (None, Some(offset_h as i64))
+                (None, wheel_delta_mm(offset_h))
             }
         }
         ScrollDirection::Right => {
             if offset_h < 0.0 {
-                (None, Some(0))
+                (None, wheel_delta_mm(0.0))
             } else {
-                (None, Some(offset_h as i64))
+                (None, wheel_delta_mm(offset_h))
             }
         }
         ScrollDirection::Up => {
             if offset_v > 0.0 {
-                (Some(0), None)
+                (wheel_delta_mm(0.0), None)
             } else {
-                (Some(offset_v as i64), None)
+                (wheel_delta_mm(offset_v), None)
             }
         }
         ScrollDirection::Down => {
             if offset_v < 0.0 {
-                (Some(0), None)
+                (wheel_delta_mm(0.0), None)
             } else {
-                (Some(offset_v as i64), None)
+                (wheel_delta_mm(offset_v), None)
             }
         }
     }
@@ -924,7 +931,7 @@ mod test {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 },
                         }),
-                        /* wheel_delta_v= */ Some(0),
+                        /* wheel_delta_v= */ wheel_delta_mm(0.0),
                         /* wheel_delta_h= */ None,
                         mouse_binding::MousePhase::Wheel,
                         /* affected_buttons= */ hashset! {},
@@ -939,7 +946,7 @@ mod test {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 },
                         }),
-                        /* wheel_delta_v= */ Some(0),
+                        /* wheel_delta_v= */ wheel_delta_mm(0.0),
                         /* wheel_delta_h= */ None,
                         mouse_binding::MousePhase::Wheel,
                         /* affected_buttons= */ hashset! {},
@@ -953,7 +960,7 @@ mod test {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 },
                         }),
-                        /* wheel_delta_v= */ Some(-12),
+                        /* wheel_delta_v= */ wheel_delta_mm(-12.0),
                         /* wheel_delta_h= */ None,
                         mouse_binding::MousePhase::Wheel,
                         /* affected_buttons= */ hashset! {},
@@ -1088,7 +1095,7 @@ mod test {
                                     millimeters: Position { x: 0.0, y: 0.0 },
                                 }
                             ),
-                            wheel_delta_v: Some(-11),
+                            wheel_delta_v: wheel_delta_mm(-11.0),
                             wheel_delta_h: None,
                             phase: mouse_binding::MousePhase::Wheel,
                             affected_buttons: hashset! {},

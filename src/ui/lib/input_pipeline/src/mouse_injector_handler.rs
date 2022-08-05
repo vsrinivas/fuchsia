@@ -534,8 +534,20 @@ impl MouseInjectorHandler {
             pointer_id: Some(0),
             phase: Some(phase),
             position_in_viewport: Some([current_position.x, current_position.y]),
-            scroll_v: mouse_event.wheel_delta_v,
-            scroll_h: mouse_event.wheel_delta_h,
+            scroll_v: match mouse_event.wheel_delta_v {
+                Some(mouse_binding::WheelDelta {
+                    raw_data: mouse_binding::RawWheelDelta::Ticks(tick),
+                    ..
+                }) => Some(tick),
+                _ => None,
+            },
+            scroll_h: match mouse_event.wheel_delta_h {
+                Some(mouse_binding::WheelDelta {
+                    raw_data: mouse_binding::RawWheelDelta::Ticks(tick),
+                    ..
+                }) => Some(tick),
+                _ => None,
+            },
             pressed_buttons: Some(Vec::from_iter(mouse_event.pressed_buttons.iter().cloned())),
             relative_motion,
             ..pointerinjector::PointerSample::EMPTY
@@ -969,6 +981,13 @@ mod tests {
         // Check the viewport on the handler is accurate.
         let expected_viewport = create_viewport(100.0, 200.0);
         assert_eq!(mouse_handler.mutable_state.borrow().viewport, Some(expected_viewport));
+    }
+
+    fn wheel_delta_ticks(delta: i64) -> Option<mouse_binding::WheelDelta> {
+        Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Ticks(delta),
+            physical_pixel: None,
+        })
     }
 
     // Tests that a mouse move event both sends an update to scenic and sends the current cursor
@@ -1993,7 +2012,7 @@ mod tests {
         let expected_position = Position { x: 50.0, y: 50.0 };
         let wheel_v_event = create_mouse_event(
             zero_location,
-            Some(1),
+            wheel_delta_ticks(1),
             None,
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),
@@ -2005,7 +2024,7 @@ mod tests {
         let wheel_h_event = create_mouse_event(
             zero_location,
             None,
-            Some(1),
+            wheel_delta_ticks(1),
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),
             HashSet::new(),
@@ -2134,7 +2153,7 @@ mod tests {
 
         let wheel_event = create_mouse_event(
             zero_location,
-            Some(1),
+            wheel_delta_ticks(1),
             None,
             mouse_binding::MousePhase::Wheel,
             HashSet::from_iter(vec![1]),
@@ -2156,7 +2175,7 @@ mod tests {
 
         let continue_wheel_event = create_mouse_event(
             zero_location,
-            Some(1),
+            wheel_delta_ticks(1),
             None,
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),

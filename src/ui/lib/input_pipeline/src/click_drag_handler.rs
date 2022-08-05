@@ -401,6 +401,13 @@ mod tests {
 
     std::thread_local! {static NEXT_EVENT_TIME: Cell<i64> = Cell::new(0)}
 
+    fn wheel_delta_ticks(delta: i64) -> Option<mouse_binding::WheelDelta> {
+        Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Ticks(delta),
+            physical_pixel: None,
+        })
+    }
+
     fn make_unhandled_input_event(
         mouse_event: mouse_binding::MouseEvent,
     ) -> input_device::UnhandledInputEvent {
@@ -778,7 +785,7 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
-            wheel_delta_v: Some(1),
+            wheel_delta_v: wheel_delta_ticks(1),
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Wheel,
             affected_buttons: hashset! {},
@@ -816,7 +823,7 @@ mod tests {
         });
         let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
-            wheel_delta_v: Some(1),
+            wheel_delta_v: wheel_delta_ticks(1),
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Wheel,
             affected_buttons: hashset! {0},

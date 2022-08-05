@@ -52,6 +52,24 @@ impl Default for RelativeLocation {
     }
 }
 
+/// [`RawWheelDelta`] is the wheel delta from driver or gesture arena.
+#[derive(Clone, Debug, PartialEq)]
+pub enum RawWheelDelta {
+    /// For tick based mouse wheel, driver will report how many ticks rotated in i64.
+    Ticks(i64),
+    /// For Touchpad, gesture arena will compute how many swipe distance in mm in f32.
+    Millimeters(f32),
+}
+
+/// A [`WheelDelta`] contains raw wheel delta from driver or gesture arena
+/// and scaled wheel delta in physical pixels.
+#[derive(Clone, Debug, PartialEq)]
+
+pub struct WheelDelta {
+    pub raw_data: RawWheelDelta,
+    pub physical_pixel: Option<f32>,
+}
+
 /// A [`MouseEvent`] represents a pointer event with a specified phase, and the buttons
 /// involved in said phase. The supported phases for mice include Up, Down, and Move.
 ///
@@ -78,10 +96,10 @@ pub struct MouseEvent {
     pub location: MouseLocation,
 
     /// The mouse wheel rotated delta in vertical.
-    pub wheel_delta_v: Option<i64>,
+    pub wheel_delta_v: Option<WheelDelta>,
 
     /// The mouse wheel rotated delta in horizontal.
-    pub wheel_delta_h: Option<i64>,
+    pub wheel_delta_h: Option<WheelDelta>,
 
     /// The phase of the [`buttons`] associated with this input event.
     pub phase: MousePhase,
@@ -102,8 +120,8 @@ impl MouseEvent {
     /// - `buttons`: The buttons relevant to this event.
     pub fn new(
         location: MouseLocation,
-        wheel_delta_v: Option<i64>,
-        wheel_delta_h: Option<i64>,
+        wheel_delta_v: Option<WheelDelta>,
+        wheel_delta_h: Option<WheelDelta>,
         phase: MousePhase,
         affected_buttons: HashSet<MouseButton>,
         pressed_buttons: HashSet<MouseButton>,
@@ -334,11 +352,25 @@ impl MouseBinding {
             input_event_sender,
         );
 
+        let wheel_delta_v = match mouse_report.scroll_v {
+            None => None,
+            Some(ticks) => {
+                Some(WheelDelta { raw_data: RawWheelDelta::Ticks(ticks), physical_pixel: None })
+            }
+        };
+
+        let wheel_delta_h = match mouse_report.scroll_h {
+            None => None,
+            Some(ticks) => {
+                Some(WheelDelta { raw_data: RawWheelDelta::Ticks(ticks), physical_pixel: None })
+            }
+        };
+
         // Send a mouse wheel event.
         send_mouse_event(
             MouseLocation::Relative(Default::default()),
-            mouse_report.scroll_v,
-            mouse_report.scroll_h,
+            wheel_delta_v,
+            wheel_delta_h,
             MousePhase::Wheel,
             current_buttons.union(&previous_buttons).cloned().collect(),
             current_buttons.union(&previous_buttons).cloned().collect(),
@@ -384,8 +416,8 @@ impl MouseBinding {
 /// - `sender`: The stream to send the MouseEvent to.
 fn send_mouse_event(
     location: MouseLocation,
-    wheel_delta_v: Option<i64>,
-    wheel_delta_h: Option<i64>,
+    wheel_delta_v: Option<WheelDelta>,
+    wheel_delta_h: Option<WheelDelta>,
     phase: MousePhase,
     affected_buttons: HashSet<MouseButton>,
     pressed_buttons: HashSet<MouseButton>,
@@ -508,6 +540,10 @@ mod tests {
             buttons: None,
             counts_per_mm: DEFAULT_COUNTS_PER_MM,
         })
+    }
+
+    fn wheel_delta_ticks(delta: i64) -> Option<WheelDelta> {
+        Some(WheelDelta { raw_data: RawWheelDelta::Ticks(delta), physical_pixel: None })
     }
 
     // Tests that the right u32 representation is returned from a vector of digits.
@@ -1140,7 +1176,7 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
-                Some(1),
+                wheel_delta_ticks(1),
                 None,
                 MousePhase::Wheel,
                 HashSet::new(),
@@ -1151,7 +1187,7 @@ mod tests {
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
                 None,
-                Some(1),
+                wheel_delta_ticks(1),
                 MousePhase::Wheel,
                 HashSet::new(),
                 HashSet::new(),
@@ -1219,7 +1255,7 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
-                Some(1),
+                wheel_delta_ticks(1),
                 None,
                 MousePhase::Wheel,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1239,7 +1275,7 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
-                Some(1),
+                wheel_delta_ticks(1),
                 None,
                 MousePhase::Wheel,
                 HashSet::new(),
@@ -1301,7 +1337,7 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
-                Some(1),
+                wheel_delta_ticks(1),
                 None,
                 MousePhase::Wheel,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1311,7 +1347,7 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
-                Some(1),
+                wheel_delta_ticks(1),
                 None,
                 MousePhase::Wheel,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1331,7 +1367,7 @@ mod tests {
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Default::default()),
-                Some(1),
+                wheel_delta_ticks(1),
                 None,
                 MousePhase::Wheel,
                 HashSet::new(),
