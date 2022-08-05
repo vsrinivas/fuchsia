@@ -4,9 +4,7 @@
 
 use crate::wlan::types;
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_wlan_device_service::{
-    DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker, DeviceServiceProxy,
-};
+use fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceMonitorProxy};
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
@@ -32,7 +30,6 @@ struct InnerWlanFacade {
 
 #[derive(Debug)]
 pub(crate) struct WlanFacade {
-    wlan_svc: DeviceServiceProxy,
     monitor_svc: DeviceMonitorProxy,
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
@@ -41,19 +38,14 @@ pub(crate) struct WlanFacade {
 
 impl WlanFacade {
     pub fn new() -> Result<WlanFacade, Error> {
-        let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()?;
         let monitor_svc = connect_to_protocol::<DeviceMonitorMarker>()?;
 
-        Ok(WlanFacade {
-            wlan_svc,
-            monitor_svc,
-            inner: RwLock::new(InnerWlanFacade { scan_results: false }),
-        })
+        Ok(WlanFacade { monitor_svc, inner: RwLock::new(InnerWlanFacade { scan_results: false }) })
     }
 
     /// Gets the list of wlan interface IDs.
     pub async fn get_iface_id_list(&self) -> Result<Vec<u16>, Error> {
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.monitor_svc)
             .await
             .context("Get Iface Id List: failed to get wlan iface list")?;
         Ok(wlan_iface_ids)
@@ -69,7 +61,7 @@ impl WlanFacade {
 
     pub async fn scan(&self) -> Result<Vec<String>, Error> {
         // get the first client interface
-        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.monitor_svc)
             .await
             .context("Scan: failed to get client iface sme proxy")?;
 
@@ -91,7 +83,7 @@ impl WlanFacade {
         &self,
     ) -> Result<impl IntoIterator<Item = Result<ScanResult, Error>>, Error> {
         // get the first client interface
-        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.monitor_svc)
             .await
             .context("Scan: failed to get client iface sme proxy")?;
         // start the scan
@@ -122,7 +114,7 @@ impl WlanFacade {
         target_pwd: Vec<u8>,
         target_bss_desc: fidl_internal::BssDescription,
     ) -> Result<bool, Error> {
-        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.monitor_svc)
             .await
             .context("Connect: failed to get client iface sme proxy")?;
         wlan_service_util::client::connect(&sme_proxy, target_ssid, target_pwd, target_bss_desc)
@@ -140,14 +132,14 @@ impl WlanFacade {
     }
 
     pub async fn disconnect(&self) -> Result<(), Error> {
-        wlan_service_util::client::disconnect_all(&self.wlan_svc)
+        wlan_service_util::client::disconnect_all(&self.monitor_svc)
             .await
             .context("Disconnect: Failed to disconnect ifaces")
     }
 
     pub async fn status(&self) -> Result<types::ClientStatusResponseWrapper, Error> {
         // get the first client interface
-        let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
+        let sme_proxy = wlan_service_util::client::get_first_sme(&self.monitor_svc)
             .await
             .context("Status: failed to get iface sme proxy")?;
 
@@ -160,19 +152,19 @@ impl WlanFacade {
         &self,
         iface_id: u16,
     ) -> Result<types::QueryIfaceResponseWrapper, Error> {
-        let (status, iface_info) = self
-            .wlan_svc
+        let iface_info = self
+            .monitor_svc
             .query_iface(iface_id)
             .await
-            .context("Failed to query iface information")?;
+            .context("Failed to query iface information")?
+            .map_err(|e| zx::Status::from_raw(e));
 
-        zx::ok(status)?;
-
-        let iface_info = match iface_info {
-            Some(iface_info) => iface_info,
-            None => return Err(format_err!("no iface information for ID: {}", iface_id)),
-        };
-
-        Ok(types::QueryIfaceResponseWrapper((*iface_info).into()))
+        match iface_info {
+            Ok(info) => Ok(types::QueryIfaceResponseWrapper(info.into())),
+            Err(zx::Status::NOT_FOUND) => {
+                Err(format_err!("no iface information for ID: {}", iface_id))
+            }
+            Err(e) => Err(e.into()),
+        }
     }
 }

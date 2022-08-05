@@ -6,26 +6,28 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_common::WlanMacRole;
-use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
+use fidl_fuchsia_wlan_device_service::DeviceMonitorProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_zircon as zx;
 use ieee80211::Ssid;
 
-type WlanService = DeviceServiceProxy;
+type WlanService = DeviceMonitorProxy;
 
 pub async fn get_sme_proxy(
     wlan_svc: &WlanService,
     iface_id: u16,
 ) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
-    let status = wlan_svc
+    let result = wlan_svc
         .get_ap_sme(iface_id, sme_remote)
         .await
         .context("error sending GetApSme request")?;
-    if status == zx::sys::ZX_OK {
-        Ok(sme_proxy)
-    } else {
-        Err(format_err!("Invalid interface id {}", iface_id))
+    match result {
+        Ok(()) => Ok(sme_proxy),
+        Err(e) => Err(format_err!(
+            "Failed to get AP sme proxy for interface id {} with error {}",
+            iface_id,
+            e
+        )),
     }
 }
 
@@ -76,12 +78,13 @@ pub async fn start(
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_device_service::{
-        DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem,
+        DeviceMonitorMarker, DeviceMonitorRequest, DeviceMonitorRequestStream,
     };
     use fidl_fuchsia_wlan_sme::ApSmeMarker;
     use fidl_fuchsia_wlan_sme::StartApResultCode;
     use fidl_fuchsia_wlan_sme::{ApSmeRequest, ApSmeRequestStream};
     use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use futures::stream::{StreamExt, StreamFuture};
     use futures::task::Poll;
     use ieee80211::Ssid;
@@ -210,28 +213,29 @@ mod tests {
 
     fn respond_to_get_ap_sme_request(
         exec: &mut fasync::TestExecutor,
-        req_stream: &mut DeviceServiceRequestStream,
-        status: zx::Status,
+        req_stream: &mut DeviceMonitorRequestStream,
+        result: Result<(), zx::Status>,
     ) {
         let req = exec.run_until_stalled(&mut req_stream.next());
 
         let responder = assert_variant !(
             req,
-            Poll::Ready(Some(Ok(DeviceServiceRequest::GetApSme{ responder, ..})))
+            Poll::Ready(Some(Ok(DeviceMonitorRequest::GetApSme{ responder, ..})))
             => responder);
 
         // now send the response back
-        responder.send(status.into_raw()).expect("fake sme proxy response: send failed")
+        responder
+            .send(&mut result.map_err(|e| e.into_raw()))
+            .expect("fake sme proxy response: send failed")
     }
 
     fn test_get_first_sme(iface_list: &[WlanMacRole]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
-            crate::tests::setup_fake_service::<DeviceServiceMarker>();
+            crate::tests::setup_fake_service::<DeviceMonitorMarker>();
         let fut = get_first_sme(&proxy);
         pin_mut!(fut);
 
-        let ifaces =
-            (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
+        let ifaces = (0..iface_list.len() as u16).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
         crate::tests::respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
@@ -249,7 +253,7 @@ mod tests {
             if *mac_role == WlanMacRole::Ap {
                 // ap sme proxy
                 assert!(exec.run_until_stalled(&mut fut).is_pending());
-                respond_to_get_ap_sme_request(&mut exec, &mut req_stream, zx::Status::OK);
+                respond_to_get_ap_sme_request(&mut exec, &mut req_stream, Ok(()));
                 break;
             }
         }

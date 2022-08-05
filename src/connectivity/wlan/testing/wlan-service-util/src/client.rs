@@ -7,7 +7,7 @@ use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_common::WlanMacRole;
 use fidl_fuchsia_wlan_common_security as fidl_security;
-use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
+use fidl_fuchsia_wlan_device_service::DeviceMonitorProxy;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -25,7 +25,7 @@ use wlan_common::{
     },
 };
 
-type WlanService = DeviceServiceProxy;
+type WlanService = DeviceMonitorProxy;
 
 /// Context for negotiating an `Authentication` (security protocol and credentials).
 ///
@@ -142,14 +142,17 @@ pub async fn get_sme_proxy(
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
-    let status = wlan_svc
+    let result = wlan_svc
         .get_client_sme(iface_id, sme_remote)
         .await
         .context("error sending GetClientSme request")?;
-    if status == zx::sys::ZX_OK {
-        Ok(sme_proxy)
-    } else {
-        Err(format_err!("Invalid interface id {}", iface_id))
+    match result {
+        Ok(()) => Ok(sme_proxy),
+        Err(e) => Err(format_err!(
+            "Failed to get client sme proxy for interface id {} with error {}",
+            iface_id,
+            e
+        )),
     }
 }
 
@@ -269,26 +272,28 @@ pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
 
     let mut error_msg = format!("");
     for iface_id in wlan_iface_ids {
-        let (status, resp) = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
+        let result = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
 
-        if status != zx::sys::ZX_OK {
-            error_msg = format!("{}failed querying iface {}: {}\n", error_msg, iface_id, status);
-            fx_log_err!("disconnect_all: query err on iface {}: {}", iface_id, status);
-            continue;
-        }
-        if resp.is_none() {
-            error_msg = format!("{}no query response on iface {}\n", error_msg, iface_id);
-            fx_log_err!("disconnect_all: iface query empty on iface {}", iface_id);
-            continue;
-        }
-        let resp = resp.unwrap();
-        if resp.role == WlanMacRole::Client {
-            let sme_proxy = get_sme_proxy(&wlan_svc, iface_id)
-                .await
-                .context("Disconnect all: failed to get iface sme proxy")?;
-            if let Err(e) = disconnect(&sme_proxy).await {
-                error_msg = format!("{}Error disconnecting iface {}: {}\n", error_msg, iface_id, e);
-                fx_log_err!("disconnect_all: disconnect err on iface {}: {}", iface_id, e);
+        match result {
+            Ok(query_info) => {
+                if query_info.role == WlanMacRole::Client {
+                    let sme_proxy = get_sme_proxy(&wlan_svc, iface_id)
+                        .await
+                        .context("Disconnect all: failed to get iface sme proxy")?;
+                    if let Err(e) = disconnect(&sme_proxy).await {
+                        error_msg =
+                            format!("{}Error disconnecting iface {}: {}\n", error_msg, iface_id, e);
+                        fx_log_err!("disconnect_all: disconnect err on iface {}: {}", iface_id, e);
+                    }
+                }
+            }
+            Err(zx::sys::ZX_ERR_NOT_FOUND) => {
+                error_msg = format!("{}no query response on iface {}\n", error_msg, iface_id);
+                fx_log_err!("disconnect_all: iface query empty on iface {}", iface_id);
+            }
+            Err(e) => {
+                error_msg = format!("{}failed querying iface {}: {}\n", error_msg, iface_id, e);
+                fx_log_err!("disconnect_all: query err on iface {}: {}", iface_id, e);
             }
         }
     }
@@ -349,8 +354,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device_service::{
             self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceMonitorRequest,
-            DeviceMonitorRequestStream, DeviceServiceMarker, DeviceServiceProxy,
-            DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse,
+            DeviceMonitorRequestStream,
         },
         fidl_fuchsia_wlan_sme::{
             ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, Protection,
@@ -395,18 +399,20 @@ mod tests {
 
     fn extract_sme_server_from_get_client_sme_req_and_respond(
         exec: &mut TestExecutor,
-        req_stream: &mut DeviceServiceRequestStream,
-        status: zx::Status,
+        req_stream: &mut DeviceMonitorRequestStream,
+        result: Result<(), zx::Status>,
     ) -> fidl_sme::ClientSmeRequestStream {
         let req = exec.run_until_stalled(&mut req_stream.next());
 
         let (responder, fake_sme_server) = assert_variant !(
             req,
-            Poll::Ready(Some(Ok(DeviceServiceRequest::GetClientSme{ iface_id:_, sme, responder})))
-            => (responder, sme));
+            Poll::Ready(Some(Ok(DeviceMonitorRequest::GetClientSme{ iface_id:_, sme_server, responder})))
+            => (responder, sme_server));
 
         // now send the response back
-        responder.send(status.into_raw()).expect("fake sme proxy response: send failed");
+        responder
+            .send(&mut result.map_err(|e| e.into_raw()))
+            .expect("fake sme proxy response: send failed");
 
         // and return the stream
         // let sme_stream = fake_sme_server.into_stream().expect("sme server stream failed");
@@ -416,18 +422,20 @@ mod tests {
 
     fn respond_to_get_client_sme_request(
         exec: &mut TestExecutor,
-        req_stream: &mut DeviceServiceRequestStream,
-        status: zx::Status,
+        req_stream: &mut DeviceMonitorRequestStream,
+        result: Result<(), zx::Status>,
     ) {
         let req = exec.run_until_stalled(&mut req_stream.next());
 
         let responder = assert_variant !(
             req,
-            Poll::Ready(Some(Ok(DeviceServiceRequest::GetClientSme{ responder, ..})))
+            Poll::Ready(Some(Ok(DeviceMonitorRequest::GetClientSme{ responder, ..})))
             => responder);
 
         // now send the response back
-        responder.send(status.into_raw()).expect("fake sme proxy response: send failed")
+        responder
+            .send(&mut result.map_err(|e| e.into_raw()))
+            .expect("fake sme proxy response: send failed")
     }
 
     fn respond_to_client_sme_disconnect_request(
@@ -476,12 +484,11 @@ mod tests {
 
     fn test_get_first_sme(iface_list: &[WlanMacRole]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
-            crate::tests::setup_fake_service::<DeviceServiceMarker>();
+            crate::tests::setup_fake_service::<DeviceMonitorMarker>();
         let fut = get_first_sme(&proxy);
         pin_mut!(fut);
 
-        let ifaces =
-            (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
+        let ifaces = (0..iface_list.len() as u16).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
         crate::tests::respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
@@ -500,7 +507,7 @@ mod tests {
             if *mac_role == WlanMacRole::Client {
                 // client sme proxy
                 assert!(exec.run_until_stalled(&mut fut).is_pending());
-                respond_to_get_client_sme_request(&mut exec, &mut req_stream, zx::Status::OK);
+                respond_to_get_client_sme_request(&mut exec, &mut req_stream, Ok(()));
                 break;
             }
         }
@@ -511,12 +518,11 @@ mod tests {
 
     fn test_disconnect_all(iface_list: &[(WlanMacRole, StatusResponse)]) -> Result<(), Error> {
         let (mut exec, proxy, mut req_stream) =
-            crate::tests::setup_fake_service::<DeviceServiceMarker>();
+            crate::tests::setup_fake_service::<DeviceMonitorMarker>();
         let fut = disconnect_all(&proxy);
         pin_mut!(fut);
 
-        let ifaces =
-            (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
+        let ifaces = (0..iface_list.len() as u16).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
         crate::tests::respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
@@ -538,7 +544,7 @@ mod tests {
                     extract_sme_server_from_get_client_sme_req_and_respond(
                         &mut exec,
                         &mut req_stream,
-                        zx::Status::OK,
+                        Ok(()),
                     );
 
                 // Disconnect
@@ -622,21 +628,16 @@ mod tests {
     #[test]
     fn list_ifaces_returns_iface_id_vector() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
-        let mut next_device_service_req = server.into_future();
+        let (wlan_monitor, server) = create_wlan_monitor_util();
+        let mut next_device_monitor_req = server.into_future();
 
-        // create the data to use in the response
-        let iface_id_list: Vec<u16> = vec![0, 1, 35, 36];
-        let mut iface_list_vec = vec![];
-        for id in &iface_id_list {
-            iface_list_vec.push(IfaceListItem { iface_id: *id });
-        }
+        let ifaces: Vec<u16> = vec![0, 1, 35, 36];
 
-        let fut = get_iface_list(&wlan_service);
+        let fut = get_iface_list(&wlan_monitor);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
-        send_iface_list_response(&mut exec, &mut next_device_service_req, iface_list_vec);
+        send_iface_list_response(&mut exec, &mut next_device_monitor_req, ifaces.clone());
 
         let complete = exec.run_until_stalled(&mut fut);
 
@@ -651,24 +652,24 @@ mod tests {
         };
 
         // now verify the response
-        assert_eq!(response, iface_id_list)
+        assert_eq!(response, ifaces)
     }
 
     #[test]
     fn list_ifaces_properly_handles_zero_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
-        let mut next_device_service_req = server.into_future();
+        let (wlan_monitor, server) = create_wlan_monitor_util();
+        let mut next_device_monitor_req = server.into_future();
 
         // create the data to use in the response
         let iface_id_list: Vec<u16> = vec![];
         let iface_list_vec = vec![];
 
-        let fut = get_iface_list(&wlan_service);
+        let fut = get_iface_list(&wlan_monitor);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
-        send_iface_list_response(&mut exec, &mut next_device_service_req, iface_list_vec);
+        send_iface_list_response(&mut exec, &mut next_device_monitor_req, iface_list_vec);
 
         let complete = exec.run_until_stalled(&mut fut);
 
@@ -753,41 +754,30 @@ mod tests {
         assert_eq!(response, phy_id_list)
     }
 
-    fn poll_device_service_req(
-        exec: &mut TestExecutor,
-        next_device_service_req: &mut StreamFuture<DeviceServiceRequestStream>,
-    ) -> Poll<DeviceServiceRequest> {
-        exec.run_until_stalled(next_device_service_req).map(|(req, stream)| {
-            *next_device_service_req = stream.into_future();
-            req.expect("did not expect the DeviceServiceRequestStream to end")
-                .expect("error polling device service request stream")
-        })
-    }
-
     fn poll_device_monitor_req(
         exec: &mut TestExecutor,
         next_device_monitor_req: &mut StreamFuture<DeviceMonitorRequestStream>,
     ) -> Poll<DeviceMonitorRequest> {
         exec.run_until_stalled(next_device_monitor_req).map(|(req, stream)| {
             *next_device_monitor_req = stream.into_future();
-            req.expect("did not expect the DeviceServiceRequestStream to end")
+            req.expect("did not expect the DeviceMonitorRequestStream to end")
                 .expect("error polling device service request stream")
         })
     }
 
     fn send_iface_list_response(
         exec: &mut TestExecutor,
-        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
-        iface_list_vec: Vec<IfaceListItem>,
+        server: &mut StreamFuture<wlan_service::DeviceMonitorRequestStream>,
+        mut ifaces: Vec<u16>,
     ) {
-        let responder = match poll_device_service_req(exec, server) {
-            Poll::Ready(DeviceServiceRequest::ListIfaces { responder }) => responder,
+        let responder = match poll_device_monitor_req(exec, server) {
+            Poll::Ready(DeviceMonitorRequest::ListIfaces { responder }) => responder,
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a ListIfaces request"),
         };
 
         // now send the response back
-        let _result = responder.send(&mut ListIfacesResponse { ifaces: iface_list_vec });
+        let _result = responder.send(&mut ifaces[..]);
     }
 
     fn send_phy_list_response(
@@ -808,15 +798,15 @@ mod tests {
     #[test]
     fn get_client_sme_valid_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
-        let mut next_device_service_req = server.into_future();
+        let (wlan_monitor, server) = create_wlan_monitor_util();
+        let mut next_device_monitor_req = server.into_future();
 
-        let fut = get_sme_proxy(&wlan_service, 1);
+        let fut = get_sme_proxy(&wlan_monitor, 1);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // pass in that we expect this to succeed
-        send_sme_proxy_response(&mut exec, &mut next_device_service_req, zx::Status::OK);
+        send_sme_proxy_response(&mut exec, &mut next_device_monitor_req, Ok(()));
 
         let () = match exec.run_until_stalled(&mut fut) {
             Poll::Ready(Ok(_)) => (),
@@ -826,31 +816,35 @@ mod tests {
 
     fn send_sme_proxy_response(
         exec: &mut TestExecutor,
-        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
-        status: zx::Status,
+        server: &mut StreamFuture<wlan_service::DeviceMonitorRequestStream>,
+        result: Result<(), zx::Status>,
     ) {
-        let responder = match poll_device_service_req(exec, server) {
-            Poll::Ready(DeviceServiceRequest::GetClientSme { responder, .. }) => responder,
+        let responder = match poll_device_monitor_req(exec, server) {
+            Poll::Ready(DeviceMonitorRequest::GetClientSme { responder, .. }) => responder,
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a GetClientSme request"),
         };
 
         // now send the response back
-        let _result = responder.send(status.into_raw());
+        let _result = responder.send(&mut result.map_err(|e| e.into_raw()));
     }
 
     #[test]
     fn get_client_sme_invalid_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
-        let mut next_device_service_req = server.into_future();
+        let (wlan_monitor, server) = create_wlan_monitor_util();
+        let mut next_device_monitor_req = server.into_future();
 
-        let fut = get_sme_proxy(&wlan_service, 1);
+        let fut = get_sme_proxy(&wlan_monitor, 1);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         // pass in that we expect this to fail with zx::Status::NOT_FOUND
-        send_sme_proxy_response(&mut exec, &mut next_device_service_req, zx::Status::NOT_FOUND);
+        send_sme_proxy_response(
+            &mut exec,
+            &mut next_device_monitor_req,
+            Err(zx::Status::NOT_FOUND),
+        );
 
         let complete = exec.run_until_stalled(&mut fut);
 
@@ -1080,13 +1074,6 @@ mod tests {
         let (proxy, server) = endpoints::create_proxy::<ClientSmeMarker>()
             .expect("failed to create sme client channel");
         let server = server.into_stream().expect("failed to create a client sme response stream");
-        (proxy, server)
-    }
-
-    fn create_wlan_service_util() -> (DeviceServiceProxy, DeviceServiceRequestStream) {
-        let (proxy, server) = endpoints::create_proxy::<DeviceServiceMarker>()
-            .expect("failed to create a wlan_service channel for tests");
-        let server = server.into_stream().expect("failed to create a wlan_service response stream");
         (proxy, server)
     }
 
