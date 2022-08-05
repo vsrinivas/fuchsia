@@ -121,7 +121,6 @@ impl Isolate {
 
         cmd.env("HOME", &*self.home_dir);
         cmd.env("XDG_CONFIG_HOME", &*self.xdg_config_home);
-        cmd.env("ASCENDD", &*self.ascendd_path);
 
         // On developer systems, FUCHSIA_SSH_KEY is normally not set, and so ffx
         // looks up an ssh key via a $HOME heuristic, however that is broken by
