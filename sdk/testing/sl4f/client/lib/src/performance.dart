@@ -329,7 +329,8 @@ class Performance {
       [String expectedMetricNamesFile]) async {
     _log.info('Converting the results into the catapult format');
 
-    _checkFuchsiaPerfMetricsNaming(result, expectedMetricNamesFile);
+    _checkFuchsiaPerfMetricsNaming(
+        result, expectedMetricNamesFile, environment);
 
     var master = environment[_catapultDashboardMasterVarName];
     var bot = environment[_catapultDashboardBotVarName];
@@ -403,8 +404,8 @@ class Performance {
   /// Check that the performance test metrics match the names listed in an
   /// expectations file.  This is currently optional.
   /// TODO(https://fxbug.dev/105202): Make this required.
-  void _checkFuchsiaPerfMetricsNaming(
-      File fuchsiaPerfFile, String expectedMetricNamesFile) {
+  void _checkFuchsiaPerfMetricsNaming(File fuchsiaPerfFile,
+      String expectedMetricNamesFile, Map<String, String> environment) {
     // The "test_suite" field should be all lower case.  It should start
     // with "fuchsia.", to distinguish Fuchsia test results from results
     // from other projects that upload to Catapult (Chromeperf), because
@@ -443,11 +444,21 @@ class Performance {
         metrics.add('${entry['test_suite']}: ${entry['label']}');
       }
 
-      final String runtimeDepsDir =
-          Platform.script.resolve('runtime_deps').toFilePath();
-      final MetricsAllowlist allowlist = MetricsAllowlist(
-          File(path.join(runtimeDepsDir, expectedMetricNamesFile)));
-      allowlist.check(metrics);
+      final updateDir = environment['FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR'];
+      if (updateDir == null) {
+        // Normal case: Compare against the expectation file.
+        final String runtimeDepsDir =
+            Platform.script.resolve('runtime_deps').toFilePath();
+        final MetricsAllowlist allowlist = MetricsAllowlist(
+            File(path.join(runtimeDepsDir, expectedMetricNamesFile)));
+        allowlist.check(metrics);
+      } else {
+        // Special case: Update the expectation file.
+        final destFile = File(path.join(updateDir, expectedMetricNamesFile));
+        final list = List.from(metrics);
+        list.sort();
+        destFile.writeAsStringSync(list.map((entry) => entry + '\n').join(''));
+      }
     }
   }
 
@@ -643,7 +654,11 @@ class MetricsAllowlist {
       final String diff = _formatSetDiff(expectedMetrics, actualMetrics);
       throw ArgumentError(
           'Metric names produced by the test differ from the expectations in'
-          ' ${filename}:\n$diff');
+          ' ${filename}:\n$diff\n\n'
+          'One way to update the expectation file is to run the test locally'
+          ' with this environment variable set:\n'
+          'FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR='
+          '\$(pwd)/src/tests/end_to_end/perf/expected_metric_names');
     }
   }
 }

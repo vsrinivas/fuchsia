@@ -310,6 +310,36 @@ void main(List<String> args) {
             'exception text', matches(expectedErrorRegExp))));
   });
 
+  // Test that convertResults() updates metric name expectation files if
+  // the environment variable FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR is
+  // set.
+  test('convertResults writes metric name expectations file', () async {
+    final mockRunProcessObserver = MockRunProcessObserver();
+    final performance =
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
+
+    final destDir = createTempDir().path;
+    final environment = {
+      'FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR': destDir,
+    };
+    // Use unsorted order to test that the output gets sorted.
+    const fuchsiaPerfJson = [
+      {'test_suite': 'fuchsia.test.bbb', 'label': 'Test2'},
+      {'test_suite': 'fuchsia.test.aaa', 'label': 'Test1'},
+    ];
+    final File fuchsiaPerfFile =
+        File(path.join(createTempDir().path, 'results.fuchsiaperf.json'))
+          ..writeAsStringSync(jsonEncode(fuchsiaPerfJson));
+    await performance.convertResults('/bin/catapult_converter', fuchsiaPerfFile,
+        environment, 'fuchsia.test');
+
+    final outputFile = File(path.join(destDir, 'fuchsia.test'));
+    expect(
+        outputFile.readAsStringSync(),
+        'fuchsia.test.aaa: Test1\n'
+        'fuchsia.test.bbb: Test2\n');
+  });
+
   test('MetricsAllowlist class', () {
     final File file = File(path.join(createTempDir().path, 'suite1'));
     file.writeAsStringSync('# Comment line\n\n'
@@ -326,7 +356,12 @@ void main(List<String> args) {
         ' the expectations in ${file.path}:\n'
         '-fuchsia.suite1: bar\n'
         ' fuchsia.suite1: foo\n'
-        '+fuchsia.suite1: new';
+        '+fuchsia.suite1: new\n'
+        '\n'
+        'One way to update the expectation file is to run the test locally'
+        ' with this environment variable set:\n'
+        'FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR='
+        '\$(pwd)/src/tests/end_to_end/perf/expected_metric_names';
     expect(
         () => allowlist
             .check(Set.from(['fuchsia.suite1: foo', 'fuchsia.suite1: new'])),
