@@ -51,7 +51,31 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
   dsi_.width = width;
   dsi_.height = height;
 
-  switch (panel_type) {
+  auto dsi_host = amlogic_display::DsiHost::Create(parent, panel_type);
+  if (dsi_host.is_error()) {
+    DISP_ERROR("Could not create DSI host: %s\n", dsi_host.status_string());
+    return dsi_host.status_value();
+  }
+  dsi_.dsi_host = std::move(dsi_host.value());
+  ZX_ASSERT(dsi_.dsi_host);
+
+  ddk::PDev pdev;
+  auto status = ddk::PDev::FromFragment(parent, &pdev);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not get PDEV protocol\n");
+    return status;
+  }
+  auto clock = amlogic_display::Clock::Create(pdev);
+  if (clock.is_error()) {
+    DISP_ERROR("Could not create Clock: %s\n", clock.status_string());
+    return clock.status_value();
+  }
+
+  dsi_.clock = std::move(clock.value());
+  ZX_ASSERT(dsi_.clock);
+
+  DISP_INFO("Fixed panel type is %d", dsi_.dsi_host->panel_type());
+  switch (dsi_.dsi_host->panel_type()) {
     case PANEL_TV070WSM_FT:
     case PANEL_TV070WSM_FT_9365:
       dsi_.disp_setting = kDisplaySettingTV070WSM_FT;
@@ -80,30 +104,6 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
       DISP_ERROR("Unsupported panel detected!\n");
       return ZX_ERR_NOT_SUPPORTED;
   }
-
-  auto dsi_host = amlogic_display::DsiHost::Create(parent, panel_type);
-  if (dsi_host.is_error()) {
-    DISP_ERROR("Could not create DSI host: %s\n", dsi_host.status_string());
-    return dsi_host.status_value();
-  }
-  dsi_.dsi_host = std::move(dsi_host.value());
-  ZX_ASSERT(dsi_.dsi_host);
-
-  ddk::PDev pdev;
-  auto status = ddk::PDev::FromFragment(parent, &pdev);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get PDEV protocol\n");
-    return status;
-  }
-  auto clock = amlogic_display::Clock::Create(pdev);
-  if (clock.is_error()) {
-    DISP_ERROR("Could not create Clock: %s\n", clock.status_string());
-    return clock.status_value();
-  }
-
-  dsi_.clock = std::move(clock.value());
-  ZX_ASSERT(dsi_.clock);
-
   return ZX_OK;
 }
 
@@ -143,6 +143,7 @@ zx_status_t Vout::InitHdmi(zx_device_t* parent) {
 }
 
 zx_status_t Vout::RestartDisplay() {
+  DISP_INFO("restarting display");
   zx_status_t status;
   switch (type_) {
     case VoutType::kDsi:

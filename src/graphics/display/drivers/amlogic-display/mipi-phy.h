@@ -22,9 +22,9 @@ namespace amlogic_display {
 
 class MipiPhy {
  public:
-  MipiPhy() = default;
   // This function initializes internal state of the object
-  zx_status_t Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, uint32_t lane_num);
+  static zx::status<std::unique_ptr<MipiPhy>> Create(ddk::PDev& pdev,
+                                                     ddk::DsiImplProtocolClient dsi);
   // This function enables and starts up the Mipi Phy
   zx_status_t Startup();
   // This function stops Mipi Phy
@@ -34,6 +34,7 @@ class MipiPhy {
   uint32_t GetLowPowerEscaseTime() { return dsi_phy_cfg_.lp_tesc; }
 
  private:
+  MipiPhy() = default;
   // This structure holds the timing parameters used for MIPI D-PHY
   // This can be moved later on to MIPI D-PHY specific header if need be
   struct DsiPhyConfig {
@@ -58,11 +59,9 @@ class MipiPhy {
   void PhyInit();
 
   std::optional<fdf::MmioBuffer> dsi_phy_mmio_;
-  uint32_t num_of_lanes_;
   DsiPhyConfig dsi_phy_cfg_;
   ddk::DsiImplProtocolClient dsiimpl_;
 
-  bool initialized_ = false;
   bool phy_enabled_ = false;
 };
 

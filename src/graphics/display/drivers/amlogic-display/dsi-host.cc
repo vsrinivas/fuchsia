@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dsi-host.h"
+#include "src/graphics/display/drivers/amlogic-display/dsi-host.h"
 
 #include <lib/ddk/debug.h>
 #include <lib/device-protocol/display-panel.h>
 
 #include <fbl/alloc_checker.h>
+
+#include "src/graphics/display/drivers/amlogic-display/common.h"
 
 namespace amlogic_display {
 
@@ -16,25 +18,6 @@ namespace amlogic_display {
 
 #define READ32_HHI_REG(a) hhi_mmio_->Read32(a)
 #define WRITE32_HHI_REG(a, v) hhi_mmio_->Write32(v, a)
-
-constexpr uint32_t kFitiDisplayId = 0x00936504;
-
-void DsiHost::FixupPanelType() {
-  if (panel_type_ != PANEL_TV070WSM_FT_9365 || display_id_ != 0) {
-    // This fixup is either unnecessary or has been done before.
-    return;
-  }
-  if (Lcd::GetDisplayId(dsiimpl_, &display_id_) != ZX_OK) {
-    DISP_ERROR("Failed to read display ID, assuming the board driver panel type is correct");
-    display_id_ = 0;
-    return;
-  }
-  if (display_id_ != kFitiDisplayId) {
-    DISP_INFO("Display ID is not 0x%x, rather 0x%x\nAssuming Sitronix\n", kFitiDisplayId,
-              display_id_);
-    panel_type_ = PANEL_TV070WSM_ST7703I;
-  }
-}
 
 DsiHost::DsiHost(zx_device_t* parent, uint32_t panel_type)
     : pdev_(ddk::PDev::FromFragment(parent)),
@@ -45,7 +28,8 @@ DsiHost::DsiHost(zx_device_t* parent, uint32_t panel_type)
 // static
 zx::status<std::unique_ptr<DsiHost>> DsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
   fbl::AllocChecker ac;
-  std::unique_ptr<DsiHost> self = fbl::make_unique_checked<DsiHost>(&ac, DsiHost(parent, panel_type));
+  std::unique_ptr<DsiHost> self =
+      fbl::make_unique_checked<DsiHost>(&ac, DsiHost(parent, panel_type));
   if (!ac.check()) {
     DISP_ERROR("No memory to allocate a DSI host\n");
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -67,6 +51,28 @@ zx::status<std::unique_ptr<DsiHost>> DsiHost::Create(zx_device_t* parent, uint32
     DISP_ERROR("Could not map HHI mmio %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
+
+  // panel_type_ is now canonical.
+  auto lcd_or_status = amlogic_display::Lcd::Create(&ac, self->panel_type_, self->dsiimpl_,
+                                                    self->lcd_gpio_, kBootloaderDisplayEnabled);
+  if (!ac.check()) {
+    DISP_ERROR("Unable to allocate an LCD object\n");
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  if (lcd_or_status.is_error()) {
+    DISP_ERROR("Failed to create LCD object\n");
+    return zx::error(lcd_or_status.error_value());
+  }
+  self->lcd_.reset(lcd_or_status.value());
+
+  auto phy_or_status = amlogic_display::MipiPhy::Create(self->pdev_, self->dsiimpl_);
+  if (phy_or_status.is_error()) {
+    DISP_ERROR("Failed to create PHY object\n");
+    return zx::error(phy_or_status.error_value());
+  }
+  self->phy_ = std::move(phy_or_status.value());
+
+  self->enabled_ = kBootloaderDisplayEnabled;
 
   return zx::ok(std::move(self));
 }
@@ -145,21 +151,8 @@ zx_status_t DsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitr
   // Enable MIPI PHY
   PhyEnable();
 
-  // Create MIPI PHY object
-  fbl::AllocChecker ac;
-  phy_ = fbl::make_unique_checked<amlogic_display::MipiPhy>(&ac);
-  if (!ac.check()) {
-    DISP_ERROR("Could not create MipiPhy object\n");
-    return ZX_ERR_NO_MEMORY;
-  }
-  zx_status_t status = phy_->Init(pdev_, dsiimpl_, disp_setting.lane_num);
-  if (status != ZX_OK) {
-    DISP_ERROR("MIPI PHY Init failed!\n");
-    return status;
-  }
-
   // Load Phy configuration
-  status = phy_->PhyCfgLoad(bitrate);
+  zx_status_t status = phy_->PhyCfgLoad(bitrate);
   if (status != ZX_OK) {
     DISP_ERROR("Error during phy config calculations! %d\n", status);
     return status;
@@ -190,28 +183,8 @@ zx_status_t DsiHost::Enable(const display_setting_t& disp_setting, uint32_t bitr
     return status;
   }
 
-  // TODO(fxbug.dev/12345): remove this hack when we have a solution for the
-  // bootloader to inform the board driver of the correct panel type.
-  FixupPanelType();
-
   // Load LCD Init values while in command mode
-  lcd_ = fbl::make_unique_checked<amlogic_display::Lcd>(&ac, panel_type_);
-  if (!ac.check()) {
-    DISP_ERROR("Failed to create LCD object\n");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  status = lcd_->Init(dsiimpl_, lcd_gpio_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Error during LCD Initialization! %d\n", status);
-    return status;
-  }
-
-  status = lcd_->Enable();
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not enable LCD! %d\n", status);
-    return status;
-  }
+  lcd_->Enable();
 
   // switch to video mode
   dsiimpl_.SetMode(DSI_MODE_VIDEO);

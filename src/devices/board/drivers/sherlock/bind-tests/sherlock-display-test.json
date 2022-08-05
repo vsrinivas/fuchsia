@@ -28,7 +28,7 @@
         ]
     },
     {
-        "node": "gpio-lcd",
+        "node": "gpio",
         "tests": [
             {
                 "name": "Match",

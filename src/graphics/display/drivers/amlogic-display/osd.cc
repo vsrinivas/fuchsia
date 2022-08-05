@@ -378,6 +378,8 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config,
 
   if ((config[0].mode.h_addressable != display_width_) ||
       (config[0].mode.v_addressable != display_height_)) {
+    DISP_INFO("Mode change (%d x %d) to (%d x %d)", display_width_, display_height_,
+              config[0].mode.h_addressable, config[0].mode.v_addressable);
     display_width_ = config[0].mode.h_addressable;
     display_height_ = config[0].mode.v_addressable;
     fb_width_ = config[0].mode.h_addressable;

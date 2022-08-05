@@ -131,6 +131,9 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   pdev_protocol_t pdev_proto_ = {nullptr, nullptr};
   ddk::PDev pdev_;
 
+  // Save video config to enable seamless switching between command and video modes.
+  uint32_t last_vidmode_ = 0;
+
   // This lock is used to synchronize SendCmd issued from FIDL server and Banjo interface
   fbl::Mutex command_lock_;
 
