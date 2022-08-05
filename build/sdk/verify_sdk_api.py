@@ -12,7 +12,6 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    # TODO(fxbug.dev/5535): make this argument required.
     parser.add_argument(
         '--reference', help='Path to the golden API file', required=False)
     parser.add_argument(
