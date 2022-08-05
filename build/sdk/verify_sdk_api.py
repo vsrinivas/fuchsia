@@ -35,10 +35,6 @@ def main():
 
     ids = [a['id'] for a in manifest['atoms']]
 
-    # Ignore images which are very architecture-dependent.
-    # TODO(fxbug.dev/5824): remove this exception when obsolete.
-    ids = [i for i in ids if not (i.startswith('sdk://images'))]
-
     with open(args.updated, 'w') as updated_file:
         updated_file.write('\n'.join(ids))
 
