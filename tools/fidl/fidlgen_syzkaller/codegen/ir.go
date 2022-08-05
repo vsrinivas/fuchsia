@@ -60,8 +60,8 @@ type Union struct {
 type Protocol struct {
 	Name string
 
-	// ServiceNameString is the string service name for this FIDL protocol.
-	ServiceNameString string
+	// ProtocolNameString is the string service name for this FIDL protocol.
+	ProtocolNameString string
 
 	// Methods is a list of methods for this FIDL protocol.
 	Methods []Method
@@ -617,8 +617,8 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	r := Protocol{
-		Name:              c.compileCompoundIdentifier(val.Name, ""),
-		ServiceNameString: strings.Trim(val.GetProtocolName(), "\""),
+		Name:               c.compileCompoundIdentifier(val.Name, ""),
+		ProtocolNameString: strings.Trim(val.GetProtocolName(), "\""),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))
