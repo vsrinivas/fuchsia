@@ -13,7 +13,7 @@
   "pkg/zx/include/lib/zx/iommu.h": "d407e69567efc11ef8b66541f5f84a75",
   "pkg/zx/include/lib/zx/job.h": "c49f1749c491a3386fd4fcdbe4dad167",
   "pkg/zx/include/lib/zx/msi.h": "7345ac86fdb18de4e297466ececf4eb0",
-  "pkg/zx/include/lib/zx/object.h": "f426908a61a6b7cd5e34c3d541fdb810",
+  "pkg/zx/include/lib/zx/object.h": "96a0cc0fd78b7d6d79110162ed8c92c4",
   "pkg/zx/include/lib/zx/object_traits.h": "ba7cdfee4244664c96559901f331c342",
   "pkg/zx/include/lib/zx/pager.h": "9c807f3d0f364e913b84a4ef5b947065",
   "pkg/zx/include/lib/zx/pmt.h": "d3b0467efc25e6f32554365e9b175ebc",

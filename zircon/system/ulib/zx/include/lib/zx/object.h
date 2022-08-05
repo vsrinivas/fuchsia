@@ -95,6 +95,8 @@ class unowned;
 template <typename T>
 class object : public object_base {
  public:
+  static constexpr zx_obj_type_t TYPE = ZX_OBJ_TYPE_NONE;
+
   constexpr object() = default;
 
   explicit object(zx_handle_t value) : object_base(value) {}
