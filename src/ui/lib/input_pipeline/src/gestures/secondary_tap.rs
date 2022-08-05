@@ -150,6 +150,14 @@ struct TwoFingerContactsContender {
 }
 
 impl TwoFingerContactsContender {
+    fn into_one_finger_raised_contender(self: Box<Self>) -> Box<dyn gesture_arena::Contender> {
+        Box::new(OneFingerRaisedContender {
+            two_finger_contacts_event: self.two_finger_contacts_event,
+            max_finger_displacement_in_mm: self.max_finger_displacement_in_mm,
+            max_time_elapsed: self.max_time_elapsed,
+        })
+    }
+
     fn into_matched_contender(
         self: Box<Self>,
         no_contacts_event: TouchpadEvent,
@@ -174,6 +182,34 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
 
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
             0 => ExamineEventResult::MatchedContender(self.into_matched_contender(event.clone())),
+            1 => {
+                match &self
+                    .two_finger_contacts_event
+                    .clone()
+                    .contacts
+                    .into_iter()
+                    .find(|contact| contact.id == event.contacts[0].id)
+                {
+                    Some(contact) => {
+                        if !(position_is_in_tap_threshold(
+                            position_from_event(event, 0),
+                            contact.position,
+                            self.max_finger_displacement_in_mm,
+                        )) {
+                            return ExamineEventResult::Mismatch(
+                                "too much motion for remaining contact",
+                            );
+                        }
+                    }
+                    None => {
+                        return ExamineEventResult::Mismatch(
+                            "remaining contact id differs from initial two finger contacts",
+                        );
+                    }
+                }
+
+                ExamineEventResult::Contender(self.into_one_finger_raised_contender())
+            }
             2 => {
                 // Acceptable displacement on the first touch contact.
                 if !(position_is_in_tap_threshold(
@@ -195,8 +231,81 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
 
                 ExamineEventResult::Contender(self)
             }
-            1 => ExamineEventResult::Mismatch("wanted 0 or 2 contacts, got 1"),
             3.. => ExamineEventResult::Mismatch("wanted 0 or 2 contacts, got >= 3"),
+        }
+    }
+}
+
+/// The state when this recognizer has already detected two fingers down,
+/// and one of those fingers has been raised.
+#[derive(Debug)]
+struct OneFingerRaisedContender {
+    /// The TouchpadEvent when two fingers were first detected.
+    two_finger_contacts_event: TouchpadEvent,
+
+    /// The maximum displacement that a detected finger can withstand to still
+    /// be considered a tap. Measured in millimeters.
+    max_finger_displacement_in_mm: f32,
+
+    /// The maximum time that can elapse between two fingers down and fingers up
+    /// to be considered a secondary tap gesture.
+    max_time_elapsed: zx::Duration,
+}
+
+impl OneFingerRaisedContender {
+    fn into_matched_contender(
+        self: Box<Self>,
+        no_contacts_event: TouchpadEvent,
+    ) -> Box<dyn gesture_arena::MatchedContender> {
+        Box::new(MatchedContender {
+            two_finger_contacts_event: self.two_finger_contacts_event,
+            no_contacts_event,
+            max_time_elapsed: self.max_time_elapsed,
+        })
+    }
+}
+
+impl gesture_arena::Contender for OneFingerRaisedContender {
+    fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
+        if !is_valid_event_time(event, &self.two_finger_contacts_event, self.max_time_elapsed) {
+            return ExamineEventResult::Mismatch("too much time elapsed");
+        }
+
+        if event.pressed_buttons.len() != 0 {
+            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        }
+
+        match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
+            0 => ExamineEventResult::MatchedContender(self.into_matched_contender(event.clone())),
+            1 => {
+                match &self
+                    .two_finger_contacts_event
+                    .clone()
+                    .contacts
+                    .into_iter()
+                    .find(|contact| contact.id == event.contacts[0].id)
+                {
+                    Some(contact) => {
+                        if !(position_is_in_tap_threshold(
+                            position_from_event(event, 0),
+                            contact.position,
+                            self.max_finger_displacement_in_mm,
+                        )) {
+                            return ExamineEventResult::Mismatch(
+                                "too much motion for remaining contact",
+                            );
+                        }
+                    }
+                    None => {
+                        return ExamineEventResult::Mismatch(
+                            "remaining contact id differs from initial two finger contacts",
+                        );
+                    }
+                }
+
+                ExamineEventResult::Contender(self)
+            }
+            2.. => ExamineEventResult::Mismatch("wanted 0 or 1 contacts, got >= 2"),
         }
     }
 }
@@ -332,6 +441,21 @@ mod tests {
 
     fn get_two_finger_contacts_contender() -> Box<TwoFingerContactsContender> {
         Box::new(TwoFingerContactsContender {
+            max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
+            max_time_elapsed: MAX_TIME_ELAPSED,
+            two_finger_contacts_event: TouchpadEvent {
+                contacts: vec![
+                    create_touch_contact(0, Position::zero()),
+                    create_touch_contact(1, Position::zero()),
+                ],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            },
+        })
+    }
+
+    fn get_one_finger_raised_contender() -> Box<OneFingerRaisedContender> {
+        Box::new(OneFingerRaisedContender {
             max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
             max_time_elapsed: MAX_TIME_ELAPSED,
             two_finger_contacts_event: TouchpadEvent {
@@ -716,13 +840,30 @@ mod tests {
         ));
     }
 
-    /// Tests that a TwoFingerContactsContender with one touch contact yields
-    /// a Mismatch.
+    /// Tests that a TwoFingerContactsContender with one touch contact with
+    /// acceptable displacement yields a OneFingerRaisedContender.
     #[fuchsia::test]
     fn two_finger_contacts_contender_one_contact() {
-        assert_matches!(
+        assert_contender(
             get_two_finger_contacts_contender().examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(0, Position::zero())],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            TypeId::of::<OneFingerRaisedContender>(),
+        );
+    }
+
+    /// Tests that a TwoFingerContactsContender with one touch contact with
+    /// too much displacement yields a Mismatch.
+    #[fuchsia::test]
+    fn two_finger_contacts_contender_one_contact_large_displacement() {
+        assert_matches!(
+            get_two_finger_contacts_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(
+                    0,
+                    Position { x: MAX_FINGER_DISPLACEMENT_IN_MM, y: MAX_FINGER_DISPLACEMENT_IN_MM },
+                )],
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
             }),
@@ -844,6 +985,164 @@ mod tests {
                 pressed_buttons: vec![],
             }),
             TypeId::of::<TwoFingerContactsContender>(),
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with an event whose timestamp
+    /// exceeds the elapsed threshold yields a Mismatch.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_too_long() {
+        assert_matches!(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![],
+                timestamp: MAX_TIME_ELAPSED + zx::Time::from_nanos(1),
+                pressed_buttons: vec![],
+            }),
+            ExamineEventResult::Mismatch(_)
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with one pressed button yields a
+    /// Mismatch.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_single_button() {
+        assert_matches!(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![0],
+            }),
+            ExamineEventResult::Mismatch(_)
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with multiple pressed buttons
+    /// yields a Mismatch.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_many_buttons() {
+        assert_matches!(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![0, 1],
+            }),
+            ExamineEventResult::Mismatch(_)
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with zero touch contacts yields a
+    /// MatchedContender.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_no_touch_contacts() {
+        assert_examined_matched_contender(get_one_finger_raised_contender().examine_event(
+            &TouchpadEvent {
+                contacts: vec![],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            },
+        ));
+    }
+
+    /// Tests that a OneFingerRaisedContender with one touch contact with
+    /// acceptable displacement against first recorded contact yields a
+    /// OneFingerRaisedContender.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_one_contact_first_id() {
+        assert_contender(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(0, Position::zero())],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            TypeId::of::<OneFingerRaisedContender>(),
+        );
+
+        assert_contender(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(
+                    0,
+                    Position { x: HALF_MOTION, y: HALF_MOTION },
+                )],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            TypeId::of::<OneFingerRaisedContender>(),
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with one touch contact with
+    /// acceptable displacement against second recorded contact yields a
+    /// OneFingerRaisedContender.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_one_contact_second_id() {
+        assert_contender(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(1, Position::zero())],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            TypeId::of::<OneFingerRaisedContender>(),
+        );
+
+        assert_contender(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(
+                    1,
+                    Position { x: HALF_MOTION, y: HALF_MOTION },
+                )],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            TypeId::of::<OneFingerRaisedContender>(),
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with one touch contact with
+    /// acceptable displacement against an unrecorded contact id yields a
+    /// Mismatch.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_one_contact_invalid_id() {
+        assert_matches!(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(2, Position::zero(),)],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            ExamineEventResult::Mismatch(_)
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with one touch contact with
+    /// too much displacement yields a Mismatch.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_one_contact_large_displacement() {
+        assert_matches!(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(
+                    0,
+                    Position { x: MAX_FINGER_DISPLACEMENT_IN_MM, y: MAX_FINGER_DISPLACEMENT_IN_MM },
+                )],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            ExamineEventResult::Mismatch(_)
+        );
+    }
+
+    /// Tests that a OneFingerRaisedContender with more than one touch contacts
+    /// yields a Mismatch.
+    #[fuchsia::test]
+    fn one_finger_raised_contender_many_touch_contacts() {
+        assert_matches!(
+            get_one_finger_raised_contender().examine_event(&TouchpadEvent {
+                contacts: vec![
+                    create_touch_contact(0, Position::zero()),
+                    create_touch_contact(1, Position::zero()),
+                ],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
+            ExamineEventResult::Mismatch(_)
         );
     }
 
