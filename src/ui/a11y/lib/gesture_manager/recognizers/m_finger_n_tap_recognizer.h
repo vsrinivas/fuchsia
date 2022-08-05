@@ -14,10 +14,10 @@ namespace a11y {
 class MFingerNTapRecognizer : public GestureRecognizer {
  public:
   // Default value for maximum time the tap can take.
-  static constexpr zx::duration kTapTimeout = zx::msec(300);
+  static constexpr zx::duration kMaxTapDuration = zx::msec(300);
 
   // Default value for maximum time under which the next tap should start.
-  static constexpr zx::duration kTimeoutBetweenTaps = zx::msec(250);
+  static constexpr zx::duration kMaxTimeBetweenMultifingerTaps = zx::msec(250);
 
   // Callback which will be invoked when gesture has been recognized.
   using OnMFingerNTapCallback = fit::function<void(GestureContext)>;

@@ -260,7 +260,7 @@ TEST_F(GestureManagerTest, CallsActionOnSingleTap) {
   };
   listener_.events().OnStreamHandled = std::move(listener_callback);
   ExecuteOneFingerTapAction(&listener_);
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
   EXPECT_EQ(actual_point_.x, kLocalPoint.x);
@@ -302,7 +302,7 @@ TEST_F(GestureManagerTest, CallsActionOnDoubleTap) {
 
   ExecuteOneFingerTapAction(&listener_);
   ExecuteOneFingerTapAction(&listener_);
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
   EXPECT_EQ(actual_point_.x, kLocalPoint.x);
@@ -776,7 +776,7 @@ TEST_F(GestureManagerTest, CallsActionOnOneFingerTripleTapDrag) {
   event.set_pointer_id(kDefaultPointerId);
   event.set_phase(Phase::DOWN);
   listener_->OnEvent(std::move(event));
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
   EXPECT_EQ(actual_point_.x, kLocalPoint.x);
@@ -818,7 +818,7 @@ TEST_F(GestureManagerTest, NoGestureDetected) {
   // Send an ADD event.
   auto event = GetDefaultPointerEvent();
   listener_->OnEvent(std::move(event));
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::REJECTED);
   EXPECT_FALSE(double_tap_detected_);
@@ -910,7 +910,7 @@ TEST_F(GestureManagerTest, CallsActionOnThreeFingerDoubleTapDrag) {
   for (uint32_t finger = 0; finger < 3; finger++) {
     SendPointerEvents(&listener_, DownEvents(finger, {}));
   }
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
   RunLoopUntilIdle();
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
@@ -953,7 +953,7 @@ TEST_F(GestureManagerTest, CallsActionOnTwoFingerDrag) {
     SendPointerEvents(&listener_, DownEvents(finger, {}));
   }
 
-  RunLoopFor(a11y::TwoFingerDragRecognizer::kDefaultMinDragDuration);
+  RunLoopFor(a11y::TwoFingerDragRecognizer::kMinDragDuration);
   RunLoopUntilIdle();
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);

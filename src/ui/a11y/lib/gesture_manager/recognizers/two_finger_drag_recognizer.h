@@ -25,7 +25,7 @@ class TwoFingerDragRecognizer : public GestureRecognizer {
  public:
   // Minimum duration of a drag (in milliseconds).
   // This delay is intended to ensure behavioral consistency with other screen readers.
-  static constexpr zx::duration kDefaultMinDragDuration = zx::msec(500);
+  static constexpr zx::duration kMinDragDuration = zx::msec(500);
 
   // Displacements of less than 1/16 are considered valid for taps, so we want
   // to recognize slightly larger gestures as drags.
@@ -57,7 +57,7 @@ class TwoFingerDragRecognizer : public GestureRecognizer {
   // arena.
   TwoFingerDragRecognizer(DragGestureCallback on_drag_started, DragGestureCallback on_drag_update,
                           DragGestureCallback on_drag_complete,
-                          zx::duration drag_gesture_delay = kDefaultMinDragDuration);
+                          zx::duration drag_gesture_delay = kMinDragDuration);
   ~TwoFingerDragRecognizer() override;
 
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;

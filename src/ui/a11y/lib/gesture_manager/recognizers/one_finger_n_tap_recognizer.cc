@@ -77,7 +77,7 @@ void OneFingerNTapRecognizer::HandleEvent(
       // Cancel task which would be scheduled for timeout between taps.
       contest_->reject_task.Cancel();
 
-      // Schedule a task with kTapTimeout for the current tap to complete.
+      // Schedule a task with timeout `kTapDuration` for the current tap to complete.
       contest_->reject_task.PostDelayed(async_get_default_dispatcher(), tap_timeout_);
       contest_->tap_in_progress = true;
       break;

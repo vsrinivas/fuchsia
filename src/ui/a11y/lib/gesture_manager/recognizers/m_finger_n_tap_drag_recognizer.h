@@ -17,13 +17,13 @@ class MFingerNTapDragRecognizer : public GestureRecognizer {
   // TODO(fxb/70569): Move constants into a separate file to share across all
   // recognizers.
   // Default value for minimum time to constitute a held tap.
-  static constexpr zx::duration kMinTapHoldDuration = zx::msec(500);
+  static constexpr zx::duration kMinDragDuration = zx::msec(500);
 
   // Default value for maximum time the tap can take.
-  static constexpr zx::duration kTapTimeout = zx::msec(300);
+  static constexpr zx::duration kMaxTapDuration = zx::msec(300);
 
   // Default value for maximum time under which the next tap should start.
-  static constexpr zx::duration kTimeoutBetweenTaps = zx::msec(250);
+  static constexpr zx::duration kMaxTimeBetweenMultifingerTaps = zx::msec(250);
 
   // Displacements of less than 1/16 NDC are considered valid for taps, so we want
   // to recognize slightly larger gestures as drags.

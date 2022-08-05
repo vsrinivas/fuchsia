@@ -44,7 +44,7 @@ class TwoFingerDragRecognizerTest : public gtest::TestLoopFixture {
         [this](a11y::GestureContext context) { gesture_start_callback_called_ = true; },
         [this](a11y::GestureContext context) { gesture_updates_.push_back(context); },
         [this](a11y::GestureContext context) { gesture_complete_callback_called_ = true; },
-        a11y::TwoFingerDragRecognizer::kDefaultMinDragDuration);
+        a11y::TwoFingerDragRecognizer::kMinDragDuration);
 
     recognizer_->OnContestStarted(member_.TakeInterface());
   }
@@ -68,7 +68,7 @@ TEST_F(TwoFingerDragRecognizerTest, WonAfterGestureDetectedTimeThreshold) {
 
   // Wait for the drag delay to elapse, at which point the recognizer should claim the win and
   // invoke the update callback.
-  RunLoopFor(a11y::TwoFingerDragRecognizer::kDefaultMinDragDuration);
+  RunLoopFor(a11y::TwoFingerDragRecognizer::kMinDragDuration);
 
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -161,7 +161,7 @@ TEST_F(TwoFingerDragRecognizerTest, RejectSecondFingerTimeout) {
 
   SendPointerEvents(DownEvents(1, {0, 0}));
 
-  RunLoopFor(a11y::TwoFingerDragRecognizer::kDefaultMinDragDuration);
+  RunLoopFor(a11y::TwoFingerDragRecognizer::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }

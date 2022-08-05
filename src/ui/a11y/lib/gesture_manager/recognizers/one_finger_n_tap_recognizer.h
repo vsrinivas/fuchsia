@@ -14,10 +14,10 @@ namespace a11y {
 class OneFingerNTapRecognizer : public GestureRecognizer {
  public:
   // Default value for maximum time the tap can take.
-  static constexpr zx::duration kTapTimeout = zx::msec(300);
+  static constexpr zx::duration kMaxTapDuration = zx::msec(300);
 
   // Default value for maximum time under which the next tap should start.
-  static constexpr zx::duration kTimeoutBetweenTaps = zx::msec(300);
+  static constexpr zx::duration kMaxTimeBetweenTaps = zx::msec(300);
 
   // Callback which will be invoked when gesture has been recognized.
   using OnFingerTapGesture = fit::function<void(GestureContext)>;
@@ -35,8 +35,8 @@ class OneFingerNTapRecognizer : public GestureRecognizer {
   // recognized in this timeout period, then the scheduled task is cancelled. If not recognized,
   // scheduled tasks will get executed which will declare defeat for the current recognizer.
   OneFingerNTapRecognizer(OnFingerTapGesture callback, int number_of_taps,
-                          zx::duration tap_timeout = kTapTimeout,
-                          zx::duration timeout_between_taps = kTimeoutBetweenTaps);
+                          zx::duration tap_timeout = kMaxTapDuration,
+                          zx::duration timeout_between_taps = kMaxTimeBetweenTaps);
 
   ~OneFingerNTapRecognizer() override;
 

@@ -76,7 +76,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragDetected) {
   // Send events for second tap.
   SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {})));
 
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -173,7 +173,7 @@ TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapWithDragDetected) {
   SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
                      DownEvents(1, {}) + MoveEvents(1, {}, {})));
 
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -245,7 +245,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragDetectedExtraF
   SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
                      DownEvents(1, {}) + MoveEvents(1, {}, {})));
 
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinTapHoldDuration);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -301,7 +301,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapRejectedEarlyTapLength
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}));
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
@@ -313,7 +313,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapRejectedLastTapLengthT
 
   SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
                     UpEvents(2, {}) + UpEvents(3, {}) + DownEvents(1, {}));
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kTapTimeout);
+  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }

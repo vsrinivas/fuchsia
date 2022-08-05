@@ -58,13 +58,13 @@ MFingerNTapDragRecognizer::~MFingerNTapDragRecognizer() = default;
 
 void MFingerNTapDragRecognizer::OnTapStarted() {
   // If this tap is the last in the gesture, post a task to accept the gesture
-  // if the fingers are still on screen after kMinTapHoldDuration has elapsed.
+  // if the fingers are still on screen after `kMinDragDuration` has elapsed.
   // Otherwise, if this tap is NOT the last in the gesture, post a task to
-  // reject the gesture if the fingers have not lifted by the time kTapTimeout
+  // reject the gesture if the fingers have not lifted by the time `kTapDuration`
   // elapses. In this case, we also need to cancel the tap length timeout.
   if (contest_->number_of_taps_detected == number_of_taps_in_gesture_ - 1) {
     contest_->tap_length_timeout.Cancel();
-    contest_->accept_task.PostDelayed(async_get_default_dispatcher(), kMinTapHoldDuration);
+    contest_->accept_task.PostDelayed(async_get_default_dispatcher(), kMinDragDuration);
   }
 }
 
@@ -144,7 +144,7 @@ void MFingerNTapDragRecognizer::OnUpEvent() {
     contest_->tap_length_timeout.Cancel();
 
     // Schedule task with delay of timeout_between_taps_.
-    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
+    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kMaxTimeBetweenMultifingerTaps);
   }
 }
 
@@ -206,7 +206,7 @@ void MFingerNTapDragRecognizer::HandleEvent(
       // schedule the tap length timeout.
       if (NumberOfFingersOnScreen(gesture_context_) == 1) {
         contest_->tap_interval_timeout.Cancel();
-        contest_->tap_length_timeout.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
+        contest_->tap_length_timeout.PostDelayed(async_get_default_dispatcher(), kMaxTapDuration);
       }
 
       contest_->tap_in_progress =

@@ -544,7 +544,7 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
   // Send Tap event for view_ref_. This should trigger explore action, which should then call
   // FocusChain to set focus to the tapped view.
   SendPointerEvents(&mock_pointer_event_registry_.listener(), TapEvents(1, {}));
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 
   auto mock_screen_reader_context = screen_reader_context_factory_.mock_screen_reader_context();
   ASSERT_TRUE(mock_screen_reader_context);

@@ -73,7 +73,7 @@ void MFingerNTapRecognizer::OnUpEvent() {
   // Check if this is not the last tap of the gesture.
   if (contest_->number_of_taps_detected < number_of_taps_in_gesture_) {
     // Schedule task with delay of timeout_between_taps_.
-    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kTimeoutBetweenTaps);
+    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kMaxTimeBetweenMultifingerTaps);
   } else {
     // Tap gesture is detected.
     contest_->member->Accept();
@@ -140,7 +140,7 @@ void MFingerNTapRecognizer::HandleEvent(
       // the new tap.
       if (NumberOfFingersOnScreen(gesture_context_) == 1) {
         contest_->tap_interval_timeout.Cancel();
-        contest_->tap_length_timeout.PostDelayed(async_get_default_dispatcher(), kTapTimeout);
+        contest_->tap_length_timeout.PostDelayed(async_get_default_dispatcher(), kMaxTapDuration);
       }
 
       contest_->tap_in_progress =

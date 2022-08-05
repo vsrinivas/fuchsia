@@ -96,7 +96,7 @@ TEST_F(OneFingerNTapRecognizerTest, SingleTapGestureDetectedWin) {
   EXPECT_TRUE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 }
 
 // Tests Double tap gesture detection case where gesture is declared a winner.
@@ -115,7 +115,7 @@ TEST_F(OneFingerNTapRecognizerTest, DoubleTapGestureDetectedWin) {
   EXPECT_TRUE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 }
 
 // Tests Single tap gesture detection case where gesture is declared defeated.
@@ -129,7 +129,7 @@ TEST_F(OneFingerNTapRecognizerTest, SingleTapGestureDetectedLoss) {
   EXPECT_FALSE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 }
 
 // Tests Double tap gesture detection case where gesture is declared defeated.
@@ -148,7 +148,7 @@ TEST_F(OneFingerNTapRecognizerTest, DoubleTapGestureDetectedLoss) {
   EXPECT_FALSE(gesture_won_);
 
   // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 }
 
 // Tests Single tap gesture detection failure, where gesture detection times out because of long
@@ -160,7 +160,7 @@ TEST_F(OneFingerNTapRecognizerTest, SingleTapGestureTimeout) {
   SendPointerEvents(DownEvents(1, {}));
 
   // Wait until the timeout, after which the gesture should abandon.
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
@@ -175,7 +175,7 @@ TEST_F(OneFingerNTapRecognizerTest, DoubleTapGestureTimeoutBetweenTaps) {
   SendPointerEvents(TapEvents(1, {}));
 
   // Wait until the timeout, after which the gesture should abandon.
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kTapTimeout);
+  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }

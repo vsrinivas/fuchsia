@@ -29,7 +29,7 @@ class SwipeRecognizerBase : public GestureRecognizer {
   static constexpr float kMinSwipeDistance = 2.f / 8;
 
   // Maximum duration of swipe (in milliseconds).
-  static constexpr zx::duration kDefaultSwipeGestureTimeout = zx::msec(500);
+  static constexpr zx::duration kMaxSwipeDuration = zx::msec(500);
 
   static constexpr uint32_t kDefaultNumberOfFingers = 1;
 

@@ -28,7 +28,7 @@ class TestSwipeRecognizer : public a11y::SwipeRecognizerBase {
  public:
   TestSwipeRecognizer(SwipeGestureCallback callback, uint32_t number_of_fingers)
       : SwipeRecognizerBase(std::move(callback), number_of_fingers,
-                            SwipeRecognizerBase::kDefaultSwipeGestureTimeout,
+                            SwipeRecognizerBase::kMaxSwipeDuration,
                             kSwipeRecognizerName) {}
 
   void set_valid(bool valid) { valid_ = valid; }
@@ -199,7 +199,7 @@ TEST_P(SwipeRecognizerBaseTest, Timeout) {
     SendPointerEvents(DownEvents(finger, {}));
   }
 
-  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
+  RunLoopFor(a11y::SwipeRecognizerBase::kMaxSwipeDuration);
   EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
@@ -217,7 +217,7 @@ TEST_P(SwipeRecognizerBaseTest, NoTimeoutAfterDetected) {
 
   // By now, the member has been released (verified in the |Accept| test), so state can no longer
   // change. Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
+  RunLoopFor(a11y::SwipeRecognizerBase::kMaxSwipeDuration);
 }
 
 // Tests rejection case in which the swipe gesture does not cover long enough distance.
