@@ -226,7 +226,13 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
 
 #[cfg(test)]
 mod test {
-    use {super::*, fuchsia_async as fasync, tempfile::tempdir};
+    use {
+        super::*,
+        fuchsia_async as fasync,
+        maplit::hashset,
+        std::{collections::HashSet, iter::FromIterator},
+        tempfile::tempdir,
+    };
 
     #[fuchsia::test]
     async fn empty_data_returns_empty_repeatedly() {
@@ -314,8 +320,11 @@ mod test {
         .await;
 
         assert_eq!(
-            responses,
-            vec![("file".to_string(), b"test".to_vec()), ("file2".to_string(), b"test2".to_vec()),]
+            HashSet::from_iter(responses),
+            hashset![
+                ("file".to_string(), b"test".to_vec()),
+                ("file2".to_string(), b"test2".to_vec()),
+            ]
         );
     }
 }
