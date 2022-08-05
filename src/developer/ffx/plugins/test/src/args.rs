@@ -116,7 +116,9 @@ pub struct RunCommand {
     pub output_directory: Option<String>,
 
     /// enables experimental parallel test scheduler. The provided number
-    /// specifies the max number of test suites to run in parallel
+    /// specifies the max number of test suites to run in parallel.
+    /// If the value provided is 0, a default value will be chosen by the
+    /// server implementation.
     #[argh(option)]
     pub experimental_parallel_execution: Option<u16>,
 

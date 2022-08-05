@@ -13,8 +13,8 @@ use {
     fidl_fuchsia_component_resolution::ResolverProxy,
     fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{
-        LaunchError, RunControllerRequest, RunControllerRequestStream, SuiteControllerRequest,
-        SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
+        LaunchError, RunControllerRequest, RunControllerRequestStream, SchedulingOptions,
+        SuiteControllerRequest, SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
     },
     fuchsia_async::{self as fasync},
     fuchsia_zircon as zx,
@@ -155,6 +155,7 @@ impl TestRunBuilder {
         debug_controller: ftest_internal::DebugDataSetControllerProxy,
         debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
         inspect_node: self_diagnostics::RunInspectNode,
+        _scheduling_options: Option<SchedulingOptions>,
     ) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);

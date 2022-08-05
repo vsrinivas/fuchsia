@@ -477,6 +477,20 @@ impl RunningSuite {
     }
 }
 
+// Will invoke the WithSchedulingOptions FIDL method if a client indicates
+// that they want to use experimental parallel execution.
+async fn request_scheduling_options(
+    run_params: &RunParams,
+    builder_proxy: &RunBuilderProxy,
+) -> Result<(), RunTestSuiteError> {
+    let scheduling_options = ftest_manager::SchedulingOptions {
+        max_parallel_suites: run_params.experimental_parallel_execution,
+        ..ftest_manager::SchedulingOptions::EMPTY
+    };
+    builder_proxy.with_scheduling_options(scheduling_options)?;
+    Ok(())
+}
+
 /// Schedule and run the tests specified in |test_params|, and collect the results.
 /// Note this currently doesn't record the result or call finished() on run_reporter,
 /// the caller should do this instead.
@@ -525,6 +539,8 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         suite_start_futs.push(suite_and_id_fut);
         builder_proxy.add_suite(&params.test_url, run_options, suite_server_end)?;
     }
+
+    request_scheduling_options(&run_params, &builder_proxy).await?;
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
     let run_controller_ref = &run_controller;
     builder_proxy.build(run_server_end)?;
@@ -784,8 +800,8 @@ pub fn create_reporter<W: 'static + Write + Send + Sync>(
 mod test {
     use {
         super::*, crate::output::InMemoryReporter, assert_matches::assert_matches,
-        fidl::endpoints::create_proxy_and_stream, futures::future::join, maplit::hashmap,
-        output::EntityId,
+        fidl::endpoints::create_proxy_and_stream, ftest_manager, futures::future::join,
+        maplit::hashmap, output::EntityId,
     };
     #[cfg(target_os = "fuchsia")]
     use {
@@ -1344,7 +1360,11 @@ mod test {
                     run_controller = Some(controller);
                     break;
                 }
-                _ => unreachable!(),
+                ftest_manager::RunBuilderRequest::WithSchedulingOptions { options, .. } => {
+                    if let Some(_) = options.max_parallel_suites {
+                        panic!("Not expecting calls to WithSchedulingOptions where options.max_parallel_suites is Some()")
+                    }
+                }
             }
         }
         assert!(
@@ -1722,5 +1742,76 @@ mod test {
         let (name, file) = &files[0];
         assert_eq!(name.to_string_lossy(), "test_file.profraw".to_string());
         assert_eq!(file.get_contents(), b"Not a real profile");
+    }
+
+    async fn fake_parallel_options_server(
+        mut stream: ftest_manager::RunBuilderRequestStream,
+    ) -> Option<ftest_manager::SchedulingOptions> {
+        let mut scheduling_options = None;
+        if let Ok(Some(req)) = stream.try_next().await {
+            match req {
+                ftest_manager::RunBuilderRequest::AddSuite { .. } => {
+                    panic!("Not expecting an AddSuite request")
+                }
+                ftest_manager::RunBuilderRequest::Build { .. } => {
+                    panic!("Not expecting a Build request")
+                }
+                ftest_manager::RunBuilderRequest::WithSchedulingOptions { options, .. } => {
+                    scheduling_options = Some(options);
+                }
+            }
+        }
+        scheduling_options
+    }
+
+    #[fuchsia::test]
+    async fn request_scheduling_options_test_parallel() {
+        let max_parallel_suites: u16 = 10;
+        let expected_max_parallel_suites = Some(max_parallel_suites);
+
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let run_params = RunParams {
+            timeout_behavior: TimeoutBehavior::Continue,
+            stop_after_failures: None,
+            experimental_parallel_execution: Some(max_parallel_suites),
+        };
+
+        let request_parallel_fut = request_scheduling_options(&run_params, &builder_proxy);
+        let fake_server_fut = fake_parallel_options_server(run_builder_stream);
+
+        let returned_options = join(request_parallel_fut, fake_server_fut).await.1;
+        let max_parallel_suites_received = match returned_options {
+            Some(scheduling_options) => scheduling_options.max_parallel_suites,
+            None => panic!("Expected scheduling options."),
+        };
+        assert_eq!(max_parallel_suites_received, expected_max_parallel_suites);
+    }
+
+    #[fuchsia::test]
+    async fn request_scheduling_options_test_serial() {
+        let expected_max_parallel_suites = None;
+
+        let (builder_proxy, run_builder_stream) =
+            create_proxy_and_stream::<ftest_manager::RunBuilderMarker>()
+                .expect("create builder proxy");
+
+        let run_params = RunParams {
+            timeout_behavior: TimeoutBehavior::Continue,
+            stop_after_failures: None,
+            experimental_parallel_execution: None,
+        };
+
+        let request_parallel_fut = request_scheduling_options(&run_params, &builder_proxy);
+        let fake_server_fut = fake_parallel_options_server(run_builder_stream);
+
+        let returned_options = join(request_parallel_fut, fake_server_fut)
+            .await
+            .1
+            .expect("Expected scheduling options.");
+        let max_parallel_suites_received = returned_options.max_parallel_suites;
+        assert_eq!(max_parallel_suites_received, expected_max_parallel_suites);
     }
 }

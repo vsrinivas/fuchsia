@@ -134,14 +134,11 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             Some(Some(stop_after)) => Some(stop_after),
         },
         experimental_parallel_execution: match (
-            cmd.experimental_parallel_execution.map(std::num::NonZeroU16::new),
+            cmd.experimental_parallel_execution,
             experimental_parallel_exec_enabled,
         ) {
             (None, _) => None,
-            (Some(None), true) => {
-                ffx_bail!("--experimental-parallel-execution should be greater than zero.")
-            }
-            (Some(Some(max_parallel_suites)), true) => Some(max_parallel_suites),
+            (Some(max_parallel_suites), true) => Some(max_parallel_suites),
             (_, false) => ffx_bail!(
               "Parallel test suite execution is experimental and is subject to breaking changes. \
               To enable parallel test suite execution, run: \n \

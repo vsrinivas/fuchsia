@@ -32,6 +32,7 @@ pub async fn run_test_manager(
     inspect_root: &self_diagnostics::RootInspectNode,
 ) -> Result<(), TestManagerError> {
     let mut builder = TestRunBuilder { suites: vec![] };
+    let mut scheduling_options: Option<ftest_manager::SchedulingOptions> = None;
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
             ftest_manager::RunBuilderRequest::AddSuite {
@@ -61,8 +62,8 @@ pub async fn run_test_manager(
                     facets: facet::ResolveStatus::Unresolved,
                 });
             }
-            ftest_manager::RunBuilderRequest::WithSchedulingOptions { options: _, .. } => {
-                unimplemented!();
+            ftest_manager::RunBuilderRequest::WithSchedulingOptions { options, .. } => {
+                scheduling_options = Some(options);
             }
             ftest_manager::RunBuilderRequest::Build { controller, control_handle } => {
                 let controller = match controller.into_stream() {
@@ -80,7 +81,15 @@ pub async fn run_test_manager(
                 debug_data_controller.new_set(iterator_server, set_controller_server).unwrap();
                 let run_inspect = inspect_root
                     .new_run(&format!("run_{:?}", zx::Time::get_monotonic().into_nanos()));
-                builder.run(controller, debug_set_controller, debug_iterator, run_inspect).await;
+                builder
+                    .run(
+                        controller,
+                        debug_set_controller,
+                        debug_iterator,
+                        run_inspect,
+                        scheduling_options,
+                    )
+                    .await;
                 // clients should reconnect to run new tests.
                 break;
             }
