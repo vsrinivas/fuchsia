@@ -48,8 +48,8 @@ KCOUNTER(ept_tlb_invalidations, "mmu.ept_tlb_invalidations")
 
 /* Default address width including virtual/physical address.
  * newer versions fetched below */
-uint8_t g_vaddr_width = 48;
-uint8_t g_paddr_width = 32;
+static uint8_t g_max_vaddr_width = 48;
+uint8_t g_max_paddr_width = 32;
 
 /* 1 if page table isolation should be used, 0 if not.  -1 if uninitialized. */
 int g_enable_isolation = -1;
@@ -106,21 +106,11 @@ paddr_t x86_kernel_cr3(void) { return kernel_pt_phys; }
  * @brief  check if the virtual address is canonical
  */
 bool x86_is_vaddr_canonical(vaddr_t vaddr) {
-  uint64_t max_vaddr_lohalf, min_vaddr_hihalf;
-
-  /* get max address in lower-half canonical addr space */
-  /* e.g. if width is 48, then 0x00007FFF_FFFFFFFF */
-  max_vaddr_lohalf = ((uint64_t)1ull << (g_vaddr_width - 1)) - 1;
-
-  /* get min address in higher-half canonical addr space */
-  /* e.g. if width is 48, then 0xFFFF8000_00000000*/
-  min_vaddr_hihalf = ~max_vaddr_lohalf;
-
-  /* Check to see if the address in a canonical address */
-  if ((vaddr > max_vaddr_lohalf) && (vaddr < min_vaddr_hihalf))
-    return false;
-
-  return true;
+  // If N is the number of address bits in use for a virtual address, then the
+  // address is canonical if bits [N - 1, 63] are all either 0 (the low half of
+  // the valid addresses) or 1 (the high half).
+  return ((vaddr & kX86CanonicalAddressMask) == 0) ||
+         ((vaddr & kX86CanonicalAddressMask) == kX86CanonicalAddressMask);
 }
 
 /**
@@ -144,7 +134,7 @@ bool x86_mmu_check_paddr(paddr_t paddr) {
   if (!IS_ALIGNED(paddr, PAGE_SIZE))
     return false;
 
-  max_paddr = ((uint64_t)1ull << g_paddr_width) - 1;
+  max_paddr = ((uint64_t)1ull << g_max_paddr_width) - 1;
 
   return paddr <= max_paddr;
 }
@@ -535,12 +525,15 @@ void x86_mmu_early_init() {
   /* if we got something meaningful, override the defaults.
    * some combinations of cpu on certain emulators seems to return
    * nonsense paddr widths (1), so trim it. */
-  if (paddr_width > g_paddr_width)
-    g_paddr_width = paddr_width;
-  if (vaddr_width > g_vaddr_width)
-    g_vaddr_width = vaddr_width;
+  if (paddr_width > g_max_paddr_width) {
+    g_max_paddr_width = paddr_width;
+  }
 
-  LTRACEF("paddr_width %u vaddr_width %u\n", g_paddr_width, g_vaddr_width);
+  if (vaddr_width > g_max_vaddr_width) {
+    g_max_vaddr_width = vaddr_width;
+  }
+
+  LTRACEF("paddr_width %u vaddr_width %u\n", g_max_paddr_width, g_max_vaddr_width);
 }
 
 void x86_mmu_init(void) {
@@ -548,6 +541,11 @@ void x86_mmu_init(void) {
       !gBootOptions->x86_disable_spec_mitigations &&
       (gBootOptions->x86_pti_enable == 1 || (gBootOptions->x86_pti_enable == 2 && g_has_meltdown));
   printf("Kernel PTI %s\n", g_enable_isolation ? "enabled" : "disabled");
+
+  ASSERT_MSG(g_max_vaddr_width >= kX86VAddrBits,
+             "Maximum number of virtual address bits (%u) is less than the assumed number of bits"
+             " being used (%u)\n",
+             g_max_vaddr_width, kX86VAddrBits);
 
   // TODO(crbug.com/fuchsia/31415): Currently KPTI disables Global pages; we might be able to do
   // better, to use global pages for all user-pages, to avoid implicit TLB entry invalidations

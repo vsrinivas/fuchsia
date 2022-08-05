@@ -179,7 +179,6 @@ bool test_addresses_outside_user_range(bool capture_faults) {
     {USER_ASPACE_BASE - (sizeof(test_buffer) / 2), ZX_ERR_INVALID_ARGS, true},
 
 #if defined(__aarch64__)
-
     // These addresses will result in ZX_ERR_INVALID_ARGS when copying to a
     // user pointer because we fault on a bad address.
 
@@ -214,7 +213,6 @@ bool test_addresses_outside_user_range(bool capture_faults) {
     {(UINT64_C(1) << 56), ZX_ERR_INVALID_ARGS, true},
 
 #elif defined(__x86_64__)
-
     // On x86_64, an address is considered accessible to the user if everything
     // above bit 47 is zero. Passing an address that doesn't meet this constraint
     // will cause the user_copy to fail without performing the copy.
@@ -229,9 +227,29 @@ bool test_addresses_outside_user_range(bool capture_faults) {
     // Overlapping 2^48
     {(UINT64_C(1) << 48) - sizeof(test_buffer) / 2, ZX_ERR_INVALID_ARGS, false},
 
+    // Additionally, all virtual addresses (including virtual mode user addresses) must be
+    // "canonical" addresses.  For machines with 48 bit virtual addresses (an assumption currently
+    // validated in "kernel/arch/x86/mmu.cc"), this means that virtual addresses in the range from
+    // [0x0000'8000'0000'0000, 0xFFFF'8000'0000'0000) are considered to be "non-canonical" and will
+    // generate a GPF if they are accessed.  See https://en.wikipedia.org/wiki/X86-64 "Canonical
+    // form addresses" for more details.
+    //
+    // Make sure that user-copy operations consider these addresses to be invalid, and do not
+    // produce faults if we attempt to access them via a user-copy operation.
+    {UINT64_C(0x0000'8000'0000'0000), ZX_ERR_INVALID_ARGS, false},
+    {UINT64_C(0xFFFF'7FFF'FFFF'FFFF), ZX_ERR_INVALID_ARGS, false},
+    {UINT64_C(0x1234'5678'9ABC'DEF0), ZX_ERR_INVALID_ARGS, false},
 #endif
-
   };
+
+#if defined(__x86_64__)
+  // Test vectors (above) rely on the current compile time assumption that the
+  // number of virtual address bits in use is 48.  If this ever changes, the
+  // tests will need to be updated.
+  static_assert(
+      kX86VAddrBits == 48,
+      "The number of x64 virtual address is no longer 48.  Unit test vectors need to be updated.");
+#endif
 
   for (const TestCase& test_case : kTestCases) {
     vaddr_t test_addr = test_case.test_addr;

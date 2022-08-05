@@ -57,11 +57,11 @@ void validate_user_accessible_range(vaddr_t* vaddr, size_t* len) {
 #elif defined(__x86_64__)
 
   // On x86_64, we must check that no address in the range of [vaddr, vaddr+len) has a bit set above
-  // bit 47 (that is, each address is less than 1<<48).
+  // the lower half of the canonical address ranges.
 
   // Note that we only really need to check the upper bound. Even if we overflowed above, `vaddr`
   // and `len` will still be zero here.
-  vaddr_t user_bit_end = (*vaddr + *len - 1) & kUpperBitsMask;
+  vaddr_t user_bit_end = (*vaddr + *len - 1) & kX86CanonicalAddressMask;
   *vaddr = fbl::conditional_select_nospec_eq(user_bit_end, 0, *vaddr, 0);
   *len = fbl::conditional_select_nospec_eq(user_bit_end, 0, *len, 0);
 

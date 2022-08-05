@@ -24,6 +24,24 @@
 struct iframe_t;
 struct syscall_regs_t;
 
+// Currently, we assume at compile time that we are operating in a mode where we
+// have 48 active virtual address bits.  If/when this changes, we need to come
+// back here and rework the code just a bit to handle the multiple possible
+// sizes instead of assuming 48 bits at compile time.
+static constexpr uint8_t kX86VAddrBits = 48;
+
+// The definition of an x86/64 "canonical" address depends on the number of
+// total meaningful virtual address bits.  The canonical address range is
+// divided into two regions; the first where all of the high address bits are 0,
+// and the second where all of the high address bits are 1.  IOW - if the number
+// of meaningful address bits is N, then the bits [N - 1, 63] must all be either
+// 1 or 0.  The lower N - 1 bits may be whatever they want to be.
+//
+// Precompute the mask for the [N - 1, 63] range so we can easily test to see if
+// an address might be a user-mode address ((addr & Mask) == 0), or might be a
+// kernel address ((addr & Mask) == Mask).
+static constexpr uint64_t kX86CanonicalAddressMask = ~((uint64_t{1} << (kX86VAddrBits - 1)) - 1);
+
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
 // Called by assembly.
@@ -74,7 +92,7 @@ void x86_syscall();
 
 void x86_syscall_process_pending_signals(struct syscall_regs_t* gregs);
 
-} // extern C
+}  // extern C
 
 /* @brief Register all of the CPUs in the system
  *
@@ -235,7 +253,7 @@ static inline void x86_set_cr4(ulong in_val) {
   static inline void set_##REG(uint16_t value) {          \
     __asm__ volatile("mov %0, %%" #REG : : "r"(value));   \
   }                                                       \
-  static inline uint16_t get_##REG() {                \
+  static inline uint16_t get_##REG() {                    \
     uint16_t value;                                       \
     __asm__ volatile("mov %%" #REG ", %0" : "=r"(value)); \
     return value;                                         \
@@ -431,6 +449,6 @@ void x86_enable_ints_and_hlt();
 void mds_buff_overwrite();
 void x86_ras_fill();
 
-} // extern C
+}  // extern C
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_H_

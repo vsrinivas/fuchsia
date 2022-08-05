@@ -9,6 +9,7 @@
 
 #include <zircon/compiler.h>
 
+#include <arch/x86.h>
 #include <arch/x86/mmu.h>
 
 static inline bool is_kernel_address(vaddr_t va) {
@@ -16,12 +17,11 @@ static inline bool is_kernel_address(vaddr_t va) {
           va - (vaddr_t)KERNEL_ASPACE_BASE < (vaddr_t)KERNEL_ASPACE_SIZE);
 }
 
-static inline constexpr uint8_t kHighVABit = 47;
-static inline constexpr uint64_t kUpperBitsMask = ~((UINT64_C(1) << (kHighVABit + 1)) - 1);
-
 static inline bool is_user_accessible(vaddr_t va) {
-  // This address refers to userspace if everything above bit 47 is zero.
-  return (va & kUpperBitsMask) == 0;
+  // This address refers to userspace if it is in the lower half of the
+  // canonical addresses.  IOW - if all of the bits in the canonical address
+  // mask are zero.
+  return (va & kX86CanonicalAddressMask) == 0;
 }
 
 // Check that the continuous range of addresses in [va, va+len) are all
