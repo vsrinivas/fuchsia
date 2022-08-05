@@ -468,11 +468,11 @@ type Protocol struct {
 	// RequestName is the name of the protocol request type for this FIDL protocol.
 	RequestName string
 
-	// ServiceNameString is the string service name for this FIDL protocol.
-	ServiceNameString string
+	// ProtocolNameString is the string service name for this FIDL protocol.
+	ProtocolNameString string
 
-	// ServiceNameConstant is the name of the service name constant for this FIDL protocol.
-	ServiceNameConstant string
+	// ProtocolNameConstant is the name of the service name constant for this FIDL protocol.
+	ProtocolNameConstant string
 
 	// Methods is a list of methods for this FIDL protocol.
 	Methods []Method
@@ -1217,8 +1217,8 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		StubName:             c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+StubSuffix),
 		RequestName:          c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+RequestSuffix),
 		EventProxyName:       c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
-		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
-		ServiceNameString:    val.GetProtocolName(),
+		ProtocolNameConstant: c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
+		ProtocolNameString:   val.GetProtocolName(),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))
@@ -1361,7 +1361,7 @@ func Compile(fidlData fidlgen.Root) Root {
 	for _, v := range fidlData.Protocols {
 		protocol := c.compileProtocol(v)
 		r.Protocols = append(r.Protocols, protocol)
-		if protocol.ProxyType == "ChannelProxy" && len(protocol.ServiceNameString) != 0 {
+		if protocol.ProxyType == "ChannelProxy" && len(protocol.ProtocolNameString) != 0 {
 			c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
 		}
 		for _, method := range protocol.Methods {

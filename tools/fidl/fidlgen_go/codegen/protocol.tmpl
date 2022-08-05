@@ -126,16 +126,16 @@ func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
 	return {{ .RequestName }}(req), (*{{ .ProxyName }})(cli), err
 }
 
-{{- if .ServiceNameString }}
+{{- if .ProtocolNameString }}
 // Implements ServiceRequest.
 func (_ {{ .RequestName }}) Name() string {
-	return {{ .ServiceNameString }}
+	return {{ .ProtocolNameString }}
 }
 func (c {{ .RequestName }}) ToChannel() _zx.Channel {
 	return c.Channel
 }
 
-const {{ .ServiceNameConstant }} = {{ .ServiceNameString }}
+const {{ .ProtocolNameConstant }} = {{ .ProtocolNameString }}
 {{- end }}
 {{- end }}
 
@@ -221,16 +221,16 @@ func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
 	return {{ .RequestName }}(req), (*{{ .ProxyName }})(cli), err
 }
 
-{{- if .ServiceNameString }}
+{{- if .ProtocolNameString }}
 // Implements ServiceRequest.
 func (_ {{ .RequestName }}) Name() string {
-	return {{ .ServiceNameString }}
+	return {{ .ProtocolNameString }}
 }
 func (c {{ .RequestName }}) ToChannel() _zx.Channel {
 	return c.Channel
 }
 
-const {{ .ServiceNameConstant }} = {{ .ServiceNameString }}
+const {{ .ProtocolNameConstant }} = {{ .ProtocolNameString }}
 {{- end }}
 {{- end }}
 
