@@ -591,14 +591,14 @@ impl<'a> MetricState<'a> {
     fn apply_lambda(&self, namespace: &str, lambda: &Lambda, args: &[&MetricValue]) -> MetricValue {
         fn substitute_all(
             expressions: &[ExpressionTree],
-            bindings: &HashMap<String, &MetricValue>,
+            bindings: &HashMap<&str, &MetricValue>,
         ) -> Vec<ExpressionTree> {
             expressions.iter().map(|e| substitute(e, bindings)).collect::<Vec<_>>()
         }
 
         fn substitute(
             expression: &ExpressionTree,
-            bindings: &HashMap<String, &MetricValue>,
+            bindings: &HashMap<&str, &MetricValue>,
         ) -> ExpressionTree {
             match expression {
                 ExpressionTree::Function(function, expressions) => ExpressionTree::Function(
@@ -609,7 +609,8 @@ impl<'a> MetricState<'a> {
                     ExpressionTree::Vector(substitute_all(expressions, bindings))
                 }
                 ExpressionTree::Variable(name) => {
-                    if let Some(value) = bindings.get(name.original_name()) {
+                    let foo: &str = name.original_name();
+                    if let Some(value) = bindings.get(foo) {
                         ExpressionTree::Value((*value).clone())
                     } else {
                         ExpressionTree::Variable(name.clone())
@@ -630,8 +631,7 @@ impl<'a> MetricState<'a> {
         }
         let mut bindings = HashMap::new();
         for (name, value) in parameters.iter().zip(args.iter()) {
-            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95056)
-            bindings.insert(name.clone(), value.clone());
+            bindings.insert(name as &str, *value);
         }
         let expression = substitute(&lambda.body, &bindings);
         self.evaluate(namespace, &expression)

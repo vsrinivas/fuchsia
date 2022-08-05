@@ -187,25 +187,6 @@ impl SelectorString {
     pub fn body(&self) -> &str {
         &self.body
     }
-
-    /// Return true if the incoming data should be parsed as a selector. Otherwise, return false.
-    ///
-    /// The only strings that should be parsed as a selector today are those starting with
-    /// "INSPECT:"
-    ///
-    /// This only validates that the incoming string should be parsed as a selector, not that it
-    /// will actually parse without errors.
-    pub fn is_selector(s: &str) -> bool {
-        // Check that there is at least one ':' delimited segment, and that it parses as a selector
-        // type.
-        #[allow(clippy::suspicious_splitn)] // TODO(fxbug.dev/95056)
-        let mut split = s.splitn(1, ':');
-
-        match (split.next(), split.next()) {
-            (Some(v), Some(_)) => SelectorType::from_str(v).is_ok(),
-            _ => false,
-        }
-    }
 }
 
 impl TryFrom<String> for SelectorString {
