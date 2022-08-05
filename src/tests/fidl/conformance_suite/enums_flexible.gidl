@@ -177,3 +177,14 @@ success("FlexibleEnumUint64UnknownValue") {
         ],
     },
 }
+
+decode_success("EmptyFlexibleEnumDecodeUnknownValue") {
+    value = EmptyEnumStruct{
+        e: 0xff,
+    },
+    bytes = {
+        v1, v2 = [
+            0xff, padding:7,
+        ],
+    },
+}

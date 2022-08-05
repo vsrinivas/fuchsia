@@ -43,6 +43,8 @@ type FlexibleEnumUint64 = flexible enum : uint64 {
     SECOND = 0x1112131415161718;
 };
 
+type EmptyEnum = flexible enum {};
+
 type FlexibleEnumInt8Struct = struct {
     e FlexibleEnumInt8;
 };
@@ -73,4 +75,8 @@ type FlexibleEnumUint32Struct = struct {
 
 type FlexibleEnumUint64Struct = struct {
     e FlexibleEnumUint64;
+};
+
+type EmptyEnumStruct = struct {
+    e EmptyEnum;
 };
