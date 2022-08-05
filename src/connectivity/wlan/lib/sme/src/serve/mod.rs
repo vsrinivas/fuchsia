@@ -139,9 +139,8 @@ pub fn create_sme(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
-    mut shutdown_receiver: mpsc::Receiver<()>,
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
-) -> (SmeServer, MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
+) -> (MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let device_info = device_info.clone();
     let (server, mlme_req_sink, mlme_req_stream, telemetry_sender, sme_fut) = match device_info.role
     {
@@ -201,19 +200,18 @@ pub fn create_sme(
     let generic_sme_fut = serve_generic_sme(
         generic_sme,
         mlme_req_sink,
-        server.clone(),
+        server,
         telemetry_sender,
         feature_support_sender,
     );
-    let sme_fut_with_shutdown = async move {
+    let unified_fut = async move {
         select! {
             sme_fut = sme_fut.fuse() => sme_fut,
             generic_sme_fut = generic_sme_fut.fuse() => generic_sme_fut,
             feature_support_fut = feature_support_fut.fuse() => feature_support_fut,
-            _ = shutdown_receiver.select_next_some() => Ok(()),
         }
     };
-    (server, mlme_req_stream, sme_fut_with_shutdown)
+    (mlme_req_stream, unified_fut)
 }
 
 async fn handle_feature_support_query(
@@ -355,51 +353,16 @@ mod tests {
     const PLACEHOLDER_HASH_KEY: [u8; 8] = [88, 77, 66, 55, 44, 33, 22, 11];
 
     #[test]
-    fn sme_shutdown() {
+    fn sme_shutdown_on_generic_sme_closed() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (_mlme_event_sender, mlme_event_stream) = mpsc::unbounded();
         let inspector = Inspector::new();
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, _persistence_stream) =
             test_utils::create_inspect_persistence_channel();
-        let (mut shutdown_sender, shutdown_receiver) = mpsc::channel(1);
-        let (_generic_sme_proxy, generic_sme_server) =
-            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
-        let (_sme_server, _mlme_req_stream, serve_fut) = create_sme(
-            crate::Config::default(),
-            mlme_event_stream,
-            &test_utils::fake_device_info([0; 6]),
-            fake_mac_sublayer_support(),
-            fake_security_support(),
-            fake_spectrum_management_support_empty(),
-            Arc::new(iface_tree_holder),
-            WlanHasher::new(PLACEHOLDER_HASH_KEY),
-            persistence_req_sender,
-            shutdown_receiver,
-            generic_sme_server,
-        );
-        pin_mut!(serve_fut);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Retrieve SME instance and close SME
-        shutdown_sender.try_send(()).expect("expect sending shutdown command to succeed");
-
-        // Verify SME future is finished
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Ready(Ok(())));
-    }
-
-    #[test]
-    fn sme_close_endpoints() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (_mlme_event_sender, mlme_event_stream) = mpsc::unbounded();
-        let inspector = Inspector::new();
-        let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
-        let (persistence_req_sender, _persistence_stream) =
-            test_utils::create_inspect_persistence_channel();
-        let (_shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         let (generic_sme_proxy, generic_sme_server) =
             create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
-        let (mut sme_server, _mlme_req_stream, serve_fut) = create_sme(
+        let (_mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
             mlme_event_stream,
             &test_utils::fake_device_info([0; 6]),
@@ -409,21 +372,10 @@ mod tests {
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,
-            shutdown_receiver,
             generic_sme_server,
         );
         pin_mut!(serve_fut);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Retrieve SME instance and close SME
-        let sme = assert_variant!(
-            sme_server,
-            SmeServer::Client(ref mut sme) => sme,
-            "expected Client SME to be spawned"
-        );
-        let close_fut = sme.close();
-        pin_mut!(close_fut);
-        assert_variant!(exec.run_until_stalled(&mut close_fut), Poll::Ready(_));
 
         // Also close secondary SME endpoint in the Generic SME.
         drop(generic_sme_proxy);
@@ -439,7 +391,6 @@ mod tests {
         // These values must stay in scope or the SME will terminate, but they
         // are not relevant to Generic SME tests.
         _inspector: Inspector,
-        _shutdown_sender: mpsc::Sender<()>,
         _persistence_stream: mpsc::Receiver<String>,
         _mlme_event_sender: mpsc::UnboundedSender<crate::MlmeEvent>,
         // Executor goes last to avoid test shutdown failures.
@@ -455,11 +406,10 @@ mod tests {
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, persistence_stream) =
             test_utils::create_inspect_persistence_channel();
-        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         let (generic_sme_proxy, generic_sme_server) =
             create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
         let device_info = fidl_mlme::DeviceInfo { role, ..test_utils::fake_device_info([0; 6]) };
-        let (_sme_server, mlme_req_stream, serve_fut) = create_sme(
+        let (mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
             mlme_event_stream,
             &device_info,
@@ -469,7 +419,6 @@ mod tests {
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,
-            shutdown_receiver,
             generic_sme_server,
         );
         let mut serve_fut = Box::pin(serve_fut);
@@ -480,7 +429,6 @@ mod tests {
                 proxy: generic_sme_proxy,
                 mlme_req_stream,
                 _inspector: inspector,
-                _shutdown_sender: shutdown_sender,
                 _persistence_stream: persistence_stream,
                 _mlme_event_sender: mlme_event_sender,
                 exec,
