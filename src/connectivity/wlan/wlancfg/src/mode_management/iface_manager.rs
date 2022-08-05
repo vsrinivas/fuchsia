@@ -1429,8 +1429,9 @@ mod tests {
     fn create_empty_phy_manager(
         monitor_service: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
         node: inspect::Node,
+        telemetry_sender: TelemetrySender,
     ) -> Arc<Mutex<dyn PhyManagerApi + Send>> {
-        Arc::new(Mutex::new(phy_manager::PhyManager::new(monitor_service, node)))
+        Arc::new(Mutex::new(phy_manager::PhyManager::new(monitor_service, node, telemetry_sender)))
     }
 
     #[derive(Debug)]
@@ -2201,8 +2202,11 @@ mod tests {
 
         // Create a PhyManager with no knowledge of any client ifaces.
         let test_values = test_setup(&mut exec);
-        let phy_manager =
-            create_empty_phy_manager(test_values.monitor_service_proxy.clone(), test_values.node);
+        let phy_manager = create_empty_phy_manager(
+            test_values.monitor_service_proxy.clone(),
+            test_values.node,
+            test_values.telemetry_sender.clone(),
+        );
 
         let mut iface_manager = IfaceManagerService::new(
             phy_manager,
@@ -2337,6 +2341,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -2471,6 +2476,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -2581,6 +2587,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -2710,6 +2717,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -2913,6 +2921,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -3046,6 +3055,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -3193,6 +3203,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -3501,6 +3512,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -3606,6 +3618,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -3675,6 +3688,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -4263,6 +4277,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -4394,6 +4409,7 @@ mod tests {
         let phy_manager = phy_manager::PhyManager::new(
             test_values.monitor_service_proxy.clone(),
             test_values.node,
+            test_values.telemetry_sender.clone(),
         );
         let iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -4794,8 +4810,11 @@ mod tests {
 
         // Create an empty IfaceManager
         let test_values = test_setup(&mut exec);
-        let phy_manager =
-            create_empty_phy_manager(test_values.monitor_service_proxy.clone(), test_values.node);
+        let phy_manager = create_empty_phy_manager(
+            test_values.monitor_service_proxy.clone(),
+            test_values.node,
+            test_values.telemetry_sender.clone(),
+        );
         let mut iface_manager = IfaceManagerService::new(
             phy_manager,
             test_values.client_update_sender,

@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mode_management::iface_manager::wpa3_supported, regulatory_manager::REGION_CODE_LEN},
+    crate::{
+        mode_management::iface_manager::wpa3_supported,
+        regulatory_manager::REGION_CODE_LEN,
+        telemetry::{TelemetryEvent, TelemetrySender},
+    },
     async_trait::async_trait,
     eui48::MacAddress,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as fidl_service,
@@ -146,6 +150,7 @@ pub struct PhyManager {
     suggested_ap_mac: Option<MacAddress>,
     saved_country_code: Option<[u8; REGION_CODE_LEN]>,
     _node: inspect::Node,
+    telemetry_sender: TelemetrySender,
     phy_add_fail_count: inspect::UintProperty,
 }
 
@@ -167,7 +172,11 @@ impl PhyContainer {
 impl PhyManager {
     /// Internally stores a DeviceMonitorProxy to query PHY and interface properties and create and
     /// destroy interfaces as requested.
-    pub fn new(device_monitor: fidl_service::DeviceMonitorProxy, node: inspect::Node) -> Self {
+    pub fn new(
+        device_monitor: fidl_service::DeviceMonitorProxy,
+        node: inspect::Node,
+        telemetry_sender: TelemetrySender,
+    ) -> Self {
         let phy_add_fail_count = node.create_uint("phy_add_fail_count", 0);
         PhyManager {
             phys: HashMap::new(),
@@ -177,6 +186,7 @@ impl PhyManager {
             suggested_ap_mac: None,
             saved_country_code: None,
             _node: node,
+            telemetry_sender,
             phy_add_fail_count,
         }
     }
@@ -260,6 +270,7 @@ impl PhyManagerApi for PhyManager {
                 phy_id,
                 fidl_common::WlanMacRole::Client,
                 NULL_MAC_ADDR,
+                &self.telemetry_sender,
             )
             .await?;
             let security_support = query_security_support(&self.device_monitor, iface_id).await?;
@@ -365,6 +376,7 @@ impl PhyManagerApi for PhyManager {
                         *client_phy,
                         fidl_common::WlanMacRole::Client,
                         NULL_MAC_ADDR,
+                        &self.telemetry_sender,
                     )
                     .await
                     {
@@ -488,6 +500,7 @@ impl PhyManagerApi for PhyManager {
                     *ap_phy_id,
                     fidl_common::WlanMacRole::Ap,
                     mac,
+                    &self.telemetry_sender,
                 )
                 .await?;
 
@@ -622,17 +635,20 @@ async fn create_iface(
     phy_id: u16,
     role: fidl_common::WlanMacRole,
     sta_addr: MacAddr,
+    telemetry_sender: &TelemetrySender,
 ) -> Result<u16, PhyManagerError> {
     let mut request = fidl_service::CreateIfaceRequest { phy_id, role, sta_addr };
     let create_iface_response = match proxy.create_iface(&mut request).await {
         Ok((status, iface_response)) => {
             if fuchsia_zircon::ok(status).is_err() || iface_response.is_none() {
+                telemetry_sender.send(TelemetryEvent::IfaceCreationFailure);
                 return Err(PhyManagerError::IfaceCreateFailure);
             }
             iface_response.ok_or_else(|| PhyManagerError::IfaceCreateFailure)?
         }
         Err(e) => {
             warn!("failed to create iface for PHY {}: {}", phy_id, e);
+            telemetry_sender.send(TelemetryEvent::IfaceCreationFailure);
             return Err(PhyManagerError::IfaceCreateFailure);
         }
     };
@@ -742,8 +758,7 @@ mod tests {
         fuchsia_async::{run_singlethreaded, TestExecutor},
         fuchsia_inspect::{self as inspect, assert_data_tree},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
-        futures::stream::StreamExt,
-        futures::task::Poll,
+        futures::{channel::mpsc, stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
         test_case::test_case,
         wlan_common::assert_variant,
@@ -756,6 +771,8 @@ mod tests {
         monitor_stream: fidl_service::DeviceMonitorRequestStream,
         inspector: inspect::Inspector,
         node: inspect::Node,
+        telemetry_sender: TelemetrySender,
+        telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     /// Create a TestValues for a unit test.
@@ -767,8 +784,17 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
+        let (sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(sender);
 
-        TestValues { monitor_proxy, monitor_stream, inspector, node }
+        TestValues {
+            monitor_proxy,
+            monitor_stream,
+            inspector,
+            node,
+            telemetry_sender,
+            telemetry_receiver,
+        }
     }
 
     /// Take in the service side of a DeviceMonitor::GetSupportedMacRoles request and respond with
@@ -948,7 +974,11 @@ mod tests {
         let fake_phy_id = 0;
         let fake_mac_roles = vec![];
 
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         {
             let add_phy_fut = phy_manager.add_phy(0);
             pin_mut!(add_phy_fut);
@@ -977,7 +1007,11 @@ mod tests {
     fn add_invalid_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -1002,7 +1036,11 @@ mod tests {
     fn add_duplicate_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         let fake_phy_id = 0;
         let fake_mac_roles = vec![];
@@ -1058,7 +1096,11 @@ mod tests {
     fn add_phy_after_create_all_client_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         let fake_iface_id = 1;
         let fake_phy_id = 1;
@@ -1123,7 +1165,11 @@ mod tests {
         let fake_phy_id = 1;
         let fake_mac_roles = vec![];
 
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         {
             let set_country_fut = phy_manager.set_country_code(Some([0, 1]));
@@ -1172,7 +1218,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_valid_phy() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         let fake_phy_id = 1;
         let fake_mac_roles = vec![];
@@ -1190,7 +1240,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_nonexistent_phy() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         let fake_phy_id = 1;
         let fake_mac_roles = vec![];
@@ -1208,7 +1262,11 @@ mod tests {
     fn on_iface_added() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1276,7 +1334,11 @@ mod tests {
     fn on_iface_added_missing_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1354,7 +1416,11 @@ mod tests {
     fn add_duplicate_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1422,7 +1488,11 @@ mod tests {
     fn add_nonexistent_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         {
             // Add the non-existent iface
@@ -1447,7 +1517,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn test_on_iface_removed() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1474,7 +1548,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_missing_iface() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1502,7 +1580,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_client_no_phys() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         let client = phy_manager.get_client();
         assert!(client.is_none());
@@ -1514,7 +1596,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_unconfigured_client() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1535,7 +1621,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_configured_client() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         phy_manager.client_connections_enabled = true;
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
@@ -1562,7 +1652,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_client_no_compatible_phys() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1584,7 +1678,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_wpa3_client_no_compatible_client_phys() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1623,7 +1721,11 @@ mod tests {
         security_support.sae.sme_handler_supported = sae_sme_handler_supported;
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer with WPA3 support to be inserted into the test
         // PhyManager
@@ -1650,7 +1752,11 @@ mod tests {
         let test_values = test_setup();
 
         // Create a new PhyManager.  On construction, client connections are disabled.
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         assert!(!phy_manager.client_connections_enabled);
 
         // Add a PHY with a lingering client interface.
@@ -1672,7 +1778,11 @@ mod tests {
     fn destroy_all_client_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1715,7 +1825,11 @@ mod tests {
     fn destroy_all_client_ifaces_no_clients() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1752,7 +1866,11 @@ mod tests {
     fn get_ap_no_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         let get_ap_future = phy_manager.create_or_get_ap_iface();
 
@@ -1767,7 +1885,11 @@ mod tests {
     fn get_unconfigured_ap() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1806,7 +1928,11 @@ mod tests {
     fn get_configured_ap() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1836,7 +1962,11 @@ mod tests {
     fn get_ap_no_compatible_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1858,7 +1988,11 @@ mod tests {
     fn stop_valid_ap_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1896,7 +2030,11 @@ mod tests {
     fn stop_invalid_ap_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1935,7 +2073,11 @@ mod tests {
     fn stop_all_ap_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // ifaces are added.
@@ -1978,7 +2120,11 @@ mod tests {
     fn stop_all_ap_ifaces_with_client() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -2014,7 +2160,11 @@ mod tests {
     fn test_suggest_ap_mac() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -2060,7 +2210,11 @@ mod tests {
     fn test_suggested_mac_does_not_apply_to_client() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -2118,7 +2272,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_phy_ids_no_phys() {
         let test_values = test_setup();
-        let phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         assert_eq!(phy_manager.get_phy_ids(), Vec::<u16>::new());
     }
 
@@ -2128,7 +2286,11 @@ mod tests {
     fn get_phy_ids_single_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -2151,7 +2313,11 @@ mod tests {
     fn get_phy_ids_two_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -2186,7 +2352,11 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn log_phy_add_failure() {
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         assert_data_tree!(test_values.inspector, root: {
             phy_manager: {
@@ -2208,7 +2378,11 @@ mod tests {
     fn test_set_country_code() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Insert a couple fake PHYs.
         let _ = phy_manager.phys.insert(
@@ -2293,7 +2467,11 @@ mod tests {
     fn test_setting_country_code_fails() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Insert a fake PHY.
         let _ = phy_manager.phys.insert(
@@ -2345,7 +2523,11 @@ mod tests {
     fn test_recover_client_interfaces_succeeds() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         // Make it look like client connections have been enabled.
@@ -2431,7 +2613,11 @@ mod tests {
     fn test_recover_client_interfaces_fails() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         // Make it look like client connections have been enabled.
@@ -2530,7 +2716,11 @@ mod tests {
     fn test_recover_client_interfaces_while_disabled() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Create a fake PHY entry without client interfaces.  Note that client connections have
         // not been set to enabled.
@@ -2563,7 +2753,11 @@ mod tests {
     fn test_start_after_unsuccessful_stop() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Verify that client connections are initially stopped.
         assert!(!phy_manager.client_connections_enabled);
@@ -2619,7 +2813,11 @@ mod tests {
         security_support.sae.sme_handler_supported = sme_handler_supported;
         let fake_phy_id = 0;
 
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         let mut phy_container = PhyContainer::new(vec![]);
         let _ = phy_container.client_ifaces.insert(0, security_support);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -2645,7 +2843,11 @@ mod tests {
         let mut phy_container = PhyContainer::new(vec![]);
         let _ = phy_container.client_ifaces.insert(0, fake_security_support());
 
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         assert_eq!(phy_manager.has_wpa3_client_iface(), false);
@@ -2656,7 +2858,11 @@ mod tests {
     fn test_client_connections_enabled_when_enabled() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         phy_manager.client_connections_enabled = true;
         assert!(phy_manager.client_connections_enabled());
@@ -2667,7 +2873,11 @@ mod tests {
     fn test_client_connections_enabled_when_disabled() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         phy_manager.client_connections_enabled = false;
         assert!(!phy_manager.client_connections_enabled());
@@ -2678,7 +2888,11 @@ mod tests {
     fn test_succeed_in_setting_power_state() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
@@ -2729,7 +2943,11 @@ mod tests {
     fn test_fail_to_set_power_state() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
@@ -2790,7 +3008,11 @@ mod tests {
     fn test_fail_to_request_low_power_mode() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         // Drop the receiving end of the device monitor channel.
         drop(test_values.monitor_stream);
@@ -2818,7 +3040,11 @@ mod tests {
     fn test_add_phy_after_low_power_enabled() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
 
         assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
@@ -2871,5 +3097,97 @@ mod tests {
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
         }
+    }
+
+    #[fuchsia::test]
+    fn test_create_iface_succeeds() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        // Issue a create iface request
+        let fut = create_iface(
+            &mut test_values.monitor_proxy,
+            0,
+            fidl_common::WlanMacRole::Client,
+            NULL_MAC_ADDR,
+            &test_values.telemetry_sender,
+        );
+        pin_mut!(fut);
+
+        // Wait for the request to stall out waiting for DeviceMonitor.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send back a positive response from DeviceMonitor.
+        send_create_iface_response(&mut exec, &mut test_values.monitor_stream, Some(0));
+
+        // The future should complete.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(0)));
+
+        // Verify that there is nothing waiting on the telemetry receiver.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_))
+    }
+
+    #[fuchsia::test]
+    fn test_create_iface_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        // Issue a create iface request
+        let fut = create_iface(
+            &mut test_values.monitor_proxy,
+            0,
+            fidl_common::WlanMacRole::Client,
+            NULL_MAC_ADDR,
+            &test_values.telemetry_sender,
+        );
+        pin_mut!(fut);
+
+        // Wait for the request to stall out waiting for DeviceMonitor.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send back a failure from DeviceMonitor.
+        send_create_iface_response(&mut exec, &mut test_values.monitor_stream, None);
+
+        // The future should complete.
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(PhyManagerError::IfaceCreateFailure))
+        );
+
+        // Verify that a metric has been logged.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::IfaceCreationFailure))
+        )
+    }
+
+    #[fuchsia::test]
+    fn test_create_iface_request_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        drop(test_values.monitor_stream);
+
+        // Issue a create iface request
+        let fut = create_iface(
+            &mut test_values.monitor_proxy,
+            0,
+            fidl_common::WlanMacRole::Client,
+            NULL_MAC_ADDR,
+            &test_values.telemetry_sender,
+        );
+        pin_mut!(fut);
+
+        // The request should immediately fail.
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(PhyManagerError::IfaceCreateFailure))
+        );
+
+        // Verify that a metric has been logged.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::IfaceCreationFailure))
+        )
     }
 }

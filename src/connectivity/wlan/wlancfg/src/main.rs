@@ -336,6 +336,7 @@ async fn run_all_futures() -> Result<(), Error> {
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
         monitor_svc.clone(),
         component::inspector().root().create_child("phy_manager"),
+        telemetry_sender.clone(),
     )));
     let configurator =
         legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());

@@ -220,11 +220,11 @@ pub enum TelemetryEvent {
     /// Notify telemetry that there was a decision to look for networks to roam to after evaluating
     /// the existing connection.
     RoamingScan,
-    // Notify telemetry of an API request to start client connections.
+    /// Notify telemetry of an API request to start client connections.
     StartClientConnectionsRequest,
-    // Notify telemetry of an API request to stop client connections.
+    /// Notify telemetry of an API request to stop client connections.
     StopClientConnectionsRequest,
-    // Notify telemetry of when AP is stopped, and how long it was started.
+    /// Notify telemetry of when AP is stopped, and how long it was started.
     StopAp {
         enabled_duration: zx::Duration,
     },
@@ -233,10 +233,15 @@ pub enum TelemetryEvent {
     UpdateExperiment {
         experiment: experiment::ExperimentUpdate,
     },
+    /// This is a stepping stone for some metrics to Cobalt 1.1.  Metrics are currently being
+    /// migrated out of `LogMetricEvent` and toward their own `TelemetryEvent`s.  Please do not use
+    /// `LogMetricEvent` for new metrics.
     LogMetricEvents {
         events: Vec<MetricEvent>,
         ctx: &'static str,
     },
+    /// Notify the telemtry event loop that a PHY has failed to create an interface.
+    IfaceCreationFailure,
 }
 
 #[derive(Clone, Debug)]
@@ -1136,6 +1141,9 @@ impl Telemetry {
             }
             TelemetryEvent::LogMetricEvents { events, ctx } => {
                 self.stats_logger.log_metric_events(events, ctx).await
+            }
+            TelemetryEvent::IfaceCreationFailure => {
+                self.stats_logger.log_iface_creation_failure().await;
             }
         }
     }
@@ -2510,6 +2518,16 @@ impl StatsLogger {
 
     async fn log_metric_events(&mut self, mut metric_events: Vec<MetricEvent>, ctx: &'static str) {
         log_cobalt_1dot1_batch!(self.cobalt_1dot1_proxy, &mut metric_events.iter_mut(), ctx,);
+    }
+
+    async fn log_iface_creation_failure(&mut self) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::INTERFACE_CREATION_FAILURE_METRIC_ID,
+            1,
+            &[]
+        )
     }
 }
 
@@ -5880,6 +5898,23 @@ mod tests {
                 CreateMetricsLoggerFailureMode::ApiFailure => assert_variant!(result, Err(_))
             }
         });
+    }
+
+    #[fuchsia::test]
+    fn test_log_iface_creation_failure() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a notification that interface creation has failed.
+        test_helper.telemetry_sender.send(TelemetryEvent::IfaceCreationFailure);
+
+        // Run the telemetry loop until it stalls.
+        assert_variant!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
+
+        // Expect that Cobalt has been notified of the interface creation failure.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let logged_metrics =
+            test_helper.get_logged_metrics(metrics::INTERFACE_CREATION_FAILURE_METRIC_ID);
+        assert_eq!(logged_metrics.len(), 1);
     }
 
     struct TestHelper {
