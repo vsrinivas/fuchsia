@@ -48,8 +48,7 @@ zx_status_t fdio_service_connect_by_name(const char* name, zx_handle_t request) 
       if (status != ZX_OK) {
         return;
       }
-      // TODO(abarth): Use "/svc/" once that actually works.
-      status = fdio_service_connect("/svc/.", request.release());
+      status = fdio_service_connect("/svc", request.release());
     });
     if (status != ZX_OK) {
       return status;

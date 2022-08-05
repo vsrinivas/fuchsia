@@ -39,7 +39,7 @@ zx::channel OpenServiceRoot() {
   auto status = zx::channel::create(0, &request, &service_root);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 
-  status = fdio_service_connect("/ns/svc/.", request.release());
+  status = fdio_service_connect("/ns/svc", request.release());
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 
   return service_root;

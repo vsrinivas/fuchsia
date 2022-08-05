@@ -416,7 +416,7 @@ zx::channel OpenServiceRoot() {
   if (zx::channel::create(0, &request, &service_root) != ZX_OK) {
     return zx::channel();
   }
-  if (fdio_service_connect("/svc/.", request.release()) != ZX_OK) {
+  if (fdio_service_connect("/svc", request.release()) != ZX_OK) {
     return zx::channel();
   }
   return service_root;

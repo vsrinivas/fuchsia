@@ -192,7 +192,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
       return zx::error(ZX_ERR_INTERNAL);
     }
 
-    status = fdio_service_connect("/svc/.", request.release());
+    status = fdio_service_connect("/svc", request.release());
     if (status != ZX_OK) {
       FX_LOGF(ERROR, kFastbootLogTag, "Failed to connect to svc root %s",
               zx_status_get_string(status));
