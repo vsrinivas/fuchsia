@@ -71,7 +71,7 @@ zx_status_t Cipher::GetKeyLen(Algorithm algo, size_t* out) {
   if ((rc = GetCipher(algo, &cipher)) != ZX_OK) {
     return rc;
   }
-  *out = cipher->key_len;
+  *out = EVP_CIPHER_key_length(cipher);
 
   return ZX_OK;
 }
@@ -87,7 +87,7 @@ zx_status_t Cipher::GetIVLen(Algorithm algo, size_t* out) {
   if ((rc = GetCipher(algo, &cipher)) != ZX_OK) {
     return rc;
   }
-  *out = cipher->iv_len;
+  *out = EVP_CIPHER_iv_length(cipher);
 
   return ZX_OK;
 }
@@ -103,7 +103,7 @@ zx_status_t Cipher::GetBlockSize(Algorithm algo, size_t* out) {
   if ((rc = GetCipher(algo, &cipher)) != ZX_OK) {
     return rc;
   }
-  *out = cipher->block_size;
+  *out = EVP_CIPHER_block_size(cipher);
 
   return ZX_OK;
 }
@@ -123,7 +123,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Secret& key,
   if ((rc = GetCipher(algo, &cipher)) != ZX_OK) {
     return rc;
   }
-  if (key.len() != cipher->key_len || iv.len() != cipher->iv_len) {
+  if (key.len() != EVP_CIPHER_key_length(cipher) || iv.len() != EVP_CIPHER_iv_length(cipher)) {
     xprintf("bad parameter(s): key_len=%zu, iv_len=%zu\n", key.len(), iv.len());
     return ZX_ERR_INVALID_ARGS;
   }
@@ -131,7 +131,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Secret& key,
 
   // Set the IV.
   fbl::AllocChecker ac;
-  size_t n = fbl::round_up(cipher->iv_len, sizeof(zx_off_t)) / sizeof(zx_off_t);
+  size_t n = fbl::round_up(EVP_CIPHER_iv_length(cipher), sizeof(zx_off_t)) / sizeof(zx_off_t);
   iv_.reset(new (&ac) zx_off_t[n]{0});
   if (!ac.check()) {
     xprintf("failed to allocate %zu bytes\n", n * sizeof(zx_off_t));
@@ -169,7 +169,7 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Secret& key,
     return rc;
   }
   direction_ = direction;
-  block_size_ = cipher->block_size;
+  block_size_ = EVP_CIPHER_block_size(cipher);
 
   cleanup.cancel();
   return ZX_OK;
