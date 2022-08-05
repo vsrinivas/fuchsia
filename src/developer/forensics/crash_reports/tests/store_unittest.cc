@@ -431,6 +431,30 @@ TEST_F(StoreTest, Succeed_TmpGarbageCollection) {
                                       }));
 }
 
+TEST_F(StoreTest, Succeed_TmpGarbageCollectionMultipleCollected) {
+  // We set up the store so it can hold two empty reports at most.
+  MakeNewStore(2 * StorageSize::Bytes(2u /*the empty annotations.json*/));
+  std::vector<ReportId> garbage_collected_reports;
+
+  const auto id1 = Add("program_name1", &garbage_collected_reports);
+  const auto id2 = Add("program_name2", &garbage_collected_reports);
+
+  // Construct a slightly larger report (one byte added for "m" in minidump) to ensure both previous
+  // reports are garbage collected, since this report won't fit otherwise.
+  const auto id3 = Add("program_name3", {}, {}, "", "m", &garbage_collected_reports);
+  EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id1.value(), id2.value()}));
+  EXPECT_FALSE(store_->Contains(id1.value()));
+  EXPECT_FALSE(store_->Contains(id2.value()));
+  EXPECT_TRUE(store_->Contains(id3.value()));
+
+  EXPECT_THAT(store_->GetReports(), UnorderedElementsAreArray({
+                                        id3.value(),
+                                    }));
+  EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({
+                                          "program_name3",
+                                      }));
+}
+
 TEST_F(StoreTest, Succeed_RebuildsMetadata) {
   const std::string expected_program_shortname = "program_shortname";
 

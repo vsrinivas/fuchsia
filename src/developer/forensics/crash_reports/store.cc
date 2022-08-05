@@ -471,7 +471,7 @@ bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize 
   // Commit to garbage collection reports until either all reports are garbage collected or
   // enough space has been freed.
   for (size_t i = 0; i < total_num_report_ids && remaining_space < required_space; ++i) {
-    remaining_space -= root_metadata.ReportSize(gc_order[i].oldest_report);
+    remaining_space += root_metadata.ReportSize(gc_order[i].oldest_report);
     ++num_garbage_collected;
   }
 
