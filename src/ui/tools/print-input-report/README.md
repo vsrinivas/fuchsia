@@ -6,8 +6,8 @@ descriptors or events.
 ## Building and testing
 
 ```
-fx set ... --with=//src/ui/tools/print-input-report
-fx build
+fx set ... --with-base=//src/ui/tools/print-input-report
+fx build && fx ota
 fx test //src/ui/tools/print-input-report
 ```
 
