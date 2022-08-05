@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/avb"
-	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/omaha"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/omaha_tool"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
@@ -174,7 +174,7 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 type OmahaUpdater struct {
 	repo             *packages.Repository
 	updatePackageURL *url.URL
-	omahaServer      *omaha.OmahaServer
+	omahaTool        *omaha_tool.OmahaTool
 	avbTool          *avb.AVBTool
 	zbiTool          *zbi.ZBITool
 }
@@ -182,7 +182,7 @@ type OmahaUpdater struct {
 func NewOmahaUpdater(
 	repo *packages.Repository,
 	updatePackageURL string,
-	omahaServer *omaha.OmahaServer,
+	omahaTool *omaha_tool.OmahaTool,
 	avbTool *avb.AVBTool,
 	zbiTool *zbi.ZBITool,
 ) (*OmahaUpdater, error) {
@@ -202,7 +202,7 @@ func NewOmahaUpdater(
 	return &OmahaUpdater{
 		repo:             repo,
 		updatePackageURL: u,
-		omahaServer:      omahaServer,
+		omahaTool:        omahaTool,
 		avbTool:          avbTool,
 		zbiTool:          zbiTool,
 	}, nil
@@ -236,7 +236,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	defer os.Remove(destZbi.Name())
 
 	imageArguments := map[string]string{
-		"omaha_url": u.omahaServer.URL(),
+		"omaha_url": u.omahaTool.URL(),
 	}
 
 	if err := u.zbiTool.MakeImageArgsZbi(ctx, destZbi.Name(), imageArguments); err != nil {
@@ -267,7 +267,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 		return fmt.Errorf("failed to atomically overwrite %q: %w", srcVbmetaPath, err)
 	}
 
-	logger.Infof(ctx, "Omaha Server URL set in vbmeta to %q", u.omahaServer.URL())
+	logger.Infof(ctx, "Omaha Server URL set in vbmeta to %q", u.omahaTool.URL())
 
 	pkgBuilder, err := packages.NewPackageBuilderFromDir(tempDir, "update_omaha", "0", "testrepository.com")
 	if err != nil {
@@ -284,8 +284,8 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 
 	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", pkgPath, pkgMerkle)
 
-	// Have the omaha server serve the package.
-	if err := u.omahaServer.SetUpdatePkgURL(ctx, omahaPackageURL); err != nil {
+	// Configure the Omaha server with the new omaha package URL.
+	if err := u.omahaTool.SetPkgURL(ctx, omahaPackageURL); err != nil {
 		return fmt.Errorf("Failed to set Omaha update package: %w", err)
 	}
 

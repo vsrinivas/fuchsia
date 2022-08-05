@@ -14,7 +14,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/avb"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/device"
-	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/omaha"
+	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/omaha_tool"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/updater"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
@@ -42,7 +42,10 @@ type InstallerConfig struct {
 	avbTool         *avb.AVBTool
 	zbiTool         *zbi.ZBITool
 	updater         updater.Updater
-	omahaServer     *omaha.OmahaServer
+	omahaTool       *omaha_tool.OmahaTool
+	omahaToolPath   string
+	privateKeyId    string
+	privateKeyPath  string
 	omahaAddress    string
 }
 
@@ -51,14 +54,15 @@ func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
 
 	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
+	fs.StringVar(&c.avbToolPath, "avbtool-path", filepath.Join(testDataPath, "avbtool.py"), "path to the avbtool binary")
 	fs.StringVar(&c.installerMode, "installer", SystemUpdateChecker, "the installation mode (default: system-update-checker)")
-	fs.StringVar(&c.avbToolPath, "avbtool-path", filepath.Join(testDataPath, "avbtool.py"),
-		"path to the avbtool binary")
-	fs.StringVar(&c.zbiToolPath, "zbitool-path", filepath.Join(testDataPath, "zbi"),
-		"path to the zbi binary")
-	fs.StringVar(&c.keyPath, "vbmeta-key", filepath.Join(testDataPath, "atx_psk.pem"), "path to the vbmeta private key")
 	fs.StringVar(&c.keyMetadataPath, "vbmeta-key-metadata", filepath.Join(testDataPath, "avb_atx_metadata.bin"), "path to the vbmeta public key metadata")
+	fs.StringVar(&c.keyPath, "vbmeta-key", filepath.Join(testDataPath, "atx_psk.pem"), "path to the vbmeta private key")
 	fs.StringVar(&c.omahaAddress, "omaha-address", ":0", "which address to serve omaha server on (default random)")
+	fs.StringVar(&c.omahaToolPath, "omaha-tool-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"), "the path of the mock-omaha-server binary to invoke.")
+	fs.StringVar(&c.privateKeyId, "omaha-key-id", "42", "the integer private key ID to use for CUP within Omaha requests.")
+	fs.StringVar(&c.privateKeyPath, "omaha-key-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"), "the path of the private key .pem to use for CUP within Omaha requests.")
+	fs.StringVar(&c.zbiToolPath, "zbitool-path", filepath.Join(testDataPath, "zbi"), "path to the zbi binary")
 
 	return c, nil
 }
@@ -87,21 +91,34 @@ func (c *InstallerConfig) ZBITool() (*zbi.ZBITool, error) {
 	return c.zbiTool, nil
 }
 
+func (c *InstallerConfig) OmahaTool(ctx context.Context, device *device.Client) (*omaha_tool.OmahaTool, error) {
+	localHostname, err := device.GetSSHConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+	omahaTool, err := omaha_tool.NewOmahaServer(ctx, omaha_tool.OmahaToolArgs{
+		ToolPath:       c.omahaToolPath,
+		PrivateKeyId:   c.privateKeyId,
+		PrivateKeyPath: c.privateKeyPath,
+		AppId:          "fuchsia-test:no-update",
+		LocalHostname:  localHostname,
+	}, /*stdout=*/ nil /*stderr=*/, nil)
+	if err != nil {
+		return nil, err
+	}
+	return omahaTool, nil
+}
+
 // ConfigureBuild configures a build for the updater.
 func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Client, build artifacts.Build) (artifacts.Build, error) {
 	switch c.installerMode {
 	case Omaha:
-		if c.omahaServer == nil {
-			localHostname, err := device.GetSSHConnection(ctx)
+		if c.omahaTool == nil {
+			omahaTool, err := c.OmahaTool(ctx, device)
 			if err != nil {
 				return nil, err
 			}
-
-			omahaServer, err := omaha.NewOmahaServer(ctx, c.omahaAddress, localHostname)
-			if err != nil {
-				return nil, err
-			}
-			c.omahaServer = omahaServer
+			c.omahaTool = omahaTool
 		}
 
 		avbTool, err := c.AVBTool()
@@ -114,7 +131,7 @@ func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Cli
 			return nil, err
 		}
 
-		return artifacts.NewOmahaBuild(build, c.omahaServer.URL(), avbTool, zbiTool), nil
+		return artifacts.NewOmahaBuild(build, c.omahaTool, avbTool, zbiTool), nil
 
 	case SystemUpdateChecker:
 		return build, nil
@@ -138,7 +155,7 @@ func (c *InstallerConfig) Updater(repo *packages.Repository, updatePackageURL st
 			return nil, err
 		}
 
-		return updater.NewOmahaUpdater(repo, updatePackageURL, c.omahaServer, avbTool, zbiTool)
+		return updater.NewOmahaUpdater(repo, updatePackageURL, c.omahaTool, avbTool, zbiTool)
 
 	case SystemUpdateChecker:
 		// TODO: The e2e tests only support using the system-update-checker
