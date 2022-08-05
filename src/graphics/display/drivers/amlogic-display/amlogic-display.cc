@@ -435,6 +435,7 @@ void AmlogicDisplay::DdkRelease() {
   thrd_join(vsync_thread_, nullptr);
   if (fully_initialized()) {
     osd_->Release();
+    vpu_->PowerOff();
   }
 
   vd1_wr_irq_.destroy();
