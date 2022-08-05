@@ -4,9 +4,11 @@
 
 #![cfg(test)]
 
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_netemul_network as fnetemul_network;
 use fuchsia_async::TimeoutExt as _;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v6, std_socket_addr};
@@ -112,12 +114,10 @@ async fn address_deprecation<E: netemul::Endpoint>(name: &str) {
     assert_eq!(get_source_addr().await, ADDR2);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn add_address_errors() {
-    let name = "interfaces_admin_add_address_errors";
-
+#[variants_test]
+async fn add_address_errors<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
     let fidl_fuchsia_net_interfaces_ext::Properties {
         id: loopback_id,
@@ -1331,6 +1331,79 @@ async fn control_enable_disable<N: Netstack>(name: &str) {
         })
         .select_next_some()
         .await;
+}
+
+#[variants_test]
+// Test add/remove address and observe the events in InterfaceWatcher.
+async fn control_add_remove_address<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
+    let expect_enable = !(E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
+        && N::VERSION == NetstackVersion::Netstack3);
+    assert_eq!(
+        expect_enable,
+        interface.control().enable().await.expect("send enable").expect("enable")
+    );
+    interface.set_link_up(true).await.expect("bring device up");
+    let id = interface.control().get_id().await.expect("failed to get interface id");
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+
+    async fn add_address(
+        address: &mut fnet::Subnet,
+        control: &fidl_fuchsia_net_interfaces_ext::admin::Control,
+        id: u64,
+        interface_state: &fidl_fuchsia_net_interfaces::StateProxy,
+    ) -> finterfaces_admin::AddressStateProviderProxy {
+        let (address_state_provider, server_end) =
+            fidl::endpoints::create_proxy::<finterfaces_admin::AddressStateProviderMarker>()
+                .expect("create AddressStateProvider proxy");
+        control
+            .add_address(
+                address,
+                fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
+                server_end,
+            )
+            .expect("failed to add_address");
+        interfaces::wait_for_addresses(&interface_state, id, |addresses| {
+            addresses
+                .iter()
+                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr == *address
+                })
+                .then(|| ())
+        })
+        .await
+        .expect("wait for address presence");
+        address_state_provider
+    }
+
+    let addresses = [fidl_subnet!("1.1.1.1/32"), fidl_subnet!("3ffe::1/128")];
+    for mut address in addresses {
+        // Add an address and explicitly remove it.
+        let _address_state_provider =
+            add_address(&mut address, &interface.control(), id, &interface_state).await;
+        let did_remove = interface
+            .control()
+            .remove_address(&mut address)
+            .await
+            .expect("failed to send remove address request")
+            .expect("failed to remove address");
+        assert!(did_remove);
+        interfaces::wait_for_addresses(&interface_state, id, |addresses| {
+            addresses
+                .iter()
+                .all(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr != address
+                })
+                .then(|| ())
+        })
+        .await
+        .expect("wait for address absence");
+    }
 }
 
 #[variants_test]

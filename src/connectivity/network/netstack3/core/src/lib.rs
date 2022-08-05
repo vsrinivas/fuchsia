@@ -54,7 +54,10 @@ pub use crate::{
         receive_frame, remove_device, update_ipv4_configuration, update_ipv6_configuration,
         DeviceId, DeviceLayerEventDispatcher,
     },
-    error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError},
+    error::{
+        ExistsError, LocalAddressError, NetstackError, NotFoundError, RemoteAddressError,
+        SocketError,
+    },
     ip::{
         device::{
             dad::DadEvent,
@@ -97,7 +100,7 @@ use alloc::vec::Vec;
 use core::{fmt::Debug, marker::PhantomData, time};
 
 use net_types::{
-    ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither},
+    ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv6, SubnetEither},
     SpecifiedAddr,
 };
 use packet::{Buf, BufferMut, EmptyBuf};
@@ -481,12 +484,11 @@ pub fn add_ip_addr_subnet<NonSyncCtx: NonSyncContext>(
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
-) -> error::Result<()> {
+) -> Result<(), ExistsError> {
     map_addr_version!(
         addr_sub: AddrSubnetEither;
         crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr_sub)
     )
-    .map_err(From::from)
 }
 
 /// Delete an IP address on a device.
@@ -494,13 +496,13 @@ pub fn del_ip_addr<NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
     device: DeviceId,
-    addr: IpAddr<SpecifiedAddr<Ipv4Addr>, SpecifiedAddr<Ipv6Addr>>,
-) -> error::Result<()> {
+    addr: SpecifiedAddr<IpAddr>,
+) -> Result<(), NotFoundError> {
+    let addr = addr.into();
     map_addr_version!(
         addr: IpAddr;
         crate::device::del_ip_addr(sync_ctx, ctx, device, &addr)
     )
-    .map_err(From::from)
 }
 
 /// Adds a route to the forwarding table.
@@ -586,7 +588,7 @@ mod tests {
         // Add IP again (already exists).
         assert_eq!(
             add_ip_addr_subnet(&mut sync_ctx, &mut non_sync_ctx, device, addr_subnet).unwrap_err(),
-            NetstackError::Exists
+            error::ExistsError
         );
         assert_eq!(
             get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
@@ -598,7 +600,7 @@ mod tests {
         assert_eq!(
             add_ip_addr_subnet(&mut sync_ctx, &mut non_sync_ctx, device, wrong_addr_subnet)
                 .unwrap_err(),
-            NetstackError::Exists
+            error::ExistsError
         );
         assert_eq!(
             get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
@@ -616,7 +618,7 @@ mod tests {
         // Del IP again (not found).
         assert_eq!(
             del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, device, ip.into()).unwrap_err(),
-            NetstackError::NotFound
+            error::NotFoundError
         );
         assert_eq!(
             get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),

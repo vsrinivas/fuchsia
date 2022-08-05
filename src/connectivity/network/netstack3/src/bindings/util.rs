@@ -16,7 +16,10 @@ use net_types::{
     AddrAndZone, ZonedAddr,
 };
 use net_types::{SpecifiedAddr, Witness};
-use netstack3_core::{AddRouteError, AddableEntryEither, DeviceId, EntryEither, NetstackError};
+use netstack3_core::{
+    AddRouteError, AddableEntryEither, DeviceId, EntryEither, ExistsError, NetstackError,
+    NotFoundError,
+};
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};
 
@@ -157,6 +160,14 @@ impl TryIntoFidl<fidl_net_stack::Error> for AddrSubnetError {
     }
 }
 
+impl TryIntoFidl<fidl_net_stack::Error> for ExistsError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
+        Ok(fidl_net_stack::Error::AlreadyExists)
+    }
+}
+
 impl TryIntoFidl<fidl_net_stack::Error> for NetstackError {
     type Error = Never;
 
@@ -166,6 +177,14 @@ impl TryIntoFidl<fidl_net_stack::Error> for NetstackError {
             NetstackError::NotFound => Ok(fidl_net_stack::Error::NotFound),
             _ => Ok(fidl_net_stack::Error::Internal),
         }
+    }
+}
+
+impl TryIntoFidl<fidl_net_stack::Error> for NotFoundError {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net_stack::Error, Never> {
+        Ok(fidl_net_stack::Error::NotFound)
     }
 }
 
@@ -252,6 +271,7 @@ impl TryIntoFidl<fidl_net::MacAddress> for Mac {
 
 /// An error indicating that an address was a member of the wrong class (for
 /// example, a unicast address used where a multicast address is required).
+#[derive(Debug)]
 pub struct AddrClassError;
 
 // TODO(joshlf): Introduce a separate variant to `fidl_net_stack::Error` for
@@ -311,6 +331,14 @@ impl TryIntoFidl<fidl_net::Subnet> for SubnetEither {
     fn try_into_fidl(self) -> Result<fidl_net::Subnet, Never> {
         let (net, prefix) = self.net_prefix();
         Ok(fidl_net::Subnet { addr: net.into_fidl(), prefix_len: prefix })
+    }
+}
+
+impl TryFromFidl<fidl_net::Subnet> for SpecifiedAddr<IpAddr> {
+    type Error = AddrClassError;
+
+    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<SpecifiedAddr<IpAddr>, AddrClassError> {
+        SpecifiedAddr::new(fidl.addr.into_core()).ok_or(AddrClassError)
     }
 }
 

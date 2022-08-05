@@ -210,7 +210,8 @@ pub async fn wait_for_v6_ll(
     .context("wait for IPv6 link-local address")
 }
 
-async fn wait_for_addresses<T, F>(
+/// Wait until the given interface has a set of addresses that matches the given predicate.
+pub async fn wait_for_addresses<T, F>(
     interfaces_state: &fidl_fuchsia_net_interfaces::StateProxy,
     id: u64,
     mut predicate: F,

@@ -4,8 +4,9 @@
 
 use std::ops::DerefMut as _;
 
-use fidl::endpoints::ProtocolMarker;
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl_fuchsia_hardware_network as fhardware_network;
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -17,7 +18,8 @@ use futures::{
 use netstack3_core::Ctx;
 
 use crate::bindings::{
-    devices, netdevice_worker, BindingId, InterfaceControl as _, Netstack, NetstackContext,
+    devices, netdevice_worker, util::TryIntoCore as _, BindingId, InterfaceControl as _, Netstack,
+    NetstackContext,
 };
 
 pub(crate) fn serve(
@@ -467,13 +469,13 @@ async fn dispatch_control_request(
     log::debug!("serving {:?}", req);
     match req {
         fnet_interfaces_admin::ControlRequest::AddAddress {
-            address: _,
-            parameters: _,
-            address_state_provider: _,
+            address,
+            parameters,
+            address_state_provider,
             control_handle: _,
-        } => todo!("https://fxbug.dev/100870 support add address"),
-        fnet_interfaces_admin::ControlRequest::RemoveAddress { address: _, responder: _ } => {
-            todo!("https://fxbug.dev/100870 support remove address")
+        } => Ok(add_address(ctx, id, address, parameters, address_state_provider).await),
+        fnet_interfaces_admin::ControlRequest::RemoveAddress { address, responder } => {
+            responder.send(&mut Ok(remove_address(ctx, id, address).await))
         }
         fnet_interfaces_admin::ControlRequest::GetId { responder } => responder.send(id),
         fnet_interfaces_admin::ControlRequest::SetConfiguration { config: _, responder: _ } => {
@@ -587,4 +589,119 @@ async fn set_interface_enabled(ctx: &NetstackContext, enabled: bool, id: Binding
         ctx.disable_interface(id).expect("failed to disable interface");
     }
     true
+}
+
+/// Removes the given `address` from the interface with the given `id`.
+///
+/// Returns `true` if the address existed and was removed; otherwise `false`.
+async fn remove_address(ctx: &NetstackContext, id: BindingId, address: fnet::Subnet) -> bool {
+    let addr = match address.try_into_core() {
+        Ok(addr) => addr,
+        Err(e) => {
+            log::warn!("not removing invalid address {:?} from interface {}: {:?}", address, id, e);
+            return false;
+        }
+    };
+    let mut ctx = ctx.lock().await;
+    let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+    let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
+    match netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, device_id, addr) {
+        Ok(()) => true,
+        Err(netstack3_core::NotFoundError) => false,
+    }
+}
+
+/// Adds the given `address` to the interface with the given `id`.
+///
+/// If the address cannot be added, the appropriate removal reason will be sent
+/// to the address_state_provider.
+async fn add_address(
+    ctx: &NetstackContext,
+    id: BindingId,
+    address: fnet::Subnet,
+    params: fnet_interfaces_admin::AddressParameters,
+    address_state_provider: ServerEnd<fnet_interfaces_admin::AddressStateProviderMarker>,
+) {
+    let (req_stream, control_handle) = address_state_provider
+        .into_stream_and_control_handle()
+        .expect("failed to decompose AddressStateProvider handle");
+    // TODO(https://fxbug.dev/100870): Actually handle incoming AddressStateProvider requests.
+    std::mem::drop(req_stream);
+    let addr = match address.try_into_core() {
+        Ok(addr) => addr,
+        Err(e) => {
+            log::warn!("not adding invalid address {:?} to interface {}: {:?}", address, id, e);
+            close_address_state_provider(
+                address,
+                id,
+                control_handle,
+                fnet_interfaces_admin::AddressRemovalReason::Invalid,
+            );
+            return;
+        }
+    };
+
+    if params.temporary.unwrap_or(false) {
+        todo!("https://fxbug.dev/105630: support adding temporary addresses");
+    }
+    const INFINITE_NANOS: i64 = zx::Time::INFINITE.into_nanos();
+    let initial_properties =
+        params.initial_properties.unwrap_or(fnet_interfaces_admin::AddressProperties::EMPTY);
+    let valid_lifetime_end = initial_properties.valid_lifetime_end.unwrap_or(INFINITE_NANOS);
+    if valid_lifetime_end != INFINITE_NANOS {
+        log::warn!(
+            "TODO(https://fxbug.dev/105630): ignoring valid_lifetime_end: {:?}",
+            valid_lifetime_end
+        );
+    }
+    match initial_properties.preferred_lifetime_info.unwrap_or(
+        fnet_interfaces_admin::PreferredLifetimeInfo::PreferredLifetimeEnd(INFINITE_NANOS),
+    ) {
+        fnet_interfaces_admin::PreferredLifetimeInfo::Deprecated(_) => {
+            todo!("https://fxbug.dev/105630: support adding deprecated addresses")
+        }
+        fnet_interfaces_admin::PreferredLifetimeInfo::PreferredLifetimeEnd(
+            preferred_lifetime_end,
+        ) => {
+            if preferred_lifetime_end != INFINITE_NANOS {
+                log::warn!(
+                    "TODO(https://fxbug.dev/105630): ignoring preferred_lifetime_end: {:?}",
+                    preferred_lifetime_end
+                );
+            }
+        }
+    }
+
+    let mut ctx = ctx.lock().await;
+    let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+    let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
+    match netstack3_core::add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr) {
+        Ok(()) => {}
+        Err(netstack3_core::ExistsError) => {
+            close_address_state_provider(
+                address,
+                id,
+                control_handle,
+                fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned,
+            );
+        }
+    }
+}
+
+fn close_address_state_provider(
+    addr: fnet::Subnet,
+    id: BindingId,
+    control_handle: fnet_interfaces_admin::AddressStateProviderControlHandle,
+    reason: fnet_interfaces_admin::AddressRemovalReason,
+) {
+    control_handle.send_on_address_removed(reason).unwrap_or_else(|e| {
+        let log_level = if e.is_closed() { log::Level::Debug } else { log::Level::Error };
+        log::log!(
+            log_level,
+            "failed to send address removal reason for addr {:?} on interface {}: {:?}",
+            addr,
+            id,
+            e,
+        );
+    })
 }
