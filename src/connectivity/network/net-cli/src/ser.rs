@@ -191,30 +191,27 @@ pub const DISPLAYED_NEIGH_ENTRY_VARIANTS: NeighborTableEntryIteratorItemVariants
 /// Intermediary type for serializing Entry (e.g. into JSON).
 #[derive(serde::Serialize)]
 pub struct NeighborTableEntry {
-    interface: Option<u64>,
-    neighbor: Option<std::net::IpAddr>,
+    interface: u64,
+    neighbor: std::net::IpAddr,
     state: &'static str,
     mac: Option<fidl_fuchsia_net_ext::MacAddress>,
 }
 
 impl From<fidl_fuchsia_net_neighbor_ext::Entry> for NeighborTableEntry {
     fn from(
-        fidl_fuchsia_net_neighbor_ext::Entry(fidl_fuchsia_net_neighbor::Entry {
+        fidl_fuchsia_net_neighbor_ext::Entry {
             interface,
             neighbor,
             state,
             mac,
             // Ignored since the tabular format ignores this field.
             updated_at: _,
-            ..
-        }): fidl_fuchsia_net_neighbor_ext::Entry,
+        }: fidl_fuchsia_net_neighbor_ext::Entry,
     ) -> NeighborTableEntry {
+        let fidl_fuchsia_net_ext::IpAddress(neighbor) = neighbor.into();
         NeighborTableEntry {
             interface,
-            neighbor: neighbor.map(|i| {
-                let fidl_fuchsia_net_ext::IpAddress(addr) = i.into();
-                addr
-            }),
+            neighbor,
             state: fidl_fuchsia_net_neighbor_ext::display_entry_state(&state),
             mac: mac.map(|mac| mac.into()),
         }

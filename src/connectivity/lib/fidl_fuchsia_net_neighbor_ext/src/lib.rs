@@ -6,57 +6,54 @@
 
 #![deny(missing_docs)]
 
-use fidl_fuchsia_net_ext::{IpAddress, MacAddress};
-use fidl_fuchsia_net_neighbor as fidl;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_neighbor as fnet_neighbor;
+use fidl_table_validation::*;
+use fuchsia_zircon_types as zx;
 
 /// Information on a neighboring device in the local network.
-pub struct Entry(pub fidl::Entry);
-
-impl From<fidl::Entry> for Entry {
-    fn from(entry: fidl::Entry) -> Self {
-        Entry(entry)
-    }
+#[derive(Clone, Debug, Eq, PartialEq, ValidFidlTable)]
+#[fidl_table_src(fnet_neighbor::Entry)]
+pub struct Entry {
+    /// Identifier for the interface used for communicating with the neighbor.
+    pub interface: u64,
+    /// IP address of the neighbor.
+    pub neighbor: fnet::IpAddress,
+    /// State of the entry within the Neighbor Unreachability Detection (NUD)
+    /// state machine.
+    pub state: fnet_neighbor::EntryState,
+    /// MAC address of the neighboring device's network interface controller.
+    #[fidl_field_type(optional)]
+    pub mac: Option<fnet::MacAddress>,
+    /// Timestamp when this entry has changed `state`.
+    // TODO(https://fxbug.dev/75531): Replace with zx::Time once there is
+    // support for custom conversion functions.
+    pub updated_at: zx::zx_time_t,
 }
 
-macro_rules! write_field {
-    ($f:expr, $field_name:literal, $field:expr, $sep:literal) => {
-        let () = write!($f, "{} ", $field_name)?;
-        match $field {
-            None => {
-                let () = write!($f, "?")?;
-            }
-            Some(val) => {
-                let () = write!($f, "{}", val)?;
-            }
-        }
-        let () = write!($f, " {} ", $sep)?;
-    };
-}
-
-// TODO(https://fxbug.dev/90069): introduce a validated Entry struct and
-// EntryState enum type in the same shape as UpdateResult in
-// fidl_fuchsia_net_interfaces_ext.
 /// Returns a &str suitable for display representing the EntryState parameter.
-pub fn display_entry_state(state: &Option<fidl::EntryState>) -> &'static str {
+pub fn display_entry_state(state: &fnet_neighbor::EntryState) -> &'static str {
     match state {
-        None => "?",
-        Some(fidl::EntryState::Incomplete) => "INCOMPLETE",
-        Some(fidl::EntryState::Reachable) => "REACHABLE",
-        Some(fidl::EntryState::Stale) => "STALE",
-        Some(fidl::EntryState::Delay) => "DELAY",
-        Some(fidl::EntryState::Probe) => "PROBE",
-        Some(fidl::EntryState::Static) => "STATIC",
-        Some(fidl::EntryState::Unreachable) => "UNREACHABLE",
+        fnet_neighbor::EntryState::Incomplete => "INCOMPLETE",
+        fnet_neighbor::EntryState::Reachable => "REACHABLE",
+        fnet_neighbor::EntryState::Stale => "STALE",
+        fnet_neighbor::EntryState::Delay => "DELAY",
+        fnet_neighbor::EntryState::Probe => "PROBE",
+        fnet_neighbor::EntryState::Static => "STATIC",
+        fnet_neighbor::EntryState::Unreachable => "UNREACHABLE",
     }
 }
 
 impl std::fmt::Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let Self(fidl::Entry { interface, neighbor, mac, state, updated_at: _, .. }) = self;
-
-        write_field!(f, "Interface", interface, "|");
-        write_field!(f, "IP", neighbor.map(IpAddress::from), "|");
-        write_field!(f, "MAC", mac.map(MacAddress::from), "|");
-        write!(f, "{}", display_entry_state(state))
+        let Self { interface, neighbor, mac, state, updated_at: _ } = self;
+        write!(f, "Interface {} | IP {} | MAC ", interface, fnet_ext::IpAddress::from(*neighbor))?;
+        if let Some(mac) = mac {
+            write!(f, "{}", fnet_ext::MacAddress::from(*mac))?;
+        } else {
+            write!(f, "?")?;
+        }
+        write!(f, " | {}", display_entry_state(state))
     }
 }

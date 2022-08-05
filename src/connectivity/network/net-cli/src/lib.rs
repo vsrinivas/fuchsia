@@ -923,28 +923,29 @@ async fn do_neigh_del(
 
 fn unpack_neigh_iter_item(
     item: fneighbor::EntryIteratorItem,
-) -> (&'static str, Option<fneighbor::Entry>) {
+) -> Result<(&'static str, Option<fneighbor_ext::Entry>), Error> {
     let displayed_state_change_status = ser::DISPLAYED_NEIGH_ENTRY_VARIANTS.select(&item);
 
-    (
+    Ok((
         displayed_state_change_status,
         match item {
-            fneighbor::EntryIteratorItem::Existing(entry) => Some(entry),
+            fneighbor::EntryIteratorItem::Existing(entry)
+            | fneighbor::EntryIteratorItem::Added(entry)
+            | fneighbor::EntryIteratorItem::Changed(entry)
+            | fneighbor::EntryIteratorItem::Removed(entry) => {
+                Some(fneighbor_ext::Entry::try_from(entry)?)
+            }
             fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent) => None,
-            fneighbor::EntryIteratorItem::Added(entry) => Some(entry),
-            fneighbor::EntryIteratorItem::Changed(entry) => Some(entry),
-            fneighbor::EntryIteratorItem::Removed(entry) => Some(entry),
         },
-    )
+    ))
 }
 
 fn jsonify_neigh_iter_item(
     item: fneighbor::EntryIteratorItem,
     include_entry_state: bool,
 ) -> Result<Value, Error> {
-    let (state_change_status, entry) = unpack_neigh_iter_item(item);
+    let (state_change_status, entry) = unpack_neigh_iter_item(item)?;
     let entry_json = entry
-        .map(fneighbor_ext::Entry::from)
         .map(ser::NeighborTableEntry::from)
         .map(serde_json::to_value)
         .map(|res| res.map_err(Error::new))
@@ -1078,7 +1079,7 @@ fn write_tabular_neigh_entry<W: std::io::Write>(
     item: fneighbor::EntryIteratorItem,
     include_entry_state: bool,
 ) -> Result<(), Error> {
-    let (state_change_status, entry) = unpack_neigh_iter_item(item);
+    let (state_change_status, entry) = unpack_neigh_iter_item(item)?;
     match entry {
         Some(entry) => {
             if include_entry_state {
@@ -1086,7 +1087,7 @@ fn write_tabular_neigh_entry<W: std::io::Write>(
                     &mut f,
                     "{:width$} | {}",
                     state_change_status,
-                    fneighbor_ext::Entry::from(entry),
+                    entry,
                     width = ser::DISPLAYED_NEIGH_ENTRY_VARIANTS
                         .into_iter()
                         .map(|s| s.len())
@@ -1094,7 +1095,7 @@ fn write_tabular_neigh_entry<W: std::io::Write>(
                         .unwrap_or(0),
                 )?
             } else {
-                writeln!(&mut f, "{}", fneighbor_ext::Entry::from(entry))?
+                writeln!(&mut f, "{}", entry)?
             }
         }
         None => writeln!(&mut f, "{}", state_change_status)?,
@@ -2512,7 +2513,7 @@ mac             -
                 fneighbor::EntryIteratorItem::Existing(new_entry(updated_at)),
                 fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}),
             ]],
-            want(fneighbor_ext::Entry::from(new_entry(updated_at))),
+            want(fneighbor_ext::Entry::try_from(new_entry(updated_at)).unwrap()),
         )
         .await
     }
@@ -2573,8 +2574,14 @@ mac             -
                 fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}),
             ]],
             want(
-                fneighbor_ext::Entry::from(new_entry(IF_ADDR_V4.addr, MAC_1, updated_at)),
-                fneighbor_ext::Entry::from(new_entry(IF_ADDR_V6.addr, MAC_2, updated_at - offset)),
+                fneighbor_ext::Entry::try_from(new_entry(IF_ADDR_V4.addr, MAC_1, updated_at))
+                    .unwrap(),
+                fneighbor_ext::Entry::try_from(new_entry(
+                    IF_ADDR_V6.addr,
+                    MAC_2,
+                    updated_at - offset,
+                ))
+                .unwrap(),
             ),
         )
         .await
