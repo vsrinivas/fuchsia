@@ -70,6 +70,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/lib/fuchsia",
     "//src/lib/test_util",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:tempfile",

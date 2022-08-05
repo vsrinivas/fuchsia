@@ -37,6 +37,7 @@ use {
         stream::StreamExt,
         task::Poll,
     },
+    hex,
     lazy_static::lazy_static,
     log::info,
     pin_utils::pin_mut,
@@ -50,6 +51,87 @@ pub const TEST_CLIENT_IFACE_ID: u16 = 42;
 pub const TEST_PHY_ID: u16 = 41;
 lazy_static! {
     pub static ref TEST_SSID: types::Ssid = types::Ssid::try_from("test_ssid").unwrap();
+}
+
+#[derive(Clone)]
+pub struct TestCredentials {
+    policy: fidl_policy::Credential,
+    sme: Option<Box<fidl_common_security::Credentials>>,
+}
+pub struct TestCredentialVariants {
+    pub none: TestCredentials,
+    pub wep_64_hex: TestCredentials,
+    pub wep_64_ascii: TestCredentials,
+    pub wep_128_hex: TestCredentials,
+    pub wep_128_ascii: TestCredentials,
+    pub wpa_passphrase_min: TestCredentials,
+    pub wpa_passphrase_max: TestCredentials,
+    pub wpa_psk: TestCredentials,
+}
+
+lazy_static! {
+    pub static ref TEST_CRED_VARIANTS: TestCredentialVariants = TestCredentialVariants {
+        none: TestCredentials {
+            policy: fidl_policy::Credential::None(fidl_policy::Empty),
+            sme: None
+        },
+        wep_64_hex: TestCredentials {
+            policy: fidl_policy::Credential::Password(b"7465737431".to_vec()),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wep(
+                fidl_common_security::WepCredentials { key: b"test1".to_vec() }
+            )))
+        },
+        wep_64_ascii: TestCredentials {
+            policy: fidl_policy::Credential::Password(b"test1".to_vec()),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wep(
+                fidl_common_security::WepCredentials { key: b"test1".to_vec() }
+            )))
+        },
+        wep_128_hex: TestCredentials {
+            policy: fidl_policy::Credential::Password(b"74657374317465737432333435".to_vec()),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wep(
+                fidl_common_security::WepCredentials { key: b"test1test2345".to_vec() }
+            )))
+        },
+        wep_128_ascii: TestCredentials {
+            policy: fidl_policy::Credential::Password(b"test1test2345".to_vec()),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wep(
+                fidl_common_security::WepCredentials { key: b"test1test2345".to_vec() }
+            )))
+        },
+        wpa_passphrase_min: TestCredentials {
+            policy: fidl_policy::Credential::Password(b"eight111".to_vec()),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wpa(
+                fidl_common_security::WpaCredentials::Passphrase(b"eight111".to_vec())
+            )))
+        },
+        wpa_passphrase_max: TestCredentials {
+            policy: fidl_policy::Credential::Password(
+                b"thisIs63CharactersLong!!!#$#%thisIs63CharactersLong!!!#$#%00009".to_vec()
+            ),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wpa(
+                fidl_common_security::WpaCredentials::Passphrase(
+                    b"thisIs63CharactersLong!!!#$#%thisIs63CharactersLong!!!#$#%00009".to_vec()
+                )
+            )))
+        },
+        wpa_psk: TestCredentials {
+            policy: fidl_policy::Credential::Psk(
+                hex::decode(b"f10aedbb0ea29c928b06997ed305a697706ddad220ff5a98f252558a470a748f")
+                    .unwrap()
+            ),
+            sme: Some(Box::new(fidl_common_security::Credentials::Wpa(
+                fidl_common_security::WpaCredentials::Psk(
+                    hex::decode(
+                        b"f10aedbb0ea29c928b06997ed305a697706ddad220ff5a98f252558a470a748f"
+                    )
+                    .unwrap()
+                    .try_into()
+                    .unwrap()
+                )
+            )))
+        }
+    };
 }
 
 struct TestValues {
@@ -202,6 +284,16 @@ fn add_phy(exec: &mut TestExecutor, test_values: &mut TestValues) {
     assert_variant!(exec.run_until_stalled(&mut add_phy_fut), Poll::Ready(()));
 }
 
+fn security_support_with_wpa3() -> fidl_common::SecuritySupport {
+    fidl_common::SecuritySupport {
+        mfp: fidl_common::MfpFeature { supported: true },
+        sae: fidl_common::SaeFeature {
+            driver_handler_supported: true,
+            sme_handler_supported: true,
+        },
+    }
+}
+
 /// Adds a phy and prepares client interfaces by turning on client connections
 fn prepare_client_interface(
     exec: &mut TestExecutor,
@@ -263,13 +355,7 @@ fn prepare_client_interface(
                 }))) => {
                     assert!(responder.send(
                         &mut fidl_sme::FeatureSupportQuerySecuritySupportResult::Ok(
-                            fidl_common::SecuritySupport {
-                                mfp: fidl_common::MfpFeature { supported: false },
-                                sae: fidl_common::SaeFeature {
-                                    driver_handler_supported: false,
-                                    sme_handler_supported: false,
-                                },
-                            }
+                            security_support_with_wpa3()
                         )
                     ).is_ok());
                 }
@@ -345,13 +431,7 @@ fn prepare_client_interface(
                 }))) => {
                     assert!(responder.send(
                         &mut fidl_sme::FeatureSupportQuerySecuritySupportResult::Ok(
-                            fidl_common::SecuritySupport {
-                                mfp: fidl_common::MfpFeature { supported: false },
-                                sae: fidl_common::SaeFeature {
-                                    driver_handler_supported: false,
-                                    sme_handler_supported: false,
-                                },
-                            }
+                            security_support_with_wpa3()
                         )
                     ).is_ok());
                 }
@@ -453,26 +533,64 @@ fn get_client_state_update(
     update
 }
 
-#[test_case(
-    fidl_policy::SecurityType::None,
-    fidl_sme::Protection::Open,
-    fidl_policy::Credential::None(fidl_policy::Empty),
-    None
-)]
-#[test_case(
-    fidl_policy::SecurityType::Wep,
-    fidl_sme::Protection::Wep,
-    fidl_policy::Credential::Password(b"00ba5eba11".to_vec()),
-    Some(Box::new(fidl_common_security::Credentials::Wep(fidl_common_security::WepCredentials{key: vec![0, 186, 94, 186, 17]})))
-)]
+use fidl_policy::SecurityType;
+use fidl_sme::Protection;
+#[test_case(SecurityType::None, Protection::Open, TEST_CRED_VARIANTS.none.clone())]
+// Saved credential: WEP 40/64 bit
+#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_64_ascii.clone())]
+#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())]
+// Saved credential: WEP 104/128 bit
+#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_128_ascii.clone())]
+#[test_case(SecurityType::Wep, Protection::Wep, TEST_CRED_VARIANTS.wep_128_hex.clone())]
+// Saved credential: WPA1
+#[test_case(SecurityType::Wpa, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+// TODO(fxbug.dev/85817): reenable credential upgrading
+// #[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+// #[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+// #[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+// #[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+// #[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+// Saved credential: WPA2
+#[test_case(SecurityType::Wpa2, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+// Saved credential: WPA3
+#[test_case(SecurityType::Wpa3, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
 #[fuchsia::test(add_test_attr = false)]
 /// Tests saving and connecting across various security types
 fn save_and_connect(
     saved_security: fidl_policy::SecurityType,
     scanned_security: fidl_sme::Protection,
-    saved_credential: fidl_policy::Credential,
-    expected_credential: Option<Box<fidl_common_security::Credentials>>,
+    test_credentials: TestCredentials,
 ) {
+    let saved_credential = test_credentials.policy.clone();
+    let expected_credential = test_credentials.sme.clone();
+
     let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
     let mut test_values = test_setup(&mut exec);
 
