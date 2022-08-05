@@ -64,6 +64,7 @@
         {
             protocol: "fuchsia.memorypressure.Provider",
             from: "parent",
+            availability: "optional",
         },
     ],
     offer: [

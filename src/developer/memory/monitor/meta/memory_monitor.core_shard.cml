@@ -70,11 +70,6 @@
             to: "#memory_monitor",
         },
         {
-            protocol: "fuchsia.memorypressure.Provider",
-            from: "#memory_monitor",
-            to: "#vulkan_loader",
-        },
-        {
             protocol: [
                 "fuchsia.memory.Monitor",
                 "fuchsia.memorypressure.Provider",

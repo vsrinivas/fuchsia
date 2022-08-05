@@ -726,23 +726,6 @@
                     },
                 },
                 {
-                    using_node: "/core/vulkan_loader",
-                    capability: "fuchsia.memorypressure.Provider",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: "/core/vulkan_loader",
-                                        capability_id: "fuchsia.memorypressure.Provider",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/vulkan_loader` for `fuchsia.memorypressure.Provider`, but no matching `offer` declaration was found in the parent",
-                    },
-                },
-                {
                     // system-update-configurator is not present in all products.
                     using_node: "/core/omaha-client-service",
                     capability: "fuchsia.update.config.OptOut",

@@ -853,6 +853,12 @@
             ],
         },
         {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "#memory_monitor",
+            to: "#vulkan_loader",
+            source_availability: "unknown",
+        },
+        {
             directory: "dev",
             from: "parent",
             as: "dev-gpu",
