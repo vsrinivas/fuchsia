@@ -214,8 +214,6 @@
             protocol: [
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.process.Resolver",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
             ],
             from: "parent",
             to: "#console-launcher",

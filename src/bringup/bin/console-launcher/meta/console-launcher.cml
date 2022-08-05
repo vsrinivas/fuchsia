@@ -114,8 +114,6 @@
                 "fuchsia.pkg.rewrite.Engine",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tpm.cr50.Cr50",
