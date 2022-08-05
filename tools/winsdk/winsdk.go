@@ -611,6 +611,14 @@ popd
 		return retMap, nil
 	}
 
+	// TODO(fxbug.dev/99600): Consider to remove this extra layer once builders
+	// migrate to this new SDK package.
+	jsonOutputWrapper := func(envvar map[string][][]string) map[string]map[string][][]string {
+		retMap := make(map[string]map[string][][]string)
+		retMap["env"] = envvar
+		return retMap
+	}
+
 	setX86JSON, err := os.Create(setEnvPrefix + ".x86.json")
 	if err != nil {
 		return "", err
@@ -620,7 +628,7 @@ popd
 	if err != nil {
 		return "", err
 	}
-	if err := json.NewEncoder(setX86JSON).Encode(x86envJSON); err != nil {
+	if err := json.NewEncoder(setX86JSON).Encode(jsonOutputWrapper(x86envJSON)); err != nil {
 		return "", err
 	}
 
@@ -633,7 +641,7 @@ popd
 	if err != nil {
 		return "", err
 	}
-	if err := json.NewEncoder(setX64JSON).Encode(x64envJSON); err != nil {
+	if err := json.NewEncoder(setX64JSON).Encode(jsonOutputWrapper(x64envJSON)); err != nil {
 		return "", err
 	}
 
@@ -646,7 +654,7 @@ popd
 	if err != nil {
 		return "", err
 	}
-	if err := json.NewEncoder(setARM64JSON).Encode(arm64envJSON); err != nil {
+	if err := json.NewEncoder(setARM64JSON).Encode(jsonOutputWrapper(arm64envJSON)); err != nil {
 		return "", err
 	}
 
