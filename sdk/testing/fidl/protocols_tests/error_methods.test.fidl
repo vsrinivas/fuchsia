@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.error.methods;
+
+type MyError = strict enum : int32 {
+    BAD_ERROR = 1;
+    REALLY_BAD_ERROR = 2;
+};
+
+protocol ErrorMethods {
+    NoArgsPrimitiveError(struct {
+        should_error bool;
+    }) -> (struct {}) error int32;
+
+    ManyArgsCustomError(struct {
+        should_error bool;
+    }) -> (struct {
+        a int32;
+        b int32;
+        c int32;
+    }) error MyError;
+};

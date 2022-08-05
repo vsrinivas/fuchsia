@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
-#include <fidl/fidl.test.coding.fuchsia/cpp/wire_test_base.h>
+#include <fidl/test.basic.protocol/cpp/wire.h>
+#include <fidl/test.basic.protocol/cpp/wire_test_base.h>
+#include <fidl/test.transitional/cpp/wire.h>
 
 #include <type_traits>
 
 #include <zxtest/zxtest.h>
 
-namespace test = fidl_test_coding_fuchsia;
+namespace test = test_basic_protocol;
 
 namespace {
 
@@ -42,7 +43,8 @@ TEST(SyncEventHandler, ExhaustivenessRequired) {
     void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
     void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
   };
-  class EventHandlerAllTransitional : public fidl::WireSyncEventHandler<test::TransitionalEvent> {};
+  class EventHandlerAllTransitional
+      : public fidl::WireSyncEventHandler<test_transitional::TransitionalEvent> {};
   static_assert(std::is_abstract_v<EventHandlerNone>);
   static_assert(std::is_abstract_v<EventHandlerA>);
   static_assert(std::is_abstract_v<EventHandlerB>);
@@ -100,11 +102,11 @@ TEST(SyncEventHandler, UnknownEvent) {
 }
 
 TEST(SyncEventHandler, UnhandledTransitionalEvent) {
-  zx::status endpoints = fidl::CreateEndpoints<test::TransitionalEvent>();
+  zx::status endpoints = fidl::CreateEndpoints<test_transitional::TransitionalEvent>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fidl::WireSendEvent(endpoints->server)->Event());
 
-  class EventHandler : public fidl::WireSyncEventHandler<test::TransitionalEvent> {};
+  class EventHandler : public fidl::WireSyncEventHandler<test_transitional::TransitionalEvent> {};
   EventHandler event_handler;
   fidl::Status status = event_handler.HandleOneEvent(endpoints->client);
   EXPECT_EQ(fidl::Reason::kUnexpectedMessage, status.reason());

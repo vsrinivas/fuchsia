@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
+#include <fidl/test.basic.protocol/cpp/wire.h>
 #include <lib/fidl/cpp/wire/status.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fidl/cpp/wire/transaction.h>
@@ -15,6 +16,8 @@
 #include <type_traits>
 
 #include <zxtest/zxtest.h>
+
+#include "src/lib/fidl/llcpp/tests/dispatcher/lsan_disabler.h"
 
 namespace {
 
@@ -51,8 +54,7 @@ class Transaction : public fidl::Transaction {
   std::optional<fidl::UnbindInfo> error_ = std::nullopt;
 };
 
-using OneWayCompleter =
-    fidl::WireServer<::fidl_test_coding_fuchsia::Example>::OneWayCompleter::Sync;
+using OneWayCompleter = fidl::WireServer<::test_basic_protocol::Values>::OneWayCompleter::Sync;
 
 TEST(LlcppTransaction, one_way_completer_reply_not_needed) {
   Transaction txn{};
@@ -60,7 +62,7 @@ TEST(LlcppTransaction, one_way_completer_reply_not_needed) {
   EXPECT_FALSE(completer.is_reply_needed());
 }
 
-using Completer = fidl::WireServer<::fidl_test_coding_fuchsia::Llcpp>::ActionCompleter::Sync;
+using Completer = fidl::WireServer<::test_basic_protocol::ValueEcho>::EchoCompleter::Sync;
 
 // A completer being destroyed without replying (but needing one) should crash
 TEST(LlcppTransaction, no_reply_asserts) {
@@ -78,8 +80,9 @@ TEST(LlcppTransaction, no_expected_reply_doesnt_assert) {
 TEST(LlcppTransaction, double_reply_asserts) {
   Transaction txn{};
   Completer completer(&txn);
-  completer.Reply(0);
-  ASSERT_DEATH([&] { completer.Reply(1); }, "second reply should crash");
+  completer.Reply("");
+  ASSERT_DEATH([&] { fidl_testing::RunWithLsanDisabled([&] { completer.Reply(""); }); },
+               "second reply should crash");
 }
 
 // It is allowed to reply and then close
@@ -87,7 +90,7 @@ TEST(LlcppTransaction, reply_then_close_doesnt_assert) {
   Transaction txn{};
   Completer completer(&txn);
   EXPECT_TRUE(completer.is_reply_needed());
-  completer.Reply(0);
+  completer.Reply("");
   EXPECT_FALSE(completer.is_reply_needed());
   completer.Close(ZX_ERR_INVALID_ARGS);
   EXPECT_FALSE(completer.is_reply_needed());
@@ -100,7 +103,8 @@ TEST(LlcppTransaction, close_then_reply_asserts) {
   EXPECT_TRUE(completer.is_reply_needed());
   completer.Close(ZX_ERR_INVALID_ARGS);
   EXPECT_FALSE(completer.is_reply_needed());
-  ASSERT_DEATH([&] { completer.Reply(1); }, "reply after close should crash");
+  ASSERT_DEATH([&] { fidl_testing::RunWithLsanDisabled([&] { completer.Reply(""); }); },
+               "reply after close should crash");
 }
 
 // It is not allowed to be accessed from multiple threads simultaneously
@@ -108,10 +112,11 @@ TEST(LlcppTransaction, concurrent_access_asserts) {
   sync_completion_t signal, wait;
   Transaction txn{&signal, &wait};
   Completer completer(&txn);
-  std::thread t([&] { completer.Reply(1); });
+  std::thread t([&] { completer.Reply(""); });
   sync_completion_wait(&wait, ZX_TIME_INFINITE);
   // TODO(fxbug.dev/54499): Hide assertion failed messages from output - they are confusing.
-  ASSERT_DEATH([&] { completer.Reply(1); }, "concurrent access should crash");
+  ASSERT_DEATH([&] { fidl_testing::RunWithLsanDisabled([&] { completer.Reply(""); }); },
+               "concurrent access should crash");
   ASSERT_DEATH([&] { completer.Close(ZX_OK); }, "concurrent access should crash");
   ASSERT_DEATH([&] { completer.EnableNextDispatch(); }, "concurrent access should crash");
   ASSERT_DEATH([&] { completer.ToAsync(); }, "concurrent access should crash");
@@ -142,7 +147,7 @@ TEST(CompleterResultOfReply, CalledWithoutMakingAReply) {
 TEST(CompleterResultOfReply, Ok) {
   Transaction txn{};
   Completer completer(&txn);
-  completer.Reply(0);
+  completer.Reply("");
   EXPECT_OK(completer.result_of_reply().status());
 }
 
@@ -171,7 +176,7 @@ TEST(CompleterResultOfReply, TransportError) {
 
   FakeTransportErrorTransaction txn{};
   Completer completer(&txn);
-  completer.Reply(0);
+  completer.Reply("");
   fidl::Status result = completer.result_of_reply();
   EXPECT_EQ(fidl::Reason::kTransportError, result.reason());
   EXPECT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());

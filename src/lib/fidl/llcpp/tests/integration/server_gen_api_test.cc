@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
-#include <fidl/fidl.test.coding.fuchsia/cpp/wire_test_base.h>
+#include <fidl/test.basic.protocol/cpp/wire.h>
+#include <fidl/test.basic.protocol/cpp/wire_test_base.h>
+#include <fidl/test.empty.protocol/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -23,41 +25,18 @@
 
 namespace {
 
-using ::fidl_test_coding_fuchsia::Example;
-using ::fidl_test_coding_fuchsia::Simple;
+using ::test_basic_protocol::Closer;
+using ::test_basic_protocol::ValueEcho;
+using ::test_basic_protocol::Values;
 
 constexpr uint32_t kNumberOfAsyncs = 10;
-constexpr int32_t kExpectedReply = 7;
-
-class Server : public fidl::WireServer<Simple> {
- public:
-  explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
-  Server(Server&& other) = delete;
-  Server(const Server& other) = delete;
-  Server& operator=(Server&& other) = delete;
-  Server& operator=(const Server& other) = delete;
-
-  ~Server() override { sync_completion_signal(destroyed_); }
-
-  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
-    completer.Reply(request->request);
-  }
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.Close(ZX_OK);
-  }
-
- private:
-  sync_completion_t* destroyed_;
-};
+constexpr char kExpectedReply[] = "test";
 
 TEST(BindServerTestCase, SyncReply) {
-  struct SyncServer : fidl::WireServer<Simple> {
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
-    }
+  struct SyncServer : fidl::WireServer<ValueEcho> {
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       EXPECT_TRUE(completer.is_reply_needed());
-      completer.Reply(request->request);
+      completer.Reply(request->s);
       EXPECT_FALSE(completer.is_reply_needed());
     }
   };
@@ -67,13 +46,13 @@ TEST(BindServerTestCase, SyncReply) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t closed;
   fidl::OnUnboundFn<SyncServer> on_unbound = [&closed](SyncServer*, fidl::UnbindInfo info,
-                                                       fidl::ServerEnd<Simple> server_end) {
+                                                       fidl::ServerEnd<ValueEcho> server_end) {
     EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
@@ -84,25 +63,22 @@ TEST(BindServerTestCase, SyncReply) {
   // Sync client call.
   auto result = fidl::WireCall(local)->Echo(kExpectedReply);
   EXPECT_OK(result.status());
-  EXPECT_EQ(result.value().reply, kExpectedReply);
+  EXPECT_EQ(result.value().s.get(), kExpectedReply);
 
   local.reset();  // To trigger binding destruction before loop's destruction.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
 TEST(BindServerTestCase, AsyncReply) {
-  struct AsyncServer : fidl::WireServer<Simple> {
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
-    }
+  struct AsyncServer : fidl::WireServer<ValueEcho> {
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(),
-                      [request = request->request, completer = completer.ToAsync()]() mutable {
-                        EXPECT_TRUE(completer.is_reply_needed());
-                        completer.Reply(request);
-                        EXPECT_FALSE(completer.is_reply_needed());
-                      });
+      async::PostTask(worker_->dispatcher(), [request = std::string(request->s.get()),
+                                              completer = completer.ToAsync()]() mutable {
+        EXPECT_TRUE(completer.is_reply_needed());
+        completer.Reply(fidl::StringView::FromExternal(request));
+        EXPECT_FALSE(completer.is_reply_needed());
+      });
       EXPECT_FALSE(completer.is_reply_needed());
       ASSERT_OK(worker_->StartThread());
     }
@@ -114,13 +90,13 @@ TEST(BindServerTestCase, AsyncReply) {
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(main.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t closed;
   fidl::OnUnboundFn<AsyncServer> on_unbound = [&closed](AsyncServer*, fidl::UnbindInfo info,
-                                                        fidl::ServerEnd<Simple> server_end) {
+                                                        fidl::ServerEnd<ValueEcho> server_end) {
     EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
@@ -131,20 +107,17 @@ TEST(BindServerTestCase, AsyncReply) {
   // Sync client call.
   auto result = fidl::WireCall(local)->Echo(kExpectedReply);
   EXPECT_OK(result.status());
-  EXPECT_EQ(result.value().reply, kExpectedReply);
+  EXPECT_EQ(result.value().s.get(), kExpectedReply);
 
   local.reset();  // To trigger binding destruction before main's destruction.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
 TEST(BindServerTestCase, MultipleAsyncReplies) {
-  struct AsyncDelayedServer : fidl::WireServer<Simple> {
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
-    }
+  struct AsyncDelayedServer : fidl::WireServer<ValueEcho> {
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker->dispatcher(), [request = request->request,
+      async::PostTask(worker->dispatcher(), [request = std::string(request->s.get()),
                                              completer = completer.ToAsync(), this]() mutable {
         static std::atomic<int> count;
         // Since we block until we get kNumberOfAsyncs concurrent requests
@@ -153,7 +126,7 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
           sync_completion_signal(&done_);
         }
         sync_completion_wait(&done_, ZX_TIME_INFINITE);
-        completer.Reply(request);
+        completer.Reply(fidl::StringView::FromExternal(request));
       });
       ASSERT_OK(worker->StartThread());
       loops_.push_back(std::move(worker));
@@ -167,19 +140,19 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(main.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t closed;
-  fidl::OnUnboundFn<AsyncDelayedServer> on_unbound = [&closed](AsyncDelayedServer* server,
-                                                               fidl::UnbindInfo info,
-                                                               fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
-    EXPECT_TRUE(server_end);
-    sync_completion_signal(&closed);
-  };
+  fidl::OnUnboundFn<AsyncDelayedServer> on_unbound =
+      [&closed](AsyncDelayedServer* server, fidl::UnbindInfo info,
+                fidl::ServerEnd<ValueEcho> server_end) {
+        EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+        EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
+        EXPECT_TRUE(server_end);
+        sync_completion_signal(&closed);
+      };
   fidl::BindServer(main.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   // Sync client calls.
@@ -189,7 +162,7 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
     auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(client->dispatcher(), [local = local.borrow(), &done]() {
       auto result = fidl::WireCall(local)->Echo(kExpectedReply);
-      ASSERT_EQ(result.value().reply, kExpectedReply);
+      ASSERT_EQ(result.value().s.get(), kExpectedReply);
       static std::atomic<int> count;
       if (++count == kNumberOfAsyncs) {
         sync_completion_signal(&done);
@@ -210,32 +183,29 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
 // must either see a reply or a close and there should not be any thread-related
 // data corruptions.
 TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
-  struct AsyncDelayedServer : fidl::WireServer<Simple> {
+  struct AsyncDelayedServer : fidl::WireServer<ValueEcho> {
     AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops, sync_completion_t* done)
         : loops_(loops), done_(done) {}
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
-    }
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       // The posted task may run after the server is destroyed. As such, we must
       // not capture server member fields by reference or capture `this`.
-      async::PostTask(
-          worker->dispatcher(),
-          [request = request->request, completer = completer.ToAsync(), done = done_]() mutable {
-            bool signal = false;
-            static std::atomic<int> count;
-            if (++count == kNumberOfAsyncs) {
-              signal = true;
-            }
-            if (signal) {
-              sync_completion_signal(done);
-              completer.Close(ZX_OK);
-            } else {
-              sync_completion_wait(done, ZX_TIME_INFINITE);
-              completer.Reply(request);
-            }
-          });
+      async::PostTask(worker->dispatcher(),
+                      [request = std::string(request->s.get()), completer = completer.ToAsync(),
+                       done = done_]() mutable {
+                        bool signal = false;
+                        static std::atomic<int> count;
+                        if (++count == kNumberOfAsyncs) {
+                          signal = true;
+                        }
+                        if (signal) {
+                          sync_completion_signal(done);
+                          completer.Close(ZX_OK);
+                        } else {
+                          sync_completion_wait(done, ZX_TIME_INFINITE);
+                          completer.Reply(fidl::StringView::FromExternal(request));
+                        }
+                      });
       ASSERT_OK(worker->StartThread());
       loops_->push_back(std::move(worker));
     }
@@ -252,13 +222,13 @@ TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(main.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t closed;
   fidl::OnUnboundFn<AsyncDelayedServer> on_unbound =
-      [&closed](AsyncDelayedServer*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      [&closed](AsyncDelayedServer*, fidl::UnbindInfo info, fidl::ServerEnd<ValueEcho> server_end) {
         EXPECT_EQ(fidl::Reason::kClose, info.reason());
         EXPECT_OK(info.status());
         EXPECT_TRUE(server_end);
@@ -293,48 +263,47 @@ TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
 }
 
 TEST(BindServerTestCase, CallbackDestroyOnClientClose) {
-  sync_completion_t destroyed;
-  auto server = std::make_unique<Server>(&destroyed);
+  using ::test_empty_protocol::Empty;
+  class Server : public fidl::WireServer<Empty> {};
+  sync_completion_t unbound;
+  auto server = std::make_unique<Server>();
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<Empty>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnbindInfo info,
-                                            fidl::ServerEnd<Simple> server_end) {
+  fidl::OnUnboundFn<Server> on_unbound = [&unbound](Server* server, fidl::UnbindInfo info,
+                                                    fidl::ServerEnd<Empty> server_end) {
     EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
-    delete server;
+    sync_completion_signal(&unbound);
   };
 
-  fidl::BindServer(loop.dispatcher(), std::move(remote), server.release(), std::move(on_unbound));
+  fidl::BindServer(loop.dispatcher(), std::move(remote), std::move(server), std::move(on_unbound));
   loop.RunUntilIdle();
-  ASSERT_FALSE(sync_completion_signaled(&destroyed));
+  ASSERT_FALSE(sync_completion_signaled(&unbound));
 
   local.reset();
   loop.RunUntilIdle();
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
 TEST(BindServerTestCase, CallbackErrorClientTriggered) {
-  struct ErrorServer : fidl::WireServer<Simple> {
+  struct ErrorServer : fidl::WireServer<ValueEcho> {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Launches a thread so we can hold the transaction in progress.
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(), [request = request->request,
+      async::PostTask(worker_->dispatcher(), [request = std::string(request->s.get()),
                                               completer = completer.ToAsync(), this]() mutable {
         sync_completion_signal(worker_start_);
         sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-        completer.Reply(request);
+        completer.Reply(fidl::StringView::FromExternal(request));
       });
       ASSERT_OK(worker_->StartThread());
-    }
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
     }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
@@ -347,12 +316,12 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   fidl::OnUnboundFn<ErrorServer> on_unbound = [&error](ErrorServer*, fidl::UnbindInfo info,
-                                                       fidl::ServerEnd<Simple> server_end) {
+                                                       fidl::ServerEnd<ValueEcho> server_end) {
     EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
@@ -391,17 +360,14 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
 }
 
 TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
-  struct WorkingServer : fidl::WireServer<Simple> {
+  struct WorkingServer : fidl::WireServer<ValueEcho> {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      completer.Reply(request->request);
+      completer.Reply(request->s);
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.result_of_reply().status());
-    }
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
     }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
@@ -413,13 +379,13 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t closed;
   fidl::OnUnboundFn<WorkingServer> on_unbound = [&closed](WorkingServer*, fidl::UnbindInfo info,
-                                                          fidl::ServerEnd<Simple> server_end) {
+                                                          fidl::ServerEnd<ValueEcho> server_end) {
     EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
@@ -458,26 +424,33 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
 }
 
 TEST(BindServerTestCase, CallbackErrorServerTriggered) {
-  struct ErrorServer : fidl::WireServer<Simple> {
+  struct ErrorServer : fidl::WireServer<ValueEcho> {
     explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
+
+    // After the first request, subsequent requests close the channel.
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      count++;
+      if (count > 1) {
+        completer.Close(ZX_ERR_INTERNAL);
+        return;
+      }
+
       // Launches a thread so we can hold the transaction in progress.
       worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-      async::PostTask(worker_->dispatcher(), [request = request->request,
+      async::PostTask(worker_->dispatcher(), [request = std::string(request->s.get()),
                                               completer = completer.ToAsync(), this]() mutable {
         sync_completion_signal(worker_start_);
         sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-        completer.Reply(request);
+        completer.Reply(fidl::StringView::FromExternal(request));
       });
       ASSERT_OK(worker_->StartThread());
     }
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      completer.Close(ZX_ERR_INTERNAL);
-    }
+
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
+    int count = 0;
   };
   sync_completion_t worker_start, worker_done, closed;
 
@@ -486,12 +459,12 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   fidl::OnUnboundFn<ErrorServer> on_unbound = [&closed](ErrorServer*, fidl::UnbindInfo info,
-                                                        fidl::ServerEnd<Simple> server_end) {
+                                                        fidl::ServerEnd<ValueEcho> server_end) {
     EXPECT_EQ(fidl::Reason::kClose, info.reason());
     EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
@@ -506,53 +479,65 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
   ASSERT_FALSE(sync_completion_signaled(&closed));
 
   // Client1 launches a thread so we can hold its transaction in progress.
-  auto client1 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  async::PostTask(client1->dispatcher(), [local = local.borrow()]() {
+  auto client1 = std::thread([local = local.borrow()] {
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
     (void)fidl::WireCall(local)->Echo(kExpectedReply);
   });
-  ASSERT_OK(client1->StartThread());
 
   // Wait until worker_start so we have an in-flight transaction.
   ASSERT_OK(sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
 
   // Client2 launches a thread to continue the test while its transaction is still in progress.
-  auto client2 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  async::PostTask(client2->dispatcher(), [local = local.borrow()]() {
-    // Server will close the channel, on_unbound is not called.
-    auto result = fidl::WireCall(local)->Close();
+  auto client2 = std::thread([local = local.borrow(), &worker_done] {
+    // After |worker_start|, this will be the second request the server sees.
+    // Server will close the channel.
+    auto result = fidl::WireCall(local)->Echo(kExpectedReply);
     if (result.status() != ZX_ERR_PEER_CLOSED) {
       FAIL();
     }
+    // Trigger finishing the client1 outstanding transaction.
+    sync_completion_signal(&worker_done);
   });
-  ASSERT_OK(client2->StartThread());
-
-  // Trigger finishing the client1 outstanding transaction.
-  sync_completion_signal(&worker_done);
 
   // Wait for the closed callback to be called.
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 
-  // Verify the epitaph from Close().
+  // Verify the epitaph.
   fidl_epitaph_t epitaph;
   ASSERT_OK(
       local.channel().read(0, &epitaph, nullptr, sizeof(fidl_epitaph_t), 0, nullptr, nullptr));
   EXPECT_EQ(ZX_ERR_INTERNAL, epitaph.error);
+
+  client1.join();
+  client2.join();
 }
 
 TEST(BindServerTestCase, CallbackDestroyOnServerClose) {
+  class Server : public fidl::WireServer<Closer> {
+   public:
+    explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
+    ~Server() override { sync_completion_signal(destroyed_); }
+
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      completer.Close(ZX_OK);
+    }
+
+   private:
+    sync_completion_t* destroyed_;
+  };
+
   sync_completion_t destroyed;
   // Server launches a thread so we can make sync client calls.
   auto server = std::make_unique<Server>(&destroyed);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<Closer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnbindInfo info,
-                                            fidl::ServerEnd<Simple> server_end) {
+                                            fidl::ServerEnd<Closer> server_end) {
     EXPECT_EQ(fidl::Reason::kClose, info.reason());
     EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
@@ -577,43 +562,42 @@ TEST(BindServerTestCase, CallbackDestroyOnServerClose) {
 }
 
 TEST(BindServerTestCase, ExplicitUnbind) {
+  using ::test_empty_protocol::Empty;
+  class Server : public fidl::WireServer<Empty> {};
   // Server launches a thread so we can make sync client calls.
-  sync_completion_t destroyed;
-  auto server = new Server(&destroyed);
+  sync_completion_t unbound;
+  Server server;
   async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
   main.StartThread();
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<Empty>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   auto remote_handle = remote.channel().get();
 
-  fidl::OnUnboundFn<Server> on_unbound = [remote_handle](Server* server, fidl::UnbindInfo info,
-                                                         fidl::ServerEnd<Simple> server_end) {
+  fidl::OnUnboundFn<Server> on_unbound = [&, remote_handle](Server* server, fidl::UnbindInfo info,
+                                                            fidl::ServerEnd<Empty> server_end) {
     EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
     EXPECT_OK(info.status());
     EXPECT_EQ(server_end.channel().get(), remote_handle);
-    delete server;
+    sync_completion_signal(&unbound);
   };
   auto binding_ref =
-      fidl::BindServer(main.dispatcher(), std::move(remote), server, std::move(on_unbound));
+      fidl::BindServer(main.dispatcher(), std::move(remote), &server, std::move(on_unbound));
 
   // Unbind() and wait for the hook.
   binding_ref.Unbind();
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
 TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
-  struct WorkingServer : fidl::WireServer<Simple> {
+  struct WorkingServer : fidl::WireServer<ValueEcho> {
     explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      completer.Reply(request->request);
-    }
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
+      completer.Reply(request->s);
     }
     sync_completion_t* worker_start_;
     sync_completion_t* worker_done_;
@@ -625,7 +609,7 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   zx_handle_t remote_handle = remote.channel().get();
@@ -641,7 +625,7 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   sync_completion_t unbound;
   fidl::OnUnboundFn<WorkingServer> on_unbound = [remote_handle, &unbound](
                                                     WorkingServer*, fidl::UnbindInfo info,
-                                                    fidl::ServerEnd<Simple> server_end) {
+                                                    fidl::ServerEnd<ValueEcho> server_end) {
     EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
     EXPECT_OK(info.status());
     EXPECT_EQ(server_end.channel().get(), remote_handle);
@@ -667,10 +651,9 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
 // threads while unbinding is occurring, and that those event sending operations
 // return |ZX_ERR_CANCELED| after the server has been unbound.
 TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
-  using ::fidl_test_coding_fuchsia::Example;
-  class Server : public fidl::WireServer<Example> {
+  class Server : public fidl::WireServer<Values> {
    public:
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       ADD_FAILURE("Not used in this test");
     }
 
@@ -681,7 +664,7 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
 
   // Repeat the test until at least one failure is observed.
   for (;;) {
-    auto endpoints = fidl::CreateEndpoints<Example>();
+    auto endpoints = fidl::CreateEndpoints<Values>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
 
@@ -706,7 +689,7 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
             ZX_ASSERT(ZX_OK == sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
             for (size_t i = 0; i < kNumEventsPerThread; i++) {
               fidl::Status result =
-                  fidl::WireSendEvent(server_binding)->OnEvent(fidl::StringView("a"));
+                  fidl::WireSendEvent(server_binding)->OnValueEvent(fidl::StringView("a"));
               if (!result.ok()) {
                 // |ZX_ERR_CANCELED| indicates unbinding has happened.
                 ZX_ASSERT_MSG(result.status() == ZX_ERR_CANCELED, "Unexpected status: %d",
@@ -754,11 +737,8 @@ TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
 }
 
 TEST(BindServerTestCase, ConcurrentSyncReply) {
-  struct ConcurrentSyncServer : fidl::WireServer<Simple> {
+  struct ConcurrentSyncServer : fidl::WireServer<ValueEcho> {
     ConcurrentSyncServer(int max_reqs) : max_reqs_(max_reqs) {}
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
-    }
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Increment the request count. Yield to allow other threads to execute.
       auto i = ++req_cnt_;
@@ -776,14 +756,14 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
       } else {
         sync_completion_signal(&on_max_reqs_);
       }
-      completer.Reply(request->request);
+      completer.Reply(request->s);
     }
     sync_completion_t on_max_reqs_;
     const int max_reqs_;
     std::atomic<int> req_cnt_ = 0;
   };
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -796,7 +776,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 
   // Bind the server.
   auto res = fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get());
-  fidl::ServerBindingRef<Simple> binding(std::move(res));
+  fidl::ServerBindingRef<ValueEcho> binding(std::move(res));
 
   // Launch 10 client threads to make two-way Echo() calls.
   std::vector<std::thread> threads;
@@ -816,7 +796,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 }
 
 TEST(BindServerTestCase, ConcurrentIdempotentClose) {
-  struct ConcurrentSyncServer : fidl::WireServer<Simple> {
+  struct ConcurrentSyncServer : fidl::WireServer<Closer> {
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       // Add the wait back to the dispatcher. Sleep to allow another thread in.
       completer.EnableNextDispatch();
@@ -824,10 +804,9 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
       // Close with ZX_OK.
       completer.Close(ZX_OK);
     }
-    void Echo(EchoRequestView, EchoCompleter::Sync&) override { ADD_FAILURE("Must not call echo"); }
   };
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<Closer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -841,7 +820,7 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
   // Bind the server.
   sync_completion_t unbound;
   fidl::OnUnboundFn<ConcurrentSyncServer> on_unbound =
-      [&unbound](ConcurrentSyncServer*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      [&unbound](ConcurrentSyncServer*, fidl::UnbindInfo info, fidl::ServerEnd<Closer> server_end) {
         static std::atomic_flag invoked = ATOMIC_FLAG_INIT;
         ASSERT_FALSE(invoked.test_and_set());  // Must only be called once.
         EXPECT_EQ(fidl::Reason::kClose, info.reason());
@@ -876,9 +855,9 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
 // async dispatcher thread.
 TEST(BindServerTestCase, UnbindSynchronouslyPassivatesSyncCompleter) {
   // This server destroys itself upon the |Echo| call.
-  class ShutdownOnEchoRequestServer : public fidl::WireServer<Simple> {
+  class ShutdownOnEchoRequestServer : public fidl::WireServer<ValueEcho> {
    public:
-    ShutdownOnEchoRequestServer(async::Loop* loop, fidl::ServerEnd<Simple> server_end)
+    ShutdownOnEchoRequestServer(async::Loop* loop, fidl::ServerEnd<ValueEcho> server_end)
         : binding_ref_(
               fidl::BindServer(loop->dispatcher(), std::move(server_end), this,
                                cpp20::bind_front(&ShutdownOnEchoRequestServer::OnUnbound, loop))) {}
@@ -889,12 +868,8 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesSyncCompleter) {
       binding_ref_.Unbind();
     }
 
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ZX_PANIC("Unused");
-    }
-
     static void OnUnbound(async::Loop* loop, ShutdownOnEchoRequestServer* server,
-                          fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+                          fidl::UnbindInfo info, fidl::ServerEnd<ValueEcho> server_end) {
       EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
       EXPECT_OK(info.status());
       loop->Quit();
@@ -902,18 +877,18 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesSyncCompleter) {
     }
 
    private:
-    fidl::ServerBindingRef<Simple> binding_ref_;
+    fidl::ServerBindingRef<ValueEcho> binding_ref_;
   };
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::status endpoints = fidl::CreateEndpoints<Simple>();
+  zx::status endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
 
   // Server owns itself.
   (void)new ShutdownOnEchoRequestServer(&loop, std::move(endpoints->server));
 
   std::thread call_thread([client_end = std::move(endpoints->client)] {
-    fidl::WireResult result = fidl::WireCall(client_end)->Echo(42);
+    fidl::WireResult result = fidl::WireCall(client_end)->Echo("");
     ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
   });
 
@@ -930,9 +905,9 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesSyncCompleter) {
 // async dispatcher thread.
 TEST(BindServerTestCase, UnbindSynchronouslyPassivatesAsyncCompleter) {
   // This server destroys itself upon the |Echo| call.
-  class ShutdownOnEchoRequestServer : public fidl::WireServer<Simple> {
+  class ShutdownOnEchoRequestServer : public fidl::WireServer<ValueEcho> {
    public:
-    ShutdownOnEchoRequestServer(async::Loop* loop, fidl::ServerEnd<Simple> server_end)
+    ShutdownOnEchoRequestServer(async::Loop* loop, fidl::ServerEnd<ValueEcho> server_end)
         : loop_(loop),
           binding_ref_(
               fidl::BindServer(loop->dispatcher(), std::move(server_end), this,
@@ -952,12 +927,8 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesAsyncCompleter) {
       });
     }
 
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ZX_PANIC("Unused");
-    }
-
     static void OnUnbound(async::Loop* loop, ShutdownOnEchoRequestServer* server,
-                          fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+                          fidl::UnbindInfo info, fidl::ServerEnd<ValueEcho> server_end) {
       EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
       EXPECT_OK(info.status());
       loop->Quit();
@@ -965,19 +936,19 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesAsyncCompleter) {
 
    private:
     async::Loop* loop_;
-    fidl::ServerBindingRef<Simple> binding_ref_;
+    fidl::ServerBindingRef<ValueEcho> binding_ref_;
     std::optional<EchoCompleter::Async> async_completer_;
   };
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::status endpoints = fidl::CreateEndpoints<Simple>();
+  zx::status endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
 
   // Server owns itself.
   (void)new ShutdownOnEchoRequestServer(&loop, std::move(endpoints->server));
 
   std::thread call_thread([client_end = std::move(endpoints->client)] {
-    fidl::WireResult result = fidl::WireCall(client_end)->Echo(42);
+    fidl::WireResult result = fidl::WireCall(client_end)->Echo("");
     ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
   });
 
@@ -995,7 +966,7 @@ TEST(BindServerTestCase, UnbindSynchronouslyPassivatesAsyncCompleter) {
 //   This is important to avoid use-after-free if the user destroys the server
 //   at the point of teardown completion.
 TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
-  struct LongOperationServer : fidl::WireServer<Simple> {
+  struct LongOperationServer : fidl::WireServer<Closer> {
     explicit LongOperationServer(libsync::Completion* long_operation)
         : long_operation_(long_operation) {}
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
@@ -1007,14 +978,13 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
         completer.Close(ZX_OK);
       }
     }
-    void Echo(EchoRequestView, EchoCompleter::Sync&) override { ADD_FAILURE("Must not call echo"); }
 
    private:
     std::atomic_flag first_request_ = ATOMIC_FLAG_INIT;
     libsync::Completion* long_operation_;
   };
 
-  zx::status endpoints = fidl::CreateEndpoints<Simple>();
+  zx::status endpoints = fidl::CreateEndpoints<Closer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -1027,7 +997,7 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
 
   libsync::Completion unbound;
   fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get(),
-                   [&unbound](LongOperationServer*, fidl::UnbindInfo, fidl::ServerEnd<Simple>) {
+                   [&unbound](LongOperationServer*, fidl::UnbindInfo, fidl::ServerEnd<Closer>) {
                      unbound.Signal();
                    });
 
@@ -1049,31 +1019,33 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
 
 TEST(BindServerTestCase, ServerUnbind) {
   // Create the server.
-  sync_completion_t destroyed;
-  auto* server = new Server(&destroyed);
+  class Server : public fidl::WireServer<test_empty_protocol::Empty> {};
+  Server server;
+  sync_completion_t unbound;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   // Create and bind the channel.
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   auto remote_handle = remote.channel().get();
-  fidl::OnUnboundFn<Server> on_unbound = [remote_handle, remote = &remote](
-                                             Server* server, fidl::UnbindInfo info,
-                                             fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
-    EXPECT_OK(info.status());
-    EXPECT_EQ(server_end.channel().get(), remote_handle);
-    *remote = std::move(server_end);
-    delete server;
-  };
+  fidl::OnUnboundFn<Server> on_unbound =
+      [remote_handle, remote = &remote, &unbound](
+          Server* server, fidl::UnbindInfo info,
+          fidl::ServerEnd<test_empty_protocol::Empty> server_end) {
+        EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+        EXPECT_OK(info.status());
+        EXPECT_EQ(server_end.channel().get(), remote_handle);
+        *remote = std::move(server_end);
+        sync_completion_signal(&unbound);
+      };
   auto binding_ref =
-      fidl::BindServer(loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
+      fidl::BindServer(loop.dispatcher(), std::move(remote), &server, std::move(on_unbound));
 
   // The binding should be destroyed without waiting for the Server to be destroyed.
   binding_ref.Unbind();
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 
   // Unbind()/Close() may still be called from the Server.
   binding_ref.Unbind();
@@ -1089,29 +1061,31 @@ TEST(BindServerTestCase, ServerUnbind) {
 
 TEST(BindServerTestCase, ServerClose) {
   // Create the server.
-  sync_completion_t destroyed;
-  auto* server = new Server(&destroyed);
+  class Server : public fidl::WireServer<test_empty_protocol::Empty> {};
+  Server server;
+  sync_completion_t unbound;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   // Create and bind the channel.
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
-  fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnbindInfo info,
-                                            fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::Reason::kClose, info.reason());
-    EXPECT_OK(info.status());
-    EXPECT_TRUE(server_end);
-    delete server;
-  };
+  fidl::OnUnboundFn<Server> on_unbound =
+      [&unbound](Server* server, fidl::UnbindInfo info,
+                 fidl::ServerEnd<test_empty_protocol::Empty> server_end) {
+        EXPECT_EQ(fidl::Reason::kClose, info.reason());
+        EXPECT_OK(info.status());
+        EXPECT_TRUE(server_end);
+        sync_completion_signal(&unbound);
+      };
   auto binding_ref =
-      fidl::BindServer(loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
+      fidl::BindServer(loop.dispatcher(), std::move(remote), &server, std::move(on_unbound));
 
   // The binding should be destroyed without waiting for the Server to be destroyed.
   binding_ref.Close(ZX_OK);
   ASSERT_OK(local.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 
   // Unbind()/Close() may still be called from the Server.
   binding_ref.Unbind();
@@ -1124,8 +1098,8 @@ TEST(BindServerTestCase, ServerClose) {
   EXPECT_EQ(ZX_OK, epitaph.error);
 }
 
-fidl::Endpoints<Example> CreateEndpointsWithoutServerWriteRight() {
-  zx::status endpoints = fidl::CreateEndpoints<Example>();
+fidl::Endpoints<Values> CreateEndpointsWithoutServerWriteRight() {
+  zx::status endpoints = fidl::CreateEndpoints<Values>();
   EXPECT_OK(endpoints.status_value());
   if (!endpoints.is_ok())
     return {};
@@ -1138,11 +1112,11 @@ fidl::Endpoints<Example> CreateEndpointsWithoutServerWriteRight() {
     server_end.channel() = std::move(server_channel_non_writable);
   }
 
-  return fidl::Endpoints<Example>{std::move(client_end), std::move(server_end)};
+  return fidl::Endpoints<Values>{std::move(client_end), std::move(server_end)};
 }
 
 // A mock server that panics upon receiving any message.
-class NotImplementedServer : public fidl::testing::WireTestBase<fidl_test_coding_fuchsia::Example> {
+class NotImplementedServer : public fidl::testing::WireTestBase<test_basic_protocol::Values> {
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
     ZX_PANIC("Unreachable");
   }
@@ -1188,20 +1162,20 @@ TEST(BindServerTestCase, UnbindInfoDecodeError) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  zx::status endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   // Error message should contain the word "presence", because the presence
   // marker is invalid. Only checking for "presence" allows the error message to
   // evolve slightly without breaking tests.
-  UnbindObserver<Example> observer(fidl::Reason::kDecodeError, ZX_ERR_INVALID_ARGS, "presence");
+  UnbindObserver<Values> observer(fidl::Reason::kDecodeError, ZX_ERR_INVALID_ARGS, "presence");
   fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
   // Make a call with an intentionally crafted wrong message.
   // To trigger a decode error, here we use a string with an invalid presence marker.
-  fidl::internal::TransactionalRequest<Example::TwoWay> request;
-  request.body.in = fidl::StringView::FromExternal(
+  fidl::internal::TransactionalRequest<Values::Echo> request;
+  request.body.s = fidl::StringView::FromExternal(
       reinterpret_cast<const char*>(0x1234123412341234),  // invalid presence marker
       0                                                   // size
   );
@@ -1222,10 +1196,10 @@ TEST(BindServerTestCase, UnbindInfoDecodeError) {
 }
 
 TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling) {
-  struct WorkingServer : fidl::WireServer<Example> {
+  struct WorkingServer : fidl::WireServer<Values> {
     explicit WorkingServer(std::shared_ptr<async::Loop> loop) : loop_(std::move(loop)) {}
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
-      completer.Reply(request->in);
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      completer.Reply(request->s);
       std::thread shutdown([loop = loop_] { loop->Shutdown(); });
       shutdown.detach();
       // Polling until the dispatcher has entered a shutdown state.
@@ -1249,14 +1223,14 @@ TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling
   ASSERT_OK(loop->StartThread());
   auto server = std::make_unique<WorkingServer>(loop);
 
-  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  zx::status endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kDispatcherError, ZX_ERR_CANCELED);
+  UnbindObserver<Values> observer(fidl::Reason::kDispatcherError, ZX_ERR_CANCELED);
   fidl::BindServer(loop->dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
-  fidl::WireResult result = fidl::WireCall(local)->TwoWay("");
+  fidl::WireResult result = fidl::WireCall(local)->Echo("");
   EXPECT_OK(result.status());
 
   ASSERT_OK(observer.completion().Wait());
@@ -1264,10 +1238,10 @@ TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling
 
 // Error sending reply should trigger binding teardown.
 TEST(BindServerTestCase, UnbindInfoErrorSendingReply) {
-  struct WorkingServer : fidl::WireServer<Example> {
+  struct WorkingServer : fidl::WireServer<Values> {
     WorkingServer() = default;
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
-      completer.Reply(request->in);
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      completer.Reply(request->s);
       EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.result_of_reply().status());
     }
     void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
@@ -1280,14 +1254,14 @@ TEST(BindServerTestCase, UnbindInfoErrorSendingReply) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  fidl::Endpoints<Example> endpoints;
+  fidl::Endpoints<Values> endpoints;
   ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutServerWriteRight());
   auto [local, remote] = std::move(endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
+  UnbindObserver<Values> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
   fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
-  fidl::WireResult result = fidl::WireCall(local)->TwoWay("");
+  fidl::WireResult result = fidl::WireCall(local)->Echo("");
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
 
   ASSERT_OK(observer.completion().Wait());
@@ -1298,15 +1272,15 @@ TEST(BindServerTestCase, UnbindInfoErrorSendingEvent) {
   auto server = std::make_unique<NotImplementedServer>();
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  fidl::Endpoints<Example> endpoints;
+  fidl::Endpoints<Values> endpoints;
   ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutServerWriteRight());
   auto [local, remote] = std::move(endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
-  fidl::ServerBindingRef<Example> binding =
+  UnbindObserver<Values> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
+  fidl::ServerBindingRef<Values> binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
-  fidl::Status result = fidl::WireSendEvent(binding)->OnEvent("");
+  fidl::Status result = fidl::WireSendEvent(binding)->OnValueEvent("");
   ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
 
   ASSERT_FALSE(observer.DidUnbind());
@@ -1319,10 +1293,10 @@ TEST(BindServerTestCase, UnbindInfoErrorSendingEvent) {
 // tearing down.
 TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
   constexpr static char kData[] = "test";
-  struct MockServer : fidl::WireServer<Example> {
+  struct MockServer : fidl::WireServer<Values> {
     MockServer() = default;
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call TwoWay");
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call Echo");
     }
     void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
       EXPECT_EQ(request->in.get(), kData);
@@ -1338,12 +1312,12 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
   auto server = std::make_unique<MockServer>();
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  zx::status endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kPeerClosed, ZX_ERR_PEER_CLOSED);
-  fidl::ServerBindingRef<Example> binding =
+  UnbindObserver<Values> observer(fidl::Reason::kPeerClosed, ZX_ERR_PEER_CLOSED);
+  fidl::ServerBindingRef<Values> binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
   // Make a call and close the client endpoint.
@@ -1351,7 +1325,7 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
   local.reset();
 
   // Sending event fails due to client endpoint closing.
-  fidl::Status result = fidl::WireSendEvent(binding)->OnEvent("");
+  fidl::Status result = fidl::WireSendEvent(binding)->OnValueEvent("");
   ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
 
   // The initial call should still be processed.
@@ -1364,11 +1338,11 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
 
 TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
   constexpr static char kData[] = "test";
-  struct MockServer : fidl::WireServer<Example> {
+  struct MockServer : fidl::WireServer<Values> {
     MockServer() = default;
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Sending reply fails due to client endpoint closing.
-      EXPECT_EQ(request->in.get(), kData);
+      EXPECT_EQ(request->s.get(), kData);
       completer.Reply(kData);
       fidl::Status result = completer.result_of_reply();
       EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
@@ -1390,12 +1364,12 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
   auto server = std::make_unique<MockServer>();
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  zx::status endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kPeerClosed, ZX_ERR_PEER_CLOSED);
-  fidl::ServerBindingRef<Example> binding =
+  UnbindObserver<Values> observer(fidl::Reason::kPeerClosed, ZX_ERR_PEER_CLOSED);
+  fidl::ServerBindingRef<Values> binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
   // Make a two-way call followed by a one-way call and close the client
@@ -1403,7 +1377,7 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
   {
     async::Loop client_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     fidl::WireClient client(std::move(local), client_loop.dispatcher());
-    client->TwoWay(kData).ThenExactlyOnce([](fidl::WireUnownedResult<Example::TwoWay>&) {});
+    client->Echo(kData).ThenExactlyOnce([](fidl::WireUnownedResult<Values::Echo>&) {});
     ASSERT_OK(client->OneWay(kData).status());
     ASSERT_OK(client_loop.RunUntilIdle());
   }
@@ -1420,31 +1394,33 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
 
 TEST(BindServerTestCase, UnbindInfoDispatcherError) {
   // Create the server.
-  sync_completion_t destroyed;
-  auto* server = new Server(&destroyed);
+  class Server : public fidl::WireServer<test_empty_protocol::Empty> {};
+  Server server;
+  sync_completion_t unbound;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   // Create and bind the channel.
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   auto remote_handle = remote.channel().get();
-  fidl::OnUnboundFn<Server> on_unbound = [remote_handle, remote = &remote](
-                                             Server* server, fidl::UnbindInfo info,
-                                             fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::Reason::kDispatcherError, info.reason());
-    EXPECT_EQ(ZX_ERR_CANCELED, info.status());
-    EXPECT_EQ(server_end.channel().get(), remote_handle);
-    *remote = std::move(server_end);
-    delete server;
-  };
+  fidl::OnUnboundFn<Server> on_unbound =
+      [remote_handle, remote = &remote, &unbound](
+          Server* server, fidl::UnbindInfo info,
+          fidl::ServerEnd<test_empty_protocol::Empty> server_end) {
+        EXPECT_EQ(fidl::Reason::kDispatcherError, info.reason());
+        EXPECT_EQ(ZX_ERR_CANCELED, info.status());
+        EXPECT_EQ(server_end.channel().get(), remote_handle);
+        *remote = std::move(server_end);
+        sync_completion_signal(&unbound);
+      };
   auto binding_ref =
-      fidl::BindServer(loop.dispatcher(), std::move(remote), server, std::move(on_unbound));
+      fidl::BindServer(loop.dispatcher(), std::move(remote), &server, std::move(on_unbound));
 
   // This should destroy the binding, running the error handler before returning.
   loop.Shutdown();
-  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE_PAST));
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE_PAST));
 
   // The channel should still be valid.
   EXPECT_EQ(remote.channel().get(), remote_handle);
@@ -1458,11 +1434,11 @@ TEST(BindServerTestCase, UnbindInfoUnknownMethod) {
   auto server = std::make_unique<NotImplementedServer>();
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED);
+  UnbindObserver<Values> observer(fidl::Reason::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED);
   fidl::BindServer(loop.dispatcher(), std::move(remote), std::move(server), observer.GetCallback());
   loop.RunUntilIdle();
   ASSERT_FALSE(observer.DidUnbind());
@@ -1475,16 +1451,13 @@ TEST(BindServerTestCase, UnbindInfoUnknownMethod) {
 }
 
 TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
-  struct WorkingServer : fidl::WireServer<Simple> {
+  struct WorkingServer : fidl::WireServer<ValueEcho> {
     explicit WorkingServer(std::optional<EchoCompleter::Async>* async_completer,
                            sync_completion_t* ready)
         : async_completer_(async_completer), ready_(ready) {}
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(ready_);
       *async_completer_ = completer.ToAsync();  // Releases ownership of the binding.
-    }
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
     }
     std::optional<EchoCompleter::Async>* async_completer_;
     sync_completion_t* ready_;
@@ -1494,14 +1467,14 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   ASSERT_OK(loop.StartThread());
 
   // Create the channel and bind it with the server and dispatcher.
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   sync_completion_t ready, unbound;
-  std::optional<Server::EchoCompleter::Async> async_completer;
+  std::optional<WorkingServer::EchoCompleter::Async> async_completer;
   auto server = std::make_unique<WorkingServer>(&async_completer, &ready);
   fidl::OnUnboundFn<WorkingServer> on_unbound = [&unbound](WorkingServer*, fidl::UnbindInfo info,
-                                                           fidl::ServerEnd<Simple>) {
+                                                           fidl::ServerEnd<ValueEcho>) {
     EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
     EXPECT_EQ(ZX_OK, info.status());
     sync_completion_signal(&unbound);
@@ -1544,7 +1517,7 @@ class PlaceholderBase2 {
 };
 
 class MultiInheritanceServer : public PlaceholderBase1,
-                               public fidl::WireServer<Simple>,
+                               public fidl::WireServer<Closer>,
                                public PlaceholderBase2 {
  public:
   explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}
@@ -1555,9 +1528,6 @@ class MultiInheritanceServer : public PlaceholderBase1,
 
   ~MultiInheritanceServer() override { sync_completion_signal(destroyed_); }
 
-  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
-    completer.Reply(request->request);
-  }
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.Close(ZX_OK);
   }
@@ -1575,13 +1545,13 @@ TEST(BindServerTestCase, MultipleInheritanceServer) {
   // Launch a thread so we can make a blocking client call
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<Closer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   fidl::OnUnboundFn<MultiInheritanceServer> on_unbound = [](MultiInheritanceServer* server,
                                                             fidl::UnbindInfo info,
-                                                            fidl::ServerEnd<Simple> server_end) {
+                                                            fidl::ServerEnd<Closer> server_end) {
     EXPECT_EQ(fidl::Reason::kClose, info.reason());
     EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
@@ -1607,12 +1577,12 @@ TEST(BindServerTestCase, MultipleInheritanceServer) {
 }
 
 TEST(WireSendEvent, UnownedServerEnd) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  fidl::UnownedServerEnd<Example> server_end(endpoints->server);
-  auto result = fidl::WireSendEvent(server_end)->OnEvent("abcd");
+  fidl::UnownedServerEnd<Values> server_end(endpoints->server);
+  auto result = fidl::WireSendEvent(server_end)->OnValueEvent("abcd");
   ASSERT_OK(result.status());
 
   // For simplicity, just ensure that *some* message was received on the other side.

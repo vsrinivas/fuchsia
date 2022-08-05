@@ -30,23 +30,6 @@ type HandleUnionStruct = resource struct {
     u HandleUnion;
 };
 
-/// Protocol for testing methods with error types.
-/// In the implementation, each method is hardcoded to return either the
-/// success or the error case. This should follow the naming of the method,
-/// e.g. ReturnPrimitiveError will always return the error case.
-protocol ErrorMethods {
-    NoArgsPrimitiveError(struct {
-        should_error bool;
-    }) -> (struct {}) error int32;
-    ManyArgsCustomError(struct {
-        should_error bool;
-    }) -> (struct {
-        a int32;
-        b int32;
-        c int32;
-    }) error MyError;
-};
-
 protocol Frobinator {
     Frob(struct {
         value string;
@@ -85,5 +68,3 @@ protocol EnumMethods {
         e MyError;
     });
 };
-
-protocol Empty {};

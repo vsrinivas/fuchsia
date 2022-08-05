@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
+#include <fidl/test.empty.protocol/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/wire/server.h>
@@ -14,9 +14,9 @@
 
 namespace {
 
-using ::fidl_test_coding_fuchsia::Simple;
+using ::test_empty_protocol::Empty;
 
-class Server : public fidl::WireServer<Simple> {
+class Server : public fidl::WireServer<Empty> {
  public:
   explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
   Server(Server&& other) = delete;
@@ -26,13 +26,6 @@ class Server : public fidl::WireServer<Simple> {
 
   ~Server() override { sync_completion_signal(destroyed_); }
 
-  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
-    ZX_PANIC("Never used");
-  }
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    ZX_PANIC("Never used");
-  }
-
  private:
   sync_completion_t* destroyed_;
 };
@@ -41,14 +34,14 @@ class BindServerOverloads : public zxtest::Test {
  public:
   BindServerOverloads()
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        endpoints_(fidl::CreateEndpoints<Simple>()) {}
+        endpoints_(fidl::CreateEndpoints<Empty>()) {}
 
   void SetUp() override {
     ASSERT_OK(loop_.StartThread());
     ASSERT_OK(endpoints_.status_value());
   }
 
-  zx::status<fidl::Endpoints<Simple>>& endpoints() { return endpoints_; }
+  zx::status<fidl::Endpoints<Empty>>& endpoints() { return endpoints_; }
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
@@ -56,7 +49,7 @@ class BindServerOverloads : public zxtest::Test {
 
  private:
   async::Loop loop_;
-  zx::status<fidl::Endpoints<Simple>> endpoints_;
+  zx::status<fidl::Endpoints<Empty>> endpoints_;
 };
 
 // Test that |BindServer| correctly destroys a server it uniquely owns.
@@ -77,7 +70,7 @@ TEST_F(BindServerOverloads, UniquePtrWithUnboundHook) {
   sync_completion_t unbound;
   auto result = fidl::BindServer(
       dispatcher(), std::move(endpoints()->server), std::make_unique<Server>(&destroyed),
-      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Empty> server_end) {
         // Server is held alive by the runtime until we leave this lambda.
         ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&destroyed, ZX_TIME_INFINITE_PAST));
 
@@ -110,7 +103,7 @@ TEST_F(BindServerOverloads, SharedPtrWithUnboundHook) {
   sync_completion_t unbound;
   auto result = fidl::BindServer(
       dispatcher(), std::move(endpoints()->server), std::make_shared<Server>(&destroyed),
-      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Empty> server_end) {
         // Server is held alive by the runtime until we leave this lambda.
         ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&destroyed, ZX_TIME_INFINITE_PAST));
 
@@ -131,7 +124,7 @@ TEST_F(BindServerOverloads, SharedPtrWithUnboundHookAndSharedOwnership) {
   auto shared_server = std::make_shared<Server>(&destroyed);
   auto result = fidl::BindServer(
       dispatcher(), std::move(endpoints()->server), shared_server,
-      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Empty> server_end) {
         // Server is held alive by the runtime until we leave this lambda.
         ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&destroyed, ZX_TIME_INFINITE_PAST));
 
@@ -175,7 +168,7 @@ TEST_F(BindServerOverloads, RawPtrWithUnboundHook) {
   std::optional<Server> server{&destroyed};
   auto result = fidl::BindServer(
       dispatcher(), std::move(endpoints()->server), &server.value(),
-      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      [&unbound, &destroyed](Server*, fidl::UnbindInfo info, fidl::ServerEnd<Empty> server_end) {
         // Server is held alive by the local variable.
         ASSERT_EQ(ZX_ERR_TIMED_OUT, sync_completion_wait(&destroyed, ZX_TIME_INFINITE_PAST));
 

@@ -16,3 +16,29 @@ cts_fidl("test.protocol.connector") {
   testonly = true
   sources = [ "protocol_connector.test.fidl" ]
 }
+
+# A library containing just an empty protocol.
+cts_fidl("test.empty.protocol") {
+  testonly = true
+  sources = [ "empty_protocol.test.fidl" ]
+}
+
+# Methods returning application errors.
+cts_fidl("test.error.methods") {
+  testonly = true
+  sources = [ "error_methods.test.fidl" ]
+}
+
+# Simple one way/two way echo methods and events that test the basic operation
+# of client and server APIs.
+cts_fidl("test.basic.protocol") {
+  testonly = true
+  sources = [ "basic_protocol.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+# Methods and events with the @transitional attribute.
+cts_fidl("test.transitional") {
+  testonly = true
+  sources = [ "transitional.test.fidl" ]
+}

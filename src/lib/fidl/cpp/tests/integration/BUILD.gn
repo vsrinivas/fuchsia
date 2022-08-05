@@ -46,8 +46,8 @@ test("fidl_cpp_gen_api_tests_bin") {
     "server_gen_api_test.cc",
   ]
   deps = [
-    "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_cpp",
-    "//src/lib/fidl/llcpp/tests/integration:llcpptest.protocol.test_cpp",
+    "//sdk/testing/fidl/protocols_tests:test.basic.protocol_cpp",
+    "//sdk/testing/fidl/protocols_tests:test.error.methods_cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

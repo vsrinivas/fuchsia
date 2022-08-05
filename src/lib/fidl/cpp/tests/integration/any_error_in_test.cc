@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/llcpptest.protocol.test/cpp/fidl.h>
+#include <fidl/test.error.methods/cpp/fidl.h>
 #include <lib/fidl/cpp/any_error_in.h>
 
 #include <zxtest/zxtest.h>
@@ -13,20 +13,18 @@ namespace {
 // the corresponding domain specific error.
 
 // NoArgsPrimitiveError(struct { should_error bool; }) -> (struct {}) error int32;
-static_assert(
-    std::is_base_of<
-        fidl::internal::AnyErrorInImpl<int32_t>,
-        fidl::AnyErrorIn<llcpptest_protocol_test::ErrorMethods::NoArgsPrimitiveError>>::value);
+static_assert(std::is_base_of<
+              fidl::internal::AnyErrorInImpl<int32_t>,
+              fidl::AnyErrorIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>::value);
 
 // ManyArgsCustomError(struct { should_error bool; })
 //     -> (struct { a int32; b int32; c int32; }) error MyError;
 static_assert(std::is_base_of<
-              fidl::internal::AnyErrorInImpl<llcpptest_protocol_test::MyError>,
-              fidl::AnyErrorIn<llcpptest_protocol_test::ErrorMethods::ManyArgsCustomError>>::value);
+              fidl::internal::AnyErrorInImpl<test_error_methods::MyError>,
+              fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>::value);
 
-using ::llcpptest_protocol_test::MyError;
-using AnyErrorInMethod =
-    fidl::AnyErrorIn<llcpptest_protocol_test::ErrorMethods::ManyArgsCustomError>;
+using ::test_error_methods::MyError;
+using AnyErrorInMethod = fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>;
 
 TEST(AnyErrorInMethod, TransportError) {
   AnyErrorInMethod error(fidl::Status::UnknownOrdinal());
@@ -44,7 +42,7 @@ TEST(AnyErrorInMethod, ApplicationError) {
   EXPECT_FALSE(error.is_transport_error());
   EXPECT_TRUE(error.is_application_error());
   EXPECT_EQ(MyError::kBadError, error.application_error());
-  EXPECT_EQ("FIDL application error: llcpptest.protocol.test/MyError.BAD_ERROR (value: 1)",
+  EXPECT_EQ("FIDL application error: test.error.methods/MyError.BAD_ERROR (value: 1)",
             error.FormatDescription());
 }
 
@@ -52,7 +50,7 @@ TEST(AnyErrorInMethod, UnknownApplicationError) {
   AnyErrorInMethod error(static_cast<MyError>(42));
   EXPECT_FALSE(error.is_transport_error());
   EXPECT_TRUE(error.is_application_error());
-  EXPECT_EQ("FIDL application error: llcpptest.protocol.test/MyError.[UNKNOWN] (value: 42)",
+  EXPECT_EQ("FIDL application error: test.error.methods/MyError.[UNKNOWN] (value: 42)",
             error.FormatDescription());
 }
 

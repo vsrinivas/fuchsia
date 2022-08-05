@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fidl.test.coding.fuchsia;
 
-using zx;
-
 type TestEnum = strict enum : uint32 {
     ONE = 1;
 };
@@ -16,45 +14,4 @@ protocol Llcpp {
     EnumAction() -> (struct {
         v TestEnum;
     });
-};
-
-protocol Example {
-    TwoWay(struct {
-        in string;
-    }) -> (struct {
-        out string;
-    });
-    OneWay(struct {
-        in string;
-    });
-    -> OnEvent(struct {
-        out string;
-    });
-    -> OnResourceEvent(resource struct {
-        h zx.handle;
-    });
-};
-
-protocol Simple {
-    /// Replies with the value requested.
-    Echo(struct {
-        request int32;
-    }) -> (struct {
-        reply int32;
-    });
-
-    /// Never actually replies.  Just closes instead.
-    Close() -> (struct {
-        v int32;
-    });
-};
-
-protocol TwoEvents {
-    -> EventA();
-    -> EventB();
-};
-
-protocol TransitionalEvent {
-    @transitional
-    -> Event();
 };

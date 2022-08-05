@@ -1,0 +1,78 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.basic.protocol;
+
+using zx;
+
+/// Never actually replies. Just closes the connection.
+protocol Closer {
+    Close() -> ();
+};
+
+/// Replies with the value requested.
+protocol ValueEcho {
+    Echo(struct {
+        s string;
+    }) -> (struct {
+        s string;
+    });
+};
+
+/// Replies with the handle requested.
+protocol ResourceEcho {
+    Echo(resource struct {
+        h zx.handle;
+    }) -> (resource struct {
+        h zx.handle;
+    });
+};
+
+protocol ValueOneWay {
+    OneWay(struct {
+        in string;
+    });
+};
+
+protocol ResourceOneWay {
+    OneWay(resource struct {
+        h zx.handle;
+    });
+};
+
+protocol ValueEvent {
+    -> OnValueEvent(struct {
+        s string;
+    });
+};
+
+protocol ResourceEvent {
+    -> OnResourceEvent(resource struct {
+        h zx.handle;
+    });
+};
+
+/// A basic protocol exercising all interaction types: two way call,
+/// one way call, and event. All the payloads are values.
+protocol Values {
+    compose ValueEcho;
+    compose ValueOneWay;
+    compose ValueEvent;
+};
+
+/// A basic protocol exercising all interaction types: two way call,
+/// one way call, and event. All the payloads are resources.
+protocol Resources {
+    compose ResourceEcho;
+    compose ResourceOneWay;
+    compose ResourceEvent;
+};
+
+/// [`TwoEvents`] is useful for testing binding APIs that allow a client to omit
+/// one or more event handlers. In that case the corresponding events should be
+/// silently ignored.
+protocol TwoEvents {
+    -> EventA();
+    -> EventB();
+};

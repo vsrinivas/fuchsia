@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/llcpptest.protocol.test/cpp/wire.h>
+#include <fidl/test.error.methods/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
@@ -85,18 +86,20 @@ TEST(SyncClientErrorTest, DecodeError) {
 }
 
 TEST(SyncClientErrorTest, DecodeErrorWithErrorSyntax) {
-  zx::status endpoints = fidl::CreateEndpoints<test::ErrorMethods>();
+  zx::status endpoints = fidl::CreateEndpoints<test_error_methods::ErrorMethods>();
   ASSERT_OK(endpoints.status_value());
   std::thread replier{[&] {
     zx_signals_t observed;
     ASSERT_OK(
         endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
     ASSERT_EQ(ZX_CHANNEL_READABLE, observed & ZX_CHANNEL_READABLE);
-    fidl::internal::TransactionalRequest<test::ErrorMethods::ManyArgsCustomError> request{};
+    fidl::internal::TransactionalRequest<test_error_methods::ErrorMethods::ManyArgsCustomError>
+        request{};
     uint32_t actual;
     endpoints->server.channel().read(0, &request, nullptr, sizeof(request), 0, &actual, nullptr);
     ASSERT_EQ(sizeof(request), actual);
-    fidl::internal::TransactionalResponse<test::ErrorMethods::ManyArgsCustomError> message;
+    fidl::internal::TransactionalResponse<test_error_methods::ErrorMethods::ManyArgsCustomError>
+        message;
 
     // Zero the message body, to prevent hitting the "non-zero padding bytes" error, which is
     // checked before the "not valid enum member" error we're interested in
@@ -106,8 +109,8 @@ TEST(SyncClientErrorTest, DecodeErrorWithErrorSyntax) {
     // receives the message.
     fidl::InitTxnHeader(&message.header, request.header.txid, request.header.ordinal,
                         fidl::MessageDynamicFlags::kStrictMethod);
-    message.body.result = test::wire::ErrorMethodsManyArgsCustomErrorResult::WithErr(
-        static_cast<test::wire::MyError>(42));
+    message.body.result = test_error_methods::wire::ErrorMethodsManyArgsCustomErrorResult::WithErr(
+        static_cast<test_error_methods::MyError>(42));
     ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
                                                 sizeof(message), nullptr, 0));
   }};

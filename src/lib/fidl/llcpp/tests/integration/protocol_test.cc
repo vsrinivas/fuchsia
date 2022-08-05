@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fidl/llcpptest.protocol.test/cpp/wire.h>
+#include <fidl/test.empty.protocol/cpp/wire.h>
+#include <fidl/test.error.methods/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
@@ -34,7 +36,7 @@ uint32_t GetHandleCount(zx::unowned<T> h) {
 
 }  // namespace
 
-class ErrorServer : public fidl::WireServer<test::ErrorMethods> {
+class ErrorServer : public fidl::WireServer<test_error_methods::ErrorMethods> {
  public:
   void NoArgsPrimitiveError(NoArgsPrimitiveErrorRequestView request,
                             NoArgsPrimitiveErrorCompleter::Sync& completer) override {
@@ -47,7 +49,7 @@ class ErrorServer : public fidl::WireServer<test::ErrorMethods> {
   void ManyArgsCustomError(ManyArgsCustomErrorRequestView request,
                            ManyArgsCustomErrorCompleter::Sync& completer) override {
     if (request->should_error) {
-      completer.ReplyError(test::wire::MyError::kReallyBadError);
+      completer.ReplyError(test_error_methods::MyError::kReallyBadError);
     } else {
       completer.ReplySuccess(1, 2, 3);
     }
@@ -60,7 +62,7 @@ class ResultTest : public ::zxtest::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_result_server"), ZX_OK);
 
-    auto endpoints = fidl::CreateEndpoints<test::ErrorMethods>();
+    auto endpoints = fidl::CreateEndpoints<test_error_methods::ErrorMethods>();
     ASSERT_EQ(endpoints.status_value(), ZX_OK);
     auto [client_end, server_end] = std::move(endpoints.value());
     client_end_ = std::move(client_end);
@@ -74,15 +76,15 @@ class ResultTest : public ::zxtest::Test {
     loop_->JoinThreads();
   }
 
-  fidl::WireSyncClient<test::ErrorMethods> TakeClient() {
+  fidl::WireSyncClient<test_error_methods::ErrorMethods> TakeClient() {
     EXPECT_TRUE(client_end_.is_valid());
-    return fidl::WireSyncClient<test::ErrorMethods>(std::move(client_end_));
+    return fidl::WireSyncClient<test_error_methods::ErrorMethods>(std::move(client_end_));
   }
 
  private:
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<ErrorServer> server_;
-  fidl::ClientEnd<test::ErrorMethods> client_end_;
+  fidl::ClientEnd<test_error_methods::ErrorMethods> client_end_;
 };
 
 TEST_F(ResultTest, OwnedPrimitiveError) {
@@ -98,7 +100,7 @@ TEST_F(ResultTest, OwnedCustomError) {
   auto resp = client->ManyArgsCustomError(true);
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_error());
-  EXPECT_EQ(resp->error_value(), test::wire::MyError::kReallyBadError);
+  EXPECT_EQ(resp->error_value(), test_error_methods::MyError::kReallyBadError);
 }
 
 TEST_F(ResultTest, OwnedSuccessNoArgs) {
@@ -231,7 +233,7 @@ TEST(MagicNumberTest, EventRead) {
 }
 
 TEST(SyncClientTest, DefaultInitializationError) {
-  fidl::WireSyncClient<test::ErrorMethods> client;
+  fidl::WireSyncClient<test_error_methods::ErrorMethods> client;
   ASSERT_FALSE(client.is_valid());
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   ASSERT_DEATH([&] { (void)client->NoArgsPrimitiveError(false); });
@@ -420,14 +422,14 @@ TEST_F(HandleTest, HandleUnion) {
   ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
 }
 
-class EmptyImpl : public fidl::WireServer<test::Empty> {
+class EmptyImpl : public fidl::WireServer<test_empty_protocol::Empty> {
  public:
 };
 
 TEST(EmptyTest, EmptyProtocolHasBindableInterface) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto endpoints = fidl::CreateEndpoints<test::Empty>();
+  auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
   EmptyImpl server;
@@ -438,11 +440,11 @@ TEST(EmptyTest, EmptyProtocolHasBindableInterface) {
 TEST(Endpoints, CreateFromProtocol) {
   // `std::move` pattern
   {
-    auto endpoints = fidl::CreateEndpoints<test::Empty>();
+    auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
     ASSERT_OK(endpoints.status_value());
     ASSERT_EQ(ZX_OK, endpoints.status_value());
-    fidl::ClientEnd<test::Empty> client_end = std::move(endpoints->client);
-    fidl::ServerEnd<test::Empty> server_end = std::move(endpoints->server);
+    fidl::ClientEnd<test_empty_protocol::Empty> client_end = std::move(endpoints->client);
+    fidl::ServerEnd<test_empty_protocol::Empty> server_end = std::move(endpoints->server);
 
     ASSERT_TRUE(client_end.is_valid());
     ASSERT_TRUE(server_end.is_valid());
@@ -450,7 +452,7 @@ TEST(Endpoints, CreateFromProtocol) {
 
   // Destructuring pattern
   {
-    auto endpoints = fidl::CreateEndpoints<test::Empty>();
+    auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
     ASSERT_OK(endpoints.status_value());
     ASSERT_EQ(ZX_OK, endpoints.status_value());
     auto [client_end, server_end] = std::move(endpoints.value());
@@ -463,7 +465,7 @@ TEST(Endpoints, CreateFromProtocol) {
 // Test creating a typed channel endpoint pair using the out-parameter
 // overloads.
 TEST(Endpoints, CreateFromProtocolOutParameterStyleClientRetained) {
-  fidl::ClientEnd<test::Empty> client_end;
+  fidl::ClientEnd<test_empty_protocol::Empty> client_end;
   auto server_end = fidl::CreateEndpoints(&client_end);
   ASSERT_OK(server_end.status_value());
   ASSERT_EQ(ZX_OK, server_end.status_value());
@@ -473,7 +475,7 @@ TEST(Endpoints, CreateFromProtocolOutParameterStyleClientRetained) {
 }
 
 TEST(Endpoints, CreateFromProtocolOutParameterStyleServerRetained) {
-  fidl::ServerEnd<test::Empty> server_end;
+  fidl::ServerEnd<test_empty_protocol::Empty> server_end;
   auto client_end = fidl::CreateEndpoints(&server_end);
   ASSERT_OK(client_end.status_value());
   ASSERT_EQ(ZX_OK, client_end.status_value());

@@ -51,6 +51,8 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   ]
   deps = [
     ":client_test_helpers",
+    "//sdk/testing/fidl/protocols_tests:test.basic.protocol_cpp_wire",
+    "//sdk/testing/fidl/protocols_tests:test.empty.protocol_cpp_wire",
     "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_cpp_wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",

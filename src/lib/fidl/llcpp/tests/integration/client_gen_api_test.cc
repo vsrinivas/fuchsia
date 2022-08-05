@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
+#include <fidl/test.basic.protocol/cpp/wire.h>
+#include <fidl/test.empty.protocol/cpp/wire.h>
+#include <fidl/test.transitional/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/time.h>
@@ -23,17 +25,17 @@
 
 namespace {
 
-using ::fidl_test_coding_fuchsia::Example;
+using ::test_basic_protocol::Values;
 
-class Server : public fidl::WireServer<Example> {
+class Server : public fidl::WireServer<Values> {
  public:
   explicit Server(const char* data, size_t size) : data_(data), size_(size) {}
 
-  void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
-    ASSERT_EQ(size_, request->in.size());
-    EXPECT_EQ(0, strncmp(data_, request->in.data(), size_));
+  void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+    ASSERT_EQ(size_, request->s.size());
+    EXPECT_EQ(0, strncmp(data_, request->s.data(), size_));
     two_way_count_.fetch_add(1);
-    completer.Reply(request->in);
+    completer.Reply(request->s);
   }
 
   void OneWay(OneWayRequestView request, OneWayCompleter::Sync&) override {
@@ -53,25 +55,25 @@ class Server : public fidl::WireServer<Example> {
   std::atomic_uint one_way_count_ = 0;
 };
 
-TEST(GenAPITestCase, TwoWayAsyncManaged) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+TEST(GenAPITestCase, EchoAsyncManaged) {
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher());
 
-  static constexpr char data[] = "TwoWay() sync managed";
+  static constexpr char data[] = "Echo() sync managed";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
 
   sync_completion_t done;
-  client->TwoWay(fidl::StringView(data))
-      .ThenExactlyOnce([&done](fidl::WireUnownedResult<Example::TwoWay>& result) {
+  client->Echo(fidl::StringView(data))
+      .ThenExactlyOnce([&done](fidl::WireUnownedResult<Values::Echo>& result) {
         ASSERT_OK(result.status());
-        ASSERT_EQ(strlen(data), result.value().out.size());
-        EXPECT_EQ(0, strncmp(result.value().out.data(), data, strlen(data)));
+        ASSERT_EQ(strlen(data), result.value().s.size());
+        EXPECT_EQ(0, strncmp(result.value().s.data(), data, strlen(data)));
         sync_completion_signal(&done);
       });
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
@@ -79,15 +81,15 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   server_binding.Unbind();
 }
 
-TEST(GenAPITestCase, TwoWayAsyncResponseContext) {
-  class ResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
+TEST(GenAPITestCase, EchoAsyncResponseContext) {
+  class ResponseContext final : public fidl::WireResponseContext<Values::Echo> {
    public:
     ResponseContext(libsync::Completion* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
 
-    void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
+    void OnResult(fidl::WireUnownedResult<Values::Echo>& result) override {
       ASSERT_OK(result.status());
-      auto& out = result.value().out;
+      auto& out = result.value().s;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
       done_->Signal();
@@ -99,33 +101,33 @@ TEST(GenAPITestCase, TwoWayAsyncResponseContext) {
     size_t size_;
   };
 
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher());
 
-  static constexpr char kData[] = "TwoWay() sync response context";
+  static constexpr char kData[] = "Echo() sync response context";
   fidl::BindServer(loop.dispatcher(), std::move(remote),
                    std::make_unique<Server>(kData, strlen(kData)));
 
   libsync::Completion done;
   ResponseContext context(&done, kData, strlen(kData));
-  client->TwoWay(fidl::StringView(kData)).ThenExactlyOnce(&context);
+  client->Echo(fidl::StringView(kData)).ThenExactlyOnce(&context);
   ASSERT_OK(done.Wait(zx::duration::infinite()));
 }
 
-TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
-  class ResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
+TEST(GenAPITestCase, EchoAsyncCallerAllocated) {
+  class ResponseContext final : public fidl::WireResponseContext<Values::Echo> {
    public:
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
 
-    void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
+    void OnResult(fidl::WireUnownedResult<Values::Echo>& result) override {
       ASSERT_OK(result.status());
-      auto& out = result.value().out;
+      auto& out = result.value().s;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
       sync_completion_signal(done_);
@@ -137,55 +139,55 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
     size_t size_;
   };
 
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher());
 
-  static constexpr char data[] = "TwoWay() sync caller-allocated";
+  static constexpr char data[] = "Echo() sync caller-allocated";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
 
   sync_completion_t done;
-  fidl::AsyncClientBuffer<Example::TwoWay> buffer;
+  fidl::AsyncClientBuffer<Values::Echo> buffer;
   ResponseContext context(&done, data, strlen(data));
-  client.buffer(buffer.view())->TwoWay(fidl::StringView(data)).ThenExactlyOnce(&context);
+  client.buffer(buffer.view())->Echo(fidl::StringView(data)).ThenExactlyOnce(&context);
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
 }
 
-TEST(GenAPITestCase, TwoWaySyncManaged) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+TEST(GenAPITestCase, EchoSyncManaged) {
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher());
 
-  static constexpr char kData[] = "TwoWay() sync managed";
+  static constexpr char kData[] = "Echo() sync managed";
   auto server = std::make_shared<Server>(kData, strlen(kData));
   fidl::BindServer(loop.dispatcher(), std::move(remote), server);
 
-  fidl::WireResult result = client.sync()->TwoWay(fidl::StringView(kData));
+  fidl::WireResult result = client.sync()->Echo(fidl::StringView(kData));
   ASSERT_OK(result.status());
-  ASSERT_EQ(strlen(kData), result.value().out.size());
-  EXPECT_EQ(0, strncmp(result.value().out.data(), kData, strlen(kData)));
+  ASSERT_EQ(strlen(kData), result.value().s.size());
+  EXPECT_EQ(0, strncmp(result.value().s.data(), kData, strlen(kData)));
   EXPECT_EQ(1, server->two_way_count());
   EXPECT_EQ(0, server->one_way_count());
 }
 
 TEST(GenAPITestCase, OneWaySyncManaged) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::WireClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireClient<Values> client(std::move(local), loop.dispatcher());
 
   static constexpr char kData[] = "OneWay() sync managed";
   auto server = std::make_shared<Server>(kData, strlen(kData));
@@ -199,19 +201,19 @@ TEST(GenAPITestCase, OneWaySyncManaged) {
 }
 
 TEST(GenAPITestCase, AsyncEventHandlerExhaustivenessNotRequired) {
-  namespace test = ::fidl_test_coding_fuchsia;
-  class EventHandlerNone : public fidl::WireAsyncEventHandler<test::TwoEvents> {};
-  class EventHandlerA : public fidl::WireAsyncEventHandler<test::TwoEvents> {
-    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
+  class EventHandlerNone : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {};
+  class EventHandlerA : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {
+    void EventA(fidl::WireEvent<test_basic_protocol::TwoEvents::EventA>*) override {}
   };
-  class EventHandlerB : public fidl::WireAsyncEventHandler<test::TwoEvents> {
-    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
+  class EventHandlerB : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {
+    void EventB(fidl::WireEvent<test_basic_protocol::TwoEvents::EventB>*) override {}
   };
-  class EventHandlerAll : public fidl::WireAsyncEventHandler<test::TwoEvents> {
-    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
-    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
+  class EventHandlerAll : public fidl::WireAsyncEventHandler<test_basic_protocol::TwoEvents> {
+    void EventA(fidl::WireEvent<test_basic_protocol::TwoEvents::EventA>*) override {}
+    void EventB(fidl::WireEvent<test_basic_protocol::TwoEvents::EventB>*) override {}
   };
-  class EventHandlerAllTransitional : public fidl::WireSyncEventHandler<test::TransitionalEvent> {};
+  class EventHandlerAllTransitional
+      : public fidl::WireSyncEventHandler<test_transitional::TransitionalEvent> {};
   static_assert(!std::is_abstract_v<EventHandlerNone>);
   static_assert(!std::is_abstract_v<EventHandlerA>);
   static_assert(!std::is_abstract_v<EventHandlerB>);
@@ -220,7 +222,7 @@ TEST(GenAPITestCase, AsyncEventHandlerExhaustivenessNotRequired) {
 }
 
 TEST(GenAPITestCase, EventManaged) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -228,15 +230,15 @@ TEST(GenAPITestCase, EventManaged) {
   ASSERT_OK(loop.StartThread());
 
   static constexpr char data[] = "OnEvent() managed";
-  class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+  class EventHandler : public fidl::WireAsyncEventHandler<Values> {
    public:
     EventHandler() = default;
 
     sync_completion_t& done() { return done_; }
 
-    void OnEvent(fidl::WireEvent<Example::OnEvent>* event) {
-      ASSERT_EQ(strlen(data), event->out.size());
-      EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
+    void OnValueEvent(fidl::WireEvent<Values::OnValueEvent>* event) override {
+      ASSERT_EQ(strlen(data), event->s.size());
+      EXPECT_EQ(0, strncmp(event->s.data(), data, strlen(data)));
       sync_completion_signal(&done_);
     }
 
@@ -245,28 +247,29 @@ TEST(GenAPITestCase, EventManaged) {
   };
 
   auto event_handler = std::make_shared<EventHandler>();
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(), event_handler.get(),
-                                         fidl::ShareUntilTeardown(event_handler));
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher(), event_handler.get(),
+                                        fidl::ShareUntilTeardown(event_handler));
 
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
 
   // Wait for the event from the server.
-  ASSERT_OK(fidl::WireSendEvent(server_binding)->OnEvent(fidl::StringView(data)));
+  ASSERT_OK(fidl::WireSendEvent(server_binding)->OnValueEvent(fidl::StringView(data)));
   ASSERT_OK(sync_completion_wait(&event_handler->done(), ZX_TIME_INFINITE));
 
   server_binding.Unbind();
 }
 
 TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerIsAbsent) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<test_basic_protocol::ResourceEvent>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<test_basic_protocol::ResourceEvent> client(std::move(local),
+                                                                    loop.dispatcher());
 
   // Send an unhandled event. The event should be silently discarded since
   // the user did not provide an event handler.
@@ -279,17 +282,17 @@ TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerIsAbsent) {
 }
 
 TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerMethodIsAbsent) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<test_basic_protocol::ResourceEvent>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  class EventHandler : public fidl::WireAsyncEventHandler<Example> {};
+  class EventHandler : public fidl::WireAsyncEventHandler<test_basic_protocol::ResourceEvent> {};
 
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
-                                         std::make_unique<EventHandler>());
+  fidl::WireSharedClient<test_basic_protocol::ResourceEvent> client(
+      std::move(local), loop.dispatcher(), std::make_unique<EventHandler>());
 
   // Send an unhandled event. The event should be silently discarded since
   // the user did not provide a handler method for |OnResourceEvent|.
@@ -307,13 +310,13 @@ TEST(GenAPITestCase, Epitaph) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   sync_completion_t unbound;
 
-  class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+  class EventHandler : public fidl::WireAsyncEventHandler<test_empty_protocol::Empty> {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
@@ -327,8 +330,8 @@ TEST(GenAPITestCase, Epitaph) {
     sync_completion_t& unbound_;
   };
 
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
-                                         std::make_unique<EventHandler>(unbound));
+  fidl::WireSharedClient<test_empty_protocol::Empty> client(
+      std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
   ASSERT_OK(fidl_epitaph_write(remote.channel().get(), ZX_ERR_BAD_STATE));
@@ -336,18 +339,18 @@ TEST(GenAPITestCase, Epitaph) {
 }
 
 TEST(GenAPITestCase, UnbindInfoEncodeError) {
-  class ErrorServer : public fidl::WireServer<Example> {
+  class ErrorServer : public fidl::WireServer<Values> {
    public:
     explicit ErrorServer() = default;
 
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Fail to send the reply due to an encoding error (the buffer is too small).
       // The buffer still needs to be properly aligned.
       constexpr size_t kSmallSize = 8;
       FIDL_ALIGNDECL uint8_t small_buffer[kSmallSize];
-      static_assert(sizeof(fidl::WireResponse<Example::TwoWay>) > kSmallSize);
+      static_assert(sizeof(fidl::WireResponse<Values::Echo>) > kSmallSize);
       fidl::BufferSpan too_small(small_buffer, std::size(small_buffer));
-      completer.buffer(too_small).Reply(request->in);
+      completer.buffer(too_small).Reply(request->s);
       EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, completer.result_of_reply().status());
       completer.Close(ZX_OK);  // This should not panic.
     }
@@ -355,28 +358,27 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
     void OneWay(OneWayRequestView, OneWayCompleter::Sync&) override {}
   };
 
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher());
 
   sync_completion_t done;
-  fidl::OnUnboundFn<ErrorServer> on_unbound =
-      [&done](ErrorServer*, fidl::UnbindInfo info,
-              fidl::ServerEnd<fidl_test_coding_fuchsia::Example>) {
-        EXPECT_EQ(fidl::Reason::kEncodeError, info.reason());
-        EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status());
-        sync_completion_signal(&done);
-      };
+  fidl::OnUnboundFn<ErrorServer> on_unbound = [&done](ErrorServer*, fidl::UnbindInfo info,
+                                                      fidl::ServerEnd<Values>) {
+    EXPECT_EQ(fidl::Reason::kEncodeError, info.reason());
+    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status());
+    sync_completion_signal(&done);
+  };
   auto server = std::make_unique<ErrorServer>();
   auto server_binding =
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   // Make a synchronous call which should fail as a result of the server end closing.
-  fidl::WireResult result = client.sync()->TwoWay(fidl::StringView(""));
+  fidl::WireResult result = client.sync()->Echo(fidl::StringView(""));
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
 
@@ -385,7 +387,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
 }
 
 TEST(GenAPITestCase, UnbindInfoDecodeError) {
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -393,11 +395,11 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
   ASSERT_OK(loop.StartThread());
   sync_completion_t done;
 
-  class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+  class EventHandler : public fidl::WireAsyncEventHandler<Values> {
    public:
     explicit EventHandler(sync_completion_t& done) : done_(done) {}
 
-    void OnEvent(fidl::WireEvent<Example::OnEvent>* event) override {
+    void OnValueEvent(fidl::WireEvent<Values::OnValueEvent>* event) override {
       FAIL();
       sync_completion_signal(&done_);
     }
@@ -411,14 +413,14 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
     sync_completion_t& done_;
   };
 
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
-                                         std::make_unique<EventHandler>(done));
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher(),
+                                        std::make_unique<EventHandler>(done));
 
-  // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
+  // Set up an Values.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
-  fidl::internal::TransactionalEvent<Example::OnEvent> resp(fidl::StringView(""));
-  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalEvent<Example::OnEvent>> encoded(
-      &resp);
+  fidl::internal::TransactionalEvent<Values::OnValueEvent> resp(fidl::StringView(""));
+  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalEvent<Values::OnValueEvent>>
+      encoded(&resp);
   ASSERT_TRUE(encoded.ok());
   auto bytes = encoded.GetOutgoingMessage().CopyBytes();
   ASSERT_OK(remote.channel().write(0, bytes.data(), sizeof(fidl_message_header_t), nullptr, 0));
@@ -429,11 +431,11 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 // After a client is unbound, no more calls can be made on that client.
 TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   // Use a server to count the number of |OneWay| calls.
-  class Server : public fidl::WireServer<Example> {
+  class Server : public fidl::WireServer<Values> {
    public:
     Server() = default;
 
-    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       ZX_PANIC("Not used in this test");
     }
 
@@ -445,10 +447,10 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
     std::atomic<int> num_one_way_ = 0;
   };
 
-  auto endpoints = fidl::CreateEndpoints<Example>();
+  auto endpoints = fidl::CreateEndpoints<Values>();
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::WireSharedClient<Example> client(std::move(endpoints->client), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(endpoints->client), loop.dispatcher());
 
   auto server = std::make_shared<Server>();
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), server);
@@ -470,8 +472,8 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   EXPECT_EQ(1, server->num_one_way());
 }
 
-fidl::Endpoints<Example> CreateEndpointsWithoutClientWriteRight() {
-  zx::status endpoints = fidl::CreateEndpoints<Example>();
+fidl::Endpoints<Values> CreateEndpointsWithoutClientWriteRight() {
+  zx::status endpoints = fidl::CreateEndpoints<Values>();
   EXPECT_OK(endpoints.status_value());
   if (!endpoints.is_ok())
     return {};
@@ -484,10 +486,10 @@ fidl::Endpoints<Example> CreateEndpointsWithoutClientWriteRight() {
     client_end.channel() = std::move(client_channel_non_writable);
   }
 
-  return fidl::Endpoints<Example>{std::move(client_end), std::move(server_end)};
+  return fidl::Endpoints<Values>{std::move(client_end), std::move(server_end)};
 }
 
-class ExpectErrorResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {
+class ExpectErrorResponseContext final : public fidl::WireResponseContext<Values::Echo> {
  public:
   explicit ExpectErrorResponseContext(sync_completion_t* did_error, zx_status_t expected_status,
                                       fidl::Reason expected_reason)
@@ -495,7 +497,7 @@ class ExpectErrorResponseContext final : public fidl::WireResponseContext<Exampl
         expected_status_(expected_status),
         expected_reason_(expected_reason) {}
 
-  void OnResult(fidl::WireUnownedResult<Example::TwoWay>& result) override {
+  void OnResult(fidl::WireUnownedResult<Values::Echo>& result) override {
     EXPECT_TRUE(!result.ok());
     EXPECT_STATUS(expected_status_, result.status());
     EXPECT_EQ(expected_reason_, result.error().reason());
@@ -511,27 +513,27 @@ class ExpectErrorResponseContext final : public fidl::WireResponseContext<Exampl
 // If writing to the channel fails, the response context ownership should be
 // released back to the user with a call to |OnError|.
 TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
-  fidl::Endpoints<Example> endpoints;
+  fidl::Endpoints<Values> endpoints;
   ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
   auto [client_end, server_end] = std::move(endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::WireSharedClient<Example> client(std::move(client_end), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(client_end), loop.dispatcher());
   loop.StartThread("client-test");
 
   libsync::Completion error;
   ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
                                      fidl::Reason::kTransportError);
 
-  fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-  client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
+  fidl::AsyncClientBuffer<Values::Echo> buffer;
+  client.buffer(buffer.view())->Echo("foo").ThenExactlyOnce(&context);
   ASSERT_OK(error.Wait());
 }
 
 TEST(GenAPITestCase, AsyncNotifySendError) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    fidl::Endpoints<Example> endpoints;
+    fidl::Endpoints<Values> endpoints;
     ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
     auto [local, remote] = std::move(endpoints);
 
@@ -542,33 +544,33 @@ TEST(GenAPITestCase, AsyncNotifySendError) {
     ExpectErrorResponseContext context(error.get(), ZX_ERR_ACCESS_DENIED,
                                        fidl::Reason::kTransportError);
 
-    fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-    client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
+    fidl::AsyncClientBuffer<Values::Echo> buffer;
+    client.buffer(buffer.view())->Echo("foo").ThenExactlyOnce(&context);
     // The context should be asynchronously notified.
     EXPECT_FALSE(error.signaled());
     loop.RunUntilIdle();
     EXPECT_TRUE(error.signaled());
   };
 
-  do_test(fidl::WireClient<Example>{});
-  do_test(fidl::WireSharedClient<Example>{});
+  do_test(fidl::WireClient<Values>{});
+  do_test(fidl::WireSharedClient<Values>{});
 }
 
 TEST(GenAPITestCase, AsyncNotifyTeardownError) {
-  fidl::Endpoints<Example> endpoints;
+  fidl::Endpoints<Values> endpoints;
   ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
   auto [local, remote] = std::move(endpoints);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Values> client(std::move(local), loop.dispatcher());
   client.AsyncTeardown();
   loop.RunUntilIdle();
 
   libsync::Completion error;
   ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
 
-  fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-  client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
+  fidl::AsyncClientBuffer<Values::Echo> buffer;
+  client.buffer(buffer.view())->Echo("foo").ThenExactlyOnce(&context);
   EXPECT_FALSE(error.signaled());
   loop.RunUntilIdle();
   EXPECT_TRUE(error.signaled());
@@ -577,7 +579,7 @@ TEST(GenAPITestCase, AsyncNotifyTeardownError) {
 TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    fidl::Endpoints<Example> endpoints;
+    fidl::Endpoints<Values> endpoints;
     ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
     auto [local, remote] = std::move(endpoints);
 
@@ -597,15 +599,15 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
     loop.Shutdown();
     EXPECT_FALSE(error.signaled());
 
-    fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-    client.buffer(buffer.view())->TwoWay("foo").ThenExactlyOnce(&context);
+    fidl::AsyncClientBuffer<Values::Echo> buffer;
+    client.buffer(buffer.view())->Echo("foo").ThenExactlyOnce(&context);
     // If the loop was shutdown, |context| should still be notified, although
     // it has to happen on the current stack frame.
     EXPECT_TRUE(error.signaled());
   };
 
-  do_test(fidl::WireClient<Example>{});
-  do_test(fidl::WireSharedClient<Example>{});
+  do_test(fidl::WireClient<Values>{});
+  do_test(fidl::WireSharedClient<Values>{});
 }
 
 // An integration-style test that verifies that user-supplied async callbacks
@@ -614,7 +616,7 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
 TEST(GenAPITestCase, ThenWithClientLifetime) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    auto endpoints = fidl::CreateEndpoints<Example>();
+    auto endpoints = fidl::CreateEndpoints<Values>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -625,8 +627,8 @@ TEST(GenAPITestCase, ThenWithClientLifetime) {
     Receiver receiver{ClientType(std::move(local), loop.dispatcher())};
 
     bool destroyed = false;
-    receiver.client->TwoWay("foo").Then([observer = fit::defer([&] { destroyed = true; })](
-                                            fidl::WireUnownedResult<Example::TwoWay>& result) {
+    receiver.client->Echo("foo").Then([observer = fit::defer([&] { destroyed = true; })](
+                                          fidl::WireUnownedResult<Values::Echo>& result) {
       ADD_FATAL_FAILURE("Should not be invoked");
     });
     // Immediately start cancellation.
@@ -638,8 +640,8 @@ TEST(GenAPITestCase, ThenWithClientLifetime) {
     ASSERT_TRUE(destroyed);
   };
 
-  do_test(fidl::WireClient<Example>{});
-  do_test(fidl::WireSharedClient<Example>{});
+  do_test(fidl::WireClient<Values>{});
+  do_test(fidl::WireSharedClient<Values>{});
 }
 
 // An integration-style test that verifies that user-supplied async callbacks
@@ -648,7 +650,7 @@ TEST(GenAPITestCase, ThenWithClientLifetime) {
 TEST(GenAPITestCase, ThenExactlyOnce) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    auto endpoints = fidl::CreateEndpoints<Example>();
+    auto endpoints = fidl::CreateEndpoints<Values>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
 
@@ -658,13 +660,12 @@ TEST(GenAPITestCase, ThenExactlyOnce) {
     bool destroyed = false;
     auto callback_destruction_observer = fit::defer([&] { destroyed = true; });
 
-    client->TwoWay("foo").ThenExactlyOnce(
-        [observer = std::move(callback_destruction_observer),
-         &called](fidl::WireUnownedResult<Example::TwoWay>& result) {
-          called = true;
-          EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
-          EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
-        });
+    client->Echo("foo").ThenExactlyOnce([observer = std::move(callback_destruction_observer),
+                                         &called](fidl::WireUnownedResult<Values::Echo>& result) {
+      called = true;
+      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+    });
     // Immediately start cancellation.
     client = {};
     loop.RunUntilIdle();
@@ -674,8 +675,8 @@ TEST(GenAPITestCase, ThenExactlyOnce) {
     ASSERT_TRUE(destroyed);
   };
 
-  do_test(fidl::WireClient<Example>{});
-  do_test(fidl::WireSharedClient<Example>{});
+  do_test(fidl::WireClient<Values>{});
+  do_test(fidl::WireSharedClient<Values>{});
 }
 
 // The client should not notify the user of teardown completion until all
@@ -685,7 +686,7 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
   // This invariant should hold regardless of how many threads are on the
   // dispatcher.
   for (int num_threads = 1; num_threads < 4; num_threads++) {
-    auto endpoints = fidl::CreateEndpoints<Example>();
+    auto endpoints = fidl::CreateEndpoints<test_basic_protocol::ResourceEvent>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
 
@@ -694,8 +695,9 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
       ASSERT_OK(loop.StartThread());
     }
 
-    class EventHandler : public fidl::WireAsyncEventHandler<Example> {
-      void OnResourceEvent(fidl::WireEvent<Example::OnResourceEvent>* event) override {
+    class EventHandler : public fidl::WireAsyncEventHandler<test_basic_protocol::ResourceEvent> {
+      void OnResourceEvent(
+          fidl::WireEvent<test_basic_protocol::ResourceEvent::OnResourceEvent>* event) override {
         // Signal to the test that the dispatcher thread has entered into
         // a user callback.
         event_ = zx::eventpair(event->h.release());
@@ -711,8 +713,8 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
       zx::eventpair event_;
     };
 
-    fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
-                                           std::make_unique<EventHandler>());
+    fidl::WireSharedClient<test_basic_protocol::ResourceEvent> client(
+        std::move(local), loop.dispatcher(), std::make_unique<EventHandler>());
 
     zx::eventpair ep1, ep2;
     ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
@@ -740,11 +742,11 @@ TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
 TEST(AllClients, SendErrorLeadsToBindingTeardown) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    fidl::Endpoints<Example> endpoints;
+    fidl::Endpoints<Values> endpoints;
     ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutClientWriteRight());
     auto [local, remote] = std::move(endpoints);
 
-    class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+    class EventHandler : public fidl::WireAsyncEventHandler<Values> {
      public:
       void on_fidl_error(fidl::UnbindInfo info) override {
         errored_ = true;
@@ -762,23 +764,22 @@ TEST(AllClients, SendErrorLeadsToBindingTeardown) {
     ClientType client(std::move(local), loop.dispatcher(), &event_handler);
 
     EXPECT_FALSE(event_handler.errored());
-    client->TwoWay("foo").ThenExactlyOnce([](fidl::WireUnownedResult<Example::TwoWay>&) {});
+    client->Echo("foo").ThenExactlyOnce([](fidl::WireUnownedResult<Values::Echo>&) {});
     loop.RunUntilIdle();
     EXPECT_TRUE(event_handler.errored());
 
     bool called = false;
-    client->TwoWay("foo").ThenExactlyOnce(
-        [&called](fidl::WireUnownedResult<Example::TwoWay>& result) {
-          called = true;
-          EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
-          EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
-        });
+    client->Echo("foo").ThenExactlyOnce([&called](fidl::WireUnownedResult<Values::Echo>& result) {
+      called = true;
+      EXPECT_EQ(fidl::Reason::kUnbind, result.reason());
+      EXPECT_STATUS(ZX_ERR_CANCELED, result.status());
+    });
     loop.RunUntilIdle();
     EXPECT_TRUE(called);
   };
 
-  do_test(fidl::WireClient<Example>{});
-  do_test(fidl::WireSharedClient<Example>{});
+  do_test(fidl::WireClient<Values>{});
+  do_test(fidl::WireSharedClient<Values>{});
 }
 
 // If a call fails due to a peer closed error, the client bindings should still
@@ -786,20 +787,20 @@ TEST(AllClients, SendErrorLeadsToBindingTeardown) {
 TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    zx::status endpoints = fidl::CreateEndpoints<Example>();
+    zx::status endpoints = fidl::CreateEndpoints<Values>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
 
     static constexpr char data[] = "test";
-    class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+    class EventHandler : public fidl::WireAsyncEventHandler<Values> {
      public:
       EventHandler() = default;
 
       bool received() const { return received_; }
 
-      void OnEvent(fidl::WireEvent<Example::OnEvent>* event) override {
-        ASSERT_EQ(strlen(data), event->out.size());
-        EXPECT_EQ(0, strncmp(event->out.data(), data, strlen(data)));
+      void OnValueEvent(fidl::WireEvent<Values::OnValueEvent>* event) override {
+        ASSERT_EQ(strlen(data), event->s.size());
+        EXPECT_EQ(0, strncmp(event->s.data(), data, strlen(data)));
         received_ = true;
       }
 
@@ -811,7 +812,7 @@ TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
     ClientType client(std::move(local), loop.dispatcher(), &event_handler);
 
     // Send an event and close the server endpoint.
-    ASSERT_OK(fidl::WireSendEvent(remote)->OnEvent(fidl::StringView(data)));
+    ASSERT_OK(fidl::WireSendEvent(remote)->OnValueEvent(fidl::StringView(data)));
     remote.reset();
 
     // The event should not be received unless the |loop| was polled.
@@ -835,8 +836,8 @@ TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
     }
   };
 
-  do_test(fidl::WireClient<Example>{});
-  do_test(fidl::WireSharedClient<Example>{});
+  do_test(fidl::WireClient<Values>{});
+  do_test(fidl::WireSharedClient<Values>{});
 }
 
 }  // namespace
