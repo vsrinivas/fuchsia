@@ -510,7 +510,6 @@ fn process_stash_write(
         exec.run_until_stalled(&mut stash_server.try_next()),
         Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::Flush{responder}))) => {
             responder.send(&mut Ok(())).expect("failed to send stash response");
-            info!("send flush respose");
         }
     );
     info!("finished stash writing")
@@ -668,6 +667,9 @@ fn save_and_connect(
         Poll::Pending
     );
 
+    // Save request returns now
+    assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
+
     // State machine does an initial disconnect
     assert_variant!(
         exec.run_until_stalled(&mut sme_stream.next()),
@@ -764,9 +766,6 @@ fn save_and_connect(
         Poll::Pending
     );
 
-    // Save request returns now
-    assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
-
     // Check for a listener update saying we're connected
     let fidl_policy::ClientStateSummary { state, networks, .. } =
         get_client_state_update(&mut exec, &mut client_listener_update_requests);
@@ -775,5 +774,246 @@ fn save_and_connect(
     assert_eq!(networks.len(), 1);
     let network = networks.pop().unwrap();
     assert_eq!(network.state.unwrap(), types::ConnectionState::Connected);
+    assert_eq!(network.id.unwrap(), network_id.clone().into());
+}
+
+// TODO(fxbug.dev/85817): reenable credential upgrading, which will make these cases connect
+#[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa2Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+// WPA credentials should never be used for WEP or Open networks
+#[test_case(SecurityType::Wpa, Protection::Open, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa, Protection::Open, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
+#[test_case(SecurityType::Wpa, Protection::Wep, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Open, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Open, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
+#[test_case(SecurityType::Wpa2, Protection::Wep, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Open, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Open, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wep, TEST_CRED_VARIANTS.wep_64_hex.clone())] // Use credentials which are valid len for WEP and WPA
+#[test_case(SecurityType::Wpa3, Protection::Wep, TEST_CRED_VARIANTS.wpa_psk.clone())]
+// PSKs should never be used for WPA3
+#[test_case(SecurityType::Wpa, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa3Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+// Saved credential: WPA2: downgrades are disallowed
+#[test_case(SecurityType::Wpa2, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa2, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_psk.clone())]
+// Saved credential: WPA3: downgrades are disallowed
+#[test_case(SecurityType::Wpa3, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa1Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2Personal, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_min.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_passphrase_max.clone())]
+#[test_case(SecurityType::Wpa3, Protection::Wpa2PersonalTkipOnly, TEST_CRED_VARIANTS.wpa_psk.clone())]
+#[fuchsia::test(add_test_attr = false)]
+/// Tests saving and connecting across various security types, where the connection is expected to fail
+fn save_and_fail_to_connect(
+    saved_security: fidl_policy::SecurityType,
+    scanned_security: fidl_sme::Protection,
+    test_credentials: TestCredentials,
+) {
+    let saved_credential = test_credentials.policy.clone();
+
+    let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+    let mut test_values = test_setup(&mut exec);
+
+    // No request has been sent yet. Future should be idle.
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Request a new controller.
+    let (controller, mut client_listener_update_requests) =
+        request_controller(&test_values.external_interfaces.client_provider_proxy);
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Initial update should reflect client connections are disabled
+    let fidl_policy::ClientStateSummary { state, networks, .. } =
+        get_client_state_update(&mut exec, &mut client_listener_update_requests);
+    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsDisabled);
+    assert_eq!(networks.unwrap().len(), 0);
+
+    // Get ready for client connections
+    prepare_client_interface(&mut exec, &controller, &mut test_values);
+
+    // Check for a listener update saying client connections are enabled
+    let fidl_policy::ClientStateSummary { state, networks, .. } =
+        get_client_state_update(&mut exec, &mut client_listener_update_requests);
+    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
+    assert_eq!(networks.unwrap().len(), 0);
+
+    // Generate network ID
+    let network_id =
+        fidl_policy::NetworkIdentifier { ssid: TEST_SSID.clone().into(), type_: saved_security };
+    let network_config = fidl_policy::NetworkConfig {
+        id: Some(network_id.clone()),
+        credential: Some(saved_credential),
+        ..fidl_policy::NetworkConfig::EMPTY
+    };
+
+    // Save the network
+    let save_fut = controller.save_network(network_config);
+    pin_mut!(save_fut);
+    // Begin processing the save request
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Process the stash write from the save
+    process_stash_write(&mut exec, &mut test_values.external_interfaces.stash_server);
+
+    // Continue processing the save request. Auto-connection process starts
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Expect to get an SME request for the state machine creation
+    let sme_server = assert_variant!(
+        exec.run_until_stalled(&mut test_values.external_interfaces.monitor_service_stream.next()),
+            Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+            iface_id: TEST_CLIENT_IFACE_ID, sme_server, responder
+        }))) => {
+            // Send back a positive acknowledgement.
+            assert!(responder.send(&mut Ok(())).is_ok());
+            sme_server
+        }
+    );
+    let mut sme_stream = sme_server.into_stream().expect("failed to create ClientSmeRequestStream");
+
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Save request returns now
+    assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
+
+    // State machine does an initial disconnect
+    assert_variant!(
+        exec.run_until_stalled(&mut sme_stream.next()),
+        Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Disconnect {
+            reason, responder
+        }))) => {
+            assert_eq!(fidl_sme::UserDisconnectReason::Startup, reason);
+            assert!(responder.send().is_ok());
+        }
+    );
+
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Check for a listener update triggered by the initial disconnect
+    let fidl_policy::ClientStateSummary { state, networks, .. } =
+        get_client_state_update(&mut exec, &mut client_listener_update_requests);
+    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
+    assert_eq!(networks.unwrap().len(), 0);
+
+    // State machine scans
+    let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+        ssids: vec![TEST_SSID.clone().into()],
+        channels: vec![],
+    });
+    let mock_scan_results = vec![fidl_sme::ScanResult {
+        compatible: true,
+        timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+        bss_description: random_fidl_bss_description!(
+            protection =>  wlan_common::test_utils::fake_stas::FakeProtectionCfg::from(scanned_security),
+            bssid: [0, 0, 0, 0, 0, 0],
+            ssid: TEST_SSID.clone().into(),
+            rssi_dbm: 10,
+            snr_db: 10,
+            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
+        ),
+    }];
+    poll_for_and_validate_sme_scan_request_and_send_results(
+        &mut exec,
+        &mut test_values.internal_objects.internal_futures,
+        &mut sme_stream,
+        &expected_scan_request,
+        mock_scan_results.clone(),
+    );
+
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+
+    // Failed to find a compatible AP, wake the timer so the retry and scan recur
+    for _loop_count in 1..4 {
+        while exec.wake_next_timer().is_some() {
+            // Occasionally, there's a second timer stacked up from the idle interface check.
+            // Loop to wake all timers.
+        }
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+            Poll::Pending
+        );
+
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Disconnect {
+                reason, responder
+            }))) => {
+                assert_eq!(fidl_sme::UserDisconnectReason::FailedToConnect, reason);
+                assert!(responder.send().is_ok());
+            }
+        );
+        poll_for_and_validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.internal_objects.internal_futures,
+            &mut sme_stream,
+            &expected_scan_request,
+            mock_scan_results.clone(),
+        );
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+            Poll::Pending
+        );
+    }
+
+    // After the dust settles, we should have a couple listener updates
+    // Check for a listener update saying we're connecting
+    let fidl_policy::ClientStateSummary { state, networks, .. } =
+        get_client_state_update(&mut exec, &mut client_listener_update_requests);
+    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
+    let mut networks = networks.unwrap();
+    assert_eq!(networks.len(), 1);
+    let network = networks.pop().unwrap();
+    assert_eq!(network.state.unwrap(), types::ConnectionState::Connecting);
+    assert_eq!(network.id.unwrap(), network_id.clone().into());
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
+    // Check for a listener update saying we failed to connect
+    let fidl_policy::ClientStateSummary { state, networks, .. } =
+        get_client_state_update(&mut exec, &mut client_listener_update_requests);
+    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
+    let mut networks = networks.unwrap();
+    assert_eq!(networks.len(), 1);
+    let network = networks.pop().unwrap();
+    assert_eq!(network.state.unwrap(), types::ConnectionState::Failed);
     assert_eq!(network.id.unwrap(), network_id.clone().into());
 }
