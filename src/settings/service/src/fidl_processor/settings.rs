@@ -51,8 +51,6 @@ macro_rules! request_respond {
 pub(crate) type RequestCallback<P, T, ST, K> =
     Box<dyn Fn(RequestContext<T, ST, K>, FidlRequest<P>) -> RequestResultCreator<'static, P>>;
 
-type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
-
 /// `RequestContext` is passed to each request callback to provide resources,
 /// Note that we do not directly expose the hanging get handler so that we can
 /// better control its lifetime.
@@ -99,24 +97,6 @@ where
         let mut hanging_get_lock = self.hanging_get_handler.lock().await;
         hanging_get_lock
             .watch(responder, if close_on_error { Some(self.exit_tx.clone()) } else { None })
-            .await;
-    }
-
-    pub(crate) async fn watch_with_change_fn(
-        &self,
-        change_function_key: K,
-        change_function: ChangeFunction<T>,
-        responder: ST,
-        close_on_error: bool,
-    ) {
-        let mut hanging_get_lock = self.hanging_get_handler.lock().await;
-        hanging_get_lock
-            .watch_with_change_fn(
-                Some(change_function_key),
-                change_function,
-                responder,
-                if close_on_error { Some(self.exit_tx.clone()) } else { None },
-            )
             .await;
     }
 }

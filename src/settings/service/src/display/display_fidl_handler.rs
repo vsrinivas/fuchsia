@@ -3,27 +3,24 @@
 // found in the LICENSE file.
 use crate::base::{SettingInfo, SettingType};
 use crate::display::types::{LowLightMode, SetDisplayInfo, Theme, ThemeMode, ThemeType};
-use crate::fidl_common::FidlResponseErrorLogger;
-use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::request_respond;
-use fidl::endpoints::ProtocolMarker;
+use crate::ingress::{request, watch, Scoped};
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
+use fidl::endpoints::{ControlHandle, Responder};
 use fidl_fuchsia_settings::{
-    DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatchLightSensorResponder,
-    DisplayWatchResponder, Error, LightSensorData, LowLightMode as FidlLowLightMode,
-    Theme as FidlTheme, ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
+    DisplayRequest, DisplaySetResponder, DisplaySetResult, DisplaySettings,
+    DisplayWatchLightSensorResponder, DisplayWatchResponder, LightSensorData,
+    LowLightMode as FidlLowLightMode, Theme as FidlTheme, ThemeMode as FidlThemeMode,
+    ThemeType as FidlThemeType,
 };
-use fuchsia_async as fasync;
 
-fidl_hanging_get_responder!(
-    DisplayMarker,
-    DisplaySettings,
-    DisplayWatchResponder,
-    LightSensorData,
-    DisplayWatchLightSensorResponder,
-);
+use fuchsia_syslog::fx_log_warn;
+
+use std::collections::hash_map::DefaultHasher;
+use std::convert::TryFrom;
+use std::hash::Hash;
+use std::hash::Hasher;
 
 impl From<SettingInfo> for LightSensorData {
     fn from(response: SettingInfo) -> Self {
@@ -124,6 +121,50 @@ impl From<SettingInfo> for DisplaySettings {
     }
 }
 
+impl ErrorResponder for DisplaySetResponder {
+    fn id(&self) -> &'static str {
+        "Display_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl request::Responder<Scoped<DisplaySetResult>> for DisplaySetResponder {
+    fn respond(self, Scoped(mut response): Scoped<DisplaySetResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl watch::Responder<DisplaySettings, fuchsia_zircon::Status> for DisplayWatchResponder {
+    fn respond(self, response: Result<DisplaySettings, fuchsia_zircon::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl watch::Responder<LightSensorData, fuchsia_zircon::Status>
+    for DisplayWatchLightSensorResponder
+{
+    fn respond(self, response: Result<LightSensorData, fuchsia_zircon::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
 fn to_request(settings: DisplaySettings) -> Option<Request> {
     let set_display_info = SetDisplayInfo {
         manual_brightness_value: settings.brightness_value,
@@ -147,79 +188,44 @@ fn to_request(settings: DisplaySettings) -> Option<Request> {
     }
 }
 
-fidl_process!(
-    Display,
-    SettingType::Display,
-    process_request,
-    SettingType::LightSensor,
-    LightSensorData,
-    DisplayWatchLightSensorResponder,
-    process_sensor_request,
-);
-
-async fn process_request(
-    context: RequestContext<DisplaySettings, DisplayWatchResponder>,
-    req: DisplayRequest,
-) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        DisplayRequest::Set { settings, responder } => {
-            if let Some(request) = to_request(settings) {
-                fasync::Task::spawn(async move {
-                    request_respond!(
-                        context,
-                        responder,
-                        SettingType::Display,
-                        request,
-                        Ok(()),
-                        Err(Error::Failed),
-                        DisplayMarker
-                    );
-                })
-                .detach();
-            } else {
-                responder
-                    .send(&mut Err(Error::Unsupported))
-                    .log_fidl_response_error(DisplayMarker::DEBUG_NAME);
+impl TryFrom<DisplayRequest> for Job {
+    type Error = JobError;
+    fn try_from(req: DisplayRequest) -> Result<Self, Self::Error> {
+        // Support future expansion of FIDL
+        #[allow(unreachable_patterns)]
+        match req {
+            DisplayRequest::Set { settings, responder } => match to_request(settings) {
+                Some(request) => {
+                    Ok(request::Work::new(SettingType::Display, request, responder).into())
+                }
+                None => Err(JobError::InvalidInput(Box::new(responder))),
+            },
+            DisplayRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::Display, responder))
+            }
+            DisplayRequest::WatchLightSensor { delta, responder } => {
+                let mut hasher = DefaultHasher::new();
+                // Bucket watch requests to the nearest 0.01.
+                format!("{:.2}", delta).hash(&mut hasher);
+                Ok(watch::Work::new_job_with_change_function(
+                    SettingType::LightSensor,
+                    responder,
+                    watch::ChangeFunction::new(
+                        hasher.finish(),
+                        Box::new(move |old: &SettingInfo, new: &SettingInfo| match (old, new) {
+                            (
+                                SettingInfo::LightSensor(old_data),
+                                SettingInfo::LightSensor(new_data),
+                            ) => (new_data.illuminance - old_data.illuminance).abs() >= delta,
+                            _ => false,
+                        }),
+                    ),
+                ))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", req);
+                Err(JobError::Unsupported)
             }
         }
-        DisplayRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
     }
-
-    Ok(None)
-}
-
-async fn process_sensor_request(
-    context: RequestContext<LightSensorData, DisplayWatchLightSensorResponder>,
-    req: DisplayRequest,
-) -> Result<Option<DisplayRequest>, anyhow::Error> {
-    if let DisplayRequest::WatchLightSensor { delta, responder } = req {
-        context
-            .watch_with_change_fn(
-                // Bucket watch requests to the nearest 0.01.
-                format!("{:.2}", delta),
-                Box::new(move |old_data: &LightSensorData, new_data: &LightSensorData| {
-                    if let (Some(old_lux), Some(new_lux)) =
-                        (old_data.illuminance_lux, new_data.illuminance_lux)
-                    {
-                        (new_lux - old_lux).abs() >= delta
-                    } else {
-                        true
-                    }
-                }),
-                responder,
-                true,
-            )
-            .await;
-    } else {
-        return Ok(Some(req));
-    }
-
-    Ok(None)
 }
