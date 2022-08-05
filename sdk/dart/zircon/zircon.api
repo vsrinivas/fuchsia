@@ -1572,6 +1572,14 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
+            "OBJ_TYPE_DEBUGLOG": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "OBJ_TYPE_DEBUGLOG",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
             "OBJ_TYPE_EVENT": {
               "isConst": true,
               "isFinal": false,

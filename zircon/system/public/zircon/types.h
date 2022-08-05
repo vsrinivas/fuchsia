@@ -419,7 +419,7 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_PORT            ((zx_obj_type_t)6u)
 #define ZX_OBJ_TYPE_INTERRUPT       ((zx_obj_type_t)9u)
 #define ZX_OBJ_TYPE_PCI_DEVICE      ((zx_obj_type_t)11u)
-#define ZX_OBJ_TYPE_LOG             ((zx_obj_type_t)12u)
+#define ZX_OBJ_TYPE_DEBUGLOG        ((zx_obj_type_t)12u)
 #define ZX_OBJ_TYPE_SOCKET          ((zx_obj_type_t)14u)
 #define ZX_OBJ_TYPE_RESOURCE        ((zx_obj_type_t)15u)
 #define ZX_OBJ_TYPE_EVENTPAIR       ((zx_obj_type_t)16u)
@@ -439,6 +439,9 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_CLOCK           ((zx_obj_type_t)30u)
 #define ZX_OBJ_TYPE_STREAM          ((zx_obj_type_t)31u)
 #define ZX_OBJ_TYPE_MSI             ((zx_obj_type_t)32u)
+
+// For backwards compatibility.
+#define ZX_OBJ_TYPE_LOG             ZX_OBJ_TYPE_DEBUGLOG
 
 // System ABI commits to having no more than 64 object types.
 //
