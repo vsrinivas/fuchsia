@@ -27,13 +27,17 @@ Future<void> _killProcesses(PerfTestHelper helper) async {
   await helper.sl4fDriver.ssh.run('killall "simplest_app*"');
 }
 
-void _addTest(String testName, String runAppCommand) {
+void main() {
+  enableLoggingOutput();
+
+  const testName = 'fuchsia.input_latency.simplest_app';
   test(testName, () async {
     final helper = await PerfTestHelper.make();
 
     await _killProcesses(helper);
 
-    final runApp = helper.sl4fDriver.ssh.run(runAppCommand);
+    await helper.component.launch(
+        'fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx', null);
 
     // Wait for the application to start.
     await Future.delayed(Duration(seconds: 3));
@@ -73,14 +77,5 @@ void _addTest(String testName, String runAppCommand) {
     // to prevent these processes from interfering with later performance
     // tests.
     await _killProcesses(helper);
-
-    await runApp;
   });
-}
-
-void main() {
-  enableLoggingOutput();
-
-  _addTest('fuchsia.input_latency.simplest_app',
-      '/bin/run -d fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx');
 }
