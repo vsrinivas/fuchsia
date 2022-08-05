@@ -33,6 +33,5 @@ executable("camera_sensor_cli_bin") {
 }
 
 fuchsia_shell_package("camera_sensor_cli") {
-  manifest = "meta/camera_sensor_cli.cmx"
   deps = [ ":camera_sensor_cli_bin" ]
 }
