@@ -8,12 +8,9 @@ source_set("mocks") {
   sources = [
     "mock_a11y_focus_manager.cc",
     "mock_a11y_focus_manager.h",
-    "mock_focuser.cc",
-    "mock_focuser.h",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
