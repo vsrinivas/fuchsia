@@ -42,7 +42,7 @@ class ConsoleLauncher {
   static zx::status<ConsoleLauncher> Create();
   zx::status<zx::process> LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
                                       zx::channel stdio, const std::string& term,
-                                      const std::optional<std::string>& cmd = std::nullopt) const;
+                                      const std::optional<std::string>& cmd) const;
 
   const zx::job& shell_job() const { return shell_job_; }
 

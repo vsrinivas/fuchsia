@@ -209,7 +209,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     }
 
     zx::status process =
-        launcher.LaunchShell(std::move(directory->client), node->client.TakeChannel(), term);
+        launcher.LaunchShell(std::move(directory->client), node->client.TakeChannel(), term, cmd);
     if (process.is_error()) {
       FX_PLOGS(FATAL, process.status_value()) << "failed to launch shell";
     }
