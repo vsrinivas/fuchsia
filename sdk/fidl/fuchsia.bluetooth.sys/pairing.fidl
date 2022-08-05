@@ -1,8 +1,9 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 library fuchsia.bluetooth.sys;
+
+using fuchsia.bluetooth as bt;
 
 /// Allows system clients to enable Bluetooth pairing.
 @available(added=HEAD)
@@ -11,15 +12,175 @@ protocol Pairing {
     /// Assign a PairingDelegate to respond to pairing procedures. The provided I/O capabilities
     /// will be used to determine the pairing methods used.
     ///
-    /// Only one PairingDelegate can be registered at a time. Closing a PairingDelegate aborts all
-    /// ongoing pairing procedures.
+    /// Only one PairingDelegate can be set at a time system-wide - if this is called
+    /// while another delegate is set, the new delegate will be closed immediately.
+    /// Closing a PairingDelegate after it is set aborts all ongoing pairing procedures
+    /// without accepting and unsets the delegate.
     ///
-    /// + request `input` Bluetooth input capability
-    /// + request `output` Bluetooth output capability
-    /// + request `delegate` The client end of a PairingDelegate channel.
+    /// If no PairingDelegate is set, all pairings will be rejected even if the
+    /// peer connection was initiated by the local device.
+    ///
+    /// + request `input` Bluetooth input capability, see `InputCapability`
+    /// + request `output` Bluetooth output capability, see `OutputCapability`
+    /// + request `delegate` PairingDelegate which will receive pairing requests
     SetPairingDelegate(resource struct {
         input InputCapability;
         output OutputCapability;
         delegate client_end:PairingDelegate;
+    });
+};
+
+/// Input Capabilities for pairing exchanges.
+/// These should be set based on the ability of the local system to enter
+/// responses to pairing requests.
+/// See Volume 3, Part C, Table 5.3 for more information.
+type InputCapability = strict enum {
+    /// There is no user input method available for responding 'yes' or 'no' to
+    /// a pairing request.
+    /// Note: setting this setting will mean most pairings are considered
+    /// unauthenticated and vulnerable to machine-in-the-middle attacks.
+    NONE = 1;
+    /// The user can respond yes or no to a request.
+    CONFIRMATION = 2;
+    /// The user has a keyboard (or other UI) where they can type a numerical code
+    /// and signal they have finished or cancel.
+    KEYBOARD = 3;
+};
+
+/// Output Capabilities for pairing excanges.
+/// These should be set based on the ability of the local system to display
+/// information to the user initiating or accepting a Bluetooth pairing.
+/// See Volume 3, Part C, Table 5.4 for more information.
+type OutputCapability = strict enum {
+    /// There is no display available for pairing.
+    NONE = 1;
+    /// There is a display that can show at least a six-digit decimal number.
+    DISPLAY = 2;
+};
+
+/// Different types required by the Security Manager for pairing methods.
+/// Bluetooth SIG has different requirements for different device capabilities.
+type PairingMethod = strict enum {
+    /// The user is asked to accept or reject pairing.
+    /// This is the minimum method - even when both devices do not support
+    /// input or output, the delegate will be asked to confirm any pairing
+    /// not initiated with user intent.
+    CONSENT = 1;
+
+    /// The user is shown a 6-digit numerical passkey on this device which they
+    /// must enter on the peer device.
+    PASSKEY_DISPLAY = 2;
+
+    /// The user is shown a 6-digit numerical passkey on this device which will
+    /// also shown on the peer device. The user must compare the passkeys and
+    /// accept the pairing if the passkeys match.
+    PASSKEY_COMPARISON = 3;
+
+    /// The user is asked to enter a 6-digit passkey on this device which is
+    /// communicated via the peer device.
+    PASSKEY_ENTRY = 4;
+};
+
+
+/// Used to convey information to the peer on progress typing a passkey. The
+/// various types of keypresses can be used to customize what is communicated to
+/// the user requesting a pairing.
+type PairingKeypress = strict enum {
+    /// The user has entered a single digit.
+    DIGIT_ENTERED = 1;
+
+    /// The user has erased a single digit.
+    DIGIT_ERASED = 2;
+
+    /// The user has cleared the entire passkey.
+    PASSKEY_CLEARED = 3;
+
+    /// The user has finished entering the passkey.
+    PASSKEY_ENTERED = 4;
+};
+
+
+/// A Bluetooth Pairing Delegate is responsible for confirming or denying
+/// pairing requests received from Bluetooth peers that connect or are
+/// being connected to the local device.
+///
+/// Any new pairing will result in a call to `PairingDelegate.OnPairingRequest`,
+/// including pairings where the InputCapability and OutputCapability are set
+/// to none. The delegate is expected to have enough context to derive whether
+/// to accept or deny the pairing.
+///
+/// Only one delegate is allowed to be set per system at a time. See
+/// `fuchsia.bluetooth.sys.Pairing` for how to set the pairing delegate.
+protocol PairingDelegate {
+    /// Called to confirm a pairing. The pairing process will be continued if
+    /// `accept` response is true and rejected otherwise.
+    /// If the pairing method requires a passkey it must be included as well.
+    /// Pairing methods that do not require a passkey ignore the `entered_passkey`
+    /// repsonse.
+    ///
+    /// The pairing can fail (usually by timeout or peer disconnect) before the
+    /// response is received. The OnPairingComplete method will be called when this
+    /// occurs.  Any response sent in this case will be ignored.
+    ///
+    /// + request `peer` information about the peer being paired
+    /// + request `method` method of pairing active. See `PairingMethod`
+    /// + request `displayed_passkey` a passkey to display to the user if
+    ///   PASSKEY_DISPLAY or PASSKEY_COMPARISON is being used. Meaningless
+    ///   otherwise.
+    /// - response `accept` true if the pairing is accepted
+    /// - response `entered_passkey` passkey entered by the user. Ignored unless
+    ///   method is PASSKEY_ENTRY.
+    OnPairingRequest(struct {
+        peer Peer;
+        method PairingMethod;
+        displayed_passkey uint32;
+    }) -> (struct {
+        accept bool;
+        entered_passkey uint32;
+    });
+
+    /// Called when the pairing procedure for a peer has been completed.
+    /// This can be due to successful completion or an error (e.g. due to cancellation
+    /// by the peer, a timeout, or disconnection).
+    /// * request `id` The Bluetooth peer ID of the peer which was being paired.
+    /// * request `success` true if the pairing succeeded, otherwise false.
+    OnPairingComplete(struct {
+        id bt.PeerId;
+        success bool;
+    });
+
+    /// Called to notify keypresses from the peer device during pairing using
+    /// `PairingMethod.PASSKEY_DISPLAY`.
+    ///
+    /// This event is used to provide key press events to the delegate for a responsive user
+    /// experience as the user types the passkey on the peer device. This event will be called
+    /// once for each keypress.
+    ///
+    /// This event will only be called between when an OnPairingRequest has been sent for
+    /// `id` and when OnPairingComplete is sent.
+    ///
+    /// Note: many devices do not send these events
+    /// * request `id` The peer id of the peer that sent the keypress event.
+    /// * request `keypress` The type of event which was received.
+    OnRemoteKeypress(struct {
+        id bt.PeerId;
+        keypress PairingKeypress;
+    });
+
+    /// The delegate can send this event to notify the peer of local keypresses
+    /// during pairing using `PairingMethod.PASSKEY_ENTRY`.
+    ///
+    /// Sending local keypress events can allow the user additional time for
+    /// pairing when entering a passkey.
+    ///
+    /// This should only be sent after an OnPairingRequest has been received
+    /// with a PASSKEY_ENTRY method, and before the reponse for that pairing
+    /// request.
+    ///
+    /// * request `id` id of a peer with a pairing request active
+    /// * request `keypress` the type of notification which should be sent
+    -> OnLocalKeypress(struct {
+        id bt.PeerId;
+        keypress PairingKeypress;
     });
 };
