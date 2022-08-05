@@ -477,11 +477,11 @@ static std::tuple<float, float> GetCenter(uint32_t index, uint32_t n) {
   auto [rows, cols] = GetGridSize(n);
   uint32_t row = index / cols;
   uint32_t col = index % cols;
-  float y = (row + 0.5f) / rows;
-  float x = (col + 0.5f) / cols;
+  float y = (static_cast<float>(row) + 0.5f) / static_cast<float>(rows);
+  float x = (static_cast<float>(col) + 0.5f) / static_cast<float>(cols);
   // Center-align the last row if it is not fully filled.
   if (row == rows - 1) {
-    x += static_cast<float>(rows * cols - n) * 0.5f / cols;
+    x += static_cast<float>(rows * cols - n) * 0.5f / static_cast<float>(cols);
   }
   return {x, y};
 }
@@ -565,8 +565,9 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   std::array<float, 3> aabb_min{x1, y1, 0};
   std::array<float, 3> aabb_max{x2, y2, 0};
 
-  mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, ib.size(), scenic_vb,
-                    format, 0, vb.size() / kVertexSize, aabb_min, aabb_max);
+  mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0,
+                    static_cast<uint32_t>(ib.size()), scenic_vb, format, 0,
+                    static_cast<uint32_t>(vb.size() / kVertexSize), aabb_min, aabb_max);
 
   return mesh;
 }
@@ -614,7 +615,7 @@ static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session
 
   auto append_mesh = [&](std::vector<float>& vb, std::vector<uint32_t>& ib, bool flip_horizontal,
                          bool flip_vertical) {
-    uint32_t base_index = vb.size() / kVertexSize;
+    uint32_t base_index = static_cast<uint32_t>(vb.size() / kVertexSize);
     bool flip_chirality =
         (flip_horizontal && !flip_vertical) || (flip_vertical && !flip_horizontal);
     for (auto& vertex : vertices) {
@@ -659,8 +660,9 @@ static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session
   scenic::Buffer scenic_ib(ib_mem, 0, ib_size);
   std::array<float, 3> aabb_min{0, 0, 0};
   std::array<float, 3> aabb_max{1, 1, 0};
-  mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, ib.size(), scenic_vb,
-                    format, 0, vb.size() / kVertexSize, aabb_min, aabb_max);
+  mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0,
+                    static_cast<uint32_t>(ib.size()), scenic_vb, format, 0,
+                    static_cast<uint32_t>(vb.size() / kVertexSize), aabb_min, aabb_max);
 
   return mesh;
 }
@@ -674,12 +676,12 @@ void BufferCollage::UpdateLayout() {
     view_extents_ = kDefaultBoundingBox;
   }
 
-  auto [rows, cols] = GetGridSize(collection_views_.size());
+  auto [rows, cols] = GetGridSize(static_cast<uint32_t>(collection_views_.size()));
   float view_width = view_extents_->max.x - view_extents_->min.x;
   float view_height = view_extents_->max.y - view_extents_->min.y;
   constexpr float kPadding = 4.0f;
-  float cell_width = view_width / cols - kPadding;
-  float cell_height = view_height / rows - kPadding;
+  float cell_width = view_width / static_cast<float>(cols) - kPadding;
+  float cell_height = view_height / static_cast<float>(rows) - kPadding;
 
   for (auto& [id, view] : collection_views_) {
     if (view.node) {
@@ -708,11 +710,11 @@ void BufferCollage::UpdateLayout() {
         constexpr uint32_t kAlphaWorkaround = 254;
         view.description_node->material.SetColor(255, 255, 255, kAlphaWorkaround);
       }
-      float display_width = view.image_format.coded_width;
-      float display_height = view.image_format.coded_height;
+      float display_width = static_cast<float>(view.image_format.coded_width);
+      float display_height = static_cast<float>(view.image_format.coded_height);
       if (view.image_format.has_pixel_aspect_ratio) {
-        display_width *= view.image_format.pixel_aspect_ratio_width;
-        display_height *= view.image_format.pixel_aspect_ratio_height;
+        display_width *= static_cast<float>(view.image_format.pixel_aspect_ratio_width);
+        display_height *= static_cast<float>(view.image_format.pixel_aspect_ratio_height);
       }
       auto [element_width, element_height] =
           ScaleToFit(display_width, display_height, cell_width, cell_height);
@@ -724,20 +726,21 @@ void BufferCollage::UpdateLayout() {
       view.highlight_node->SetShape(*view.highlight_mesh);
       view.node->SetMaterial(*view.material);
       view.highlight_node->SetMaterial(*view.highlight_material);
-      auto [x, y] = GetCenter(index++, collection_views_.size());
+      auto [x, y] = GetCenter(index++, static_cast<uint32_t>(collection_views_.size()));
       view.node->SetTranslation(view_width * x, view_height * y, kCollectionDepth);
       view.highlight_node->SetTranslation(0, 0, kOffscreenDepth);
       view.view_region.width = element_width;
       view.view_region.height = element_height;
       view.view_region.x = view_width * x - element_width * 0.5f;
       view.view_region.y = view_height * y - element_height * 0.5f;
-      float scale = (element_width - kPadding * 2) / view.description_node->width;
+      float scale =
+          (element_width - kPadding * 2) / static_cast<float>(view.description_node->width);
       view.description_node->node.SetScale(scale, scale, 1);
-      view.description_node->node.SetTranslation(view_width * x,
-                                                 view_height * y + element_height * 0.5f -
-                                                     scale * view.description_node->height * 0.5f -
-                                                     kPadding,
-                                                 kDescriptionDepth);
+      view.description_node->node.SetTranslation(
+          view_width * x,
+          view_height * y + element_height * 0.5f -
+              scale * static_cast<float>(view.description_node->height) * 0.5f - kPadding,
+          kDescriptionDepth);
       view_->AddChild(*view.node);
       view_->AddChild(*view.highlight_node);
       if (show_description()) {
@@ -799,9 +802,10 @@ void BufferCollage::SetupView() {
         zx::duration t = (zx::clock::get_monotonic() - start_time_) % kHeartbeatPeriod.get();
         float phase = static_cast<float>(t.to_msecs()) / kHeartbeatPeriod.to_msecs();
         float amplitude = pow(1 - abs(1 - 2 * phase), 5.0f);
-        heartbeat_indicator_.material->SetColor(kHeartbeatColor[0] * amplitude,
-                                                kHeartbeatColor[1] * amplitude,
-                                                kHeartbeatColor[2] * amplitude, 0xFF);
+        heartbeat_indicator_.material->SetColor(
+            static_cast<uint8_t>(kHeartbeatColor[0] * amplitude),
+            static_cast<uint8_t>(kHeartbeatColor[1] * amplitude),
+            static_cast<uint8_t>(kHeartbeatColor[2] * amplitude), 0xFF);
         session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
       });
   session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});

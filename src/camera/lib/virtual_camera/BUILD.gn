@@ -47,9 +47,6 @@ executable("virtual_camera_unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("virtual_camera_unittest") {

@@ -164,7 +164,7 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
 
 void StreamCycler::ConnectToAllStreams() {
   for (size_t i = 0; i < configurations_[current_config_index_].streams.size(); i++) {
-    ConnectToStream(current_config_index_, i);
+    ConnectToStream(current_config_index_, static_cast<uint32_t>(i));
   }
 }
 

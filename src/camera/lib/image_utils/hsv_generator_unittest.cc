@@ -43,7 +43,7 @@ fzl::OwnedVmoMapper GenerateImage(const fuchsia::sysmem::ImageFormat_2 format, u
   fzl::OwnedVmoMapper buffer;
   auto format_c = ConvertImageFormatToC(format);
   EXPECT_EQ(ZX_OK, buffer.CreateAndMap(ImageFormatImageSize(&format_c), "buff"));
-  EXPECT_EQ(ZX_OK, HsvGenerator(buffer.start(), format, index));
+  EXPECT_EQ(ZX_OK, HsvGenerator(buffer.start(), format, static_cast<uint32_t>(index)));
   return buffer;
 }
 

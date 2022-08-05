@@ -23,6 +23,7 @@ zx_status_t Imx227Device::CameraSensor2Init() {
   std::lock_guard guard(lock_);
 
   HwInit();
+
   return ZX_OK;
 }
 
@@ -85,7 +86,8 @@ zx_status_t Imx227Device::ThrottleFrameRate(uint32_t mode) {
       (configured_frame_length_lines * configured_fps) / throttled_fps;
   throttled_frame_length_lines = std::min(throttled_frame_length_lines, 0xffffU);
 
-  auto write_result = Write16(kFrameLengthLinesReg, throttled_frame_length_lines);
+  auto write_result =
+      Write16(kFrameLengthLinesReg, static_cast<uint16_t>(throttled_frame_length_lines));
   return write_result;
 }
 

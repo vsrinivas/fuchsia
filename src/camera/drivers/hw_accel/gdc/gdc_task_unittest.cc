@@ -94,7 +94,7 @@ class TaskTest : public zxtest::Test {
 
   uint32_t GetCallbackSize() {
     std::lock_guard al(lock_);
-    return callback_check_.size();
+    return static_cast<uint32_t>(callback_check_.size());
   }
 
   uint32_t GetCallbackBackOutputBufferIndex() {

@@ -72,7 +72,7 @@ void FrameCapture::Archive(std::unique_ptr<uint8_t[]> buffer, uint32_t buffer_si
     FX_LOGS(ERROR) << "Error opening file at " << path_name.c_str() << ": " << strerror(errno);
     return;
   }
-  int result = write(fd, buffer.get(), buffer_size);
+  int result = static_cast<int>(write(fd, buffer.get(), buffer_size));
   if (result < 0) {
     FX_LOGS(ERROR) << "Error writing file at " << path_name.c_str() << ": " << strerror(errno);
   } else if (result != static_cast<int>(buffer_size)) {

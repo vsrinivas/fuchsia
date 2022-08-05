@@ -10,22 +10,22 @@
 
 namespace camera {
 
-constexpr float kMargin = 0.00001;
-constexpr float kMinimumWidth = 0.100;
-constexpr float kMinimumHeight = 0.100;
+constexpr float kMargin = 0.00001f;
+constexpr float kMinimumWidth = 0.100f;
+constexpr float kMinimumHeight = 0.100f;
 
 MovingWindow::MovingWindow() {
   // Initialize position.
-  curr_window_.left = 0.000;
-  curr_window_.right = 0.400;
-  curr_window_.top = 0.000;
-  curr_window_.bottom = 0.400;
+  curr_window_.left = 0.000f;
+  curr_window_.right = 0.400f;
+  curr_window_.top = 0.000f;
+  curr_window_.bottom = 0.400f;
 
   // Initialize motion vectors.
-  left_inc_ = 0.0050;
-  right_inc_ = 0.0050;
-  top_inc_ = 0.0025;
-  bottom_inc_ = 0.0025;
+  left_inc_ = 0.0050f;
+  right_inc_ = 0.0050f;
+  top_inc_ = 0.0025f;
+  bottom_inc_ = 0.0025f;
 }
 
 MovingWindow::~MovingWindow() {}
@@ -64,8 +64,8 @@ fuchsia::math::RectF MovingWindow::NextWindow() {
 
   if (hit_minimum_width || hit_minimum_height) {
     // Start expanding width & height
-    right_inc_ = AddToMagnitude(left_inc_, 0.010);
-    bottom_inc_ = AddToMagnitude(top_inc_, 0.005);
+    right_inc_ = AddToMagnitude(left_inc_, 0.010f);
+    bottom_inc_ = AddToMagnitude(top_inc_, 0.005f);
   }
 
   bool hit_left_right = hit_left && hit_right;
@@ -80,8 +80,8 @@ fuchsia::math::RectF MovingWindow::NextWindow() {
   // If we hit 2 opposite sides, start shrinking.
   if (hit_opposite_sides) {
     // Start shrinking width & height
-    right_inc_ = AddToMagnitude(left_inc_, -0.010);
-    bottom_inc_ = AddToMagnitude(top_inc_, -0.005);
+    right_inc_ = AddToMagnitude(left_inc_, -0.010f);
+    bottom_inc_ = AddToMagnitude(top_inc_, -0.005f);
     curr_window_ = std::move(next_window);
     return WindowToRectF(curr_window_);
   }

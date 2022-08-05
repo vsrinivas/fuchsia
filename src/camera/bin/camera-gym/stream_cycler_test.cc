@@ -59,7 +59,7 @@ class TokenHandleProvider {
  public:
   TokenHandleProvider() = default;
   ~TokenHandleProvider() = default;
-  uint32_t Size() const { return handles_.size(); }
+  uint32_t Size() const { return static_cast<uint32_t>(handles_.size()); }
   BufferCollectionTokenHandle Get() {
     // If this assertion trips, it means the test did not set up enough handles.
     ZX_ASSERT(handles_.size() > 0);
@@ -288,7 +288,7 @@ class FakeBufferCollectionTokenServ {
     ZX_ASSERT(client_index < clients_.size());
     return clients_[client_index].impl.get();
   }
-  uint32_t clients_size() { return clients_.size(); }
+  uint32_t clients_size() { return static_cast<uint32_t>(clients_.size()); }
 
   // Gates
   void set_sync_remaining(uint32_t remaining) { sync_remaining_ = remaining; }
@@ -377,7 +377,7 @@ class FakeStreamServ {
     ZX_ASSERT(client_index < clients_.size());
     return clients_[client_index].impl.get();
   }
-  uint32_t clients_size() { return clients_.size(); }
+  uint32_t clients_size() { return static_cast<uint32_t>(clients_.size()); }
 
   TokenHandleProvider* token_handle_provider() { return &token_handle_provider_; }
 
@@ -619,8 +619,8 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
   uint32_t OnAddCollection(BufferCollectionTokenHandle token,
                            fuchsia::sysmem::ImageFormat_2 image_format, std::string description) {
     on_add_collection_stat().Enter();
-    set_on_add_collection_width(image_format.coded_width);
-    set_on_add_collection_height(image_format.coded_height);
+    set_on_add_collection_width(static_cast<float>(image_format.coded_width));
+    set_on_add_collection_height(static_cast<float>(image_format.coded_height));
     return 0;
   }
   void OnRemoveCollection(uint32_t id) {

@@ -229,13 +229,14 @@ TEST_F(ControllerDeviceTest, CreateStreamInvalidArgs) {
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 
   // Invalid stream index.
-  controller_protocol_->CreateStream(0, camera_config->stream_configs.size(), 0,
-                                     stream.NewRequest());
+  controller_protocol_->CreateStream(0, static_cast<uint32_t>(camera_config->stream_configs.size()),
+                                     0, stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 
   // Invalid format index.
-  controller_protocol_->CreateStream(0, 0, camera_config->stream_configs[0].image_formats.size(),
-                                     stream.NewRequest());
+  controller_protocol_->CreateStream(
+      0, 0, static_cast<uint32_t>(camera_config->stream_configs[0].image_formats.size()),
+      stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 }
 

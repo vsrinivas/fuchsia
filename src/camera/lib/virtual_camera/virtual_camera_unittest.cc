@@ -113,7 +113,7 @@ TEST_F(VirtualCameraTest, FramesReceived) {
     result = virtual_camera_->CheckFrame(mapper.start(), 0, info);
     EXPECT_TRUE(result.is_error());
     mapper.Unmap();
-    std::vector<char> zeros(0, mapper.size());
+    std::vector<char> zeros(0, static_cast<char>(mapper.size()));
     result = virtual_camera_->CheckFrame(zeros.data(), zeros.size(), info);
     EXPECT_TRUE(result.is_error());
     if (++frames_received < kTargetFrameCount) {

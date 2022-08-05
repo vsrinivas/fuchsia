@@ -60,7 +60,7 @@ fpromise::result<uint16_t, zx_status_t> Imx227Device::GetRegisterValueFromSequen
   if (result_lo.is_error()) {
     return fpromise::error(result_lo.error());
   }
-  return fpromise::ok(result_hi.value() << 8 | result_lo.value());
+  return fpromise::ok(static_cast<uint16_t>(result_hi.value() << 8 | result_lo.value()));
 }
 
 zx_status_t Imx227Device::InitPdev() {
@@ -224,6 +224,7 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
 
 void Imx227Device::HwInit() {
   TRACE_DURATION("camera", "Imx227Device::HwInit");
+
   // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
   gpio_vana_enable_.Write(1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
@@ -243,6 +244,7 @@ void Imx227Device::HwInit() {
 
 void Imx227Device::HwDeInit() {
   TRACE_DURATION("camera", "Imx227Device::HwDeInit");
+
   gpio_cam_rst_.Write(1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 

@@ -126,7 +126,7 @@ class TaskTest : public zxtest::Test {
 
   uint32_t GetCallbackSize() {
     std::lock_guard al(lock_);
-    return callback_check_.size();
+    return static_cast<uint32_t>(callback_check_.size());
   }
 
   uint32_t GetCallbackBackOutputBufferIndex() {
@@ -170,7 +170,7 @@ class TaskTest : public zxtest::Test {
 
     fuchsia_sysmem_ImageFormat_2 temp_image_format;
     sysmem::image_format_2_fidl_from_banjo(watermark_info_.wm_image_format, temp_image_format);
-    uint32_t watermark_size = ImageFormatImageSize(&temp_image_format);
+    uint32_t watermark_size = static_cast<uint32_t>(ImageFormatImageSize(&temp_image_format));
 
     zx_status_t status = zx_vmo_create_contiguous(bti_handle_.get(), watermark_size, 0,
                                                   watermark_vmo_.reset_and_get_address());
@@ -189,9 +189,9 @@ class TaskTest : public zxtest::Test {
         buffer_collection_count);
     ASSERT_OK(status);
 
-    CreateContiguousWatermarkVmos(bti_handle_, watermark_size, duplicated_watermark_info_.size(),
-                                  watermark_input_contiguous_vmos_,
-                                  watermark_blended_contiguous_vmo_);
+    CreateContiguousWatermarkVmos(
+        bti_handle_, watermark_size, static_cast<uint32_t>(duplicated_watermark_info_.size()),
+        watermark_input_contiguous_vmos_, watermark_blended_contiguous_vmo_);
   }
 
   // Sets up Ge2dDevice, initialize a task.
@@ -794,7 +794,8 @@ TEST(TaskTest, NonContigVmoTest) {
 
   std::vector<zx::vmo> watermark_input_contiguous_vmos;
   zx::vmo watermark_blended_contiguous_vmo;
-  CreateContiguousWatermarkVmos(bti_handle, watermark_size, duplicated_watermark_info.size(),
+  CreateContiguousWatermarkVmos(bti_handle, watermark_size,
+                                static_cast<uint32_t>(duplicated_watermark_info.size()),
                                 watermark_input_contiguous_vmos, watermark_blended_contiguous_vmo);
 
   status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection,
@@ -841,7 +842,8 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
 
   std::vector<zx::vmo> watermark_input_contiguous_vmos;
   zx::vmo watermark_blended_contiguous_vmo;
-  CreateContiguousWatermarkVmos(bti_handle, watermark_size, duplicated_watermark_info.size(),
+  CreateContiguousWatermarkVmos(bti_handle, watermark_size,
+                                static_cast<uint32_t>(duplicated_watermark_info.size()),
                                 watermark_input_contiguous_vmos, watermark_blended_contiguous_vmo);
 
   status = task->InitWatermark(
