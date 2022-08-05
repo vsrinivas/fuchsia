@@ -11,6 +11,9 @@ assert(
 product_assembly_configuration("workstation") {
   platform = {
     build_type = "eng"
+    identity = {
+      password_pinweaver = "allowed"
+    }
   }
   product = {
     session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm"
