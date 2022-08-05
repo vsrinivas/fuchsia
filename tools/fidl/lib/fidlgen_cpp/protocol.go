@@ -1227,7 +1227,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		HlMessaging:                 hlMessaging,
 		unifiedMessagingDetails:     unifiedMessaging,
 		wireTypeNames:               wireTypeNames,
-		DiscoverableName:            p.GetServiceName(),
+		DiscoverableName:            p.GetProtocolName(),
 		IncomingEventsStorage:       IncomingEventsStorage.template(protocolName.Wire),
 		IncomingEventsHandleStorage: IncomingEventsHandleStorage.template(protocolName.Wire),
 		SyncEventAllocationV1: computeAllocation(

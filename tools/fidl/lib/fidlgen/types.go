@@ -1052,7 +1052,7 @@ type Protocol struct {
 // If the protocol is discoverable, gets the discovery name for the protocol, consisting of the
 // library name and protocol declaration name separated by dots and enclosed in quotes. For example,
 // "\"my.library.MyProtocol\"". This part of legacy service discovery (pre-RFC-0041).
-func (d *Protocol) GetServiceName() string {
+func (d *Protocol) GetProtocolName() string {
 	attr, ok := d.LookupAttribute("discoverable")
 	if !ok {
 		return ""

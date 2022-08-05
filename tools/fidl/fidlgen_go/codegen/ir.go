@@ -1218,7 +1218,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		RequestName:          c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+RequestSuffix),
 		EventProxyName:       c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
 		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
-		ServiceNameString:    val.GetServiceName(),
+		ServiceNameString:    val.GetProtocolName(),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))

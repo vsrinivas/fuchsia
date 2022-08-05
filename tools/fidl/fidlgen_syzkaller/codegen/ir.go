@@ -618,7 +618,7 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	r := Protocol{
 		Name:              c.compileCompoundIdentifier(val.Name, ""),
-		ServiceNameString: strings.Trim(val.GetServiceName(), "\""),
+		ServiceNameString: strings.Trim(val.GetProtocolName(), "\""),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))

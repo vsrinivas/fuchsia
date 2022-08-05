@@ -119,12 +119,12 @@ class {{ .AsyncResponseClass }} {
 ///{{ . -}}
 {{- end }}
 abstract class {{ .Name }}
-{{- if .GetServiceName }}
+{{- if .GetProtocolName }}
       extends $fidl.Service
 {{- end }}
       {
-  {{- if .GetServiceName }}
-    static const String $serviceName = {{ .GetServiceName }};
+  {{- if .GetProtocolName }}
+    static const String $serviceName = {{ .GetProtocolName }};
     @override
   {{- end }}
   $fidl.ServiceData? get $serviceData => {{ .ServiceData }}();
@@ -171,7 +171,7 @@ class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 
   @override
   String getName() {
-    {{- if .GetServiceName }}
+    {{- if .GetProtocolName }}
     return {{ .Name }}.$serviceName;
     {{- else }}
     return "";
@@ -190,8 +190,8 @@ class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     implements {{ .Name }} {
   {{ .ProxyName }}() : super($fidl.AsyncProxyController<{{ .Name }}>(
-      {{- if .GetServiceName }}
-        $serviceName: {{ .GetServiceName }},
+      {{- if .GetProtocolName }}
+        $serviceName: {{ .GetProtocolName }},
       {{- end }}
       $interfaceName: r'{{ .Name }}')
     ) {
@@ -213,7 +213,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     {{- end }}
   }
 
-  {{- if .GetServiceName }}
+  {{- if .GetProtocolName }}
     @override
     $fidl.ServiceData get $serviceData => {{ .ServiceData }}();
   {{- else }}

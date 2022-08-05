@@ -1034,7 +1034,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		ECI:          val.Name,
 		Name:         c.compileCamelCompoundIdentifier(val.Name),
 		Methods:      []Method{},
-		ProtocolName: strings.Trim(val.GetServiceName(), "\""),
+		ProtocolName: strings.Trim(val.GetProtocolName(), "\""),
 	}
 
 	getParametersFromType := func(t *fidlgen.Type) []Parameter {
