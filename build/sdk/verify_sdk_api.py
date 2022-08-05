@@ -49,9 +49,6 @@ def main():
     ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), ids)
     old_ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), old_ids)
 
-    ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), ids)
-    old_ids = filter(lambda i: not i.startswith('sdk://fidl/zx'), old_ids)
-
     new_id_set = set(ids)
     old_id_set = set(old_ids)
     added_ids = new_id_set - old_id_set
