@@ -36,6 +36,7 @@
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.posix.socket.Provider",
+                "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.settings.Display",
 
                 // Tests of the media system change their behavior based on
