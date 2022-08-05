@@ -192,14 +192,18 @@ impl Config {
         Self { user, build, global, runtime, default }
     }
 
-    pub(crate) fn from_env(env: &Environment) -> Result<Self> {
-        let build_conf = env.get_build();
+    pub(crate) fn from_env(
+        env: &Environment,
+        build_dir: Option<&Path>,
+        runtime: ConfigMap,
+    ) -> Result<Self> {
+        let build_conf = env.get_build(build_dir);
 
         let user = env.get_user().map(ConfigFile::from_file).transpose()?;
         let build = build_conf.map(ConfigFile::from_file).transpose()?;
         let global = env.get_global().map(ConfigFile::from_file).transpose()?;
 
-        Ok(Self::new(global, build, user, env.get_runtime_args().clone()))
+        Ok(Self::new(global, build, user, runtime))
     }
 
     #[cfg(test)]

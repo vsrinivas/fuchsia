@@ -20,7 +20,10 @@ ffx_plugin("ffx_config_plugin") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  test_deps = [ "//src/lib/fuchsia-async" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   args_sources = [ "src/args.rs" ]
 
