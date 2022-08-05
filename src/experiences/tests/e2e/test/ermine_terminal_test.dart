@@ -23,7 +23,7 @@ void main() {
   late ErmineDriver ermine;
   late Input input;
 
-  const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
+  const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cm';
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -68,7 +68,7 @@ void main() {
   // instance is running.
   Future<String> waitForBuffer() {
     return ermine.waitFor(() async {
-      final snapshot = await ermine.inspectSnapshot('terminal.cmx');
+      final snapshot = await ermine.inspectSnapshot('terminal.cm');
       return snapshot['grid'];
     });
   }

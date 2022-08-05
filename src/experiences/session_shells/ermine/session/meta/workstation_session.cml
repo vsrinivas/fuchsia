@@ -46,7 +46,6 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.bluetooth.sys.Access",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.element.Manager",
@@ -76,7 +75,6 @@
                 "fuchsia.ssh.AuthorizedKeys",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.ui.activity.Tracker",
@@ -100,12 +98,65 @@
             to: [ "#login_shell" ],
         },
         {
-            directory: "config-data",
+            directory: [
+                "config-data",
+                "root-ssl-certificates",
+            ],
             from: "parent",
-            to: "#login_shell",
+            to: [ "#login_shell" ],
         },
         {
-            directory: "root-ssl-certificates",
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#login_shell` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of `#ermine_shell` (a descendent of `#login_shell`). If/when
+            // there is a way to route capabilities to specific descendents
+            // (and specific collection members), these protocols should be
+            // routed only to terminal.
+            //
+            // Other (current and future) children of `#login_shell` should not
+            // `use` these protocols without first getting a security policy
+            // review.
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.device.NameProvider",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.starnix.developer.Manager",
+                "fuchsia.sys.Environment",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+            ],
+            from: "parent",
+            to: [ "#login_shell" ],
+            availability: "same_as_target",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `directory` offers to
+            // `#login_shell` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of `#ermine_shell` (a descendent of `#login_shell`). If/when
+            // there is a way to route capabilities to specific descendents
+            // (and specific collection members), these directories should be
+            // routed only to terminal.
+            //
+            // Other (current and future) children of `#login_shell` should not
+            // `use` these directories without first getting a security policy
+            // review.
+            directory: [
+                "bin",
+                "boot-bin",
+                "pkgfs-packages",
+            ],
             from: "parent",
             to: [ "#login_shell" ],
         },

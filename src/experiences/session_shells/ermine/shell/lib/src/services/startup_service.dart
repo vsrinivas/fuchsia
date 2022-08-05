@@ -32,7 +32,7 @@ const _kAppDefaultEntries = <Map<String, String>>[
   {
     'title': 'Terminal',
     'icon': 'images/Terminal-icon-2x.png',
-    'url': 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx',
+    'url': 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cm',
   },
   {
     'title': 'Settings',

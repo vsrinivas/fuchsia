@@ -13,6 +13,6 @@
     {
         "icon": "images/Terminal-icon-2x.png",
         "title": "Terminal",
-        "url": "fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx"
+        "url": "fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cm"
     }
 ]
