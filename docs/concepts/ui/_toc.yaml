@@ -8,7 +8,7 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/ui/index.md
-- title: "User interface client"
+- title: "User Interface Client"
   path: /docs/concepts/ui/ui-client.md
 - title: "Scenic"
   section:
@@ -19,10 +19,10 @@ toc:
   - title: "Gfx"
     section:
     - include: /docs/concepts/ui/scenic/gfx/_toc.yaml
-  - title: "Frame scheduling"
+  - title: "Frame Scheduling"
     path: /docs/concepts/ui/scenic/frame_scheduling.md
-  - title: "View tree"
-    path: /docs/concepts/ui/scenic/view_tree.md
+  - title: "View System"
+    path: /docs/concepts/ui/scenic/views.md
   - title: "Pointer input"
     path: /docs/concepts/ui/scenic/input.md
   - title: "Hit testing"
@@ -35,15 +35,15 @@ toc:
     path: /docs/concepts/ui/input/index.md
   - title: "Mouse"
     path: /docs/concepts/ui/input/mouse.md
-  - title: "Mouse scroll"
+  - title: "Mouse Scroll"
     path: /docs/concepts/ui/input/mouse_scroll.md
   - title: "Focus"
     path: /docs/concepts/ui/input/focus.md
-  - title: "Hit testing"
+  - title: "Hit Testing"
     path: /docs/concepts/ui/input/hit_testing.md
-  - title: "Semantic visibility"
+  - title: "Semantic Visibility"
     path: /docs/concepts/ui/input/semantic_visibility.md
-  - title: "Scene root"
+  - title: "Scene Root"
     path: /docs/concepts/ui/input/scene_root.md
   - title: "Testing"
     section:

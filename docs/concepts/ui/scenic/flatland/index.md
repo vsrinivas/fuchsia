@@ -57,7 +57,7 @@ Here are some high level design decisions made around Flatland API:
 
 The main protocol for creating and submitting a 2D scene graph. Connecting to Flatland protocol does
 not mean the submitted content can reach display. Flatland instance is still expected to connect to
-the global [View Tree](/docs/concepts/ui/scenic/view_tree.md) by creating its own View.
+the global [View Tree](/docs/concepts/ui/scenic/views.md) by creating its own View.
 
 ### ViewBoundProtocols
 

@@ -25,10 +25,7 @@ Some examples include:
 A UI client creates a [view](/docs/glossary#view) in the global view tree, and
 within that view, presents graphical content to the user via a display.
 
-A view is the common unit of UI organization between UI clients on Fuchsia. For
-example, a view can embed other views in a parent-child relationship, which
-recursively creates the view tree. At the top, the root view attaches to the
-display.
+For more information, see the [views](/docs/concepts/ui/scenic/views.md) documentation.
 
 ## A UI client receives input events and reacts appropriately
 
