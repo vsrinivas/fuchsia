@@ -49,9 +49,6 @@ exceptions=(\
     "./build/flutter/meta/jit_product_runtime.cmx"
     "./build/flutter/meta/jit_runtime.cmx"
 
-    # uses shards to have a valid minimal v1 manifest
-    "./src/ui/bin/terminal/meta/vsh-terminal.cmx"
-
     # manually specifies a runner package
     "./src/virtualization/packages/meta/guest_package.cmx"
 
@@ -105,7 +102,6 @@ exceptions=(\
     "./src/devices/tests/ddk-metadata-test/meta/ddk-metadata-test.cmx"
     "./src/devices/tests/driver-inspect-test/meta/driver-inspect-test.cmx"
     "./src/lib/process/meta/process_unittests.cmx"
-    "./src/ui/bin/terminal/meta/terminal.cmx"
 
     # requests pkgfs in its sandbox
     "./src/connectivity/lowpan/drivers/lowpan-spinel-driver/meta/lowpan-spinel-driver.cmx"

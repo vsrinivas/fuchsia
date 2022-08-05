@@ -86,6 +86,146 @@
             to: "#session-manager",
         },
         {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal`
+            // component. `terminal` is launched as a member of the `elements`
+            // collection of `#ermine_shell` (a descendent of
+            // `#session-manager`). If/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these protocols should be routed only to terminal.
+            //
+            // Other (current and future) children of `#session-manager`
+            // should not `use` these protocols without first getting a security
+            // policy review.
+            protocol: [
+                "fuchsia.process.Resolver",
+
+                // from linux_runner.core_shard.cml
+                "fuchsia.virtualization.LinuxManager",
+            ],
+            from: "self",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: [
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.space.Manager",
+            ],
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: [
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
+            from: "#pkg-resolver",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: "fuchsia.virtualization.DebianGuestManager",
+            from: "#debian-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: "fuchsia.virtualization.TerminaGuestManager",
+            from: "#termina-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: "fuchsia.virtualization.ZirconGuestManager",
+            from: "#zircon-guest-manager",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: "fuchsia.bluetooth.sys.HostWatcher",
+            from: "#bluetooth-core",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#session-manager` are only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these protocols without first getting a security policy
+            // review.
+            protocol: "fuchsia.starnix.developer.Manager",
+            from: "#starnix-manager",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            // TODO(fxbug.dev/105828): This `bin` directory offered
+            // to `#session-manager` is only required by the `terminal`
+            // component. `terminal` is launched as a member of the `elements`
+            // collection of `#ermine_shell` (a descendent of
+            // `#session-manager`). If/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these directories should be routed only to terminal.
+            //
+            // Other (current and future) children of `#session-manager`
+            // should not `use` these directories without first getting a
+            // security policy review.
+            directory: "bin",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            // TODO(fxbug.dev/105828): This `boot-bin` directory offered to
+            // `#session-manager` is only required by the `terminal` component.
+            // Other (current and future) children of `#session-manager` should
+            // not `use` these directories without first getting a security
+            // policy review.
+            directory: "boot",
+            from: "parent",
+            as: "boot-bin",
+            to: "#session-manager",
+            subdir: "bin",
+        },
+        {
+            // TODO(fxbug.dev/105828): This `pkgfs-packages` directory offered
+            // to `#session-manager` is only required by the `terminal`
+            // component. Other (current and future) children of
+            // `#session-manager` should not `use` these directories without
+            // first getting a security policy review.
+            directory: "pkgfs",
+            from: "parent",
+            as: "pkgfs-packages",
+            to: "#session-manager",
+            subdir: "packages",
+        },
+        {
             directory: [
                 "tzdata",
                 "tzdata-icu-44-le",

@@ -1,0 +1,82 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/terminal",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
+    use: [
+        {
+            directory: "bin",
+            rights: [ "rx*" ],
+            path: "/bin",
+        },
+        {
+            directory: "boot-bin",
+            rights: [ "rx*" ],
+            path: "/boot/bin",
+        },
+        {
+            directory: "pkgfs-packages",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.device.NameProvider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.media.Audio",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+        },
+        {
+            protocol: "fuchsia.starnix.developer.Manager",
+            availability: "optional",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.ui.app.ViewProvider",
+            from: "self",
+            to: "parent",
+        },
+    ],
+}

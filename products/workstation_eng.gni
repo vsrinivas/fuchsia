@@ -25,7 +25,6 @@ legacy_base_package_labels +=
 
 # Improve DX by allowing iteration on these packages without and OTA.
 _developer_packages = [
-  "//src/sys/activity",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
   "//src/power:battery",

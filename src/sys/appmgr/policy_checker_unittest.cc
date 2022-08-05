@@ -83,7 +83,7 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyAbsent) {
 
 TEST_F(PolicyCheckerTest, HubPolicy) {
   static constexpr char kFile[] = R"F(
-  fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx
+  fuchsia-pkg://fuchsia.com/some_package#meta/some_component.cmx
   )F";
 
   // Stub out a dispatcher.  We won't actually run anything on it, but some
@@ -103,11 +103,11 @@ TEST_F(PolicyCheckerTest, HubPolicy) {
   PolicyChecker policy_checker(std::move(dirfd));
 
   // "Vanilla" package url, without variant or hash
-  fp.Parse("fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/some_package#meta/some_component.cmx");
   EXPECT_TRUE(policy_checker.CheckHub(fp));
 
   // Variants and hashes should be thrown away
-  fp.Parse("fuchsia-pkg://fuchsia.com/terminal/0?hash=123#meta/terminal.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/some_package/0?hash=123#meta/some_component.cmx");
   EXPECT_TRUE(policy_checker.CheckHub(fp));
 
   // Check exclusion

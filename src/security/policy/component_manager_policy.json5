@@ -388,6 +388,13 @@
                 target_monikers: [
                     "/bootstrap/console-launcher",
                     "/core/sshd-host",
+
+                    // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
+                    // ermine_shell component, via its "elements" collection. Terminal requires some
+                    // additional permissions gated through this policy file. If/when these
+                    // permissions can be migrated to an ermine-specific policy file (outside
+                    // fuchsia.git), the following entry should be removed here.
+                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
                 ],
             },
             {
@@ -420,6 +427,13 @@
                     "/core",
                     "/core/appmgr",
                     "/core/sshd-host",
+
+                    // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
+                    // ermine_shell component, via its "elements" collection. Terminal requires some
+                    // additional permissions gated through this policy file. If/when these
+                    // permissions can be migrated to an ermine-specific policy file (outside
+                    // fuchsia.git), the following entry should be removed here.
+                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
                 ],
             },
             {

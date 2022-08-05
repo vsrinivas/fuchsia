@@ -360,6 +360,59 @@
             to: "#session",
             availability: "same_as_target",
         },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to the
+            // `#session` collection are only required by the `terminal`
+            // component. `terminal` is launched as a member of the `elements`
+            // collection of `#ermine_shell` (a descendent of the workstation
+            // session, which is launched as a member of the `#session`
+            // collection). If/when there is a way to route capabilities to
+            // specific descendents (and specific collection members), these
+            // protocols should be routed only to terminal.
+            //
+            // Other (current and future) components launched under the
+            // `#session` collection should not `use` these protocols without
+            // first getting a security policy review.
+            protocol: [
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.starnix.developer.Manager",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+            ],
+            from: "parent",
+            to: [ "#session" ],
+            availability: "same_as_target",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `directory` offers to the
+            // `#session` collection are only required by the `terminal`
+            // component. `terminal` is launched as a member of the `elements`
+            // collection of `#ermine_shell` (a descendent of the workstation
+            // session, which is launched as a member of the `#session`
+            // collection). If/when there is a way to route capabilities to
+            // specific descendents (and specific collection members), these
+            // directories should be routed only to terminal.
+            //
+            // Other (current and future) components launched under the
+            // `#session` collection should not `use` these directories without
+            // first getting a security policy review.
+            directory: [
+                "bin",
+                "boot-bin",
+                "pkgfs-packages",
+            ],
+            from: "parent",
+            to: [ "#session" ],
+        },
 
         // Allow components in the session to restart it (the session).
         {

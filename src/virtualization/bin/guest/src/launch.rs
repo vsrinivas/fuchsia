@@ -65,7 +65,7 @@ impl GuestLaunch {
                 "          --args='core_realm_shards += [ \"{}\" ]'",
                 guest_type.gn_core_shard_label()
             );
-            eprintln!("  2) Launching may not work from the zircon virtcon (https://fxbug.dev/105422). Try again using fx-shell or terminal.cmx");
+            eprintln!("  2) Launching may not work from the zircon virtcon (https://fxbug.dev/105422). Try again using fx-shell or terminal.cm");
             eprintln!("");
             return Err(anyhow!("Unable to start guest: {}", fidl_result.unwrap_err()));
         }

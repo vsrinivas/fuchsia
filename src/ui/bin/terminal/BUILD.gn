@@ -119,12 +119,12 @@ rustc_binary("bin") {
 
 fuchsia_component("terminal_component") {
   component_name = "terminal"
-  manifest = "meta/terminal.cmx"
+  manifest = "meta/terminal.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_component("vsh-terminal") {
-  manifest = "meta/vsh-terminal.cmx"
+  manifest = "meta/vsh-terminal.cml"
   deps = [ ":bin" ]
 }
 
