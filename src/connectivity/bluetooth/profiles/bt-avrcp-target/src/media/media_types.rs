@@ -9,7 +9,7 @@ use {
     fidl_table_validation::ValidFidlTable,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::convert::TryInto,
-    tracing::{trace, warn},
+    tracing::{debug, trace, warn},
 };
 
 /// Converts time (i64, in nanoseconds) to milliseconds (u32).
@@ -390,6 +390,13 @@ impl MediaInfo {
         }
     }
 
+    pub fn track_changed(&self, other: &Self) -> bool {
+        self.title != other.title
+            || self.artist_name != other.artist_name
+            || self.album_name != other.album_name
+            || self.track_number != other.track_number
+    }
+
     /// Updates information about currently playing media.
     /// If a metadata update is present, this implies the current media has changed.
     /// In the event that metadata is present, but duration is not, `playing_time`
@@ -415,7 +422,7 @@ impl MediaInfo {
         self.playing_time = duration.map(|d| time_nanos_to_millis(d).to_string());
     }
 
-    fn update_metadata(&mut self, metadata: Metadata) {
+    pub fn update_metadata(&mut self, metadata: Metadata) {
         for property in metadata.properties {
             match property.label.as_str() {
                 fidl_media_types::METADATA_LABEL_TITLE => {
@@ -434,17 +441,23 @@ impl MediaInfo {
                     self.genre = Some(property.value);
                 }
                 _ => {
-                    trace!("Media metadata {:?} variant not supported.", property.label);
+                    trace!(
+                        "Media metadata {:?} ({:?}) variant not supported.",
+                        property.label,
+                        property.value
+                    );
                 }
             }
         }
+        debug!("Media metadata updated: {:?}", self);
     }
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Notification {
     pub status: Option<fidl_avrcp::PlaybackStatus>,
-    pub track_id: Option<u64>,
+    // Media info currently used to detect track changes when track_id is 0
+    pub media_info: Option<MediaInfo>,
     pub pos: Option<u32>,
     pub battery_status: Option<fidl_avrcp::BatteryStatus>,
     // SystemStatus
@@ -457,7 +470,6 @@ pub(crate) struct Notification {
 impl Notification {
     fn new(
         status: Option<fidl_avrcp::PlaybackStatus>,
-        track_id: Option<u64>,
         pos: Option<u32>,
         battery_status: Option<fidl_avrcp::BatteryStatus>,
         application_settings: Option<ValidPlayerApplicationSettings>,
@@ -467,13 +479,13 @@ impl Notification {
     ) -> Self {
         Self {
             status,
-            track_id,
             pos,
             battery_status,
             application_settings,
             player_id,
             volume,
             device_connected,
+            media_info: None,
         }
     }
 
@@ -486,7 +498,7 @@ impl Notification {
                 res.status = self.status;
             }
             fidl_avrcp::NotificationEvent::TrackChanged => {
-                res.track_id = self.track_id;
+                res.media_info = self.media_info.clone();
             }
             fidl_avrcp::NotificationEvent::TrackPosChanged => {
                 res.pos = self.pos;
@@ -513,7 +525,6 @@ impl From<fidl_avrcp::Notification> for Notification {
     fn from(src: fidl_avrcp::Notification) -> Notification {
         Notification::new(
             src.status.map(Into::into),
-            src.track_id,
             src.pos,
             src.battery_status,
             src.application_settings.map(|s| s.try_into().expect("Couldn't convert PAS")),
@@ -529,7 +540,7 @@ impl From<Notification> for fidl_avrcp::Notification {
         let mut res = fidl_avrcp::Notification::EMPTY;
 
         res.status = src.status.map(Into::into);
-        res.track_id = src.track_id;
+        res.track_id = src.media_info.as_ref().map(MediaInfo::get_track_id);
         res.pos = src.pos;
         res.battery_status = src.battery_status;
         res.application_settings = src.application_settings.map(Into::into);

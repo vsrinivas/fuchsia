@@ -251,7 +251,7 @@ impl SessionInfo {
                 );
             }
             fidl_avrcp::NotificationEvent::TrackChanged => {
-                notification.track_id = Some(self.media_info.get_track_id());
+                notification.media_info = Some(self.media_info.clone());
             }
             fidl_avrcp::NotificationEvent::TrackPosChanged => {
                 notification.pos = Some(self.play_status.get_playback_position());
@@ -302,6 +302,10 @@ impl SessionInfo {
             self.player_application_settings
                 .update_player_application_settings(info.repeat_mode, info.shuffle_on);
             self.media_info.update_media_info(info.duration, metadata);
+            return;
+        }
+        if let Some(m) = metadata {
+            self.media_info.update_metadata(m);
         }
     }
 
@@ -318,7 +322,7 @@ impl From<SessionInfo> for Notification {
         notification.application_settings = Some(
             src.get_player_application_settings(vec![]).expect("Should get application settings."),
         );
-        notification.track_id = Some(src.media_info.get_track_id());
+        notification.media_info = Some(src.get_media_info().clone());
         notification.pos = Some(src.play_status.get_playback_position());
         notification.player_id = Some(src.get_player_id());
         notification.battery_status = Some(src.battery_status);
@@ -338,11 +342,14 @@ pub(crate) mod tests {
     use futures::stream::TryStreamExt;
 
     pub(crate) fn create_metadata() -> fidl_media_types::Metadata {
+        create_metadata_title("This is a sample title".to_string())
+    }
+
+    pub(crate) fn create_metadata_title(title: String) -> fidl_media_types::Metadata {
         let mut metadata = fidl_media_types::Metadata::new_empty();
         let mut property1 = fidl_media_types::Property::new_empty();
         property1.label = fidl_media_types::METADATA_LABEL_TITLE.to_string();
-        let sample_title = "This is a sample title".to_string();
-        property1.value = sample_title.clone();
+        property1.value = title;
         metadata.properties = vec![property1];
         metadata
     }
@@ -403,7 +410,7 @@ pub(crate) mod tests {
 
     #[fuchsia::test]
     /// Tests updating SessionInfo with Media PlayerStatus and Metadata.
-    /// 1) Tests Metadata and no PlayerStatus -> No updates
+    /// 1) Tests Metadata and no PlayerStatus -> Partial updates
     /// 2) Tests PlayerStatus and no Metadata -> Partial updates
     /// 3) Tests PlayerStatus and Metadata -> Full update
     /// 4) Tests neither PlayerStatus and Metadata -> No updates
@@ -416,13 +423,15 @@ pub(crate) mod tests {
 
         // 1. Only metadata
         let mut info = fidl_media::SessionInfoDelta::EMPTY;
-        info.metadata = Some(create_metadata());
+        let title = "Sapphire 💖".to_string();
+        info.metadata = Some(create_metadata_title(title.clone()));
         info.player_status = None;
         media_state.update_session_info(info);
 
         let expected_play_status = ValidPlayStatus::default();
         let expected_pas = ValidPlayerApplicationSettings::new(None, None, None, None);
-        let expected_media_info = MediaInfo::default();
+        let expected_media_info =
+            MediaInfo::new(Some(title.clone()), None, None, None, None, None, None);
         assert_eq!(media_state.session_info().play_status, expected_play_status);
         assert_eq!(media_state.session_info().player_application_settings, expected_pas);
         assert_eq!(media_state.session_info().media_info, expected_media_info);
@@ -443,7 +452,7 @@ pub(crate) mod tests {
             None,
         );
         let expected_media_info =
-            MediaInfo::new(None, None, None, None, None, None, Some("123".to_string()));
+            MediaInfo::new(Some(title), None, None, None, None, None, Some("123".to_string()));
         assert_eq!(media_state.session_info().play_status, expected_play_status);
         assert_eq!(media_state.session_info().player_application_settings, expected_pas);
         assert_eq!(media_state.session_info().media_info, expected_media_info);
@@ -657,34 +666,29 @@ pub(crate) mod tests {
             fidl_avrcp::NotificationEvent::TrackChanged,
             fidl_avrcp::NotificationEvent::BattStatusChanged,
         ];
-        let expected_values: Vec<Notification> = vec![
+        let expected_values = vec![
             fidl_avrcp::Notification {
                 application_settings: Some(expected_pas),
                 ..fidl_avrcp::Notification::EMPTY
-            }
-            .into(),
+            },
             fidl_avrcp::Notification {
                 status: Some(expected_play_status),
                 ..fidl_avrcp::Notification::EMPTY
-            }
-            .into(),
-            fidl_avrcp::Notification { track_id: Some(0), ..fidl_avrcp::Notification::EMPTY }
-                .into(),
+            },
+            fidl_avrcp::Notification { track_id: Some(0), ..fidl_avrcp::Notification::EMPTY },
             fidl_avrcp::Notification {
                 battery_status: Some(fidl_avrcp::BatteryStatus::Critical),
                 ..fidl_avrcp::Notification::EMPTY
-            }
-            .into(),
+            },
         ];
 
         for (event_id, expected_v) in requested_events.iter().zip(expected_values.iter()) {
-            assert_eq!(
-                media_state
-                    .session_info()
-                    .get_notification_value(event_id)
-                    .expect("The notification value should exist in the map"),
-                expected_v.clone()
-            );
+            let received: fidl_avrcp::Notification = media_state
+                .session_info()
+                .get_notification_value(event_id)
+                .expect("The notification value should exist in the map")
+                .into();
+            assert_eq!(received, expected_v.clone());
         }
     }
 

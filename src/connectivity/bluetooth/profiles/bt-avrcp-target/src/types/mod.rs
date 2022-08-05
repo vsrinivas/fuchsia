@@ -103,12 +103,17 @@ impl NotificationData {
                 Ok(self.current_value.application_settings != new_value.application_settings)
             }
             fidl_avrcp::NotificationEvent::TrackChanged => {
-                Ok(self.current_value.track_id != new_value.track_id)
+                // TODO(fxbug.dev/104358): be able to use track_id alone
+                match (&new_value.media_info, &self.current_value.media_info) {
+                    (None, None) => Ok(false),
+                    (Some(_), None) | (None, Some(_)) => Ok(true),
+                    (Some(new), Some(old)) => Ok(old.track_changed(new)),
+                }
             }
             fidl_avrcp::NotificationEvent::TrackPosChanged => {
                 let flag = self.current_value.pos != new_value.pos
                     || self.current_value.status != new_value.status
-                    || self.current_value.track_id != new_value.track_id
+                    || self.current_value.media_info != new_value.media_info
                     || self.expected_response_time.map_or(false, |t| fasync::Time::now() >= t);
                 Ok(flag)
             }
@@ -143,6 +148,7 @@ impl Drop for NotificationData {
 mod tests {
     use super::*;
 
+    use crate::media::media_types::MediaInfo;
     use crate::tests::generate_empty_watch_notification;
 
     use fidl::endpoints::create_proxy_and_stream;
@@ -178,7 +184,7 @@ mod tests {
                 responder,
             );
 
-            let curr_value: Notification = fidl_avrcp::Notification {
+            let mut curr_value: Notification = fidl_avrcp::Notification {
                 status: Some(fidl_avrcp::PlaybackStatus::Playing),
                 track_id: Some(800),
                 pos: Some(12345),
@@ -191,6 +197,8 @@ mod tests {
                 ..fidl_avrcp::Notification::EMPTY
             }
             .into();
+
+            curr_value.media_info = Some(MediaInfo::default());
 
             let res1 = data.notification_value_changed(
                 &fidl_avrcp::NotificationEvent::PlaybackStatusChanged,

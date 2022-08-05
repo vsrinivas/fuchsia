@@ -375,6 +375,16 @@ impl MediaSessionsInner {
                     .reference_deadline((interval as i64).seconds());
                 (current_values, response_timeout)
             }
+            (fidl_avrcp::NotificationEvent::TrackChanged, _) => {
+                // Add in the current media info.
+                (
+                    Notification {
+                        media_info: Some(active_session.session_info().get_media_info().clone()),
+                        ..current
+                    },
+                    None,
+                )
+            }
             (fidl_avrcp::NotificationEvent::AddressedPlayerChanged, _) => {
                 responder.drop_without_shutdown();
                 return Ok(None);
@@ -458,7 +468,9 @@ fn create_session_control_proxy(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::media::media_state::tests::{create_metadata, create_player_status};
+    use crate::media::media_state::tests::{
+        create_metadata, create_metadata_title, create_player_status,
+    };
     use crate::media::media_types::ValidPlayStatus;
     use crate::tests::generate_empty_watch_notification;
 
@@ -885,6 +897,9 @@ pub(crate) mod tests {
         // changed with new values.
         let n_result_futs = join_all(proxied_futs).await;
 
+        let track_changed_notification_current =
+            fidl_avrcp::Notification { track_id: Some(0), ..fidl_avrcp::Notification::EMPTY };
+
         let expected_responses: Vec<(NotificationEvent, fidl_avrcp::Notification)> =
             requested_event_ids
                 .into_iter()
@@ -902,10 +917,7 @@ pub(crate) mod tests {
                             status: Some(fidl_avrcp::PlaybackStatus::Playing),
                             ..fidl_avrcp::Notification::EMPTY
                         },
-                        fidl_avrcp::Notification {
-                            track_id: Some(0),
-                            ..fidl_avrcp::Notification::EMPTY
-                        },
+                        track_changed_notification_current.clone(),
                         fidl_avrcp::Notification {
                             pos: Some(0),
                             ..fidl_avrcp::Notification::EMPTY
@@ -934,6 +946,39 @@ pub(crate) mod tests {
                 assert_eq!(actual, expected);
             }
         }
+
+        // Update the media information again, and check that the TrackChanged is still returned,
+        // even though it is still at track_id 0 (because the track has changed).
+
+        let (result_fut, responder) = generate_empty_watch_notification(&mut proxy, &mut stream)
+            .await
+            .expect("valid request");
+        let res = sessions.register_notification(
+            NotificationEvent::TrackChanged,
+            track_changed_notification_current.clone().into(),
+            0,
+            responder,
+        );
+        // No response deadline for TrackChanged.
+        assert_matches!(res, Ok(None));
+
+        let delta = fidl_media::SessionInfoDelta {
+            metadata: Some(create_metadata_title("Hello".to_string())),
+            ..fidl_media::SessionInfoDelta::EMPTY
+        };
+
+        // Update the local media state with session and battery changes.
+        {
+            let state = sessions.map.get_mut(&id).expect("active session for id exists");
+            state.update_session_info(delta);
+        }
+
+        // Update all outstanding notifications.
+        sessions.update_notification_responders();
+
+        let result =
+            result_fut.await.expect("FIDL call should have returned").expect("valid notification");
+        assert_eq!(track_changed_notification_current, result);
     }
 
     #[fuchsia::test]
