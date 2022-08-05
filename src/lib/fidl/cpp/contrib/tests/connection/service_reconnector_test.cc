@@ -5,17 +5,18 @@
 #include "src/lib/fidl/cpp/contrib/connection/service_reconnector.h"
 
 #include <fidl/test.protocol.connector/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <functional>
 #include <optional>
 #include <queue>
 #include <type_traits>
 
-#include <sdk/lib/sys/component/cpp/outgoing_directory.h>
+#include <gtest/gtest.h>
 
-#include "lib/async/cpp/task.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
@@ -199,15 +200,21 @@ TEST_F(ServiceReconnectorTest, HandlesErrors) {
   ASSERT_EQ(protocol().ActionsSuccessful(), 2U);
 }
 
-TEST_F(ServiceReconnectorTest, SupportsCallsFromMultipleThreads) {
-  auto thread_1 = std::thread([=]() { DoAction(); });
-  auto thread_2 = std::thread([=]() { DoAction(); });
-  thread_1.join();
-  thread_2.join();
-
+TEST_F(ServiceReconnectorTest, SupportCallsFromDispatcherThread) {
+  DoAction();
   RunLoopUntilIdle();
-  ASSERT_EQ(protocol().ActionsAttempted(), 2U);
-  ASSERT_EQ(protocol().ActionsSuccessful(), 2U);
+}
+
+TEST_F(ServiceReconnectorTest, DoesNotSupportCallsFromMultipleThreads) {
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+  auto test = [&] {
+    auto thread_1 = std::thread([=]() { DoAction(); });
+    RunLoopUntilIdle();
+    thread_1.join();
+  };
+
+  ASSERT_DEATH(test(), "thread");
+#endif
 }
 
 TEST_F(ServiceReconnectorTest, BacksOff) {

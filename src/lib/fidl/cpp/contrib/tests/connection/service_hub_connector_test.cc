@@ -354,15 +354,21 @@ TEST_F(ServiceHubConnectorTest, DoesNotRetryPermanentErrors) {
   ASSERT_EQ(protocol()->ActionsSuccessful(), 2U);
 }
 
-TEST_F(ServiceHubConnectorTest, SupportsCallsFromMultipleThreads) {
-  auto thread_1 = std::thread([=]() { protocol_connector().DoAction(); });
-  auto thread_2 = std::thread([=]() { protocol_connector().DoAction(); });
-  thread_1.join();
-  thread_2.join();
-
+TEST_F(ServiceHubConnectorTest, SupportCallsFromDispatcherThread) {
+  protocol_connector().DoAction();
   RunLoopUntilIdle();
-  ASSERT_EQ(protocol()->ActionsAttempted(), 2U);
-  ASSERT_EQ(protocol()->ActionsSuccessful(), 2U);
+}
+
+TEST_F(ServiceHubConnectorTest, DoesNotSupportCallsFromMultipleThreads) {
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+  auto test = [&] {
+    auto thread_1 = std::thread([=]() { protocol_connector().DoAction(); });
+    RunLoopUntilIdle();
+    thread_1.join();
+  };
+
+  ASSERT_DEATH(test(), "thread");
+#endif
 }
 
 TEST_F(ServiceHubConnectorTest, LimitsInFlightCallbacks) {

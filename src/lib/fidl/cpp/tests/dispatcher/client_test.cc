@@ -10,7 +10,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "test_messages.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/test_messages.h"
 
 namespace {
 
@@ -37,7 +37,7 @@ class WireWeakAsyncClientImpl<TestProtocol> : public fidl::internal::ClientImplB
   using ClientImplBase::ClientImplBase;
 
   void SomeWireMethod() {
-    GoodMessage msg;
+    fidl_testing::GoodMessage msg;
     fidl::Status result = _client_base()->MakeSyncCallWith(
         [&](std::shared_ptr<fidl::internal::AnyTransport> transport) {
           // The input to this call has no handles.
@@ -72,7 +72,7 @@ class NaturalClientImpl<TestProtocol> : public NaturalClientBase {
   using NaturalClientBase::NaturalClientBase;
 
   void SomeNaturalMethod() const {
-    GoodMessage msg;
+    fidl_testing::GoodMessage msg;
     fidl::OutgoingMessage outgoing = msg.message();
     fidl::Status result = client_base().SendOneWay(outgoing);
     EXPECT_OK(result.status());

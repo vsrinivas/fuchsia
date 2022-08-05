@@ -130,6 +130,10 @@ class ::fidl::internal::WireWeakAsyncClientImpl<fidl_testing::TestProtocol>
     : public fidl::internal::ClientImplBase {
  public:
   using ClientImplBase::ClientImplBase;
+
+  fidl::Status OneWayMethod(fidl::OutgoingMessage& message) {
+    return _client_base()->SendOneWay(message);
+  }
 };
 
 template <>

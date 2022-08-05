@@ -19,9 +19,10 @@
 
 #include <zxtest/zxtest.h>
 
-#include "async_loop_and_endpoints_fixture.h"
-#include "client_checkers.h"
-#include "mock_client_impl.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/async_loop_and_endpoints_fixture.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/client_checkers.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/mock_client_impl.h"
+#include "src/lib/fidl/llcpp/tests/dispatcher/test_messages.h"
 
 namespace fidl {
 namespace {
@@ -302,6 +303,19 @@ TEST_F(WireSharedClientTest, Move) {
   EXPECT_FALSE(client.is_valid());
   EXPECT_TRUE(client2.is_valid());
   ASSERT_DEATH([&] { client.operator->(); });
+}
+
+TEST_F(WireSharedClientTest, CanMakeCallOnAnotherThread) {
+  auto [local, remote] = std::move(endpoints());
+
+  WireSharedClient client(std::move(local), loop().dispatcher());
+
+  std::thread foreign_thread([&] {
+    fidl_testing::GoodMessage message;
+    fidl::OutgoingMessage outgoing = message.message();
+    (void)client->OneWayMethod(outgoing);
+  });
+  foreign_thread.join();
 }
 
 }  // namespace

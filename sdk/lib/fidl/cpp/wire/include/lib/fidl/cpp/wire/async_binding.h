@@ -173,6 +173,8 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
+  const DebugOnlyThreadChecker& thread_checker() const { return thread_checker_; }
+
   // Initiates teardown with the provided |info| as reason.
   // This does not have to happen in the context of a dispatcher thread.
   TeardownTaskPostingResult StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
@@ -409,7 +411,11 @@ class AsyncClientBinding final : public AsyncBinding {
 
   virtual ~AsyncClientBinding() = default;
 
-  std::shared_ptr<fidl::internal::AnyTransport> GetTransport() const { return transport_; }
+  // Obtain the transport and check that the caller is on the appropriate thread.
+  std::shared_ptr<fidl::internal::AnyTransport> GetTransport() const {
+    ScopedThreadGuard guard(thread_checker());
+    return transport_;
+  }
 
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher,

@@ -30,8 +30,8 @@ namespace fidl::contrib {
 // To use this class, it must be extended with implementations of the
 // methods |ConnectToServiceHub()| and |ConnectToService()|.
 //
-// NOTE: ServiceHubConnector and its subclasses must be constructed and destroyed from the
-// |dispatcher| thread.
+// NOTE: ServiceHubConnector and its subclasses must be used from the |dispatcher| thread.
+// This includes construction, destruction, and making calls.
 //
 // For example, if you have a fidl service like:
 //
@@ -306,7 +306,7 @@ class ServiceHubConnector {
   };
 
   // The |Do()| method is the only way of performing actions using the underlying |Protocol|. This
-  // method may be called from any thread.
+  // method must be called from the dispatcher thread.
   //
   // It is recommended for classes that extend ServiceHubConnector create wrapper functions to
   // ease the calling of this method e.g.:

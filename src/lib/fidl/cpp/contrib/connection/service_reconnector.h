@@ -29,7 +29,8 @@ namespace fidl::contrib {
 // Using this class requires defining a |ConnectLambda| that takes as an argument a
 // |ConnectResolver|.
 //
-// NOTE: ServiceReconnector must be constructed and destroyed from the |dispatcher| thread.
+// NOTE: ServiceReconnector must be used from the |dispatcher| thread.
+// This includes construction, destruction, and making calls.
 //
 // For example, if you had a fidl service like:
 //

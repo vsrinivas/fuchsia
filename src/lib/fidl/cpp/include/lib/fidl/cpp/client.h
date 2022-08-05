@@ -89,8 +89,8 @@ namespace fidl {
 //   the provided |async_dispatcher_t|, termed "the dispatcher thread".
 // - The client must be bound on the dispatcher thread.
 // - The client must be destroyed on the dispatcher thread.
-// - FIDL method calls may be made on other threads, but the response is always
-//   delivered on the dispatcher thread, as are event callbacks.
+// - FIDL method calls must be made from the dispatcher thread.
+// - Responses are always delivered on the dispatcher thread, as are events.
 //
 // The above rules are checked in debug builds at run-time. In short, the client
 // is local to a thread.

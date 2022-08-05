@@ -21,9 +21,13 @@ source_set("client_test_helpers") {
     "client_checkers.h",
     "lsan_disabler.h",
     "mock_client_impl.h",
+    "test_messages.h",
   ]
   testonly = true
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//src/lib/fidl/cpp/tests/*",
+  ]
   public_deps = [
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/zxtest",

@@ -35,10 +35,14 @@ test("service_reconnector_tests_bin") {
 }
 
 fuchsia_unittest_package("service_hub_connector_tests") {
+  # Required for death tests
+  manifest = "meta/service_hub_connector_tests.cml"
   deps = [ ":service_hub_connector_tests_bin" ]
 }
 
 fuchsia_unittest_package("service_reconnector_tests") {
+  # Required for death tests
+  manifest = "meta/service_reconnector_tests.cml"
   deps = [ ":service_reconnector_tests_bin" ]
 }
 

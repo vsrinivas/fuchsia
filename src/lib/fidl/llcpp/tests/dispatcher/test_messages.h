@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_CPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
-#define SRC_LIB_FIDL_CPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
+#ifndef SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
+#define SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
 
 #include <lib/fidl/cpp/wire/message.h>
 
 #include <cstdint>
 
-constexpr uint64_t kTestOrdinal = 0x1234567812345678;
+namespace fidl_testing {
+
+constexpr uint64_t kTestOrdinal = 0x1234567812345678ULL;
 
 // |GoodMessage| is a helper to create a valid FIDL transactional message.
 class GoodMessage {
@@ -36,4 +38,6 @@ class GoodMessage {
   FIDL_ALIGNDECL fidl_message_header_t content_ = {};
 };
 
-#endif  // SRC_LIB_FIDL_CPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
+}  // namespace fidl_testing
+
+#endif  // SRC_LIB_FIDL_LLCPP_TESTS_DISPATCHER_TEST_MESSAGES_H_
