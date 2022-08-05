@@ -76,7 +76,7 @@ pub async fn run_process_async<'a>(
         zx::Socket::create(zx::SocketOpts::STREAM).expect("create stderr socket");
     // The reader-ends should not write.
     let () = stdout_writer.half_close().expect("stdout_reader.half_close");
-    let () = stdout_writer.half_close().expect("stderr_reader.half_close");
+    let () = stderr_writer.half_close().expect("stderr_reader.half_close");
 
     let args: Vec<CString> = std::iter::once(binary_path)
         .chain(args)
