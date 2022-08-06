@@ -24,6 +24,8 @@
 #include "lib/async/dispatcher.h"
 #include "src/camera/bin/usb_device_watcher/device_instance.h"
 
+namespace camera {
+
 using ClientId = uint64_t;
 using TransientDeviceId = uint64_t;
 using PersistentDeviceId = uint64_t;
@@ -79,7 +81,6 @@ class DeviceWatcherImpl {
 
   std::unique_ptr<sys::ComponentContext> context_;
   async_dispatcher_t* dispatcher_;
-  fuchsia::sys::LauncherPtr launcher_;
   TransientDeviceId device_id_next_ = 1;
   DevicesMap devices_;
   ClientId client_id_next_ = 1;
@@ -87,5 +88,7 @@ class DeviceWatcherImpl {
   bool initial_update_received_ = false;
   std::queue<fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher>> requests_;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_USB_DEVICE_WATCHER_DEVICE_WATCHER_IMPL_H_

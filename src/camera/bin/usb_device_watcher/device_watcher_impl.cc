@@ -18,6 +18,8 @@
 #include <iterator>
 #include <limits>
 
+namespace camera {
+
 DeviceWatcherImpl::DeviceWatcherImpl(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}
 
@@ -226,3 +228,5 @@ void DeviceWatcherImpl::Client::ConnectToDevice(
 
   watcher_.context()->svc()->Connect(std::move(request), "fuchsia.camera3.Device");
 }
+
+}  // namespace camera

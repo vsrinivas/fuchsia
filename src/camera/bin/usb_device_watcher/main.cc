@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 
   auto directory = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  auto result = DeviceWatcherImpl::Create(std::move(context), loop.dispatcher());
+  auto result = camera::DeviceWatcherImpl::Create(std::move(context), loop.dispatcher());
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.error());
     return EXIT_FAILURE;

@@ -13,6 +13,8 @@
 #include "lib/fit/function.h"
 #include "lib/sys/cpp/service_directory.h"
 
+namespace camera {
+
 fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create(
     fidl::InterfaceHandle<fuchsia::hardware::camera::Device> camera,
     async_dispatcher_t* dispatcher) {
@@ -31,3 +33,5 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
   });
   return fpromise::ok(std::move(instance));
 }
+
+}  // namespace camera

@@ -19,6 +19,8 @@
 #include <lib/vfs/cpp/service.h>
 #include <zircon/status.h>
 
+namespace camera {
+
 // Represents a launched device process.
 class DeviceInstance {
  public:
@@ -28,10 +30,8 @@ class DeviceInstance {
  private:
   async_dispatcher_t* dispatcher_;
   fuchsia::hardware::camera::DevicePtr camera_;
-  vfs::PseudoDir injected_services_dir_;
-  std::shared_ptr<sys::ServiceDirectory> published_services_;
-  fuchsia::sys::ComponentControllerPtr component_controller_;
-  std::vector<fidl::InterfaceRequest<fuchsia::camera3::Device>> pending_requests_;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_USB_DEVICE_WATCHER_DEVICE_INSTANCE_H_
