@@ -28,8 +28,10 @@ class ServiceHandlerInterface {
 
   // User-defined action for handling a connection attempt to a
   // member FIDL protocol defined by |Protocol|.
+  // For example, if |Protocol| is spoken over Zircon channels, the handler takes a
+  // |fidl::ServerEnd<Protocol>|.
   template <typename Protocol>
-  using MemberHandler = fit::function<void(::fidl::ServerEnd<Protocol>)>;
+  using MemberHandler = fit::function<void(typename fidl::internal::ServerEndType<Protocol>)>;
 
   // Add a |member| to the instance, which will be handled by |handler|.
   //
@@ -42,7 +44,7 @@ class ServiceHandlerInterface {
   template <typename Protocol>
   zx::status<> AddMember(std::string_view member, MemberHandler<Protocol> handler) {
     return AddAnyMember(member, [handler = std::move(handler)](zx::channel channel) {
-      return handler(::fidl::ServerEnd<Protocol>(std::move(channel)));
+      return handler(::fidl::internal::ServerEndType<Protocol>(std::move(channel)));
     });
   }
 

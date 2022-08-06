@@ -468,7 +468,7 @@ class Service final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_p(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_versions::Protocol> handler) {
-      return service_handler_->AddMember("p", std::move(handler));
+      return service_handler_->AddMember<::test_versions::Protocol>("p", std::move(handler));
     }
 
    private:

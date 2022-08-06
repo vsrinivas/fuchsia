@@ -448,7 +448,7 @@ class Service final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_interface(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_doccomments::Interface> handler) {
-      return service_handler_->AddMember("interface", std::move(handler));
+      return service_handler_->AddMember<::test_doccomments::Interface>("interface", std::move(handler));
     }
 
    private:

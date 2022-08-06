@@ -603,7 +603,7 @@ class SingleMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_single_member(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember("single_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>("single_member", std::move(handler));
     }
 
    private:
@@ -705,7 +705,7 @@ class MultiHomogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_first_member(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember("first_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>("first_member", std::move(handler));
     }
 
     // Adds member "second_member" to the service instance. |handler| will be invoked on connection
@@ -716,7 +716,7 @@ class MultiHomogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_second_member(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember("second_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>("second_member", std::move(handler));
     }
 
    private:
@@ -818,7 +818,7 @@ class MultiHeterogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_first_member(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_service::FirstProtocol> handler) {
-      return service_handler_->AddMember("first_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::FirstProtocol>("first_member", std::move(handler));
     }
 
     // Adds member "second_member" to the service instance. |handler| will be invoked on connection
@@ -829,7 +829,7 @@ class MultiHeterogeneousMemberService final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_second_member(
         ::fidl::ServiceHandlerInterface::MemberHandler<::test_service::SecondProtocol> handler) {
-      return service_handler_->AddMember("second_member", std::move(handler));
+      return service_handler_->AddMember<::test_service::SecondProtocol>("second_member", std::move(handler));
     }
 
    private:

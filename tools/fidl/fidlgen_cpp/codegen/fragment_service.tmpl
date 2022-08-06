@@ -89,7 +89,7 @@ class {{ .Name }} final {
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_{{ .Name }}(
         ::fidl::ServiceHandlerInterface::MemberHandler<{{ .ProtocolType }}> handler) {
-      return service_handler_->AddMember("{{ .Name }}", std::move(handler));
+      return service_handler_->AddMember<{{ .ProtocolType }}>("{{ .Name }}", std::move(handler));
     }
     {{- end }}
 
