@@ -80,7 +80,8 @@ Eval strings are infix math expressions with normal operator precedence.
 
 () may be used.
 
-Arithmetic operators are + - * / //. / is float division; // is int division.
+Arithmetic operators are `+` `-` `*` `/` `//` `/?` `//?`. `/` is float division; `//` is int
+division. Division operators with a `?` return Problem::Ignore on division by 0.
 
 Functions are a function name, '(', comma-separated expression list, ')'.
 Provided functions include:
@@ -116,8 +117,8 @@ Metric type follows the type read from the Inspect file. Currently, UInt is
 converted to Int upon reading. Operating on mixed Int and Float promotes the
 result to Float.
 
-Boolean operations are > < >= <= == !=. The equality tests == and != compare
-numbers, Booleans, strings, and vectors. > < >= <= only compare numbers.
+Boolean operations are `>` `<` `>=` `<=` `==` `!=`. The equality tests `==` and `!=` compare
+numbers, Booleans, strings, and vectors. `>` `<` `>=` `<=` only compare numbers.
 
 Whitespace is optional everywhere, but recommended around infix operators.
 

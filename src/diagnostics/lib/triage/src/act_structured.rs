@@ -10,7 +10,7 @@ use {
         config::DiagnosticData,
         metrics::{
             fetch::{Fetcher, FileDataFetcher},
-            metric_value::MetricValue,
+            metric_value::{MetricValue, Problem},
             MetricState, Metrics, ValueSource,
         },
         plugins::{register_plugins, Plugin},
@@ -136,7 +136,7 @@ impl StructuredActionContext<'_> {
         &self.triage_output
     }
 
-    /// Update warnings if condition is met.
+    /// Populate warnings.
     fn update_warnings(&mut self, action: &Warning, namespace: &String, name: &String) {
         self.metric_state.eval_action_metric(namespace, &action.trigger);
         self.triage_output.add_action(
@@ -146,7 +146,7 @@ impl StructuredActionContext<'_> {
         );
     }
 
-    /// Update snapshots if condition is met.
+    /// Populate snapshots. Log a warning if the condition evaluates to a reportable Problem.
     fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, name: &str) {
         let snapshot_trigger = self.metric_state.eval_action_metric(namespace, &action.trigger);
         self.metric_state.eval_action_metric(namespace, &action.repeat);
@@ -158,6 +158,7 @@ impl StructuredActionContext<'_> {
         match snapshot_trigger {
             MetricValue::Bool(true) => {}
             MetricValue::Bool(false) => {}
+            MetricValue::Problem(Problem::Ignore(_)) => {}
             MetricValue::Problem(_reason) => {
                 #[cfg(target_os = "fuchsia")]
                 warn!("Snapshot trigger was missing: {:?}", _reason);

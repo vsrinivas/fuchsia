@@ -40,6 +40,8 @@ pub enum Problem {
     ValueError(String),
     /// An internal bug; these should never be seen in the wild.
     InternalBug(String),
+    /// One or more expected errors - don't bother humans with the result.
+    Ignore(Vec<Problem>),
 }
 
 impl PartialEq for MetricValue {
@@ -166,6 +168,17 @@ impl std::fmt::Debug for Problem {
                     write!(f, "{:?}; ", problem)?;
                 }
                 write!(f, "]")
+            }
+            Problem::Ignore(problems) => {
+                if problems.len() == 1 {
+                    write!(f, "Ignore: {:?}", problems[0])
+                } else {
+                    write!(f, "Ignore: [")?;
+                    for problem in problems.iter() {
+                        write!(f, "{:?}; ", problem)?;
+                    }
+                    write!(f, "]")
+                }
             }
             Problem::SyntaxError(s) => write!(f, "SyntaxError: {}", s),
             Problem::ValueError(s) => write!(f, "ValueError: {}", s),
@@ -320,6 +333,25 @@ pub(crate) mod test {
                 ]))
             ),
             "MultipleErrors: [SyntaxError: Where is Foo?; ValueError: Where is Bar?; ]"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                MetricValue::Problem(Problem::Ignore(vec![Problem::SyntaxError(
+                    "Where is Foo?".to_string()
+                ),]))
+            ),
+            "Ignore: SyntaxError: Where is Foo?"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                MetricValue::Problem(Problem::Ignore(vec![
+                    Problem::SyntaxError("Where is Foo?".to_string()),
+                    Problem::ValueError("Where is Bar?".to_string()),
+                ]))
+            ),
+            "Ignore: [SyntaxError: Where is Foo?; ValueError: Where is Bar?; ]"
         );
     }
 

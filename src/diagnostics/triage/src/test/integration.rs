@@ -342,6 +342,15 @@ integration_test!(log_tests, vec!["log_tests.triage"], vec![], vec![], 0, "");
 integration_test!(bundle_test, vec!["sample_bundle.json"], vec![], vec![], 0, "gauge: 120");
 
 integration_test!(
+    checked_ratio_test,
+    vec!["sample_checked_ratio.json"],
+    vec![],
+    vec![],
+    0,
+    "gauge: N/A"
+);
+
+integration_test!(
     bundle_files_error_test,
     vec!["sample_bundle_files_error.json"],
     vec![],

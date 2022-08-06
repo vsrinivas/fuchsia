@@ -36,8 +36,13 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::FloatDiv | MathFunction::IntDiv if operands[1] == 0.0 => {
                 return super::value_error("Division by zero")
             }
-            MathFunction::FloatDiv => operands[0] / operands[1],
-            MathFunction::IntDiv => {
+            MathFunction::FloatDivChecked | MathFunction::IntDivChecked if operands[1] == 0.0 => {
+                return MetricValue::Problem(Problem::Ignore(vec![Problem::ValueError(
+                    "Division by zero".to_string(),
+                )]))
+            }
+            MathFunction::FloatDiv | MathFunction::FloatDivChecked => operands[0] / operands[1],
+            MathFunction::IntDiv | MathFunction::IntDivChecked => {
                 return match super::safe_float_to_int(operands[0] / operands[1]) {
                     Some(int) => MetricValue::Int(int),
                     None => super::value_error("Non-numeric division result"),
@@ -58,10 +63,15 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::FloatDiv | MathFunction::IntDiv if operands[1] == 0 => {
                 return super::value_error("Division by zero")
             }
-            MathFunction::FloatDiv => {
+            MathFunction::FloatDivChecked | MathFunction::IntDivChecked if operands[1] == 0 => {
+                return MetricValue::Problem(Problem::Ignore(vec![Problem::ValueError(
+                    "Division by zero".to_string(),
+                )]))
+            }
+            MathFunction::FloatDiv | MathFunction::FloatDivChecked => {
                 return MetricValue::Float(operands[0] as f64 / operands[1] as f64)
             }
-            MathFunction::IntDiv => operands[0] / operands[1],
+            MathFunction::IntDiv | MathFunction::IntDivChecked => operands[0] / operands[1],
             MathFunction::Greater => return MetricValue::Bool(operands[0] > operands[1]),
             MathFunction::Less => return MetricValue::Bool(operands[0] < operands[1]),
             MathFunction::GreaterEq => return MetricValue::Bool(operands[0] >= operands[1]),
@@ -114,7 +124,7 @@ fn promote_type(operands: &Vec<MetricValue>) -> Result<PromotedOperands, MetricV
     if error_vec.len() == 1 {
         return Err(MetricValue::Problem(error_vec.swap_remove(0)));
     }
-    return Err(MetricValue::Problem(Problem::Multiple(error_vec)));
+    return Err(MetricValue::Problem(super::bubble_up_ignore(Problem::Multiple(error_vec))));
 }
 
 // Correct operation of this file is tested in parse.rs.

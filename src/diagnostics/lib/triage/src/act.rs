@@ -281,6 +281,7 @@ impl Gauge {
                 Some(format) if format.as_str() == "percentage" => format!("{}%", value * 100),
                 _ => format!("{}", value),
             },
+            MetricValue::Problem(Problem::Ignore(_)) => "N/A".to_string(),
             value => format!("{:?}", value),
         }
     }
@@ -384,25 +385,22 @@ impl ActionContext<'_> {
                 } else {
                     self.action_results.add_warning(format!("[WARNING] {}.", action.print));
                 }
-                true
             }
-            MetricValue::Bool(false) => false,
+            MetricValue::Bool(false) => (),
+            MetricValue::Problem(Problem::Ignore(_)) => (),
             MetricValue::Problem(Problem::Missing(reason)) => {
                 self.action_results
                     .add_warning(format!("[MISSING] In config '{}': {:?}", namespace, reason));
-                false
             }
             MetricValue::Problem(problem) => {
                 self.action_results
                     .add_warning(format!("[ERROR] In config '{}': {:?}", namespace, problem));
-                false
             }
             other => {
                 self.action_results.add_warning(format!(
                     "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
                     namespace, other
                 ));
-                false
             }
         };
     }
@@ -418,7 +416,6 @@ impl ActionContext<'_> {
                         let signature = action.signature.clone();
                         let output = SnapshotTrigger { interval, signature };
                         self.action_results.add_snapshot(output);
-                        true
                     }
                     Err(ref bad_type) => {
                         self.action_results.add_warning(format!(
@@ -427,17 +424,16 @@ impl ActionContext<'_> {
                         ));
                         #[cfg(target_os = "fuchsia")]
                         error!("Bad interval in config '{}': {:?}", namespace, interval);
-                        false
                     }
                 }
             }
-            MetricValue::Bool(false) => false,
+            MetricValue::Bool(false) => (),
+            MetricValue::Problem(Problem::Ignore(_)) => (),
             MetricValue::Problem(reason) => {
                 #[cfg(target_os = "fuchsia")]
                 warn!("Snapshot trigger was missing: {:?}", reason);
                 self.action_results
                     .add_warning(format!("[MISSING] In config '{}': {:?}", namespace, reason));
-                false
             }
             other => {
                 #[cfg(target_os = "fuchsia")]
@@ -449,7 +445,6 @@ impl ActionContext<'_> {
                     "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
                     namespace, other
                 ));
-                false
             }
         };
     }
@@ -457,7 +452,18 @@ impl ActionContext<'_> {
     /// Update gauges.
     fn update_gauges(&mut self, action: &Gauge, namespace: &String, name: &String) {
         let value = self.metric_state.eval_action_metric(namespace, &action.value);
-        self.action_results.add_gauge(format!("{}: {}", name, action.get_formatted_value(value)));
+        match value {
+            MetricValue::Problem(Problem::Ignore(_)) => {
+                self.action_results.add_gauge(format!("{}: N/A", name));
+            }
+            value => {
+                self.action_results.add_gauge(format!(
+                    "{}: {}",
+                    name,
+                    action.get_formatted_value(value)
+                ));
+            }
+        }
     }
 }
 

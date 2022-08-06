@@ -29,22 +29,22 @@
         // Don't trigger from last-1d counters unless there has been at least 6 hours worth of data.
         enough_1d_counters_data: "total_duration_1d > Hours(6)",
         uptime_denominator_duration_1d: "connected_duration_1d + Max(0, downtime_duration_1d - downtime_no_saved_neighbor_duration_1d)",
-        uptime_ratio_1d: "connected_duration_1d / uptime_denominator_duration_1d",
-        connect_successful_ratio_1d: "connect_successful_count_1d / connect_attempts_count_1d",
-        disconnect_per_day_connected_ratio_1d: "disconnect_count_1d / (connected_duration_1d / Days(1))",
-        rx_high_packet_drop_duration_ratio_1d: "rx_high_packet_drop_duration_1d / connected_duration_1d",
-        rx_very_high_packet_drop_duration_ratio_1d: "rx_very_high_packet_drop_duration_1d / connected_duration_1d",
-        tx_high_packet_drop_duration_ratio_1d: "tx_high_packet_drop_duration_1d / connected_duration_1d",
-        tx_very_high_packet_drop_duration_ratio_1d: "tx_very_high_packet_drop_duration_1d / connected_duration_1d",
-        no_rx_duration_ratio_1d: "no_rx_duration_1d / connected_duration_1d",
+        uptime_ratio_1d: "connected_duration_1d /? uptime_denominator_duration_1d",
+        connect_successful_ratio_1d: "connect_successful_count_1d /? connect_attempts_count_1d",
+        disconnect_per_day_connected_ratio_1d: "disconnect_count_1d /? (connected_duration_1d / Days(1))",
+        rx_high_packet_drop_duration_ratio_1d: "rx_high_packet_drop_duration_1d /? connected_duration_1d",
+        rx_very_high_packet_drop_duration_ratio_1d: "rx_very_high_packet_drop_duration_1d /? connected_duration_1d",
+        tx_high_packet_drop_duration_ratio_1d: "tx_high_packet_drop_duration_1d /? connected_duration_1d",
+        tx_very_high_packet_drop_duration_ratio_1d: "tx_very_high_packet_drop_duration_1d /? connected_duration_1d",
+        no_rx_duration_ratio_1d: "no_rx_duration_1d /? connected_duration_1d",
 
         // Gauges for up to last 7 days
         // Don't trigger from last-7d counters unless there has been at least 3 days worth of data.
         enough_7d_counters_data: "total_duration_7d > Days(3)",
         uptime_denominator_duration_7d: "connected_duration_7d + Max(0, downtime_duration_7d - downtime_no_saved_neighbor_duration_7d)",
-        uptime_ratio_7d: "connected_duration_7d / uptime_denominator_duration_7d",
-        connect_successful_ratio_7d: "connect_successful_count_7d / connect_attempts_count_7d",
-        disconnect_per_day_connected_ratio_7d: "disconnect_count_7d / (connected_duration_7d / Days(1))",
+        uptime_ratio_7d: "connected_duration_7d /? uptime_denominator_duration_7d",
+        connect_successful_ratio_7d: "connect_successful_count_7d /? connect_attempts_count_7d",
+        disconnect_per_day_connected_ratio_7d: "disconnect_count_7d /? (connected_duration_7d / Days(1))",
     },
     act: {
         wlan_driver_unresponsive: {

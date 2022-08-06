@@ -403,7 +403,13 @@ fn build_expression<'a>(
 fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
     let (remainder, (items, operators)) = items_and_separators(
         expression_primitive,
-        alt((math!("*", Mul), math!("//", IntDiv), math!("/", FloatDiv))),
+        alt((
+            math!("*", Mul),
+            math!("//?", IntDivChecked),
+            math!("/?", FloatDivChecked),
+            math!("//", IntDiv),
+            math!("/", FloatDiv),
+        )),
         i,
     )?;
     Ok((remainder, build_expression(items, operators)))
@@ -776,12 +782,26 @@ mod test {
         assert_eq!(eval!("3*4+2"), MetricValue::Int(14));
         assert_eq!(eval!("2-3-4"), MetricValue::Int(-5));
         assert_eq!(eval!("6//3*4"), MetricValue::Int(8));
+        assert_eq!(eval!("6//?3*4"), MetricValue::Int(8));
+        assert_eq!(eval!("6/3*4"), MetricValue::Float(8.0));
+        assert_eq!(eval!("6/?3*4"), MetricValue::Float(8.0));
+        assert_eq!(eval!("8/4/2"), MetricValue::Float(1.0));
+        assert_eq!(eval!("8/4*2"), MetricValue::Float(4.0));
         assert_eq!(eval!("2-3-4"), MetricValue::Int(-5));
         assert_eq!(eval!("(2+3)*4"), MetricValue::Int(20));
         assert_eq!(eval!("2++4"), MetricValue::Int(6));
         assert_eq!(eval!("2+-4"), MetricValue::Int(-2));
         assert_eq!(eval!("2-+4"), MetricValue::Int(-2));
         assert_eq!(eval!("2--4"), MetricValue::Int(6));
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn division_by_zero() -> Result<(), Error> {
+        assert_problem!(eval!("4/0"), "ValueError: Division by zero");
+        assert_problem!(eval!("4//0"), "ValueError: Division by zero");
+        assert_problem!(eval!("4/?0"), "Ignore: ValueError: Division by zero");
+        assert_problem!(eval!("4//?0"), "Ignore: ValueError: Division by zero");
         Ok(())
     }
 
