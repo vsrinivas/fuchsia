@@ -71,6 +71,7 @@
 #include "src/storage/f2fs/f2fs_internal.h"
 #include "src/storage/f2fs/namestring.h"
 #include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/storage_buffer.h"
 #include "src/storage/f2fs/writeback.h"
 #include "src/storage/f2fs/vnode.h"
 #include "src/storage/f2fs/vnode_cache.h"

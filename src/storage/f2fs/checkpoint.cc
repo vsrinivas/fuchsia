@@ -460,13 +460,10 @@ void F2fs::DoCheckpoint(bool is_umount) {
     start_blk += kNrCursegNodeType;
   }
 
-  // Flush SegmentWriteBuffers.
-  ScheduleWriterSubmitPages();
   {
     // Write out this checkpoint pack.
     WritebackOperation op = {.bSync = true};
     SyncMetaPages(op);
-    ZX_ASSERT(superblock_info.GetPageCount(CountType::kWriteback) == 0);
   }
 
   // Prepare the commit block.
@@ -482,19 +479,17 @@ void F2fs::DoCheckpoint(bool is_umount) {
   superblock_info.SetAllocValidBlockCount(0);
 
   // Commit.
-  {
+  if (!superblock_info.TestCpFlags(CpFlag::kCpErrorFlag)) {
+    ZX_ASSERT(superblock_info.GetPageCount(CountType::kWriteback) == 0);
     ZX_ASSERT(superblock_info.GetPageCount(CountType::kDirtyMeta) == 1);
     // TODO: Use FUA when it is available.
     GetBc().Flush();
     WritebackOperation op = {.bSync = true};
     SyncMetaPages(op);
     GetBc().Flush();
-  }
 
-  GetSegmentManager().ClearPrefreeSegments();
-  superblock_info.ClearDirty();
-
-  if (!superblock_info.TestCpFlags(CpFlag::kCpErrorFlag)) {
+    GetSegmentManager().ClearPrefreeSegments();
+    superblock_info.ClearDirty();
     meta_vnode_->InvalidatePages();
   }
 }
@@ -537,7 +532,6 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   std::lock_guard cp_lock(superblock_info.GetCheckpointMutex());
   ZX_DEBUG_ASSERT(IsCheckpointAvailable());
   BlockOperations();
-  ScheduleWriterSubmitPages();
 
   // update checkpoint pack index
   // Increase the version number so that

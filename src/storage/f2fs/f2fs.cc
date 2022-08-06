@@ -327,18 +327,7 @@ zx_status_t F2fs::MakeReadOperation(LockedPage& page, block_t blk_addr, bool is_
 }
 
 zx_status_t F2fs::MakeWriteOperation(LockedPage& page, block_t blk_addr, PageType type) {
-  if (blk_addr >= GetBc().Maxblk()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  storage::Operation op = {
-      .type = storage::OperationType::kWrite,
-      .dev_offset = blk_addr,
-      .length = 1,
-  };
-  writer_->EnqueuePage(op, page, type);
-
-  return ZX_OK;
+  return writer_->EnqueuePage(page, blk_addr, type).status_value();
 }
 
 zx_status_t F2fs::MakeOperation(storage::OperationType op, LockedPage& page, block_t blk_addr,
@@ -360,4 +349,5 @@ zx_status_t F2fs::MakeOperation(storage::OperationType op, block_t blk_addr, blo
   }
   return GetBc().Trim(blk_addr, nblocks);
 }
+
 }  // namespace f2fs
