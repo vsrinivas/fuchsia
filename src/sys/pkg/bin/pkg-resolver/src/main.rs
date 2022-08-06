@@ -334,10 +334,15 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     };
 
     let cup_cb = {
+        let cobalt_sender = cobalt_sender.clone();
         move |stream| {
             fasync::Task::local(
-                eager_package_manager::run_cup_service(Arc::clone(&eager_package_manager), stream)
-                    .unwrap_or_else(|e| fx_log_err!("run_cup_service failed: {:#}", anyhow!(e))),
+                eager_package_manager::run_cup_service(
+                    Arc::clone(&eager_package_manager),
+                    stream,
+                    cobalt_sender.clone(),
+                )
+                .unwrap_or_else(|e| fx_log_err!("run_cup_service failed: {:#}", anyhow!(e))),
             )
             .detach()
         }

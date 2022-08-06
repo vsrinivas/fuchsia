@@ -5,6 +5,7 @@
 /// This module tests eager packages.
 use {
     assert_matches::assert_matches,
+    cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::{GetInfoError, ResolveError},
     fidl_fuchsia_pkg_ext::CupData,
     fuchsia_async as fasync,
@@ -263,6 +264,21 @@ async fn test_cup_write() {
     // Verify the served package directory contains the exact expected contents.
     pkg.verify_contents(&package).await.unwrap();
 
+    env.assert_count_events(
+        metrics::CUP_GETINFO_METRIC_ID,
+        vec![
+            metrics::CupGetinfoMetricDimensionResult::NotAvailable,
+            metrics::CupGetinfoMetricDimensionResult::Success,
+        ],
+    )
+    .await;
+
+    env.assert_count_events(
+        metrics::CUP_WRITE_METRIC_ID,
+        vec![metrics::CupGetinfoMetricDimensionResult::Success],
+    )
+    .await;
+
     env.stop().await;
 }
 
@@ -306,6 +322,12 @@ async fn test_cup_get_info_persisted() {
 
     assert_eq!(version, "1.2.3.4");
     assert_eq!(channel, "stable");
+
+    env.assert_count_events(
+        metrics::CUP_GETINFO_METRIC_ID,
+        vec![metrics::CupGetinfoMetricDimensionResult::Success],
+    )
+    .await;
 
     env.stop().await;
 }

@@ -6,11 +6,15 @@ use {
     crate::resolver_service::Resolver,
     anyhow::{anyhow, Context as _, Error},
     async_lock::RwLock as AsyncRwLock,
+    cobalt_sw_delivery_registry as metrics,
     eager_package_config::pkg_resolver::{EagerPackageConfig, EagerPackageConfigs},
+    fidl_contrib::protocol_connector::ProtocolSender,
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{self as fpkg, CupRequest, CupRequestStream, GetInfoError, WriteError},
     fidl_fuchsia_pkg_ext::{cache, BlobInfo, CupData, CupMissingField, ResolutionContext},
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
+    fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::fx_log_err,
     fuchsia_url::{AbsolutePackageUrl, Hash, PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
@@ -447,6 +451,7 @@ impl From<&CupGetInfoError> for GetInfoError {
 pub async fn run_cup_service<T: Resolver>(
     manager: Arc<Option<AsyncRwLock<EagerPackageManager<T>>>>,
     mut stream: CupRequestStream,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         match event {
@@ -461,6 +466,13 @@ pub async fn run_cup_service<T: Resolver>(
                     }
                     None => Err(WriteError::Storage),
                 };
+
+                cobalt_sender.send(
+                    MetricEvent::builder(metrics::CUP_WRITE_METRIC_ID)
+                        .with_event_codes(cup_write_result_to_event_code(&response))
+                        .as_occurrence(1),
+                );
+
                 responder.send(&mut response)?;
             }
             CupRequest::GetInfo { url, responder } => {
@@ -472,11 +484,43 @@ pub async fn run_cup_service<T: Resolver>(
                     }),
                     None => Err(GetInfoError::NotAvailable),
                 };
+
+                cobalt_sender.send(
+                    MetricEvent::builder(metrics::CUP_GETINFO_METRIC_ID)
+                        .with_event_codes(cup_getinfo_result_to_event_code(&response))
+                        .as_occurrence(1),
+                );
+
                 responder.send(&mut response)?;
             }
         }
     }
     Ok(())
+}
+
+fn cup_write_result_to_event_code(
+    result: &Result<(), WriteError>,
+) -> metrics::CupWriteMetricDimensionResult {
+    use metrics::CupWriteMetricDimensionResult as EventCodes;
+    match result {
+        Ok(_) => EventCodes::Success,
+        Err(WriteError::UnknownUrl) => EventCodes::UnknownUrl,
+        Err(WriteError::Verification) => EventCodes::Verification,
+        Err(WriteError::Download) => EventCodes::Download,
+        Err(WriteError::Storage) => EventCodes::Storage,
+    }
+}
+
+fn cup_getinfo_result_to_event_code(
+    result: &Result<(String, String), GetInfoError>,
+) -> metrics::CupGetinfoMetricDimensionResult {
+    use metrics::CupGetinfoMetricDimensionResult as EventCodes;
+    match result {
+        Ok(_) => EventCodes::Success,
+        Err(GetInfoError::UnknownUrl) => EventCodes::UnknownUrl,
+        Err(GetInfoError::Verification) => EventCodes::Verification,
+        Err(GetInfoError::NotAvailable) => EventCodes::NotAvailable,
+    }
 }
 
 #[cfg(test)]
