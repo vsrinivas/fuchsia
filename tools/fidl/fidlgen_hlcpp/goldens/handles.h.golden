@@ -52,6 +52,8 @@ class Handles final {
 
   ::zx::job job_handle{};
 
+  ::zx::msi msi_handle{};
+
   ::zx::pager pager_handle{};
 
   ::zx::pmt pmt_handle{};
@@ -65,6 +67,8 @@ class Handles final {
   ::zx::resource resource_handle{};
 
   ::zx::socket socket_handle{};
+
+  ::zx::stream stream_handle{};
 
   ::zx::suspend_token suspendtoken_handle{};
 
@@ -124,11 +128,11 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::handles::Handles>
-    : public EncodableCodingTraits<::test::handles::Handles, 128> {};
+    : public EncodableCodingTraits<::test::handles::Handles, 136> {};
 
 template <>
 struct IsMemcpyCompatible<::test::handles::Handles> : public internal::BoolConstant<
-                                                          !HasPadding<::test::handles::Handles>::value && IsMemcpyCompatible<::zx::handle>::value && IsMemcpyCompatible<::zx::bti>::value && IsMemcpyCompatible<::zx::channel>::value && IsMemcpyCompatible<::zx::clock>::value && IsMemcpyCompatible<::zx::debuglog>::value && IsMemcpyCompatible<::zx::event>::value && IsMemcpyCompatible<::zx::eventpair>::value && IsMemcpyCompatible<::zx::exception>::value && IsMemcpyCompatible<::zx::fifo>::value && IsMemcpyCompatible<::zx::guest>::value && IsMemcpyCompatible<::zx::interrupt>::value && IsMemcpyCompatible<::zx::iommu>::value && IsMemcpyCompatible<::zx::job>::value && IsMemcpyCompatible<::zx::pager>::value && IsMemcpyCompatible<::zx::pmt>::value && IsMemcpyCompatible<::zx::port>::value && IsMemcpyCompatible<::zx::process>::value && IsMemcpyCompatible<::zx::profile>::value && IsMemcpyCompatible<::zx::resource>::value && IsMemcpyCompatible<::zx::socket>::value && IsMemcpyCompatible<::zx::suspend_token>::value && IsMemcpyCompatible<::zx::thread>::value && IsMemcpyCompatible<::zx::timer>::value && IsMemcpyCompatible<::zx::vcpu>::value && IsMemcpyCompatible<::zx::vmar>::value && IsMemcpyCompatible<::zx::vmo>::value && IsMemcpyCompatible<::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value && IsMemcpyCompatible<::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value> {};
+                                                          !HasPadding<::test::handles::Handles>::value && IsMemcpyCompatible<::zx::handle>::value && IsMemcpyCompatible<::zx::bti>::value && IsMemcpyCompatible<::zx::channel>::value && IsMemcpyCompatible<::zx::clock>::value && IsMemcpyCompatible<::zx::debuglog>::value && IsMemcpyCompatible<::zx::event>::value && IsMemcpyCompatible<::zx::eventpair>::value && IsMemcpyCompatible<::zx::exception>::value && IsMemcpyCompatible<::zx::fifo>::value && IsMemcpyCompatible<::zx::guest>::value && IsMemcpyCompatible<::zx::interrupt>::value && IsMemcpyCompatible<::zx::iommu>::value && IsMemcpyCompatible<::zx::job>::value && IsMemcpyCompatible<::zx::msi>::value && IsMemcpyCompatible<::zx::pager>::value && IsMemcpyCompatible<::zx::pmt>::value && IsMemcpyCompatible<::zx::port>::value && IsMemcpyCompatible<::zx::process>::value && IsMemcpyCompatible<::zx::profile>::value && IsMemcpyCompatible<::zx::resource>::value && IsMemcpyCompatible<::zx::socket>::value && IsMemcpyCompatible<::zx::stream>::value && IsMemcpyCompatible<::zx::suspend_token>::value && IsMemcpyCompatible<::zx::thread>::value && IsMemcpyCompatible<::zx::timer>::value && IsMemcpyCompatible<::zx::vcpu>::value && IsMemcpyCompatible<::zx::vmar>::value && IsMemcpyCompatible<::zx::vmo>::value && IsMemcpyCompatible<::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value && IsMemcpyCompatible<::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value> {};
 
 inline zx_status_t Clone(const ::test::handles::Handles& value,
                          ::test::handles::Handles* result) {
@@ -177,6 +181,9 @@ struct Equality<::test::handles::Handles> {
     if (!::fidl::Equals(_lhs.job_handle, _rhs.job_handle)) {
       return false;
     }
+    if (!::fidl::Equals(_lhs.msi_handle, _rhs.msi_handle)) {
+      return false;
+    }
     if (!::fidl::Equals(_lhs.pager_handle, _rhs.pager_handle)) {
       return false;
     }
@@ -196,6 +203,9 @@ struct Equality<::test::handles::Handles> {
       return false;
     }
     if (!::fidl::Equals(_lhs.socket_handle, _rhs.socket_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.stream_handle, _rhs.stream_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.suspendtoken_handle, _rhs.suspendtoken_handle)) {

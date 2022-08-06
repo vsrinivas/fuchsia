@@ -31,6 +31,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/job.h>
+#include <lib/zx/msi.h>
 #include <lib/zx/object.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/pmt.h>

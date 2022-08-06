@@ -17,6 +17,7 @@ void ::test_handles::wire::Handles::_CloseHandles() {
   interrupt_handle.reset();
   iommu_handle.reset();
   job_handle.reset();
+  msi_handle.reset();
   pager_handle.reset();
   pmt_handle.reset();
   port_handle.reset();
@@ -24,6 +25,7 @@ void ::test_handles::wire::Handles::_CloseHandles() {
   profile_handle.reset();
   resource_handle.reset();
   socket_handle.reset();
+  stream_handle.reset();
   suspendtoken_handle.reset();
   thread_handle.reset();
   timer_handle.reset();

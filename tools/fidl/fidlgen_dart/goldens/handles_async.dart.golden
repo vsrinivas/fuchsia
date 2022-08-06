@@ -56,6 +56,7 @@ class Handles extends $fidl.Struct {
     required this.interruptHandle,
     required this.iommuHandle,
     required this.jobHandle,
+    required this.msiHandle,
     required this.pagerHandle,
     required this.pmtHandle,
     required this.portHandle,
@@ -63,6 +64,7 @@ class Handles extends $fidl.Struct {
     required this.profileHandle,
     required this.resourceHandle,
     required this.socketHandle,
+    required this.streamHandle,
     required this.suspendtokenHandle,
     required this.threadHandle,
     required this.timerHandle,
@@ -91,6 +93,7 @@ class Handles extends $fidl.Struct {
     $zircon.Handle? interruptHandle,
     $zircon.Handle? iommuHandle,
     $zircon.Handle? jobHandle,
+    $zircon.Handle? msiHandle,
     $zircon.Handle? pagerHandle,
     $zircon.Handle? pmtHandle,
     $zircon.Handle? portHandle,
@@ -98,6 +101,7 @@ class Handles extends $fidl.Struct {
     $zircon.Handle? profileHandle,
     $zircon.Handle? resourceHandle,
     $zircon.Socket? socketHandle,
+    $zircon.Handle? streamHandle,
     $zircon.Handle? suspendtokenHandle,
     $zircon.Handle? threadHandle,
     $zircon.Handle? timerHandle,
@@ -124,6 +128,7 @@ class Handles extends $fidl.Struct {
           interruptHandle: interruptHandle ?? $orig.interruptHandle,
           iommuHandle: iommuHandle ?? $orig.iommuHandle,
           jobHandle: jobHandle ?? $orig.jobHandle,
+          msiHandle: msiHandle ?? $orig.msiHandle,
           pagerHandle: pagerHandle ?? $orig.pagerHandle,
           pmtHandle: pmtHandle ?? $orig.pmtHandle,
           portHandle: portHandle ?? $orig.portHandle,
@@ -131,6 +136,7 @@ class Handles extends $fidl.Struct {
           profileHandle: profileHandle ?? $orig.profileHandle,
           resourceHandle: resourceHandle ?? $orig.resourceHandle,
           socketHandle: socketHandle ?? $orig.socketHandle,
+          streamHandle: streamHandle ?? $orig.streamHandle,
           suspendtokenHandle: suspendtokenHandle ?? $orig.suspendtokenHandle,
           threadHandle: threadHandle ?? $orig.threadHandle,
           timerHandle: timerHandle ?? $orig.timerHandle,
@@ -162,6 +168,7 @@ class Handles extends $fidl.Struct {
     $zircon.Handle? interruptHandle,
     $zircon.Handle? iommuHandle,
     $zircon.Handle? jobHandle,
+    $zircon.Handle? msiHandle,
     $zircon.Handle? pagerHandle,
     $zircon.Handle? pmtHandle,
     $zircon.Handle? portHandle,
@@ -169,6 +176,7 @@ class Handles extends $fidl.Struct {
     $zircon.Handle? profileHandle,
     $zircon.Handle? resourceHandle,
     $zircon.Socket? socketHandle,
+    $zircon.Handle? streamHandle,
     $zircon.Handle? suspendtokenHandle,
     $zircon.Handle? threadHandle,
     $zircon.Handle? timerHandle,
@@ -196,6 +204,7 @@ class Handles extends $fidl.Struct {
       interruptHandle: interruptHandle ?? this.interruptHandle,
       iommuHandle: iommuHandle ?? this.iommuHandle,
       jobHandle: jobHandle ?? this.jobHandle,
+      msiHandle: msiHandle ?? this.msiHandle,
       pagerHandle: pagerHandle ?? this.pagerHandle,
       pmtHandle: pmtHandle ?? this.pmtHandle,
       portHandle: portHandle ?? this.portHandle,
@@ -203,6 +212,7 @@ class Handles extends $fidl.Struct {
       profileHandle: profileHandle ?? this.profileHandle,
       resourceHandle: resourceHandle ?? this.resourceHandle,
       socketHandle: socketHandle ?? this.socketHandle,
+      streamHandle: streamHandle ?? this.streamHandle,
       suspendtokenHandle: suspendtokenHandle ?? this.suspendtokenHandle,
       threadHandle: threadHandle ?? this.threadHandle,
       timerHandle: timerHandle ?? this.timerHandle,
@@ -234,6 +244,7 @@ class Handles extends $fidl.Struct {
   final $zircon.Handle interruptHandle;
   final $zircon.Handle iommuHandle;
   final $zircon.Handle jobHandle;
+  final $zircon.Handle msiHandle;
   final $zircon.Handle pagerHandle;
   final $zircon.Handle pmtHandle;
   final $zircon.Handle portHandle;
@@ -241,6 +252,7 @@ class Handles extends $fidl.Struct {
   final $zircon.Handle profileHandle;
   final $zircon.Handle resourceHandle;
   final $zircon.Socket socketHandle;
+  final $zircon.Handle streamHandle;
   final $zircon.Handle suspendtokenHandle;
   final $zircon.Handle threadHandle;
   final $zircon.Handle timerHandle;
@@ -270,6 +282,7 @@ class Handles extends $fidl.Struct {
       interruptHandle,
       iommuHandle,
       jobHandle,
+      msiHandle,
       pagerHandle,
       pmtHandle,
       portHandle,
@@ -277,6 +290,7 @@ class Handles extends $fidl.Struct {
       profileHandle,
       resourceHandle,
       socketHandle,
+      streamHandle,
       suspendtokenHandle,
       threadHandle,
       timerHandle,
@@ -319,37 +333,41 @@ class Handles extends $fidl.Struct {
   static const $fieldType12 =
       $fidl.HandleType(objectType: 17, rights: 2147483648);
   static const $fieldType13 =
-      $fidl.HandleType(objectType: 28, rights: 2147483648);
+      $fidl.HandleType(objectType: 32, rights: 2147483648);
   static const $fieldType14 =
-      $fidl.HandleType(objectType: 26, rights: 2147483648);
+      $fidl.HandleType(objectType: 28, rights: 2147483648);
   static const $fieldType15 =
-      $fidl.HandleType(objectType: 6, rights: 2147483648);
+      $fidl.HandleType(objectType: 26, rights: 2147483648);
   static const $fieldType16 =
-      $fidl.HandleType(objectType: 1, rights: 2147483648);
+      $fidl.HandleType(objectType: 6, rights: 2147483648);
   static const $fieldType17 =
-      $fidl.HandleType(objectType: 25, rights: 2147483648);
+      $fidl.HandleType(objectType: 1, rights: 2147483648);
   static const $fieldType18 =
-      $fidl.HandleType(objectType: 15, rights: 2147483648);
+      $fidl.HandleType(objectType: 25, rights: 2147483648);
   static const $fieldType19 =
-      $fidl.SocketType(objectType: 14, rights: 2147483648);
+      $fidl.HandleType(objectType: 15, rights: 2147483648);
   static const $fieldType20 =
-      $fidl.HandleType(objectType: 27, rights: 2147483648);
+      $fidl.SocketType(objectType: 14, rights: 2147483648);
   static const $fieldType21 =
-      $fidl.HandleType(objectType: 2, rights: 2147483648);
+      $fidl.HandleType(objectType: 31, rights: 2147483648);
   static const $fieldType22 =
-      $fidl.HandleType(objectType: 22, rights: 2147483648);
+      $fidl.HandleType(objectType: 27, rights: 2147483648);
   static const $fieldType23 =
-      $fidl.HandleType(objectType: 21, rights: 2147483648);
+      $fidl.HandleType(objectType: 2, rights: 2147483648);
   static const $fieldType24 =
+      $fidl.HandleType(objectType: 22, rights: 2147483648);
+  static const $fieldType25 =
+      $fidl.HandleType(objectType: 21, rights: 2147483648);
+  static const $fieldType26 =
       $fidl.HandleType(objectType: 18, rights: 2147483648);
-  static const $fieldType25 = $fidl.VmoType(objectType: 3, rights: 2147483648);
-  static const $fieldType26 = $fidl.VmoType(objectType: 3, rights: 5);
-  static const $fieldType27 =
+  static const $fieldType27 = $fidl.VmoType(objectType: 3, rights: 2147483648);
+  static const $fieldType28 = $fidl.VmoType(objectType: 3, rights: 5);
+  static const $fieldType29 =
       $fidl.HandleType(objectType: 0, rights: 2147483648);
-  static const $fieldType28 = $fidl.VmoType(objectType: 3, rights: 2147483648);
-  static const $fieldType29 = $fidl.VmoType(objectType: 3, rights: 1);
-  static const $fieldType30 = $fidl.InterfaceHandleType<SomeProtocol>();
-  static const $fieldType31 = $fidl.InterfaceRequestType<SomeProtocol>();
+  static const $fieldType30 = $fidl.VmoType(objectType: 3, rights: 2147483648);
+  static const $fieldType31 = $fidl.VmoType(objectType: 3, rights: 1);
+  static const $fieldType32 = $fidl.InterfaceHandleType<SomeProtocol>();
+  static const $fieldType33 = $fidl.InterfaceRequestType<SomeProtocol>();
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
@@ -366,28 +384,30 @@ class Handles extends $fidl.Struct {
     $fieldType10.encode($encoder, interruptHandle, $offset + 40, $depth);
     $fieldType11.encode($encoder, iommuHandle, $offset + 44, $depth);
     $fieldType12.encode($encoder, jobHandle, $offset + 48, $depth);
-    $fieldType13.encode($encoder, pagerHandle, $offset + 52, $depth);
-    $fieldType14.encode($encoder, pmtHandle, $offset + 56, $depth);
-    $fieldType15.encode($encoder, portHandle, $offset + 60, $depth);
-    $fieldType16.encode($encoder, processHandle, $offset + 64, $depth);
-    $fieldType17.encode($encoder, profileHandle, $offset + 68, $depth);
-    $fieldType18.encode($encoder, resourceHandle, $offset + 72, $depth);
-    $fieldType19.encode($encoder, socketHandle, $offset + 76, $depth);
-    $fieldType20.encode($encoder, suspendtokenHandle, $offset + 80, $depth);
-    $fieldType21.encode($encoder, threadHandle, $offset + 84, $depth);
-    $fieldType22.encode($encoder, timerHandle, $offset + 88, $depth);
-    $fieldType23.encode($encoder, vcpuHandle, $offset + 92, $depth);
-    $fieldType24.encode($encoder, vmarHandle, $offset + 96, $depth);
-    $fieldType25.encode($encoder, vmoHandle, $offset + 100, $depth);
-    $fieldType26.encode($encoder, rightsHandle, $offset + 104, $depth);
-    $fieldType27.encode(
-        $encoder, aliasedPlainHandleField, $offset + 108, $depth);
-    $fieldType28.encode(
-        $encoder, aliasedSubtypeHandleField, $offset + 112, $depth);
+    $fieldType13.encode($encoder, msiHandle, $offset + 52, $depth);
+    $fieldType14.encode($encoder, pagerHandle, $offset + 56, $depth);
+    $fieldType15.encode($encoder, pmtHandle, $offset + 60, $depth);
+    $fieldType16.encode($encoder, portHandle, $offset + 64, $depth);
+    $fieldType17.encode($encoder, processHandle, $offset + 68, $depth);
+    $fieldType18.encode($encoder, profileHandle, $offset + 72, $depth);
+    $fieldType19.encode($encoder, resourceHandle, $offset + 76, $depth);
+    $fieldType20.encode($encoder, socketHandle, $offset + 80, $depth);
+    $fieldType21.encode($encoder, streamHandle, $offset + 84, $depth);
+    $fieldType22.encode($encoder, suspendtokenHandle, $offset + 88, $depth);
+    $fieldType23.encode($encoder, threadHandle, $offset + 92, $depth);
+    $fieldType24.encode($encoder, timerHandle, $offset + 96, $depth);
+    $fieldType25.encode($encoder, vcpuHandle, $offset + 100, $depth);
+    $fieldType26.encode($encoder, vmarHandle, $offset + 104, $depth);
+    $fieldType27.encode($encoder, vmoHandle, $offset + 108, $depth);
+    $fieldType28.encode($encoder, rightsHandle, $offset + 112, $depth);
     $fieldType29.encode(
-        $encoder, aliasedRightsHandleField, $offset + 116, $depth);
-    $fieldType30.encode($encoder, someProtocol, $offset + 120, $depth);
-    $fieldType31.encode($encoder, requestSomeProtocol, $offset + 124, $depth);
+        $encoder, aliasedPlainHandleField, $offset + 116, $depth);
+    $fieldType30.encode(
+        $encoder, aliasedSubtypeHandleField, $offset + 120, $depth);
+    $fieldType31.encode(
+        $encoder, aliasedRightsHandleField, $offset + 124, $depth);
+    $fieldType32.encode($encoder, someProtocol, $offset + 128, $depth);
+    $fieldType33.encode($encoder, requestSomeProtocol, $offset + 132, $depth);
   }
 
   static Handles _structDecode(
@@ -410,30 +430,32 @@ class Handles extends $fidl.Struct {
                 $fieldType10.decode($decoder, $offset + 40, $depth),
             iommuHandle: $fieldType11.decode($decoder, $offset + 44, $depth),
             jobHandle: $fieldType12.decode($decoder, $offset + 48, $depth),
-            pagerHandle: $fieldType13.decode($decoder, $offset + 52, $depth),
-            pmtHandle: $fieldType14.decode($decoder, $offset + 56, $depth),
-            portHandle: $fieldType15.decode($decoder, $offset + 60, $depth),
-            processHandle: $fieldType16.decode($decoder, $offset + 64, $depth),
-            profileHandle: $fieldType17.decode($decoder, $offset + 68, $depth),
-            resourceHandle: $fieldType18.decode($decoder, $offset + 72, $depth),
-            socketHandle: $fieldType19.decode($decoder, $offset + 76, $depth),
+            msiHandle: $fieldType13.decode($decoder, $offset + 52, $depth),
+            pagerHandle: $fieldType14.decode($decoder, $offset + 56, $depth),
+            pmtHandle: $fieldType15.decode($decoder, $offset + 60, $depth),
+            portHandle: $fieldType16.decode($decoder, $offset + 64, $depth),
+            processHandle: $fieldType17.decode($decoder, $offset + 68, $depth),
+            profileHandle: $fieldType18.decode($decoder, $offset + 72, $depth),
+            resourceHandle: $fieldType19.decode($decoder, $offset + 76, $depth),
+            socketHandle: $fieldType20.decode($decoder, $offset + 80, $depth),
+            streamHandle: $fieldType21.decode($decoder, $offset + 84, $depth),
             suspendtokenHandle:
-                $fieldType20.decode($decoder, $offset + 80, $depth),
-            threadHandle: $fieldType21.decode($decoder, $offset + 84, $depth),
-            timerHandle: $fieldType22.decode($decoder, $offset + 88, $depth),
-            vcpuHandle: $fieldType23.decode($decoder, $offset + 92, $depth),
-            vmarHandle: $fieldType24.decode($decoder, $offset + 96, $depth),
-            vmoHandle: $fieldType25.decode($decoder, $offset + 100, $depth),
-            rightsHandle: $fieldType26.decode($decoder, $offset + 104, $depth),
+                $fieldType22.decode($decoder, $offset + 88, $depth),
+            threadHandle: $fieldType23.decode($decoder, $offset + 92, $depth),
+            timerHandle: $fieldType24.decode($decoder, $offset + 96, $depth),
+            vcpuHandle: $fieldType25.decode($decoder, $offset + 100, $depth),
+            vmarHandle: $fieldType26.decode($decoder, $offset + 104, $depth),
+            vmoHandle: $fieldType27.decode($decoder, $offset + 108, $depth),
+            rightsHandle: $fieldType28.decode($decoder, $offset + 112, $depth),
             aliasedPlainHandleField:
-                $fieldType27.decode($decoder, $offset + 108, $depth),
-            aliasedSubtypeHandleField:
-                $fieldType28.decode($decoder, $offset + 112, $depth),
-            aliasedRightsHandleField:
                 $fieldType29.decode($decoder, $offset + 116, $depth),
-            someProtocol: $fieldType30.decode($decoder, $offset + 120, $depth),
+            aliasedSubtypeHandleField:
+                $fieldType30.decode($decoder, $offset + 120, $depth),
+            aliasedRightsHandleField:
+                $fieldType31.decode($decoder, $offset + 124, $depth),
+            someProtocol: $fieldType32.decode($decoder, $offset + 128, $depth),
             requestSomeProtocol:
-                $fieldType31.decode($decoder, $offset + 124, $depth));
+                $fieldType33.decode($decoder, $offset + 132, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -443,7 +465,7 @@ class Handles extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Handles> kHandles_Type = $fidl.StructType<Handles>(
-    inlineSize: 128, structDecode: Handles._structDecode);
+    inlineSize: 136, structDecode: Handles._structDecode);
 
 abstract class SomeProtocol {
   $fidl.ServiceData? get $serviceData => SomeProtocolData();

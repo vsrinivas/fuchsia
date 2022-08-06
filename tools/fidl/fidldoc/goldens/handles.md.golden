@@ -8,7 +8,7 @@
 ## **PROTOCOLS**
 
 ## DriverProtocol {#DriverProtocol}
-*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=53)*
+*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=55)*
 
 ## SomeProtocol {#SomeProtocol}
 *Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=6)*
@@ -17,7 +17,7 @@
 ## **STRUCTS**
 
 ### FdfHandles [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#FdfHandles data-text="FdfHandles"}
-*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=56)*
+*Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=58)*
 
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
@@ -156,6 +156,14 @@
             <td></td>
             <td>No default</td>
         </tr>
+        <tr id="Handles.msi_handle">
+            <td><code>msi_handle</code></td>
+            <td>
+                <code>handle&lt;msi&gt;</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
         <tr id="Handles.pager_handle">
             <td><code>pager_handle</code></td>
             <td>
@@ -208,6 +216,14 @@
             <td><code>socket_handle</code></td>
             <td>
                 <code>handle&lt;socket&gt;</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
+        <tr id="Handles.stream_handle">
+            <td><code>stream_handle</code></td>
+            <td>
+                <code>handle&lt;stream&gt;</code>
             </td>
             <td></td>
             <td>No default</td>

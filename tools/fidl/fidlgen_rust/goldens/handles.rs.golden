@@ -42,6 +42,7 @@ pub struct Handles {
     pub interrupt_handle: fidl::Interrupt,
     pub iommu_handle: fidl::Iommu,
     pub job_handle: fidl::Job,
+    pub msi_handle: fidl::Msi,
     pub pager_handle: fidl::Pager,
     pub pmt_handle: fidl::Pmt,
     pub port_handle: fidl::Port,
@@ -49,6 +50,7 @@ pub struct Handles {
     pub profile_handle: fidl::Profile,
     pub resource_handle: fidl::Resource,
     pub socket_handle: fidl::Socket,
+    pub stream_handle: fidl::Stream,
     pub suspendtoken_handle: fidl::SuspendToken,
     pub thread_handle: fidl::Thread,
     pub timer_handle: fidl::Timer,
@@ -183,10 +185,19 @@ fidl_struct! {
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
             },
         },
-        pager_handle {
-            ty: fidl::Pager,
+        msi_handle {
+            ty: fidl::Msi,
             offset_v1: 52,
             offset_v2: 52,
+            handle_metadata: {
+                handle_subtype: fidl::ObjectType::MSI,
+                handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
+            },
+        },
+        pager_handle {
+            ty: fidl::Pager,
+            offset_v1: 56,
+            offset_v2: 56,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::PAGER,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -194,8 +205,8 @@ fidl_struct! {
         },
         pmt_handle {
             ty: fidl::Pmt,
-            offset_v1: 56,
-            offset_v2: 56,
+            offset_v1: 60,
+            offset_v2: 60,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::PMT,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -203,8 +214,8 @@ fidl_struct! {
         },
         port_handle {
             ty: fidl::Port,
-            offset_v1: 60,
-            offset_v2: 60,
+            offset_v1: 64,
+            offset_v2: 64,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::PORT,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -212,8 +223,8 @@ fidl_struct! {
         },
         process_handle {
             ty: fidl::Process,
-            offset_v1: 64,
-            offset_v2: 64,
+            offset_v1: 68,
+            offset_v2: 68,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::PROCESS,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -221,8 +232,8 @@ fidl_struct! {
         },
         profile_handle {
             ty: fidl::Profile,
-            offset_v1: 68,
-            offset_v2: 68,
+            offset_v1: 72,
+            offset_v2: 72,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::PROFILE,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -230,8 +241,8 @@ fidl_struct! {
         },
         resource_handle {
             ty: fidl::Resource,
-            offset_v1: 72,
-            offset_v2: 72,
+            offset_v1: 76,
+            offset_v2: 76,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::RESOURCE,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -239,17 +250,26 @@ fidl_struct! {
         },
         socket_handle {
             ty: fidl::Socket,
-            offset_v1: 76,
-            offset_v2: 76,
+            offset_v1: 80,
+            offset_v2: 80,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::SOCKET,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
             },
         },
+        stream_handle {
+            ty: fidl::Stream,
+            offset_v1: 84,
+            offset_v2: 84,
+            handle_metadata: {
+                handle_subtype: fidl::ObjectType::STREAM,
+                handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
+            },
+        },
         suspendtoken_handle {
             ty: fidl::SuspendToken,
-            offset_v1: 80,
-            offset_v2: 80,
+            offset_v1: 88,
+            offset_v2: 88,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::SUSPEND_TOKEN,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -257,8 +277,8 @@ fidl_struct! {
         },
         thread_handle {
             ty: fidl::Thread,
-            offset_v1: 84,
-            offset_v2: 84,
+            offset_v1: 92,
+            offset_v2: 92,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::THREAD,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -266,8 +286,8 @@ fidl_struct! {
         },
         timer_handle {
             ty: fidl::Timer,
-            offset_v1: 88,
-            offset_v2: 88,
+            offset_v1: 96,
+            offset_v2: 96,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::TIMER,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -275,8 +295,8 @@ fidl_struct! {
         },
         vcpu_handle {
             ty: fidl::Vcpu,
-            offset_v1: 92,
-            offset_v2: 92,
+            offset_v1: 100,
+            offset_v2: 100,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VCPU,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -284,8 +304,8 @@ fidl_struct! {
         },
         vmar_handle {
             ty: fidl::Vmar,
-            offset_v1: 96,
-            offset_v2: 96,
+            offset_v1: 104,
+            offset_v2: 104,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VMAR,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -293,8 +313,8 @@ fidl_struct! {
         },
         vmo_handle {
             ty: fidl::Vmo,
-            offset_v1: 100,
-            offset_v2: 100,
+            offset_v1: 108,
+            offset_v2: 108,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VMO,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -302,8 +322,8 @@ fidl_struct! {
         },
         rights_handle {
             ty: fidl::Vmo,
-            offset_v1: 104,
-            offset_v2: 104,
+            offset_v1: 112,
+            offset_v2: 112,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VMO,
                 handle_rights: fidl::Rights::from_bits_const(5).unwrap(),
@@ -311,8 +331,8 @@ fidl_struct! {
         },
         aliased_plain_handle_field {
             ty: fidl::Handle,
-            offset_v1: 108,
-            offset_v2: 108,
+            offset_v1: 116,
+            offset_v2: 116,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::NONE,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -320,8 +340,8 @@ fidl_struct! {
         },
         aliased_subtype_handle_field {
             ty: fidl::Vmo,
-            offset_v1: 112,
-            offset_v2: 112,
+            offset_v1: 120,
+            offset_v2: 120,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VMO,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -329,8 +349,8 @@ fidl_struct! {
         },
         aliased_rights_handle_field {
             ty: fidl::Vmo,
-            offset_v1: 116,
-            offset_v2: 116,
+            offset_v1: 124,
+            offset_v2: 124,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VMO,
                 handle_rights: fidl::Rights::from_bits_const(1).unwrap(),
@@ -338,8 +358,8 @@ fidl_struct! {
         },
         some_protocol {
             ty: fidl::endpoints::ClientEnd<SomeProtocolMarker>,
-            offset_v1: 120,
-            offset_v2: 120,
+            offset_v1: 128,
+            offset_v2: 128,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::CHANNEL,
                 handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -347,8 +367,8 @@ fidl_struct! {
         },
         request_some_protocol {
             ty: fidl::endpoints::ServerEnd<SomeProtocolMarker>,
-            offset_v1: 124,
-            offset_v2: 124,
+            offset_v1: 132,
+            offset_v2: 132,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::CHANNEL,
                 handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -357,8 +377,8 @@ fidl_struct! {
     ],
     padding_v1: [],
     padding_v2: [],
-    size_v1: 128,
-    size_v2: 128,
+    size_v1: 136,
+    size_v2: 136,
     align_v1: 4,
     align_v2: 4,
 }

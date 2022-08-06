@@ -31,6 +31,7 @@ test_handles_HandlesInLine {
     interrupt_handle flags[fidl_handle_presence, int32]
     iommu_handle flags[fidl_handle_presence, int32]
     job_handle flags[fidl_handle_presence, int32]
+    msi_handle flags[fidl_handle_presence, int32]
     pager_handle flags[fidl_handle_presence, int32]
     pmt_handle flags[fidl_handle_presence, int32]
     port_handle flags[fidl_handle_presence, int32]
@@ -38,6 +39,7 @@ test_handles_HandlesInLine {
     profile_handle flags[fidl_handle_presence, int32]
     resource_handle flags[fidl_handle_presence, int32]
     socket_handle flags[fidl_handle_presence, int32]
+    stream_handle flags[fidl_handle_presence, int32]
     suspendtoken_handle flags[fidl_handle_presence, int32]
     thread_handle flags[fidl_handle_presence, int32]
     timer_handle flags[fidl_handle_presence, int32]
@@ -59,7 +61,7 @@ test_handles_HandlesHandles {
     bti_handle zx_bti
     channel_handle zx_chan
     clock_handle zx_clock
-    debuglog_handle zx_log
+    debuglog_handle zx_debuglog
     event_handle zx_event
     eventpair_handle zx_eventpair
     exception_handle zx_exception
@@ -68,6 +70,7 @@ test_handles_HandlesHandles {
     interrupt_handle zx_interrupt
     iommu_handle zx_iommu
     job_handle zx_job
+    msi_handle zx_msi
     pager_handle zx_pager
     pmt_handle zx_pmt
     port_handle zx_port
@@ -75,6 +78,7 @@ test_handles_HandlesHandles {
     profile_handle zx_profile
     resource_handle zx_resource
     socket_handle zx_socket
+    stream_handle zx_stream
     suspendtoken_handle zx_suspendtoken
     thread_handle zx_thread
     timer_handle zx_timer

@@ -255,6 +255,7 @@ const (
 	HandleSubtypeInterrupt    HandleSubtype = "interrupt"
 	HandleSubtypeIommu        HandleSubtype = "iommu"
 	HandleSubtypeJob          HandleSubtype = "job"
+	HandleSubtypeMsi          HandleSubtype = "msi"
 	HandleSubtypePager        HandleSubtype = "pager"
 	HandleSubtypePciDevice    HandleSubtype = "pcidevice"
 	HandleSubtypePmt          HandleSubtype = "pmt"
@@ -294,7 +295,7 @@ const (
 	ObjectTypeInterrupt
 	_ // 10
 	ObjectTypePciDevice
-	ObjectTypeLog
+	ObjectTypeDebugLog
 	_ // 13
 	ObjectTypeSocket
 	ObjectTypeResource
@@ -313,6 +314,8 @@ const (
 	ObjectTypePager
 	ObjectTypeException
 	ObjectTypeClock
+	ObjectTypeStream
+	ObjectTypeMsi
 )
 
 func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
@@ -324,7 +327,7 @@ func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 	case HandleSubtypeClock:
 		return ObjectTypeClock
 	case HandleSubtypeDebugLog:
-		return ObjectTypeLog
+		return ObjectTypeDebugLog
 	case HandleSubtypeEvent:
 		return ObjectTypeEvent
 	case HandleSubtypeEventpair:
@@ -341,6 +344,8 @@ func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 		return ObjectTypeIommu
 	case HandleSubtypeJob:
 		return ObjectTypeJob
+	case HandleSubtypeMsi:
+		return ObjectTypeMsi
 	case HandleSubtypePager:
 		return ObjectTypePager
 	case HandleSubtypePciDevice:
@@ -357,6 +362,8 @@ func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 		return ObjectTypeResource
 	case HandleSubtypeSocket:
 		return ObjectTypeSocket
+	case HandleSubtypeStream:
+		return ObjectTypeStream
 	case HandleSubtypeSuspendToken:
 		return ObjectTypeSuspendToken
 	case HandleSubtypeThread:

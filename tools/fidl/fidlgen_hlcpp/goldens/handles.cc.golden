@@ -40,7 +40,7 @@ void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset,
                                                           });
 
     ::fidl::Encode(_encoder, &debuglog_handle, _offset + 16, ::fidl::HandleInformation{
-                                                                 .object_type = ZX_OBJ_TYPE_LOG,
+                                                                 .object_type = ZX_OBJ_TYPE_DEBUGLOG,
                                                                  .rights = 0x80000000,
                                                              });
 
@@ -84,97 +84,107 @@ void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset,
                                                             .rights = 0x80000000,
                                                         });
 
-    ::fidl::Encode(_encoder, &pager_handle, _offset + 52, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &msi_handle, _offset + 52, ::fidl::HandleInformation{
+                                                            .object_type = ZX_OBJ_TYPE_MSI,
+                                                            .rights = 0x80000000,
+                                                        });
+
+    ::fidl::Encode(_encoder, &pager_handle, _offset + 56, ::fidl::HandleInformation{
                                                               .object_type = ZX_OBJ_TYPE_PAGER,
                                                               .rights = 0x80000000,
                                                           });
 
-    ::fidl::Encode(_encoder, &pmt_handle, _offset + 56, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &pmt_handle, _offset + 60, ::fidl::HandleInformation{
                                                             .object_type = ZX_OBJ_TYPE_PMT,
                                                             .rights = 0x80000000,
                                                         });
 
-    ::fidl::Encode(_encoder, &port_handle, _offset + 60, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &port_handle, _offset + 64, ::fidl::HandleInformation{
                                                              .object_type = ZX_OBJ_TYPE_PORT,
                                                              .rights = 0x80000000,
                                                          });
 
-    ::fidl::Encode(_encoder, &process_handle, _offset + 64, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &process_handle, _offset + 68, ::fidl::HandleInformation{
                                                                 .object_type = ZX_OBJ_TYPE_PROCESS,
                                                                 .rights = 0x80000000,
                                                             });
 
-    ::fidl::Encode(_encoder, &profile_handle, _offset + 68, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &profile_handle, _offset + 72, ::fidl::HandleInformation{
                                                                 .object_type = ZX_OBJ_TYPE_PROFILE,
                                                                 .rights = 0x80000000,
                                                             });
 
-    ::fidl::Encode(_encoder, &resource_handle, _offset + 72, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &resource_handle, _offset + 76, ::fidl::HandleInformation{
                                                                  .object_type = ZX_OBJ_TYPE_RESOURCE,
                                                                  .rights = 0x80000000,
                                                              });
 
-    ::fidl::Encode(_encoder, &socket_handle, _offset + 76, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &socket_handle, _offset + 80, ::fidl::HandleInformation{
                                                                .object_type = ZX_OBJ_TYPE_SOCKET,
                                                                .rights = 0x80000000,
                                                            });
 
-    ::fidl::Encode(_encoder, &suspendtoken_handle, _offset + 80, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &stream_handle, _offset + 84, ::fidl::HandleInformation{
+                                                               .object_type = ZX_OBJ_TYPE_STREAM,
+                                                               .rights = 0x80000000,
+                                                           });
+
+    ::fidl::Encode(_encoder, &suspendtoken_handle, _offset + 88, ::fidl::HandleInformation{
                                                                      .object_type = ZX_OBJ_TYPE_SUSPEND_TOKEN,
                                                                      .rights = 0x80000000,
                                                                  });
 
-    ::fidl::Encode(_encoder, &thread_handle, _offset + 84, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &thread_handle, _offset + 92, ::fidl::HandleInformation{
                                                                .object_type = ZX_OBJ_TYPE_THREAD,
                                                                .rights = 0x80000000,
                                                            });
 
-    ::fidl::Encode(_encoder, &timer_handle, _offset + 88, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &timer_handle, _offset + 96, ::fidl::HandleInformation{
                                                               .object_type = ZX_OBJ_TYPE_TIMER,
                                                               .rights = 0x80000000,
                                                           });
 
-    ::fidl::Encode(_encoder, &vcpu_handle, _offset + 92, ::fidl::HandleInformation{
-                                                             .object_type = ZX_OBJ_TYPE_VCPU,
-                                                             .rights = 0x80000000,
-                                                         });
+    ::fidl::Encode(_encoder, &vcpu_handle, _offset + 100, ::fidl::HandleInformation{
+                                                              .object_type = ZX_OBJ_TYPE_VCPU,
+                                                              .rights = 0x80000000,
+                                                          });
 
-    ::fidl::Encode(_encoder, &vmar_handle, _offset + 96, ::fidl::HandleInformation{
-                                                             .object_type = ZX_OBJ_TYPE_VMAR,
-                                                             .rights = 0x80000000,
-                                                         });
+    ::fidl::Encode(_encoder, &vmar_handle, _offset + 104, ::fidl::HandleInformation{
+                                                              .object_type = ZX_OBJ_TYPE_VMAR,
+                                                              .rights = 0x80000000,
+                                                          });
 
-    ::fidl::Encode(_encoder, &vmo_handle, _offset + 100, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &vmo_handle, _offset + 108, ::fidl::HandleInformation{
                                                              .object_type = ZX_OBJ_TYPE_VMO,
                                                              .rights = 0x80000000,
                                                          });
 
-    ::fidl::Encode(_encoder, &rights_handle, _offset + 104, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &rights_handle, _offset + 112, ::fidl::HandleInformation{
                                                                 .object_type = ZX_OBJ_TYPE_VMO,
                                                                 .rights = 0x5,
                                                             });
 
-    ::fidl::Encode(_encoder, &aliased_plain_handle_field, _offset + 108, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &aliased_plain_handle_field, _offset + 116, ::fidl::HandleInformation{
                                                                              .object_type = ZX_OBJ_TYPE_NONE,
                                                                              .rights = 0x80000000,
                                                                          });
 
-    ::fidl::Encode(_encoder, &aliased_subtype_handle_field, _offset + 112, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &aliased_subtype_handle_field, _offset + 120, ::fidl::HandleInformation{
                                                                                .object_type = ZX_OBJ_TYPE_VMO,
                                                                                .rights = 0x80000000,
                                                                            });
 
-    ::fidl::Encode(_encoder, &aliased_rights_handle_field, _offset + 116, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &aliased_rights_handle_field, _offset + 124, ::fidl::HandleInformation{
                                                                               .object_type = ZX_OBJ_TYPE_VMO,
                                                                               .rights = 0x1,
                                                                           });
 
-    ::fidl::Encode(_encoder, &some_protocol, _offset + 120, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &some_protocol, _offset + 128, ::fidl::HandleInformation{
                                                                 .object_type = ZX_OBJ_TYPE_CHANNEL,
                                                                 .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                                                             });
 
-    ::fidl::Encode(_encoder, &request_some_protocol, _offset + 124, ::fidl::HandleInformation{
+    ::fidl::Encode(_encoder, &request_some_protocol, _offset + 132, ::fidl::HandleInformation{
                                                                         .object_type = ZX_OBJ_TYPE_CHANNEL,
                                                                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                                                                     });
@@ -198,25 +208,27 @@ void Handles::Decode(::fidl::Decoder* _decoder, Handles* _value, size_t _offset)
     ::fidl::Decode(_decoder, &_value->interrupt_handle, _offset + 40);
     ::fidl::Decode(_decoder, &_value->iommu_handle, _offset + 44);
     ::fidl::Decode(_decoder, &_value->job_handle, _offset + 48);
-    ::fidl::Decode(_decoder, &_value->pager_handle, _offset + 52);
-    ::fidl::Decode(_decoder, &_value->pmt_handle, _offset + 56);
-    ::fidl::Decode(_decoder, &_value->port_handle, _offset + 60);
-    ::fidl::Decode(_decoder, &_value->process_handle, _offset + 64);
-    ::fidl::Decode(_decoder, &_value->profile_handle, _offset + 68);
-    ::fidl::Decode(_decoder, &_value->resource_handle, _offset + 72);
-    ::fidl::Decode(_decoder, &_value->socket_handle, _offset + 76);
-    ::fidl::Decode(_decoder, &_value->suspendtoken_handle, _offset + 80);
-    ::fidl::Decode(_decoder, &_value->thread_handle, _offset + 84);
-    ::fidl::Decode(_decoder, &_value->timer_handle, _offset + 88);
-    ::fidl::Decode(_decoder, &_value->vcpu_handle, _offset + 92);
-    ::fidl::Decode(_decoder, &_value->vmar_handle, _offset + 96);
-    ::fidl::Decode(_decoder, &_value->vmo_handle, _offset + 100);
-    ::fidl::Decode(_decoder, &_value->rights_handle, _offset + 104);
-    ::fidl::Decode(_decoder, &_value->aliased_plain_handle_field, _offset + 108);
-    ::fidl::Decode(_decoder, &_value->aliased_subtype_handle_field, _offset + 112);
-    ::fidl::Decode(_decoder, &_value->aliased_rights_handle_field, _offset + 116);
-    ::fidl::Decode(_decoder, &_value->some_protocol, _offset + 120);
-    ::fidl::Decode(_decoder, &_value->request_some_protocol, _offset + 124);
+    ::fidl::Decode(_decoder, &_value->msi_handle, _offset + 52);
+    ::fidl::Decode(_decoder, &_value->pager_handle, _offset + 56);
+    ::fidl::Decode(_decoder, &_value->pmt_handle, _offset + 60);
+    ::fidl::Decode(_decoder, &_value->port_handle, _offset + 64);
+    ::fidl::Decode(_decoder, &_value->process_handle, _offset + 68);
+    ::fidl::Decode(_decoder, &_value->profile_handle, _offset + 72);
+    ::fidl::Decode(_decoder, &_value->resource_handle, _offset + 76);
+    ::fidl::Decode(_decoder, &_value->socket_handle, _offset + 80);
+    ::fidl::Decode(_decoder, &_value->stream_handle, _offset + 84);
+    ::fidl::Decode(_decoder, &_value->suspendtoken_handle, _offset + 88);
+    ::fidl::Decode(_decoder, &_value->thread_handle, _offset + 92);
+    ::fidl::Decode(_decoder, &_value->timer_handle, _offset + 96);
+    ::fidl::Decode(_decoder, &_value->vcpu_handle, _offset + 100);
+    ::fidl::Decode(_decoder, &_value->vmar_handle, _offset + 104);
+    ::fidl::Decode(_decoder, &_value->vmo_handle, _offset + 108);
+    ::fidl::Decode(_decoder, &_value->rights_handle, _offset + 112);
+    ::fidl::Decode(_decoder, &_value->aliased_plain_handle_field, _offset + 116);
+    ::fidl::Decode(_decoder, &_value->aliased_subtype_handle_field, _offset + 120);
+    ::fidl::Decode(_decoder, &_value->aliased_rights_handle_field, _offset + 124);
+    ::fidl::Decode(_decoder, &_value->some_protocol, _offset + 128);
+    ::fidl::Decode(_decoder, &_value->request_some_protocol, _offset + 132);
   }
 }
 
@@ -260,6 +272,9 @@ zx_status_t Handles::Clone(Handles* _result) const {
   _status = ::fidl::Clone(job_handle, &_result->job_handle);
   if (_status != ZX_OK)
     return _status;
+  _status = ::fidl::Clone(msi_handle, &_result->msi_handle);
+  if (_status != ZX_OK)
+    return _status;
   _status = ::fidl::Clone(pager_handle, &_result->pager_handle);
   if (_status != ZX_OK)
     return _status;
@@ -279,6 +294,9 @@ zx_status_t Handles::Clone(Handles* _result) const {
   if (_status != ZX_OK)
     return _status;
   _status = ::fidl::Clone(socket_handle, &_result->socket_handle);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(stream_handle, &_result->stream_handle);
   if (_status != ZX_OK)
     return _status;
   _status = ::fidl::Clone(suspendtoken_handle, &_result->suspendtoken_handle);

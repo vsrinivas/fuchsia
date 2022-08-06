@@ -102,7 +102,7 @@
       "name": "test.handles/DriverProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 53,
+        "line": 55,
         "column": 10,
         "length": 14
       },
@@ -125,7 +125,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-                "line": 52,
+                "line": 54,
                 "column": 12,
                 "length": 8
               }
@@ -133,7 +133,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 52,
+            "line": 54,
             "column": 1,
             "length": 20
           }
@@ -163,7 +163,7 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 56,
+        "line": 58,
         "column": 6,
         "length": 10
       },
@@ -186,7 +186,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-                "line": 55,
+                "line": 57,
                 "column": 20,
                 "length": 20
               }
@@ -194,7 +194,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 55,
+            "line": 57,
             "column": 1,
             "length": 40
           }
@@ -233,7 +233,7 @@
           "name": "fdf_channel_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 57,
+            "line": 59,
             "column": 5,
             "length": 18
           },
@@ -276,7 +276,7 @@
           "name": "client_end_driver",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 59,
+            "line": 61,
             "column": 5,
             "length": 17
           },
@@ -319,7 +319,7 @@
           "name": "server_end_driver",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 60,
+            "line": 62,
             "column": 5,
             "length": 17
           },
@@ -955,6 +955,51 @@
         {
           "type": {
             "kind": "handle",
+            "obj_type": 32,
+            "subtype": "msi",
+            "rights": 2147483648,
+            "nullable": false,
+            "resource_identifier": "zx/handle",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "msi_handle",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
+            "line": 27,
+            "column": 5,
+            "length": 10
+          },
+          "field_shape_v1": {
+            "offset": 52,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 52,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "handle",
             "obj_type": 28,
             "subtype": "pager",
             "rights": 2147483648,
@@ -984,16 +1029,16 @@
           "name": "pager_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 27,
+            "line": 28,
             "column": 5,
             "length": 12
           },
           "field_shape_v1": {
-            "offset": 52,
+            "offset": 56,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 52,
+            "offset": 56,
             "padding": 0
           }
         },
@@ -1029,16 +1074,16 @@
           "name": "pmt_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 28,
+            "line": 29,
             "column": 5,
             "length": 10
           },
           "field_shape_v1": {
-            "offset": 56,
+            "offset": 60,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 56,
+            "offset": 60,
             "padding": 0
           }
         },
@@ -1074,16 +1119,16 @@
           "name": "port_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 29,
+            "line": 30,
             "column": 5,
             "length": 11
           },
           "field_shape_v1": {
-            "offset": 60,
+            "offset": 64,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 60,
+            "offset": 64,
             "padding": 0
           }
         },
@@ -1119,16 +1164,16 @@
           "name": "process_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 30,
+            "line": 31,
             "column": 5,
             "length": 14
           },
           "field_shape_v1": {
-            "offset": 64,
+            "offset": 68,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 64,
+            "offset": 68,
             "padding": 0
           }
         },
@@ -1164,16 +1209,16 @@
           "name": "profile_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 31,
+            "line": 32,
             "column": 5,
             "length": 14
           },
           "field_shape_v1": {
-            "offset": 68,
+            "offset": 72,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 68,
+            "offset": 72,
             "padding": 0
           }
         },
@@ -1209,16 +1254,16 @@
           "name": "resource_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 32,
+            "line": 33,
             "column": 5,
             "length": 15
           },
           "field_shape_v1": {
-            "offset": 72,
+            "offset": 76,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 72,
+            "offset": 76,
             "padding": 0
           }
         },
@@ -1254,16 +1299,61 @@
           "name": "socket_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 33,
+            "line": 34,
             "column": 5,
             "length": 13
           },
           "field_shape_v1": {
-            "offset": 76,
+            "offset": 80,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 76,
+            "offset": 80,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "obj_type": 31,
+            "subtype": "stream",
+            "rights": 2147483648,
+            "nullable": false,
+            "resource_identifier": "zx/handle",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "stream_handle",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
+            "line": 35,
+            "column": 5,
+            "length": 13
+          },
+          "field_shape_v1": {
+            "offset": 84,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 84,
             "padding": 0
           }
         },
@@ -1299,16 +1389,16 @@
           "name": "suspendtoken_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 34,
+            "line": 36,
             "column": 5,
             "length": 19
           },
           "field_shape_v1": {
-            "offset": 80,
+            "offset": 88,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 80,
+            "offset": 88,
             "padding": 0
           }
         },
@@ -1344,16 +1434,16 @@
           "name": "thread_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 35,
+            "line": 37,
             "column": 5,
             "length": 13
           },
           "field_shape_v1": {
-            "offset": 84,
+            "offset": 92,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 84,
+            "offset": 92,
             "padding": 0
           }
         },
@@ -1389,16 +1479,16 @@
           "name": "timer_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 36,
+            "line": 38,
             "column": 5,
             "length": 12
           },
           "field_shape_v1": {
-            "offset": 88,
+            "offset": 96,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 88,
+            "offset": 96,
             "padding": 0
           }
         },
@@ -1434,16 +1524,16 @@
           "name": "vcpu_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 37,
+            "line": 39,
             "column": 5,
             "length": 11
           },
           "field_shape_v1": {
-            "offset": 92,
+            "offset": 100,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 92,
+            "offset": 100,
             "padding": 0
           }
         },
@@ -1479,16 +1569,16 @@
           "name": "vmar_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 38,
+            "line": 40,
             "column": 5,
             "length": 11
           },
           "field_shape_v1": {
-            "offset": 96,
+            "offset": 104,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 96,
+            "offset": 104,
             "padding": 0
           }
         },
@@ -1524,16 +1614,16 @@
           "name": "vmo_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 39,
+            "line": 41,
             "column": 5,
             "length": 10
           },
           "field_shape_v1": {
-            "offset": 100,
+            "offset": 108,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 100,
+            "offset": 108,
             "padding": 0
           }
         },
@@ -1569,16 +1659,16 @@
           "name": "rights_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 41,
+            "line": 43,
             "column": 5,
             "length": 13
           },
           "field_shape_v1": {
-            "offset": 104,
+            "offset": 112,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 104,
+            "offset": 112,
             "padding": 0
           }
         },
@@ -1619,16 +1709,16 @@
           "name": "aliased_plain_handle_field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 44,
+            "line": 46,
             "column": 5,
             "length": 26
           },
           "field_shape_v1": {
-            "offset": 108,
+            "offset": 116,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 108,
+            "offset": 116,
             "padding": 0
           }
         },
@@ -1669,16 +1759,16 @@
           "name": "aliased_subtype_handle_field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 45,
+            "line": 47,
             "column": 5,
             "length": 28
           },
           "field_shape_v1": {
-            "offset": 112,
+            "offset": 120,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 112,
+            "offset": 120,
             "padding": 0
           }
         },
@@ -1719,16 +1809,16 @@
           "name": "aliased_rights_handle_field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 46,
+            "line": 48,
             "column": 5,
             "length": 27
           },
           "field_shape_v1": {
-            "offset": 116,
+            "offset": 124,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 116,
+            "offset": 124,
             "padding": 0
           }
         },
@@ -1762,16 +1852,16 @@
           "name": "some_protocol",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 48,
+            "line": 50,
             "column": 5,
             "length": 13
           },
           "field_shape_v1": {
-            "offset": 120,
+            "offset": 128,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 120,
+            "offset": 128,
             "padding": 0
           }
         },
@@ -1805,36 +1895,36 @@
           "name": "request_some_protocol",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 49,
+            "line": 51,
             "column": 5,
             "length": 21
           },
           "field_shape_v1": {
-            "offset": 124,
+            "offset": 132,
             "padding": 0
           },
           "field_shape_v2": {
-            "offset": 124,
+            "offset": 132,
             "padding": 0
           }
         }
       ],
       "resource": true,
       "type_shape_v1": {
-        "inline_size": 128,
+        "inline_size": 136,
         "alignment": 4,
         "depth": 0,
-        "max_handles": 32,
+        "max_handles": 34,
         "max_out_of_line": 0,
         "has_padding": false,
         "has_envelope": false,
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 128,
+        "inline_size": 136,
         "alignment": 4,
         "depth": 0,
-        "max_handles": 32,
+        "max_handles": 34,
         "max_out_of_line": 0,
         "has_padding": false,
         "has_envelope": false,

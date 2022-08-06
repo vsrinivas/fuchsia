@@ -78,6 +78,7 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
   hlcpp.interrupt_handle = ::fidl::NaturalToHLCPP(std::move(value.interrupt_handle()));
   hlcpp.iommu_handle = ::fidl::NaturalToHLCPP(std::move(value.iommu_handle()));
   hlcpp.job_handle = ::fidl::NaturalToHLCPP(std::move(value.job_handle()));
+  hlcpp.msi_handle = ::fidl::NaturalToHLCPP(std::move(value.msi_handle()));
   hlcpp.pager_handle = ::fidl::NaturalToHLCPP(std::move(value.pager_handle()));
   hlcpp.pmt_handle = ::fidl::NaturalToHLCPP(std::move(value.pmt_handle()));
   hlcpp.port_handle = ::fidl::NaturalToHLCPP(std::move(value.port_handle()));
@@ -85,6 +86,7 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
   hlcpp.profile_handle = ::fidl::NaturalToHLCPP(std::move(value.profile_handle()));
   hlcpp.resource_handle = ::fidl::NaturalToHLCPP(std::move(value.resource_handle()));
   hlcpp.socket_handle = ::fidl::NaturalToHLCPP(std::move(value.socket_handle()));
+  hlcpp.stream_handle = ::fidl::NaturalToHLCPP(std::move(value.stream_handle()));
   hlcpp.suspendtoken_handle = ::fidl::NaturalToHLCPP(std::move(value.suspendtoken_handle()));
   hlcpp.thread_handle = ::fidl::NaturalToHLCPP(std::move(value.thread_handle()));
   hlcpp.timer_handle = ::fidl::NaturalToHLCPP(std::move(value.timer_handle()));
@@ -115,6 +117,7 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
       .interrupt_handle = ::fidl::HLCPPToNatural(std::move(value.interrupt_handle)),
       .iommu_handle = ::fidl::HLCPPToNatural(std::move(value.iommu_handle)),
       .job_handle = ::fidl::HLCPPToNatural(std::move(value.job_handle)),
+      .msi_handle = ::fidl::HLCPPToNatural(std::move(value.msi_handle)),
       .pager_handle = ::fidl::HLCPPToNatural(std::move(value.pager_handle)),
       .pmt_handle = ::fidl::HLCPPToNatural(std::move(value.pmt_handle)),
       .port_handle = ::fidl::HLCPPToNatural(std::move(value.port_handle)),
@@ -122,6 +125,7 @@ struct HLCPPToNaturalTraits<::test::handles::FdfHandles> {
       .profile_handle = ::fidl::HLCPPToNatural(std::move(value.profile_handle)),
       .resource_handle = ::fidl::HLCPPToNatural(std::move(value.resource_handle)),
       .socket_handle = ::fidl::HLCPPToNatural(std::move(value.socket_handle)),
+      .stream_handle = ::fidl::HLCPPToNatural(std::move(value.stream_handle)),
       .suspendtoken_handle = ::fidl::HLCPPToNatural(std::move(value.suspendtoken_handle)),
       .thread_handle = ::fidl::HLCPPToNatural(std::move(value.thread_handle)),
       .timer_handle = ::fidl::HLCPPToNatural(std::move(value.timer_handle)),

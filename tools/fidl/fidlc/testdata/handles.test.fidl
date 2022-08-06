@@ -24,6 +24,7 @@ type Handles = resource struct {
     interrupt_handle zx.handle:INTERRUPT;
     iommu_handle zx.handle:IOMMU;
     job_handle zx.handle:JOB;
+    msi_handle zx.handle:MSI;
     pager_handle zx.handle:PAGER;
     pmt_handle zx.handle:PMT;
     port_handle zx.handle:PORT;
@@ -31,6 +32,7 @@ type Handles = resource struct {
     profile_handle zx.handle:PROFILE;
     resource_handle zx.handle:RESOURCE;
     socket_handle zx.handle:SOCKET;
+    stream_handle zx.handle:STREAM;
     suspendtoken_handle zx.handle:SUSPEND_TOKEN;
     thread_handle zx.handle:THREAD;
     timer_handle zx.handle:TIMER;
