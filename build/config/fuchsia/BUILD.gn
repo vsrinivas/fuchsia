@@ -104,7 +104,8 @@ config("compiler_target") {
 }
 
 config("compiler_fuchsia_api_level") {
-  cflags = [ "-ffuchsia-api-level=$current_fuchsia_api_level" ]
+  # We build in-tree code at HEAD API level, the same as we do for FIDL.
+  cflags = [ "-ffuchsia-api-level=${platform_version.head_fuchsia_api_level}" ]
   asmflags = cflags
   ldflags = cflags
 }

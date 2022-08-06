@@ -3,5 +3,11 @@
 # found in the LICENSE file.
 platform_version = read_file("platform_version.json", "json")
 
+# TODO(https://fxbug.dev/104513) upstream clang support for HEAD
+# Emulate a "HEAD" API level since it is not supported directly by clang.
+# Fuchsia API levels are unsigned 64-bit integers, but clang stores API levels as 32-bit,
+# so we define this as `((uint32_t)-1)`. clang expects API levels to be integer literals.
+platform_version.head_fuchsia_api_level = 4294967295
+
 # TODO(kjharland): Migrate callsites to platform_version.current_fuchsia_api_level
 current_fuchsia_api_level = platform_version.current_fuchsia_api_level
