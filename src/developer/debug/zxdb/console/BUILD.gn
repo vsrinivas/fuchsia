@@ -282,21 +282,3 @@ source_set("tests") {
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
-
-source_set("e2e_tests") {
-  testonly = true
-  sources = [
-    "e2e_test.cc",
-    "mock_console.cc",
-  ]
-
-  deps = [
-    ":console",
-    "//src/developer/debug/zxdb:e2e_test_headers",
-    "//src/developer/debug/zxdb/common:test_support",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}

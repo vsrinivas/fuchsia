@@ -31,7 +31,7 @@ class TestWithLoop : public testing::Test {
     bool success = loop_.Init(&error_message);
     FX_CHECK(success) << error_message;
   }
-  ~TestWithLoop() { loop_.Cleanup(); }
+  ~TestWithLoop() override { loop_.Cleanup(); }
 
   MessageLoop& loop() { return loop_; }
 

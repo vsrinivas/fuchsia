@@ -14,10 +14,6 @@ declare_args() {
 
 import("//build/test.gni")
 
-source_set("e2e_test_headers") {
-  public = [ "main_e2e_test.h" ]
-}
-
 # ZXDB currently only compiles for the host.
 if (is_host) {
   executable("zxdb") {
@@ -34,16 +30,6 @@ if (is_host) {
     category = "partner"
     output_name = "zxdb"
     deps = [ ":zxdb" ]
-  }
-
-  test("zxdb_e2e_tests") {
-    sources = [ "main_e2e_test.cc" ]
-    deps = [
-      ":e2e_test_headers",
-      "//src/developer/debug/zxdb/console:e2e_tests",
-      "//src/lib/fxl/test:test_settings",
-      "//third_party/googletest:gtest",
-    ]
   }
 
   test("zxdb_tests") {
@@ -127,7 +113,6 @@ group("all_tests") {
 
   deps = [
     ":tests",
-    ":zxdb_e2e_tests($host_toolchain)",
     ":zxdb_perftests($host_toolchain)",
   ]
 }
