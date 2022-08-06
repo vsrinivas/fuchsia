@@ -381,7 +381,7 @@ assoc_values!(ObjectType, [
     PORT            = sys::ZX_OBJ_TYPE_PORT;
     INTERRUPT       = sys::ZX_OBJ_TYPE_INTERRUPT;
     PCI_DEVICE      = sys::ZX_OBJ_TYPE_PCI_DEVICE;
-    LOG             = sys::ZX_OBJ_TYPE_LOG;
+    DEBUGLOG        = sys::ZX_OBJ_TYPE_DEBUGLOG;
     SOCKET          = sys::ZX_OBJ_TYPE_SOCKET;
     STREAM          = sys::ZX_OBJ_TYPE_STREAM;
     RESOURCE        = sys::ZX_OBJ_TYPE_RESOURCE;

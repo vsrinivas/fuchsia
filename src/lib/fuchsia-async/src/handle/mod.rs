@@ -33,7 +33,7 @@ macro_rules! invoke_for_handle_types {
         $x! {Port, "Port", PORT, 6,  FuchsiaOnly}
         $x! {Interrupt, "Interrupt", INTERRUPT, 7, FuchsiaOnly}
         $x! {PciDevice, "PCI Device", PCI_DEVICE, 8, Stub}
-        $x! {DebugLog, "Debug Log", LOG, 9, FuchsiaOnly}
+        $x! {DebugLog, "Debug Log", DEBUGLOG, 9, FuchsiaOnly}
         $x! {Socket, "Socket", SOCKET, 10, Everywhere}
         $x! {Resource, "Resource", RESOURCE, 12, FuchsiaOnly}
         $x! {EventPair, "Event Pair", EVENTPAIR, 13, Everywhere}

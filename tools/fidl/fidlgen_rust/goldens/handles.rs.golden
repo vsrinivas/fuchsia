@@ -107,7 +107,7 @@ fidl_struct! {
             offset_v1: 16,
             offset_v2: 16,
             handle_metadata: {
-                handle_subtype: fidl::ObjectType::LOG,
+                handle_subtype: fidl::ObjectType::DEBUGLOG,
                 handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
             },
         },

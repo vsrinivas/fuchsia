@@ -325,7 +325,7 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_PORT                = 6;
     ZX_OBJ_TYPE_INTERRUPT           = 9;
     ZX_OBJ_TYPE_PCI_DEVICE          = 11;
-    ZX_OBJ_TYPE_LOG                 = 12;
+    ZX_OBJ_TYPE_DEBUGLOG            = 12;
     ZX_OBJ_TYPE_SOCKET              = 14;
     ZX_OBJ_TYPE_RESOURCE            = 15;
     ZX_OBJ_TYPE_EVENTPAIR           = 16;
