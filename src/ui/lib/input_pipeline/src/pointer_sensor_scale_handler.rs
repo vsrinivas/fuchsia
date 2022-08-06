@@ -11,7 +11,7 @@ use {
     std::{cell::RefCell, convert::From, num::FpCategory, option::Option, rc::Rc},
 };
 
-pub struct PointerMotionSensorScaleHandler {
+pub struct PointerSensorScaleHandler {
     mutable_state: RefCell<MutableState>,
 }
 
@@ -21,7 +21,7 @@ struct MutableState {
 }
 
 #[async_trait(?Send)]
-impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
+impl UnhandledInputHandler for PointerSensorScaleHandler {
     async fn handle_unhandled_input_event(
         self: Rc<Self>,
         unhandled_input_event: input_device::UnhandledInputEvent,
@@ -135,8 +135,8 @@ const MEDIUM_SPEED_RANGE_END_MM_PER_SEC: f32 = 150.0;
 // A higher numbness indicates lower responsiveness.
 const NUMBNESS: f32 = 37.5;
 
-impl PointerMotionSensorScaleHandler {
-    /// Creates a new [`PointerMotionSensorScaleHandler`].
+impl PointerSensorScaleHandler {
+    /// Creates a new [`PointerSensorScaleHandler`].
     ///
     /// Returns `Rc<Self>`.
     pub fn new() -> Rc<Self> {
@@ -147,7 +147,7 @@ impl PointerMotionSensorScaleHandler {
     //
     // Given the values of `MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC` and
     // `NUMBNESS` above, this results in downscaling the motion.
-    fn scale_low_speed_motion(movement_mm_per_sec: f32) -> f32 {
+    fn scale_low_speed(movement_mm_per_sec: f32) -> f32 {
         const LINEAR_SCALE_FACTOR: f32 = MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC / NUMBNESS;
         LINEAR_SCALE_FACTOR * movement_mm_per_sec
     }
@@ -166,7 +166,7 @@ impl PointerMotionSensorScaleHandler {
     // (2 * MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC / NUMBNESS).
     //
     // However, the transition works well enough in practice.
-    fn scale_medium_speed_motion(movement_mm_per_sec: f32) -> f32 {
+    fn scale_medium_speed(movement_mm_per_sec: f32) -> f32 {
         const QUARDRATIC_SCALE_FACTOR: f32 = 1.0 / NUMBNESS;
         QUARDRATIC_SCALE_FACTOR * movement_mm_per_sec * movement_mm_per_sec
     }
@@ -177,8 +177,8 @@ impl PointerMotionSensorScaleHandler {
     // 1. The composite curve is continuous as the speed transitions
     //    from the medium-speed bucket to the high-speed bucket.
     // 2. The composite curve is differentiable.
-    fn scale_high_speed_motion(movement_mm_per_sec: f32) -> f32 {
-        // Use linear scaling equal to the slope of `scale_medium_speed_motion()`
+    fn scale_high_speed(movement_mm_per_sec: f32) -> f32 {
+        // Use linear scaling equal to the slope of `scale_medium_speed()`
         // at the transition point.
         const LINEAR_SCALE_FACTOR: f32 = 2.0 * (MEDIUM_SPEED_RANGE_END_MM_PER_SEC / NUMBNESS);
 
@@ -197,13 +197,13 @@ impl PointerMotionSensorScaleHandler {
     // `MEDIUM_SPEED_RANGE_END_MM_PER_SEC`.
     fn scale_euclidean_velocity(raw_velocity: f32) -> f32 {
         if (0.0..MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC).contains(&raw_velocity) {
-            Self::scale_low_speed_motion(raw_velocity)
+            Self::scale_low_speed(raw_velocity)
         } else if (MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC..MEDIUM_SPEED_RANGE_END_MM_PER_SEC)
             .contains(&raw_velocity)
         {
-            Self::scale_medium_speed_motion(raw_velocity)
+            Self::scale_medium_speed(raw_velocity)
         } else {
-            Self::scale_high_speed_motion(raw_velocity)
+            Self::scale_high_speed(raw_velocity)
         }
     }
 
@@ -335,12 +335,8 @@ mod tests {
         #[fuchsia::test]
         fn transition_from_low_to_medium_is_continuous() {
             assert_near!(
-                PointerMotionSensorScaleHandler::scale_low_speed_motion(
-                    MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC
-                ),
-                PointerMotionSensorScaleHandler::scale_medium_speed_motion(
-                    MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC
-                ),
+                PointerSensorScaleHandler::scale_low_speed(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC),
+                PointerSensorScaleHandler::scale_medium_speed(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC),
                 SCALE_EPSILON
             );
         }
@@ -353,12 +349,8 @@ mod tests {
         #[fuchsia::test]
         fn transition_from_medium_to_high_is_continuous() {
             assert_near!(
-                PointerMotionSensorScaleHandler::scale_medium_speed_motion(
-                    MEDIUM_SPEED_RANGE_END_MM_PER_SEC
-                ),
-                PointerMotionSensorScaleHandler::scale_high_speed_motion(
-                    MEDIUM_SPEED_RANGE_END_MM_PER_SEC
-                ),
+                PointerSensorScaleHandler::scale_medium_speed(MEDIUM_SPEED_RANGE_END_MM_PER_SEC),
+                PointerSensorScaleHandler::scale_high_speed(MEDIUM_SPEED_RANGE_END_MM_PER_SEC),
                 SCALE_EPSILON
             );
         }
@@ -380,7 +372,7 @@ mod tests {
 
         async fn get_scaled_motion(movement_counts: Position, duration: zx::Duration) -> Position {
             let movement_mm = movement_counts / COUNTS_PER_MM;
-            let handler = PointerMotionSensorScaleHandler::new();
+            let handler = PointerSensorScaleHandler::new();
 
             // Send a don't-care value through to seed the last timestamp.
             let input_event = input_device::UnhandledInputEvent {
@@ -584,7 +576,7 @@ mod tests {
         }
 
         async fn get_scaled_motion_mm(movement_mm: Position, duration: zx::Duration) -> Position {
-            let handler = PointerMotionSensorScaleHandler::new();
+            let handler = PointerSensorScaleHandler::new();
 
             // Send a don't-care value through to seed the last timestamp.
             let input_event = input_device::UnhandledInputEvent {
@@ -778,7 +770,7 @@ mod tests {
 
         #[fuchsia::test(allow_stalls = false)]
         async fn does_not_consume_event() {
-            let handler = PointerMotionSensorScaleHandler::new();
+            let handler = PointerSensorScaleHandler::new();
             let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                     counts: Position { x: 1.5, y: 4.5 },
@@ -800,7 +792,7 @@ mod tests {
         // sensitive to the speed of motion. So it's important to preserve timestamps.
         #[fuchsia::test(allow_stalls = false)]
         async fn preserves_event_time() {
-            let handler = PointerMotionSensorScaleHandler::new();
+            let handler = PointerSensorScaleHandler::new();
             let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                     counts: Position { x: 1.5, y: 4.5 },

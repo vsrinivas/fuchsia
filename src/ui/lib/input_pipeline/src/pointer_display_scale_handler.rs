@@ -12,14 +12,14 @@ use {
 
 // TODO(fxbug.dev/91272) Add trackpad support
 #[derive(Debug, PartialEq)]
-pub struct PointerMotionDisplayScaleHandler {
+pub struct PointerDisplayScaleHandler {
     /// The amount by which motion will be scaled up. E.g., a `scale_factor`
     /// of 2 means that all motion will be multiplied by 2.
     scale_factor: f32,
 }
 
 #[async_trait(?Send)]
-impl UnhandledInputHandler for PointerMotionDisplayScaleHandler {
+impl UnhandledInputHandler for PointerDisplayScaleHandler {
     async fn handle_unhandled_input_event(
         self: Rc<Self>,
         unhandled_input_event: input_device::UnhandledInputEvent,
@@ -74,7 +74,7 @@ impl UnhandledInputHandler for PointerMotionDisplayScaleHandler {
     }
 }
 
-impl PointerMotionDisplayScaleHandler {
+impl PointerDisplayScaleHandler {
     /// Creates a new [`PointerMotionDisplayScaleHandler`].
     ///
     /// Returns
@@ -158,13 +158,13 @@ mod tests {
     #[test_case(              0.5 => matches Err(_); "yields err for downscale")]
     #[test_case(              1.0 => matches Ok(_);  "yields handler for unit scale")]
     #[test_case(              1.5 => matches Ok(_);  "yields handler for upscale")]
-    fn new(scale_factor: f32) -> Result<Rc<PointerMotionDisplayScaleHandler>, Error> {
-        PointerMotionDisplayScaleHandler::new(scale_factor)
+    fn new(scale_factor: f32) -> Result<Rc<PointerDisplayScaleHandler>, Error> {
+        PointerDisplayScaleHandler::new(scale_factor)
     }
 
     #[fuchsia::test(allow_stalls = false)]
     async fn applies_scale_counts() {
-        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
@@ -193,7 +193,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn applies_scale_mm() {
-        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position::zero(),
@@ -222,7 +222,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn does_not_consume_event() {
-        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
@@ -245,7 +245,7 @@ mod tests {
     #[test_case(hashset! {1, 2, 3}; "multiple buttons")]
     #[fuchsia::test(allow_stalls = false)]
     async fn preserves_buttons(input_buttons: HashSet<u8>) {
-        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
@@ -269,7 +269,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn preserves_descriptor() {
-        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
@@ -289,7 +289,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn preserves_event_time() {
-        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
