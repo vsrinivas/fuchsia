@@ -229,7 +229,7 @@ template <ElfMachine Machine = ElfMachine::kNative, class Memory, class Diagnost
       return relocate_symbolic(reloc, tls_desc, RelocateTls::kDesc);
     }
 
-    return diagnostics.FormatError("unrecognized relocation type"sv);
+    return diagnostics.FormatError("unrecognized relocation type"sv, type);
   };
 
   return reloc_info.VisitSymbolic(relocate);

@@ -4,8 +4,10 @@
 
 #include <lib/elfldltl/diagnostics.h>
 
+#include <array>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <zxtest/zxtest.h>
@@ -15,6 +17,40 @@ namespace {
 #ifndef ASSERT_DEATH
 #define ASSERT_DEATH(...)  // Not available on host.
 #endif
+
+TEST(ElfldltlDiagnosticsTests, PrintfDiagnosticsReport) {
+  std::array<char, 200> buffer{};
+  auto printer = [&buffer](const char* format, auto&&... args) {
+    snprintf(buffer.data(), buffer.size(), format, std::forward<decltype(args)>(args)...);
+  };
+
+  constexpr uint32_t kPrefixValue = 42;
+  constexpr std::string_view kPrefixStringView = ": ";
+  auto report =
+      elfldltl::PrintfDiagnosticsReport(printer, "prefix", kPrefixValue, kPrefixStringView);
+
+  constexpr std::string_view kStringViewArg = "foo";
+  constexpr uint32_t kValue32 = 123;
+  constexpr uint64_t kValue64 = 456;
+  constexpr uint32_t kOffset32 = 0x123;
+  constexpr uint64_t kOffset64 = 0x456;
+  constexpr uint32_t kAddress32 = 0x1234;
+  constexpr uint64_t kAddress64 = 0x4567;
+  decltype(auto) retval =
+      report(kStringViewArg, kValue32, "bar", kValue64, elfldltl::FileOffset{kOffset32},
+             elfldltl::FileOffset{kOffset64}, elfldltl::FileAddress{kAddress32},
+             elfldltl::FileAddress{kAddress64});
+
+  static_assert(std::is_same_v<decltype(retval), bool>);
+  EXPECT_TRUE(retval);
+
+  ASSERT_EQ(buffer.back(), '\0');
+  EXPECT_STREQ(
+      "prefix 42: foo 123bar 456"
+      " at file offset 0x123 at file offset 0x456"
+      " at relative address 0x1234 at relative address 0x4567",
+      buffer.data());
+}
 
 TEST(ElfldltlDiagnosticsTests, Trap) {
   auto diag = elfldltl::TrapDiagnostics();

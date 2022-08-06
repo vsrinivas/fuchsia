@@ -5,12 +5,15 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_DIAGNOSTICS_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_DIAGNOSTICS_H_
 
+#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#include "internal/diagnostics-printf.h"
 
 namespace elfldltl {
 
@@ -35,13 +38,26 @@ namespace elfldltl {
 //
 //    * `size_type`, the address-sized unsigned integral type for the file.
 //      This argument is a value from the file that the error complains about.
+//      It's canonical to show these in decimal.
 //
 //    * `elfldltl::FileOffset<size_type>`
 //      This argument is the offset in the ELF file, where the bad data is.
+//      It's canonical to show these in hexadecimal.
 //
 //    * `elfldltl::FileAddress<size_type>`
 //      This argument is the address relative to the load bias of the ELF file,
-//      where the bad data is.
+//      where the bad data is.  It's canonical to show these in hexadecimal.
+//
+//    * `std::string_view`, `const char*`, or string literals
+//      These strings are just concatenated.  Note that while the integer-based
+//      types are expected to be formatted with a leading space, strings are
+//      expected to just be appended verbatim.  So a typical call might look
+//      like `FormatError("bad value", 123, " in something indexed", 456)` to
+//      yield a result like `"bad value 123 in something indexed 456"`.
+//
+//   The `elfldltl::FileOffset` and `elfldltl::FileAddress` types each provide
+//   a `static constexpr std::string_view kDescription` with canonical text
+//   to precede the integer value (usually shown in hexadecimal).
 //
 //   Essentially this is an input-dependent assertion failure.  FormatError is
 //   called exclusively for anomalies that can be explained only by a corrupted
@@ -77,12 +93,16 @@ template <typename size_type>
 struct FileOffset {
   using value_type = size_type;
 
-  value_type operator*() const { return offset; }
+  constexpr value_type operator*() const { return offset; }
 
   static constexpr std::string_view kDescription = "file offset";
 
   value_type offset;
 };
+
+// Deduction guide.
+template <typename size_type>
+FileOffset(size_type) -> FileOffset<size_type>;
 
 // Helper to discover if T is a FileOffset type.
 template <typename T>
@@ -98,12 +118,16 @@ template <typename size_type>
 struct FileAddress {
   using value_type = size_type;
 
-  value_type operator*() const { return address; }
+  constexpr value_type operator*() const { return address; }
 
   static constexpr std::string_view kDescription = "file-relative address";
 
   value_type address;
 };
+
+// Deduction guide.
+template <typename size_type>
+FileAddress(size_type) -> FileAddress<size_type>;
 
 // Helper to discover if T is a FileAddress type.
 template <typename T>
@@ -227,6 +251,35 @@ class Diagnostics {
   [[no_unique_address]] Count<kCount, &Flags::warnings_are_errors> warnings_;
 };
 
+// This creates a callable object to use as the Report function in a
+// Diagnostics object; it calls the printer function like calling printf.  The
+// remaining prefix arguments are treated like initial arguments passed to
+// every Diagnostics::FormatError call.  The printer is called with a format
+// string literal, followed by various argument types corresponding to the '%'
+// formats used therein.  That format and argument sequence is generated based
+// on the argument types as passed to FormatError.
+template <typename Printer, typename... Prefix>
+constexpr auto PrintfDiagnosticsReport(Printer&& printer, Prefix&&... prefix) {
+  return [printer = std::forward<Printer>(printer),
+          prefix = std::forward_as_tuple(std::forward<Prefix>(prefix)...)](auto&&... args) {
+    internal::Printf(printer, prefix, std::forward<decltype(args)>(args)...);
+    return true;
+  };
+}
+
+// This is just PrintfDiagnosticsReport with a printer function that calls
+// fprintf with the given FILE* argument.
+template <typename... Prefix>
+constexpr auto FprintfDiagnosticsReport(FILE* stream, Prefix&&... prefix) {
+  auto printer = [stream](auto&&... args) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+    fprintf(stream, std::forward<decltype(args)>(args)...);
+#pragma GCC diagnostic pop
+  };
+  return PrintfDiagnosticsReport(printer, std::forward<Prefix>(prefix)...);
+}
+
 // This returns a Diagnostics object that crashes immediately for any error or
 // warning.  There are no library dependencies of any kind.  This behavior is
 // appropriate only for self-relocation and bootstrapping cases where if there
@@ -243,24 +296,21 @@ constexpr auto TrapDiagnostics() {
 // This is similar to TrapDiagnostics but it uses the <zircon/assert.h>
 // ZX_PANIC call to write the message and crash, with an optional fixed prefix.
 // So it has some library dependencies but might be able to generate some error
-// output beofre crashing.  The argument is stored in the diagnostics object;
-// it can be any type convertible to std::string_view, such as std::string.
-// It's forwarded perfectly, so if passed as an lvalue reference, the reference
-// will be stored rather than its referent copied.
-template <typename T = std::string_view>
-constexpr auto PanicDiagnostics(T&& prefix = std::string_view{}) {
-  struct Report {
-    bool operator()(std::string_view prefix, std::string_view error) const {
-      ZX_PANIC("%.*s%.*s", static_cast<int>(prefix.size()), prefix.data(),
-               static_cast<int>(error.size()), error.data());
-      return false;
-    }
-    // TODO(mcgrathr): more overloads for value arguments.
+// output beofre crashing.  Any arguments are stored in the diagnostics object
+// and then treated as if initial arguments to every FormatError et al call so
+// they can form a prefix on every message.  Those arguments are forwarded
+// perfectly, so if passed as an lvalue reference, the reference will be stored
+// rather than its referent copied.
+template <typename... PrefixArgs>
+constexpr auto PanicDiagnostics(PrefixArgs&&... prefix_args) {
+  constexpr auto panic = [](const char* format, auto&&... args) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+    ZX_PANIC(format, std::forward<decltype(args)>(args)...);
+#pragma GCC diagnostic pop
   };
-  auto panic = [prefix = std::forward<T>(prefix)](auto&&... args) {
-    return Report{}(prefix, std::forward<decltype(args)>(args)...);
-  };
-  return Diagnostics(panic, DiagnosticsPanicFlags());
+  return Diagnostics(PrintfDiagnosticsReport(panic, std::forward<PrefixArgs>(prefix_args)...),
+                     DiagnosticsPanicFlags());
 }
 
 // This returns a Diagnostics object that simply stores a single error or

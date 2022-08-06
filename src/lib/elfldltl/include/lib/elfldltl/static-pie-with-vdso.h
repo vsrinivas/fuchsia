@@ -139,7 +139,7 @@ inline std::pair<SymbolInfo<Elf>, uintptr_t> GetVdsoSymbols(DiagnosticsType& dia
     if (ph.type == ElfPhdrType::kDynamic) {
       auto dyn = vdso_image.ReadArray<Dyn>(ph.vaddr(), ph.filesz() / sizeof(Dyn));
       if (!dyn) [[unlikely]] {
-        diagnostics.FormatError("cannot read vDSO PT_DYNAMIC"sv);
+        diagnostics.FormatError("cannot read vDSO PT_DYNAMIC"sv, FileAddress{ph.vaddr()});
         __builtin_trap();
       }
       DecodeDynamic(diagnostics, vdso_image, *dyn, DynamicSymbolInfoObserver(vdso_symbols));

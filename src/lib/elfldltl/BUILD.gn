@@ -22,6 +22,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/gnu-hash.h",
     "lib/elfldltl/init-fini.h",
     "lib/elfldltl/internal/const-string.h",
+    "lib/elfldltl/internal/diagnostics-printf.h",
     "lib/elfldltl/internal/dynamic-tag-error.h",
     "lib/elfldltl/internal/phdr-error.h",
     "lib/elfldltl/layout.h",

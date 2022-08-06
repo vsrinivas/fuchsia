@@ -294,7 +294,7 @@ struct Elf : private Layout<Class, Data> {
           diagnostics.FormatError("ET_CORE files cannot be loaded"sv);
           return false;
         default:
-          diagnostics.FormatError("unrecognized e_type value"sv);
+          diagnostics.FormatError("unrecognized e_type value"sv, static_cast<uint32_t>(type()));
           return false;
       }
 

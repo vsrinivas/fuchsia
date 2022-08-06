@@ -15,6 +15,7 @@
 #include <type_traits>
 
 #include "constants.h"
+#include "diagnostics.h"
 #include "internal/phdr-error.h"
 
 namespace elfldltl {
@@ -44,7 +45,7 @@ constexpr auto ReadPhdrsFromFile(Diagnostics& diagnostics, File& file, Allocator
     auto result = file.template ReadArrayFromFile<Phdr>(  //
         phoff, std::forward<Allocator>(allocator), phnum);
     if (!result) {
-      diagnostics.FormatError("cannot read program headers from ELF file"sv);
+      diagnostics.FormatError("cannot read program headers from ELF file"sv, FileOffset{phoff});
     }
     return result;
   };
@@ -60,17 +61,17 @@ constexpr auto ReadPhdrsFromFile(Diagnostics& diagnostics, File& file, Allocator
   // Validate the Ehdr fields related to the phdr.
 
   if (ehdr.phentsize != sizeof(Phdr)) [[unlikely]] {
-    diagnostics.FormatError("e_phentsize has unexpected value"sv);
+    diagnostics.FormatError("e_phentsize has unexpected value"sv, ehdr.phentsize());
     return OptionalResult();
   }
 
   if (phoff < sizeof(Ehdr)) [[unlikely]] {
-    diagnostics.FormatError("e_phoff overlaps with ELF file header"sv);
+    diagnostics.FormatError("e_phoff overlaps with ELF file header"sv, FileOffset{phoff});
     return OptionalResult();
   }
 
   if (phoff % alignof(Phdr) != 0) [[unlikely]] {
-    diagnostics.FormatError("e_phoff has insufficient alignment"sv);
+    diagnostics.FormatError("e_phoff has insufficient alignment"sv, FileOffset{phoff});
     return OptionalResult();
   }
 
@@ -90,13 +91,13 @@ constexpr auto ReadPhdrsFromFile(Diagnostics& diagnostics, File& file, Allocator
   }
 
   if (ehdr.shentsize != sizeof(Shdr)) [[unlikely]] {
-    diagnostics.FormatError("e_shentsize has unexpected value"sv);
+    diagnostics.FormatError("e_shentsize has unexpected value"sv, ehdr.shentsize());
     return OptionalResult();
   }
 
   const size_type shoff = ehdr.shoff;
   if (shoff < sizeof(Ehdr)) [[unlikely]] {
-    diagnostics.FormatError("e_shoff overlaps with ELF file header"sv);
+    diagnostics.FormatError("e_shoff overlaps with ELF file header"sv, FileOffset{shoff});
     return OptionalResult();
   }
 
@@ -105,7 +106,7 @@ constexpr auto ReadPhdrsFromFile(Diagnostics& diagnostics, File& file, Allocator
     return read_phdrs(shdr.info);
   }
 
-  diagnostics.FormatError("cannot read section header 0 from ELF file"sv);
+  diagnostics.FormatError("cannot read section header 0 from ELF file"sv, FileOffset{shoff});
   return OptionalResult();
 }
 
@@ -466,7 +467,7 @@ class PhdrLoadObserver
     // If `p_align` is not page-aligned, then this file cannot be loaded through
     // normal memory mapping.
     if (0 < phdr.align() && phdr.align() < page_size_ &&
-        !diag.FormatError("PT_LOAD's `p_align` is not page-aligned"sv)) {
+        !diag.FormatError("PT_LOAD's `p_align` is not page-aligned"sv, phdr.align())) {
       return false;
     }
 
@@ -504,8 +505,8 @@ class PhdrLoadObserver
     if (NoHeadersSeen()) {
       if constexpr (Policy == PhdrLoadPolicy::kContiguous) {
         if (phdr.offset() >= page_size_ &&
-            !diag.FormatError("first PT_LOAD's `p_offset` does not lie within the first page"sv))
-            [[unlikely]] {
+            !diag.FormatError("first PT_LOAD's `p_offset` does not lie within the first page"sv,
+                              FileOffset{phdr.offset()})) [[unlikely]] {
           return false;
         }
       }
