@@ -103,6 +103,11 @@ starnix_test_package("android_with_init") {
     ":init_test",
     ":java_hello_world",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   galaxy = "//src/proc/bin/galaxies/stardroid"
 }
 
