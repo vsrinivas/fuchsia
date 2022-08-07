@@ -4,7 +4,7 @@
 
 use {
     crate::{data_buffer::DataBuffer, object_handle::ReadObjectHandle},
-    anyhow::{bail, Error},
+    anyhow::Error,
     async_lock::Semaphore,
     async_trait::async_trait,
     fuchsia_zircon::{self as zx},
@@ -78,17 +78,9 @@ impl DataBuffer for VmoDataBuffer {
     ) -> Result<(), Error> {
         let _guard = CONCURRENT_SYSCALLS.acquire().await;
 
-        let old_size = self.size();
-        let end = offset + buf.len() as u64;
-
-        if end > old_size {
-            self.vmo.set_size(end).unwrap();
-        }
-
-        if let Err(e) = self.vmo.write(buf, offset) {
-            self.vmo.set_size(old_size)?;
-            bail!(e);
-        }
+        self.stream
+            .writev_at(zx::StreamWriteOptions::empty(), offset, &[buf])
+            .expect("write failed");
 
         Ok(())
     }
@@ -99,6 +91,11 @@ impl DataBuffer for VmoDataBuffer {
 
     async fn resize(&self, size: u64) {
         let _guard = CONCURRENT_SYSCALLS.acquire().await;
-        self.vmo.set_size(size).unwrap();
+        let old_vmo_size = self.vmo.get_size().unwrap();
+        if size > old_vmo_size {
+            self.vmo.set_size(size).unwrap();
+        } else {
+            self.vmo.set_content_size(&size).unwrap();
+        }
     }
 }

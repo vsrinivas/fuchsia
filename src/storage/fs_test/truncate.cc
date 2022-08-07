@@ -202,6 +202,20 @@ TEST_P(TruncateTest, ShrinkRace) {
   }
 }
 
+TEST_P(TruncateTest, GrowAndRead) {
+  // Grow the file using truncate making sure that it's growing the file by more than a page and
+  // then read at the end (which should be zeroed).
+  std::string file_name = GetPath("GrowAndRead");
+  fbl::unique_fd fd(open(file_name.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0666));
+  ASSERT_TRUE(fd);
+  constexpr off_t kSize = 100'000;
+  EXPECT_EQ(ftruncate(fd.get(), kSize), 0);
+  char buf[10] = {1, 1, 1, 1, 1};
+  EXPECT_EQ(pread(fd.get(), buf, sizeof(buf), kSize - 5), 5) << strerror(errno);
+  char zeros[5] = {0};
+  EXPECT_EQ(memcmp(buf, zeros, 5), 0);
+}
+
 std::string GetParamDescription(const testing::TestParamInfo<ParamType>& param) {
   std::stringstream s;
   s << std::get<0>(param.param);
