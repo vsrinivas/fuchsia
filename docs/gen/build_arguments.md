@@ -1064,9 +1064,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/253509ef9606528a3115de89274b20edabce185c/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/253509ef9606528a3115de89274b20edabce185c/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -4890,7 +4890,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
