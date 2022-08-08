@@ -150,7 +150,7 @@ impl VsockDevice {
         } else {
             match OpType::try_from(header.op.get())? {
                 OpType::Request => match chain.return_complete() {
-                    Ok(()) => match self.guest_initiated_connect(key) {
+                    Ok(()) => match self.guest_initiated_connect(key, &header) {
                         Ok(connection) => {
                             let device = self.clone();
                             fasync::Task::local(async move {
@@ -420,6 +420,7 @@ impl VsockDevice {
     fn guest_initiated_connect(
         &self,
         key: VsockConnectionKey,
+        header: &VirtioVsockHeader,
     ) -> Result<Rc<VsockConnection>, Error> {
         let listeners = self.listeners.borrow();
         let acceptor = match listeners.get(&key.host_port) {
@@ -437,6 +438,7 @@ impl VsockDevice {
         let connection = Rc::new(VsockConnection::new_guest_initiated(
             key,
             response,
+            header,
             self.control_packet_tx.clone(),
         ));
         self.connections.borrow_mut().insert(key, connection.clone());
@@ -1003,12 +1005,10 @@ mod tests {
             .expect("listen unexpectedly failed");
 
         // Attempt and fail to connect on a port without a listener.
-        let result = device.guest_initiated_connect(VsockConnectionKey::new(
-            HOST_CID,
-            invalid_host_port,
-            DEFAULT_GUEST_CID,
-            guest_port,
-        ));
+        let result = device.guest_initiated_connect(
+            VsockConnectionKey::new(HOST_CID, invalid_host_port, DEFAULT_GUEST_CID, guest_port),
+            &VirtioVsockHeader::default(),
+        );
         assert!(result.is_err());
 
         let mut control_packets =
@@ -1022,12 +1022,10 @@ mod tests {
 
         // Successfully connect on a port with a listener.
         let guest_connection = device
-            .guest_initiated_connect(VsockConnectionKey::new(
-                HOST_CID,
-                host_port,
-                DEFAULT_GUEST_CID,
-                guest_port,
-            ))
+            .guest_initiated_connect(
+                VsockConnectionKey::new(HOST_CID, host_port, DEFAULT_GUEST_CID, guest_port),
+                &VirtioVsockHeader::default(),
+            )
             .expect("expected connection");
 
         let device_clone = device.clone();

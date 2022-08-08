@@ -86,6 +86,10 @@ enum QueueId {
 
 class TestConnection {
  public:
+  TestConnection() = default;
+  TestConnection(zx::socket socket, uint32_t guest_port, uint32_t host_port)
+      : host_port_(host_port), guest_port_(guest_port), socket_(std::move(socket)) {}
+
   HostVsockEndpoint::Connect2Callback callback() {
     return [this](HostVsockEndpoint_Connect2_Result result) {
       callback_count_++;
@@ -170,7 +174,7 @@ class TestListener : public HostVsockAcceptor {
       zx::socket client, remote;
       ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &client, &remote));
       request.callback(fpromise::ok(std::move(remote)));
-      client_sockets_.push_back(std::move(client));
+      connections_.emplace_back(std::move(client), request.src_port, request.port);
     }
 
     requests_.clear();
@@ -199,7 +203,7 @@ class TestListener : public HostVsockAcceptor {
 
   // Populated by guest initiated requests.
   std::vector<IncomingRequest> requests_;
-  std::vector<zx::socket> client_sockets_;
+  std::vector<TestConnection> connections_;
 
  private:
   bool invoked_listen_callback_ = false;
@@ -932,6 +936,36 @@ TEST_F(VirtioVsockTest, Write) {
   std::vector<uint8_t> data = {1, 2, 3, 4};
   ASSERT_NO_FATAL_FAILURE(GuestWriteClientRead(data, conn));
   ASSERT_NO_FATAL_FAILURE(GuestWriteClientRead(data, conn));
+}
+
+TEST_F(VirtioVsockTest, ClientWriteWithInitialCredit) {
+  TestListener listener;
+  HostListenOnPort(kVirtioVsockHostPort, &listener);
+  ASSERT_EQ(ZX_OK, listener.status());
+
+  SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
+
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5)));
+  ASSERT_EQ(listener.requests_.size(), 1ul);
+  listener.RespondToGuestRequests();
+
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RESPONSE);
+  EXPECT_EQ(header->src_port, kVirtioVsockHostPort);
+  EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
+
+  ASSERT_NO_FATAL_FAILURE(GetNextHeaderOnlyPacketOfType(&header, VIRTIO_VSOCK_OP_CREDIT_UPDATE));
+
+  // The guest sends its initial credit information with the VIRTIO_VSOCK_OP_REQUEST packet, so
+  // a client should immediately have credit to write to the guest with.
+  std::vector<uint8_t> data = {1, 2, 3, 4};
+  ASSERT_EQ(data.size(), RxBuffer::kDataSize);
+
+  ASSERT_EQ(listener.connections_.size(), 1ul);
+  ASSERT_NO_FATAL_FAILURE(ClientWriteGuestRead(data, listener.connections_[0]));
 }
 
 TEST_F(VirtioVsockTest, WriteMultiple) {

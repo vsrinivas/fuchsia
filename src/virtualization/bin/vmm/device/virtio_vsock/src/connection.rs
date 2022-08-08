@@ -156,6 +156,7 @@ impl VsockConnection {
     pub fn new_guest_initiated(
         key: VsockConnectionKey,
         listener_response: QueryResponseFut<Result<zx::Socket, i32>>,
+        header: &VirtioVsockHeader,
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) -> Self {
         VsockConnection::new(
@@ -164,6 +165,7 @@ impl VsockConnection {
                 listener_response,
                 control_packets,
                 key,
+                header,
             )),
         )
     }
@@ -216,7 +218,7 @@ impl VsockConnection {
         let mut state = self.cancel_pending_tasks_and_get_mutable_state().await;
 
         // Apply the operation to the current state, which may cause a state transition.
-        let new_state = mem::take(&mut *state).handle_operation(op, flags);
+        let new_state = mem::take(&mut *state).handle_operation(op, flags, &header);
         *state = new_state;
 
         // Consume the readable chain. If the chain was not fully walked (such as if the guest
@@ -529,6 +531,7 @@ mod tests {
         let connection = Rc::new(VsockConnection::new_guest_initiated(
             VsockConnectionKey::new(HOST_CID, 3, DEFAULT_GUEST_CID, 2),
             response_fut,
+            &VirtioVsockHeader::default(),
             control_tx,
         ));
 

@@ -82,7 +82,7 @@ use {
 #[derive(Debug)]
 pub struct GuestInitiated {
     listener_response: RefCell<Option<QueryResponseFut<Result<zx::Socket, i32>>>>,
-
+    initial_credit: ConnectionCredit,
     key: VsockConnectionKey,
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
@@ -92,9 +92,14 @@ impl GuestInitiated {
         listener_response: QueryResponseFut<Result<zx::Socket, i32>>,
         control_packets: UnboundedSender<VirtioVsockHeader>,
         key: VsockConnectionKey,
+        header: &VirtioVsockHeader,
     ) -> Self {
+        let mut initial_credit = ConnectionCredit::default();
+        initial_credit.read_credit(header);
+
         GuestInitiated {
             listener_response: RefCell::new(Some(listener_response)),
+            initial_credit,
             key,
             control_packets,
         }
@@ -142,6 +147,7 @@ impl GuestInitiated {
                 StateAction::UpdateState(VsockConnectionState::ReadWrite(ReadWrite::new(
                     socket,
                     self.key,
+                    self.initial_credit,
                     self.control_packets.clone(),
                 )))
             }
@@ -179,7 +185,7 @@ impl ClientInitiated {
         }
     }
 
-    fn next(mut self, op: OpType) -> VsockConnectionState {
+    fn next(mut self, op: OpType, header: &VirtioVsockHeader) -> VsockConnectionState {
         match op {
             OpType::Response => {
                 let mut get_socket = || -> Result<fasync::Socket, Error> {
@@ -199,10 +205,14 @@ impl ClientInitiated {
                     Ok(local_async)
                 };
 
+                let mut credit = ConnectionCredit::default();
+                credit.read_credit(header);
+
                 match get_socket() {
                     Ok(socket) => VsockConnectionState::ReadWrite(ReadWrite::new(
                         socket,
                         self.key,
+                        credit,
                         self.control_packets.clone(),
                     )),
                     Err(err) => {
@@ -300,11 +310,12 @@ impl ReadWrite {
     fn new(
         socket: fasync::Socket,
         key: VsockConnectionKey,
+        initial_credit: ConnectionCredit,
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) -> Self {
         ReadWrite {
             socket,
-            credit: RefCell::new(ConnectionCredit::default()),
+            credit: RefCell::new(initial_credit),
             conn_flags: RefCell::new(VirtioVsockFlags::default()),
             tx_shutdown_leeway: RefCell::new(fasync::Time::now()),
             key,
@@ -871,11 +882,16 @@ pub enum VsockConnectionState {
 }
 
 impl VsockConnectionState {
-    pub fn handle_operation(self, op: OpType, flags: VirtioVsockFlags) -> Self {
+    pub fn handle_operation(
+        self,
+        op: OpType,
+        flags: VirtioVsockFlags,
+        header: &VirtioVsockHeader,
+    ) -> Self {
         match self {
             VsockConnectionState::Invalid => panic!("Connection entered an impossible state"),
             VsockConnectionState::GuestInitiated(state) => state.next(op),
-            VsockConnectionState::ClientInitiated(state) => state.next(op),
+            VsockConnectionState::ClientInitiated(state) => state.next(op, header),
             VsockConnectionState::ReadWrite(state) => state.next(op, flags),
             VsockConnectionState::GuestInitiatedShutdown(state) => state.next(op),
             VsockConnectionState::ClientInitiatedShutdown(state) => state.next(op),
@@ -1065,7 +1081,8 @@ mod tests {
             .expect("failed to create HostVsockAcceptor request stream");
 
         let response_fut = proxy.accept(DEFAULT_GUEST_CID, key.guest_port, key.host_port);
-        let state = GuestInitiated::new(response_fut, control_tx, key);
+        let state =
+            GuestInitiated::new(response_fut, control_tx, key, &VirtioVsockHeader::default());
 
         let fut = state.do_state_action();
         futures::pin_mut!(fut);
@@ -1099,7 +1116,8 @@ mod tests {
             .expect("failed to create HostVsockAcceptor request stream");
 
         let response_fut = proxy.accept(DEFAULT_GUEST_CID, key.guest_port, key.host_port);
-        let state = GuestInitiated::new(response_fut, control_tx, key);
+        let state =
+            GuestInitiated::new(response_fut, control_tx, key, &VirtioVsockHeader::default());
 
         let fut = state.do_state_action();
         futures::pin_mut!(fut);
@@ -1147,7 +1165,7 @@ mod tests {
         // Guest responded before the client actually made a request. This implies that the
         // two are out of sync.
         let state = ClientInitiated::new(responder, control_tx, key);
-        match state.next(OpType::Response) {
+        match state.next(OpType::Response, &VirtioVsockHeader::default()) {
             VsockConnectionState::ShutdownForced(_state) => (),
             _ => panic!("Expected transition to ShutdownForced state"),
         };
@@ -1196,7 +1214,7 @@ mod tests {
         assert_eq!(header.dst_port.get(), key.guest_port);
         assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Request);
 
-        match state.next(OpType::Response) {
+        match state.next(OpType::Response, &VirtioVsockHeader::default()) {
             VsockConnectionState::ReadWrite(_state) => (),
             _ => panic!("Expected transition to ReadWrite state"),
         };
@@ -1222,7 +1240,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         // The RW state will immediately send an unsolicited credit update upon creation as it
         // knows that the guest thinks there's no credit available.
@@ -1301,7 +1319,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         // Tell the device that there's u32::MAX credit available, as this test should not be
         // credit limited.
@@ -1415,7 +1433,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
         send_header_to_rw_state(
             VirtioVsockHeader {
                 op: LE16::new(OpType::CreditUpdate.into()),
@@ -1451,7 +1469,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         // The read-write state knows that the guest thinks there's no credit, so immediately
         // sends an unsolicited credit update.
@@ -1523,7 +1541,7 @@ mod tests {
 
         assert_eq!(client_socket.write(b"success!").expect("failed to write to socket"), 8);
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
         match state.next(OpType::Shutdown, VirtioVsockFlags::SHUTDOWN_RECIEVE) {
             VsockConnectionState::ReadWrite(_state) => {
                 // Socket is half closed so unable to transmit data.
@@ -1544,7 +1562,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         // Tell the device that there's u32::MAX credit available, as this test should not be
         // credit limited.
@@ -1666,7 +1684,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         // The guest informs the device that it only has 5 bytes of buffer available (the guest
         // RX credit).
@@ -1805,7 +1823,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         send_header_to_rw_state(
             VirtioVsockHeader {
@@ -1892,7 +1910,7 @@ mod tests {
         let socket =
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         let mem = IdentityDriverMem::new();
         let mut queue_state = TestQueue::new(32, &mem);
@@ -1965,7 +1983,7 @@ mod tests {
 
         // The read-write state knows that the device thinks there's no client credit while there
         // actually is, so immediately sends an unsolicited credit update.
-        let state = ReadWrite::new(socket, key, control_tx);
+        let state = ReadWrite::new(socket, key, ConnectionCredit::default(), control_tx);
 
         let state_action_fut = state.do_state_action();
         futures::pin_mut!(state_action_fut);
