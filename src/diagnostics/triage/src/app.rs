@@ -212,8 +212,8 @@ mod tests {
         let output = String::from_utf8(dest)?;
         assert_eq!(
             "{\"actions\":{\"file\":{\"warning_name\":{\"type\":\"Warning\",\"trigger\":\
-        {\"metric\":{\"Eval\":{\"raw_expression\":\"0==0\",\"parsed_expression\":{\"Function\":\
-        [\"Equals\",[{\"Value\":{\"Int\":0}},{\"Value\":{\"Int\":0}}]]}}},\"cached_value\":\
+        {\"metric\":{\"Eval\":{\"raw_expression\":\"True()\",\"parsed_expression\":{\"Function\":\
+        [\"True\",[]]}}},\"cached_value\":\
         {\"Bool\":true}},\"print\":\"fail\",\"file_bug\":null,\"tag\":null}}},\"metrics\":\
         {\"file\":{}},\"plugin_results\":{},\"triage_errors\":[]}\n",
             output

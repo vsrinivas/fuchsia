@@ -161,13 +161,18 @@ impl StructuredActionContext<'_> {
             MetricValue::Problem(Problem::Ignore(_)) => {}
             MetricValue::Problem(_reason) => {
                 #[cfg(target_os = "fuchsia")]
-                warn!("Snapshot trigger was missing: {:?}", _reason);
+                warn!(
+                    "Snapshot trigger was not boolean in '{}::{}': {:?}",
+                    namespace, name, _reason,
+                );
             }
             _other => {
                 #[cfg(target_os = "fuchsia")]
                 error!(
-                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
-                    namespace, _other
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}::{}' (need boolean): {}",
+                    namespace,
+                    name,
+                    _other,
                 );
             }
         };

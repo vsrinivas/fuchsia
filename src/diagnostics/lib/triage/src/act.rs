@@ -321,19 +321,12 @@ impl Action {
 }
 
 fn get_trigger_true() -> ValueSource {
-    let eval_true = MetricValue::Bool(true);
     ValueSource {
         metric: Metric::Eval(ExpressionContext {
-            raw_expression: "0==0".to_string(),
-            parsed_expression: ExpressionTree::Function(
-                Function::Equals,
-                vec![
-                    ExpressionTree::Value(MetricValue::Int(0)),
-                    ExpressionTree::Value(MetricValue::Int(0)),
-                ],
-            ),
+            raw_expression: "True()".to_string(),
+            parsed_expression: ExpressionTree::Function(Function::True, vec![]),
         }),
-        cached_value: RefCell::new(Some(eval_true)),
+        cached_value: RefCell::new(Some(MetricValue::Bool(true))),
     }
 }
 
@@ -376,7 +369,7 @@ impl ActionContext<'_> {
     }
 
     /// Update warnings if condition is met.
-    fn update_warnings(&mut self, action: &Warning, namespace: &String, _name: &String) {
+    fn update_warnings(&mut self, action: &Warning, namespace: &String, name: &String) {
         match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 if let Some(file_bug) = &action.file_bug {
@@ -389,24 +382,30 @@ impl ActionContext<'_> {
             MetricValue::Bool(false) => (),
             MetricValue::Problem(Problem::Ignore(_)) => (),
             MetricValue::Problem(Problem::Missing(reason)) => {
-                self.action_results
-                    .add_warning(format!("[MISSING] In config '{}': {:?}", namespace, reason));
+                self.action_results.add_warning(format!(
+                    "[MISSING] In config '{}::{}': (need boolean trigger) {:?}",
+                    namespace, name, reason,
+                ));
             }
             MetricValue::Problem(problem) => {
-                self.action_results
-                    .add_warning(format!("[ERROR] In config '{}': {:?}", namespace, problem));
+                self.action_results.add_warning(format!(
+                    "[ERROR] In config '{}::{}': (need boolean trigger): {:?}",
+                    namespace, name, problem,
+                ));
             }
             other => {
                 self.action_results.add_warning(format!(
-                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
-                    namespace, other
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}::{}' (need boolean trigger): {}",
+                    namespace,
+                    name,
+                    other,
                 ));
             }
         };
     }
 
     /// Update snapshots if condition is met.
-    fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, _name: &str) {
+    fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, name: &str) {
         match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 let repeat_value = self.metric_state.eval_action_metric(namespace, &action.repeat);
@@ -419,11 +418,11 @@ impl ActionContext<'_> {
                     }
                     Err(ref bad_type) => {
                         self.action_results.add_warning(format!(
-                            "Bad interval in config '{}': {:?}",
-                            namespace, bad_type
+                            "Bad interval in config '{}::{}': {:?}",
+                            namespace, name, bad_type,
                         ));
                         #[cfg(target_os = "fuchsia")]
-                        error!("Bad interval in config '{}': {:?}", namespace, interval);
+                        error!("Bad interval in config '{}::{}': {:?}", namespace, name, interval);
                     }
                 }
             }
@@ -431,19 +430,28 @@ impl ActionContext<'_> {
             MetricValue::Problem(Problem::Ignore(_)) => (),
             MetricValue::Problem(reason) => {
                 #[cfg(target_os = "fuchsia")]
-                warn!("Snapshot trigger was missing: {:?}", reason);
-                self.action_results
-                    .add_warning(format!("[MISSING] In config '{}': {:?}", namespace, reason));
+                warn!(
+                    "Snapshot trigger was not boolean in config '{}::{}': {:?}",
+                    namespace, name, reason,
+                );
+                self.action_results.add_warning(format!(
+                    "[MISSING] In config '{}::{}': {:?}",
+                    namespace, name, reason,
+                ));
             }
             other => {
                 #[cfg(target_os = "fuchsia")]
                 error!(
-                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
-                    namespace, other
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}::{}' (need boolean): {}",
+                    namespace,
+                    name,
+                    other,
                 );
                 self.action_results.add_warning(format!(
-                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
-                    namespace, other
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}::{}' (need boolean): {}",
+                    namespace,
+                    name,
+                    other,
                 ));
             }
         };
@@ -690,7 +698,7 @@ mod test {
         assert_eq!(&vec!["[WARNING] 1234.".to_string()], results_1234.get_warnings());
         assert!(results_no_time
             .get_warnings()
-            .contains(&"[MISSING] In config \'file\': \"No valid time available\"".to_string()));
+            .contains(&"[MISSING] In config \'file::time_1234\': (need boolean trigger) \"No valid time available\"".to_string()));
         assert!(results_no_time.get_warnings().contains(&"[WARNING] missing.".to_string()));
     }
 
