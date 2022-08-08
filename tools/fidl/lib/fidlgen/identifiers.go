@@ -55,6 +55,22 @@ func (name Name) DeclarationName() string {
 	return name.declName
 }
 
+// SplitMember, in the case of a layout member declaration, returns name of the
+// parent layout declaration and that of the member; else, it returns the
+// original name and an empty string.
+func (name Name) SplitMember() (Name, string) {
+	parts := strings.Split(name.declName, ".")
+	if len(parts) != 2 {
+		return name, ""
+	}
+	member := parts[1]
+	parent := Name{
+		libraryName: name.libraryName,
+		declName:    strings.TrimSuffix(name.declName, "."+member),
+	}
+	return parent, member
+}
+
 // FullyQualifiedName returns the fully qualified name, e.g. `fuchsia.mem/Buffer`.
 //
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-043#fully_qualified_names

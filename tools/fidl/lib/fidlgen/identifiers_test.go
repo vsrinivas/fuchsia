@@ -144,3 +144,23 @@ func TestNamesStringer(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitMember(t *testing.T) {
+	cases := []struct {
+		memberDecl     Name
+		expectedLayout Name
+		expectedMember string
+	}{
+		{MustReadName("example/NotALayoutMember"), MustReadName("example/NotALayoutMember"), ""},
+		{MustReadName("example/Layout.Member"), MustReadName("example/Layout"), "Member"},
+	}
+	for _, ex := range cases {
+		layout, member := ex.memberDecl.SplitMember()
+		if layout != ex.expectedLayout {
+			t.Errorf("%s: expected=%s, actual=%s", ex.memberDecl, ex.expectedLayout, layout)
+		}
+		if member != ex.expectedMember {
+			t.Errorf("%s: expected=%s, actual=%s", ex.memberDecl, ex.expectedMember, member)
+		}
+	}
+}
