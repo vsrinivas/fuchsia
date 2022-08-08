@@ -16,17 +16,7 @@ pub struct ProductCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum SubCommand {
-    List(ListCommand),
     Get(GetCommand),
-}
-
-/// Display a list of product bundle names.
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "list")]
-pub struct ListCommand {
-    /// do no network IO, use the locally cached version or fail.
-    #[argh(switch)]
-    pub cached: bool,
 }
 
 /// Retrieve image data.

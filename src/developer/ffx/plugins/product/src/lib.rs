@@ -10,10 +10,10 @@ use {
     ::gcs::client::ProgressResponse,
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
-    ffx_product_args::{GetCommand, ListCommand, ProductCommand, SubCommand},
+    ffx_product_args::{GetCommand, ProductCommand, SubCommand},
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
-    pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata_all},
+    pbms::{get_product_data, update_metadata_all},
     std::{
         convert::TryInto,
         io::{stdout, Write},
@@ -37,37 +37,8 @@ where
     W: Write + Sync,
 {
     match &command.sub {
-        SubCommand::List(cmd) => pb_list(writer, &cmd).await?,
         SubCommand::Get(cmd) => pb_get(writer, &cmd, repos).await?,
     }
-    Ok(())
-}
-
-/// `ffx product list` sub-command.
-async fn pb_list<W: Write + Sync>(writer: &mut W, cmd: &ListCommand) -> Result<()> {
-    if !cmd.cached {
-        let base_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&base_dir, &mut |_d, _f| {
-            write!(writer, ".")?;
-            writer.flush()?;
-            Ok(ProgressResponse::Continue)
-        })
-        .await?;
-    }
-    let mut entries = product_bundle_urls().await.context("list pbms")?;
-    entries.sort();
-    writeln!(writer, "")?;
-    for entry in entries {
-        let ready = if is_pb_ready(&entry).await? { "*" } else { "" };
-        writeln!(writer, "{}{}", entry, ready)?;
-    }
-    writeln!(
-        writer,
-        "\
-        \n*No need to fetch with `ffx product get ...`. \
-        The '*' is not part of the name.\
-        \n"
-    )?;
     Ok(())
 }
 
