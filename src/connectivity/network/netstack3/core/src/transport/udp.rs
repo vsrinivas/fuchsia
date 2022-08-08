@@ -25,6 +25,7 @@ use net_types::{
     ip::{Ip, IpAddress, IpVersionMarker},
     MulticastAddr, MulticastAddress as _, Scope as _, SpecifiedAddr, Witness, ZonedAddr,
 };
+use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use packet_formats::{
     error::ParseError,
@@ -51,8 +52,9 @@ use crate::{
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         datagram::{
-            DatagramPortAlloc, DatagramSockets, MulticastMembershipChange, MulticastMemberships,
-            UnboundSocketState,
+            ConnState, DatagramSocketId, DatagramSocketSpec, DatagramSockets, DatagramStateContext,
+            DatagramStateNonSyncContext, ListenerState, MulticastMemberships,
+            SetMulticastMembershipError, UnboundSocketState,
         },
         posix::{
             PosixAddrState, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
@@ -108,7 +110,9 @@ type UdpBoundSocketMap<I, D> = BoundSocketMap<IpPortSpec<I, D>, Udp<I, D, IpSock
 
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId>(DatagramSockets<I, D, Udp<I, D, IpSock<I, D>>>);
+pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId>(
+    DatagramSockets<IpPortSpec<I, D>, Udp<I, D, IpSock<I, D>>>,
+);
 
 /// The state associated with the UDP protocol.
 ///
@@ -127,33 +131,12 @@ impl<I: IpExt, D: IpDeviceId> Default for UdpState<I, D> {
 /// Uninstantiatable type for implementing PosixSocketMapSpec.
 struct Udp<I, D, S>(PhantomData<(I, D, S)>, Never);
 
-impl<I: Ip, D> Default for UnboundSocketState<I, D> {
-    fn default() -> Self {
-        UnboundSocketState {
-            device: None,
-            sharing: PosixSharingOptions::Exclusive,
-            multicast_memberships: Default::default(),
-        }
-    }
-}
-
 /// Produces an iterator over eligible receiving socket addresses.
 fn iter_receiving_addrs<I: Ip, D: IpDeviceId>(
     addr: ConnIpAddr<I::Addr, NonZeroU16, NonZeroU16>,
     device: D,
 ) -> impl Iterator<Item = AddrVec<IpPortSpec<I, D>>> {
     PosixAddrVecIter::with_device(addr, device)
-}
-
-#[derive(Debug)]
-struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
-    multicast_memberships: MulticastMemberships<A, D>,
-}
-
-#[derive(Debug)]
-struct ConnState<A: Eq + Hash, D: Eq + Hash, S> {
-    socket: S,
-    multicast_memberships: MulticastMemberships<A, D>,
 }
 
 pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>(
@@ -367,6 +350,11 @@ impl<I: Ip, D: IpDeviceId, S> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D
     }
 }
 
+impl<I: IpExt, D: IpDeviceId, S> DatagramSocketSpec for Udp<I, D, S> {
+    type UnboundId = UdpUnboundId<I>;
+    type UnboundSharingState = PosixSharingOptions;
+}
+
 enum LookupResult<I: Ip, D: IpDeviceId> {
     Conn(UdpConnId<I>, ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>),
     Listener(UdpListenerId<I>, ListenerAddr<I::Addr, D, NonZeroU16>),
@@ -551,8 +539,26 @@ fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCon
     None
 }
 
-impl<I: Ip + IpExt, D: IpDeviceId> DatagramPortAlloc for Udp<I, D, IpSock<I, D>> {
+impl<I: IpExt, D: IpDeviceId> PortAllocImpl
+    for BoundSocketMap<IpPortSpec<I, D>, Udp<I, D, IpSock<I, D>>>
+{
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
+    const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
+    type Id = ProtocolFlowId<I::Addr>;
+
+    fn is_port_available(&self, id: &Self::Id, port: u16) -> bool {
+        // We can safely unwrap here, because the ports received in
+        // `is_port_available` are guaranteed to be in `EPHEMERAL_RANGE`.
+        let port = NonZeroU16::new(port).unwrap();
+        let conn = ConnAddr::from_protocol_flow_and_local_port(id, port);
+
+        // A port is free if there are no sockets currently using it, and if
+        // there are no sockets that are shadowing it.
+        AddrVec::from(conn).iter_shadows().all(|a| match &a {
+            AddrVec::Listen(l) => self.listeners().get_by_addr(&l).is_none(),
+            AddrVec::Conn(c) => self.conns().get_by_addr(&c).is_none(),
+        } && self.get_shadower_counts(&a) == 0)
+    }
 }
 
 /// Information associated with a UDP connection.
@@ -614,6 +620,12 @@ pub struct UdpUnboundId<I: Ip>(usize, IpVersionMarker<I>);
 impl<I: Ip> UdpUnboundId<I> {
     fn new(id: usize) -> UdpUnboundId<I> {
         UdpUnboundId(id, IpVersionMarker::default())
+    }
+}
+
+impl<I: Ip> From<usize> for UdpUnboundId<I> {
+    fn from(index: usize) -> Self {
+        Self::new(index)
     }
 }
 
@@ -772,6 +784,16 @@ impl<I: Ip> From<UdpListenerId<I>> for UdpSocketId<I> {
 impl<I: Ip> From<UdpConnId<I>> for UdpSocketId<I> {
     fn from(id: UdpConnId<I>) -> Self {
         Self::Bound(id.into())
+    }
+}
+
+impl<I: IpExt, D: IpDeviceId> From<UdpSocketId<I>> for DatagramSocketId<Udp<I, D, IpSock<I, D>>> {
+    fn from(id: UdpSocketId<I>) -> Self {
+        match id {
+            UdpSocketId::Unbound(id) => Self::Unbound(id),
+            UdpSocketId::Bound(UdpBoundId::Listening(id)) => Self::Listener(id),
+            UdpSocketId::Bound(UdpBoundId::Connected(id)) => Self::Connected(id),
+        }
     }
 }
 
@@ -1241,6 +1263,68 @@ pub fn send_udp_listener<
     }))
 }
 
+impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
+    DatagramStateContext<
+        IpPortSpec<I, SC::DeviceId>,
+        C,
+        Udp<I, SC::DeviceId, IpSock<I, SC::DeviceId>>,
+    > for SC
+{
+    fn join_multicast_group(
+        &mut self,
+        ctx: &mut C,
+        device: SC::DeviceId,
+        addr: MulticastAddr<I::Addr>,
+    ) {
+        UdpStateContext::join_multicast_group(self, ctx, device, addr)
+    }
+
+    fn leave_multicast_group(
+        &mut self,
+        ctx: &mut C,
+        device: SC::DeviceId,
+        addr: MulticastAddr<I::Addr>,
+    ) {
+        UdpStateContext::leave_multicast_group(self, ctx, device, addr)
+    }
+
+    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<I::Addr>) -> Option<SC::DeviceId> {
+        TransportIpContext::get_device_with_assigned_addr(self, addr)
+    }
+
+    fn with_sockets<
+        O,
+        F: FnOnce(
+            &DatagramSockets<
+                IpPortSpec<I, SC::DeviceId>,
+                Udp<I, SC::DeviceId, IpSock<I, SC::DeviceId>>,
+            >,
+        ) -> O,
+    >(
+        &self,
+        cb: F,
+    ) -> O {
+        self.with_sockets(|UdpSockets(state)| cb(state))
+    }
+
+    fn with_sockets_mut<
+        O,
+        F: FnOnce(
+            &mut DatagramSockets<
+                IpPortSpec<I, SC::DeviceId>,
+                Udp<I, SC::DeviceId, IpSock<I, SC::DeviceId>>,
+            >,
+        ) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O {
+        self.with_sockets_mut(|UdpSockets(state)| cb(state))
+    }
+}
+
+impl<I: IpExt, C: UdpStateNonSyncContext<I>> DatagramStateNonSyncContext<I> for C {}
+
 /// Creates an unbound UDP socket.
 ///
 /// `create_udp_unbound` creates a new unbound UDP socket and returns an
@@ -1249,10 +1333,7 @@ pub fn send_udp_listener<
 pub fn create_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
 ) -> UdpUnboundId<I> {
-    sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets(DatagramSockets { unbound, bound: _, lazy_port_alloc: _ }) = state;
-        UdpUnboundId::new(unbound.push(UnboundSocketState::default()))
-    })
+    crate::socket::datagram::create_unbound(sync_ctx)
 }
 
 /// Removes a socket that has been created but not bound.
@@ -1266,13 +1347,7 @@ pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCo
     ctx: &mut C,
     id: UdpUnboundId<I>,
 ) {
-    let UnboundSocketState { device: _, sharing: _, multicast_memberships } = sync_ctx
-        .with_sockets_mut(|state| {
-            let UdpSockets(DatagramSockets { unbound, bound: _, lazy_port_alloc: _ }) = state;
-            unbound.remove(id.into()).expect("invalid UDP unbound ID")
-        });
-
-    leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
+    crate::socket::datagram::remove_unbound(sync_ctx, ctx, id)
 }
 
 /// Create a UDP connection.
@@ -1585,55 +1660,6 @@ pub fn get_udp_posix_reuse_port<
     })
 }
 
-/// Error resulting from attempting to change multicast membership settings for
-/// a socket.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum UdpSetMulticastMembershipError {
-    /// The provided address does not match the provided device.
-    AddressNotAvailable,
-    /// The provided address does not match any address on the host.
-    NoDeviceWithAddress,
-    /// No device or address was specified and there is no device with a route
-    /// to the multicast address.
-    NoDeviceAvailable,
-    /// The requested membership change had no effect (tried to leave a group
-    /// without joining, or to join a group again).
-    NoMembershipChange,
-    /// The socket is bound to a device that doesn't match the one specified.
-    WrongDevice,
-}
-
-fn pick_matching_interface<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
-    sync_ctx: &SC,
-    device: Option<SC::DeviceId>,
-    address: Option<SpecifiedAddr<I::Addr>>,
-) -> Result<Option<SC::DeviceId>, UdpSetMulticastMembershipError> {
-    match (device, address) {
-        (Some(device), None) => Ok(Some(device)),
-        (Some(device), Some(addr)) => sync_ctx
-            .get_device_with_assigned_addr(addr)
-            .and_then(|found_device| (device == found_device).then(|| device))
-            .ok_or(UdpSetMulticastMembershipError::AddressNotAvailable)
-            .map(Some),
-        (None, Some(addr)) => sync_ctx
-            .get_device_with_assigned_addr(addr)
-            .ok_or(UdpSetMulticastMembershipError::NoDeviceWithAddress)
-            .map(Some),
-        (None, None) => Ok(None),
-    }
-}
-
-fn pick_interface_for_addr<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
-    _sync_ctx: &SC,
-    _addr: MulticastAddr<I::Addr>,
-) -> Option<SC::DeviceId> {
-    log_unimplemented!(
-        (),
-        "https://fxbug.dev/39479: Implement this by passing `_addr` through the routing table."
-    );
-    None
-}
-
 /// Sets the specified socket's membership status for the given group.
 ///
 /// If `id` is unbound, the membership state will take effect when it is bound.
@@ -1653,118 +1679,17 @@ pub fn set_udp_multicast_membership<
     local_interface_address: Option<SpecifiedAddr<I::Addr>>,
     interface_identifier: Option<SC::DeviceId>,
     want_membership: bool,
-) -> Result<(), UdpSetMulticastMembershipError> {
-    let interface =
-        pick_matching_interface(sync_ctx, interface_identifier, local_interface_address)?;
-
-    let interface = sync_ctx.with_sockets(|state| {
-        let UdpSockets(DatagramSockets { bound, unbound, lazy_port_alloc: _ }) = state;
-        let bound_device = match id {
-            UdpSocketId::Unbound(id) => {
-                let UnboundSocketState { device, sharing: _, multicast_memberships: _ } =
-                    unbound.get(id.into()).expect("unbound UDP socket not found");
-                device
-            }
-            UdpSocketId::Bound(id) => match id {
-                UdpBoundId::Listening(id) => {
-                    let (_, _, ListenerAddr { ip: _, device }): &(
-                        ListenerState<_, _>,
-                        PosixSharingOptions,
-                        _,
-                    ) = bound.listeners().get_by_id(&id).expect("Listening socket not found");
-                    device
-                }
-                UdpBoundId::Connected(id) => {
-                    let (_, _, ConnAddr { ip: _, device }): &(
-                        ConnState<_, _, _>,
-                        PosixSharingOptions,
-                        _,
-                    ) = bound.conns().get_by_id(&id).expect("Connected socket not found");
-                    device
-                }
-            },
-        };
-
-        // If the socket is bound to a device, check that against the provided
-        // interface ID. If none was provided, use the bound device. If there is
-        // none, try to pick a device using the provided address.
-        match (bound_device, interface) {
-            (Some(bound_device), None) => Ok(*bound_device),
-            (None, Some(interface)) => Ok(interface),
-            (Some(bound_device), Some(interface)) => (*bound_device == interface)
-                .then(|| interface)
-                .ok_or(UdpSetMulticastMembershipError::WrongDevice),
-            (None, None) => pick_interface_for_addr(sync_ctx, multicast_group)
-                .ok_or(UdpSetMulticastMembershipError::NoDeviceAvailable),
-        }
-    })?;
-
-    // Re-borrow the state mutably here now that we have picked an interface.
-    // This can be folded into the above if we can teach our context traits that
-    // the UDP state can be borrowed while the interface picking code runs.
-    let change = sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets(DatagramSockets { bound, unbound, lazy_port_alloc: _ }) = state;
-        let multicast_memberships = match id {
-            UdpSocketId::Unbound(id) => {
-                let UnboundSocketState { device: _, sharing: _, multicast_memberships } =
-                    unbound.get_mut(id.into()).expect("unbound UDP socket not found");
-                multicast_memberships
-            }
-
-            UdpSocketId::Bound(id) => {
-                let multicast_memberships = match id {
-                    UdpBoundId::Listening(id) => {
-                        let (ListenerState { multicast_memberships }, _, _): (
-                            _,
-                            &PosixSharingOptions,
-                            &ListenerAddr<_, _, _>,
-                        ) = bound
-                            .listeners_mut()
-                            .get_by_id_mut(&id)
-                            .expect("Listening socket not found");
-                        multicast_memberships
-                    }
-                    UdpBoundId::Connected(id) => {
-                        let (ConnState { socket: _, multicast_memberships }, _, _): (
-                            _,
-                            &PosixSharingOptions,
-                            &ConnAddr<_, _, _, _>,
-                        ) = bound
-                            .conns_mut()
-                            .get_by_id_mut(&id)
-                            .expect("Connected socket not found");
-                        multicast_memberships
-                    }
-                };
-                multicast_memberships
-            }
-        };
-
-        multicast_memberships
-            .apply_membership_change(multicast_group, interface, want_membership)
-            .ok_or(UdpSetMulticastMembershipError::NoMembershipChange)
-    })?;
-
-    match change {
-        MulticastMembershipChange::Join => {
-            sync_ctx.join_multicast_group(ctx, interface, multicast_group)
-        }
-        MulticastMembershipChange::Leave => {
-            sync_ctx.leave_multicast_group(ctx, interface, multicast_group)
-        }
-    }
-
-    Ok(())
-}
-
-fn leave_all_joined_groups<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    memberships: MulticastMemberships<I::Addr, SC::DeviceId>,
-) {
-    for (addr, device) in memberships {
-        sync_ctx.leave_multicast_group(ctx, device, addr)
-    }
+) -> Result<(), SetMulticastMembershipError> {
+    crate::socket::datagram::set_multicast_membership(
+        sync_ctx,
+        ctx,
+        id,
+        multicast_group,
+        local_interface_address,
+        interface_identifier,
+        want_membership,
+    )
+    .map_err(Into::into)
 }
 
 /// Connects an already existing UDP socket to a remote destination.
@@ -1922,16 +1847,8 @@ pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateConte
     ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let (ConnState { socket: _, multicast_memberships }, ConnAddr { ip, device: _ }) = sync_ctx
-        .with_sockets_mut(|state| {
-            let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
-            let (state, _sharing, addr): (_, PosixSharingOptions, _) =
-                bound.conns_mut().remove(&id).expect("UDP connection not found");
-            (state, addr)
-        });
-
-    leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
-    ip.clone().into()
+    let ConnAddr { ip, device: _ } = crate::socket::datagram::remove_conn(sync_ctx, ctx, id);
+    ip.into()
 }
 
 /// Gets the [`UdpConnInfo`] associated with the UDP connection referenced by [`id`].
@@ -2087,15 +2004,7 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateC
     ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let (ListenerState { multicast_memberships }, addr) = sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
-        let (state, _, addr): (_, PosixSharingOptions, _) =
-            bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
-        (state, addr)
-    });
-
-    leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
-    addr.into()
+    crate::socket::datagram::remove_listener(sync_ctx, ctx, id).into()
 }
 
 /// Gets the [`UdpListenerInfo`] associated with the UDP listener referenced by
@@ -2954,7 +2863,7 @@ mod tests {
                 None,
                 true
             ),
-            Err(UdpSetMulticastMembershipError::NoMembershipChange)
+            Err(SetMulticastMembershipError::NoMembershipChange)
         );
     }
 
@@ -3028,7 +2937,7 @@ mod tests {
                 None,
                 true
             ),
-            Err(UdpSetMulticastMembershipError::NoMembershipChange)
+            Err(SetMulticastMembershipError::NoMembershipChange)
         );
     }
 
@@ -4429,7 +4338,7 @@ mod tests {
             UdpUnboundId<I>,
         ) -> UdpSocketId<I>,
     ) -> (
-        Result<(), UdpSetMulticastMembershipError>,
+        Result<(), SetMulticastMembershipError>,
         HashMap<(MultipleDevicesId, MulticastAddr<I::Addr>), NonZeroUsize>,
     )
     where
@@ -4571,7 +4480,7 @@ mod tests {
             Some(interface_id),
             make_socket,
         );
-        assert_eq!(result, Err(UdpSetMulticastMembershipError::AddressNotAvailable));
+        assert_eq!(result, Err(SetMulticastMembershipError::AddressNotAvailable));
         assert_eq!(multicast_memberships, HashMap::default());
     }
 
@@ -4592,7 +4501,7 @@ mod tests {
             &mut DummyNonSyncCtx<I>,
             UdpUnboundId<I>,
         ) -> UdpSocketId<I>,
-        expected_result: Result<(), UdpSetMulticastMembershipError>,
+        expected_result: Result<(), SetMulticastMembershipError>,
     ) where
         MultiDeviceDummySyncCtx<I>: DummyDeviceSyncCtxBound<I, MultipleDevicesId>,
     {

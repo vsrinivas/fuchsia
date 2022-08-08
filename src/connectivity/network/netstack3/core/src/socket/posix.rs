@@ -142,6 +142,12 @@ pub(crate) enum PosixSharingOptions {
     ReusePort,
 }
 
+impl Default for PosixSharingOptions {
+    fn default() -> Self {
+        Self::Exclusive
+    }
+}
+
 impl PosixSharingOptions {
     pub(crate) fn is_shareable_with_new_state(&self, new_state: PosixSharingOptions) -> bool {
         match (self, new_state) {
