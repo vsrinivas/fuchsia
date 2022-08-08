@@ -302,6 +302,10 @@ class FileCache {
   // It returns a locked Page corresponding to |index| from |page_tree_|.
   // If there is no Page, it creates and returns a locked Page.
   zx_status_t GetPage(const pgoff_t index, LockedPage *out) __TA_EXCLUDES(tree_lock_);
+  // It returns locked Pages corresponding to [start - end) from |page_tree_|.
+  zx::status<std::vector<LockedPage>> GetPages(const pgoff_t start, const pgoff_t end)
+      __TA_EXCLUDES(tree_lock_);
+  LockedPage GetNewPage(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   // It returns an unlocked Page corresponding to |index| from |page_tree|.
   // If it fails to find the Page in |page_tree_|, it returns ZX_ERR_NOT_FOUND.
   zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);

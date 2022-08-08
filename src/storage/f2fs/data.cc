@@ -453,11 +453,11 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
   const size_t offset_end = safemath::CheckAdd<size_t>(offset, len).ValueOrDie();
   const pgoff_t index_end = CheckedDivRoundUp<pgoff_t>(offset_end, kBlockSize);
 
-  std::vector<LockedPage> data_pages(index_end - index_start);
-  for (pgoff_t i = index_start; i < index_end; ++i) {
-    if (zx_status_t ret = GrabCachePage(i, &data_pages[i - index_start]); ret != ZX_OK) {
-      return zx::error(ret);
-    }
+  std::vector<LockedPage> data_pages;
+  if (auto pages_or = GrabCachePages(index_start, index_end); pages_or.is_error()) {
+    return pages_or.take_error();
+  } else {
+    data_pages = std::move(pages_or.value());
   }
 
   fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));

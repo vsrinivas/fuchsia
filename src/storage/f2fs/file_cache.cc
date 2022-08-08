@@ -241,20 +241,47 @@ zx_status_t FileCache::AddPageUnsafe(const fbl::RefPtr<Page> &page) {
   return ZX_OK;
 }
 
-zx_status_t FileCache::GetPage(const pgoff_t index, LockedPage *out) {
+zx::status<std::vector<LockedPage>> FileCache::GetPages(const pgoff_t start, const pgoff_t end) {
+  std::lock_guard tree_lock(tree_lock_);
+  std::vector<LockedPage> locked_pages(end - start);
+  auto exist_pages = GetLockedPagesUnsafe(start, end);
+  uint32_t exist_pages_index = 0, count = 0;
+  for (pgoff_t index = start; index < end; ++index, ++count) {
+    if (exist_pages_index < exist_pages.size() &&
+        exist_pages[exist_pages_index]->GetKey() == index) {
+      locked_pages[count] = std::move(exist_pages[exist_pages_index]);
+      ++exist_pages_index;
+    } else {
+      locked_pages[count] = GetNewPage(index);
+    }
+
+    if (auto ret = locked_pages[count]->GetPage(); ret != ZX_OK) {
+      return zx::error(ret);
+    }
+  }
+
+  return zx::ok(std::move(locked_pages));
+}
+
+LockedPage FileCache::GetNewPage(const pgoff_t index) {
   fbl::RefPtr<Page> page;
+  if (GetVnode().IsNode()) {
+    page = fbl::MakeRefCounted<NodePage>(this, index);
+  } else {
+    page = fbl::MakeRefCounted<Page>(this, index);
+  }
+  ZX_ASSERT(AddPageUnsafe(page) == ZX_OK);
+  auto locked_page = LockedPage(std::move(page));
+  locked_page->SetActive();
+  return locked_page;
+}
+
+zx_status_t FileCache::GetPage(const pgoff_t index, LockedPage *out) {
   LockedPage locked_page;
   std::lock_guard tree_lock(tree_lock_);
   auto locked_page_or = GetPageUnsafe(index);
   if (locked_page_or.is_error()) {
-    if (GetVnode().IsNode()) {
-      page = fbl::MakeRefCounted<NodePage>(this, index);
-    } else {
-      page = fbl::MakeRefCounted<Page>(this, index);
-    }
-    ZX_ASSERT(AddPageUnsafe(page) == ZX_OK);
-    locked_page = LockedPage(std::move(page));
-    locked_page->SetActive();
+    locked_page = GetNewPage(index);
   } else {
     locked_page = std::move(*locked_page_or);
   }

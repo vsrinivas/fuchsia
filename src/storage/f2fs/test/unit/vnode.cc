@@ -335,5 +335,27 @@ TEST_F(VnodeTest, SyncFile) {
   file_vnode = nullptr;
 }
 
+TEST_F(VnodeTest, GrabCachePages) {
+  fbl::RefPtr<fs::Vnode> file_fs_vnode;
+  std::string file_name("test_file");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFDIR, &file_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> file_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(file_fs_vnode));
+
+  constexpr pgoff_t kStartOffset = 0;
+  constexpr pgoff_t kEndOffset = 1000;
+
+  auto pages_or = file_vnode->GrabCachePages(kStartOffset, kEndOffset);
+  ASSERT_TRUE(pages_or.is_ok());
+  for (pgoff_t i = kStartOffset; i < kEndOffset; ++i) {
+    LockedPage locked_page = std::move(pages_or.value()[i]);
+    auto unlocked_page = locked_page.release();
+    ASSERT_EQ(file_vnode->GrabCachePage(i, &locked_page), ZX_OK);
+    ASSERT_EQ(locked_page.get(), unlocked_page.get());
+  }
+
+  ASSERT_EQ(file_vnode->Close(), ZX_OK);
+  file_vnode = nullptr;
+}
+
 }  // namespace
 }  // namespace f2fs
