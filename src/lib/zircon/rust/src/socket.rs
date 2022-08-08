@@ -27,8 +27,6 @@ bitflags! {
     pub struct SocketOpts: u32 {
         const STREAM = 0 << 0;
         const DATAGRAM = 1 << 0;
-        const FLAG_CONTROL = 1 << 1;
-        const FLAG_ACCEPT = 1 << 2;
     }
 }
 
@@ -36,7 +34,6 @@ bitflags! {
     #[repr(transparent)]
     #[derive(Default)]
     pub struct SocketReadOpts: u32 {
-        const CONTROL = 1 << 2;
         const PEEK = 1 << 3;
     }
 }
@@ -45,7 +42,6 @@ bitflags! {
     #[repr(transparent)]
     #[derive(Default)]
     pub struct SocketWriteOpts: u32 {
-        const CONTROL = 1 << 2;
     }
 }
 
