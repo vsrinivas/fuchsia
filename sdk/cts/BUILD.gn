@@ -69,9 +69,10 @@ group("cts") {
   testonly = true
   deps = [
     ":cts_no_e2e",
-    ":idk_deps",
+    ":idk_dep_goldens",
     ":plasa",
     ":test_manifest",
+    ":verify_idk_deps",
     "examples:tests",
     "tests",
   ]
@@ -101,24 +102,32 @@ copy("plasa_manifest_copy") {
   deps = [ ":plasa_manifest" ]
 }
 
-# Generate SDK directory layout golden file.
-idk_group_list = []
+idk_golden_gen = []
+idk_verify_ct = []
 foreach(idk, _idk_deps) {
-  idk_group_list += [ ":${idk}_sdk_layout" ]
+  # Generate SDK directory layout golden file.
   generate_sdk_layout_golden_file("${idk}_sdk_layout") {
     testonly = true
     sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
     deps = [ "//sdk:${idk}_archive" ]
   }
+  idk_golden_gen += [ ":${idk}_sdk_layout" ]
+
+  # Prevents backwards breaking changes to the core SDK directory layout.
+  verify_sdk_compatibility("verify_${idk}_sdk_compatibility") {
+    testonly = true
+    sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
+    deps = [ "//sdk:${idk}_archive" ]
+  }
+  idk_verify_ct += [ ":verify_${idk}_sdk_compatibility" ]
 }
 
-group("idk_deps") {
+group("idk_dep_goldens") {
   testonly = true
-  deps = idk_group_list
+  deps = idk_golden_gen
 }
 
-# Ensures the backwards compatibility of core SDK directory layout changes.
-verify_sdk_compatibility("verify_sdk_compatibility") {
-  sdk_archive = "$root_out_dir/sdk/archive/core.tar.gz"
-  deps = [ "//sdk:core_archive" ]
+group("verify_idk_deps") {
+  testonly = true
+  deps = idk_verify_ct
 }

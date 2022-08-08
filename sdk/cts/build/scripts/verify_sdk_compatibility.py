@@ -26,7 +26,7 @@ class GoldenFileGenerationError(Exception):
     def __str__(self):
         return (
             f"Detected invalid file within the SDK archive "
-            f"tarfile:\n{self.invalid}.\n"
+            f"tarfile:\n{self.invalid}\n"
             f"Golden file will not be generated if "
             f"the tarfile contains this file type. Please update\n"
             f"{self.tarfile}\naccordingly.\n")
@@ -36,15 +36,18 @@ class MissingInputError(Exception):
     """Exception raised when a missing golden file
     or current archive tarball is detected."""
 
-    def __init__(self, missing, is_tar=False):
+    def __init__(self, missing, is_tar=False, stamp=False):
         self.missing = missing
         self.is_tar = is_tar
+        self.stamp = stamp
 
     def __str__(self):
         input = "golden file"
         if self.is_tar:
             input = "current archive tarball"
-        return_str = f"The {input} appears to be missing:\n{self.missing}.\n"
+        elif self.stamp:
+            input = "verification file path"
+        return_str = f"The {input} appears to be missing:\n{self.missing}\n"
         if not self.is_tar:
             return_str += (
                 f"Please consult with sdk-dev@fuchsia.dev to"
@@ -54,22 +57,20 @@ class MissingInputError(Exception):
 
 class NotifyOnAdditions(Exception):
     """Exception raised to notify developers of non-breaking changes.
-    
+
     Args:
         additions: Paths found in the archive but not in the golden file.
         path: Path to create a temporary golden file for the archive.
-        updated_list: List of sorted paths from the SDK archive. 
         golden: Path to the golden file.
     """
 
-    def __init__(self, additions, path, updated_list, golden):
+    def __init__(self, additions, path, golden):
         self.additions = additions
         self.path = path
-        self.updated_list = updated_list
         self.golden = golden
 
     def __str__(self):
-        cmd = update_golden(self.updated_list, self.path, self.golden)
+        cmd = update_golden(self.path, self.golden)
         return (
             f"Detected additions to the SDK directory layout.\n"
             f"The current archive tarball contains these additional "
@@ -84,19 +85,17 @@ class SdkCompatibilityError(Exception):
         idk: SDK archive tarball dependency target name.
         missing_goldens: Paths expected to be in the archive, but not found.
         path: Path to create a temporary golden file for the archive.
-        updated_list: List of sorted paths from the SDK archive. 
         golden: Path to the golden file.
     """
 
-    def __init__(self, idk, missing_goldens, path, updated_list, golden):
+    def __init__(self, idk, missing_goldens, path, golden):
         self.idk = idk
         self.missing_goldens = missing_goldens
         self.path = path
-        self.updated_list = updated_list
         self.golden = golden
 
     def __str__(self):
-        cmd = update_golden(self.updated_list, self.path, self.golden)
+        cmd = update_golden(self.path, self.golden)
         return (
             f"Detected breaking changes to the {self.idk} SDK's directory layout.\n"
             f"If possible, please make a soft transition"
@@ -111,7 +110,7 @@ def main():
     parser.add_argument(
         '--current', help='Path to the SDK archive tarball', required=True)
     parser.add_argument(
-        '--stamp', help='Verification output file path', required=True)
+        '--stamp', help='Verification output file path')
     parser.add_argument(
         '--generate_golden',
         help='Generate SDK directory layout golden file.',
@@ -121,7 +120,7 @@ def main():
         help='Path to generate SDK directory layout golden file.')
     parser.add_argument(
         '--update_golden',
-        help='Path to generate an updated golden file when additions are made.')
+        help='Path to the updated golden file for when changes are made.')
     args = parser.parse_args()
 
     err = None
@@ -146,9 +145,11 @@ def main():
             err = e
         except NotifyOnAdditions as n:
             notify = n
-
-    with open(args.stamp, 'w') as stamp_file:
-        stamp_file.write('Verified!\n')
+        try:
+            with open(args.stamp, 'w') as stamp_file:
+                stamp_file.write('Verified!\n')
+        except FileNotFoundError:
+            err = str(MissingInputError(missing=args.stamp, stamp=True))
 
     if not err:
         if notify:
@@ -159,7 +160,7 @@ def main():
     return 1
 
 
-def fail_on_breaking_changes(current_archive, golden_file, update_golden_path):
+def fail_on_breaking_changes(current_archive, golden_file, update_golden):
     """Fails if current is not compatible with golden."""
 
     gold_set = set()
@@ -179,16 +180,14 @@ def fail_on_breaking_changes(current_archive, golden_file, update_golden_path):
         raise SdkCompatibilityError(
             idk=Path(current_archive).with_suffix('').stem,
             missing_goldens=set_diff,
-            path=update_golden_path,
-            updated_list=sorted(curr_set),
+            path=update_golden,
             golden=golden_file)
 
     # Notify developer of any additions to the SDK directory layout.
     if len(gold_set) != len(curr_set):
         raise NotifyOnAdditions(
             additions=curr_set.difference(gold_set),
-            path=update_golden_path,
-            updated_list=sorted(curr_set),
+            path=update_golden,
             golden=golden_file)
     return None
 
@@ -219,13 +218,9 @@ def generate_sdk_layout_golden_file(current_archive):
     return golden_set
 
 
-def update_golden(updated_file_list, updated_path, golden):
+def update_golden(updated_path, golden):
     """For presentation only. Never execute the cmd output programmatically because
     it may present a security exploit."""
-    with open(updated_path, 'w') as updated_golden_file:
-        for path in updated_file_list or []:
-            updated_golden_file.write(path)
-            updated_golden_file.write("\n")
     return "cp \"{}\" \"{}\"".format(
         os.path.abspath(updated_path), os.path.abspath(golden))
 
