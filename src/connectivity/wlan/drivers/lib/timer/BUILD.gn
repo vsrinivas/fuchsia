@@ -1,0 +1,21 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/components.gni")
+
+config("wlan_drivers_timer_cpp_config") {
+  include_dirs = [ "cpp/include" ]
+}
+
+source_set("cpp") {
+  public_configs = [ ":wlan_drivers_timer_cpp_config" ]
+  public_deps = [
+    "//src/lib/ddk",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
+  ]
+  sources = [ "cpp/timer.cc" ]
+}

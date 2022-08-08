@@ -57,6 +57,7 @@ group("tests") {
     "drivers/lib/components/cpp/test:tests",
     "drivers/lib/fuzzing:tests",
     "drivers/lib/log:tests",
+    "drivers/lib/timer/cpp/test:tests",
     "drivers/testing/lib/sim-device/test:sim_device_test",
     "drivers/testing/lib/sim-env/test:wlan-sim-env-test",
     "drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",
