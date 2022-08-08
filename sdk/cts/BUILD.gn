@@ -6,6 +6,13 @@ import("//build/config/build_api_module.gni")
 import("//sdk/cts/build/cts.gni")
 import("//sdk/cts/build/verify_sdk_compatibility.gni")
 
+_idk_deps = [
+  "core",
+  "core_testing",
+  "e2e_testing",
+  "modular_testing",
+]
+
 build_api_module("cts_artifacts") {
   testonly = true
   data_keys = [ "cts_artifacts" ]
@@ -61,8 +68,8 @@ group("cts_no_e2e") {
 group("cts") {
   testonly = true
   deps = [
-    ":core_sdk_layout",
     ":cts_no_e2e",
+    ":idk_deps",
     ":plasa",
     ":test_manifest",
     "examples:tests",
@@ -95,9 +102,19 @@ copy("plasa_manifest_copy") {
 }
 
 # Generate SDK directory layout golden file.
-generate_sdk_layout_golden_file("core_sdk_layout") {
-  sdk_archive = "$root_out_dir/sdk/archive/core.tar.gz"
-  deps = [ "//sdk:core_archive" ]
+idk_group_list = []
+foreach(idk, _idk_deps) {
+  idk_group_list += [ ":${idk}_sdk_layout" ]
+  generate_sdk_layout_golden_file("${idk}_sdk_layout") {
+    testonly = true
+    sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
+    deps = [ "//sdk:${idk}_archive" ]
+  }
+}
+
+group("idk_deps") {
+  testonly = true
+  deps = idk_group_list
 }
 
 # Ensures the backwards compatibility of core SDK directory layout changes.

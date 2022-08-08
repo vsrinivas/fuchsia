@@ -36,7 +36,7 @@ class MissingInputError(Exception):
     """Exception raised when a missing golden file
     or current archive tarball is detected."""
 
-    def __init__(self, missing, is_tar):
+    def __init__(self, missing, is_tar=False):
         self.missing = missing
         self.is_tar = is_tar
 
@@ -53,36 +53,56 @@ class MissingInputError(Exception):
 
 
 class NotifyOnAdditions(Exception):
-    """Exception raised to notify developers of non-breaking changes."""
+    """Exception raised to notify developers of non-breaking changes.
+    
+    Args:
+        additions: Paths found in the archive but not in the golden file.
+        path: Path to create a temporary golden file for the archive.
+        updated_list: List of sorted paths from the SDK archive. 
+        golden: Path to the golden file.
+    """
 
-    def __init__(self, additions):
+    def __init__(self, additions, path, updated_list, golden):
         self.additions = additions
+        self.path = path
+        self.updated_list = updated_list
+        self.golden = golden
 
     def __str__(self):
+        cmd = update_golden(self.updated_list, self.path, self.golden)
         return (
             f"Detected additions to the SDK directory layout.\n"
             f"The current archive tarball contains these additional "
             f"paths not found in the golden file.\n{self.additions}\n"
-            f"If this is an intentional change, please disregard this notice.\n"
-        )
+            f"If this is an intentional change, run: {cmd}\n")
 
 
 class SdkCompatibilityError(Exception):
-    """Exception raised when breaking changes are detected."""
+    """Exception raised when breaking changes are detected.
 
-    def __init__(self, idk, missing_goldens):
+    Args:
+        idk: SDK archive tarball dependency target name.
+        missing_goldens: Paths expected to be in the archive, but not found.
+        path: Path to create a temporary golden file for the archive.
+        updated_list: List of sorted paths from the SDK archive. 
+        golden: Path to the golden file.
+    """
+
+    def __init__(self, idk, missing_goldens, path, updated_list, golden):
         self.idk = idk
         self.missing_goldens = missing_goldens
+        self.path = path
+        self.updated_list = updated_list
+        self.golden = golden
 
     def __str__(self):
+        cmd = update_golden(self.updated_list, self.path, self.golden)
         return (
             f"Detected breaking changes to the {self.idk} SDK's directory layout.\n"
             f"If possible, please make a soft transition"
             f" to prevent breaking SDK users.\nThe following paths are missing"
             f" from the SDK:\n{self.missing_goldens}\n"
-            f"If you have approval to make this change, "
-            f"see go/fuchsia-change-control#in_tree_change for instructions"
-            f" on how to use cherry-picking to move forward with submission.\n")
+            f"If you have approval to make this change, run: {cmd}\n")
 
 
 def main():
@@ -90,7 +110,8 @@ def main():
     parser.add_argument('--golden', help='Path to the golden file')
     parser.add_argument(
         '--current', help='Path to the SDK archive tarball', required=True)
-    parser.add_argument('--stamp', help='Verification output file path')
+    parser.add_argument(
+        '--stamp', help='Verification output file path', required=True)
     parser.add_argument(
         '--generate_golden',
         help='Generate SDK directory layout golden file.',
@@ -98,6 +119,9 @@ def main():
     parser.add_argument(
         '--gen_golden_path',
         help='Path to generate SDK directory layout golden file.')
+    parser.add_argument(
+        '--update_golden',
+        help='Path to generate an updated golden file when additions are made.')
     args = parser.parse_args()
 
     err = None
@@ -106,18 +130,18 @@ def main():
         try:
             golden_sdk_set = generate_sdk_layout_golden_file(args.current)
         except (MissingInputError, GoldenFileGenerationError) as e:
-            print("ERROR: ", e)
-            return 1
+            err = e
         golden_sdk_layout = sorted(golden_sdk_set)
-        with open(args.gen_golden_path, 'w') as golden_sdk_layout_file:
-            if golden_sdk_layout:
-                for path in golden_sdk_layout:
-                    golden_sdk_layout_file.write(path)
-                    golden_sdk_layout_file.write("\n")
-        return 0
+        try:
+            with open(args.gen_golden_path, 'w') as golden_sdk_layout_file:
+                layout = "{}\n".format("\n".join(golden_sdk_layout or []))
+                golden_sdk_layout_file.write(layout)
+        except FileNotFoundError:
+            err = str(MissingInputError(missing=args.gen_golden_path))
     else:
         try:
-            fail_on_breaking_changes(args.current, args.golden)
+            fail_on_breaking_changes(
+                args.current, args.golden, args.update_golden)
         except (SdkCompatibilityError, MissingInputError) as e:
             err = e
         except NotifyOnAdditions as n:
@@ -126,15 +150,16 @@ def main():
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('Verified!\n')
 
-    if notify and not err:
-        print("NOTICE: ", notify)
+    if not err:
+        if notify:
+            print("NOTICE: ", notify)
         return 0
 
     print("ERROR: ", err)
     return 1
 
 
-def fail_on_breaking_changes(current_archive, golden_file):
+def fail_on_breaking_changes(current_archive, golden_file, update_golden_path):
     """Fails if current is not compatible with golden."""
 
     gold_set = set()
@@ -154,11 +179,17 @@ def fail_on_breaking_changes(current_archive, golden_file):
         raise SdkCompatibilityError(
             idk=Path(current_archive).with_suffix('').stem,
             missing_goldens=set_diff,
-        )
+            path=update_golden_path,
+            updated_list=sorted(curr_set),
+            golden=golden_file)
 
     # Notify developer of any additions to the SDK directory layout.
     if len(gold_set) != len(curr_set):
-        raise NotifyOnAdditions(additions=curr_set.difference(gold_set))
+        raise NotifyOnAdditions(
+            additions=curr_set.difference(gold_set),
+            path=update_golden_path,
+            updated_list=sorted(curr_set),
+            golden=golden_file)
     return None
 
 
@@ -170,7 +201,8 @@ def generate_sdk_layout_golden_file(current_archive):
         raise MissingInputError(missing=current_archive, is_tar=True)
 
     # Ignore golden file checks for paths ending in .debug as they change frequently.
-    path_regex = "\.build-id" + re.escape(os.sep) + "\w{2}" + re.escape(os.sep) + "\w{14}\.debug"
+    path_regex = "\.build-id" + re.escape(os.sep) + "\w{2}" + re.escape(
+        os.sep) + "\w{14}\.debug"
     ignored_path = re.compile(path_regex, re.IGNORECASE)
 
     golden_set = set()
@@ -185,6 +217,17 @@ def generate_sdk_layout_golden_file(current_archive):
                     tarfile=current_archive, invalid=path)
             golden_set.add(gold_dir)
     return golden_set
+
+
+def update_golden(updated_file_list, updated_path, golden):
+    """For presentation only. Never execute the cmd output programmatically because
+    it may present a security exploit."""
+    with open(updated_path, 'w') as updated_golden_file:
+        for path in updated_file_list or []:
+            updated_golden_file.write(path)
+            updated_golden_file.write("\n")
+    return "cp \"{}\" \"{}\"".format(
+        os.path.abspath(updated_path), os.path.abspath(golden))
 
 
 if __name__ == '__main__':

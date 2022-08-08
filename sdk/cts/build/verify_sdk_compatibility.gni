@@ -12,17 +12,22 @@
 template("generate_sdk_layout_golden_file") {
   assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
 
+  # Nested function call to remove both parts of the archive's extension.
+  idk_name = get_path_info(get_path_info(invoker.sdk_archive, "name"), "name")
+
   action(target_name) {
     forward_variables_from(invoker, "*")
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
-    gold_file = "$root_build_dir/cts/sdk_directory_layout.golden"
+    gold_file =
+        "//sdk/goldens/${target_cpu}/sdk_directory_layout_${idk_name}.golden"
+    stamp_file = "$target_gen_dir/$target_name.verified"
 
     tarfile = sdk_archive
 
     inputs = [ sdk_archive ]
 
-    outputs = [ gold_file ]
+    outputs = [ stamp_file ]
 
     args = [
       "--current",
@@ -30,11 +35,9 @@ template("generate_sdk_layout_golden_file") {
       "--generate_golden",
       "--gen_golden_path",
       rebase_path(gold_file, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
     ]
-
-    metadata = {
-      cts_artifacts = [ "cts/sdk_directory_layout.golden" ]
-    }
   }
 }
 
@@ -52,6 +55,7 @@ template("verify_sdk_compatibility") {
     forward_variables_from(invoker, "*")
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
+    updated_golden_path = "$target_gen_dir/$target_name.golden"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     current = sdk_archive
@@ -68,6 +72,8 @@ template("verify_sdk_compatibility") {
       rebase_path(current, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
+      "--update_golden",
+      rebase_path(updated_golden_path, root_build_dir),
     ]
   }
 }

@@ -5,11 +5,9 @@
 
 """Unit tests for verify_sdk_compatibility.py"""
 
-import json
 import os
 import tarfile
 import tempfile
-import re
 import unittest
 from tempfile import TemporaryDirectory
 from verify_sdk_compatibility import (
@@ -64,13 +62,16 @@ class VerifySdkCompatibilityTests(unittest.TestCase):
             efile = os.path.join(root_build_dir, "efile")
             with open(efile, 'w') as f:
                 f.write("file_content")
+            update_golden_path = os.path.join(root_build_dir, "updated")
             with tempfile.NamedTemporaryFile('wb', suffix='.tar.gz',
                                              delete=False) as f:
                 with tarfile.open(f.name, mode='w:gz') as tar_curr:
                     tar_curr.add(afile)
                 # Assert that a case with no changes should pass.
+                mock_gold = "path/to/core.golden"
                 self.assertTrue(
-                    fail_on_breaking_changes(f.name, golden1) is None)
+                    fail_on_breaking_changes(f.name, golden1, mock_gold) is None
+                )
                 # Assert that additions to the SDK layout will trigger a notification.
                 with tarfile.open(f.name, mode='w:gz') as tar_curr:
                     tar_curr.add(afile)
@@ -78,26 +79,29 @@ class VerifySdkCompatibilityTests(unittest.TestCase):
                     tar_curr.add(cfile)
                 self.assertRaisesRegex(
                     NotifyOnAdditions, ".*(?=.*bfile)(?=.*cfile).*",
-                    fail_on_breaking_changes, f.name, golden1)
+                    fail_on_breaking_changes, f.name, golden1,
+                    update_golden_path)
                 # Assert that a mismatch of types will not pass.
                 with self.assertRaises(SdkCompatibilityError):
-                    fail_on_breaking_changes(f.name, golden2)
+                    fail_on_breaking_changes(
+                        f.name, golden2, update_golden_path)
                 # Assert that a nonexistent golden file will not pass.
-                mock_gold = "path/to/core.golden"
                 with self.assertRaises(MissingInputError):
-                    fail_on_breaking_changes(f.name, mock_gold)
+                    fail_on_breaking_changes(f.name, mock_gold, mock_gold)
                 # Assert that files with different order, same contents will pass.
                 with tarfile.open(f.name, mode='w:gz') as tar_curr:
                     tar_curr.add(bfile)
                     tar_curr.add(afile)
                 self.assertTrue(
-                    fail_on_breaking_changes(f.name, golden3) is None)
+                    fail_on_breaking_changes(f.name, golden3, mock_gold) is None
+                )
                 # Assert that a case with breaking changes will not pass (deletion).
                 with tarfile.open(f.name, mode='w:gz') as tar_curr:
                     tar_curr.add(bfile)
                 self.assertRaisesRegex(
                     SdkCompatibilityError, ".*afile.*",
-                    fail_on_breaking_changes, f.name, golden3)
+                    fail_on_breaking_changes, f.name, golden3,
+                    update_golden_path)
                 # Assert that a case with no matching files does not pass.
                 with tarfile.open(f.name, mode='w:gz') as tar_curr:
                     tar_curr.add(dfile)
@@ -105,7 +109,8 @@ class VerifySdkCompatibilityTests(unittest.TestCase):
                     tar_curr.add(cfile)
                 self.assertRaisesRegex(
                     SdkCompatibilityError, ".*(?=.*bfile)(?=.*afile).*",
-                    fail_on_breaking_changes, f.name, golden3)
+                    fail_on_breaking_changes, f.name, golden3,
+                    update_golden_path)
                 # Assert that a case with one missing path does not pass.
                 manifest = {
                     os.path.relpath(cfile, start),
@@ -117,13 +122,13 @@ class VerifySdkCompatibilityTests(unittest.TestCase):
                         file.write("\n")
                 self.assertRaisesRegex(
                     SdkCompatibilityError, ".*bfile*", fail_on_breaking_changes,
-                    f.name, golden3)
+                    f.name, golden3, update_golden_path)
 
             with tempfile.NamedTemporaryFile('wb', suffix='.tar.gz',
                                              delete=False) as f3:
                 # Assert that an empty tar file will not pass.
                 with self.assertRaises(MissingInputError):
-                    fail_on_breaking_changes(f3.name, golden1)
+                    fail_on_breaking_changes(f3.name, golden1, mock_gold)
 
     def test_generate_sdk_layout_golden_file(self):
         with TemporaryDirectory() as root_build_dir:
