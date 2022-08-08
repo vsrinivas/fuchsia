@@ -58,6 +58,7 @@ fuchsia_driver_component("driver") {
   deps = [ ":fuchsia_driver" ]
   info = "driver-info.json"
   colocate = true
+  default_dispatcher_opts = [ "allow_sync_calls" ]
 }
 
 fuchsia_driver_package("intel-gspi") {
