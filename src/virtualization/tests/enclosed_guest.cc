@@ -184,6 +184,12 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
   guest_manager_ = realm_root.ConnectSync<fuchsia::virtualization::GuestManager>(
       guest_launch_info.interface_name);
 
+  // Test cases may disable the vsock device, and during the migration we FX_CHECK that we can
+  // acquire the HostVsockEndpoint handle (which is now served by the device).
+  // TODO(fxbug.dev/97355): Use GetHostVsockEndpoint return status instead of parsing the config.
+  const bool vsock_enabled =
+      !guest_launch_info.config.has_virtio_vsock() || guest_launch_info.config.virtio_vsock();
+
   auto status = SetupVsockServices(deadline, guest_launch_info);
   if (status != ZX_OK) {
     return status;
@@ -198,7 +204,9 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
   guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
   // TODO(fxbug.dev/97355): Get from Guest protocol instead of guest manager after migration.
-  GetHostVsockEndpoint(vsock_.NewRequest());
+  if (vsock_enabled) {
+    GetHostVsockEndpoint(vsock_.NewRequest());
+  }
 
   // Launch the guest.
   logger.Start("Launching guest", zx::sec(5));

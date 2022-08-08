@@ -320,8 +320,8 @@ int main(int argc, char** argv) {
       }
     }
   } else {
-    experimental_vsock = std::make_unique<controller::VirtioVsock>(guest.phys_mem());
     if (cfg.virtio_vsock()) {
+      experimental_vsock = std::make_unique<controller::VirtioVsock>(guest.phys_mem());
       status = bus.Connect(experimental_vsock->pci_device(), device_loop.dispatcher(), true);
       if (status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
@@ -336,7 +336,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  FX_CHECK(!experimental_vsock != (!legacy_vsock && !vsock_loop));
+  // If a vsock device has been added for this guest, it must either be the out of process device
+  // or the legacy device, but not both.
+  FX_CHECK(!cfg.virtio_vsock() || !experimental_vsock != (!legacy_vsock && !vsock_loop));
   guest_controller.ProvideVsockController(std::move(experimental_vsock));
 
   // Setup wayland device.
