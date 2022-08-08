@@ -14,7 +14,7 @@ use {
             types::{BoxedLayerIterator, ItemRef, LayerIteratorFilter},
             LSMTree,
         },
-        object_handle::{ObjectHandle, WriteObjectHandle, INVALID_OBJECT_ID},
+        object_handle::{ObjectHandle, INVALID_OBJECT_ID},
         object_store::{
             extent_record::ExtentValue,
             layer_size_from_encrypted_mutations_size,
@@ -184,6 +184,7 @@ impl ObjectStore {
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
         let reservation_update: ReservationUpdate; // Must live longer than end_transaction.
+        let handle; // Must live longer than end_transaction.
         let mut end_transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
         #[async_trait]
@@ -212,7 +213,7 @@ impl ObjectStore {
         let (old_layers, new_layers) = if self.is_locked() {
             // The store is locked so we need to either write our encrypted mutations to a new file,
             // or append them to an existing one.
-            let handle = if new_store_info.encrypted_mutations_object_id == INVALID_OBJECT_ID {
+            handle = if new_store_info.encrypted_mutations_object_id == INVALID_OBJECT_ID {
                 let handle = ObjectStore::create_object(
                     parent_store,
                     &mut transaction,
@@ -246,7 +247,9 @@ impl ObjectStore {
                 .unwrap()
                 .serialize_with_version(&mut cursor)?;
             let len = cursor.position() as usize;
-            handle.write_or_append(None, buffer.subslice(..len)).await?;
+            handle
+                .txn_write(&mut end_transaction, handle.get_size(), buffer.subslice(..len))
+                .await?;
 
             total_layer_size += layer_size_from_encrypted_mutations_size(handle.get_size())
                 + self
