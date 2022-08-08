@@ -17,5 +17,5 @@ fuchsia.BIND_COMPOSITE == 1;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.nxp.platform.BIND_PLATFORM_DEV_VID.NXP;
 fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.nxp.platform.BIND_PLATFORM_DEV_DID.WIFI;
 accept fuchsia.BIND_PLATFORM_DEV_PID {
-  fuchsia.nxp.platform.BIND_PLATFORM_DEV_PID.SD8897,
+  fuchsia.nxp.platform.BIND_PLATFORM_DEV_PID.SD8987,
 }

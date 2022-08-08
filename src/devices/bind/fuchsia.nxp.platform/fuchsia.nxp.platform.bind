@@ -9,7 +9,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
-  SD8897 = 1,
+  SD8987 = 1,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
