@@ -44,7 +44,6 @@ rustc_library("fuchsia-async") {
       "//third_party/rust_crates:crossbeam",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:parking_lot",
-      "//third_party/rust_crates:smallvec",
       "//third_party/rust_crates:socket2",
     ]
     if (fuchsia_async_trace_level_logging) {

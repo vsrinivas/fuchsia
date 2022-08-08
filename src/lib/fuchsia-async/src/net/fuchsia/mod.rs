@@ -13,10 +13,8 @@ pub use self::udp::*;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite};
 use futures::ready;
-use futures::task::{Context, Waker};
+use futures::task::{AtomicWaker, Context};
 use libc;
-use parking_lot::Mutex;
-use smallvec::SmallVec;
 
 use std::fmt;
 use std::io::{Read, Write};
@@ -35,45 +33,13 @@ const WRITABLE: usize = libc::EPOLLOUT as usize;
 const ERROR: usize = libc::EPOLLERR as usize;
 const HUP: usize = libc::EPOLLHUP as usize;
 
-#[derive(Default)]
-struct CombinedWaker {
-    // We support multiple wakers for `EventedFcPacketReceiver` to maintain
-    // feature parity with other executors like tokio.
-    //
-    // Using a `SmallVec` here allows us to pre-size our wakers container for
-    // the most common case (1-2 wakers) while still supporting the less-common
-    // cases (3+ wakers).
-    //
-    // The overhead of a `parking_lot::Mutex` is minimal, and leverages
-    // uncontested lock optimizations that make it roughly as performant as an
-    // `AtomicWaker` in the common case.
-    wakers: Mutex<SmallVec<[Waker; 2]>>,
-}
-
-impl CombinedWaker {
-    fn register(&self, waker: &Waker) {
-        let mut wakers = self.wakers.lock();
-        wakers.push(waker.clone());
-    }
-
-    fn wake(&self) {
-        let wakers = {
-            let mut lock = self.wakers.lock();
-            mem::replace(&mut *lock, SmallVec::new())
-        };
-        for waker in wakers {
-            waker.wake();
-        }
-    }
-}
-
 // Unsafe to use. `receive_packet` must not be called after
 // `fdio` is invalidated.
 pub(crate) struct EventedFdPacketReceiver {
     fdio: *const syscall::fdio_t,
     signals: AtomicUsize,
-    read_task: CombinedWaker,
-    write_task: CombinedWaker,
+    read_task: AtomicWaker,
+    write_task: AtomicWaker,
 }
 
 // Needed because of the fdio pointer.
@@ -82,30 +48,6 @@ pub(crate) struct EventedFdPacketReceiver {
 // before `fdio_unsafe_release` is called.
 unsafe impl Send for EventedFdPacketReceiver {}
 unsafe impl Sync for EventedFdPacketReceiver {}
-
-impl EventedFdPacketReceiver {
-    /// Registers a waker for when the port becomes readable. Returns `true` if
-    /// the receiver started waiting for a `SignalOne` packet containing the
-    /// `READABLE` signal.
-    fn register_for_read(&self, waker: &Waker) -> bool {
-        self.read_task.register(waker);
-        self.unset_signal(READABLE)
-    }
-
-    /// Registers a waker for when the port becomes writable. Returns `true` if
-    /// the receiver started waiting for a `SignalOne` packet containing the
-    /// `WRITABLE` signal.
-    fn register_for_write(&self, waker: &Waker) -> bool {
-        self.write_task.register(waker);
-        self.unset_signal(WRITABLE)
-    }
-
-    /// Clears the given signals, returning `true` if any of them were
-    /// previously set.
-    fn unset_signal(&self, signal: usize) -> bool {
-        self.signals.fetch_and(!signal, Ordering::SeqCst) & signal != 0
-    }
-}
 
 impl PacketReceiver for EventedFdPacketReceiver {
     fn receive_packet(&self, packet: zx::Packet) {
@@ -194,8 +136,8 @@ where
                 // readable or writable. In return, there will be an extra wasted
                 // syscall per read/write if the fd is not readable or writable.
                 signals: AtomicUsize::new(READABLE | WRITABLE),
-                read_task: CombinedWaker::default(),
-                write_task: CombinedWaker::default(),
+                read_task: AtomicWaker::new(),
+                write_task: AtomicWaker::new(),
             }));
 
         let evented_fd =
@@ -213,7 +155,7 @@ where
     }
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
-    /// when a "readable" signal arrives.
+    /// when a "writable" signal arrives.
     pub fn poll_readable(&self, cx: &mut Context<'_>) -> Poll<Result<(), zx::Status>> {
         let receiver = self.signal_receiver.receiver();
         if (receiver.signals.load(Ordering::SeqCst) & (READABLE | ERROR | HUP)) != 0 {
@@ -250,9 +192,12 @@ where
     /// Arranges for the current task to receive a notification when a "readable"
     /// signal arrives.
     pub fn need_read(&self, cx: &mut Context<'_>) {
+        let receiver = self.signal_receiver.receiver();
+        receiver.read_task.register(cx.waker());
+        let old = receiver.signals.fetch_and(!READABLE, Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
         // If READABLE was already false, a packet was already scheduled.
-        if self.signal_receiver.receiver().register_for_read(cx.waker()) {
+        if (old & READABLE) != 0 {
             self.schedule_packet(READABLE);
         }
     }
@@ -260,9 +205,12 @@ where
     /// Arranges for the current task to receive a notification when a "writable"
     /// signal arrives.
     pub fn need_write(&self, cx: &mut Context<'_>) {
+        let receiver = self.signal_receiver.receiver();
+        receiver.write_task.register(cx.waker());
+        let old = receiver.signals.fetch_and(!WRITABLE, Ordering::SeqCst);
         // We only need to schedule a new packet if one isn't already scheduled.
         // If WRITABLE was already false, a packet was already scheduled.
-        if self.signal_receiver.receiver().register_for_write(cx.waker()) {
+        if (old & WRITABLE) != 0 {
             self.schedule_packet(WRITABLE);
         }
     }
@@ -291,6 +239,11 @@ where
             mem::forget(handle);
             res.expect("Error scheduling EventedFd notification");
         }
+    }
+
+    /// Clears all incoming signals.
+    pub fn clear(&self) {
+        self.signal_receiver.receiver().signals.store(0, Ordering::SeqCst);
     }
 }
 
