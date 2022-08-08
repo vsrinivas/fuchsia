@@ -86,6 +86,11 @@ test("test_bin") {
 fuchsia_unittest_package("network-device-lib-test") {
   deps = [ ":test_bin" ]
   manifest = "meta/network-device-lib-test.cml"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 test("microbenchmarks_bin") {

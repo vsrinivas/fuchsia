@@ -88,6 +88,11 @@ test("network_tun_unittest") {
 
 fuchsia_unittest_package("network-tun-test") {
   deps = [ ":network_tun_unittest" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 core_shard("network-tun-core-shard") {

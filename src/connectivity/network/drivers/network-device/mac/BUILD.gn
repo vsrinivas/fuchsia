@@ -49,4 +49,9 @@ test("test_bin") {
 
 fuchsia_unittest_package("network-device-mac-lib-test") {
   deps = [ ":test_bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

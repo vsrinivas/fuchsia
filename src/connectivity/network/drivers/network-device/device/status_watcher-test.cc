@@ -142,7 +142,7 @@ class StatusWatcherTest : public ::testing::Test {
     ASSERT_OK(loop_.StartThread("test-thread", nullptr));
     fx_logger_config_t log_cfg = {
         .min_severity = -2,
-        .console_fd = dup(STDOUT_FILENO),
+        .console_fd = -1,
         .tags = nullptr,
         .num_tags = 0,
     };
