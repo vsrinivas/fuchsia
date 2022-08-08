@@ -77,6 +77,189 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.anonymous/Expression",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "data": "Expression",
+        "start_offset": 45,
+        "end_offset": 55
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "value",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "value",
+            "start_offset": 82,
+            "end_offset": 87
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "bin_op",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "bin_op",
+            "start_offset": 103,
+            "end_offset": 109
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "function_application",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "function_application",
+            "start_offset": 335,
+            "end_offset": 355
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "union_data",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "union_data",
+            "start_offset": 681,
+            "end_offset": 691
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "func",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "func",
+            "start_offset": 375,
+            "end_offset": 379
+          },
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "args",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "args",
+            "start_offset": 424,
+            "end_offset": 428
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "flags",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "flags",
+            "start_offset": 471,
+            "end_offset": 476
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "table_data",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "table_data",
+            "start_offset": 779,
+            "end_offset": 789
+          },
+          "type": {
+            "kind": "vector"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": true,

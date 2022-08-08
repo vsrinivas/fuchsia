@@ -65,6 +65,70 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.versions/Union",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "Union",
+        "start_offset": 693,
+        "end_offset": 698
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "data": "x",
+            "start_offset": 754,
+            "end_offset": 755
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": true
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.versions/Table",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "Table",
+        "start_offset": 524,
+        "end_offset": 529
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "data": "x",
+            "start_offset": 585,
+            "end_offset": 586
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": true
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": false,

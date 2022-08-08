@@ -437,6 +437,50 @@
   ],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/SimpleUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "SimpleUnion",
+        "start_offset": 729,
+        "end_offset": 740
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "a",
+            "start_offset": 765,
+            "end_offset": 766
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "b",
+            "start_offset": 781,
+            "end_offset": 782
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [],
   "structs": [
     {
       "is_anonymous": false,

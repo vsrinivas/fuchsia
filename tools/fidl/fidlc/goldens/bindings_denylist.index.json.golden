@@ -115,6 +115,345 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.bindingsdenylist/OnlyLlcpp",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyLlcpp",
+        "start_offset": 1022,
+        "end_offset": 1031
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "x",
+            "start_offset": 1056,
+            "end_offset": 1057
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3302,
+            "end_offset": 3303
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3709,
+            "end_offset": 3710
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 4080,
+            "end_offset": 4081
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.bindingsdenylist/OnlyRust",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyRust",
+        "start_offset": 924,
+        "end_offset": 932
+      },
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3206,
+            "end_offset": 3207
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3613,
+            "end_offset": 3614
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3996,
+            "end_offset": 3997
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": true,

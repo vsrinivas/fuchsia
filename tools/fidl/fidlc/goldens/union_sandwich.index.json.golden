@@ -14,6 +14,126 @@
   "dependency_identifiers": [],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.unionsandwich/UnionSize12Alignment4",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+        "data": "UnionSize12Alignment4",
+        "start_offset": 581,
+        "end_offset": 602
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "variant",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+            "data": "variant",
+            "start_offset": 627,
+            "end_offset": 634
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.unionsandwich/UnionSize24Alignment8",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+        "data": "UnionSize24Alignment8",
+        "start_offset": 853,
+        "end_offset": 874
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "variant",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+            "data": "variant",
+            "start_offset": 899,
+            "end_offset": 906
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.unionsandwich/StructSize16Alignment8",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+              "data": "StructSize16Alignment8",
+              "start_offset": 907,
+              "end_offset": 929
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.unionsandwich/UnionSize36Alignment4",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+        "data": "UnionSize36Alignment4",
+        "start_offset": 1060,
+        "end_offset": 1081
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "variant",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+            "data": "variant",
+            "start_offset": 1106,
+            "end_offset": 1113
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.unionsandwich/UnionSize8Alignment4",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+        "data": "UnionSize8Alignment4",
+        "start_offset": 393,
+        "end_offset": 413
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "variant",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
+            "data": "variant",
+            "start_offset": 438,
+            "end_offset": 445
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [],
   "structs": [
     {
       "is_anonymous": false,

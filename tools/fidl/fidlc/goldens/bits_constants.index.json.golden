@@ -120,6 +120,8 @@
     }
   ],
   "enums": [],
+  "unions": [],
+  "tables": [],
   "structs": [],
   "protocols": []
 }

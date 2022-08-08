@@ -95,6 +95,91 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.doccomments/FlexibleUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "FlexibleUnion",
+        "start_offset": 1886,
+        "end_offset": 1899
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "Field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "Field",
+            "start_offset": 1998,
+            "end_offset": 2003
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.doccomments/StrictUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "StrictUnion",
+        "start_offset": 1692,
+        "end_offset": 1703
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "Field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "Field",
+            "start_offset": 1800,
+            "end_offset": 1805
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.doccomments/Table",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "Table",
+        "start_offset": 2066,
+        "end_offset": 2071
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "Field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "Field",
+            "start_offset": 2159,
+            "end_offset": 2164
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": false,

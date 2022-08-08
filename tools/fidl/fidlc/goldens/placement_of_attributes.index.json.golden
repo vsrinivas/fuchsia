@@ -85,6 +85,91 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.placementofattributes/ExampleUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "ExampleUnion",
+        "start_offset": 675,
+        "end_offset": 687
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "variant",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "variant",
+            "start_offset": 733,
+            "end_offset": 740
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.placementofattributes/ExampleXUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "ExampleXUnion",
+        "start_offset": 770,
+        "end_offset": 783
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "variant",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "variant",
+            "start_offset": 833,
+            "end_offset": 840
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.placementofattributes/ExampleTable",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "ExampleTable",
+        "start_offset": 548,
+        "end_offset": 560
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "member",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "member",
+            "start_offset": 599,
+            "end_offset": 605
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": true,

@@ -14,6 +14,2662 @@
   "dependency_identifiers": [],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7955,
+            "end_offset": 7965
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8270,
+            "end_offset": 8280
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4366,
+            "end_offset": 4376
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3771,
+            "end_offset": 3781
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3154,
+            "end_offset": 3164
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4681,
+            "end_offset": 4691
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4070,
+            "end_offset": 4080
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3469,
+            "end_offset": 3479
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8726,
+            "end_offset": 8736
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 9041,
+            "end_offset": 9051
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5727,
+            "end_offset": 5737
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5110,
+            "end_offset": 5120
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6026,
+            "end_offset": 6036
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5425,
+            "end_offset": 5435
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6501,
+            "end_offset": 6511
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7468,
+            "end_offset": 7478
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7137,
+            "end_offset": 7147
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6816,
+            "end_offset": 6826
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2383,
+            "end_offset": 2393
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1788,
+            "end_offset": 1798
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 515,
+            "end_offset": 525
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2698,
+            "end_offset": 2708
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1482,
+            "end_offset": 1492
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1151,
+            "end_offset": 1161
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": true
+        },
+        {
+          "is_reserved": false,
+          "name": "transport_err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "internal"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2087,
+            "end_offset": 2097
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 830,
+            "end_offset": 840
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8035,
+            "end_offset": 8045
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8365,
+            "end_offset": 8375
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4446,
+            "end_offset": 4456
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3847,
+            "end_offset": 3857
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3234,
+            "end_offset": 3244
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4776,
+            "end_offset": 4786
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4161,
+            "end_offset": 4171
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3564,
+            "end_offset": 3574
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8806,
+            "end_offset": 8816
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 9136,
+            "end_offset": 9146
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5803,
+            "end_offset": 5813
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5190,
+            "end_offset": 5200
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6117,
+            "end_offset": 6127
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5520,
+            "end_offset": 5530
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6581,
+            "end_offset": 6591
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7567,
+            "end_offset": 7577
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7221,
+            "end_offset": 7231
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6911,
+            "end_offset": 6921
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2463,
+            "end_offset": 2473
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1864,
+            "end_offset": 1874
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 595,
+            "end_offset": 605
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2793,
+            "end_offset": 2803
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1581,
+            "end_offset": 1591
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1235,
+            "end_offset": 1245
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2178,
+            "end_offset": 2188
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 925,
+            "end_offset": 935
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": true,

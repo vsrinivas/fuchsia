@@ -48,6 +48,49 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.newtype/Union",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+        "data": "Union",
+        "start_offset": 171,
+        "end_offset": 176
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "b",
+            "start_offset": 194,
+            "end_offset": 195
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.newtype/Table",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+        "data": "Table",
+        "start_offset": 148,
+        "end_offset": 153
+      },
+      "members": []
+    }
+  ],
   "structs": [
     {
       "is_anonymous": true,

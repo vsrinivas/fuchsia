@@ -48,6 +48,64 @@
       ]
     }
   ],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.handlesintypes/UnionWithHandle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+        "data": "UnionWithHandle",
+        "start_offset": 429,
+        "end_offset": 444
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+            "data": "h",
+            "start_offset": 480,
+            "end_offset": 481
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.handlesintypes/TableWithHandle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+        "data": "TableWithHandle",
+        "start_offset": 364,
+        "end_offset": 379
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+            "data": "h",
+            "start_offset": 406,
+            "end_offset": 407
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": false,

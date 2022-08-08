@@ -14,6 +14,91 @@
   "dependency_identifiers": [],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.requestflexibleenvelope/FlexibleFoo",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+        "data": "FlexibleFoo",
+        "start_offset": 44,
+        "end_offset": 55
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "s",
+            "start_offset": 82,
+            "end_offset": 83
+          },
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "i",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "i",
+            "start_offset": 99,
+            "end_offset": 100
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.requestflexibleenvelope/StrictFoo",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+        "data": "StrictFoo",
+        "start_offset": 117,
+        "end_offset": 126
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "s",
+            "start_offset": 151,
+            "end_offset": 152
+          },
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "i",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "i",
+            "start_offset": 168,
+            "end_offset": 169
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [],
   "structs": [
     {
       "is_anonymous": true,

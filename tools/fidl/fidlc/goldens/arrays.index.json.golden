@@ -14,6 +14,118 @@
   "dependency_identifiers": [],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.arrays/UnionLargeArray",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+        "data": "UnionLargeArray",
+        "start_offset": 346,
+        "end_offset": 361
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+            "data": "a",
+            "start_offset": 386,
+            "end_offset": 387
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.arrays/UnionSmallArray",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+        "data": "UnionSmallArray",
+        "start_offset": 277,
+        "end_offset": 292
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+            "data": "a",
+            "start_offset": 317,
+            "end_offset": 318
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.arrays/TableLargeArray",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+        "data": "TableLargeArray",
+        "start_offset": 213,
+        "end_offset": 228
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+            "data": "a",
+            "start_offset": 246,
+            "end_offset": 247
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.arrays/TableSmallArray",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+        "data": "TableSmallArray",
+        "start_offset": 151,
+        "end_offset": 166
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+            "data": "a",
+            "start_offset": 184,
+            "end_offset": 185
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": false,

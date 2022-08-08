@@ -25,6 +25,8 @@ std::ostringstream IndexJSONGenerator::Produce() {
     GenerateObjectMember("dependency_identifiers", IndexJSONGenerator::GetDependencyIdentifiers());
     GenerateObjectMember("consts", compilation_->declarations.consts);
     GenerateObjectMember("enums", compilation_->declarations.enums);
+    GenerateObjectMember("unions", compilation_->declarations.unions);
+    GenerateObjectMember("tables", compilation_->declarations.tables);
     GenerateObjectMember("structs", compilation_->declarations.structs);
     GenerateObjectMember("protocols", compilation_->declarations.protocols);
   });
@@ -57,6 +59,14 @@ IndexJSONGenerator::GetDependencyIdentifiers() {
     }
     for (auto& protocoldecl : dependency.declarations.protocols) {
       auto identifier = IndexJSONGenerator::ReferencedIdentifier(protocoldecl->name);
+      identifiers.emplace_back(identifier);
+    }
+    for (auto& uniondecl : dependency.declarations.unions) {
+      auto identifier = IndexJSONGenerator::ReferencedIdentifier(uniondecl->name);
+      identifiers.emplace_back(identifier);
+    }
+    for (auto& tabledecl : dependency.declarations.tables) {
+      auto identifier = IndexJSONGenerator::ReferencedIdentifier(tabledecl->name);
       identifiers.emplace_back(identifier);
     }
   }
@@ -151,6 +161,50 @@ void IndexJSONGenerator::Generate(const flat::Enum::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name.data(), Position::kFirst);
     GenerateObjectMember("location", value.name);
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Union& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("is_anonymous", value.IsAnonymousLayout(), Position::kFirst);
+    if (!value.IsAnonymousLayout()) {
+      GenerateObjectMember("identifier", value.name);
+      GenerateObjectMember("location", value.name.span().value());
+    }
+    GenerateObjectMember("members", value.members);
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Union::Member& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("is_reserved", !value.maybe_used, Position::kFirst);
+    if (value.maybe_used) {
+      GenerateObjectMember("name", value.maybe_used->name.data());
+      GenerateObjectMember("location", value.maybe_used->name);
+      GenerateObjectMember("type", value.maybe_used->type_ctor.get());
+    }
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Table& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("is_anonymous", value.IsAnonymousLayout(), Position::kFirst);
+    if (!value.IsAnonymousLayout()) {
+      GenerateObjectMember("identifier", value.name);
+      GenerateObjectMember("location", value.name.span().value());
+    }
+    GenerateObjectMember("members", value.members);
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Table::Member& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("is_reserved", !value.maybe_used, Position::kFirst);
+    if (value.maybe_used) {
+      GenerateObjectMember("name", value.maybe_used->name.data());
+      GenerateObjectMember("location", value.maybe_used->name);
+      GenerateObjectMember("type", value.maybe_used->type_ctor.get());
+    }
   });
 }
 

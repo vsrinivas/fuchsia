@@ -83,10 +83,519 @@
         "start_offset": 164,
         "end_offset": 180
       }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocolOnAnonComposedRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "strict union {\n        1: b bool;\n    }",
+        "start_offset": 497,
+        "end_offset": 536
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "strict union {\n        1: b bool;\n    }",
+        "start_offset": 266,
+        "end_offset": 305
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocol_OnAnonComposedWithError_Result",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "(table {\n        1: a uint16;\n    })",
+        "start_offset": 569,
+        "end_offset": 605
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocol_OnNamedComposedWithError_Result",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "(ImportTablePayload)",
+        "start_offset": 901,
+        "end_offset": 921
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocol_TwoWayAnonComposedWithError_Response",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "strict union {\n        1: b bool;\n    }",
+        "start_offset": 420,
+        "end_offset": 459
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocol_TwoWayAnonComposedWithError_Result",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "(strict union {\n        1: b bool;\n    })",
+        "start_offset": 419,
+        "end_offset": 460
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocol_TwoWayNamedComposedWithError_Result",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "(ImportUnionPayload)",
+        "start_offset": 791,
+        "end_offset": 811
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ImportUnionPayload",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "ImportUnionPayload",
+        "start_offset": 100,
+        "end_offset": 118
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocolOneWayAnonComposedRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "table {\n        1: a uint16;\n    }",
+        "start_offset": 206,
+        "end_offset": 240
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedResponse",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "table {\n        1: a uint16;\n    }",
+        "start_offset": 311,
+        "end_offset": 345
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocolTwoWayAnonComposedWithErrorRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "table {\n        1: a uint16;\n    }",
+        "start_offset": 380,
+        "end_offset": 414
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ComposedProtocol_OnAnonComposedWithError_Response",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "table {\n        1: a uint16;\n    }",
+        "start_offset": 570,
+        "end_offset": 604
+      }
+    },
+    {
+      "identifier": "test.protocollayouts.imported/ImportTablePayload",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
+        "data": "ImportTablePayload",
+        "start_offset": 45,
+        "end_offset": 63
+      }
     }
   ],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.protocollayouts/LocalUnionPayload",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+        "data": "LocalUnionPayload",
+        "start_offset": 135,
+        "end_offset": 152
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "b",
+            "start_offset": 179,
+            "end_offset": 180
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "b",
+            "start_offset": 1400,
+            "end_offset": 1401
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "b",
+            "start_offset": 1181,
+            "end_offset": 1182
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocollayouts.imported/ImportTablePayload",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+              "data": "imp.ImportTablePayload",
+              "start_offset": 668,
+              "end_offset": 690
+            }
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocollayouts/LocalTablePayload",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+              "data": "LocalTablePayload",
+              "start_offset": 1007,
+              "end_offset": 1024
+            }
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "b",
+            "start_offset": 1329,
+            "end_offset": 1330
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocollayouts.imported/ImportUnionPayload",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+              "data": "imp.ImportUnionPayload",
+              "start_offset": 564,
+              "end_offset": 586
+            }
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocollayouts/LocalUnionPayload",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+              "data": "LocalUnionPayload",
+              "start_offset": 915,
+              "end_offset": 932
+            }
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.protocollayouts/LocalTablePayload",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+        "data": "LocalTablePayload",
+        "start_offset": 81,
+        "end_offset": 98
+      },
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "a",
+            "start_offset": 116,
+            "end_offset": 117
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "a",
+            "start_offset": 1120,
+            "end_offset": 1121
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "a",
+            "start_offset": 1219,
+            "end_offset": 1220
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "a",
+            "start_offset": 1280,
+            "end_offset": 1281
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
+            "data": "a",
+            "start_offset": 1458,
+            "end_offset": 1459
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": true,

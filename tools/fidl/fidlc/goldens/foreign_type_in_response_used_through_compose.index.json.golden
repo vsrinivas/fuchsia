@@ -77,6 +77,8 @@
   ],
   "consts": [],
   "enums": [],
+  "unions": [],
+  "tables": [],
   "structs": [],
   "protocols": [
     {

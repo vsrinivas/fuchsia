@@ -437,6 +437,42 @@
   ],
   "consts": [],
   "enums": [],
+  "unions": [],
+  "tables": [
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "zircon_handle",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "data": "zircon_handle",
+            "start_offset": 714,
+            "end_offset": 727
+          },
+          "type": {
+            "kind": "handle"
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "fdf_handle",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "data": "fdf_handle",
+            "start_offset": 760,
+            "end_offset": 770
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    }
+  ],
   "structs": [
     {
       "is_anonymous": false,

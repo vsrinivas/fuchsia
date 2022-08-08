@@ -437,6 +437,8 @@
   ],
   "consts": [],
   "enums": [],
+  "unions": [],
+  "tables": [],
   "structs": [
     {
       "is_anonymous": false,

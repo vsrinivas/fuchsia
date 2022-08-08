@@ -73,10 +73,49 @@
         "start_offset": 208,
         "end_offset": 229
       }
+    },
+    {
+      "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
+        "data": "(struct {\n        value int64;\n    })",
+        "start_offset": 298,
+        "end_offset": 335
+      }
     }
   ],
   "consts": [],
   "enums": [],
+  "unions": [
+    {
+      "is_anonymous": true,
+      "members": [
+        {
+          "is_reserved": false,
+          "name": "response",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "is_reserved": false,
+          "name": "err",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "tables": [],
   "structs": [
     {
       "is_anonymous": true,

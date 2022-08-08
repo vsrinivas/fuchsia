@@ -63,6 +63,10 @@ class IndexJSONGenerator : public utils::JsonWriter<IndexJSONGenerator> {
   void Generate(const flat::Protocol& value);
   void Generate(const flat::Protocol::ComposedProtocol& value);
   void Generate(const flat::Protocol::MethodWithInfo& method_with_info);
+  void Generate(const flat::Union& value);
+  void Generate(const flat::Union::Member& value);
+  void Generate(const flat::Table& value);
+  void Generate(const flat::Table::Member& value);
 
   std::ostringstream Produce();
 
