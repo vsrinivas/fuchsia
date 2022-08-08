@@ -19,7 +19,8 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     futures::TryStreamExt,
     protocols::prelude::*,
-    std::net::SocketAddr,
+    std::net::IpAddr,
+    std::net::{SocketAddr, SocketAddrV4, SocketAddrV6},
     std::rc::Rc,
     std::time::{Duration, Instant, SystemTime, UNIX_EPOCH},
     tasks::TaskManager,
@@ -106,13 +107,29 @@ impl TargetCollectionProtocol {
     async fn load_manual_targets(&self, tc: &TargetCollection) {
         // The FFX config value for a manual target contains a target ID (typically the IP:PORT
         // combo) and a timeout (which is None, if the target is indefinitely persistent).
-        for (str, val) in self.manual_targets.get_or_default().await {
-            let sa = match str.parse::<std::net::SocketAddr>() {
-                Ok(sa) => sa,
+        for (unparsed_addr, val) in self.manual_targets.get_or_default().await {
+            let (addr, scope, port) = match netext::parse_address_parts(unparsed_addr.as_str()) {
+                Ok(res) => res,
                 Err(e) => {
-                    tracing::error!("Parse of manual target config failed: {}", e);
+                    tracing::error!("Skipping load of manual target address due to parsing error '{unparsed_addr}': {e}");
                     continue;
                 }
+            };
+            let scope_id = if let Some(scope) = scope {
+                match netext::get_verified_scope_id(scope) {
+                    Ok(res) => res,
+                    Err(e) => {
+                        tracing::error!("Scope load of manual address '{unparsed_addr}', which had a scope ID of '{scope}', which was not verifiable: {e}");
+                        continue;
+                    }
+                }
+            } else {
+                0
+            };
+            let port = port.unwrap_or(0);
+            let sa = match addr {
+                IpAddr::V4(i) => std::net::SocketAddr::V4(SocketAddrV4::new(i, port)),
+                IpAddr::V6(i) => std::net::SocketAddr::V6(SocketAddrV6::new(i, port, 0, scope_id)),
             };
             let secs = val.as_u64();
             if secs.is_some() {

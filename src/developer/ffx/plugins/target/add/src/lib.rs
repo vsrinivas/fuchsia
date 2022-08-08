@@ -13,26 +13,23 @@ use {
     std::net::IpAddr,
 };
 
-use std::ffi::CString;
-
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand) -> Result<()> {
     let (addr, scope, port) =
         parse_address_parts(cmd.addr.as_str()).map_err(|e| ffx_error!("{}", e))?;
-    // TODO(fxbug.dev/93511): Check if the scope ID is an index.
     let scope_id = if let Some(scope) = scope {
-        if cfg!(not(test)) {
-            unsafe {
-                let scope = CString::new(scope).unwrap();
-                libc::if_nametoindex(scope.as_ptr())
+        match netext::get_verified_scope_id(scope) {
+            Ok(res) => res,
+            Err(_e) => {
+                return Err(ffx_error!(
+                    "Cannot add target, as scope ID '{scope}' is not a valid interface name or index"
+                )
+                .into());
             }
-        } else {
-            scope.parse()?
         }
     } else {
         0
     };
-
     let ip = match addr {
         IpAddr::V6(i) => net::IpAddress::Ipv6(net::Ipv6Address { addr: i.octets().into() }),
         IpAddr::V4(i) => net::IpAddress::Ipv4(net::Ipv4Address { addr: i.octets().into() }),

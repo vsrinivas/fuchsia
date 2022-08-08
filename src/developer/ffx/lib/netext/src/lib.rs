@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use itertools::Itertools;
 use libc;
 use nix::{
@@ -153,12 +153,16 @@ fn ifaddr_to_socketaddr(ifaddr: InterfaceAddress) -> Option<std::net::SocketAddr
 /// scope_id_to_name attempts to convert a scope_id to an interface name, otherwise it returns the
 /// scopeid formatted as a string.
 pub fn scope_id_to_name(scope_id: u32) -> String {
+    scope_id_to_name_checked(scope_id).unwrap_or(format!("{scope_id}"))
+}
+
+fn scope_id_to_name_checked(scope_id: u32) -> Result<String> {
     let mut buf = vec![0; libc::IF_NAMESIZE];
     let res = unsafe { libc::if_indextoname(scope_id, buf.as_mut_ptr() as *mut libc::c_char) };
     if res.is_null() {
-        format!("{}", scope_id)
+        bail!("{scope_id} is not a valid network interface ID")
     } else {
-        String::from_utf8_lossy(&buf.split(|&c| c == 0u8).next().unwrap_or(&[0u8])).to_string()
+        Ok(String::from_utf8_lossy(&buf.split(|&c| c == 0u8).next().unwrap_or(&[0u8])).to_string())
     }
 }
 
@@ -166,9 +170,16 @@ pub fn scope_id_to_name(scope_id: u32) -> String {
 /// string `name` is not a compatible CString (containing an interior null byte),
 /// will return 0.
 pub fn name_to_scope_id(name: &str) -> u32 {
-    match CString::new(name) {
-        Ok(s) => unsafe { libc::if_nametoindex(s.as_ptr()) },
-        Err(_) => 0,
+    name_to_scope_id_checked(name).unwrap_or(0)
+}
+
+fn name_to_scope_id_checked(name: &str) -> Result<u32> {
+    let s = CString::new(name)?;
+    let idx = unsafe { libc::if_nametoindex(s.as_ptr()) };
+    if idx == 0 {
+        bail!("'{name}' is not a valid network interface name.")
+    } else {
+        Ok(idx)
     }
 }
 
@@ -232,6 +243,31 @@ pub fn parse_address_parts(addr_str: &str) -> Result<(IpAddr, Option<&str>, Opti
     Ok((addr, scope, port))
 }
 
+/// Takes a string purporting to be a scope ID, then verifies that it exists on the system.
+///
+/// Examples:
+///
+/// ```rust
+/// // If `en0` is a real interface on the system with the scope ID being 1.
+/// assert_eq!(get_verified_scope_id("en0").unwrap(), 1u32);
+///
+/// // If `foober` isn't a real interface on the system.
+/// assert!(get_verified_scope_id("foober").is_err());
+///
+/// // If "1" is the scope ID of, say, `en0`.
+/// assert_eq!(get_verified_scope_id("1").unwrap(), 1u32);
+///
+/// // If "25" is not a scope ID of any interface.
+/// assert!(get_verified_scope_id("25").is_err())
+/// ```
+pub fn get_verified_scope_id(scope: &str) -> Result<u32> {
+    let s = match scope.parse::<u32>() {
+        Ok(i) => scope_id_to_name_checked(i)?,
+        Err(_e) => scope.to_owned(),
+    };
+    name_to_scope_id_checked(s.as_str())
+}
+
 // select_mcast_interfaces iterates over a set of InterfaceAddresses,
 // selecting only those that meet the McastInterface criteria (see
 // McastInterface), and returns them in a McastInterface representation.
@@ -273,6 +309,30 @@ mod tests {
         let addr = ifaddrs.next().unwrap();
         let index = nix::net::if_::if_nametoindex(addr.interface_name.as_str()).unwrap();
         assert_eq!(scope_id_to_name(index), addr.interface_name.to_string());
+    }
+
+    #[test]
+    fn test_verified_scope_id_by_name() {
+        let mut ifaddrs = getifaddrs().unwrap();
+        let addr = ifaddrs.next().unwrap();
+        let index = name_to_scope_id_checked(addr.interface_name.as_str()).unwrap();
+        assert_eq!(get_verified_scope_id(addr.interface_name.as_str()).unwrap(), index);
+    }
+
+    #[test]
+    fn test_verified_scope_id_nonsense_name() {
+        assert!(get_verified_scope_id("foihaofhoaw").is_err());
+    }
+
+    #[test]
+    fn test_verified_scope_id_unused_scope_id() {
+        let ifaddrs = getifaddrs().unwrap();
+        let mut used_indices = ifaddrs
+            .map(|addr| name_to_scope_id(addr.interface_name.as_str()))
+            .collect::<Vec<u32>>();
+        used_indices.sort();
+        let unused_index = used_indices.as_slice().last().unwrap() + 1;
+        assert!(get_verified_scope_id(format!("{}", unused_index).as_str()).is_err());
     }
 
     #[test]

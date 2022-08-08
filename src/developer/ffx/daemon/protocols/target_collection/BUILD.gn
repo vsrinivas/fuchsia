@@ -16,6 +16,7 @@ rustc_library("ffx_daemon_protocol_target_collection") {
     "//src/developer/ffx/daemon/events:lib",
     "//src/developer/ffx/daemon/target:lib",
     "//src/developer/ffx/lib/diagnostics:lib",
+    "//src/developer/ffx/lib/netext:lib",
     "//src/developer/ffx/lib/protocols:lib",
     "//src/developer/ffx/lib/rcs:lib",
     "//src/developer/ffx/lib/stream_util:lib",

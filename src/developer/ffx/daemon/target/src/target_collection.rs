@@ -353,28 +353,17 @@ impl From<String> for TargetQuery {
         let (addr, scope, port) = match netext::parse_address_parts(s.as_str()) {
             Ok(r) => r,
             Err(e) => {
-                tracing::trace!("Failed to parse address. Interpreting as nodename: {:?}", e);
+                tracing::trace!(
+                    "Failed to parse address from '{s}'. Interpreting as nodename: {:?}",
+                    e
+                );
                 return Self::NodenameOrSerial(s);
             }
         };
-        let scope = scope
-            .map(|s| {
-                // If this ends up being a number and is a valid scope ID, then this will return
-                // the name. If not it will return the index number as a string (so something like
-                // "3"). When running name_to_scope_id, using the index as a string will fail,
-                // causing that function to return zero, which is the desired effect.
-                //
-                // Returning 0 from this closure will set the TargetAddr scope_id to 0 as well,
-                // which is the same as not including a scope_id in the query. This will still
-                // match a target later if the scope has gone down (manually or otherwise), which
-                // is why it is not included as an error for searching. This does mean it might
-                // be possible to include arbitrary inaccurate scope names for looking up a target,
-                // however, like `fe80::1%nonsense`.
-                let s =
-                    s.parse::<u32>().map(|i| netext::scope_id_to_name(i)).unwrap_or(s.to_owned());
-                netext::name_to_scope_id(s.as_str())
-            })
-            .unwrap_or(0);
+        // If no such interface exists, just return 0 for a best effort search.
+        // This does mean it might be possible to include arbitrary inaccurate scope names for
+        // looking up a target, however (like `fe80::1%nonsense`).
+        let scope = scope.map(|s| netext::get_verified_scope_id(s).unwrap_or(0)).unwrap_or(0);
         match port {
             Some(p) => Self::AddrPort((TargetAddr::from((addr, scope)), p)),
             None => Self::Addr(TargetAddr::from((addr, scope))),
