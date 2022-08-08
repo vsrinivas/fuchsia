@@ -285,11 +285,20 @@ impl<A: AsMut<[u8]>, B: AsMut<[u8]>> AsMut<[u8]> for Either<A, B> {
 /// `AsMut<[u8]>`) and implements various buffer traits by keeping track of
 /// prefix, body, and suffix offsets within the byte slice.
 #[derive(Clone, Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct Buf<B> {
     buf: B,
     body: Range<usize>,
 }
+
+impl<B: AsRef<[u8]>> PartialEq for Buf<B> {
+    fn eq(&self, other: &Self) -> bool {
+        let self_slice = AsRef::<[u8]>::as_ref(self);
+        let other_slice = AsRef::<[u8]>::as_ref(other);
+        PartialEq::eq(self_slice, other_slice)
+    }
+}
+
+impl<B: AsRef<[u8]>> Eq for Buf<B> {}
 
 impl Buf<Vec<u8>> {
     /// Extracts the contained data trimmed to the buffer's range.

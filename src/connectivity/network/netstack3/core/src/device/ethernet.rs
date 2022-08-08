@@ -4,20 +4,16 @@
 
 //! The Ethernet protocol.
 
-use alloc::{collections::HashMap, collections::VecDeque, vec::Vec};
 use core::fmt::Debug;
 
-use log::{debug, trace};
+use log::trace;
 use net_types::{
     ethernet::Mac,
-    ip::{
-        AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-        UnicastOrMulticastIpv6Addr,
-    },
+    ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     BroadcastAddress, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, UnicastAddress,
     Witness,
 };
-use packet::{Buf, BufferMut, InnerPacketBuilder as _, Nested, Serializer};
+use packet::{BufferMut, InnerPacketBuilder as _, Nested, Serializer};
 use packet_formats::{
     arp::{peek_arp_types, ArpHardwareType, ArpNetworkType},
     ethernet::{
@@ -30,11 +26,15 @@ use packet_formats::{
     utils::NonZeroDuration,
 };
 
+#[cfg(test)]
+use crate::ip::device::nud::NudHandler;
 use crate::{
     context::{FrameContext, RngContext, StateContext, TimerHandler},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
-        arp::{self, ArpContext, ArpFrameMetadata, ArpState, ArpTimerId},
+        arp::{
+            ArpContext, ArpFrameMetadata, ArpPacketHandler, ArpState, ArpTimerId, BufferArpContext,
+        },
         link::LinkDevice,
         ndp::NdpContext,
         BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
@@ -42,13 +42,11 @@ use crate::{
     },
     error::ExistsError,
     ip::device::{
-        nud::{NudContext, NudHandler, NudState, NudTimerId},
+        nud::{BufferNudContext, BufferNudHandler, NudContext, NudState, NudTimerId},
         state::{AddrConfig, IpDeviceState},
     },
-    NonSyncContext, SyncCtx,
+    BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
-
-const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
 impl From<Mac> for FrameDestination {
     fn from(mac: Mac) -> FrameDestination {
@@ -249,24 +247,42 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
             NeighborSolicitation::new(lookup_addr.get()),
         );
     }
+}
 
-    fn address_resolved(
+fn send_ip_frame_to_dst<
+    B: BufferMut,
+    S: Serializer<Buffer = B>,
+    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
+    SC: EthernetIpLinkDeviceContext<C> + FrameContext<C, B, SC::DeviceId>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
+    dst_mac: Mac,
+    body: S,
+    ether_type: EtherType,
+) -> Result<(), S> {
+    let local_mac = get_state(sync_ctx, device_id).link.mac;
+    sync_ctx
+        .send_frame(
+            ctx,
+            device_id.into(),
+            body.encapsulate(EthernetFrameBuilder::new(local_mac.get(), dst_mac, ether_type)),
+        )
+        .map_err(|ser| ser.into_inner())
+}
+
+impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
+    BufferNudContext<B, Ipv6, EthernetLinkDevice, NonSyncCtx> for SyncCtx<NonSyncCtx>
+{
+    fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut NonSyncCtx,
-        device_id: Self::DeviceId,
-        address: SpecifiedAddr<Ipv6Addr>,
-        link_address: Mac,
-    ) {
-        mac_resolved(self, ctx, device_id, IpAddr::V6(address.get()), link_address);
-    }
-
-    fn address_resolution_failed(
-        &mut self,
-        ctx: &mut NonSyncCtx,
-        device_id: Self::DeviceId,
-        address: SpecifiedAddr<Ipv6Addr>,
-    ) {
-        mac_resolution_failed(self, ctx, device_id, IpAddr::V6(address.get()));
+        device_id: EthernetDeviceId,
+        dst_mac: Mac,
+        body: S,
+    ) -> Result<(), S> {
+        send_ip_frame_to_dst(self, ctx, device_id, dst_mac, body, EtherType::Ipv6)
     }
 }
 
@@ -303,7 +319,6 @@ impl EthernetDeviceStateBuilder {
             hw_mtu: self.mtu,
             link_multicast_groups: RefCountedHashSet::default(),
             ipv4_arp: ArpState::default(),
-            pending_frames: HashMap::new(),
             promiscuous_mode: false,
             ipv6_nud: Default::default(),
         }
@@ -329,11 +344,6 @@ pub(crate) struct EthernetDeviceState {
     /// IPv4 ARP state.
     ipv4_arp: ArpState<EthernetLinkDevice>,
 
-    // pending_frames stores a list of serialized frames indexed by their
-    // destination IP addresses. The frames contain an entire EthernetFrame
-    // body and the MTU check is performed before queueing them here.
-    pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
-
     /// A flag indicating whether the device will accept all ethernet frames
     /// that it receives, regardless of the ethernet frame's destination MAC
     /// address.
@@ -344,36 +354,6 @@ pub(crate) struct EthernetDeviceState {
 }
 
 impl EthernetDeviceState {
-    /// Adds a pending frame `frame` associated with `local_addr` to the list of
-    /// pending frames in the current device state.
-    ///
-    /// If an older frame had to be dropped because it exceeds the maximum
-    /// allowed number of pending frames, it is returned.
-    fn add_pending_frame(
-        &mut self,
-        local_addr: IpAddr,
-        frame: Buf<Vec<u8>>,
-    ) -> Option<Buf<Vec<u8>>> {
-        let buff = self.pending_frames.entry(local_addr).or_insert_with(Default::default);
-        buff.push_back(frame);
-        if buff.len() > ETHERNET_MAX_PENDING_FRAMES {
-            buff.pop_front()
-        } else {
-            None
-        }
-    }
-
-    /// Takes all pending frames associated with address `local_addr`.
-    fn take_pending_frames(
-        &mut self,
-        local_addr: IpAddr,
-    ) -> Option<impl Iterator<Item = Buf<Vec<u8>>>> {
-        match self.pending_frames.remove(&local_addr) {
-            Some(buff) => Some(buff.into_iter()),
-            None => None,
-        }
-    }
-
     /// Is a packet with a destination MAC address, `dst`, destined for this
     /// device?
     ///
@@ -465,8 +445,8 @@ pub(super) fn send_ip_frame<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
     SC: EthernetIpLinkDeviceContext<C>
         + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>
-        + NudHandler<Ipv4, EthernetLinkDevice, C>
-        + NudHandler<Ipv6, EthernetLinkDevice, C>,
+        + BufferNudHandler<B, Ipv4, EthernetLinkDevice, C>
+        + BufferNudHandler<B, Ipv6, EthernetLinkDevice, C>,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
@@ -480,69 +460,40 @@ pub(super) fn send_ip_frame<
 
     trace!("ethernet::send_ip_frame: local_addr = {:?}; device = {:?}", local_addr, device_id);
 
-    let state = &mut sync_ctx.get_state_mut_with(device_id).link;
-    let (local_mac, mtu) = (state.mac, state.mtu);
+    let mtu = sync_ctx.get_state_with(device_id).link.mtu;
+    let body = body.with_mtu(mtu as usize);
 
-    let dst_mac = match local_addr.into() {
-        IpAddr::V4(local_addr) => match MulticastAddr::from_witness(local_addr) {
-            Some(multicast) => Ok(Mac::from(&multicast)),
-            None => NudHandler::<Ipv4, _, _>::lookup(sync_ctx, ctx, device_id, local_addr)
-                .ok_or(IpAddr::V4(local_addr)),
-        },
-        IpAddr::V6(local_addr) => match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
-            UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
-            UnicastOrMulticastIpv6Addr::Unicast(addr) => {
-                NudHandler::<Ipv6, _, _>::lookup(sync_ctx, ctx, device_id, addr.into_specified())
-                    .ok_or(IpAddr::V6(local_addr))
+    if let Some(multicast) = MulticastAddr::new(local_addr.get()) {
+        send_ip_frame_to_dst(
+            sync_ctx,
+            ctx,
+            device_id,
+            Mac::from(&multicast),
+            body,
+            A::Version::ETHER_TYPE,
+        )
+    } else {
+        match local_addr.into() {
+            IpAddr::V4(local_addr) => {
+                BufferNudHandler::<_, Ipv4, _, _>::send_ip_packet_to_neighbor(
+                    sync_ctx, ctx, device_id, local_addr, body,
+                )
             }
-        },
-    };
-
-    match dst_mac {
-        Ok(dst_mac) => sync_ctx
-            .send_frame(
-                ctx,
-                device_id.into(),
-                body.with_mtu(mtu as usize).encapsulate(EthernetFrameBuilder::new(
-                    local_mac.get(),
-                    dst_mac,
-                    A::Version::ETHER_TYPE,
-                )),
-            )
-            .map_err(|ser| ser.into_inner().into_inner()),
-        Err(local_addr) => {
-            let state = &mut sync_ctx.get_state_mut_with(device_id).link;
-            // The `serialize_vec_outer` call returns an `Either<B,
-            // Buf<Vec<u8>>`. We could naively call `.as_ref().to_vec()` on it,
-            // but if it were the `Buf<Vec<u8>>` variant, we'd be unnecessarily
-            // allocating a new `Vec` when we already have one. Instead, we
-            // leave the `Buf<Vec<u8>>` variant as it is, and only convert the
-            // `B` variant by calling `map_a`. That gives us an
-            // `Either<Buf<Vec<u8>>, Buf<Vec<u8>>`, which we call `into_inner`
-            // on to get a `Buf<Vec<u8>>`.
-            let frame = body
-                .with_mtu(mtu as usize)
-                .serialize_vec_outer()
-                .map_err(|ser| ser.1.into_inner())?
-                .map_a(|buffer| Buf::new(buffer.as_ref().to_vec(), ..))
-                .into_inner();
-            let dropped = state
-                .add_pending_frame(local_addr.transpose::<SpecifiedAddr<IpAddr>>().get(), frame);
-            if let Some(_dropped) = dropped {
-                // TODO(brunodalbo): Is it ok to silently just let this drop? Or
-                //  should the IP layer be notified in any way?
-                log_unimplemented!((), "Ethernet dropped frame because ran out of allowable space");
+            IpAddr::V6(local_addr) => {
+                BufferNudHandler::<_, Ipv6, _, _>::send_ip_packet_to_neighbor(
+                    sync_ctx, ctx, device_id, local_addr, body,
+                )
             }
-            Ok(())
         }
     }
+    .map_err(Nested::into_inner)
 }
 
 /// Receive an Ethernet frame from the network.
 pub(super) fn receive_frame<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
     B: BufferMut,
-    SC: BufferEthernetIpLinkDeviceContext<C, B>,
+    SC: BufferEthernetIpLinkDeviceContext<C, B> + ArpPacketHandler<B, EthernetLinkDevice, C>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -587,7 +538,7 @@ pub(super) fn receive_frame<
             };
             match types {
                 (ArpHardwareType::Ethernet, ArpNetworkType::Ipv4) => {
-                    arp::handle_packet(sync_ctx, ctx, device_id, buffer)
+                    ArpPacketHandler::handle_packet(sync_ctx, ctx, device_id, buffer)
                 }
             }
         }
@@ -730,7 +681,7 @@ pub(super) fn get_mtu<
 #[cfg(test)]
 pub(super) fn insert_static_arp_table_entry<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
-    SC: EthernetIpLinkDeviceContext<C>,
+    SC: EthernetIpLinkDeviceContext<C> + NudHandler<Ipv4, EthernetLinkDevice, C>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -738,7 +689,11 @@ pub(super) fn insert_static_arp_table_entry<
     addr: Ipv4Addr,
     mac: Mac,
 ) {
-    arp::insert_static_neighbor(sync_ctx, ctx, device_id, addr, mac)
+    if let Some(addr) = SpecifiedAddr::new(addr) {
+        NudHandler::<Ipv4, EthernetLinkDevice, _>::set_static_neighbor(
+            sync_ctx, ctx, device_id, addr, mac,
+        )
+    }
 }
 
 /// Insert an entry into this device's NDP table.
@@ -789,16 +744,13 @@ impl<
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        meta: ArpFrameMetadata<EthernetLinkDevice, SC::DeviceId>,
+        ArpFrameMetadata { device_id, dst_addr }: ArpFrameMetadata<
+            EthernetLinkDevice,
+            SC::DeviceId,
+        >,
         body: S,
     ) -> Result<(), S> {
-        let src = self.get_state_with(meta.device_id).link.mac;
-        self.send_frame(
-            ctx,
-            meta.device_id,
-            body.encapsulate(EthernetFrameBuilder::new(src.get(), meta.dst_addr, EtherType::Arp)),
-        )
-        .map_err(Nested::into_inner)
+        send_ip_frame_to_dst(self, ctx, device_id, dst_addr, body, EtherType::Arp)
     }
 }
 
@@ -818,22 +770,19 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
     fn get_hardware_addr(&self, _ctx: &mut C, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
         self.get_state_with(device_id.into()).link.mac
     }
-    fn address_resolved(
+}
+
+impl<B: BufferMut, C: BufferNonSyncContext<B>> BufferArpContext<EthernetLinkDevice, C, B>
+    for SyncCtx<C>
+{
+    fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: SC::DeviceId,
-        proto_addr: Ipv4Addr,
-        hw_addr: Mac,
-    ) {
-        mac_resolved(self, ctx, device_id.into(), IpAddr::V4(proto_addr), hw_addr);
-    }
-    fn address_resolution_failed(
-        &mut self,
-        ctx: &mut C,
-        device_id: SC::DeviceId,
-        proto_addr: Ipv4Addr,
-    ) {
-        mac_resolution_failed(self, ctx, device_id.into(), IpAddr::V4(proto_addr));
+        device_id: EthernetDeviceId,
+        dst_mac: Mac,
+        body: S,
+    ) -> Result<(), S> {
+        send_ip_frame_to_dst(self, ctx, device_id, dst_mac, body, EtherType::Ipv4)
     }
 }
 
@@ -892,82 +841,10 @@ impl LinkDevice for EthernetLinkDevice {
     type State = EthernetDeviceState;
 }
 
-/// Sends out any pending frames that are waiting for link layer address
-/// resolution.
-///
-/// `mac_resolved` is the common logic used when a link layer address is
-/// resolved either by ARP or NDP.
-fn mac_resolved<
-    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
-    SC: EthernetIpLinkDeviceContext<C>,
->(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    device_id: SC::DeviceId,
-    address: IpAddr,
-    dst_mac: Mac,
-) {
-    let state = &mut sync_ctx.get_state_mut_with(device_id).link;
-    let src_mac = state.mac;
-    let ether_type = match &address {
-        IpAddr::V4(_) => EtherType::Ipv4,
-        IpAddr::V6(_) => EtherType::Ipv6,
-    };
-    if let Some(pending) = state.take_pending_frames(address) {
-        for frame in pending {
-            // NOTE(brunodalbo): We already performed MTU checking when we saved
-            //  the buffer waiting for address resolution. It should be noted
-            //  that the MTU check back then didn't account for ethernet frame
-            //  padding required by EthernetFrameBuilder, but that's fine (as it
-            //  stands right now) because the MTU is guaranteed to be larger
-            //  than an Ethernet minimum frame body size.
-            let res = sync_ctx.send_frame(
-                ctx,
-                device_id.into(),
-                frame.encapsulate(EthernetFrameBuilder::new(src_mac.get(), dst_mac, ether_type)),
-            );
-            if let Err(_) = res {
-                // TODO(joshlf): Do we want to handle this differently?
-                debug!("Failed to send pending frame; MTU changed since frame was queued");
-            }
-        }
-    }
-}
-
-/// Clears out any pending frames that are waiting for link layer address
-/// resolution.
-///
-/// `mac_resolution_failed` is the common logic used when a link layer address
-/// fails to resolve either by ARP or NDP.
-fn mac_resolution_failed<
-    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
-    SC: EthernetIpLinkDeviceContext<C>,
->(
-    sync_ctx: &mut SC,
-    _ctx: &mut C,
-    device_id: SC::DeviceId,
-    address: IpAddr,
-) {
-    // TODO(brunodalbo) what do we do here in regards to the pending frames?
-    //  NDP's RFC explicitly states unreachable ICMP messages must be generated:
-    //  "If no Neighbor Advertisement is received after MAX_MULTICAST_SOLICIT
-    //  solicitations, address resolution has failed. The sender MUST return
-    //  ICMP destination unreachable indications with code 3
-    //  (Address Unreachable) for each packet queued awaiting address
-    //  resolution."
-    //  For ARP, we don't have such a clear statement on the RFC, it would make
-    //  sense to do the same thing though.
-    let state = &mut sync_ctx.get_state_mut_with(device_id).link;
-    if let Some(_) = state.take_pending_frames(address) {
-        log_unimplemented!((), "ethernet mac resolution failed not implemented");
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
+    use alloc::{collections::hash_map::HashMap, vec, vec::Vec};
 
-    use assert_matches::assert_matches;
     use net_types::ip::IpVersion;
     use packet::Buf;
     use packet_formats::{
@@ -1005,12 +882,14 @@ mod tests {
 
     struct DummyEthernetCtx {
         state: IpLinkDeviceState<DummyInstant, EthernetDeviceState>,
+        static_arp_entries: HashMap<SpecifiedAddr<Ipv4Addr>, Mac>,
     }
 
     impl DummyEthernetCtx {
         fn new(mac: UnicastAddr<Mac>, mtu: u32) -> DummyEthernetCtx {
             DummyEthernetCtx {
                 state: IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()),
+                static_arp_entries: Default::default(),
             }
         }
     }
@@ -1095,17 +974,63 @@ mod tests {
             unimplemented!()
         }
 
-        fn lookup(
+        fn flush(&mut self, _ctx: &mut DummyNonSyncCtx, _device_id: Self::DeviceId) {
+            unimplemented!()
+        }
+    }
+
+    impl<B: BufferMut> BufferNudHandler<B, Ipv6, EthernetLinkDevice, DummyNonSyncCtx> for DummyCtx {
+        fn send_ip_packet_to_neighbor<S: Serializer<Buffer = B>>(
             &mut self,
             _ctx: &mut DummyNonSyncCtx,
             _device_id: Self::DeviceId,
             _lookup_addr: SpecifiedAddr<Ipv6Addr>,
-        ) -> Option<Mac> {
+            _body: S,
+        ) -> Result<(), S> {
             unimplemented!()
+        }
+    }
+
+    impl NudHandler<Ipv4, EthernetLinkDevice, DummyNonSyncCtx> for DummyCtx {
+        fn set_dynamic_neighbor(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device_id: Self::DeviceId,
+            _neighbor: SpecifiedAddr<Ipv4Addr>,
+            _link_addr: Mac,
+            _is_confirmation: DynamicNeighborUpdateSource,
+        ) {
+            unimplemented!()
+        }
+
+        fn set_static_neighbor(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device_id: Self::DeviceId,
+            neighbor: SpecifiedAddr<Ipv4Addr>,
+            link_addr: Mac,
+        ) {
+            let _: Option<Mac> = self.get_mut().static_arp_entries.insert(neighbor, link_addr);
         }
 
         fn flush(&mut self, _ctx: &mut DummyNonSyncCtx, _device_id: Self::DeviceId) {
             unimplemented!()
+        }
+    }
+
+    impl<B: BufferMut> BufferNudHandler<B, Ipv4, EthernetLinkDevice, DummyNonSyncCtx> for DummyCtx {
+        fn send_ip_packet_to_neighbor<S: Serializer<Buffer = B>>(
+            &mut self,
+            ctx: &mut DummyNonSyncCtx,
+            device_id: Self::DeviceId,
+            lookup_addr: SpecifiedAddr<Ipv4Addr>,
+            body: S,
+        ) -> Result<(), S> {
+            if let Some(link_addr) = self.get_ref().static_arp_entries.get(&lookup_addr).cloned() {
+                send_ip_frame_to_dst(self, ctx, device_id, link_addr, body, EtherType::Ipv4)
+            } else {
+                Ok(())
+            }
         }
     }
 
@@ -1171,33 +1096,6 @@ mod tests {
 
         test(Ipv6::MINIMUM_LINK_MTU.into(), 1);
         test(usize::from(Ipv6::MINIMUM_LINK_MTU) + 1, 0);
-    }
-
-    #[test]
-    fn test_pending_frames() {
-        let mut state = EthernetDeviceStateBuilder::new(
-            DUMMY_CONFIG_V4.local_mac,
-            Ipv6::MINIMUM_LINK_MTU.into(),
-        )
-        .build();
-        let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.get());
-        assert_matches!(state.add_pending_frame(ip, Buf::new(vec![1], ..)), None);
-        assert_matches!(state.add_pending_frame(ip, Buf::new(vec![2], ..)), None);
-        assert_matches!(state.add_pending_frame(ip, Buf::new(vec![3], ..)), None);
-
-        // Check that we're accumulating correctly...
-        assert_eq!(3, state.take_pending_frames(ip).unwrap().count());
-        // ...and that take_pending_frames clears all the buffered data.
-        assert!(state.take_pending_frames(ip).is_none());
-
-        for i in 0..ETHERNET_MAX_PENDING_FRAMES {
-            assert!(state.add_pending_frame(ip, Buf::new(vec![i as u8], ..)).is_none());
-        }
-        // Check that adding more than capacity will drop the older buffers as
-        // a proper FIFO queue.
-        assert_eq!(0, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
-        assert_eq!(1, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
-        assert_eq!(2, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
     }
 
     #[ip_test]

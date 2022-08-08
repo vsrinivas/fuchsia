@@ -89,17 +89,16 @@ pub(crate) fn set_logger_for_test() {
 /// correct [`EventDispatcher`] are re-implemented by it so any events can be
 /// short circuited into internal event watchers as opposed to routing into the
 /// internal [`BindingsDispatcherState]`.
+#[derive(Default)]
 pub(crate) struct TestNonSyncCtx {
     ctx: BindingsNonSyncCtxImpl,
     /// A oneshot signal that is hit whenever changes to interface status occur
     /// and it is set.
     status_changed_signal: Option<futures::channel::oneshot::Sender<()>>,
-}
-
-impl Default for TestNonSyncCtx {
-    fn default() -> TestNonSyncCtx {
-        TestNonSyncCtx { ctx: Default::default(), status_changed_signal: None }
-    }
+    /// Holds when timers are scheduled to fire.
+    ///
+    /// Note that the timers will not actually fire/be dispatched.
+    scheduled_timers: HashMap<TimerId, StackTime>,
 }
 
 impl TestNonSyncCtx {
@@ -181,21 +180,25 @@ impl TcpNonSyncContext for TestNonSyncCtx {
     fn on_new_connection(&mut self, _listener: ListenerId) {}
 }
 
+// An implementation that keeps track of when timers are scheduled to fire but
+// does not actually fire timers.
+//
+// This is OK as current tests do not expect to fire timers.
 impl TimerContext<TimerId> for TestNonSyncCtx {
     fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
-        self.ctx.schedule_timer_instant(time, id)
+        self.scheduled_timers.insert(id, time)
     }
 
     fn cancel_timer(&mut self, id: TimerId) -> Option<StackTime> {
-        self.ctx.cancel_timer(id)
+        self.scheduled_timers.remove(&id)
     }
 
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.ctx.cancel_timers_with(f);
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, mut f: F) {
+        self.scheduled_timers.retain(|id, _time| !f(id))
     }
 
     fn scheduled_instant(&self, id: TimerId) -> Option<StackTime> {
-        self.ctx.scheduled_instant(id)
+        self.scheduled_timers.get(&id).cloned()
     }
 }
 
