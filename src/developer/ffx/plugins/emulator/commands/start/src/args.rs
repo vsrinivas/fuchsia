@@ -5,6 +5,7 @@
 use argh::FromArgs;
 use ffx_config::FfxConfigBacked;
 use ffx_core::ffx_command;
+use ffx_emulator_common::host_is_mac;
 use ffx_emulator_config::{AccelerationMode, GpuType, NetworkingMode};
 use std::path::PathBuf;
 
@@ -81,7 +82,7 @@ pub struct StartCommand {
     pub headless: bool,
 
     /// enable pixel scaling on HiDPI devices. Defaults to true for MacOS, false otherwise.
-    #[argh(option, default = "std::env::consts::OS == \"macos\"")]
+    #[argh(option, default = "host_is_mac()")]
     pub hidpi_scaling: bool,
 
     /// experimental(for https://fxbug.dev/95278). Passes the given string to the emulator

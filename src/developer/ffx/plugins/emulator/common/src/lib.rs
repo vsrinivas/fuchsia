@@ -11,7 +11,6 @@ use std::{
     fs::File,
     io::{BufRead, Write},
     path::PathBuf,
-    process::Command,
 };
 
 // Provides access to ffx_config properties.
@@ -19,6 +18,12 @@ pub mod config;
 pub mod instances;
 pub mod process;
 pub mod target;
+pub mod tuntap;
+
+/// A utility function for checking whether the host OS is MacOS.
+pub fn host_is_mac() -> bool {
+    std::env::consts::OS == "macos"
+}
 
 /// A utility function for splitting a string at a single point and converting it into a tuple.
 /// Returns an Err(anyhow) if it can't do the split.
@@ -30,21 +35,6 @@ pub fn split_once(text: &str, pattern: &str) -> Result<(String, String)> {
     let first = splitter[0];
     let second = splitter[1];
     Ok((first.to_string(), second.to_string()))
-}
-
-/// A utility function for testing if a Tap interface is up and available. Assumes the existence
-/// of the "ip" program for finding the interface, which is usually preinstalled on Linux hosts
-/// but not MacOS hosts. Conservatively assumes any error indicates Tap is unavailable.
-pub fn tap_available() -> bool {
-    if std::env::consts::OS != "linux" {
-        return false;
-    }
-    let output = Command::new("ip").args(["tuntap", "show"]).output();
-    // Output contains the interface name, if it exists. Tap is considered available if the call
-    // succeeds and output is non-empty.
-    // TODO(fxbug.dev/87464): Check for the expected interface name, to make sure we have the right
-    // one if there are multiple taps possible (i.e. for supporting multiple emu instances).
-    return output.is_ok() && output.unwrap().stdout.len() > 0;
 }
 
 /// A utility function to dump the contents of a file to the terminal.

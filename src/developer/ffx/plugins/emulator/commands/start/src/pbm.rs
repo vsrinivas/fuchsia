@@ -8,7 +8,8 @@ use anyhow::{bail, Context, Result};
 use ffx_emulator_common::instances::get_instance_dir;
 use ffx_emulator_common::{
     config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE, KVM_PATH},
-    split_once, tap_available,
+    split_once,
+    tuntap::tap_available,
 };
 use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
@@ -121,9 +122,14 @@ async fn apply_command_line_options(
     }
 
     if emu_config.host.networking == NetworkingMode::Auto {
-        if tap_available() {
+        let available = tap_available();
+        if available.is_ok() {
             emu_config.host.networking = NetworkingMode::Tap;
         } else {
+            tracing::debug!(
+                "Falling back on user-mode networking: {}",
+                available.as_ref().unwrap_err()
+            );
             emu_config.host.networking = NetworkingMode::User;
         }
     }

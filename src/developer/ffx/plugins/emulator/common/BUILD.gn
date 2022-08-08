@@ -14,6 +14,7 @@ if (is_host) {
       "src/lib.rs",
       "src/process.rs",
       "src/target.rs",
+      "src/tuntap.rs",
     ]
     deps = [
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
@@ -22,7 +23,11 @@ if (is_host) {
       "//src/developer/ffx/lib/timeout:lib",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:cfg-if",
+      "//third_party/rust_crates:mockall",
       "//third_party/rust_crates:nix",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:shared_child",
       "//third_party/rust_crates:signal-hook",
       "//third_party/rust_crates:tracing",

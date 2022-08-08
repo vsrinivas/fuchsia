@@ -13,8 +13,9 @@ use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
     config,
     config::FfxConfigWrapper,
-    dump_log_to_out, process, tap_available,
+    dump_log_to_out, host_is_mac, process,
     target::{add_target, is_active, remove_target},
+    tuntap::{tap_ready, TAP_INTERFACE_NAME},
 };
 use ffx_emulator_config::{
     AccelerationMode, ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine,
@@ -203,18 +204,20 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 bail!("Networking mode is unresolved after configuration.");
             }
             NetworkingMode::Tap => {
-                // MacOS tun/tap is unsupported.
-                if std::env::consts::OS == "macos" {
+                // Officially, MacOS tun/tap is unsupported. tap_ready() uses the "ip" command to
+                // retrieve details about the target interface, but "ip" is not installed on macs
+                // by default. That means, if tap_ready() is called on a MacOS host, it returns a
+                // Result::Error, which would cancel emulation. However, if an end-user sets up
+                // tun/tap on a MacOS host we don't want to block that, so we check the OS here
+                // and make it a warning to run on MacOS instead.
+                if host_is_mac() {
                     eprintln!(
                         "Tun/Tap networking mode is not currently supported on MacOS. \
                         You may experience errors with your current configuration."
                     );
-                } else if !tap_available() {
-                    eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
-                    eprintln!(
-                        "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
-                    );
-                    bail!("Configure Tun/Tap on your host or try --net user.")
+                } else {
+                    // tap_ready() has some good error reporting, so just return the Result.
+                    return tap_ready();
                 }
             }
             NetworkingMode::User => (),
@@ -267,16 +270,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             NetworkingMode::Tap => &self.emu_config().runtime.upscript,
             _ => &None,
         } {
-            let status = Command::new(&script)
-                // TODO(fxbug.dev/100022): Make this configurable.
-                // The interface name, "qemu", provided here used to be provided by the qemu
-                // executable when it was left for qemu to start the upscript. Since we need
-                // to time the sudo prompt and the socket creation, we now launch the script
-                // ourselves, so we also have to provide the interface name. This will likely
-                // need to eventually be configurable to support running emulators on
-                // multiple tap interfaces.
-                .arg("qemu")
-                .status()?;
+            let status = Command::new(&script).arg(TAP_INTERFACE_NAME).status()?;
             if !status.success() {
                 return Err(anyhow!(
                     "Upscript {} returned non-zero exit code {}",
