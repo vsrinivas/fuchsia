@@ -15,7 +15,7 @@ pub struct Timestamp(pub u64);
 
 const MICROSECONDS_PER_SECOND: u64 = 1000000;
 const FRACTIONS_PER_SECOND: u64 = 32768;
-const UTC_BIT_MASK: u64 = 1;
+const AUTHORITATIVE_BIT_MASK: u64 = 1;
 const SUBSEC_MASK: u64 = 0xFFFE;
 const MAX_SECONDS: u64 = 0xFFFFFFFFFFFF;
 
@@ -40,22 +40,22 @@ impl Timestamp {
         Self::try_from_system_time(SystemTime::now()).unwrap()
     }
 
-    /// Returns true if this timestamp is UTC, false otherwise.
-    pub const fn is_utc(&self) -> bool {
-        (self.0 & UTC_BIT_MASK) == UTC_BIT_MASK
+    /// Returns true if this timestamp is authoritative, false otherwise.
+    pub const fn is_authoritative(&self) -> bool {
+        (self.0 & AUTHORITATIVE_BIT_MASK) == AUTHORITATIVE_BIT_MASK
     }
 
-    /// Sets or clears the UTC bit.
-    pub fn set_utc(&mut self, utc: bool) {
-        self.0 &= !UTC_BIT_MASK;
-        if utc {
-            self.0 |= UTC_BIT_MASK;
+    /// Sets or clears the authoritative bit.
+    pub fn set_authoritative(&mut self, authoritative: bool) {
+        self.0 &= !AUTHORITATIVE_BIT_MASK;
+        if authoritative {
+            self.0 |= AUTHORITATIVE_BIT_MASK;
         }
     }
 
-    /// Returns this timestamp with the UTC bit changed as indicated.
-    pub fn with_utc(mut self, utc: bool) -> Self {
-        self.set_utc(utc);
+    /// Returns this timestamp with the authoritative bit changed as indicated.
+    pub fn with_authoritative(mut self, authoritative: bool) -> Self {
+        self.set_authoritative(authoritative);
         self
     }
 
@@ -159,17 +159,35 @@ impl From<u64> for Timestamp {
     }
 }
 
+impl From<openthread_sys::otTimestamp> for Timestamp {
+    fn from(ts: otTimestamp) -> Self {
+        let mut ret = Timestamp::from(((ts.mSeconds << 16) | ((ts.mTicks as u64) << 1)) as u64);
+        ret.set_authoritative(ts.mAuthoritative);
+        ret
+    }
+}
+
+impl From<Timestamp> for openthread_sys::otTimestamp {
+    fn from(ts: Timestamp) -> Self {
+        openthread_sys::otTimestamp {
+            mSeconds: u64::from(ts) >> 16,
+            mTicks: ((u64::from(ts) & SUBSEC_MASK) >> 1) as u16,
+            mAuthoritative: ts.is_authoritative(),
+        }
+    }
+}
+
 impl Debug for Timestamp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let utc = if self.is_utc() { "UTC" } else { "" };
-        write!(f, "{:12X} ({:?}{})", self.0, self.to_naive_date_time(), utc)
+        let authoritative = if self.is_authoritative() { "authoritative" } else { "" };
+        write!(f, "{:12X} ({:?}{})", self.0, self.to_naive_date_time(), authoritative)
     }
 }
 
 impl Display for Timestamp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let utc = if self.is_utc() { " UTC" } else { "" };
-        write!(f, "{}{}", self.to_naive_date_time(), utc)
+        let authoritative = if self.is_authoritative() { " authoritative" } else { "" };
+        write!(f, "{}{}", self.to_naive_date_time(), authoritative)
     }
 }
 
@@ -240,14 +258,24 @@ mod test {
 
         assert_eq!(
             Timestamp::from(0x62CC8DE70001).to_string(),
-            "2022-07-11 20:53:59 UTC".to_string()
+            "2022-07-11 20:53:59 authoritative".to_string()
         );
 
-        assert!(!Timestamp::from(0u64).is_utc());
-        assert!(Timestamp::from(1u64).is_utc());
+        assert!(!Timestamp::from(0u64).is_authoritative());
+        assert!(Timestamp::from(1u64).is_authoritative());
 
-        assert!(Timestamp(0).with_utc(true).is_utc());
-        assert!(!Timestamp(1).with_utc(false).is_utc());
+        assert_eq!(Timestamp::from(0x62CC8DE70000).to_string(), "2022-07-11 20:53:59".to_string());
+
+        assert_eq!(
+            Timestamp::from(0x62CC8DE70001).to_string(),
+            "2022-07-11 20:53:59 authoritative".to_string()
+        );
+
+        assert!(!Timestamp::from(0u64).is_authoritative());
+        assert!(Timestamp::from(1u64).is_authoritative());
+
+        assert!(Timestamp(0).with_authoritative(true).is_authoritative());
+        assert!(!Timestamp(1).with_authoritative(false).is_authoritative());
 
         assert!(Timestamp::try_from_system_time(SystemTime::UNIX_EPOCH - Duration::from_secs(1))
             .is_err());
