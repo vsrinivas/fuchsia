@@ -29,7 +29,7 @@ rustc_test("bin") {
 
 fuchsia_test_component("recovery_integration_test_component") {
   component_name = "recovery_integration_test"
-  manifest = "meta/recovery_integration_test.cmx"
+  manifest = "meta/recovery_integration_test.cml"
   deps = [ ":bin" ]
 }
 
