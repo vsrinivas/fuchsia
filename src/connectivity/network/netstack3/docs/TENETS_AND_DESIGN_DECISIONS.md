@@ -278,6 +278,50 @@ Note that `inspect` data is not considered part of the API surface and is not
 part of this contract. Netstack3 is not expected to generate fully compatible
 debugging or metrics information.
 
+## Core crate public API
+
+Netstack3 core will expose symbols through its internal module structure, and
+avoid re-exporting symbols from different levels.
+
+### Why?
+
+Pros:
+- Allows shorter naming of symbols while maintaining a clean API.
+  `...udp::{Socket, Id, State}`  stutters less than `{UdpSocket, UdpId,
+  UdpState}`.
+- Public visibility of a symbol is immediately evaluated by the presence of the
+  `pub` keyword. Note that its full module path must also be publicly exported
+  for this to be true, which is taken to be true given the proposed pattern.
+- Navigating to symbol definitions without reference-resolving tools is easier.
+
+Cons:
+- Exposes internal code organization, which may be brittle.
+
+We find the pros outweigh the cons. Most of the code-movement thrash is expected
+to happen while netstack3_core is part of the Fuchsia monorepo, which means all
+known users can be fixed at the same time the movement happens, without external
+breakages. This pain is expected to be reduced once the project reaches
+maturity.
+
+### How
+
+All modules that contain `pub` symbols must themselves be made `pub`, so they
+make it into the public API through the expected module tree.
+
+No modules may re-export symbols.
+
+Symbol names avoid stuttering, i.e. prefer `udp::Socket` to `udp::UdpSocket`,
+`ip::Device` to `ip::IpDevice`, and `tcp::connect` to `tcp::tcp_connect`.
+
+Avoid importing symbols directly, import their parent module instead, i.e.
+prefer `use crate::transport::udp` to `use crate::transport::udp::Socket`.
+
+> TODO(https://fxbug.dev/105636): We've decided to adopt this guidance, but
+> defer renaming any symbols for now to focus on more important milestones. We
+> still wish to a world with clearer imports and less stuttering, but the
+> codebase may not reflect this until we decide to flip the switch on existing
+> code.
+
 [`fuchsia.net.interfaces/Watcher`]: https://fuchsia.dev/reference/fidl/fuchsia.net.interfaces?hl=en#Watcher
 [DAD implementation]: https://fuchsia-review.googlesource.com/c/fuchsia/+/648202
 [Originally in Netstack3]: https://cs.opensource.google/fuchsia/fuchsia/+/07b825aab40438237b2c47239786aae08c179139:src/connectivity/network/netstack3/
