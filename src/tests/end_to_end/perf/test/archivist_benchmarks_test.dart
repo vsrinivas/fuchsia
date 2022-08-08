@@ -17,7 +17,8 @@ void main() {
     await helper.runTestComponent(
         packageName: 'archivist-benchmarks',
         componentName: 'logging.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.archivist.logging.txt');
   }, timeout: Timeout.none);
 
   test('archivist_formatter_benchmarks', () async {
@@ -25,6 +26,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'archivist-benchmarks',
         componentName: 'formatter.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.archivist.formatter.txt');
   }, timeout: Timeout.none);
 }

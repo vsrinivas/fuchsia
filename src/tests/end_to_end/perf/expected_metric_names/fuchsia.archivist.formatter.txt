@@ -1,0 +1,7 @@
+fuchsia.archivist: Formatter/JsonPacketSerializer/16k
+fuchsia.archivist: Formatter/JsonPacketSerializer/5
+fuchsia.archivist: Formatter/JsonPacketSerializer/5k
+fuchsia.archivist: Formatter/JsonString/Fill/1000x500
+fuchsia.archivist: Formatter/JsonString/Fill/100x100
+fuchsia.archivist: Formatter/JsonString/Fill/10x10
+fuchsia.archivist: Formatter/JsonString/Fill/5x5

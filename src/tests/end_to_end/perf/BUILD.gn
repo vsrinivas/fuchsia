@@ -146,6 +146,8 @@ foreach(test, shard_test_list) {
 
 if (is_host) {
   metric_files = [
+    "fuchsia.archivist.formatter.txt",
+    "fuchsia.archivist.logging.txt",
     "fuchsia.fidlc_microbenchmarks.txt",
     "fuchsia.input_latency.simplest_app.txt",
   ]

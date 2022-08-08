@@ -1,0 +1,7 @@
+fuchsia.archivist: Logging/ArcList/CheckEmpty
+fuchsia.archivist: Logging/ArcList/Fill/16K
+fuchsia.archivist: Logging/ArcList/FillDrain/16K
+fuchsia.archivist: Logging/ArcList/Iterate/size=16K/writers=0/per_second=1
+fuchsia.archivist: Logging/ArcList/Iterate/size=16K/writers=1/per_second=50
+fuchsia.archivist: Logging/ArcList/Iterate/size=16K/writers=1/per_second=500
+fuchsia.archivist: Logging/ArcList/Iterate/size=16K/writers=3/per_second=500
