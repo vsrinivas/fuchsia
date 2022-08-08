@@ -318,7 +318,7 @@ zx_status_t zx_driver::Create(std::string_view libname, InspectNodeCollection& d
   const char* tags[] = {process_name, "driver"};
   fx_logger_config_t config = {
       .min_severity = FX_LOG_SEVERITY_DEFAULT,
-      .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+      .console_fd = -1,
       .tags = tags,
       .num_tags = std::size(tags),
   };
@@ -344,7 +344,7 @@ zx_status_t zx_driver::ReconfigureLogger(cpp20::span<const char* const> tags) co
   new_tags.insert(new_tags.end(), tags.begin(), tags.end());
   fx_logger_config_t config = {
       .min_severity = FX_LOG_SEVERITY_DEFAULT,
-      .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+      .console_fd = -1,
       .tags = std::data(new_tags),
       .num_tags = std::size(new_tags),
   };
@@ -908,7 +908,7 @@ int main(int argc, char** argv) {
       .min_severity = getenv_bool("devmgr.verbose", false)
                           ? std::numeric_limits<fx_log_severity_t>::min()
                           : FX_LOG_SEVERITY_DEFAULT,
-      .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+      .console_fd = -1,
       .tags = tags,
       .num_tags = std::size(tags),
   };

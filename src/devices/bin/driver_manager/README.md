@@ -23,11 +23,6 @@ through isolated Driver Manager for testing.
 Load a driver with this path. If this is set then DriverManager will not search
 /boot/drivers/ for drivers.
 
-### --log_to_debuglog=\<bool\>
-
-Connect the stdout and stderr file descriptors for this program to a debuglog handle acquired with
-fuchsia.boot.WriteOnlyLog.
-
 ### --no-exit-after-suspend=\<bool\>
 
 Do not exit Driver Manager after suspending the system.

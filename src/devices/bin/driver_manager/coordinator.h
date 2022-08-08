@@ -104,8 +104,6 @@ struct CoordinatorConfig {
   fidl::WireSharedClient<fdi::DriverIndex> driver_index;
   // Whether we require /system.
   bool require_system = false;
-  // Whether to output logs to debuglog.
-  bool log_to_debuglog = false;
   // Whether to enable verbose logging.
   bool verbose = false;
   // Timeout for system wide suspend

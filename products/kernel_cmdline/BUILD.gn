@@ -17,10 +17,6 @@ kernel_cmdline("console.shell--false") {
   args = [ "console.shell=false" ]
 }
 
-kernel_cmdline("devmgr.log-to-debuglog--true") {
-  args = [ "devmgr.log-to-debuglog=true" ]
-}
-
 kernel_cmdline("devmgr.enable-ephemeral--true") {
   args = [ "devmgr.enable-ephemeral=true" ]
 }

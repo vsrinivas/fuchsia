@@ -38,9 +38,6 @@ func TestOOMSignal(t *testing.T) {
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
 
-	// TODO(https://fxbug.dev/97444): do not set this kernel argument when it is no longer used.
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	i := distro.CreateContext(ctx, device)

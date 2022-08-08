@@ -10,7 +10,4 @@
 #define LOGF(severity, message...) FX_LOGF(severity, nullptr, message)
 #define VLOGF(verbosity, message...) FX_VLOGF(verbosity, nullptr, message)
 
-// Redirect log statements from syslog to debuglog.
-zx_status_t log_to_debuglog();
-
 #endif  // SRC_DEVICES_LIB_LOG_LOG_H_

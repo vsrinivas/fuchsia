@@ -346,7 +346,7 @@ ok 8 host_x64/fake_tests (4.378744489s)
 func TestParseGoPanic(t *testing.T) {
 	stdout := `
 === RUN   TestReboot
-Running /tmp/qemu-distro868073415/bin/qemu-system-x86_64 [-initrd /usr/local/google/home/curtisgalloway/src/fuchsia/out/core.x64/fuchsia.zbi -kernel /usr/local/google/home/curtisgalloway/src/fuchsia/out/core.x64/host_x64/test_data/qemu/multiboot.bin -nographic -smp 4,threads=2 -trace enable=vm_state_notify -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -cpu Haswell,+smap,-check,-fsgsbase -m 8192 -net none -append kernel.serial=legacy kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 kernel.halt-on-panic=true devmgr.log-to-debuglog]
+Running /tmp/qemu-distro868073415/bin/qemu-system-x86_64 [-initrd /usr/local/google/home/curtisgalloway/src/fuchsia/out/core.x64/fuchsia.zbi -kernel /usr/local/google/home/curtisgalloway/src/fuchsia/out/core.x64/host_x64/test_data/qemu/multiboot.bin -nographic -smp 4,threads=2 -trace enable=vm_state_notify -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -cpu Haswell,+smap,-check,-fsgsbase -m 8192 -net none -append kernel.serial=legacy kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 kernel.halt-on-panic=true]
 Checking for QEMU boot...
 9234@1592444858.702846:vm_state_notify running 1 reason 9
 SeaBIOS (version rel-1.11.1-0-g0551a4be2c-prebuilt.qemu-project.org)

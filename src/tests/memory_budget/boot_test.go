@@ -44,7 +44,6 @@ func TestBoot(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdlineCommon...)
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
 	device.Hw.Ram = vmConfig.RamSize
 	device.Hw.CpuCount = vmConfig.CpuCount
 	device.Drive = &fvdpb.Drive{

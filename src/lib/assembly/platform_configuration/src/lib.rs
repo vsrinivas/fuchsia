@@ -14,20 +14,20 @@ use std::collections::{BTreeMap, BTreeSet};
 const EXAMPLE_ENABLED_FLAG: &str = "assembly_example_enabled";
 
 const BASE_CONSOLE_ALLOWED_TAGS: &[&str] = &[
+    "blobfs",
     "console-launcher",
-    "driver_manager.cm",
-    "driver_host2.cm",
-    "driver",
     "device",
+    "driver",
+    "driver_host2.cm",
+    "driver_manager.cm",
+    "fshost",
+    "fxfs",
     "mdns",
+    "minfs",
     "netcfg",
     "netstack",
-    "fshost",
-    "blobfs",
-    "minfs",
-    "wlan",
-    "fxfs",
     "sshd-host",
+    "wlan",
 ];
 static_assertions::const_assert!(BASE_CONSOLE_ALLOWED_TAGS.len() <= MAX_TAGS as usize);
 

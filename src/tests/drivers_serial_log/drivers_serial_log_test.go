@@ -19,7 +19,6 @@ var cmdline = []string{
 	"console.shell=false",
 	"kernel.enable-debugging-syscalls=false",
 	"kernel.enable-serial-syscalls=output-only",
-	"devmgr.log-to-debuglog=false",
 }
 
 func TestSerialLogsAvailable(t *testing.T) {

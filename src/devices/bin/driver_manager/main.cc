@@ -60,7 +60,6 @@ namespace {
 
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
-  bool log_to_debuglog;
   bool require_system;
   bool suspend_timeout_fallback;
   bool verbose;
@@ -71,7 +70,6 @@ struct DriverManagerParams {
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   fuchsia_boot::wire::BoolPair bool_req[]{
-      {"devmgr.log-to-debuglog", false},
       {"devmgr.require-system", false},
       {"devmgr.suspend-timeout-fallback", true},
       {"devmgr.verbose", false},
@@ -108,13 +106,12 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   }
 
   return {
-      .log_to_debuglog = bool_resp.value().values[0],
-      .require_system = bool_resp.value().values[1],
-      .suspend_timeout_fallback = bool_resp.value().values[2],
-      .verbose = bool_resp.value().values[3],
+      .require_system = bool_resp.value().values[0],
+      .suspend_timeout_fallback = bool_resp.value().values[1],
+      .verbose = bool_resp.value().values[2],
       .crash_policy = crash_policy,
       .root_driver = std::move(root_driver),
-      .use_dfv2 = bool_resp.value().values[4],
+      .use_dfv2 = bool_resp.value().values[3],
   };
 }
 
@@ -156,9 +153,6 @@ struct DriverManagerArgs {
   // If any of these drivers are set, then driver_search_paths default will not
   // be used.
   fbl::Vector<const char*> load_drivers;
-  // Connect the stdout and stderr file descriptors for this program to a
-  // debuglog handle acquired with fuchsia.boot.WriteOnlyLog.
-  bool log_to_debuglog = false;
   // Do not exit driver manager after suspending the system.
   bool no_exit_after_suspend = false;
   // Path prefix for binaries/drivers/libraries etc.
@@ -175,14 +169,12 @@ struct DriverManagerArgs {
 DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
   enum {
     kLoadDriver,
-    kLogToDebuglog,
     kNoExitAfterSuspend,
     kSysDeviceDriver,
     kUseDriverIndex,
   };
   option options[] = {
       {"load-driver", required_argument, nullptr, kLoadDriver},
-      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
       {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"use-driver-index", no_argument, nullptr, kUseDriverIndex},
@@ -209,9 +201,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     switch (opt) {
       case kLoadDriver:
         args.load_drivers.push_back(optarg);
-        break;
-      case kLogToDebuglog:
-        args.log_to_debuglog = true;
         break;
       case kNoExitAfterSuspend:
         args.no_exit_after_suspend = true;
@@ -254,13 +243,6 @@ int main(int argc, char** argv) {
       fx_logger_set_min_severity(logger, std::numeric_limits<fx_log_severity_t>::min());
     }
   }
-  if (driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog) {
-    status = log_to_debuglog();
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
-      return status;
-    }
-  }
   if (!driver_manager_params.root_driver.empty()) {
     driver_manager_args.sys_device_driver = driver_manager_params.root_driver;
   }
@@ -298,8 +280,6 @@ int main(int argc, char** argv) {
   SystemInstance system_instance;
   config.boot_args = &boot_args;
   config.require_system = driver_manager_params.require_system;
-  config.log_to_debuglog =
-      driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog;
   config.verbose = driver_manager_params.verbose;
   config.fs_provider = &system_instance;
   config.path_prefix = driver_manager_args.path_prefix;
