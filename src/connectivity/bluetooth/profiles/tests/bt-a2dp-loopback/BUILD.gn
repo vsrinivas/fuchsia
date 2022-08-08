@@ -3,27 +3,38 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 
-rustc_binary("bin") {
+fuchsia_component("bt-a2dp-source") {
+  component_name = "bt-a2dp-source"
+  manifest = "meta/test-a2dp-source.cml"
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp:bin" ]
+}
+
+fuchsia_component("bt-a2dp-sink") {
+  component_name = "bt-a2dp-sink"
+  manifest = "meta/test-a2dp-sink.cml"
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp:bin" ]
+}
+
+rustc_test("bin") {
   edition = "2021"
   output_name = "bt_a2dp_loopback"
   source_root = "src/main.rs"
-  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v1",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_rust",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/main.rs" ]
@@ -31,8 +42,53 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_shell_package("bt-a2dp-loopback") {
-  testonly = true
-  manifest = "meta/bt-a2dp-loopback.cmx"
+fuchsia_test_component("bt-a2dp-loopback-component") {
+  manifest = "meta/bt-a2dp-loopback.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_test_package("bt-a2dp-loopback-test") {
+  test_components = [ ":bt-a2dp-loopback-component" ]
+
+  test_specs = {
+    # The max severity is set to ERROR due to the Cobalt connector ERROR message if the `Logger`
+    # capability is unavailable. This occurs in some cases when the `mock-cobalt` component exits
+    # (because the test has completed) before the A2DP component attempts to connect to it. This is
+    # not a bug in the test, and may be fixed if we enforce ordering in component shut down.
+    log_settings = {
+      max_severity = "ERROR"
+    }
+
+    # Ensures that the loopback test is only run on devices that support audio.
+    environments = [
+      astro_env,
+      sherlock_env,
+      nelson_env,
+    ]
+  }
+
+  deps = [
+    # The v2 A2DP component with only Source mode enabled.
+    ":bt-a2dp-source",
+
+    # The v2 A2DP component with only Sink mode enabled.
+    ":bt-a2dp-sink",
+
+    # Mock Piconet Server
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",
+
+    # Mock cobalt component that provides Cobalt services to A2DP.
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":bt-a2dp-loopback-test",
+
+    # Codec Factory package with the CFv2 component providing the `fuchsia.mediacodec.CodecFactory`
+    # capability.
+    "//src/media/codec:codec_factory",
+  ]
 }

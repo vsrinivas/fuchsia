@@ -5,7 +5,10 @@
 group("tests") {
   testonly = true
   deps = [
-    "bt-a2dp-loopback",
+    # TODO(fxbug.dev/104118): This test requires real hardware to run. At the moment, this cannot be
+    # expressed in the `test_specs` section of a Fuchsia Test Package. Instead, this test will be
+    # included in product-specific test targets.
+    # "bt-a2dp-loopback:tests",
     "bt-a2dp-source-integration-tests:tests",
     "bt-avrcp-integration-tests:tests",
     "bt-device-id-integration-tests:tests",

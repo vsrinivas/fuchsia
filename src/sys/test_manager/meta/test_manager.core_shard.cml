@@ -57,6 +57,7 @@
         {
             protocol: [
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
