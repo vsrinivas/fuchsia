@@ -219,10 +219,9 @@ impl Interface {
                         );
                     }
                     Interface::Display(_) => {
-                        let seeder = seeder.clone();
                         let _ =
                             service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
-                                seeder.seed(stream);
+                                crate::display::fidl_io::spawn(delegate.clone(), stream);
                             });
                     }
                     Interface::DoNotDisturb => {
