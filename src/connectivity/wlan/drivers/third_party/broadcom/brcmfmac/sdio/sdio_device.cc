@@ -69,6 +69,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
 
   if ((status = device->DdkAdd(
            ddk::DeviceAddArgs("brcmfmac-wlanphy")
+               .set_proto_id(ZX_PROTOCOL_WLANPHY_IMPL)
                .set_inspect_vmo(device->inspect_->inspector().DuplicateVmo()))) != ZX_OK) {
     return status;
   }

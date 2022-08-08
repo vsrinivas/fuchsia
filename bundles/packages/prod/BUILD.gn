@@ -233,7 +233,7 @@ group("tracing") {
 group("wlan_fullmac_core_drivers") {
   public_deps = [
     "//src/connectivity/wlan/drivers/wlanif",
-    "//src/connectivity/wlan/drivers/wlanphy:wlanphy",
+    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_dfv2",
   ]
 }
 

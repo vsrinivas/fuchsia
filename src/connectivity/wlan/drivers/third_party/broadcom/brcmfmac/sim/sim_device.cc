@@ -33,9 +33,7 @@ constexpr zx_protocol_device_t kSimDeviceOps = {
 
 SimDevice::~SimDevice() { ShutdownImpl(); }
 
-void SimDevice::Shutdown() {
-  ShutdownImpl();
-}
+void SimDevice::Shutdown() { ShutdownImpl(); }
 
 void SimDevice::ShutdownImpl() {
   // Keep a separate implementation for this that's not virtual so that it can be called from the

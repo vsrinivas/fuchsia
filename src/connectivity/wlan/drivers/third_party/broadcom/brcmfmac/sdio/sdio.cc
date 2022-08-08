@@ -985,7 +985,7 @@ static void brcmf_sdio_rxfail(struct brcmf_sdio* bus, bool abort, bool rtx) {
   zx_status_t err;
 
   BRCMF_WARN_THROTTLE("%sterminate frame%s", abort ? "abort command, " : "",
-                     rtx ? ", send NAK" : "");
+                      rtx ? ", send NAK" : "");
 
   if (abort) {
     brcmf_sdiod_abort(bus->sdiodev, SDIO_FN_2);
@@ -1613,7 +1613,8 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
 
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
-      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
+        // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX
+        // buffers
         BRCMF_WARN_THROTTLE("Failed to acquire frame for RX");
         ++bus->sdcnt.rx_hdrfail;
         ++bus->sdcnt.rx_outofbufs;
@@ -1653,7 +1654,8 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       // We are going to read header and data all in one go, acquire a frame
       frame = brcmf_sdio_acquire_single_rx_space(bus);
       if (!frame) {
-      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
+        // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX
+        // buffers
         BRCMF_WARN_THROTTLE("Failed to acquire rx frame");
         brcmf_sdio_rxfail(bus, false, false);
         ++bus->sdcnt.rx_outofbufs;

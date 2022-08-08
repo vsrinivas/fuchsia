@@ -672,7 +672,6 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
   }
   // This is probably unnecessary - just test/verify after taking it out please!
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-  BRCMF_DBG(TRACE, "Exit");
   return ZX_OK;
 }
 
@@ -772,8 +771,6 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting) {
   struct brcmf_bus* bus_if = drvr->bus_if;
   struct brcmf_if* ifp = drvr->iflist[0];
 
-  BRCMF_DBG(TRACE, "Enter");
-
   if (!drvr_restarting) {
     /* Add primary networking interface */
     // TODO(fxbug.dev/29361): Name uniqueness
@@ -866,8 +863,6 @@ void brcmf_dev_reset(brcmf_pub* drvr) {
 }
 
 void brcmf_detach(brcmf_pub* drvr) {
-  BRCMF_DBG(TRACE, "Enter");
-
   if (drvr == nullptr) {
     return;
   }
@@ -890,7 +885,6 @@ void brcmf_detach(brcmf_pub* drvr) {
 }
 
 zx_status_t brcmf_reset(brcmf_pub* drvr) {
-  BRCMF_DBG(TRACE, "Enter");
   zx_status_t err = ZX_OK;
 
   if (drvr == NULL) {

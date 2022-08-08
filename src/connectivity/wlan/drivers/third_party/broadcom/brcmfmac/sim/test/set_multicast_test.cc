@@ -4,7 +4,7 @@
 
 #include <functional>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"

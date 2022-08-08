@@ -248,7 +248,7 @@ static zx_status_t validate_not_invoked_on_del(struct brcmf_if* ifp,
   EXPECT_EQ(false, brcmf_cfg80211_vif_event_armed(cfg));
 
   // If the above are true, then we do not expect the event handler to be invoked.
-  EXPECT_TRUE(false) << "Event handler is not expected to be invoked in this case";
+  EXPECT_TRUE(false);
   return ZX_OK;
 }
 

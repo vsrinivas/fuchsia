@@ -3,7 +3,7 @@
 
 #include <zircon/errors.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/calls.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
@@ -16,9 +16,6 @@ namespace {
 constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 }  // namespace
-
-// Verify that initialization fails if we aren't able to generate a random MAC address
-TEST_F(SimTest, Initialization) { ASSERT_NE(Init(), ZX_OK); }
 
 // Verify that an active scan succeeds even if we aren't able to generate a random MAC address
 TEST_F(SimTest, ActiveScan) {

@@ -235,7 +235,8 @@ void WlanInterface::DdkRelease() { delete this; }
 // static
 zx_status_t WlanInterface::GetSupportedMacRoles(
     struct brcmf_pub* drvr,
-    wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+    fuchsia_wlan_common::wire::WlanMacRole
+        out_supported_mac_roles_list[fuchsia_wlan_common::wire::kMaxSupportedMacRoles],
     uint8_t* out_supported_mac_roles_count) {
   // The default client iface at bsscfgidx 0 is always assumed to exist by the driver.
   if (!drvr->iflist[0]) {
@@ -245,11 +246,11 @@ zx_status_t WlanInterface::GetSupportedMacRoles(
 
   size_t len = 0;
   if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_STA)) {
-    out_supported_mac_roles_list[len] = WLAN_MAC_ROLE_CLIENT;
+    out_supported_mac_roles_list[len] = fuchsia_wlan_common::wire::WlanMacRole::kClient;
     ++len;
   }
   if (brcmf_feat_is_enabled(drvr, BRCMF_FEAT_AP)) {
-    out_supported_mac_roles_list[len] = WLAN_MAC_ROLE_AP;
+    out_supported_mac_roles_list[len] = fuchsia_wlan_common::wire::WlanMacRole::kAp;
     ++len;
   }
   *out_supported_mac_roles_count = len;

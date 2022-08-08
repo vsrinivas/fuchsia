@@ -11,12 +11,13 @@
 
 #include <map>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
+#include "zircon/system/ulib/sync/include/lib/sync/cpp/completion.h"
 
 namespace wlan::brcmfmac {
 
@@ -193,7 +194,7 @@ class SimInterface {
 // should be common to most tests (like creating a new device instance and setting up and plugging
 // into the environment). It also provides a factory method for creating a new interface on the
 // simulated device.
-class SimTest : public ::testing::Test, public simulation::StationIfc {
+class SimTest : public ::zxtest::Test, public simulation::StationIfc {
  public:
   SimTest();
   ~SimTest();
@@ -232,6 +233,11 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
 
   // Keep track of the ifaces we created during test by iface id.
   std::map<uint16_t, SimInterface*> ifaces_;
+
+  fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client_;
+  fdf::Dispatcher client_dispatcher_;
+  fdf::Arena test_arena_;
+  libsync::Completion completion_;
 
  private:
   // StationIfc methods - by default, do nothing. These can/will be overridden by superclasses.

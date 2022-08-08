@@ -369,9 +369,22 @@ SimTest::SimTest() {
 SimTest::~SimTest() {
   // Clean the ifaces created in test but not deleted.
   for (auto iface : ifaces_) {
-    if (device_->WlanphyImplDestroyIface(iface.first) != ZX_OK) {
+    fidl::Arena fidl_arena;
+    auto builder =
+        fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(fidl_arena);
+    builder.iface_id(iface.first);
+    auto result = client_.sync().buffer(test_arena_)->DestroyIface(builder.Build());
+    if (!result.ok()) {
       BRCMF_ERR("Delete iface: %u failed", iface.first);
     }
+    if (result->is_error()) {
+      BRCMF_ERR("Delete iface: %u failed", iface.first);
+    }
+  }
+
+  if (client_dispatcher_.get()) {
+    client_dispatcher_.ShutdownAsync();
+    completion_.Wait();
   }
   // Don't have to erase the iface ids here.
 }
@@ -397,8 +410,41 @@ zx_status_t SimTest::Init() {
   if (status != ZX_OK) {
     // Ownership of the device has been transferred to the dev_mgr, so we don't need to dealloc it
     device_ = nullptr;
+    return status;
   }
-  return status;
+
+  // Create test arena.
+  auto arena = fdf::Arena::Create(0, "WlanphyImplDevice-test");
+  if (arena.is_error()) {
+    BRCMF_ERR("Failed to create arena");
+    return ZX_ERR_INTERNAL;
+  }
+
+  test_arena_ = *std::move(arena);
+
+  // Create the FIDL endpoints, bind the client end to the test class, and the server end to
+  // wlan::brcmfmac::Device class.
+  auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_wlanphyimpl::WlanphyImpl>();
+  if (endpoints.is_error()) {
+    BRCMF_ERR("Failed to create endpoints");
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Create a dispatcher to wait on the runtime channel.
+  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) { completion_.Signal(); });
+
+  if (dispatcher.is_error()) {
+    BRCMF_ERR("Failed to create dispatcher : %s", zx_status_get_string(dispatcher.error_value()));
+    return ZX_ERR_INTERNAL;
+  }
+
+  client_dispatcher_ = *std::move(dispatcher);
+  client_ = fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl>(
+      std::move(endpoints->client), client_dispatcher_.get());
+
+  device_->DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_wlan_wlanphyimpl::WlanphyImpl>,
+                             endpoints->server.TakeHandle());
+  return ZX_OK;
 }
 
 zx_status_t SimTest::StartInterface(
@@ -409,18 +455,45 @@ zx_status_t SimTest::StartInterface(
   if ((status = sim_ifc->Init(env_, role)) != ZX_OK) {
     return status;
   }
-
-  wlanphy_impl_create_iface_req_t req = {
-      .role = role,
-      .mlme_channel = sim_ifc->ch_mlme_,
-      .has_init_sta_addr = mac_addr ? true : false,
-  };
-  if (mac_addr)
-    memcpy(req.init_sta_addr, mac_addr.value().byte, ETH_ALEN);
-
-  if ((status = device_->WlanphyImplCreateIface(&req, &sim_ifc->iface_id_)) != ZX_OK) {
-    return status;
+  fuchsia_wlan_common::wire::WlanMacRole fidl_role;
+  switch (role) {
+    case WLAN_MAC_ROLE_CLIENT:
+      fidl_role = fuchsia_wlan_common::wire::WlanMacRole::kClient;
+      break;
+    case WLAN_MAC_ROLE_AP:
+      fidl_role = fuchsia_wlan_common::wire::WlanMacRole::kAp;
+      break;
+    case WLAN_MAC_ROLE_MESH:
+      fidl_role = fuchsia_wlan_common::wire::WlanMacRole::kMesh;
+      break;
+    default:
+      BRCMF_ERR("Invalid mac role %u", role);
+      return ZX_ERR_INVALID_ARGS;
   }
+  auto ch = zx::channel(sim_ifc->ch_mlme_);
+
+  fidl::Arena fidl_arena;
+
+  auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(fidl_arena);
+  builder.role(fidl_role);
+  builder.mlme_channel(std::move(ch));
+  if (mac_addr) {
+    fidl::Array<unsigned char, 6> init_sta_addr;
+    memcpy(&init_sta_addr, mac_addr.value().byte, ETH_ALEN);
+    builder.init_sta_addr(init_sta_addr);
+  }
+
+  auto result = client_.sync().buffer(test_arena_)->CreateIface(builder.Build());
+
+  EXPECT_TRUE(result.ok());
+  if (result->is_error()) {
+    BRCMF_ERR("%s error happened while creating interface",
+              zx_status_get_string(result->error_value()));
+    return result->error_value();
+  }
+  sim_ifc->iface_id_ = result->value()->iface_id();
+
+  status = ZX_OK;
 
   if (!ifaces_.insert_or_assign(sim_ifc->iface_id_, sim_ifc).second) {
     BRCMF_ERR("Iface already exist in this test.\n");
@@ -466,7 +539,6 @@ zx_status_t SimTest::InterfaceDestroyed(SimInterface* ifc) {
 
 zx_status_t SimTest::DeleteInterface(SimInterface* ifc) {
   auto iter = ifaces_.find(ifc->iface_id_);
-  zx_status_t err;
 
   if (iter == ifaces_.end()) {
     BRCMF_ERR("Iface id: %d does not exist", ifc->iface_id_);
@@ -474,9 +546,16 @@ zx_status_t SimTest::DeleteInterface(SimInterface* ifc) {
   }
 
   BRCMF_DBG(SIM, "Del IF: %d", ifc->iface_id_);
-  if ((err = device_->WlanphyImplDestroyIface(iter->first)) != ZX_OK) {
+
+  fidl::Arena fidl_arena;
+  auto builder =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(fidl_arena);
+  builder.iface_id(iter->first);
+  auto result = client_.sync().buffer(test_arena_)->DestroyIface(builder.Build());
+  EXPECT_TRUE(result.ok());
+  if (result->is_error()) {
     BRCMF_ERR("Failed to destroy interface.\n");
-    return err;
+    return result->error_value();
   }
 
   // Once the interface data structures have been deleted, our pointers are no longer valid.

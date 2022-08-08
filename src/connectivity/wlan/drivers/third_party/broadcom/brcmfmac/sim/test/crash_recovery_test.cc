@@ -7,8 +7,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
@@ -17,8 +16,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 
 namespace wlan::brcmfmac {
-
-using ::testing::NotNull;
 
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
@@ -93,14 +90,14 @@ void CrashRecoveryTest::VerifyScanResult(const uint64_t scan_id, size_t min_resu
 }
 
 void CrashRecoveryTest::GetFwRcvrInspectCount(uint64_t* out_count) {
-  ASSERT_THAT(out_count, NotNull());
+  ASSERT_NOT_NULL(out_count);
   auto hierarchy = FetchHierarchy(device_->GetInspect()->inspector());
   auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
-  ASSERT_THAT(root, NotNull());
+  ASSERT_NOT_NULL(root);
   // Only verify the value of hourly counter here, the relationship between hourly counter and daily
   // counter is verified in device_inspect_test.
   auto* uint_property = root->node().get_property<inspect::UintPropertyValue>("fw_recovered");
-  ASSERT_THAT(uint_property, NotNull());
+  ASSERT_NOT_NULL(uint_property);
   *out_count = uint_property->value();
 }
 

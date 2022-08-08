@@ -10,8 +10,7 @@
 #include <memory>
 #include <utility>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
@@ -26,9 +25,6 @@ namespace wlan::brcmfmac {
 
 using simulation::InformationElement;
 using simulation::SimBeaconFrame;
-using ::testing::IsTrue;
-using ::testing::NotNull;
-using ::testing::SizeIs;
 
 class PassiveScanTest;
 
@@ -132,7 +128,7 @@ void PassiveScanTestInterface::VerifyScanResult(wlan_fullmac_scan_result_t resul
 // Verify that each incoming scan result is as expected, using VerifyScanResult.
 void PassiveScanTestInterface::OnScanResult(const wlan_fullmac_scan_result_t* result) {
   SimInterface::OnScanResult(result);
-  ASSERT_THAT(result, NotNull());
+  ASSERT_NOT_NULL(result);
   VerifyScanResult(*result);
 }
 
@@ -171,7 +167,7 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
 
         // Verify SSID.
         auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
-        EXPECT_THAT(ssid, SizeIs(kDefaultSsid.len));
+        EXPECT_EQ(ssid.size(), kDefaultSsid.len);
         ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.data));
         EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.data, kDefaultSsid.len), 0);
 

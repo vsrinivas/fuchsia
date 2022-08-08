@@ -7,9 +7,8 @@
 #include <array>
 #include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
@@ -17,9 +16,6 @@
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
-
-using ::testing::Eq;
-using ::testing::NotNull;
 
 class ErrInjTest : public SimTest {
  public:
@@ -48,10 +44,12 @@ void ErrInjTest::RunCountryTest(const std::vector<uint8_t>& input,
   sim->sim_fw->err_inj_.AddErrInjIovar("country", ZX_OK, BCME_OK, std::nullopt, &alt_cc_data);
 
   // Get the results and verify that the country code matches the first two characters of our input
-  wlanphy_country_t actual_cc;
-  device_->WlanphyImplGetCountry(&actual_cc);
-  EXPECT_EQ(actual_cc.alpha2[0], expected_output[0]);
-  EXPECT_EQ(actual_cc.alpha2[1], expected_output[1]);
+  auto result = client_.sync().buffer(test_arena_)->GetCountry();
+  ASSERT_TRUE(result.ok());
+  ASSERT_FALSE(result->is_error());
+  auto& actual_country = result->value()->country;
+  EXPECT_EQ(actual_country.alpha2().data()[0], expected_output[0]);
+  EXPECT_EQ(actual_country.alpha2().data()[1], expected_output[1]);
 
   sim->sim_fw->err_inj_.DelErrInjIovar("country");
 }
@@ -110,8 +108,8 @@ TEST_F(ErrInjTest, CheckIfErrInjIovarEnabledWorks) {
                                                               ifp->ifidx));
   EXPECT_EQ(status, expected_status);
   EXPECT_EQ(fw_err, expected_fw_err);
-  ASSERT_THAT(inj_data, NotNull());
-  EXPECT_THAT(*inj_data, Eq(expected_inj_data));
+  ASSERT_NOT_NULL(inj_data);
+  EXPECT_EQ(*inj_data, expected_inj_data);
 }
 
 TEST_F(ErrInjTest, CmdFirmwareErrorLifecycle) {

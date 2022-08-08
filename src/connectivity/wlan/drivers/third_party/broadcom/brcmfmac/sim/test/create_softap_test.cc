@@ -11,9 +11,8 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/errors.h>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
@@ -27,8 +26,6 @@
 namespace wlan::brcmfmac {
 
 namespace {
-
-using ::testing::NotNull;
 
 constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
@@ -184,14 +181,14 @@ uint32_t CreateSoftAPTest::DeviceCountByProtocolId(uint32_t proto_id) {
 }
 
 void CreateSoftAPTest::GetApSetSsidErrInspectCount(uint64_t* out_count) {
-  ASSERT_THAT(out_count, NotNull());
+  ASSERT_NOT_NULL(out_count);
   auto hierarchy = FetchHierarchy(device_->GetInspect()->inspector());
   auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
-  ASSERT_THAT(root, NotNull());
+  ASSERT_NOT_NULL(root);
   // Only verify the value of hourly counter here, the relationship between hourly counter and daily
   // counter is verified in device_inspect_test.
   auto* uint_property = root->node().get_property<inspect::UintPropertyValue>("ap_set_ssid_err");
-  ASSERT_THAT(uint_property, NotNull());
+  ASSERT_NOT_NULL(uint_property);
   *out_count = uint_property->value();
 }
 

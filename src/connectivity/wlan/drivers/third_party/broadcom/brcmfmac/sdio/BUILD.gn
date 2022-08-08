@@ -46,6 +46,7 @@ source_set("sdio") {
     "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

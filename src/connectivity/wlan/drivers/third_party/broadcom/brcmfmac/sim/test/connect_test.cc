@@ -9,9 +9,8 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/errors.h>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
@@ -26,10 +25,6 @@
 namespace wlan::brcmfmac {
 
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
-
-using ::testing::IsEmpty;
-using ::testing::NotNull;
-using ::testing::SizeIs;
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
@@ -513,30 +508,30 @@ TEST_F(ConnectTest, GetIfaceHistogramStatsTest) {
   // get handling between real and sim firmware (e.g. fxr/404141). When wstats_counters is fully
   // supported in sim firmware we can test for the expected noise floor, RSSI, and rate buckets.
 
-  ASSERT_THAT(stats.noise_floor_histograms, SizeIs(1));
+  ASSERT_EQ(stats.noise_floor_histograms.size(), 1);
   EXPECT_EQ(stats.noise_floor_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(stats.noise_floor_histograms[0].antenna_id, NotNull());
+  ASSERT_NOT_NULL(stats.noise_floor_histograms[0].antenna_id);
   EXPECT_EQ(stats.noise_floor_histograms[0].antenna_id->freq, expected_antenna_freq);
   EXPECT_EQ(stats.noise_floor_histograms[0].antenna_id->index, expected_antenna_index);
 
-  ASSERT_THAT(stats.rssi_histograms, SizeIs(1));
+  ASSERT_EQ(stats.rssi_histograms.size(), 1);
   EXPECT_EQ(stats.rssi_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(stats.rssi_histograms[0].antenna_id, NotNull());
+  ASSERT_NOT_NULL(stats.rssi_histograms[0].antenna_id);
   EXPECT_EQ(stats.rssi_histograms[0].antenna_id->freq, expected_antenna_freq);
   EXPECT_EQ(stats.rssi_histograms[0].antenna_id->index, expected_antenna_index);
 
-  ASSERT_THAT(stats.rx_rate_index_histograms, SizeIs(1));
+  ASSERT_EQ(stats.rx_rate_index_histograms.size(), 1);
   EXPECT_EQ(stats.rx_rate_index_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(stats.rx_rate_index_histograms[0].antenna_id, NotNull());
+  ASSERT_NOT_NULL(stats.rx_rate_index_histograms[0].antenna_id);
   EXPECT_EQ(stats.rx_rate_index_histograms[0].antenna_id->freq, expected_antenna_freq);
   EXPECT_EQ(stats.rx_rate_index_histograms[0].antenna_id->index, expected_antenna_index);
 
-  ASSERT_THAT(stats.snr_histograms, SizeIs(1));
+  ASSERT_EQ(stats.snr_histograms.size(), 1);
   EXPECT_EQ(stats.snr_histograms[0].hist_scope, expected_hist_scope);
-  ASSERT_THAT(stats.snr_histograms[0].antenna_id, NotNull());
+  ASSERT_NOT_NULL(stats.snr_histograms[0].antenna_id);
   EXPECT_EQ(stats.snr_histograms[0].antenna_id->freq, expected_antenna_freq);
   EXPECT_EQ(stats.snr_histograms[0].antenna_id->index, expected_antenna_index);
-  ASSERT_THAT(stats.snr_histograms[0].snr_samples, SizeIs(1));
+  ASSERT_EQ(stats.snr_histograms[0].snr_samples.size(), 1);
   EXPECT_EQ(stats.snr_histograms[0].snr_samples[0].bucket_index, expected_snr_index);
   EXPECT_EQ(stats.snr_histograms[0].snr_samples[0].num_samples, expected_snr_num_frames);
 }
@@ -562,10 +557,10 @@ TEST_F(ConnectTest, GetIfaceHistogramStatsNotSupportedTest) {
   fuchsia::wlan::stats::IfaceHistogramStats stats;
   wlanif::ConvertIfaceHistogramStats(&stats, banjo_stats);
 
-  ASSERT_THAT(stats.noise_floor_histograms, IsEmpty());
-  ASSERT_THAT(stats.rssi_histograms, IsEmpty());
-  ASSERT_THAT(stats.rx_rate_index_histograms, IsEmpty());
-  ASSERT_THAT(stats.snr_histograms, IsEmpty());
+  ASSERT_TRUE(stats.noise_floor_histograms.empty());
+  ASSERT_TRUE(stats.rssi_histograms.empty());
+  ASSERT_TRUE(stats.rx_rate_index_histograms.empty());
+  ASSERT_TRUE(stats.snr_histograms.empty());
 }
 
 void ConnectTest::ConnectErrorInject() {

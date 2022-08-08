@@ -21,12 +21,13 @@
 #include <algorithm>
 #include <memory>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
+#include "zircon/system/ulib/sync/include/lib/sync/cpp/completion.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -54,6 +55,8 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   auto env = std::make_shared<simulation::Environment>();
   auto dev_mgr = std::make_unique<simulation::FakeDevMgr>();
 
+  libsync::Completion completion_;
+
   // Create PHY.
   SimDevice* device;
   zx_status_t status = SimDevice::Create(dev_mgr->GetRootDevice(), dev_mgr.get(), env, &device);
@@ -62,13 +65,37 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   ASSERT_EQ(status, ZX_OK);
   EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLANPHY_IMPL), 1u);
 
+  auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_wlanphyimpl::WlanphyImpl>();
+  ASSERT_FALSE(endpoints.is_error());
+  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) { completion_.Signal(); });
+
+  ASSERT_FALSE(dispatcher.is_error());
+  auto client_dispatcher_ = *std::move(dispatcher);
+
+  auto client_ = fdf::WireSharedClient<fuchsia_wlan_wlanphyimpl::WlanphyImpl>(
+      std::move(endpoints->client), client_dispatcher_.get());
+
+  device->DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_wlan_wlanphyimpl::WlanphyImpl>,
+                            endpoints->server.TakeHandle());
+  std::string_view tag{"WlanphyImplDevice-test-lifecycle"};
+
+  auto arena = fdf::Arena::Create(0, tag);
+  ASSERT_FALSE(arena.is_error());
+  auto test_arena_ = *std::move(arena);
+
   // Create iface.
   auto [local, _remote] = make_channel();
-  wlanphy_impl_create_iface_req_t create_iface_req{.role = WLAN_MAC_ROLE_CLIENT,
-                                                   .mlme_channel = local.get()};
-  uint16_t iface_id;
-  status = device->WlanphyImplCreateIface(&create_iface_req, &iface_id);
-  ASSERT_EQ(status, ZX_OK);
+  zx_handle_t test_mlme_channel = local.get();
+
+  fidl::Arena create_arena;
+  auto builder_create =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(create_arena);
+  builder_create.role(fuchsia_wlan_common::wire::WlanMacRole::kClient);
+  builder_create.mlme_channel(std::move(local));
+  auto result_create = client_.sync().buffer(test_arena_)->CreateIface(builder_create.Build());
+  EXPECT_TRUE(result_create.ok());
+  ASSERT_FALSE(result_create->is_error());
+  uint16_t iface_id = result_create->value()->iface_id();
   EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
 
   // Simulate start call from Fuchsia's generic wlanif-impl driver.
@@ -80,15 +107,24 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   wlan_fullmac_impl_ifc_protocol_t ifc_ops{};
   status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(mlme_channel, local.get());
+  EXPECT_EQ(mlme_channel, test_mlme_channel);
 
   // Verify calling start again will fail with proper error code.
   mlme_channel = ZX_HANDLE_INVALID;
   status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(mlme_channel, ZX_HANDLE_INVALID);
-  ASSERT_EQ(device->WlanphyImplDestroyIface(iface_id), ZX_OK);
+  fidl::Arena destroy_arena;
+  auto builder_destroy =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(destroy_arena);
+  builder_destroy.iface_id(iface_id);
+  auto result_destroy = client_.sync().buffer(test_arena_)->DestroyIface(builder_destroy.Build());
+  EXPECT_TRUE(result_destroy.ok());
+  ASSERT_FALSE(result_destroy->is_error());
   EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
+
+  client_dispatcher_.ShutdownAsync();
+  completion_.Wait();
 }
 
 }  // namespace

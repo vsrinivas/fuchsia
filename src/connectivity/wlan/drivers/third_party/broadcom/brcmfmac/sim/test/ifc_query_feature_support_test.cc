@@ -5,7 +5,7 @@
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <zircon/errors.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "fuchsia/wlan/common/c/banjo.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"

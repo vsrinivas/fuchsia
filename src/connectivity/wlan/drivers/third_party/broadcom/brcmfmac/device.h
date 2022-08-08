@@ -15,9 +15,15 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEVICE_H_
 
 #include <fidl/fuchsia.factory.wlan/cpp/wire.h>
-#include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
-#include <lib/async/dispatcher.h>
+#include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
 #include <lib/ddk/device.h>
+#include <lib/fdf/cpp/arena.h>
+#include <lib/fdf/cpp/channel.h>
+#include <lib/fdf/cpp/channel_read.h>
+#include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/vector_view.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -34,23 +40,21 @@ namespace brcmfmac {
 class Device;
 class DeviceInspect;
 class WlanInterface;
-
 using DeviceType =
     ::ddk::Device<Device, ddk::Initializable, ddk::Messageable<fuchsia_factory_wlan::Iovar>::Mixin,
-                  ddk::Suspendable>;
-
+                  ddk::Suspendable, ddk::ServiceConnectable>;
 class Device : public DeviceType,
-               public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol>,
+               public fdf::WireServer<fuchsia_wlan_wlanphyimpl::WlanphyImpl>,
                public ::wlan::drivers::components::NetworkDevice::Callbacks {
  public:
   virtual ~Device();
 
-  // State accessors.
+  // State accessors
   brcmf_pub* drvr();
   const brcmf_pub* drvr() const;
   ::wlan::drivers::components::NetworkDevice& NetDev() { return network_device_; }
 
-  // Virtual state accessors.
+  // Virtual state accessors
   virtual async_dispatcher_t* GetDispatcher() = 0;
   virtual DeviceInspect* GetInspect() = 0;
   virtual bool IsNetworkDeviceBus() const = 0;
@@ -59,19 +63,25 @@ class Device : public DeviceType,
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
+  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
 
   // WlanphyImpl interface implementation.
-  zx_status_t WlanphyImplGetSupportedMacRoles(
-      wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
-      uint8_t* out_supported_mac_roles_count);
-  zx_status_t WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
-                                     uint16_t* out_iface_id);
-  zx_status_t WlanphyImplDestroyIface(uint16_t iface_id);
-  zx_status_t WlanphyImplSetCountry(const wlanphy_country_t* country);
-  zx_status_t WlanphyImplClearCountry();
-  zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
-  zx_status_t WlanphyImplSetPsMode(const wlanphy_ps_mode_t* ps_mode);
-  zx_status_t WlanphyImplGetPsMode(wlanphy_ps_mode_t* out_ps_mode);
+  void GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena& arena,
+                            GetSupportedMacRolesCompleter::Sync& completer) override;
+  void CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
+                   CreateIfaceCompleter::Sync& completer) override;
+  void DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
+                    DestroyIfaceCompleter::Sync& completer) override;
+  void SetCountry(SetCountryRequestView request, fdf::Arena& arena,
+                  SetCountryCompleter::Sync& completer) override;
+  void GetCountry(GetCountryRequestView request, fdf::Arena& arena,
+                  GetCountryCompleter::Sync& completer) override;
+  void ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
+                    ClearCountryCompleter::Sync& completer) override;
+  void SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
+                 SetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
+                 GetPsModeCompleter::Sync& completer) override;
 
   // NetworkDevice::Callbacks implementation
   zx_status_t NetDevInit() override;
@@ -95,10 +105,11 @@ class Device : public DeviceType,
   virtual zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen,
                                         size_t* actual) = 0;
 
-  // Helpers
+  // Helper
   void DestroyAllIfaces(void);
 
  protected:
+  // Only derived classes are allowed to create this object.
   explicit Device(zx_device_t* parent);
 
   // This will be called when the driver is being shut down, for example during a reboot, power off
@@ -111,11 +122,15 @@ class Device : public DeviceType,
   // worry about coming back from a shutdown state, it's irreversible.
   virtual void Shutdown() = 0;
 
+  // Dispatcher for the FIDL server
+  fdf::Dispatcher dispatcher_;
+  libsync::Completion completion_;
+
  private:
   std::unique_ptr<brcmf_pub> brcmf_pub_;
   std::mutex lock_;
 
-  // Two fixed interfaces supported; the default instance as a client, and a second one as an AP.
+  // Two fixed interfaces supported;  the default interface as a client, and a second one as an AP.
   WlanInterface* client_interface_;
   WlanInterface* ap_interface_;
 
@@ -124,6 +139,10 @@ class Device : public DeviceType,
   // fidl::WireServer<fuchsia_factory_wlan_iovar::Iovar> Implementation
   void Get(GetRequestView request, GetCompleter::Sync& _completer) override;
   void Set(SetRequestView request, SetCompleter::Sync& _completer) override;
+
+  // Helpers
+  void ShutdownDispatcher();
+  zx_status_t DestroyIface(WlanInterface** iface_ptr);
 };
 
 }  // namespace brcmfmac

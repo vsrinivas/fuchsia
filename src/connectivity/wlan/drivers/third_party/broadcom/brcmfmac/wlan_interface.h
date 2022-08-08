@@ -13,6 +13,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WLAN_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WLAN_INTERFACE_H_
 
+#include <fidl/fuchsia.factory.wlan/cpp/wire.h>
+#include <fidl/fuchsia.wlan.wlanphyimpl/cpp/driver/wire.h>
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/types.h>
@@ -49,7 +51,8 @@ class WlanInterface : public wlan::drivers::components::NetworkPort,
 
   static zx_status_t GetSupportedMacRoles(
       struct brcmf_pub* drvr,
-      wlan_mac_role_t out_supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
+      fuchsia_wlan_common::wire::WlanMacRole
+          out_supported_mac_roles_list[fuchsia_wlan_common::wire::kMaxSupportedMacRoles],
       uint8_t* out_supported_mac_roles_count);
   static zx_status_t SetCountry(brcmf_pub* drvr, const wlanphy_country_t* country);
   // Reads the currently configured `country` from the firmware.
