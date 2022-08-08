@@ -8,10 +8,10 @@ assert(
     is_fuchsia,
     "Product definitions and assemblies should only be defined in the fuchsia toolchain")
 
-product_assembly_configuration("minimal") {
+product_assembly_configuration("core") {
   platform = {
-    base_feature_set = "minimal"
-    build_type = "user"
+    base_feature_set = "core"
+    build_type = "eng"
   }
   product = {
   }

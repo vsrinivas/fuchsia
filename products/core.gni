@@ -32,6 +32,7 @@ core_realm_shards += [
   "//src/developer/sshd-host:core_shard",
   "//src/media/audio/audio_core:core_shard",
   "//src/media/sounds/soundplayer:core_shard",
+  "//src/performance/trace_manager:trace_manager_core_shard",
   "//src/proc/bin/starnix:starnix_manager_core_shard",
   "//src/settings/service:setui_service_core_shard",
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
@@ -49,9 +50,6 @@ core_realm_shards += [
 ]
 core_realm_restrict_persistent_storage = false
 
-core_realm_shards +=
-    [ "//src/performance/trace_manager:trace_manager_core_shard" ]
-
 core_realm_shards += [
   "//src/intl/intl_services:intl_services_small_shard",
 
@@ -64,6 +62,7 @@ legacy_base_package_labels += [
   "//src/developer/forensics/snapshot:pkg",
   "//src/developer/sshd-host",
   "//src/developer/sshd-host:config",
+  "//src/diagnostics/log_listener:log_listener_shell",
   "//src/connectivity/bluetooth:core",
   "//src/connectivity/wlan:packages",
   "//src/devices/sysmem/bin/sysmem_connector",
@@ -107,8 +106,6 @@ product_system_image_deps +=
 # Use the product assembly config file to specify the product configuration.
 #
 # NOTE: This should be overridden by products which inherit from core.
-#
-# NOTE: This is the same as is used by the `minimal` product, for now.  This may
-#       change in the future.  It is listed here for completeness.
-fuchsia_product_assembly_config_label = "//products/minimal"
-fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/minimal/minimal/product_assembly_config.json"
+fuchsia_product_assembly_config_label = "//products/core"
+fuchsia_product_assembly_config_file =
+    "${root_build_dir}/obj/products/core/core/product_assembly_config.json"

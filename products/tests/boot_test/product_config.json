@@ -1,5 +1,6 @@
 {
     "platform": {
+        "feature_set_level": "minimal",
         "build_type": "user",
         "additional_serial_log_tags": [
             "session-manager"
