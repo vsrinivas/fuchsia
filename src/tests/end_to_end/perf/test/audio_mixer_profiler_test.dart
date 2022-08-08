@@ -17,6 +17,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'audio_mixer_profiler',
         componentName: 'audio_mixer_profiler.cm',
-        commandArgs: '--perftest-json=${PerfTestHelper.componentOutputPath}');
+        commandArgs: '--perftest-json=${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile: 'fuchsia.audio.txt');
   }, timeout: Timeout.none);
 }
