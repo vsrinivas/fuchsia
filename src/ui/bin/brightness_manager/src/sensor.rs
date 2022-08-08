@@ -45,7 +45,7 @@ fn open_input_report_device(path: &str) -> Result<InputDeviceProxy, Error> {
     Ok(proxy)
 }
 
-async fn open_sensor_input_report_reader<'a>() -> Result<AmbientLightInputReportReaderProxy, Error>
+async fn open_sensor_input_report_reader() -> Result<AmbientLightInputReportReaderProxy, Error>
 {
     let input_report_directory = "/dev/class/input-report";
     let dir_path = Path::new(input_report_directory);
@@ -56,12 +56,11 @@ async fn open_sensor_input_report_reader<'a>() -> Result<AmbientLightInputReport
         let device_path = device_path.to_str().expect("Bad path");
         let device = open_input_report_device(device_path)?;
 
-        let get_sensor_input =
-            |descriptor: &'a DeviceDescriptor| -> Result<&'a Vec<SensorInputDescriptor>, Error> {
-                let sensor = descriptor.sensor.as_ref().context("device has no sensor")?;
-                let input_desc = sensor.input.as_ref().context("sensor has no input descriptor")?;
-                Ok(input_desc)
-            };
+        fn get_sensor_input(descriptor: &DeviceDescriptor) -> Result<&Vec<SensorInputDescriptor>, Error> {
+            let sensor = descriptor.sensor.as_ref().context("device has no sensor")?;
+            let input_desc = sensor.input.as_ref().context("sensor has no input descriptor")?;
+            Ok(input_desc)
+        }
 
         if let Ok(descriptor) = device.get_descriptor().await {
             match get_sensor_input(&descriptor) {
