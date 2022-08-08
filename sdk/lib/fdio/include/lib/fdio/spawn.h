@@ -15,21 +15,18 @@
 
 __BEGIN_CDECLS
 
-// The |fdio_spawn| and |fdio_spawn_etc| functions allow some or all of the
-// environment of the running process to be shared with the process being
-// spawned.
+// The `fdio_spawn` and `fdio_spawn_etc` functions allow some or all of the environment of the
+// running process to be shared with the process being spawned.
 
 // Provides the spawned process with the job in which the process was created.
 //
-// The spawned process receives the job using the |PA_JOB_DEFAULT| process
-// argument.
+// The spawned process receives the job using the `PA_JOB_DEFAULT` process argument.
 #define FDIO_SPAWN_CLONE_JOB ((uint32_t)0x0001u)
 
-// Provides the spawned process with the shared library loader resolved via
-// fuchsia.process.Resolver (if resolved), or that which is used by this
-// process.
+// Provides the spawned process with the shared library loader resolved via fuchsia.process.Resolver
+// (if resolved), or that which is used by this process.
 //
-// The shared library loader is passed as |PA_LDSVC_LOADER|.
+// The shared library loader is passed as `PA_LDSVC_LOADER`.
 #define FDIO_SPAWN_DEFAULT_LDSVC ((uint32_t)0x0002u)
 
 // Clones the filesystem namespace into the spawned process.
@@ -37,8 +34,7 @@ __BEGIN_CDECLS
 
 // Clones file descriptors 0, 1, and 2 into the spawned process.
 //
-// Skips any of these file descriptors that are closed without generating an
-// error.
+// Skips any of these file descriptors that are closed without generating an error.
 #define FDIO_SPAWN_CLONE_STDIO ((uint32_t)0x0008u)
 
 // Clones the environment into the spawned process.
@@ -52,127 +48,116 @@ __BEGIN_CDECLS
 
 // Spawn a process in the given job.
 //
-// The program for the process is loaded from the given |path| and passed |argv|.
-// The aspects of this process' environment indicated by |flags| are shared with
-// the process. If the target program begins with |#!resolve | then the binary is
-// resolved by url via |fuchsia.process.Resolver|.
+// The program for the process is loaded from the given `path` and passed `argv`. The aspects of
+// this process' environment indicated by `flags` are shared with the process. If the target program
+// begins with `#!resolve ` then the binary is resolved by url via `fuchsia.process.Resolver`.
 //
-// The |argv| array must be terminated with a null pointer.
+// The `argv` array must be terminated with a null pointer.
 //
-// If |job| is |ZX_HANDLE_INVALID|, then the process is spawned in
-// |zx_job_default()|. Does not take ownership of |job|.
+// If `job` is `ZX_HANDLE_INVALID`, then the process is spawned in `zx_job_default()`. Does not take
+// ownership of `job`.
 //
-// Upon success, |process_out| will be a handle to the process.
+// Upon success, `process_out` will be a handle to the process.
 //
 // # Errors
 //
-// ZX_ERR_NOT_FOUND: |path| cannot be opened.
+//   * `ZX_ERR_NOT_FOUND`: `path` cannot be opened.
 //
-// ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
+//   * `ZX_ERR_BAD_HANDLE`: `path` cannot be opened as an executable VMO.
 //
-// ZX_ERR_PEER_CLOSED: Cannot connect to |fuchsia.process.Launcher|.
+//   * `ZX_ERR_PEER_CLOSED`: Cannot connect to `fuchsia.process.Launcher`.
 //
-// Returns the result of |fdio_spawn_vmo| in all other cases.
+// Returns the result of `fdio_spawn_vmo` in all other cases.
 zx_status_t fdio_spawn(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
                        const char* const* argv, ZX_HANDLE_ACQUIRE zx_handle_t* process_out)
     ZX_AVAILABLE_SINCE(1);
 
-// The |fdio_spawn_etc| function allows the running process to control the file
-// descriptor table in the process being spawned.
+// The `fdio_spawn_etc` function allows the running process to control the file descriptor table in
+// the process being spawned.
 
-// Duplicate a descriptor |local_fd| into |target_fd| in the spawned process.
+// Duplicate a descriptor `local_fd` into `target_fd` in the spawned process.
 //
-// Uses the |fd| entry in the |fdio_spawn_action_t| union.
+// Uses the `fd` entry in the `fdio_spawn_action_t` union.
 #define FDIO_SPAWN_ACTION_CLONE_FD ((uint32_t)0x0001u)
 
-// Transfer local descriptor |local_fd| into |target_fd| in the spawned process.
+// Transfer local descriptor `local_fd` into `target_fd` in the spawned process.
 //
-// This action will fail if |local_fd| is not a valid |local_fd|, if |local_fd|
-// has been duplicated, if |local_fd| is being used in an io operation, or if
-// |local_fd| does not support this operation.
+// This action will fail if `local_fd` is not a valid `local_fd`, if `local_fd` has been duplicated,
+// if `local_fd` is being used in an io operation, or if `local_fd` does not support this operation.
 //
-// From the point of view of the calling process, the |local_fd| will appear to
-// have been closed, regardless of whether the |fdio_spawn_etc| call succeeds.
+// From the point of view of the calling process, the `local_fd` will appear to have been closed,
+// regardless of whether the `fdio_spawn_etc` call succeeds.
 //
-// Uses the |fd| entry in the |fdio_spawn_action_t| union.
+// Uses the `fd` entry in the `fdio_spawn_action_t` union.
 #define FDIO_SPAWN_ACTION_TRANSFER_FD ((uint32_t)0x0002u)
 
 // Add the given entry to the namespace of the spawned process.
 //
-// If |FDIO_SPAWN_CLONE_NAMESPACE| is specified via |flags|, the namespace entry
-// is added to the cloned namespace from the calling process.
+// If `FDIO_SPAWN_CLONE_NAMESPACE` is specified via `flags`, the namespace entry is added to the
+// cloned namespace from the calling process.
 //
-// The namespace entries are added in the order they appear in the action list.
-// If |FDIO_SPAWN_CLONE_NAMESPACE| is specified via |flags|, the entries from
-// the calling process are added before any entries specified with
-// |FDIO_SPAWN_ACTION_ADD_NS_ENTRY|.
+// The namespace entries are added in the order they appear in the action list. If
+// `FDIO_SPAWN_CLONE_NAMESPACE` is specified via `flags`, the entries from the calling process are
+// added before any entries specified with `FDIO_SPAWN_ACTION_ADD_NS_ENTRY`.
 //
-// The spawned process decides how to process and interpret the namespace
-// entries. Typically, the spawned process with disregard duplicate entries
-// (i.e., the first entry for a given name wins) and will ignore nested entries
-// (e.g., |/foo/bar| when |/foo| has already been added to the namespace).
+// The spawned process decides how to process and interpret the namespace entries. Typically, the
+// spawned process with disregard duplicate entries (i.e., the first entry for a given name wins)
+// and will ignore nested entries (e.g., `/foo/bar` when `/foo` has already been added to the
+// namespace).
 //
-// To override or replace an entry in the namespace of the calling process,
-// use |fdio_ns_export_root| to export the namespace table of the calling
-// process and construct the namespace for the spawned process explicitly using
-// |FDIO_SPAWN_ACTION_ADD_NS_ENTRY|.
+// To override or replace an entry in the namespace of the calling process, use
+// `fdio_ns_export_root` to export the namespace table of the calling process and construct the
+// namespace for the spawned process explicitly using `FDIO_SPAWN_ACTION_ADD_NS_ENTRY`.
 //
-// The given handle will be closed regardless of whether the |fdio_spawn_etc|
-// call succeeds.
+// The given handle will be closed regardless of whether the `fdio_spawn_etc` call succeeds.
 //
-// Uses the |ns| entry in the |fdio_spawn_action_t| union.
+// Uses the `ns` entry in the `fdio_spawn_action_t` union.
 #define FDIO_SPAWN_ACTION_ADD_NS_ENTRY ((uint32_t)0x0003u)
 
 // Add the given handle to the process arguments of the spawned process.
 //
-// The given handle will be closed regardless of whether the |fdio_spawn_etc|
-// call succeeds.
+// The given handle will be closed regardless of whether the `fdio_spawn_etc` call succeeds.
 //
-// Uses the |h| entry in the |fdio_spawn_action_t| union.
+// Uses the `h` entry in the `fdio_spawn_action_t` union.
 #define FDIO_SPAWN_ACTION_ADD_HANDLE ((uint32_t)0x0004u)
 
 // Sets the name of the spawned process to the given name.
 //
 // Overrides the default of use the first argument to name the process.
 //
-// Uses the |name| entry in the |fdio_spawn_action_t| union.
+// Uses the `name` entry in the `fdio_spawn_action_t` union.
 #define FDIO_SPAWN_ACTION_SET_NAME ((uint32_t)0x0005u)
 
-// Shares the given directory by installing it into the namespace of spawned
-// process.
+// Shares the given directory by installing it into the namespace of spawned process.
 //
-// Uses the |dir| entry in the |fdio_spawn_action_t| union
+// Uses the `dir` entry in the `fdio_spawn_action_t` union
 #define FDIO_SPAWN_ACTION_CLONE_DIR ((uint32_t)0x0006u)
 
-// Instructs |fdio_spawn_etc| which actions to take.
+// Instructs `fdio_spawn_etc` which actions to take.
 typedef struct fdio_spawn_action fdio_spawn_action_t;
 struct fdio_spawn_action {
   // The action to take.
   //
-  // See |FDIO_SPAWN_ACTION_*| above. If |action| is invalid, the action will
-  // be ignored (rather than generate an error).
+  // See `FDIO_SPAWN_ACTION_*` above. If `action` is invalid, the action will be ignored (rather
+  // than generate an error).
   uint32_t action;
   union {
     struct {
       // The file descriptor in this process to clone or transfer.
       int local_fd;
 
-      // The file descriptor in the spawned process that will receive the
-      // clone or transfer.
+      // The file descriptor in the spawned process that will receive the clone or transfer.
       int target_fd;
     } fd ZX_AVAILABLE_SINCE(1);
     struct {
-      // The prefix in which to install the given handle in the namespace
-      // of the spawned process.
+      // The prefix in which to install the given handle in the namespace of the spawned process.
       const char* prefix;
 
-      // The handle to install with the given prefix in the namespace of
-      // the spawned process.
+      // The handle to install with the given prefix in the namespace of the spawned process.
       zx_handle_t handle;
     } ns ZX_AVAILABLE_SINCE(1);
     struct {
-      // The process argument identifier of the handle to pass to the
-      // spawned process.
+      // The process argument identifier of the handle to pass to the spawned process.
       uint32_t id;
 
       // The handle to pass to the process on startup.
@@ -183,56 +168,52 @@ struct fdio_spawn_action {
       const char* data;
     } name ZX_AVAILABLE_SINCE(1);
     struct {
-      // The directory to share with the spawned process. |prefix| may match zero or more
-      // entries in the callers flat namespace.
+      // The directory to share with the spawned process. `prefix` may match zero or more entries in
+      // the callers flat namespace.
       const char* prefix;
     } dir ZX_AVAILABLE_SINCE(1);
   };
 } ZX_AVAILABLE_SINCE(1);
 
-// The maximum size for error messages from |fdio_spawn_etc|.
+// The maximum size for error messages from `fdio_spawn_etc`.
 //
 // Including the null terminator.
 #define FDIO_SPAWN_ERR_MSG_MAX_LENGTH ((size_t)1024u)
 
 // Spawn a process in the given job.
 //
-// The binary for the process is loaded from the given |path| and passed |argv|.
-// The aspects of this process' environment indicated by |clone| are shared with
-// the process.
+// The binary for the process is loaded from the given `path` and passed `argv`. The aspects of this
+// process' environment indicated by `clone` are shared with the process.
 //
-// The spawned process is also given |environ| as its environment and the given
-// |actions| are applied when creating the process.
+// The spawned process is also given `environ` as its environment and the given `actions` are
+// applied when creating the process.
 //
-// The |argv| array must be terminated with a null pointer.
+// The `argv` array must be terminated with a null pointer.
 //
-// If non-null, the |environ| array must be terminated with a null pointer.
+// If non-null, the `environ` array must be terminated with a null pointer.
 //
-// If non-null, the |err_msg_out| buffer must have space for
-// |FDIO_SPAWN_ERR_MSG_MAX_LENGTH| bytes.
+// If non-null, the `err_msg_out` buffer must have space for `FDIO_SPAWN_ERR_MSG_MAX_LENGTH` bytes.
 //
-// If both |FDIO_SPAWN_CLONE_ENVIRON| and |environ| are specified, then the
-// spawned process is given |environ| as its environment. If both
-// |FDIO_SPAWN_CLONE_STDIO| and |actions| that target any of fds 0, 1, and 2 are
-// specified, then the actions that target those fds will control their
+// If both `FDIO_SPAWN_CLONE_ENVIRON` and `environ` are specified, then the spawned process is given
+// `environ` as its environment. If both `FDIO_SPAWN_CLONE_STDIO` and `actions` that target any of
+// fds 0, 1, and 2 are specified, then the actions that target those fds will control their
 // semantics in the spawned process.
 //
-// If |job| is |ZX_HANDLE_INVALID|, then the process is spawned in
-// |zx_job_default()|. Does not take ownership of |job|.
+// If `job` is `ZX_HANDLE_INVALID`, then the process is spawned in `zx_job_default()`. Does not take
+// ownership of `job`.
 //
-// Upon success, |process_out| will be a handle to the process. Upon failure, if
-// |err_msg_out| is not null, an error message will be we written to
-// |err_msg_out|, including a null terminator.
+// Upon success, `process_out` will be a handle to the process. Upon failure, if `err_msg_out` is
+// not null, an error message will be we written to `err_msg_out`, including a null terminator.
 //
 // # Errors
 //
-// ZX_ERR_NOT_FOUND: |path| cannot be opened.
+//   * `ZX_ERR_NOT_FOUND`: `path` cannot be opened.
 //
-// ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
+//   * `ZX_ERR_BAD_HANDLE`: `path` cannot be opened as an executable VMO.
 //
-// ZX_ERR_PEER_CLOSED: Cannot connect to |fuchsia.process.Launcher|.
+//   * `ZX_ERR_PEER_CLOSED`: Cannot connect to `fuchsia.process.Launcher`.
 //
-// Returns the result of |fdio_spawn_vmo| in all other cases.
+// Returns the result of `fdio_spawn_vmo` in all other cases.
 zx_status_t fdio_spawn_etc(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
                            const char* const* argv, const char* const* environ, size_t action_count,
                            ZX_HANDLE_RELEASE const fdio_spawn_action_t* actions,
@@ -241,31 +222,30 @@ zx_status_t fdio_spawn_etc(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const 
 
 // Spawn a process using the given executable in the given job.
 //
-// See |fdio_spawn_etc| for details. Rather than loading the binary for the
-// process from a path, this function receives the binary as the contents of a
-// vmo.
+// See `fdio_spawn_etc` for details. Rather than loading the binary for the process from a path,
+// this function receives the binary as the contents of a vmo.
 //
-// Always consumes |executable_vmo|.
+// Always consumes `executable_vmo`.
 //
 // # Errors
 //
-// ZX_ERR_INVALID_ARGS: any supplied action is invalid, or the process name is unset.
+//   * `ZX_ERR_INVALID_ARGS`: any supplied action is invalid, or the process name is unset.
 //
-// ZX_ERR_IO_INVALID: the recursion limit is hit resolving the executable name.
+//   * `ZX_ERR_IO_INVALID`: the recursion limit is hit resolving the executable name.
 //
-// ZX_ERR_BAD_HANDLE: |executable_vmo| is not a valid handle.
+//   * `ZX_ERR_BAD_HANDLE`: `executable_vmo` is not a valid handle.
 //
-// ZX_ERR_WRONG_TYPE: |executable_vmo| is not a VMO handle.
+//   * `ZX_ERR_WRONG_TYPE`: `executable_vmo` is not a VMO handle.
 //
-// ZX_ERR_ACCESS_DENIED: |executable_vmo| is not readable.
+//   * `ZX_ERR_ACCESS_DENIED`: `executable_vmo` is not readable.
 //
-// ZX_ERR_OUT_OF_RANGE: |executable_vmo| is smaller than the resolver prefix.
+//   * `ZX_ERR_OUT_OF_RANGE`: `executable_vmo` is smaller than the resolver prefix.
 //
-// ZX_ERR_PEER_CLOSED: Cannot connect to |fuchsia.process.Launcher|.
+//   * `ZX_ERR_PEER_CLOSED`: Cannot connect to `fuchsia.process.Launcher`.
 //
-// ZX_ERR_INTERNAL: A dependency needed to launch the process was unavailable.
-// Most commonly this indicates a failure attempting to resolve a |#!resolve |
-// line using |fuchsia.process.Resolver|.
+//   * `ZX_ERR_INTERNAL`: A dependency needed to launch the process was unavailable. Most commonly
+//     this indicates a failure attempting to resolve a `#!resolve ` line using
+//     `fuchsia.process.Resolver`.
 //
 // May return other errors.
 zx_status_t fdio_spawn_vmo(ZX_HANDLE_USE zx_handle_t job, uint32_t flags,

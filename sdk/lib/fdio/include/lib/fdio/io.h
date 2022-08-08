@@ -55,9 +55,9 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
 //
 // # Errors
 //
-// ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
+//   * `ZX_ERR_NO_MEMORY`: Failed due to a lack of memory.
 //
-// ZX_ERR_NO_RESOURCES: Failed to bind to the file descriptor.
+//   * `ZX_ERR_NO_RESOURCES`: Failed to bind to the file descriptor.
 zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 
 // Get a read-only VMO containing the whole contents of the file. This function creates a clone of
