@@ -28,6 +28,7 @@ source_set("lib") {
     ":fuchsia.camera.test",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys",

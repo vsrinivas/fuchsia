@@ -39,12 +39,11 @@ using DevicesMap = std::unordered_map<PersistentDeviceId, UniqueDevice>;
 
 class DeviceWatcherImpl {
  public:
-  DeviceWatcherImpl(std::unique_ptr<sys::ComponentContext> context);
-
   static fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create(
-      std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher);
+      std::unique_ptr<sys::ComponentContext> context, fuchsia::component::RealmHandle realm,
+      async_dispatcher_t* dispatcher);
   fpromise::result<PersistentDeviceId, zx_status_t> AddDevice(
-      fuchsia::hardware::camera::DeviceHandle camera);
+      fuchsia::hardware::camera::DeviceHandle camera, const std::string& path);
   void UpdateClients();
   fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> GetHandler();
 
@@ -52,6 +51,9 @@ class DeviceWatcherImpl {
 
  private:
   void OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request);
+
+  void ConnectDynamicChild(fidl::InterfaceRequest<fuchsia::camera3::Device> request,
+                           const UniqueDevice& unique_device);
 
   // Implements the server endpoint for a single client, and maintains per-client state.
   class Client : public fuchsia::camera3::DeviceWatcher {
@@ -79,8 +81,9 @@ class DeviceWatcherImpl {
     std::optional<std::set<TransientDeviceId>> last_sent_ids_;
   };
 
-  std::unique_ptr<sys::ComponentContext> context_;
   async_dispatcher_t* dispatcher_;
+  std::unique_ptr<sys::ComponentContext> context_;
+  fuchsia::component::RealmPtr realm_;
   TransientDeviceId device_id_next_ = 1;
   DevicesMap devices_;
   ClientId client_id_next_ = 1;

@@ -4,6 +4,7 @@
 
 #include <fuchsia/camera/test/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -43,7 +44,15 @@ int main(int argc, char* argv[]) {
 
   auto directory = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  auto result = camera::DeviceWatcherImpl::Create(std::move(context), loop.dispatcher());
+  fuchsia::component::RealmHandle realm;
+  zx_status_t status = context->svc()->Connect(realm.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to connect to realm service.";
+    return EXIT_FAILURE;
+  }
+
+  auto result =
+      camera::DeviceWatcherImpl::Create(std::move(context), std::move(realm), loop.dispatcher());
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.error());
     return EXIT_FAILURE;
@@ -60,7 +69,7 @@ int main(int argc, char* argv[]) {
                                          << ". This device will not be exposed to clients.";
           return;
         }
-        auto add_result = server->AddDevice(result.take_value());
+        auto add_result = server->AddDevice(result.take_value(), path);
         if (add_result.is_error()) {
           FX_PLOGS(WARNING, add_result.error()) << "Failed to add camera from " << full_path
                                                 << ". This device will not be exposed to clients.";

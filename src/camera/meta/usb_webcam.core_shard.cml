@@ -9,70 +9,38 @@
 {
     children: [
         {
-            name: "camera_device_watcher",
+            name: "usb_camera_device_watcher",
             url: "fuchsia-pkg://fuchsia.com/usb_camera_device_watcher#meta/usb_camera_device_watcher.cm",
-            environment: "#full-resolver-env",
-        },
-        {
-            name: "camera_device",
-            url: "fuchsia-pkg://fuchsia.com/usb_camera_device#meta/usb_camera_device.cm",
             environment: "#full-resolver-env",
         },
     ],
     use: [
         {
-            // Make camera device available to v1 components
-            protocol: [
-                "fuchsia.camera3.Device",
-                "fuchsia.camera3.Stream",
-            ],
-            from: "#camera_device",
-        },
-        {
             // Make camera device watcher available to v1 components
             protocol: "fuchsia.camera3.DeviceWatcher",
-            from: "#camera_device_watcher",
+            from: "#usb_camera_device_watcher",
         },
     ],
     offer: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: [
-                '#camera_device',
-                '#camera_device_watcher',
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
             ],
+            from: "parent",
+            to: [ "#usb_camera_device_watcher" ],
         },
         {
             protocol: "fuchsia.camera3.DeviceWatcher",
-            from: "#camera_device_watcher",
+            from: "#usb_camera_device_watcher",
             to: [ "#session-manager" ],
-        },
-        {
-            protocol: [
-                "fuchsia.camera3.Device",
-                "fuchsia.camera3.Stream",
-            ],
-            from: "#camera_device",
-            to: [
-                "#camera_device_watcher",
-                "#session-manager",
-            ],
         },
         {
             directory: "dev",
             from: "parent",
             as: "dev-camera",
-            to: [
-                "#camera_device",
-                "#camera_device_watcher",
-            ],
+            to: [ "#usb_camera_device_watcher" ],
             subdir: "class/camera",
-        },
-        {
-            protocol: [ "fuchsia.sysmem.Allocator" ],
-            from: "parent",
-            to: [ "#camera_device" ],
         },
     ],
 }

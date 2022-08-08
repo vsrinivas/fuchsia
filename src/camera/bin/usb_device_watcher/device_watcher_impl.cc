@@ -6,6 +6,8 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -18,23 +20,25 @@
 #include <iterator>
 #include <limits>
 
+#include "src/camera/bin/usb_device_watcher/device_instance.h"
+
 namespace camera {
 
-DeviceWatcherImpl::DeviceWatcherImpl(std::unique_ptr<sys::ComponentContext> context)
-    : context_(std::move(context)) {}
-
 fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::Create(
-    std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher) {
-  auto server = std::make_unique<DeviceWatcherImpl>(std::move(context));
+    std::unique_ptr<sys::ComponentContext> context, fuchsia::component::RealmHandle realm,
+    async_dispatcher_t* dispatcher) {
+  auto server = std::make_unique<DeviceWatcherImpl>();
 
+  server->context_ = std::move(context);
   server->dispatcher_ = dispatcher;
 
+  ZX_ASSERT(server->realm_.Bind(std::move(realm), server->dispatcher_) == ZX_OK);
   return fpromise::ok(std::move(server));
 }
 
 fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
-    fuchsia::hardware::camera::DeviceHandle camera) {
-  FX_LOGS(DEBUG) << "AddDevice(...)";
+    fuchsia::hardware::camera::DeviceHandle camera, const std::string& path) {
+  FX_LOGS(INFO) << "AddDevice: " << path;
   fuchsia::hardware::camera::DeviceSyncPtr dev;
   dev.Bind(std::move(camera));
 
@@ -48,8 +52,9 @@ fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   PersistentDeviceId persistent_id =
       (static_cast<uint64_t>(info_return.vendor_id()) << kVendorShift) | info_return.product_id();
 
-  // Close the controller handle and launch the instance.
-  auto result = DeviceInstance::Create(dev.Unbind(), dispatcher_);
+  // Launch the camera device instance.
+  std::string instance_name = std::string(kDeviceInstanceNamePrefix) + path;
+  auto result = DeviceInstance::Create(dev.Unbind(), realm_, dispatcher_, instance_name);
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Failed to launch device instance.";
     return fpromise::error(result.error());
@@ -95,6 +100,31 @@ void DeviceWatcherImpl::OnNewRequest(
   clients_[client_id_next_] = std::move(client);
   FX_LOGS(DEBUG) << "DeviceWatcher client " << client_id_next_ << " connected.";
   ++client_id_next_;
+}
+
+void DeviceWatcherImpl::ConnectDynamicChild(
+    fidl::InterfaceRequest<fuchsia::camera3::Device> request, const UniqueDevice& unique_device) {
+  fuchsia::component::decl::ChildRef child;
+  child.name = unique_device.instance->name();
+  child.collection = kDeviceInstanceCollectionName;
+
+  fidl::InterfaceHandle<fuchsia::io::Directory> exposed_dir;
+  realm_->OpenExposedDir(
+      child, exposed_dir.NewRequest(),
+      [exposed_dir = std::move(exposed_dir), request = std::move(request)](
+          fuchsia::component::Realm_OpenExposedDir_Result result) mutable {
+        if (result.is_err()) {
+          FX_LOGS(ERROR) << "Failed to connect to exposed directory. Result: "
+                         << static_cast<long>(result.err());
+
+          // TODO(b/241604541) - Need a more graceful recovery here.
+          ZX_ASSERT(false);
+        }
+        std::shared_ptr<sys::ServiceDirectory> svc_dir =
+            std::make_shared<sys::ServiceDirectory>(sys::ServiceDirectory(std::move(exposed_dir)));
+        // Connect to the service on behalf of client.
+        svc_dir->Connect(std::move(request), "fuchsia.camera3.Device");
+      });
 }
 
 DeviceWatcherImpl::Client::Client(DeviceWatcherImpl& watcher) : watcher_(watcher), binding_(this) {}
@@ -218,15 +248,17 @@ void DeviceWatcherImpl::Client::ConnectToDevice(
     return;
   }
 
+  // Find the UniqueDevice to connect to.
   const auto& devices = watcher_.devices_;
-  auto device = std::find_if(devices.begin(), devices.end(),
-                             [=](const auto& it) { return it.second.id == id; });
-  if (device == devices.end()) {
+  auto unique_device = std::find_if(devices.begin(), devices.end(),
+                                    [=](const auto& it) { return it.second.id == id; });
+  if (unique_device == devices.end()) {
     request.Close(ZX_ERR_NOT_FOUND);
     return;
   }
 
-  watcher_.context()->svc()->Connect(std::move(request), "fuchsia.camera3.Device");
+  // Create and connect to dynamic child instance.
+  watcher_.ConnectDynamicChild(std::move(request), unique_device->second);
 }
 
 }  // namespace camera

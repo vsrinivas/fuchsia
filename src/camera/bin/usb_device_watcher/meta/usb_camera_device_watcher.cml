@@ -7,6 +7,12 @@
         runner: "elf",
         binary: "bin/usb_camera_device_watcher_bin",
     },
+    collections: [
+        {
+            name: "usb_camera_devices",
+            durability: "transient",
+        },
+    ],
     capabilities: [
         {
             protocol: [
@@ -22,10 +28,23 @@
             path: "/dev/class/camera",
         },
         {
+            protocol: [ "fuchsia.component.Realm" ],
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
             protocol: [
-                "fuchsia.camera3.Device",
-                "fuchsia.camera3.Stream",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
             ],
+            from: "parent",
+            to: "#usb_camera_devices",
+        },
+        {
+            directory: "dev-camera",
+            from: "parent",
+            to: "#usb_camera_devices",
         },
     ],
     expose: [

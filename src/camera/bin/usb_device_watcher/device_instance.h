@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -21,14 +22,21 @@
 
 namespace camera {
 
+constexpr std::string_view kDeviceInstanceCollectionName{"usb_camera_devices"};
+constexpr std::string_view kDeviceInstanceNamePrefix{"usb_camera_device_"};
+
 // Represents a launched device process.
 class DeviceInstance {
  public:
   static fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> Create(
-      fuchsia::hardware::camera::DeviceHandle camera, async_dispatcher_t* dispatcher);
+      fuchsia::hardware::camera::DeviceHandle camera, const fuchsia::component::RealmPtr& realm,
+      async_dispatcher_t* dispatcher, const std::string& name);
+
+  const std::string& name() { return name_; }
 
  private:
   async_dispatcher_t* dispatcher_;
+  std::string name_;
   fuchsia::hardware::camera::DevicePtr camera_;
 };
 
