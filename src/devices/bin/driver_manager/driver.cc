@@ -244,9 +244,10 @@ void find_loadable_drivers(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_a
 }
 
 zx_status_t load_driver_vmo(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
-                            std::string_view libname, zx::vmo vmo, DriverLoadCallback func) {
+                            std::string_view libname_view, zx::vmo vmo, DriverLoadCallback func) {
+  std::string libname(libname_view);
   zx_handle_t vmo_handle = vmo.get();
-  AddContext context = {boot_args, libname.data(), std::move(func), std::move(vmo)};
+  AddContext context = {boot_args, libname.c_str(), std::move(func), std::move(vmo)};
 
   auto di_vmo_read = [](void* vmo, void* data, size_t len, size_t off) {
     return zx_vmo_read(*((zx_handle_t*)vmo), data, off, len);
@@ -254,40 +255,41 @@ zx_status_t load_driver_vmo(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_
   zx_status_t status = di_read_driver_info_etc(&vmo_handle, di_vmo_read, &context, found_driver);
 
   if (status == ZX_ERR_NOT_FOUND) {
-    LOGF(INFO, "Missing info from driver '%s'", libname.data());
+    LOGF(INFO, "Missing info from driver '%s'", libname.c_str());
   } else if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to read info from driver '%s': %s", libname.data(),
+    LOGF(ERROR, "Failed to read info from driver '%s': %s", libname.c_str(),
          zx_status_get_string(status));
   }
   return status;
 }
 
-zx_status_t load_vmo(std::string_view libname, zx::vmo* out_vmo) {
+zx_status_t load_vmo(std::string_view libname_view, zx::vmo* out_vmo) {
+  std::string libname(libname_view);
   int fd = -1;
-  zx_status_t r = fdio_open_fd(libname.data(),
+  zx_status_t r = fdio_open_fd(libname.c_str(),
                                static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
                                                      fio::wire::OpenFlags::kRightExecutable),
                                &fd);
   if (r != ZX_OK) {
-    LOGF(ERROR, "Cannot open driver '%s': %d", libname.data(), r);
+    LOGF(ERROR, "Cannot open driver '%s': %d", libname.c_str(), r);
     return ZX_ERR_IO;
   }
   zx::vmo vmo;
   r = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
   close(fd);
   if (r != ZX_OK) {
-    LOGF(ERROR, "Cannot get driver VMO '%s'", libname.data());
+    LOGF(ERROR, "Cannot get driver VMO '%s'", libname.c_str());
     return r;
   }
-  const char* vmo_name = strrchr(libname.data(), '/');
+  const char* vmo_name = strrchr(libname.c_str(), '/');
   if (vmo_name != nullptr) {
     ++vmo_name;
   } else {
-    vmo_name = libname.data();
+    vmo_name = libname.c_str();
   }
   r = vmo.set_property(ZX_PROP_NAME, vmo_name, strlen(vmo_name));
   if (r != ZX_OK) {
-    LOGF(ERROR, "Cannot set name on driver VMO to '%s'", libname.data());
+    LOGF(ERROR, "Cannot set name on driver VMO to '%s'", libname.c_str());
     return r;
   }
   *out_vmo = std::move(vmo);
