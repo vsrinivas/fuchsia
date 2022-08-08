@@ -26,8 +26,8 @@ using std::bit_cast;
 
 #else  // Use builtin to provide constexpr bit_cast.
 
-#if defined(__has_builtin) && __has_builtin(__builtin_bit_cast) && \
-    !defined(LIB_STDCOMPAT_NO_BUILTIN_BITCAST)
+#if defined(__has_builtin) && !defined(LIB_STDCOMPAT_NO_BUILTIN_BITCAST)
+#if __has_builtin(__builtin_bit_cast)
 
 template <typename To, typename From>
 constexpr std::enable_if_t<sizeof(To) == sizeof(From) && std::is_trivially_copyable<To>::value &&
@@ -37,7 +37,15 @@ bit_cast(const From& from) {
   return __builtin_bit_cast(To, from);
 }
 
-#else  // Use memcpy instead, not constexpr though.
+// Since there are two #if checks, using #else would require code duplication.
+// Define a temporary internal macro to indicate that bit_cast was defined.
+#define LIB_STDCOMPAT_BIT_CAST_DEFINED_
+
+#endif  // __has_builtin(__builtin_bit_cast)
+#endif  // defined(__has_builtin) && !defined(LIB_STDCOMPAT_NO_BUILTIN_BITCAST)
+
+// Use memcpy instead, not constexpr though.
+#ifndef LIB_STDCOMPAT_BIT_CAST_DEFINED_
 
 #define LIB_STDCOMPAT_NONCONSTEXPR_BITCAST 1
 
@@ -52,7 +60,9 @@ bit_cast(const From& from) {
   return *reinterpret_cast<const To*>(&uninitialized_to);
 }
 
-#endif  //  defined(__has_builtin) && __has_builtin(__builtin_bit_cast)
+#endif  // LIB_STDCOMPAT_BIT_CAST_DEFINED_
+
+#undef LIB_STDCOMPAT_BIT_CAST_DEFINED_
 
 #endif  //  __cpp_lib_bit_cast >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 

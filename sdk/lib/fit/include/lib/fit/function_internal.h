@@ -31,7 +31,7 @@ struct target_ops final {
 template <typename Callable, bool is_inline, bool is_shared, typename Result, typename... Args>
 struct target;
 
-inline const void* unshared_target_type_id(void* /* bits */, const void* impl_ops) {
+inline const void* unshared_target_type_id(void* /*bits*/, const void* impl_ops) {
   return impl_ops;
 }
 
@@ -41,14 +41,14 @@ template <typename Result, typename... Args>
 struct target<decltype(nullptr),
               /*is_inline=*/true, /*is_shared=*/false, Result, Args...>
     final {
-  static Result invoke(void* /* bits */, Args... /* args */) { __builtin_abort(); }
+  static Result invoke(void* /*bits*/, Args... /*args*/) { __builtin_abort(); }
 
   static const target_ops<Result, Args...> ops;
 };
 
-inline void* null_target_get(void* /* bits */) { return nullptr; }
-inline void null_target_move(void* /* from_bits */, void* /* to_bits */) {}
-inline void null_target_destroy(void* /* bits */) {}
+inline void* null_target_get(void* /*bits*/) { return nullptr; }
+inline void null_target_move(void* /*from_bits*/, void* /*to_bits*/) {}
+inline void null_target_destroy(void* /*bits*/) {}
 
 template <typename Result, typename... Args>
 constexpr target_ops<Result, Args...> target<decltype(nullptr),
@@ -149,7 +149,7 @@ struct target<SharedFunction,
     auto& from_shared_ptr = *static_cast<std::shared_ptr<SharedFunction>*>(from_bits);
     new (to_bits) std::shared_ptr<SharedFunction>(from_shared_ptr);
   }
-  static const void* target_type_id(void* bits, const void* /* impl_ops */) {
+  static const void* target_type_id(void* bits, const void* /*impl_ops*/) {
     auto& function_or_callback = **static_cast<std::shared_ptr<SharedFunction>*>(bits);
     return ::fit::internal::get_target_type_id(function_or_callback);
   }
