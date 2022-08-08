@@ -12,6 +12,9 @@ config("args") {
   if (rust_virtio_gpu_input_devices) {
     defines += [ "USE_RUST_VIRTIO_GPU_INPUT" ]
   }
+  if (rust_virtio_balloon) {
+    defines += [ "USE_RUST_VIRTIO_BALLOON" ]
+  }
 }
 
 group("bin") {

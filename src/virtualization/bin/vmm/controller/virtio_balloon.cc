@@ -16,44 +16,66 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
 zx_status_t VirtioBalloon::AddPublicService(sys::ComponentContext* context) {
+  FX_CHECK(started_);
   return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
+                                 async_dispatcher_t* device_loop_dispatcher,
                                  async_dispatcher_t* dispatcher) {
   constexpr auto kComponentName = "virtio_balloon";
   constexpr auto kComponentCollectionName = "virtio_balloon_devices";
+#ifdef USE_RUST_VIRTIO_BALLOON
+  constexpr auto kComponentUrl =
+      "fuchsia-pkg://fuchsia.com/virtio_balloon_rs#meta/virtio_balloon_rs.cm";
+#else
   constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
+#endif
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_virtualization_hardware::VirtioBalloon>();
+  auto [client_end, server_end] = std::move(endpoints.value());
+  fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioBalloon> balloon_request(
+      server_end.TakeChannel());
+  balloon_.Bind(std::move(client_end), dispatcher, this);
 
   zx_status_t status =
       CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
-                             [ballon = balloon_.NewRequest(), stats = stats_.NewRequest()](
+                             [balloon_request = std::move(balloon_request)](
                                  std::shared_ptr<sys::ServiceDirectory> services) mutable {
-                               zx_status_t status = services->Connect(std::move(ballon));
-                               if (status != ZX_OK) {
-                                 return status;
-                               }
-                               return services->Connect(std::move(stats));
+                               return services->Connect(std::move(balloon_request));
                              });
   if (status != ZX_OK) {
     return status;
   }
 
   fuchsia::virtualization::hardware::StartInfo start_info;
-  status = PrepStart(guest, dispatcher, &start_info);
+  status = PrepStart(guest, device_loop_dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }
-  return balloon_->Start(std::move(start_info));
+  started_ = true;
+  // Convert to llcpp types
+  fuchsia_virtualization_hardware::wire::StartInfo start_info_llcpp{
+      .trap =
+          {
+              .addr = start_info.trap.addr,
+              .size = start_info.trap.size,
+          },
+      .guest = std::move(start_info.guest),
+      .event = std::move(start_info.event),
+      .vmo = std::move(start_info.vmo),
+  };
+  return balloon_.sync()->Start(std::move(start_info_llcpp)).status();
 }
 
 zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                                           zx_gpaddr_t avail, zx_gpaddr_t used) {
-  return balloon_->ConfigureQueue(queue, size, desc, avail, used);
+  return balloon_.sync()->ConfigureQueue(queue, size, desc, avail, used).status();
 }
 
 zx_status_t VirtioBalloon::Ready(uint32_t negotiated_features) {
-  return balloon_->Ready(negotiated_features);
+  zx_status_t status = balloon_.sync()->Ready(negotiated_features).status();
+  return status;
 }
 
 void VirtioBalloon::GetNumPages(GetNumPagesCallback callback) {
@@ -77,6 +99,22 @@ void VirtioBalloon::RequestNumPages(uint32_t num_pages) {
   }
 }
 
+void VirtioBalloon::on_fidl_error(fidl::UnbindInfo error) {
+  FX_LOGS(ERROR) << "Connection to VirtioBalloon lost: " << error;
+}
+
 void VirtioBalloon::GetMemStats(GetMemStatsCallback callback) {
-  stats_->GetMemStats(std::move(callback));
+  FX_CHECK(started_);
+  balloon_->GetMemStats().Then([callback = std::move(callback)](auto& result) {
+    if (result.ok()) {
+      std::vector<::fuchsia::virtualization::MemStat> mem_stats;
+      for (auto& el : result->mem_stats) {
+        mem_stats.push_back({.tag = el.tag, .val = el.val});
+      }
+      callback(result->status, std::move(mem_stats));
+    } else {
+      FX_LOGS(ERROR) << "Failed to get memory stats status=" << result.status_string();
+      callback(ZX_ERR_INTERNAL, {});
+    }
+  });
 }

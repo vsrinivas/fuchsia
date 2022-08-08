@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return status;
     }
-    status = balloon.Start(guest.object(), realm, device_loop.dispatcher());
+    status = balloon.Start(guest.object(), realm, device_loop.dispatcher(), loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return status;
@@ -535,10 +535,12 @@ int main(int argc, char** argv) {
     FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
     loop.Quit();
   }
-  status = balloon.AddPublicService(context.get());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to add balloon public service";
-    loop.Quit();
+  if (cfg.virtio_balloon()) {
+    status = balloon.AddPublicService(context.get());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to add balloon public service";
+      loop.Quit();
+    }
   }
   status = gpu.AddPublicService(context.get());
   if (status != ZX_OK) {

@@ -8,4 +8,7 @@ declare_args() {
 
   # Enable to use the rust virtio GPU and input devices by default in the VMM.
   rust_virtio_gpu_input_devices = false
+
+  # Enable to the the rust virtio balloon
+  rust_virtio_balloon = false
 }
