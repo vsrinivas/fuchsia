@@ -4,51 +4,90 @@
 
 import("//build/testing/config.gni")
 
-# Defines a golden file test to be executed during the build. Fails
-# if `golden`'s contents aren't equal to `current`'s.
+# Defines a set of golden file comparisons to be executed during the build.
+# Fails if one of the provided `golden`'s contents is not equal to the
+# associated `current`'s.
 #
-# If the `bless_goldens` build arg is true, updates the current file
-# rather than failing the action.
+# If the `bless_goldens` build arg is true, the goldens will be updated with
+# the current files rather than failing the action.
 #
 # For more complex golden testing, see //build/testing/golden_test.gni.
 #
-# Parameters
-#   golden (required)
-#     Path to the canonical file.
+# Parameters:
 #
-#   current (required)
-#     Path to the file under test.
+#  * comparisons
+#    - Required: The list of golden file comparisons to perform.
+#    - Type: list(scope)
 #
-#   warn_on_changes (default: false)
-#     If true, mismatches are treated as warnings rather than errors.
-template("golden_file") {
-  assert(defined(invoker.golden), "golden is a required parameter")
-  assert(defined(invoker.current), "current is a required parameter")
+#    Each scope contains:
+#      * golden
+#        - Required: The golden file against which to check.
+#        - Type: path
+#
+#      * current
+#        - Required: The file under test.
+#        - Type: path
+#
+#  * warn_on_changes
+#    - Optional: If true, mismatches are treated as warnings rather than errors.
+#    - Type: bool
+#    - Default: false
+#
+#  * visibility, testonly, deps, public_deps
+#    - Optional: Usual GN meanings.
+#
+template("golden_files") {
+  assert(defined(invoker.comparisons) && invoker.comparisons != [],
+         "`comparisons` is a required parameter")
 
   action(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                             "deps",
+                             "public_deps",
+                           ])
 
-    script = "//build/testing/verify_golden_file.py"
+    script = "//build/testing/verify_golden_files.py"
 
     stamp_file = "$target_gen_dir/$target_name.verified"
 
-    inputs = [
-      current,
-      golden,
-    ]
+    inputs = []
 
     outputs = [ stamp_file ]
 
     args = [
-      "--golden",
-      rebase_path(golden, root_build_dir),
-      "--current",
-      rebase_path(current, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--label",
       get_label_info(":${target_name}", "label_no_toolchain"),
+      "--comparisons",
     ]
+
+    foreach(comparison, invoker.comparisons) {
+      assert(defined(comparison.golden),
+             "no `golden` given in comparison: $comparison")
+      assert(defined(comparison.current),
+             "no `current` given in comparison: $comparison")
+
+      # Forward the rest to ensure that nothing else was defined, in which case
+      # GN will provide an "unused" error.
+      forward_variables_from(comparison,
+                             "*",
+                             [
+                               "golden",
+                               "current",
+                             ])
+
+      inputs += [
+        comparison.golden,
+        comparison.current,
+      ]
+
+      args += [ rebase_path(comparison.current, root_build_dir) + ":" +
+                rebase_path(comparison.golden, root_build_dir) ]
+    }
 
     if (bless_goldens) {
       args += [ "--bless" ]
@@ -59,5 +98,49 @@ template("golden_file") {
     if (warn_on_changes) {
       args += [ "--warn" ]
     }
+  }
+}
+
+# A singleton version of golden_files().
+#
+# Parameters:
+#
+#  * golden
+#    - Required: The golden file against which to check.
+#    - Type: path
+#
+#  * current
+#    - Required: The file under test.
+#    - Type: path
+#
+#  * warn_on_changes
+#    - Optional: If true, mismatches are treated as warnings rather than errors.
+#    - Type: bool
+#    - Default: false
+#
+#  * visibility, testonly, deps, public_deps
+#    - Optional: Usual GN meanings.
+#
+template("golden_file") {
+  assert(defined(invoker.golden), "`golden` is a required parameter")
+  assert(defined(invoker.current), "`current` is a required parameter")
+  golden_files(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                             "deps",
+                             "public_deps",
+                             "warn_on_changes",
+                           ])
+    comparisons = [
+      {
+        forward_variables_from(invoker,
+                               [
+                                 "golden",
+                                 "current",
+                               ])
+      },
+    ]
   }
 }

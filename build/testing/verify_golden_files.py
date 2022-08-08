@@ -17,9 +17,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--label', help='GN label for this test', required=True)
     parser.add_argument(
-        '--golden', help='Path to the golden file', required=True)
-    parser.add_argument(
-        '--current', help='Path to the local file', required=True)
+        '--comparisons',
+        metavar='FILE:GOLDEN',
+        nargs='+',
+        help='A tuple of filepaths to compare, given as FILE:GOLDEN',
+        required=True,
+    )
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
     parser.add_argument(
@@ -32,13 +35,22 @@ def main():
         action='store_true')
     args = parser.parse_args()
 
-    if args.golden:
-        if not filecmp.cmp(args.golden, args.current):
+    diffs = False
+    for comparison in args.comparisons:
+        tokens = comparison.split(':')
+        if len(tokens) != 2:
+            print(
+                '--comparison value \"%s\" must be given as \"FILE:GOLDEN\"' %
+                comparison)
+            return 1
+        current, golden = tokens
+        if not filecmp.cmp(current, golden):
+            diffs = True
             type = 'Warning' if args.warn or args.bless else 'Error'
             print('%s: Golden file mismatch' % type)
 
             if args.bless:
-                shutil.copyfile(args.current, args.golden)
+                shutil.copyfile(current, golden)
             else:
                 print(
                     'Please acknowledge this change by updating the golden.\n')
@@ -46,14 +58,15 @@ def main():
                 # Use abspath in cp command so it works regardless of current
                 # working directory.
                 print(
-                    '  cp ' + os.path.abspath(args.current) + ' ' +
-                    os.path.abspath(args.golden))
+                    '  cp ' + os.path.abspath(current) + ' ' +
+                    os.path.abspath(golden))
                 print(
                     'Or you can rebuild with `bless_goldens=true` in your GN args and'
                 )
                 print(f'`{args.label}` in your build graph.')
-                if not args.warn:
-                    return 1
+
+    if diffs and not args.bless and not args.warn:
+        return 1
 
     with open(args.stamp, 'w') as stamp_file:
         stamp_file.write('Golden!\n')
