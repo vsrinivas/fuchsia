@@ -75,53 +75,72 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
     Ok(DirectoryManager::new(output_path_config, save_count_config)?)
 }
 
+struct Experiment {
+    name: &'static str,
+    enabled: bool,
+}
+
+struct Experiments {
+    structured_output: Experiment,
+    json_input: Experiment,
+    parallel_execution: Experiment,
+}
+
+impl Experiments {
+    async fn get_experiment(experiment_name: &'static str) -> Experiment {
+        Experiment {
+            name: experiment_name,
+            enabled: match ffx_config::get(experiment_name).await {
+                Ok(enabled) => enabled,
+                Err(_) => false,
+            },
+        }
+    }
+
+    async fn from_env() -> Self {
+        Self {
+            structured_output: Self::get_experiment("test.experimental_structured_output").await,
+            json_input: Self::get_experiment("test.experimental_json_input").await,
+            parallel_execution: Self::get_experiment("test.enable_experimental_parallel_execution")
+                .await,
+        }
+    }
+}
+
 async fn run_test<W: 'static + Write + Send + Sync>(
     builder_connector: Box<testing_lib::RunBuilderConnector>,
     writer: W,
     cmd: RunCommand,
 ) -> Result<()> {
-    // Whether or not the experimental structured output is enabled.
-    // When the experiment is disabled and the user attempts to use a strucutured output option,
-    // we bail.
-    let structured_output_experiment =
-        match ffx_config::get("test.experimental_structured_output").await {
-            Ok(true) => true,
-            Ok(false) | Err(_) => false,
-        };
-    let output_directory =
-        match (cmd.disable_output_directory, &cmd.output_directory, structured_output_experiment) {
-            (true, _, _) => None, // user explicitly disabled output.
-            (false, Some(directory), true) => Some(directory.clone().into()), // an override directory is specified.
-            // user specified an override, but output is disabled by experiment flag.
-            (false, Some(_), false) => {
-                ffx_bail!(
-                    "Structured output is experimental and is subject to breaking changes. \
-                To enable structured output run \
-                'ffx config set test.experimental_structured_output true'"
-                )
-            }
-            // Default to a managed directory when structured output is enabled.
-            (false, None, true) => {
-                let mut directory_manager = get_directory_manager().await?;
-                Some(directory_manager.new_directory()?)
-            }
-            // Default to nothing when structured output is disabled.
-            (false, None, false) => None,
-        };
+    let experiments = Experiments::from_env().await;
 
     let min_log_severity = cmd.min_severity_logs;
-    let filter_ansi = cmd.filter_ansi;
 
-    let json_input_experiment = match ffx_config::get("test.experimental_json_input").await {
-        Ok(true) => true,
-        Ok(false) | Err(_) => false,
+    let output_directory = match (
+        cmd.disable_output_directory,
+        &cmd.output_directory,
+        experiments.structured_output.enabled,
+    ) {
+        (true, _, _) => None, // user explicitly disabled output.
+        (false, Some(directory), true) => Some(directory.clone().into()), // an override directory is specified.
+        // user specified an override, but output is disabled by experiment flag.
+        (false, Some(_), false) => {
+            ffx_bail!(
+                "Structured output is experimental and is subject to breaking changes. \
+                To enable structured output run \
+                'ffx config set {} true'",
+                experiments.structured_output.name
+            )
+        }
+        // Default to a managed directory when structured output is enabled.
+        (false, None, true) => {
+            let mut directory_manager = get_directory_manager().await?;
+            Some(directory_manager.new_directory()?)
+        }
+        // Default to nothing when structured output is disabled.
+        (false, None, false) => None,
     };
-
-    let experimental_parallel_exec_enabled =
-        match ffx_config::get("test.enable_experimental_parallel_execution").await {
-            Ok(true) => true,
-            Ok(false) | Err(_) => false,
-        };
+    let reporter = run_test_suite_lib::create_reporter(cmd.filter_ansi, output_directory, writer)?;
 
     let run_params = run_test_suite_lib::RunParams {
         timeout_behavior: match cmd.continue_on_timeout {
@@ -135,18 +154,20 @@ async fn run_test<W: 'static + Write + Send + Sync>(
         },
         experimental_parallel_execution: match (
             cmd.experimental_parallel_execution,
-            experimental_parallel_exec_enabled,
+            experiments.parallel_execution.enabled,
         ) {
             (None, _) => None,
             (Some(max_parallel_suites), true) => Some(max_parallel_suites),
             (_, false) => ffx_bail!(
               "Parallel test suite execution is experimental and is subject to breaking changes. \
               To enable parallel test suite execution, run: \n \
-              'ffx config set test.enable_experimental_parallel_execution true'"
+              'ffx config set {} true'",
+              experiments.parallel_execution.name
             ),
         },
     };
-    let test_definitions = test_params_from_args(cmd, std::io::stdin, json_input_experiment)?;
+    let test_definitions =
+        test_params_from_args(cmd, std::io::stdin, experiments.json_input.enabled)?;
 
     let (cancel_sender, cancel_receiver) = futures::channel::oneshot::channel::<()>();
     let mut signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
@@ -162,7 +183,7 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             }
         }
     });
-    let reporter = run_test_suite_lib::create_reporter(filter_ansi, output_directory, writer)?;
+
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
@@ -298,13 +319,14 @@ async fn result_command<W: Write>(
     ResultCommand { subcommand }: ResultCommand,
     mut writer: W,
 ) -> Result<()> {
-    match ffx_config::get("test.experimental_structured_output").await {
-        Ok(true) => (),
-        Ok(false) | Err(_) => ffx_bail!(
+    let experiments = Experiments::from_env().await;
+    if !experiments.structured_output.enabled {
+        ffx_bail!(
             "The result subcommand relies on structured output, which is experimental \
             and subject to breaking changes. \
-            To enable structured output run 'ffx config set test.experimental_structured_output true'
-        ")
+            To enable structured output run {} true'",
+            experiments.structured_output.name,
+        )
     }
 
     match subcommand {
