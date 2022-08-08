@@ -474,7 +474,9 @@ func addEnvSetup(files *[]packedFile, vcToolsPath string) (string, error) {
 		{"Windows Kits", WinKitVersion, "UnionMetadata", sdkVersion},
 	}
 	// Common entries to all platforms.
-	vcToolsInstallDir := append(vcToolsParts, string(filepath.Separator))
+	// vcToolsInstallDir needs to end with a path separator.
+	vcToolsInstallDir := vcToolsParts
+	vcToolsInstallDir[len(vcToolsInstallDir)-1] += string(filepath.Separator)
 	env := map[string][][]string{
 		"VSINSTALLDIR":      {{`.\`}},
 		"VCINSTALLDIR":      {{`VC\`}},
