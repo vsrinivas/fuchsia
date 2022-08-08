@@ -236,7 +236,7 @@ vfs::PseudoDir& GetOrCreate(std::string_view sink_name, DataType type, SinkDirMa
 
 }  // namespace
 
-zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::PseudoDir& out_dir) {
+zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap& sink_map) {
   std::vector<ExportedFd> exported_fds;
 
   fbl::unique_fd kernel_profile(openat(kernel_data_dir.get(), kKernelProfRaw.data(), O_RDONLY));
@@ -253,10 +253,10 @@ zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::Pseud
         ExportedFd{.fd = std::move(kernel_log), .export_name = std::string(kKernelSymbolizerFile)});
   }
 
-  return Export(out_dir, exported_fds);
+  return Export(GetOrCreate("llvm-profile", DataType::kDynamic, sink_map), exported_fds);
 }
 
-zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::PseudoDir& out_dir) {
+zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map) {
   std::vector<ExportedFd> exported_fds;
 
   fbl::unique_fd phys_profile(openat(physboot_data_dir.get(), kPhysbootProfRaw.data(), O_RDONLY));
@@ -273,7 +273,7 @@ zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::P
         ExportedFd{.fd = std::move(phys_log), .export_name = std::string(kPhysSymbolizerFile)});
   }
 
-  return Export(out_dir, exported_fds);
+  return Export(GetOrCreate("llvm-profile", DataType::kStatic, sink_map), exported_fds);
 }
 
 SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash) {

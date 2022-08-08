@@ -40,20 +40,20 @@ static constexpr std::string_view kStaticDir = "static";
 static constexpr std::string_view kLlvmSink = "llvm-profile";
 static constexpr std::string_view kLlvmSinkExtension = "profraw";
 
-// Given a handle to |kernel_data_dir|, will extract the kernel coverage vmos from it,
-// and add them as VMO file into |out_dir|.
-//
-// Usually |kernel_data_dir| is '/boot/kernel/data'.
-zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::PseudoDir& out_dir);
-
-// Given a handle to |phys_data_dir|, will extract the physboot's coverage vmos from it,
-// and add them as VMO file into |out_dir|.
-//
-// Usually |phys_data_dir| is '/boot/kernel/data/phys'.
-zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::PseudoDir& out_dir);
-
 // Alias for str to unique_ptr<PseudoDir> map that allows lookup by string_view.
 using SinkDirMap = std::map<std::string, std::unique_ptr<vfs::PseudoDir>, std::less<>>;
+
+// Given a handle to |kernel_data_dir|, will extract the kernel coverage vmos from it,
+// and add them as VMO file into |sink_map| as if it where published with the sink "llvm-profile".
+//
+// Usually |kernel_data_dir| is '/boot/kernel/data'.
+zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap& sink_map);
+
+// Given a handle to |phys_data_dir|, will extract the physboot's coverage vmos from it,
+// and add them as VMO file into |sink_map| as if it where published with the sink "llvm-profile".
+//
+// Usually |phys_data_dir| is '/boot/kernel/data/phys'.
+zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map);
 
 // Given a channel speaking the |fuchsia.boot.SvcStash| protocol, this will extract all published
 // debug data, and return a map from 'sink_name' to a root directory for each sink. Each root

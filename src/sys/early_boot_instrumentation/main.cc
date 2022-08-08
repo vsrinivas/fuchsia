@@ -39,9 +39,7 @@ int main(int argc, char** argv) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Add prof_data dir.
-  vfs::PseudoDir* prof_data_static = nullptr;
-  vfs::PseudoDir* prof_data_dynamic = nullptr;
-  std::unique_ptr<vfs::PseudoDir> prof_data_root = nullptr;
+  early_boot_instrumentation::SinkDirMap sink_map;
 
   // All but llvm-profile data until its unified.
   auto debug_data = context->outgoing()->GetOrCreateDirectory("debugdata");
@@ -66,39 +64,9 @@ int main(int argc, char** argv) {
 
     if (get_response->is_ok()) {
       auto& stash_svc = get_response->value()->resource;
-      auto sink_map = early_boot_instrumentation::ExtractDebugData(stash_svc.channel().borrow());
-      // Temporary special casing of llvm-profile, that gets rerouted to match previous
-      // API. Once we move to all payloads are equal, we can remove this.
-      auto it = sink_map.find(early_boot_instrumentation::kLlvmSink);
-
-      if (it != sink_map.end()) {
-        prof_data_root = std::move(it->second);
-        prof_data_root->Lookup(static_dir_name,
-                               reinterpret_cast<vfs::internal::Node**>(&prof_data_static));
-        prof_data_root->Lookup(dynamic_dir_name,
-                               reinterpret_cast<vfs::internal::Node**>(&prof_data_dynamic));
-        sink_map.erase(it);
-      }
-
-      // Now we expose debugdata/sink_name/{dynamic|static}/data
-      for (auto& [sink, root] : sink_map) {
-        debug_data->AddEntry(sink, std::move(root));
-      }
+      sink_map = early_boot_instrumentation::ExtractDebugData(stash_svc.channel().borrow());
     }
   }
-
-  if (!prof_data_root) {
-    prof_data_root = std::make_unique<vfs::PseudoDir>();
-    std::unique_ptr<vfs::PseudoDir> static_entry = std::make_unique<vfs::PseudoDir>();
-    prof_data_static = static_entry.get();
-    prof_data_root->AddEntry(static_dir_name, std::move(static_entry));
-
-    std::unique_ptr<vfs::PseudoDir> dynamic_entry = std::make_unique<vfs::PseudoDir>();
-    prof_data_dynamic = dynamic_entry.get();
-    prof_data_root->AddEntry(dynamic_dir_name, std::move(dynamic_entry));
-  }
-
-  context->outgoing()->root_dir()->AddEntry("prof-data", std::move(prof_data_root));
 
   // Even if we fail to populate from the sources, we expose empty directories,
   // such that the contract remains.
@@ -108,8 +76,7 @@ int main(int argc, char** argv) {
     FX_LOGS(ERROR) << "Could not obtain handle to '/boot/kernel/data'. " << err;
   }
 
-  if (auto res =
-          early_boot_instrumentation::ExposeKernelProfileData(kernel_data_dir, *prof_data_dynamic);
+  if (auto res = early_boot_instrumentation::ExposeKernelProfileData(kernel_data_dir, sink_map);
       res.is_error()) {
     FX_LOGS(ERROR) << "Could not expose kernel profile data. " << res.status_value();
   }
@@ -120,11 +87,27 @@ int main(int argc, char** argv) {
     FX_LOGS(ERROR) << "Could not obtain handle to '/boot/kernel/data/phys'. " << err;
   }
 
-  if (auto res =
-          early_boot_instrumentation::ExposePhysbootProfileData(phys_data_dir, *prof_data_static);
+  if (auto res = early_boot_instrumentation::ExposePhysbootProfileData(phys_data_dir, sink_map);
       res.is_error()) {
     FX_LOGS(ERROR) << "Could not expose physboot profile data. " << res.status_value();
   }
+
+  // llvm-profile still special, exposed as prof-data.
+  auto it = sink_map.find("llvm-profile");
+  if (it != sink_map.end()) {
+    context->outgoing()->root_dir()->AddEntry("prof-data", std::move(it->second));
+    sink_map.erase(it);
+  } else {
+    // Adds a an empty set to prof-data.
+    auto root = context->outgoing()->GetOrCreateDirectory("prof-data");
+    root->AddEntry("static", std::make_unique<vfs::PseudoDir>());
+    root->AddEntry("dynamic", std::make_unique<vfs::PseudoDir>());
+  }
+
+  for (auto& [sink, root] : sink_map) {
+    debug_data->AddEntry(sink, std::move(root));
+  }
+  sink_map.clear();
 
   loop.Run();
   return 0;

@@ -105,8 +105,15 @@ TEST_F(ExposeKernelProfileDataTest, WithSymbolizerLogExposesBoth) {
   fbl::unique_fd kernel_data_dir(open("/boot/kernel/data", O_RDONLY));
   ASSERT_TRUE(kernel_data_dir) << strerror(errno);
 
-  vfs::PseudoDir out_dir;
-  ASSERT_TRUE(ExposeKernelProfileData(kernel_data_dir, out_dir).is_ok());
+  SinkDirMap sink_map;
+
+  ASSERT_TRUE(ExposeKernelProfileData(kernel_data_dir, sink_map).is_ok());
+  vfs::PseudoDir* lookup = nullptr;
+  ASSERT_EQ(
+      sink_map["llvm-profile"]->Lookup("dynamic", reinterpret_cast<vfs::internal::Node**>(&lookup)),
+      ZX_OK);
+  vfs::PseudoDir& out_dir = *lookup;
+
   ASSERT_FALSE(out_dir.IsEmpty());
 
   std::string kernel_file(kKernelFile);
@@ -128,8 +135,14 @@ TEST_F(ExposeKernelProfileDataTest, OnlyKernelFileIsOk) {
   fbl::unique_fd kernel_data_dir(open("/boot/kernel/data", O_RDONLY));
   ASSERT_TRUE(kernel_data_dir) << strerror(errno);
 
-  vfs::PseudoDir out_dir;
-  ASSERT_TRUE(ExposeKernelProfileData(kernel_data_dir, out_dir).is_ok());
+  SinkDirMap sink_map;
+
+  ASSERT_TRUE(ExposeKernelProfileData(kernel_data_dir, sink_map).is_ok());
+  vfs::PseudoDir* lookup = nullptr;
+  ASSERT_EQ(
+      sink_map["llvm-profile"]->Lookup("dynamic", reinterpret_cast<vfs::internal::Node**>(&lookup)),
+      ZX_OK);
+  vfs::PseudoDir& out_dir = *lookup;
   ASSERT_FALSE(out_dir.IsEmpty());
 
   std::string kernel_file(kKernelFile);
@@ -151,8 +164,14 @@ TEST_F(ExposePhysbootProfileDataTest, WithSymbolizerFileIsOk) {
   fbl::unique_fd kernel_data_dir(open("/boot/kernel/data/phys", O_RDONLY));
   ASSERT_TRUE(kernel_data_dir) << strerror(errno);
 
-  vfs::PseudoDir out_dir;
-  ASSERT_TRUE(ExposePhysbootProfileData(kernel_data_dir, out_dir).is_ok());
+  SinkDirMap sink_map;
+
+  ASSERT_TRUE(ExposePhysbootProfileData(kernel_data_dir, sink_map).is_ok());
+  vfs::PseudoDir* lookup = nullptr;
+  ASSERT_EQ(
+      sink_map["llvm-profile"]->Lookup("static", reinterpret_cast<vfs::internal::Node**>(&lookup)),
+      ZX_OK);
+  vfs::PseudoDir& out_dir = *lookup;
   ASSERT_FALSE(out_dir.IsEmpty());
 
   std::string phys_file(kPhysFile);
@@ -174,8 +193,14 @@ TEST_F(ExposePhysbootProfileDataTest, OnlyProfrawFileIsOk) {
   fbl::unique_fd kernel_data_dir(open("/boot/kernel/data/phys", O_RDONLY));
   ASSERT_TRUE(kernel_data_dir) << strerror(errno);
 
-  vfs::PseudoDir out_dir;
-  ASSERT_TRUE(ExposePhysbootProfileData(kernel_data_dir, out_dir).is_ok());
+  SinkDirMap sink_map;
+
+  ASSERT_TRUE(ExposePhysbootProfileData(kernel_data_dir, sink_map).is_ok());
+  vfs::PseudoDir* lookup = nullptr;
+  ASSERT_EQ(
+      sink_map["llvm-profile"]->Lookup("static", reinterpret_cast<vfs::internal::Node**>(&lookup)),
+      ZX_OK);
+  vfs::PseudoDir& out_dir = *lookup;
   ASSERT_FALSE(out_dir.IsEmpty());
 
   std::string phys_file(kPhysFile);
