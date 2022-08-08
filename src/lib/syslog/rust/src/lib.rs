@@ -33,7 +33,7 @@ pub mod levels {
     pub const INFO: LogLevel = syslog::FX_LOG_INFO;
 
     /// WARN log level
-    pub const WARN: LogLevel = syslog::FX_LOG_WARN;
+    pub const WARN: LogLevel = syslog::FX_LOG_WARNING;
 
     /// ERROR log level
     pub const ERROR: LogLevel = syslog::FX_LOG_ERROR;
@@ -58,7 +58,7 @@ fn get_fx_logger_severity(level: Level) -> syslog::fx_log_severity_t {
         Level::Trace => syslog::FX_LOG_TRACE,
         Level::Debug => syslog::FX_LOG_DEBUG,
         Level::Info => syslog::FX_LOG_INFO,
-        Level::Warn => syslog::FX_LOG_WARN,
+        Level::Warn => syslog::FX_LOG_WARNING,
         Level::Error => syslog::FX_LOG_ERROR,
     }
 }
@@ -80,7 +80,7 @@ fn get_log_filter(level: levels::LogLevel) -> LevelFilter {
         syslog::FX_LOG_TRACE => LevelFilter::Trace,
         syslog::FX_LOG_DEBUG => LevelFilter::Debug,
         syslog::FX_LOG_INFO => LevelFilter::Info,
-        syslog::FX_LOG_WARN => LevelFilter::Warn,
+        syslog::FX_LOG_WARNING => LevelFilter::Warn,
         syslog::FX_LOG_ERROR => LevelFilter::Error,
         syslog::FX_LOG_FATAL => LevelFilter::Error, // log::LevelFilter fidelity
         _ => LevelFilter::Off,                      // return for all other levels
@@ -359,7 +359,7 @@ fn init_with_tags_and_handle(handle: zx_handle_t, tags: &[&str]) -> Result<(), z
         let status = unsafe { syslog::fx_log_reconfigure(config) };
         if status == zx::Status::OK.into_raw() {
             log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-            log::set_max_level(get_log_filter(config.severity));
+            log::set_max_level(get_log_filter(config.min_severity));
         }
         zx::ok(status)
     })
@@ -372,8 +372,8 @@ pub fn build_with_tags_and_socket(sink: zx::Socket, tags: &[&str]) -> Result<Log
         tags,
         |config| -> Result<Logger, zx::Status> {
             let logger = unsafe {
-                let logger_ptr: *mut syslog::fx_logger_t = std::ptr::null_mut();
-                let status = syslog::fx_logger_create(config, &logger_ptr);
+                let mut logger_ptr: *mut syslog::fx_logger_t = std::ptr::null_mut();
+                let status = syslog::fx_logger_create(config, &mut logger_ptr);
                 if status != zx::Status::OK.into_raw() {
                     return Err(zx::Status::from_raw(status));
                 }
@@ -399,8 +399,8 @@ fn with_default_config_with_tags_and_handle<R>(
         .collect();
     let c_tags: Vec<*const c_char> = cstr_vec.iter().map(|x| x.as_ptr()).collect();
     let config = syslog::fx_logger_config_t {
-        severity: syslog::FX_LOG_SEVERITY_DEFAULT,
-        fd: -1,
+        min_severity: syslog::FX_LOG_SEVERITY_DEFAULT,
+        console_fd: -1,
         log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
         log_sink_socket: handle,
         tags: c_tags.as_ptr(),
@@ -524,8 +524,8 @@ mod test {
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
         let config = syslog::fx_logger_config_t {
-            severity: levels::INFO,
-            fd: tmp_file.as_raw_fd(),
+            min_severity: levels::INFO,
+            console_fd: tmp_file.as_raw_fd(),
             log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
             log_sink_socket: zx::sys::ZX_HANDLE_INVALID,
             tags: ptr::null(),
