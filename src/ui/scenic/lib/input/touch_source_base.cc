@@ -92,6 +92,7 @@ fuchsia::ui::pointer::TouchEvent NewEndEvent(StreamId stream_id, uint32_t device
                                              uint32_t pointer_id, bool awarded_win) {
   fuchsia::ui::pointer::TouchEvent new_event;
   new_event.set_timestamp(async::Now(async_get_default_dispatcher()).get());
+  new_event.set_trace_flow_id(TRACE_NONCE());
   AddInteractionResultsToEvent(new_event, stream_id, device_id, pointer_id, awarded_win);
   return new_event;
 }
