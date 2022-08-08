@@ -3,16 +3,21 @@
 // found in the LICENSE file.
 
 use {
+    crate::environment::FshostEnvironment,
     anyhow::{format_err, Result},
     fidl::prelude::*,
     fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
     futures::channel::mpsc,
-    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+        remote::remote_dir,
+    },
 };
 
 mod config;
 mod device;
+mod environment;
 mod manager;
 mod matcher;
 mod service;
@@ -29,10 +34,12 @@ async fn main() -> Result<()> {
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
 
+    let mut env = FshostEnvironment::new();
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(shutdown_tx),
-        }
+        },
+        "blobfs" => remote_dir(env.blobfs_root()?),
     };
 
     let scope = ExecutionScope::new();
@@ -47,7 +54,7 @@ async fn main() -> Result<()> {
     // Run the main loop of fshost, handling devices as they appear according to our filesystem
     // policy.
     let mut fs_manager =
-        manager::Manager::new(shutdown_rx, fshost_config::Config::take_from_startup_handle());
+        manager::Manager::new(shutdown_rx, fshost_config::Config::take_from_startup_handle(), env);
     let shutdown_responder = fs_manager.device_handler().await?;
 
     log::info!("shutdown signal received");

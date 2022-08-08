@@ -113,7 +113,10 @@ pub async fn wait_for_block_device(matchers: &[BlockDeviceMatcher<'_>]) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use {super::*, ramdevice_client::RamdiskClient};
+    use {
+        super::*, fidl_fuchsia_hardware_block_volume::ALLOCATE_PARTITION_FLAG_INACTIVE,
+        ramdevice_client::RamdiskClient,
+    };
     const BLOCK_SIZE: u64 = 512;
     const BLOCK_COUNT: u64 = 64 * 1024 * 1024 / BLOCK_SIZE;
     const FVM_SLICE_SIZE: usize = 1024 * 1024;
@@ -134,9 +137,16 @@ mod tests {
         let fvm = fvm::set_up_fvm(Path::new(ramdisk.get_path()), FVM_SLICE_SIZE)
             .await
             .expect("Failed to format ramdisk with FVM");
-        fvm::create_fvm_volume(&fvm, VOLUME_NAME, &TYPE_GUID, &INSTANCE_GUID, None)
-            .await
-            .expect("Failed to create fvm volume");
+        fvm::create_fvm_volume(
+            &fvm,
+            VOLUME_NAME,
+            &TYPE_GUID,
+            &INSTANCE_GUID,
+            None,
+            ALLOCATE_PARTITION_FLAG_INACTIVE,
+        )
+        .await
+        .expect("Failed to create fvm volume");
 
         wait_for_block_device(&[
             BlockDeviceMatcher::TypeGuid(&TYPE_GUID),

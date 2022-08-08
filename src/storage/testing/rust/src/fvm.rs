@@ -8,9 +8,7 @@ use {
     device_watcher::recursive_wait_and_open_node,
     fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
     fidl_fuchsia_hardware_block_partition::Guid as FidlGuid,
-    fidl_fuchsia_hardware_block_volume::{
-        VolumeManagerMarker, VolumeManagerProxy, ALLOCATE_PARTITION_FLAG_INACTIVE,
-    },
+    fidl_fuchsia_hardware_block_volume::{VolumeManagerMarker, VolumeManagerProxy},
     fidl_fuchsia_io as fio,
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{self as zx, zx_status_t},
@@ -81,6 +79,7 @@ pub async fn create_fvm_volume(
     type_guid: &Guid,
     instance_guid: &Guid,
     volume_size: Option<u64>,
+    flags: u32,
 ) -> Result<()> {
     let slice_count = match volume_size {
         Some(volume_size) => {
@@ -98,13 +97,7 @@ pub async fn create_fvm_volume(
     let mut instance_guid = FidlGuid { value: instance_guid.clone() };
 
     let status = volume_manager
-        .allocate_partition(
-            slice_count,
-            &mut type_guid,
-            &mut instance_guid,
-            name,
-            ALLOCATE_PARTITION_FLAG_INACTIVE,
-        )
+        .allocate_partition(slice_count, &mut type_guid, &mut instance_guid, name, flags)
         .await?;
     Ok(zx::ok(status)?)
 }
@@ -115,6 +108,7 @@ mod tests {
         super::*,
         crate::{wait_for_block_device, wait_for_ramctl, BlockDeviceMatcher},
         fidl_fuchsia_hardware_block_volume::VolumeMarker,
+        fidl_fuchsia_hardware_block_volume::ALLOCATE_PARTITION_FLAG_INACTIVE,
         ramdevice_client::RamdiskClient,
     };
 
@@ -154,9 +148,16 @@ mod tests {
             .await
             .expect("Failed to set up FVM");
 
-        create_fvm_volume(&fvm, VOLUME_NAME, &TYPE_GUID, &INSTANCE_GUID, None)
-            .await
-            .expect("Failed to create fvm volume");
+        create_fvm_volume(
+            &fvm,
+            VOLUME_NAME,
+            &TYPE_GUID,
+            &INSTANCE_GUID,
+            None,
+            ALLOCATE_PARTITION_FLAG_INACTIVE,
+        )
+        .await
+        .expect("Failed to create fvm volume");
         let block_device_path = wait_for_block_device(&[
             BlockDeviceMatcher::TypeGuid(&TYPE_GUID),
             BlockDeviceMatcher::InstanceGuid(&INSTANCE_GUID),
@@ -188,6 +189,7 @@ mod tests {
             &TYPE_GUID,
             &INSTANCE_GUID,
             Some((FVM_SLICE_SIZE * 5 + 4) as u64),
+            ALLOCATE_PARTITION_FLAG_INACTIVE,
         )
         .await
         .expect("Failed to create fvm volume");

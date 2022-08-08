@@ -5,6 +5,7 @@
 use {
     async_trait::async_trait,
     fidl_fuchsia_device::ControllerMarker,
+    fidl_fuchsia_hardware_block_volume::ALLOCATE_PARTITION_FLAG_INACTIVE,
     fidl_fuchsia_hardware_block_volume::{
         VolumeManagerMarker, VolumeManagerProxy, VolumeSynchronousProxy,
     },
@@ -211,6 +212,7 @@ async fn set_up_fvm_volume(
         BENCHMARK_TYPE_GUID,
         &instance_guid,
         volume_size,
+        ALLOCATE_PARTITION_FLAG_INACTIVE,
     )
     .await
     .expect("Failed to create FVM volume");
@@ -337,6 +339,7 @@ mod tests {
             BLOBFS_TYPE_GUID,
             &create_random_guid(),
             None,
+            ALLOCATE_PARTITION_FLAG_INACTIVE,
         )
         .await
         .expect("Failed to create blobfs");

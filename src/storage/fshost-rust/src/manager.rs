@@ -3,39 +3,28 @@
 // found in the LICENSE file.
 
 use {
-    crate::{device::Device, matcher, matcher::Environment, service, watcher},
+    crate::{
+        device::{BlockDevice, Device},
+        environment::Environment,
+        matcher, service, watcher,
+    },
     anyhow::{format_err, Error},
-    async_trait::async_trait,
     futures::{channel::mpsc, StreamExt},
-    std::path::Path,
 };
 
-pub struct Manager {
+pub struct Manager<E> {
     shutdown_rx: mpsc::Receiver<service::FshostShutdownResponder>,
     matcher: matcher::Matchers,
+    environment: E,
 }
 
-struct Env();
-
-#[async_trait]
-impl Environment for Env {
-    async fn attach_driver(&self, _device: &dyn Device, _driver_path: &str) -> Result<(), Error> {
-        todo!();
-    }
-    async fn mount_blobfs(&self, _device: &dyn Device) -> Result<(), Error> {
-        todo!();
-    }
-    async fn mount_data(&self, _device: &dyn Device) -> Result<(), Error> {
-        todo!();
-    }
-}
-
-impl Manager {
+impl<E: Environment> Manager<E> {
     pub fn new(
         shutdown_rx: mpsc::Receiver<service::FshostShutdownResponder>,
         config: fshost_config::Config,
+        environment: E,
     ) -> Self {
-        Manager { shutdown_rx, matcher: matcher::Matchers::new(config) }
+        Manager { shutdown_rx, matcher: matcher::Matchers::new(config), environment }
     }
 
     /// The main loop of fshost. Watch for new devices, match them against filesystems we expect,
@@ -44,30 +33,38 @@ impl Manager {
         let mut block_watcher = Box::pin(watcher::block_watcher().await?).fuse();
         loop {
             // Wait for the next device to come in, or the shutdown signal to arrive.
-            let device = futures::select! {
+            let device_path = futures::select! {
                 responder = self.shutdown_rx.next() => {
                     let responder = responder
                         .ok_or_else(|| format_err!("shutdown signal stream ended unexpectedly"))?;
                     return Ok(responder);
                 },
                 maybe_device = block_watcher.next() => {
-                    if let Some(device) = maybe_device {
-                        device
+                    if let Some(device_path) = maybe_device {
+                        device_path
                     } else {
                         anyhow::bail!("block watcher returned none unexpectedly");
                     }
                 },
             };
 
-            async fn path(device: &impl Device) -> &str {
-                device.topological_path().await.ok().and_then(Path::to_str).unwrap_or("?")
-            }
-
-            match self.matcher.match_device(device.as_ref(), &Env()).await {
-                Ok(true) => {}
-                Ok(false) => log::info!("Ignored device: `{}`", path(&*device).await),
+            let mut device = match BlockDevice::new(device_path).await {
                 Err(e) => {
-                    log::error!("Failed to match device `{}`: {}", path(&*device).await, e)
+                    log::error!("Unable to create device: {}", e);
+                    continue;
+                }
+                Ok(device) => device,
+            };
+
+            // let Manager { matcher, environment } = &mut self;
+
+            match self.matcher.match_device(&mut device, &mut self.environment).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    log::info!("Ignored device: `{}`", device.topological_path());
+                }
+                Err(e) => {
+                    log::error!("Failed to match device `{}`: {}", device.topological_path(), e)
                 }
             }
         }
@@ -75,5 +72,82 @@ impl Manager {
 
     pub async fn shutdown(self) -> Result<(), Error> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::Manager,
+        crate::{
+            config::default_config, device::constants::BLOBFS_TYPE_GUID,
+            environment::FshostEnvironment, service,
+        },
+        device_watcher::recursive_wait_and_open_node,
+        fidl::endpoints::Proxy,
+        fidl_fuchsia_device::ControllerProxy,
+        fidl_fuchsia_io as fio,
+        fs_management::Blobfs,
+        fuchsia_async as fasync,
+        fuchsia_component::client::connect_to_protocol_at_path,
+        futures::{channel::mpsc, select, FutureExt},
+        ramdevice_client::RamdiskClient,
+        std::path::Path,
+        storage_isolated_driver_manager::fvm::{create_fvm_volume, set_up_fvm},
+        uuid::Uuid,
+    };
+
+    fn dev() -> fio::DirectoryProxy {
+        connect_to_protocol_at_path::<fio::DirectoryMarker>("/dev")
+            .expect("connect_to_protocol_at_path failed")
+    }
+
+    async fn ramdisk() -> RamdiskClient {
+        recursive_wait_and_open_node(&dev(), "sys/platform/00:00:2d/ramctl")
+            .await
+            .expect("recursive_wait_and_open_node failed");
+        RamdiskClient::create(512, 1 << 16).unwrap()
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_mount_blobfs() {
+        let ramdisk = ramdisk().await;
+        let ramdisk_path = ramdisk.get_path();
+        {
+            let volume_manager_proxy = set_up_fvm(Path::new(ramdisk_path), 32 * 1024)
+                .await
+                .expect("format_for_fvm failed");
+            create_fvm_volume(
+                &volume_manager_proxy,
+                "blobfs",
+                &BLOBFS_TYPE_GUID,
+                Uuid::new_v4().as_bytes(),
+                None,
+                0,
+            )
+            .await
+            .expect("create_fvm_volume failed");
+            let blobfs_path = format!("{}/fvm/blobfs-p-1/block", ramdisk_path);
+            recursive_wait_and_open_node(&dev(), blobfs_path.strip_prefix("/dev/").unwrap())
+                .await
+                .expect("recursive_wait_and_open_node failed");
+            let blobfs = Blobfs::new(&blobfs_path).expect("new failed");
+            blobfs.format().await.expect("format failed");
+
+            let device_proxy = ControllerProxy::new(volume_manager_proxy.into_channel().unwrap());
+            device_proxy
+                .schedule_unbind()
+                .await
+                .expect("schedule unbind fidl failed")
+                .expect("schedule_unbind failed");
+        }
+        let (_shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
+        let mut env = FshostEnvironment::new();
+        let blobfs_root = env.blobfs_root().expect("blobfs_root failed");
+        let mut manager = Manager::new(shutdown_rx, default_config(), env);
+        select! {
+            _ = manager.device_handler().fuse() => unreachable!(),
+            result = blobfs_root.describe().fuse() => { result.expect("describe failed"); }
+        }
     }
 }

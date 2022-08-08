@@ -3,55 +3,29 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::{ContentFormat, Device},
+    crate::{
+        device::{
+            constants::{
+                BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID, BLOCK_FLAG_BOOTPART,
+                BOOTPART_DRIVER_PATH, DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH,
+                GPT_DRIVER_PATH, NAND_BROKER_DRIVER_PATH,
+            },
+            ContentFormat, Device,
+        },
+        environment::Environment,
+    },
     anyhow::Error,
     async_trait::async_trait,
-    std::{
-        collections::BTreeMap,
-        ops::Bound,
-        path::{Path, PathBuf},
-    },
+    std::{collections::BTreeMap, ops::Bound},
 };
-
-const BLOBFS_PARTITION_LABEL: &str = "blobfs";
-const DATA_PARTITION_LABEL: &str = "data";
-
-const BLOBFS_TYPE_GUID: [u8; 16] = [
-    0x0e, 0x38, 0x67, 0x29, 0x4c, 0x13, 0xbb, 0x4c, 0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d,
-];
-const DATA_TYPE_GUID: [u8; 16] = [
-    0x0c, 0x5f, 0x18, 0x08, 0x2d, 0x89, 0x8a, 0x42, 0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a,
-];
-
-const FVM_DRIVER_PATH: &str = "fvm.so";
-const GPT_DRIVER_PATH: &str = "gpt.so";
-// const ZXCRYPT_DRIVER_PATH: &str = "mbr.so";
-const BOOTPART_DRIVER_PATH: &str = "bootpart.so";
-// const BLOCK_VERITY_DRIVER_PATH: &str = "block-verity.so";
-const NAND_BROKER_DRIVER_PATH: &str = "nand-broker.so";
-
-const BLOCK_FLAG_BOOTPART: u32 = 4;
-
-/// Environment is a trait that performs actions when a device is matched.
-#[async_trait]
-pub trait Environment: Sync {
-    /// Attaches the specified driver to the device.
-    async fn attach_driver(&self, device: &dyn Device, driver_path: &str) -> Result<(), Error>;
-
-    /// Mounts Blobfs on the given device.
-    async fn mount_blobfs(&self, device: &dyn Device) -> Result<(), Error>;
-
-    /// Mounts the data partition on the given device.
-    async fn mount_data(&self, device: &dyn Device) -> Result<(), Error>;
-}
 
 #[async_trait]
 pub trait Matcher: Send {
     /// Tries to match this device against this matcher.
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error>;
 
     /// This is called when a device appears that is a child of an already matched device.  It can
@@ -59,9 +33,9 @@ pub trait Matcher: Send {
     /// matched as children before being matched against global matches.
     async fn match_child(
         &mut self,
-        _device: &dyn Device,
-        _env: &dyn Environment,
-        _parent_path: &Path,
+        _device: &mut dyn Device,
+        _env: &mut dyn Environment,
+        _parent_path: &str,
     ) -> Result<bool, Error> {
         // By default, matchers don't match children.
         Ok(false)
@@ -71,7 +45,7 @@ pub trait Matcher: Send {
 pub struct Matchers {
     matchers: Vec<Box<dyn Matcher>>,
 
-    matched: BTreeMap<PathBuf, usize>,
+    matched: BTreeMap<String, usize>,
 }
 
 impl Matchers {
@@ -89,7 +63,7 @@ impl Matchers {
         let gpt_matcher =
             Box::new(PartitionMapMatcher::new(ContentFormat::Gpt, false, GPT_DRIVER_PATH, ""));
         let mut fvm_matcher =
-            Box::new(PartitionMapMatcher::new(ContentFormat::Fvm, false, FVM_DRIVER_PATH, ""));
+            Box::new(PartitionMapMatcher::new(ContentFormat::Fvm, false, FVM_DRIVER_PATH, "/fvm"));
 
         if config.blobfs {
             fvm_matcher.child_matchers.push(Box::new(BlobfsMatcher::new()));
@@ -120,25 +94,25 @@ impl Matchers {
     /// such as the component url or the shared library to pass to the driver binding.
     pub async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error> {
-        let topological_path = device.topological_path().await?;
+        let topological_path = device.topological_path();
         if let Some((path, &index)) = self
             .matched
-            .range::<Path, _>((Bound::Unbounded, Bound::Excluded(topological_path)))
+            .range::<str, _>((Bound::Unbounded, Bound::Excluded(topological_path)))
             .next_back()
         {
             if topological_path.starts_with(path) {
                 if self.matchers[index].match_child(device, env, path).await? {
-                    self.matched.insert(topological_path.to_path_buf(), index);
+                    self.matched.insert(device.topological_path().to_string(), index);
                     return Ok(true);
                 }
             }
         }
         for (index, m) in self.matchers.iter_mut().enumerate() {
             if m.match_device(device, env).await? {
-                self.matched.insert(topological_path.to_path_buf(), index);
+                self.matched.insert(device.topological_path().to_string(), index);
                 return Ok(true);
             }
         }
@@ -159,8 +133,8 @@ impl BootpartMatcher {
 impl Matcher for BootpartMatcher {
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error> {
         if device.get_block_info().await?.flags & BLOCK_FLAG_BOOTPART == 0 {
             return Ok(false);
@@ -183,8 +157,8 @@ impl NandMatcher {
 impl Matcher for NandMatcher {
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error> {
         if device.is_nand() {
             env.attach_driver(device, NAND_BROKER_DRIVER_PATH).await?;
@@ -240,16 +214,15 @@ impl PartitionMapMatcher {
 impl Matcher for PartitionMapMatcher {
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error> {
-        let topological_path = device.topological_path().await?;
         if !self.allow_multiple && !self.device_paths.is_empty() {
             return Ok(false);
         }
         if device.content_format().await? == self.content_format {
             env.attach_driver(device, self.driver_path).await?;
-            self.device_paths.push(topological_path.to_str().unwrap().to_string());
+            self.device_paths.push(device.topological_path().to_string());
             Ok(true)
         } else {
             Ok(false)
@@ -258,23 +231,20 @@ impl Matcher for PartitionMapMatcher {
 
     async fn match_child(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
-        parent_path: &Path,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
+        parent_path: &str,
     ) -> Result<bool, Error> {
-        let topological_path = device.topological_path().await?;
+        let topological_path = device.topological_path();
         // Only match against children that are immediate children.
         // Child partitions should have topological paths of the form:
         //   ...<suffix>/<partition-name>/block
-        if let Some(file_name) = topological_path.file_name() {
+        if let Some((head, file_name)) = topological_path.rsplit_once('/') {
             if file_name == "block" {
-                if let Some(head) = topological_path
-                    .parent()
-                    .and_then(Path::parent)
-                    .and_then(Path::to_str)
-                    .and_then(|p| p.strip_suffix(self.path_suffix))
+                if let Some(head) =
+                    head.rsplit_once('/').and_then(|(head, _)| head.strip_suffix(self.path_suffix))
                 {
-                    if Path::new(head) == parent_path {
+                    if head == parent_path {
                         for m in &mut self.child_matchers {
                             if m.match_device(device, env).await? {
                                 return Ok(true);
@@ -303,8 +273,8 @@ impl PartitionMatcher {
 impl Matcher for PartitionMatcher {
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        _env: &dyn Environment,
+        device: &mut dyn Device,
+        _env: &mut dyn Environment,
     ) -> Result<bool, Error> {
         Ok(device.partition_label().await? == self.label
             && device.partition_type().await? == self.type_guid)
@@ -324,8 +294,8 @@ impl BlobfsMatcher {
 impl Matcher for BlobfsMatcher {
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error> {
         if self.0.match_device(device, env).await? {
             env.mount_blobfs(device).await?;
@@ -349,8 +319,8 @@ impl DataMatcher {
 impl Matcher for DataMatcher {
     async fn match_device(
         &mut self,
-        device: &dyn Device,
-        env: &dyn Environment,
+        device: &mut dyn Device,
+        env: &mut dyn Environment,
     ) -> Result<bool, Error> {
         if self.0.match_device(device, env).await? {
             env.mount_data(device).await?;
@@ -364,28 +334,28 @@ impl Matcher for DataMatcher {
 #[cfg(test)]
 mod tests {
     use {
-        super::{
-            ContentFormat, Device, Environment, Matchers, BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID,
-            BLOCK_FLAG_BOOTPART, BOOTPART_DRIVER_PATH, DATA_PARTITION_LABEL, DATA_TYPE_GUID,
-            FVM_DRIVER_PATH, GPT_DRIVER_PATH, NAND_BROKER_DRIVER_PATH,
+        super::{ContentFormat, Device, Environment, Matchers},
+        crate::{
+            config::default_config,
+            device::constants::{
+                BLOBFS_PARTITION_LABEL, BLOBFS_TYPE_GUID, BLOCK_FLAG_BOOTPART,
+                BOOTPART_DRIVER_PATH, DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH,
+                GPT_DRIVER_PATH, NAND_BROKER_DRIVER_PATH,
+            },
         },
-        crate::config::default_config,
         anyhow::Error,
         async_trait::async_trait,
         fidl::encoding::Decodable,
-        fidl_fuchsia_hardware_block::BlockInfo,
+        fidl_fuchsia_hardware_block::{BlockInfo, BlockProxy},
         fuchsia_async as fasync,
-        std::{
-            path::{Path, PathBuf},
-            sync::Mutex,
-        },
+        std::sync::Mutex,
     };
 
     struct MockDevice {
         block_flags: u32,
         is_nand: bool,
         content_format: ContentFormat,
-        topological_path: PathBuf,
+        topological_path: String,
         partition_label: Option<String>,
         partition_type: Option<[u8; 16]>,
     }
@@ -396,7 +366,7 @@ mod tests {
                 block_flags: 0,
                 is_nand: false,
                 content_format: ContentFormat::Unknown,
-                topological_path: Path::new("mock_device").to_path_buf(),
+                topological_path: "mock_device".to_string(),
                 partition_label: None,
                 partition_type: None,
             }
@@ -435,23 +405,26 @@ mod tests {
         fn is_nand(&self) -> bool {
             self.is_nand
         }
-        async fn content_format(&self) -> Result<ContentFormat, Error> {
+        async fn content_format(&mut self) -> Result<ContentFormat, Error> {
             Ok(self.content_format)
         }
-        async fn topological_path<'a>(&'a self) -> Result<&'a Path, Error> {
-            Ok(&self.topological_path)
+        fn topological_path(&self) -> &str {
+            &self.topological_path
         }
-        async fn partition_label(&self) -> Result<&str, Error> {
+        async fn partition_label(&mut self) -> Result<&str, Error> {
             Ok(self
                 .partition_label
                 .as_ref()
                 .unwrap_or_else(|| panic!("Unexpected call to partition_label")))
         }
-        async fn partition_type<'a>(&'a self) -> Result<&'a [u8; 16], Error> {
+        async fn partition_type(&mut self) -> Result<&[u8; 16], Error> {
             Ok(self
                 .partition_type
                 .as_ref()
                 .unwrap_or_else(|| panic!("Unexpected call to partition_type")))
+        }
+        fn proxy(&self) -> Result<BlockProxy, Error> {
+            unreachable!()
         }
     }
 
@@ -486,8 +459,8 @@ mod tests {
     #[async_trait]
     impl Environment for MockEnv {
         async fn attach_driver(
-            &self,
-            _device: &dyn Device,
+            &mut self,
+            _device: &mut dyn Device,
             driver_path: &str,
         ) -> Result<(), Error> {
             assert_eq!(
@@ -501,7 +474,7 @@ mod tests {
             Ok(())
         }
 
-        async fn mount_blobfs(&self, _device: &dyn Device) -> Result<(), Error> {
+        async fn mount_blobfs(&mut self, _device: &mut dyn Device) -> Result<(), Error> {
             assert_eq!(
                 std::mem::take(&mut *self.expect_mount_blobfs.lock().unwrap()),
                 true,
@@ -510,7 +483,7 @@ mod tests {
             Ok(())
         }
 
-        async fn mount_data(&self, _device: &dyn Device) -> Result<(), Error> {
+        async fn mount_data(&mut self, _device: &mut dyn Device) -> Result<(), Error> {
             assert_eq!(
                 std::mem::take(&mut *self.expect_mount_data.lock().unwrap()),
                 true,
@@ -530,109 +503,116 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_bootpart_matcher() {
-        let mock_device = MockDevice::new().set_block_flags(BLOCK_FLAG_BOOTPART);
+        let mut mock_device = MockDevice::new().set_block_flags(BLOCK_FLAG_BOOTPART);
 
         // Check no match when disabled in config.
         assert!(!Matchers::new(fshost_config::Config { bootpart: false, ..default_config() })
-            .match_device(&mock_device, &MockEnv::new())
+            .match_device(&mut mock_device, &mut MockEnv::new())
             .await
             .expect("match_device failed"));
 
         assert!(Matchers::new(default_config())
-            .match_device(&mock_device, &MockEnv::new().expect_attach_driver(BOOTPART_DRIVER_PATH))
+            .match_device(
+                &mut mock_device,
+                &mut MockEnv::new().expect_attach_driver(BOOTPART_DRIVER_PATH)
+            )
             .await
             .expect("match_device failed"));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_nand_matcher() {
-        let device = MockDevice::new().set_nand(true);
-        let env = MockEnv::new().expect_attach_driver(NAND_BROKER_DRIVER_PATH);
+        let mut device = MockDevice::new().set_nand(true);
+        let mut env = MockEnv::new().expect_attach_driver(NAND_BROKER_DRIVER_PATH);
 
         // Default shouldn't match.
         assert!(!Matchers::new(default_config())
-            .match_device(&device, &env)
+            .match_device(&mut device, &mut env)
             .await
             .expect("match_device failed"));
 
         assert!(Matchers::new(fshost_config::Config { nand: true, ..default_config() })
-            .match_device(&device, &env)
+            .match_device(&mut device, &mut env)
             .await
             .expect("match_device failed"));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_partition_map_matcher() {
-        let env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
+        let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
 
         // Check no match when disabled in config.
-        let device = MockDevice::new().set_content_format(ContentFormat::Gpt);
+        let mut device = MockDevice::new().set_content_format(ContentFormat::Gpt);
         assert!(!Matchers::new(fshost_config::Config {
             blobfs: false,
             data: false,
             gpt: false,
             ..default_config()
         })
-        .match_device(&device, &env)
+        .match_device(&mut device, &mut env)
         .await
         .expect("match_device failed"));
 
         let mut matchers = Matchers::new(default_config());
-        assert!(matchers.match_device(&device, &env).await.expect("match_device failed"));
+        assert!(matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
 
         // More GPT devices should not get matched.
-        assert!(!matchers.match_device(&device, &env).await.expect("match_device failed"));
+        assert!(!matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
 
         // The gpt_all config should allow multiple GPT devices to be matched.
         let mut matchers =
             Matchers::new(fshost_config::Config { gpt_all: true, ..default_config() });
-        let env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
-        assert!(matchers.match_device(&device, &env).await.expect("match_device failed"));
-        let env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
-        assert!(matchers.match_device(&device, &env).await.expect("match_device failed"));
+        let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
+        assert!(matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
+        let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
+        assert!(matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_blobfs_matcher() {
         fn fake_blobfs_device() -> MockDevice {
             MockDevice::new()
-                .set_topological_path("mock_device/blobfs-p-1/block")
+                .set_topological_path("mock_device/fvm/blobfs-p-1/block")
                 .set_partition_label(BLOBFS_PARTITION_LABEL)
                 .set_partition_type(&BLOBFS_TYPE_GUID)
         }
 
-        let fvm_device = MockDevice::new().set_content_format(ContentFormat::Fvm);
-        let env = MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH).expect_mount_blobfs();
+        let mut fvm_device = MockDevice::new().set_content_format(ContentFormat::Fvm);
+        let mut env = MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH).expect_mount_blobfs();
 
         let mut matchers = Matchers::new(default_config());
 
         // Attach the first GPT device.
-        assert!(matchers.match_device(&fvm_device, &env).await.expect("match_device failed"));
+        assert!(matchers
+            .match_device(&mut fvm_device, &mut env)
+            .await
+            .expect("match_device failed"));
 
         // Attaching blobfs with a different path should fail.
         assert!(!matchers
             .match_device(
-                &fake_blobfs_device().set_topological_path("another_device/blobfs-p-1/block"),
-                &env
+                &mut fake_blobfs_device()
+                    .set_topological_path("another_device/fvm/blobfs-p-1/block"),
+                &mut env
             )
             .await
             .expect("match_device failed"));
 
         // Attaching blobfs with a different label should fail.
         assert!(!matchers
-            .match_device(&fake_blobfs_device().set_partition_label("data"), &env)
+            .match_device(&mut fake_blobfs_device().set_partition_label("data"), &mut env)
             .await
             .expect("match_device failed"));
 
         // Attaching blobfs with a different type should fail.
         assert!(!matchers
-            .match_device(&fake_blobfs_device().set_partition_type(&[1; 16]), &env)
+            .match_device(&mut fake_blobfs_device().set_partition_type(&[1; 16]), &mut env)
             .await
             .expect("match_device failed"));
 
         // Attach blobfs.
         assert!(matchers
-            .match_device(&fake_blobfs_device(), &env)
+            .match_device(&mut fake_blobfs_device(), &mut env)
             .await
             .expect("match_device failed"));
     }
@@ -644,8 +624,8 @@ mod tests {
         // Attach FVM device.
         assert!(matchers
             .match_device(
-                &MockDevice::new().set_content_format(ContentFormat::Fvm),
-                &MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH)
+                &mut MockDevice::new().set_content_format(ContentFormat::Fvm),
+                &mut MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH)
             )
             .await
             .expect("match_device failed"));
@@ -653,11 +633,11 @@ mod tests {
         // Check that data is mounted.
         assert!(matchers
             .match_device(
-                &MockDevice::new()
-                    .set_topological_path("mock_device/data-p-2/block")
+                &mut MockDevice::new()
+                    .set_topological_path("mock_device/fvm/data-p-2/block")
                     .set_partition_label(DATA_PARTITION_LABEL)
                     .set_partition_type(&DATA_TYPE_GUID),
-                &MockEnv::new().expect_mount_data()
+                &mut MockEnv::new().expect_mount_data()
             )
             .await
             .expect("match_device failed"));
