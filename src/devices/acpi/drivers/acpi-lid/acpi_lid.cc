@@ -81,6 +81,7 @@ void AcpiLid::DdkInit(ddk::InitTxn txn) {
 void AcpiLid::DdkSuspend(ddk::SuspendTxn txn) {
   if ((txn.suspend_reason() & DEVICE_MASK_SUSPEND_REASON) != DEVICE_SUSPEND_REASON_SUSPEND_RAM) {
     txn.Reply(ZX_OK, txn.requested_state());
+    return;
   }
 
   auto result = acpi_.borrow()->SetWakeDevice(txn.requested_state());
