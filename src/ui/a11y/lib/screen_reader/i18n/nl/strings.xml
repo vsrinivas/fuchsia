@@ -36,7 +36,7 @@
   <string name="element_checked">Aangevinkt</string>
   <string name="element_not_checked">Uitgevinkt</string>
   <string name="element_partially_checked">Gedeeltelijk aangevinkt</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Geselecteerd</string>
   <string name="element_disabled">Uitgezet</string>
   <string name="element_expanded">Uitgevouwen</string>
   <string name="element_collapsed">Samengevouwen</string>

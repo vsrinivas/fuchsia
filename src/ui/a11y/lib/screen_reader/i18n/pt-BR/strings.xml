@@ -36,7 +36,7 @@
   <string name="element_checked">Marcado</string>
   <string name="element_not_checked">Não marcado</string>
   <string name="element_partially_checked">Parcialmente marcado</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Selecionado</string>
   <string name="element_disabled">Desativado</string>
   <string name="element_expanded">Aberto</string>
   <string name="element_collapsed">Fechado</string>

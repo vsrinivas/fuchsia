@@ -36,7 +36,7 @@
   <string name="element_checked">Markeret</string>
   <string name="element_not_checked">Ikke markeret</string>
   <string name="element_partially_checked">Delvist markeret</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Valgt</string>
   <string name="element_disabled">Deaktiveret</string>
   <string name="element_expanded">Udvidet</string>
   <string name="element_collapsed">Minimeret</string>

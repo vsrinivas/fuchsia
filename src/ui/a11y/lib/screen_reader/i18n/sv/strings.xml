@@ -36,7 +36,7 @@
   <string name="element_checked">Markerad</string>
   <string name="element_not_checked">Inte markerad</string>
   <string name="element_partially_checked">Delvis markerad</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Vald</string>
   <string name="element_disabled">Inaktiverad</string>
   <string name="element_expanded">Utökad</string>
   <string name="element_collapsed">Komprimerad</string>

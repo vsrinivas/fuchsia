@@ -36,7 +36,7 @@
   <string name="element_checked">オン</string>
   <string name="element_not_checked">オフ</string>
   <string name="element_partially_checked">一部オン</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">選択済み</string>
   <string name="element_disabled">無効</string>
   <string name="element_expanded">展開しました</string>
   <string name="element_collapsed">折りたたみました</string>

@@ -36,7 +36,7 @@
   <string name="element_checked">Avmerket</string>
   <string name="element_not_checked">Ikke avmerket</string>
   <string name="element_partially_checked">Delvis avmerket</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Valgt</string>
   <string name="element_disabled">Slått av</string>
   <string name="element_expanded">Vises</string>
   <string name="element_collapsed">Skjules</string>

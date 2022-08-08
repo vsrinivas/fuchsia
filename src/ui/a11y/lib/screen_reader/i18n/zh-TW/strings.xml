@@ -36,7 +36,7 @@
   <string name="element_checked">已勾選</string>
   <string name="element_not_checked">未勾選</string>
   <string name="element_partially_checked">部分已勾選</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">已選取</string>
   <string name="element_disabled">已停用</string>
   <string name="element_expanded">已展開</string>
   <string name="element_collapsed">已收合</string>

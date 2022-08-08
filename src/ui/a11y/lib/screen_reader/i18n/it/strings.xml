@@ -36,7 +36,7 @@
   <string name="element_checked">Elemento selezionato</string>
   <string name="element_not_checked">Elemento non selezionato</string>
   <string name="element_partially_checked">Elemento parzialmente selezionato</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Elemento selezionato</string>
   <string name="element_disabled">Elemento non attivo</string>
   <string name="element_expanded">Elemento espanso</string>
   <string name="element_collapsed">Elemento compresso</string>

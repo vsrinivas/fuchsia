@@ -36,7 +36,7 @@
   <string name="element_checked">Aktiviert</string>
   <string name="element_not_checked">Nicht aktiviert</string>
   <string name="element_partially_checked">Teilweise aktiviert</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Ausgewählt</string>
   <string name="element_disabled">Deaktiviert</string>
   <string name="element_expanded">Maximiert</string>
   <string name="element_collapsed">Minimiert</string>

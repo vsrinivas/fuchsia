@@ -36,7 +36,7 @@
   <string name="element_checked">Coché</string>
   <string name="element_not_checked">Non coché</string>
   <string name="element_partially_checked">Partiellement coché</string>
-  <string name="element_selected">Selected</string>
+  <string name="element_selected">Sélectionné</string>
   <string name="element_disabled">Désactivé</string>
   <string name="element_expanded">Développé</string>
   <string name="element_collapsed">Réduit</string>
