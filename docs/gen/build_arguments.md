@@ -4120,6 +4120,13 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 From //build/config/rust/BUILD.gn:28
 
+### rust_virtio_balloon
+Enable to the the rust virtio balloon
+
+**Current value (from the default):** `false`
+
+From //src/virtualization/bin/args.gni:13
+
 ### rust_virtio_gpu_input_devices
 Enable to use the rust virtio GPU and input devices by default in the VMM.
 
