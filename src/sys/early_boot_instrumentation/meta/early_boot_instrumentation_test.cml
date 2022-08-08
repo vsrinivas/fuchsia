@@ -21,12 +21,6 @@
     ],
     use: [
         {
-            directory: "prof-data",
-            from: "#early-boot-instrumentation",
-            rights: [ "r*" ],
-            path: "/profraw",
-        },
-        {
             directory: "debugdata",
             from: "#early-boot-instrumentation",
             rights: [ "r*" ],

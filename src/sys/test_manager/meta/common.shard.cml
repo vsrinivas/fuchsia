@@ -175,10 +175,10 @@
             from: "#custom_artifacts",
         },
         {
-            directory: "prof-data",
+            directory: "debugdata",
             from: "#early_boot_instrumentation",
             rights: [ "r*" ],
-            path: "/prof-data",
+            path: "/debugdata",
         },
         {
             protocol: "fuchsia.test.internal.DebugDataController",

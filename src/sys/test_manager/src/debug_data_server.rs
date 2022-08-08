@@ -126,8 +126,8 @@ pub async fn send_debug_data_if_produced(
 }
 
 const PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS: i64 = 15;
-const DYNAMIC_PROFILE_PREFIX: &'static str = "/prof-data/dynamic";
-const STATIC_PROFILE_PREFIX: &'static str = "/prof-data/static";
+const DYNAMIC_PROFILE_PREFIX: &'static str = "/debugdata/llvm-profile/dynamic";
+const STATIC_PROFILE_PREFIX: &'static str = "/debugdata/llvm-profile/static";
 
 pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
     let prefixes = vec![DYNAMIC_PROFILE_PREFIX, STATIC_PROFILE_PREFIX];

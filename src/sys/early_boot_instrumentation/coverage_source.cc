@@ -253,7 +253,7 @@ zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap
         ExportedFd{.fd = std::move(kernel_log), .export_name = std::string(kKernelSymbolizerFile)});
   }
 
-  return Export(GetOrCreate("llvm-profile", DataType::kDynamic, sink_map), exported_fds);
+  return Export(GetOrCreate(kLlvmSink, DataType::kDynamic, sink_map), exported_fds);
 }
 
 zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map) {
@@ -273,7 +273,7 @@ zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDi
         ExportedFd{.fd = std::move(phys_log), .export_name = std::string(kPhysSymbolizerFile)});
   }
 
-  return Export(GetOrCreate("llvm-profile", DataType::kStatic, sink_map), exported_fds);
+  return Export(GetOrCreate(kLlvmSink, DataType::kStatic, sink_map), exported_fds);
 }
 
 SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash) {

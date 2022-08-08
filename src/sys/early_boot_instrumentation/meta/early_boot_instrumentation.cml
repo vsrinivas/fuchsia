@@ -9,11 +9,6 @@
     },
     capabilities: [
         {
-            directory: "prof-data",
-            rights: [ "r*" ],
-            path: "/prof-data",
-        },
-        {
             directory: "debugdata",
             rights: [ "r*" ],
             path: "/debugdata",
@@ -30,10 +25,6 @@
         },
     ],
     expose: [
-        {
-            directory: "prof-data",
-            from: "self",
-        },
         {
             directory: "debugdata",
             from: "self",

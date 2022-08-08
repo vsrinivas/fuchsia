@@ -92,18 +92,6 @@ int main(int argc, char** argv) {
     FX_LOGS(ERROR) << "Could not expose physboot profile data. " << res.status_value();
   }
 
-  // llvm-profile still special, exposed as prof-data.
-  auto it = sink_map.find("llvm-profile");
-  if (it != sink_map.end()) {
-    context->outgoing()->root_dir()->AddEntry("prof-data", std::move(it->second));
-    sink_map.erase(it);
-  } else {
-    // Adds a an empty set to prof-data.
-    auto root = context->outgoing()->GetOrCreateDirectory("prof-data");
-    root->AddEntry("static", std::make_unique<vfs::PseudoDir>());
-    root->AddEntry("dynamic", std::make_unique<vfs::PseudoDir>());
-  }
-
   for (auto& [sink, root] : sink_map) {
     debug_data->AddEntry(sink, std::move(root));
   }

@@ -27,23 +27,23 @@ bool CheckContents(const char (&str)[N], fbl::unique_fd file) {
 }  // namespace
 
 TEST(EarlyBootInstrumentationTest, HasKernelInDynamic) {
-  fbl::unique_fd kernel_file(open("/profraw/dynamic/zircon.profraw", O_RDONLY));
+  fbl::unique_fd kernel_file(open("/debugdata/llvm-profile/dynamic/zircon.profraw", O_RDONLY));
   ASSERT_TRUE(kernel_file);
   ASSERT_TRUE(CheckContents("kernel", std::move(kernel_file)));
 }
 
 TEST(EarlyBootInstrumentationTest, HasPhysbootInStatic) {
-  fbl::unique_fd physboot_file(open("/profraw/static/physboot.profraw", O_RDONLY));
+  fbl::unique_fd physboot_file(open("/debugdata/llvm-profile/static/physboot.profraw", O_RDONLY));
   ASSERT_TRUE(physboot_file);
   ASSERT_TRUE(CheckContents("physboot", std::move(physboot_file)));
 }
 
 TEST(EarlyBootInstrumentationTest, HasSvcStashDataWithLlvmProfile) {
-  fbl::unique_fd static_file(open("/profraw/static/0-0.profraw", O_RDONLY));
+  fbl::unique_fd static_file(open("/debugdata/llvm-profile/static/0-0.profraw", O_RDONLY));
   ASSERT_TRUE(static_file);
   ASSERT_TRUE(CheckContents("1234", std::move(static_file)));
 
-  fbl::unique_fd dynamic_file(open("/profraw/dynamic/0-1.profraw", O_RDONLY));
+  fbl::unique_fd dynamic_file(open("/debugdata/llvm-profile/dynamic/0-1.profraw", O_RDONLY));
   ASSERT_TRUE(dynamic_file);
   ASSERT_TRUE(CheckContents("567890123", std::move(dynamic_file)));
 }
