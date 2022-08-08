@@ -1034,3 +1034,44 @@ decode_failure("EnvelopeHandleCountExceedsMessageHandleCountUnknown") {
     },
     err = ENVELOPE_HANDLES_EXCEED_MESSAGE_LENGTH,
 }
+
+decode_success("EmptyFlexibleUnionDecodesUnknownSmallValue") {
+    bindings_denylist = [hlcpp],
+    value = StructOfEmptyFlexibleUnion{
+        empty: EmptyFlexibleUnion{
+            1: {
+                // padding must be included in the raw bytes
+                bytes = [0xff, padding:3],
+            },
+        },
+    },
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            0xff, padding:3, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+}
+
+decode_success("EmptyFlexibleUnionDecodesUnknownLargeValue") {
+    bindings_denylist = [hlcpp],
+    value = StructOfEmptyFlexibleUnion{
+        empty: EmptyFlexibleUnion{
+            1: {
+                // padding must be included in the raw bytes
+                bytes = [repeat(0xab):8],
+            },
+        },
+    },
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            num(8):4, num(0):4, // envelope
+
+            // secondary object
+            repeat(0xab):8
+        ],
+    },
+}

@@ -39,6 +39,61 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+enum EmptyFlexibleUnionTag {
+  $unknown,
+}
+
+const Map<int, EmptyFlexibleUnionTag> _EmptyFlexibleUnionTag_map = {};
+
+class EmptyFlexibleUnion extends $fidl.Union {
+  const EmptyFlexibleUnion.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  EmptyFlexibleUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  EmptyFlexibleUnionTag get $tag =>
+      _EmptyFlexibleUnionTag_map[_ordinal] ?? EmptyFlexibleUnionTag.$unknown;
+
+  $fidl.UnknownRawData? get $unknownData {
+    return _data;
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static EmptyFlexibleUnion _ctor(int ordinal, Object data) {
+    return EmptyFlexibleUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<EmptyFlexibleUnion> kEmptyFlexibleUnion_Type =
+    $fidl.UnionType<EmptyFlexibleUnion>(
+  members: <int, $fidl.FidlType>{},
+  ctor: EmptyFlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<EmptyFlexibleUnion> kEmptyFlexibleUnion_OptType =
+    $fidl.NullableUnionType<EmptyFlexibleUnion>(
+  members: <int, $fidl.FidlType>{},
+  ctor: EmptyFlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+
 enum ExplicitFooTag {
   $unknown,
   s, // 0x2
@@ -1062,6 +1117,65 @@ const $fidl.NullableUnionType<OlderSimpleUnion> kOlderSimpleUnion_OptType =
     2: $fidl.Float32Type(),
   },
   ctor: OlderSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+
+enum OnlyReservedFlexibleUnionTag {
+  $unknown,
+}
+
+const Map<int, OnlyReservedFlexibleUnionTag> _OnlyReservedFlexibleUnionTag_map =
+    {};
+
+class OnlyReservedFlexibleUnion extends $fidl.Union {
+  const OnlyReservedFlexibleUnion.with$UnknownData(
+      this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  OnlyReservedFlexibleUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  OnlyReservedFlexibleUnionTag get $tag =>
+      _OnlyReservedFlexibleUnionTag_map[_ordinal] ??
+      OnlyReservedFlexibleUnionTag.$unknown;
+
+  $fidl.UnknownRawData? get $unknownData {
+    return _data;
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static OnlyReservedFlexibleUnion _ctor(int ordinal, Object data) {
+    return OnlyReservedFlexibleUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<OnlyReservedFlexibleUnion>
+    kOnlyReservedFlexibleUnion_Type =
+    $fidl.UnionType<OnlyReservedFlexibleUnion>(
+  members: <int, $fidl.FidlType>{},
+  ctor: OnlyReservedFlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<OnlyReservedFlexibleUnion>
+    kOnlyReservedFlexibleUnion_OptType =
+    $fidl.NullableUnionType<OnlyReservedFlexibleUnion>(
+  members: <int, $fidl.FidlType>{},
+  ctor: OnlyReservedFlexibleUnion._ctor,
   flexible: true,
   resource: false,
 );

@@ -69,3 +69,9 @@ type EnvelopeInliningTestUnion = flexible resource union {
 type EnvelopeInliningTestUnionStruct = resource struct {
     u EnvelopeInliningTestUnion;
 };
+
+type EmptyFlexibleUnion = flexible union {};
+
+type StructOfEmptyFlexibleUnion = struct {
+    empty EmptyFlexibleUnion;
+};

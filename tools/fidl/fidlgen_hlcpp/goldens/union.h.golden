@@ -41,6 +41,8 @@ class FlexiblePizzaOrPasta;
 
 class ExplicitPizzaOrPasta;
 
+class OnlyReservedFlexibleUnion;
+
 class OlderSimpleUnion;
 
 class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
@@ -70,6 +72,8 @@ class ExplicitUnion;
 class ExplicitStrictFoo;
 
 class ExplicitFoo;
+
+class EmptyFlexibleUnion;
 
 class Empty;
 
@@ -1163,6 +1167,74 @@ inline zx_status_t Clone(const ::test::union_::ExplicitPizzaOrPasta& value,
 
 using ExplicitPizzaOrPastaPtr = ::std::unique_ptr<ExplicitPizzaOrPasta>;
 
+class OnlyReservedFlexibleUnion final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  OnlyReservedFlexibleUnion();
+  ~OnlyReservedFlexibleUnion();
+
+  OnlyReservedFlexibleUnion(OnlyReservedFlexibleUnion&&);
+  OnlyReservedFlexibleUnion& operator=(OnlyReservedFlexibleUnion&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<OnlyReservedFlexibleUnion> New() { return ::std::make_unique<OnlyReservedFlexibleUnion>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, OnlyReservedFlexibleUnion* value, size_t offset);
+  zx_status_t Clone(OnlyReservedFlexibleUnion* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+  OnlyReservedFlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+
+  ::test::union_::OnlyReservedFlexibleUnion::Tag Which() const {
+    switch (tag_) {
+      case ::test::union_::OnlyReservedFlexibleUnion::Tag::Invalid:
+        return ::test::union_::OnlyReservedFlexibleUnion::Tag(tag_);
+      default:
+        return ::test::union_::OnlyReservedFlexibleUnion::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::test::union_::OnlyReservedFlexibleUnion::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::union_::OnlyReservedFlexibleUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::union_::OnlyReservedFlexibleUnion::Tag::Invalid);
+  union {
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::union_::OnlyReservedFlexibleUnion& value,
+                         ::test::union_::OnlyReservedFlexibleUnion* result) {
+  return value.Clone(result);
+}
+
+using OnlyReservedFlexibleUnionPtr = ::std::unique_ptr<OnlyReservedFlexibleUnion>;
+
 class OlderSimpleUnion final {
  public:
   static const fidl_type_t* FidlType;
@@ -2168,6 +2240,74 @@ inline zx_status_t Clone(const ::test::union_::ExplicitFoo& value,
 
 using ExplicitFooPtr = ::std::unique_ptr<ExplicitFoo>;
 
+class EmptyFlexibleUnion final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  EmptyFlexibleUnion();
+  ~EmptyFlexibleUnion();
+
+  EmptyFlexibleUnion(EmptyFlexibleUnion&&);
+  EmptyFlexibleUnion& operator=(EmptyFlexibleUnion&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<EmptyFlexibleUnion> New() { return ::std::make_unique<EmptyFlexibleUnion>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, EmptyFlexibleUnion* value, size_t offset);
+  zx_status_t Clone(EmptyFlexibleUnion* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+  EmptyFlexibleUnion& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+
+  ::test::union_::EmptyFlexibleUnion::Tag Which() const {
+    switch (tag_) {
+      case ::test::union_::EmptyFlexibleUnion::Tag::Invalid:
+        return ::test::union_::EmptyFlexibleUnion::Tag(tag_);
+      default:
+        return ::test::union_::EmptyFlexibleUnion::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::test::union_::EmptyFlexibleUnion::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::union_::EmptyFlexibleUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::union_::EmptyFlexibleUnion::Tag::Invalid);
+  union {
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::union_::EmptyFlexibleUnion& value,
+                         ::test::union_::EmptyFlexibleUnion* result) {
+  return value.Clone(result);
+}
+
+using EmptyFlexibleUnionPtr = ::std::unique_ptr<EmptyFlexibleUnion>;
+
 class Empty final {
  public:
   static const fidl_type_t* FidlType;
@@ -3006,6 +3146,58 @@ struct Equality<::test::union_::ExplicitPizzaOrPasta> {
   }
 };
 template <>
+struct IsFidlXUnion<::test::union_::OnlyReservedFlexibleUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::union_::OnlyReservedFlexibleUnion>
+    : public EncodableCodingTraits<::test::union_::OnlyReservedFlexibleUnion, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::union_::OnlyReservedFlexibleUnion>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::union_::OnlyReservedFlexibleUnion>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::union_::OnlyReservedFlexibleUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::union_::OnlyReservedFlexibleUnion);
+
+    ::test::union_::OnlyReservedFlexibleUnion::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::union_::OnlyReservedFlexibleUnion& value,
+                         ::test::union_::OnlyReservedFlexibleUnion* result) {
+  return ::test::union_::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::union_::OnlyReservedFlexibleUnion> {
+  bool operator()(const ::test::union_::OnlyReservedFlexibleUnion& _lhs, const ::test::union_::OnlyReservedFlexibleUnion& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::union_::OnlyReservedFlexibleUnion::Tag::Invalid):
+        return true;
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
+template <>
 struct IsFidlXUnion<::test::union_::OlderSimpleUnion> : public std::true_type {};
 
 template <>
@@ -3590,6 +3782,58 @@ struct Equality<::test::union_::ExplicitFoo> {
         return ::fidl::Equals(_lhs.s_, _rhs.s_);
       case ::test::union_::ExplicitFoo::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
+template <>
+struct IsFidlXUnion<::test::union_::EmptyFlexibleUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::union_::EmptyFlexibleUnion>
+    : public EncodableCodingTraits<::test::union_::EmptyFlexibleUnion, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::union_::EmptyFlexibleUnion>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::union_::EmptyFlexibleUnion>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::union_::EmptyFlexibleUnion>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::union_::EmptyFlexibleUnion);
+
+    ::test::union_::EmptyFlexibleUnion::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::union_::EmptyFlexibleUnion& value,
+                         ::test::union_::EmptyFlexibleUnion* result) {
+  return ::test::union_::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::union_::EmptyFlexibleUnion> {
+  bool operator()(const ::test::union_::EmptyFlexibleUnion& _lhs, const ::test::union_::EmptyFlexibleUnion& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::union_::EmptyFlexibleUnion::Tag::Invalid):
+        return true;
       default:
         return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }

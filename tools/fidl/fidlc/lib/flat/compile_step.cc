@@ -1289,6 +1289,7 @@ void CompileStep::CompileUnion(Union* union_declaration) {
   DeriveResourceness derive_resourceness(&union_declaration->resourceness);
 
   CompileAttributeList(union_declaration->attributes.get());
+  bool contains_non_reserved_member = false;
   for (const auto& member : union_declaration->members) {
     CompileAttributeList(member.attributes.get());
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
@@ -1299,6 +1300,8 @@ void CompileStep::CompileUnion(Union* union_declaration) {
     if (!member.maybe_used) {
       continue;
     }
+
+    contains_non_reserved_member = true;
     const auto& member_used = *member.maybe_used;
     const auto original_name = member_used.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
@@ -1321,6 +1324,11 @@ void CompileStep::CompileUnion(Union* union_declaration) {
       Fail(ErrOptionalUnionMember, member_used.name);
     }
     derive_resourceness.AddType(member_used.type_ctor->type);
+  }
+
+  if (union_declaration->strictness == types::Strictness::kStrict &&
+      !contains_non_reserved_member) {
+    Fail(ErrStrictUnionMustHaveNonReservedMember, union_declaration->name.span().value());
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {

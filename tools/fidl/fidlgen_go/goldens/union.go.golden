@@ -95,6 +95,45 @@ func (msg *testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResp
 	return _mtestProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse
 }
 
+type I_emptyFlexibleUnionTag uint64
+
+const (
+	EmptyFlexibleUnion_unknownData = 0 // 0x00000000
+)
+
+type EmptyFlexibleUnion struct {
+	I_emptyFlexibleUnionTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData           interface{}
+}
+
+var _mEmptyFlexibleUnion = _bindings.CreateLazyMarshaler(EmptyFlexibleUnion{})
+
+func (msg *EmptyFlexibleUnion) Marshaler() _bindings.Marshaler {
+	return _mEmptyFlexibleUnion
+}
+
+func (_m *EmptyFlexibleUnion) reset() {
+	switch _m.I_emptyFlexibleUnionTag {
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *EmptyFlexibleUnion) Which() I_emptyFlexibleUnionTag {
+	switch _m.I_emptyFlexibleUnionTag {
+	default:
+		return EmptyFlexibleUnion_unknownData
+	}
+}
+
+func (_m *EmptyFlexibleUnion) Ordinal() uint64 {
+	return uint64(_m.I_emptyFlexibleUnionTag)
+}
+func (_m *EmptyFlexibleUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
 type I_explicitFooTag uint64
 
 const (
@@ -900,6 +939,45 @@ func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
 	return _u
 }
 func (_m *OlderSimpleUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
+
+type I_onlyReservedFlexibleUnionTag uint64
+
+const (
+	OnlyReservedFlexibleUnion_unknownData = 0 // 0x00000000
+)
+
+type OnlyReservedFlexibleUnion struct {
+	I_onlyReservedFlexibleUnionTag `fidl:"x" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData                  interface{}
+}
+
+var _mOnlyReservedFlexibleUnion = _bindings.CreateLazyMarshaler(OnlyReservedFlexibleUnion{})
+
+func (msg *OnlyReservedFlexibleUnion) Marshaler() _bindings.Marshaler {
+	return _mOnlyReservedFlexibleUnion
+}
+
+func (_m *OnlyReservedFlexibleUnion) reset() {
+	switch _m.I_onlyReservedFlexibleUnionTag {
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *OnlyReservedFlexibleUnion) Which() I_onlyReservedFlexibleUnionTag {
+	switch _m.I_onlyReservedFlexibleUnionTag {
+	default:
+		return OnlyReservedFlexibleUnion_unknownData
+	}
+}
+
+func (_m *OnlyReservedFlexibleUnion) Ordinal() uint64 {
+	return uint64(_m.I_onlyReservedFlexibleUnionTag)
+}
+func (_m *OnlyReservedFlexibleUnion) GetUnknownData() _bindings.UnknownData {
 	return _m.I_unknownData.(_bindings.UnknownData)
 }
 

@@ -489,6 +489,32 @@ std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<
   return WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta, ::test_union::ExplicitPizzaOrPasta>::ToWire(arena, std::move(*src));
 }
 
+::test_union::OnlyReservedFlexibleUnion WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToNatural(::test_union::wire::OnlyReservedFlexibleUnion src) {
+  switch (src.Which()) {
+    default:
+      return ::test_union::OnlyReservedFlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+  }
+}
+::test_union::wire::OnlyReservedFlexibleUnion WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToWire(fidl::AnyArena& arena, ::test_union::OnlyReservedFlexibleUnion src) {
+  switch (src.Which()) {
+    default:
+      return ::test_union::wire::OnlyReservedFlexibleUnion();
+  }
+}
+
+std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>>::ToNatural(::test_union::wire::OnlyReservedFlexibleUnion src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_union::OnlyReservedFlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::OnlyReservedFlexibleUnion WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> src) {
+  if (!src) {
+    return ::test_union::wire::OnlyReservedFlexibleUnion();
+  }
+  return WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToWire(arena, std::move(*src));
+}
+
 ::test_union::OlderSimpleUnion WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::test_union::OlderSimpleUnion>::ToNatural(::test_union::wire::OlderSimpleUnion src) {
   switch (src.Which()) {
     case ::test_union::wire::OlderSimpleUnion::Tag::kI:
@@ -829,6 +855,32 @@ std::unique_ptr<::test_union::ExplicitFoo> WireNaturalConversionTraits<::test_un
     return ::test_union::wire::ExplicitFoo();
   }
   return WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToWire(arena, std::move(*src));
+}
+
+::test_union::EmptyFlexibleUnion WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToNatural(::test_union::wire::EmptyFlexibleUnion src) {
+  switch (src.Which()) {
+    default:
+      return ::test_union::EmptyFlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+  }
+}
+::test_union::wire::EmptyFlexibleUnion WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToWire(fidl::AnyArena& arena, ::test_union::EmptyFlexibleUnion src) {
+  switch (src.Which()) {
+    default:
+      return ::test_union::wire::EmptyFlexibleUnion();
+  }
+}
+
+std::unique_ptr<::test_union::EmptyFlexibleUnion> WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, std::unique_ptr<::test_union::EmptyFlexibleUnion>>::ToNatural(::test_union::wire::EmptyFlexibleUnion src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_union::EmptyFlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::EmptyFlexibleUnion WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, std::unique_ptr<::test_union::EmptyFlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::EmptyFlexibleUnion> src) {
+  if (!src) {
+    return ::test_union::wire::EmptyFlexibleUnion();
+  }
+  return WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::XUnionContainingEmptyStruct WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, ::test_union::XUnionContainingEmptyStruct>::ToNatural(::test_union::wire::XUnionContainingEmptyStruct src) {

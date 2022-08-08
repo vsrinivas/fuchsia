@@ -17,6 +17,18 @@
   "unions": [
     {
       "is_anonymous": false,
+      "identifier": "test.union/EmptyFlexibleUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "EmptyFlexibleUnion",
+        "start_offset": 3020,
+        "end_offset": 3038
+      },
+      "members": []
+    },
+    {
+      "is_anonymous": false,
       "identifier": "test.union/ExplicitFoo",
       "location": {
         "is_virtual": false,
@@ -534,6 +546,22 @@
           "type": {
             "kind": "primitive"
           }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/OnlyReservedFlexibleUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "OnlyReservedFlexibleUnion",
+        "start_offset": 3066,
+        "end_offset": 3091
+      },
+      "members": [
+        {
+          "is_reserved": true
         }
       ]
     },

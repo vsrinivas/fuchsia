@@ -224,6 +224,13 @@ std::shared_ptr<::test_union::ExplicitPizzaOrPasta::Storage_> test_union::Explic
   }
 }
 
+std::shared_ptr<::test_union::OnlyReservedFlexibleUnion::Storage_> test_union::OnlyReservedFlexibleUnion::CloneStorage_() const {
+  switch (storage_->index()) {
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
 std::shared_ptr<::test_union::OlderSimpleUnion::Storage_> test_union::OlderSimpleUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
@@ -367,6 +374,13 @@ std::shared_ptr<::test_union::ExplicitFoo::Storage_> test_union::ExplicitFoo::Cl
       return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_union::EmptyFlexibleUnion::Storage_> test_union::EmptyFlexibleUnion::CloneStorage_() const {
+  switch (storage_->index()) {
     default:
       return std::make_shared<Storage_>();
   }

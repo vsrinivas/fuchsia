@@ -63,6 +63,8 @@ class FlexiblePizzaOrPasta;
 
 class ExplicitPizzaOrPasta;
 
+class OnlyReservedFlexibleUnion;
+
 class OlderSimpleUnion;
 
 class NewerSimpleUnion;
@@ -80,6 +82,8 @@ class ExplicitUnion;
 class ExplicitStrictFoo;
 
 class ExplicitFoo;
+
+class EmptyFlexibleUnion;
 
 class XUnionContainingEmptyStruct;
 
@@ -982,6 +986,35 @@ class ExplicitPizzaOrPasta {
   ::fidl::UntypedEnvelope envelope_;
 };
 
+extern "C" const fidl_type_t test_union_OnlyReservedFlexibleUnionTable;
+
+class OnlyReservedFlexibleUnion {
+ public:
+  OnlyReservedFlexibleUnion() : ordinal_(::test_union::wire::OnlyReservedFlexibleUnion::Ordinal::Invalid), envelope_{} {}
+
+  OnlyReservedFlexibleUnion(const OnlyReservedFlexibleUnion&) = default;
+  OnlyReservedFlexibleUnion& operator=(const OnlyReservedFlexibleUnion&) = default;
+  OnlyReservedFlexibleUnion(OnlyReservedFlexibleUnion&&) = default;
+  OnlyReservedFlexibleUnion& operator=(OnlyReservedFlexibleUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::OnlyReservedFlexibleUnion::Ordinal::Invalid; }
+  ::test_union::wire::OnlyReservedFlexibleUnion::Tag Which() const;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_union::wire::OnlyReservedFlexibleUnion::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
 extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
@@ -1691,6 +1724,35 @@ class ExplicitFoo {
 
   static void SizeAndOffsetAssertionHelper();
   ::test_union::wire::ExplicitFoo::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t test_union_EmptyFlexibleUnionTable;
+
+class EmptyFlexibleUnion {
+ public:
+  EmptyFlexibleUnion() : ordinal_(::test_union::wire::EmptyFlexibleUnion::Ordinal::Invalid), envelope_{} {}
+
+  EmptyFlexibleUnion(const EmptyFlexibleUnion&) = default;
+  EmptyFlexibleUnion& operator=(const EmptyFlexibleUnion&) = default;
+  EmptyFlexibleUnion(EmptyFlexibleUnion&&) = default;
+  EmptyFlexibleUnion& operator=(EmptyFlexibleUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::EmptyFlexibleUnion::Ordinal::Invalid; }
+  ::test_union::wire::EmptyFlexibleUnion::Tag Which() const;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_union::wire::EmptyFlexibleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
@@ -3561,6 +3623,103 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitPizzaOrPas
     : public ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitPizzaOrPasta, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
+struct TypeTraits<::test_union::wire::OnlyReservedFlexibleUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_union::wire::OnlyReservedFlexibleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::wire::OnlyReservedFlexibleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_union::wire::OnlyReservedFlexibleUnion>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_union::wire::OnlyReservedFlexibleUnion, Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_union::wire::OnlyReservedFlexibleUnion* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_union::wire::OnlyReservedFlexibleUnion::Tag tag = *position.As<::test_union::wire::OnlyReservedFlexibleUnion::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeFlexibleEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
+template <>
 struct TypeTraits<::test_union::wire::OlderSimpleUnion> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
@@ -4660,6 +4819,103 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, Const
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : public ::fidl::internal::WireCodingTraits<::test_union::wire::ExplicitFoo, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
+template <>
+struct TypeTraits<::test_union::wire::EmptyFlexibleUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_union::wire::EmptyFlexibleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::wire::EmptyFlexibleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_union::wire::EmptyFlexibleUnion>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_union::wire::EmptyFlexibleUnion, Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_union::wire::EmptyFlexibleUnion* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_union::wire::EmptyFlexibleUnion::Tag tag = *position.As<::test_union::wire::EmptyFlexibleUnion::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeFlexibleEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_union::wire::EmptyFlexibleUnion, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_union::wire::EmptyFlexibleUnion, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_union::wire::XUnionContainingEmptyStruct> {

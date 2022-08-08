@@ -56,6 +56,8 @@ class FlexiblePizzaOrPasta;
 
 class ExplicitPizzaOrPasta;
 
+class OnlyReservedFlexibleUnion;
+
 class OlderSimpleUnion;
 
 class NewerSimpleUnion;
@@ -73,6 +75,8 @@ class ExplicitUnion;
 class ExplicitStrictFoo;
 
 class ExplicitFoo;
+
+class EmptyFlexibleUnion;
 
 class XUnionContainingEmptyStruct;
 
@@ -1494,6 +1498,80 @@ class ExplicitPizzaOrPasta {
   }
 };
 
+extern "C" const fidl_type_t test_union_OnlyReservedFlexibleUnionTable;
+
+class OnlyReservedFlexibleUnion {
+ private:
+  using Storage_ =
+      std::variant<
+          std::monostate>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  OnlyReservedFlexibleUnion(OnlyReservedFlexibleUnion&& other) noexcept
+      : OnlyReservedFlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  OnlyReservedFlexibleUnion& operator=(OnlyReservedFlexibleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
+  OnlyReservedFlexibleUnion(const OnlyReservedFlexibleUnion& other) noexcept : OnlyReservedFlexibleUnion(other.CloneStorage_()) {}
+  OnlyReservedFlexibleUnion& operator=(const OnlyReservedFlexibleUnion& other) noexcept {
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
+    return *this;
+  }
+
+  bool operator==(const OnlyReservedFlexibleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const OnlyReservedFlexibleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
+  constexpr ::test_union::OnlyReservedFlexibleUnion::Tag Which() const {
+    return OnlyReservedFlexibleUnion::IndexToTag(storage_->index()).value();
+  }
+
+  OnlyReservedFlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::OnlyReservedFlexibleUnion>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>());
+
+  explicit OnlyReservedFlexibleUnion(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::OnlyReservedFlexibleUnion::Tag tag) {
+    switch (tag) {
+      case ::test_union::OnlyReservedFlexibleUnion::Tag::kUnknown:
+        return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
+    }
+  }
+
+  static constexpr std::optional<::test_union::OnlyReservedFlexibleUnion::Tag> IndexToTag(size_t index) {
+    switch (index) {
+      default:
+        return ::test_union::OnlyReservedFlexibleUnion::Tag::kUnknown;
+    }
+  }
+};
+
 extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
@@ -2686,6 +2764,80 @@ class ExplicitFoo {
   }
 };
 
+extern "C" const fidl_type_t test_union_EmptyFlexibleUnionTable;
+
+class EmptyFlexibleUnion {
+ private:
+  using Storage_ =
+      std::variant<
+          std::monostate>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  EmptyFlexibleUnion(EmptyFlexibleUnion&& other) noexcept
+      : EmptyFlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  EmptyFlexibleUnion& operator=(EmptyFlexibleUnion&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
+  EmptyFlexibleUnion(const EmptyFlexibleUnion& other) noexcept : EmptyFlexibleUnion(other.CloneStorage_()) {}
+  EmptyFlexibleUnion& operator=(const EmptyFlexibleUnion& other) noexcept {
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
+    return *this;
+  }
+
+  bool operator==(const EmptyFlexibleUnion& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const EmptyFlexibleUnion& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
+  constexpr ::test_union::EmptyFlexibleUnion::Tag Which() const {
+    return EmptyFlexibleUnion::IndexToTag(storage_->index()).value();
+  }
+
+  EmptyFlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::EmptyFlexibleUnion>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>());
+
+  explicit EmptyFlexibleUnion(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::EmptyFlexibleUnion::Tag tag) {
+    switch (tag) {
+      case ::test_union::EmptyFlexibleUnion::Tag::kUnknown:
+        return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
+    }
+  }
+
+  static constexpr std::optional<::test_union::EmptyFlexibleUnion::Tag> IndexToTag(size_t index) {
+    switch (index) {
+      default:
+        return ::test_union::EmptyFlexibleUnion::Tag::kUnknown;
+    }
+  }
+};
+
 extern "C" const fidl_type_t test_union_EmptyTable;
 
 class Empty {
@@ -3033,6 +3185,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::ExplicitPizzaOrPasta, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<::test_union::ExplicitPizzaOrPasta> {};
 
+extern "C" const fidl_type_t test_union_OnlyReservedFlexibleUnionTable;
+
+template <>
+struct IsFidlType<::test_union::OnlyReservedFlexibleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::OnlyReservedFlexibleUnion> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_union::OnlyReservedFlexibleUnion, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_union::OnlyReservedFlexibleUnion> {};
+
 extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
 template <>
@@ -3131,6 +3294,17 @@ struct IsUnion<::test_union::ExplicitFoo> : public std::true_type {};
 template <>
 struct internal::NaturalCodingTraits<::test_union::ExplicitFoo, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<::test_union::ExplicitFoo> {};
+
+extern "C" const fidl_type_t test_union_EmptyFlexibleUnionTable;
+
+template <>
+struct IsFidlType<::test_union::EmptyFlexibleUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_union::EmptyFlexibleUnion> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_union::EmptyFlexibleUnion, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_union::EmptyFlexibleUnion> {};
 
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
 

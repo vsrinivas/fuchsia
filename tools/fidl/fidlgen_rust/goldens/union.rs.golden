@@ -28,6 +28,53 @@ use {
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum EmptyFlexibleUnion {
+    #[deprecated = "Use `EmptyFlexibleUnion::unknown()` to construct and `EmptyFlexibleUnionUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown { ordinal: u64, bytes: Vec<u8> },
+}
+/// Pattern that matches an unknown `EmptyFlexibleUnion` member.
+#[macro_export]
+macro_rules! EmptyFlexibleUnionUnknown {
+    () => {
+        _
+    };
+}
+
+impl EmptyFlexibleUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for EmptyFlexibleUnion {}
+
+fidl_union! {
+    name: EmptyFlexibleUnion,
+    members: [
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExplicitFoo {
     S(String),
     I(i32),
@@ -606,6 +653,53 @@ fidl_union! {
             ty: f32,
             ordinal: 2,
         },
+    ],
+    value_unknown_member: __Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum OnlyReservedFlexibleUnion {
+    #[deprecated = "Use `OnlyReservedFlexibleUnion::unknown()` to construct and `OnlyReservedFlexibleUnionUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
+    __Unknown { ordinal: u64, bytes: Vec<u8> },
+}
+/// Pattern that matches an unknown `OnlyReservedFlexibleUnion` member.
+#[macro_export]
+macro_rules! OnlyReservedFlexibleUnionUnknown {
+    () => {
+        _
+    };
+}
+
+impl OnlyReservedFlexibleUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+        }
+    }
+}
+
+impl fidl::encoding::Persistable for OnlyReservedFlexibleUnion {}
+
+fidl_union! {
+    name: OnlyReservedFlexibleUnion,
+    members: [
     ],
     value_unknown_member: __Unknown,
 }

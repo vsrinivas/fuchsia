@@ -258,19 +258,6 @@ type Example = strict union {
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
-TEST(UnionTests, BadMustHaveNonReservedMember) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = strict union {
-  2: reserved;
-  1: reserved;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
-}
-
 TEST(UnionTests, BadNoNullableMembers) {
   TestLibrary library(R"FIDL(
 library example;
@@ -295,14 +282,61 @@ type Value = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
-TEST(UnionTests, BadEmptyUnion) {
+TEST(UnionTests, GoodEmptyFlexibleUnion) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible union {};
+
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto fidl_union = library.LookupUnion("Foo");
+  ASSERT_NOT_NULL(fidl_union);
+  ASSERT_EQ(fidl_union->members.size(), 0);
+}
+
+TEST(UnionTests, GoodOnlyReservedFlexibleUnion) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible union {
+  1: reserved;
+};
+
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto fidl_union = library.LookupUnion("Foo");
+  ASSERT_NOT_NULL(fidl_union);
+
+  ASSERT_EQ(fidl_union->members.size(), 1);
+  auto& member0 = fidl_union->members[0];
+  EXPECT_EQ(member0.ordinal->value, 1);
+  EXPECT_NULL(member0.maybe_used);
+}
+
+TEST(UnionTests, BadEmptyStrictUnion) {
   TestLibrary library(R"FIDL(
 library example;
 
 type Foo = strict union {};
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStrictUnionMustHaveNonReservedMember);
+}
+
+TEST(UnionTests, BadOnlyReservedStrictUnion) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = strict union {
+  2: reserved;
+  1: reserved;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStrictUnionMustHaveNonReservedMember);
 }
 
 TEST(UnionTests, GoodErrorSyntaxExplicitOrdinals) {

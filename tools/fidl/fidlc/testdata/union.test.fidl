@@ -154,3 +154,9 @@ type UnionWithAttributes = flexible union {
     @baz
     2: reserved;
 };
+
+type EmptyFlexibleUnion = flexible union {};
+
+type OnlyReservedFlexibleUnion = flexible union {
+    1: reserved;
+};

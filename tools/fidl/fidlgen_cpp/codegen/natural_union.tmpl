@@ -173,7 +173,9 @@ class {{ .Name }} {
 
 {{ if not .IsResourceType }}
   std::shared_ptr<{{ . }}::Storage_> {{ .NoLeading }}::CloneStorage_() const {
+    {{- if .Members }}
     const Storage_& storage = *storage_;
+    {{- end }}
     switch (storage_->index()) {
       {{- range $i, $m := .Members }}
         case {{ Add $i 1 }}:

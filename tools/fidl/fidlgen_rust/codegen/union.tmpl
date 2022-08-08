@@ -79,7 +79,9 @@ impl {{ .Name }} {
         match self {
             #[allow(deprecated)]
             Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            {{- if .Members }}
             _ => Ok(self)
+            {{- end }}
         }
     }
 
@@ -88,7 +90,9 @@ impl {{ .Name }} {
         match self {
             #[allow(deprecated)]
             Self::__Unknown { .. } => true,
+            {{- if .Members }}
             _ => false,
+            {{- end }}
         }
     }
 {{- end }}
@@ -105,7 +109,9 @@ impl {{ .Name }} {
         match self {
             #[allow(deprecated)]
             Self::__Unknown { ordinal, data } => Err((ordinal, data)),
+            {{- if .Members }}
             _ => Ok(self)
+            {{- end }}
         }
     }
 
@@ -114,7 +120,9 @@ impl {{ .Name }} {
         match self {
             #[allow(deprecated)]
             Self::__Unknown { .. } => true,
+            {{- if .Members }}
             _ => false,
+            {{- end }}
         }
     }
 {{- end }}

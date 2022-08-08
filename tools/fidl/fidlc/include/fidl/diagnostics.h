@@ -49,9 +49,6 @@ constexpr ErrorDef ErrCannotAttachAttributeToIdentifier("cannot attach attribute
 constexpr ErrorDef ErrRedundantAttributePlacement(
     "cannot specify attributes on the type declaration and the corresponding layout at the same "
     "time; please merge them into one location instead");
-constexpr ErrorDef ErrMustHaveNonReservedMember(
-    "must have at least one non reserved member; you can use an empty struct to "
-    "define a placeholder variant");
 constexpr ErrorDef ErrDocCommentOnParameters("cannot have doc comment on parameters");
 constexpr ErrorDef ErrLibraryImportsMustBeGroupedAtTopOfFile(
     "library imports must be grouped at top-of-file");
@@ -212,6 +209,8 @@ constexpr ErrorDef ErrPayloadStructHasDefaultMembers(
     "default values are not allowed on members of request/response structs");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
     "multiple service members named '{}'; previous was at {}");
+constexpr ErrorDef ErrStrictUnionMustHaveNonReservedMember(
+    "strict unions must have at least one non-reserved member");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateServiceMemberNameCanonical(
         "service member '{}' conflicts with member '{}' from {}; both are "

@@ -60,6 +60,14 @@ test_union_UnionSandwichOutOfLine {
 test_union_UnionSandwichHandles {
     void void
 } [packed]
+test_union_EmptyFlexibleUnionInLine [
+]
+test_union_EmptyFlexibleUnionOutOfLine [
+    void void
+][varlen]
+test_union_EmptyFlexibleUnionHandles [
+    void void
+][varlen]
 test_union_ExplicitFooInLine [
     sInLine fidl_union_member[2, fidl_string]
     i fidl_union_member[1, int32]
@@ -175,6 +183,14 @@ test_union_OlderSimpleUnionOutOfLine [
     void void
 ][varlen]
 test_union_OlderSimpleUnionHandles [
+    void void
+][varlen]
+test_union_OnlyReservedFlexibleUnionInLine [
+]
+test_union_OnlyReservedFlexibleUnionOutOfLine [
+    void void
+][varlen]
+test_union_OnlyReservedFlexibleUnionHandles [
     void void
 ][varlen]
 test_union_PizzaOrPastaInLine [

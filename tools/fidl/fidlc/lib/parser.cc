@@ -1284,19 +1284,6 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   if (!checkpoint.NoNewErrors())
     return nullptr;
 
-  if (kind == raw::Layout::Kind::kUnion) {
-    bool contains_non_reserved_member = false;
-    for (const std::unique_ptr<raw::LayoutMember>& member : members) {
-      ZX_ASSERT_MSG(member->kind == raw::LayoutMember::Kind::kOrdinaled,
-                    "unions should only have ordinaled members");
-      const auto& union_member = static_cast<raw::OrdinaledLayoutMember*>(member.get());
-      if (!union_member->reserved)
-        contains_non_reserved_member = true;
-    }
-    if (!contains_non_reserved_member)
-      return Fail(ErrMustHaveNonReservedMember);
-  }
-
   return std::make_unique<raw::Layout>(scope.GetSourceElement(), kind, std::move(members),
                                        std::move(modifiers), std::move(subtype_ctor));
 }

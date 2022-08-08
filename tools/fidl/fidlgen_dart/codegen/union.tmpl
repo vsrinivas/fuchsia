@@ -56,6 +56,7 @@ class {{ .Name }} extends $fidl.Union {
 {{- end }}
 
   $fidl.UnknownRawData? get $unknownData {
+{{- if .Members }}
     switch (_ordinal) {
 {{- range .Members }}
       case {{ .Ordinal }}:
@@ -64,7 +65,11 @@ class {{ .Name }} extends $fidl.Union {
       default:
         return _data;
     }
+{{- else }}
+    return _data;
+{{- end }}
   }
+
 
   @override
   int get $ordinal => _ordinal;

@@ -275,8 +275,10 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType.Name }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  {{- if .Members }}
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
+  {{- end }}
 
   switch (Which()) {
     {{- range .Members }}

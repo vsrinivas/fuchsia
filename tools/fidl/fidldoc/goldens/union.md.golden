@@ -154,6 +154,9 @@
 
 ## **UNIONS**
 
+### EmptyFlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#EmptyFlexibleUnion data-text="EmptyFlexibleUnion"}
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=158)*
+
 ### ExplicitFoo [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExplicitFoo data-text="ExplicitFoo"}
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=80)*
 <table>
@@ -455,6 +458,20 @@
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
+            </td>
+            <td></td>
+        </tr>
+</table>
+
+### OnlyReservedFlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#OnlyReservedFlexibleUnion data-text="OnlyReservedFlexibleUnion"}
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=160)*
+<table>
+    <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
+        <tr id="OnlyReservedFlexibleUnion.">
+<td><h3 id="OnlyReservedFlexibleUnion." class="add-link hide-from-toc">1</h3></td>
+            <td><code></code></td>
+            <td>
+                <code></code>
             </td>
             <td></td>
         </tr>

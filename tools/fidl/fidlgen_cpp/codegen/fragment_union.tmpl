@@ -144,6 +144,7 @@ class {{ .Name }} {
 {{- if .IsFlexible }}
 auto {{ . }}::Which() const -> {{ .TagEnum }} {
   ZX_ASSERT(!has_invalid_tag());
+  {{- if .Members }}
   switch (ordinal_) {
   {{- range .Members }}
   case {{ .WireOrdinalName }}:
@@ -152,6 +153,9 @@ auto {{ . }}::Which() const -> {{ .TagEnum }} {
   default:
     return {{ .TagUnknown }};
   }
+  {{- else }}
+  return {{ .TagUnknown }};
+  {{- end }}
 }
 {{- end }}
 
