@@ -88,7 +88,7 @@ type Channel = resource table {
     /// Always present.
     3: max_tx_sdu_size uint16;
     /// Audio Direction priority extension. See `AudioDirectionExt`.
-    /// Present only if supported by the host.
+    /// Present only if supported.
     4: ext_direction client_end:AudioDirectionExt;
     // Duration after which packets are dropped from the controller.
     // Present only if a flush timeout was successfully configured.
@@ -96,6 +96,9 @@ type Channel = resource table {
     /// L2CAP parameter extension. See `L2capParametersExt`.
     /// Always present for L2CAP Channels, never present for other Channels.
     6: ext_l2cap client_end:L2capParametersExt;
+    /// Audio offload extension. See `AudioOffloadExt`.
+    /// Present only if supported.
+    7: ext_audio_offload client_end:AudioOffloadExt;
 };
 
 /// A2DP packet priority used in `AudioDirectionExt`. `NORMAL` should be used whenever audio is not
@@ -106,9 +109,8 @@ type A2dpDirectionPriority = strict enum {
     SINK = 3;
 };
 
-/// Audio Priority Direction extension.
-/// Used to put the channel in a mode where A2DP packets are prioritized over other packets in the
-/// source or sink direction.
+/// Audio Priority Direction extension. Used to put the channel in a mode where A2DP packets are
+/// prioritized over other packets in the source or sink direction.
 protocol AudioDirectionExt {
     SetPriority(struct {
         priority A2dpDirectionPriority;
@@ -130,7 +132,25 @@ protocol L2capParametersExt {
     });
 };
 
-/// Represents a service which is registered by this profile.  Closing this protocol will remove the
+type AudioSbcSupport = table {};
+type AudioAacSupport = table {};
+
+/// Audio offload features used in `AudioOffloadExt`.
+type AudioOffloadFeatures = flexible union {
+    1: sbc AudioSbcSupport;
+    2: aac AudioAacSupport;
+};
+
+/// Audio Offload Extension. Used to retrieve offloading capability and supported features.
+// TODO(fxbug.dev/103232): Add Start and Stop A2DP command messages.
+protocol AudioOffloadExt {
+    /// Returns the vendor features supported on this chipset
+    GetSupportedFeatures() -> (table {
+        1: audio_offload_features vector<AudioOffloadFeatures>:MAX;
+    });
+};
+
+/// Represents a service which is registered by this profile. Closing this protocol will remove the
 /// service registration.
 protocol ConnectionReceiver {
     /// Called when a peer connects to this service.  The channel connected is delivered
