@@ -19,9 +19,9 @@ use {
 
 /// The initial state of this recognizer, before a finger contact has been detected.
 #[derive(Debug)]
-struct Contender {
+pub(super) struct InitialContender {
     /// The minimum movement in millimeters on surface to recognize as a motion.
-    min_movement_in_mm: f32,
+    pub(super) min_movement_in_mm: f32,
 }
 
 /// The state when this recognizer has detected a finger pressed buttondown, before finger
@@ -47,7 +47,7 @@ struct Winner {
     last_position: Position,
 }
 
-impl Contender {
+impl InitialContender {
     fn into_button_down_contender(
         self: Box<Self>,
         initial_position: Position,
@@ -59,7 +59,7 @@ impl Contender {
     }
 }
 
-impl gesture_arena::Contender for Contender {
+impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if event.contacts.len() != 1 {
             return ExamineEventResult::Mismatch("wanted 1 contact");
@@ -286,7 +286,7 @@ mod test {
     #[fuchsia::test]
     fn initial_contender_examine_event_mismatch(event: TouchpadEvent) {
         let contender: Box<dyn gesture_arena::Contender> =
-            Box::new(Contender { min_movement_in_mm: 10.0 });
+            Box::new(InitialContender { min_movement_in_mm: 10.0 });
 
         let got = contender.examine_event(&event);
         assert_matches!(got, ExamineEventResult::Mismatch(_));
@@ -295,7 +295,7 @@ mod test {
     #[fuchsia::test]
     fn initial_contender_examine_event_button_down_contender() {
         let contender: Box<dyn gesture_arena::Contender> =
-            Box::new(Contender { min_movement_in_mm: 10.0 });
+            Box::new(InitialContender { min_movement_in_mm: 10.0 });
         let event = TouchpadEvent {
             timestamp: zx::Time::ZERO,
             pressed_buttons: vec![1],

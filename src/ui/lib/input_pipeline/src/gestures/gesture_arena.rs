@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{click, motion, primary_tap, secondary_tap},
+    super::{click, motion, one_finger_drag, primary_tap, secondary_tap},
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -33,6 +33,9 @@ pub fn make_input_handler() -> std::rc::Rc<dyn crate::input_handler::InputHandle
             Box::new(secondary_tap::InitialContender {
                 max_finger_displacement_in_mm: MAX_TAP_MOVEMENT_IN_MM,
                 max_time_elapsed: TAP_TIMEOUT,
+            }),
+            Box::new(one_finger_drag::InitialContender {
+                min_movement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
             }),
         ]
     }))
