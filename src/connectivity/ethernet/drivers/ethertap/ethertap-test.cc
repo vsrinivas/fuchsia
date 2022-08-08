@@ -4,8 +4,12 @@
 
 #include "ethertap.h"
 
+#include <algorithm>
+#include <random>
+
 #include <zxtest/zxtest.h>
 
+#include "fidl/fuchsia.hardware.ethertap/cpp/markers.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 class EthertapTests : public zxtest::Test {
@@ -18,7 +22,10 @@ class EthertapTests : public zxtest::Test {
 
   void OpenDevice(const char* name) {
     fuchsia_hardware_ethertap::wire::Config config = {
-        .options = 0, .features = 0, .mtu = 1500, .mac = {1, 2, 3, 4, 5, 6}};
+        .options = fuchsia_hardware_ethertap::wire::kOptReportParam,
+        .features = 0,
+        .mtu = 1500,
+        .mac = {1, 2, 3, 4, 5, 6}};
     auto tap = fidl::CreateEndpoints(&requester_side_);
     ASSERT_TRUE(tap.is_ok());
     ASSERT_OK(tap_ctl_->OpenDeviceInternal(name, config, std::move(tap.value())));
@@ -58,4 +65,45 @@ TEST_F(EthertapTests, UnbindSignalsWorkerThread) {
   tap_device()->UnbindOp();
   tap_device()->WaitUntilUnbindReplyCalled();
   ASSERT_OK(tap_device()->UnbindReplyCallStatus());
+}
+
+TEST_F(EthertapTests, TestMulticastFilterParamsAreSorted) {
+  using Protocol = fuchsia_hardware_ethertap::TapDevice;
+
+  class EventHandler : public fidl::WireSyncEventHandler<Protocol> {
+   public:
+    void OnFrame(fidl::WireEvent<Protocol::OnFrame>*) override {
+      // should not be called
+      FAIL();
+    }
+
+    void OnReportParams(fidl::WireEvent<Protocol::OnReportParams>* event) override {
+      on_report_params_called_ = true;
+      ASSERT_TRUE(std::is_sorted(event->data.begin(), event->data.end()));
+    }
+
+    bool on_report_params_called_{false};
+  };
+
+  ASSERT_NO_FATAL_FAILURE(OpenDevice("tap-device"));
+
+  fidl::WireSyncClient<Protocol> client = fidl::BindSyncClient(std::move(requester_side_));
+  eth::TapDevice* dev = tap_device()->GetDeviceContext<eth::TapDevice>();
+  std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t> rnd(0);
+
+  constexpr size_t kMacAddressLen = 6;
+  constexpr size_t kNumAddresses = 100;
+  constexpr size_t kNumTestRuns = 100;
+
+  for (size_t i = 0; i < kNumTestRuns; i++) {
+    std::vector<uint8_t> addresses(kNumAddresses * kMacAddressLen);
+    std::generate(addresses.begin(), addresses.end(), std::ref(rnd));
+    ASSERT_OK(dev->EthernetImplSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, kNumAddresses,
+                                        addresses.data(), addresses.size()));
+    EventHandler event_handler;
+    ASSERT_FALSE(event_handler.on_report_params_called_);
+    auto result = client.HandleOneEvent(event_handler);
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(event_handler.on_report_params_called_);
+  }
 }
