@@ -73,6 +73,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_VMO:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
+    case ZXIO_OBJECT_TYPE_VMOFILE:
+      io = fbl::MakeRefCounted<fdio_internal::remote>();
+      break;
     default:
       // Unknown type - allocate a generic fdio object so that zxio_create can
       // initialize a zxio object holding the object for us.

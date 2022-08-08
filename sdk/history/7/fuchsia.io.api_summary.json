@@ -1936,6 +1936,11 @@
         "name": "fuchsia.io/NodeInfo.tty"
     },
     {
+        "declaration": "fuchsia.io/VmofileDeprecated",
+        "kind": "union/member",
+        "name": "fuchsia.io/NodeInfo.vmofile_deprecated"
+    },
+    {
         "kind": "union",
         "name": "fuchsia.io/NodeInfo",
         "resourceness": "resource",
@@ -2416,6 +2421,26 @@
         "kind": "bits",
         "name": "fuchsia.io/VmoFlags",
         "strictness": "strict"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "struct/member",
+        "name": "fuchsia.io/VmofileDeprecated.length"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "struct/member",
+        "name": "fuchsia.io/VmofileDeprecated.offset"
+    },
+    {
+        "declaration": "zx/handle:VMO",
+        "kind": "struct/member",
+        "name": "fuchsia.io/VmofileDeprecated.vmo"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/VmofileDeprecated",
+        "resourceness": "resource"
     },
     {
         "declaration": "fuchsia.io/Operations",

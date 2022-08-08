@@ -60,7 +60,7 @@ impl NodeType {
         let dir_proxy = open_in_namespace(path_as_str, OpenFlags::RIGHT_READABLE)?;
         Ok(match dir_proxy.describe().await {
             Ok(fio::NodeInfo::Directory(_)) => NodeType::Directory,
-            Ok(fio::NodeInfo::File(_)) => NodeType::File,
+            Ok(fio::NodeInfo::File(_)) | Ok(fio::NodeInfo::VmofileDeprecated(_)) => NodeType::File,
             _ => NodeType::Unknown,
         })
     }

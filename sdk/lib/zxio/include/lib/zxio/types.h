@@ -134,14 +134,15 @@ typedef uint32_t zxio_object_type_t;
 #define ZXIO_OBJECT_TYPE_FILE                         ((zxio_object_type_t) 4)
 #define ZXIO_OBJECT_TYPE_DEVICE                       ((zxio_object_type_t) 5)
 #define ZXIO_OBJECT_TYPE_TTY                          ((zxio_object_type_t) 6)
-#define ZXIO_OBJECT_TYPE_VMO                          ((zxio_object_type_t) 7)
-#define ZXIO_OBJECT_TYPE_DEBUGLOG                     ((zxio_object_type_t) 8)
-#define ZXIO_OBJECT_TYPE_PIPE                         ((zxio_object_type_t) 9)
-#define ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET  ((zxio_object_type_t)10)
-#define ZXIO_OBJECT_TYPE_STREAM_SOCKET                ((zxio_object_type_t)11)
-#define ZXIO_OBJECT_TYPE_RAW_SOCKET                   ((zxio_object_type_t)12)
-#define ZXIO_OBJECT_TYPE_PACKET_SOCKET                ((zxio_object_type_t)13)
-#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET              ((zxio_object_type_t)14)
+#define ZXIO_OBJECT_TYPE_VMOFILE                      ((zxio_object_type_t) 7)
+#define ZXIO_OBJECT_TYPE_VMO                          ((zxio_object_type_t) 8)
+#define ZXIO_OBJECT_TYPE_DEBUGLOG                     ((zxio_object_type_t) 9)
+#define ZXIO_OBJECT_TYPE_PIPE                         ((zxio_object_type_t)10)
+#define ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET  ((zxio_object_type_t)11)
+#define ZXIO_OBJECT_TYPE_STREAM_SOCKET                ((zxio_object_type_t)12)
+#define ZXIO_OBJECT_TYPE_RAW_SOCKET                   ((zxio_object_type_t)13)
+#define ZXIO_OBJECT_TYPE_PACKET_SOCKET                ((zxio_object_type_t)14)
+#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET              ((zxio_object_type_t)15)
 // clang-format on
 
 // File and directory access ---------------------------------------------------

@@ -27,6 +27,7 @@ namespace {
 
 struct Context {
   zx::vmo vmo;
+  bool is_vmofile;
   bool supports_read_at;
   bool supports_seek;
   bool supports_get_backing_memory;
@@ -48,9 +49,25 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-    fuchsia_io::wire::FileObject fo;
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(
-        fidl::ObjectView<fuchsia_io::wire::FileObject>::FromExternal(&fo)));
+    if (context->is_vmofile) {
+      fuchsia_io::wire::VmofileDeprecated vmofile = {
+          .offset = 0,
+          .length = context->content_size,
+      };
+
+      zx_status_t status = context->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmofile.vmo);
+      if (status != ZX_OK) {
+        completer.Close(status);
+        return;
+      }
+
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
+          fidl::ObjectView<fuchsia_io::wire::VmofileDeprecated>::FromExternal(&vmofile)));
+    } else {
+      fuchsia_io::wire::FileObject fo;
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(
+          fidl::ObjectView<fuchsia_io::wire::FileObject>::FromExternal(&fo)));
+    }
   }
 
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
@@ -177,6 +194,7 @@ TEST(GetVMOTest, Remote) {
   ASSERT_OK(endpoints.status_value());
 
   Context context = {
+      .is_vmofile = false,
       .supports_get_backing_memory = true,
       .content_size = 43,
   };
@@ -241,6 +259,58 @@ TEST(GetVMOTest, Remote) {
   context.last_flags = {};
 }
 
+TEST(GetVMOTest, VMOFile) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("fake-filesystem"));
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(endpoints.status_value());
+
+  Context context = {
+      .is_vmofile = true,
+      .supports_seek = true,
+      .content_size = 43,
+  };
+  create_context_vmo(zx_system_get_page_size(), &context.vmo);
+  ASSERT_OK(context.vmo.write("abcd", 0, 4));
+
+  ASSERT_OK(fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server),
+                                         std::make_unique<TestServer>(&context)));
+
+  int raw_fd = -1;
+  ASSERT_OK(fdio_fd_create(endpoints->client.channel().release(), &raw_fd));
+  fbl::unique_fd fd(raw_fd);
+  context.supports_seek = false;
+
+  zx_rights_t expected_rights =
+      ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ;
+
+  zx::vmo received;
+  EXPECT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
+  EXPECT_EQ(get_koid(context.vmo), get_koid(received));
+  EXPECT_EQ(get_rights(received), expected_rights);
+
+  // The rest of these tests exercise methods which use VmoFlags::PRIVATE_CLONE, in which case the
+  // returned rights should also include ZX_RIGHT_SET_PROPERTY.
+  expected_rights |= ZX_RIGHT_SET_PROPERTY;
+
+  EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_EQ(get_rights(received), expected_rights);
+
+  EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_EQ(get_rights(received), expected_rights);
+
+  EXPECT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
+  EXPECT_NE(get_koid(context.vmo), get_koid(received));
+  EXPECT_TRUE(vmo_starts_with(received, "abcd"));
+  EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
+}
+
 // Verify that mmap works with PROT_EXEC. This test is here instead of fdio_mmap.cc since we need
 // a file handle that supports execute rights, which the fake filesystem server above handles.
 TEST(MmapFileTest, ProtExecWorks) {
@@ -252,6 +322,7 @@ TEST(MmapFileTest, ProtExecWorks) {
   ASSERT_OK(endpoints.status_value());
 
   Context context = {
+      .is_vmofile = false,
       .supports_get_backing_memory = true,
       .content_size = 43,
   };

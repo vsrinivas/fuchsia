@@ -84,6 +84,7 @@ source_set("zxio") {
     "remote_v2/remote_v2.cc",
     "socket.cc",
     "vmo.cc",
+    "vmofile.cc",
     "zxio.cc",
   ]
   public_deps = [ ":headers" ]

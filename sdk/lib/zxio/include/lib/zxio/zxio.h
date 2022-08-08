@@ -22,10 +22,10 @@ __BEGIN_CDECLS
 // underlying protocol without sacrificing (much) performance.
 //
 // This library is organized around a zxio object type |zxio_t| defined in
-// types.h.  A zxio object abstracts over several related protocols (e.g. file,
-// and directory) to provide a uniform interface. Advanced clients can also
-// provide their own implementation of the underlying ops table to provide
-// drop-in replacements for zxio objects with different backends.
+// types.h.  A zxio object abstracts over several related protocols (e.g.,
+// vmofile, file, and directory) to provide a uniform interface. Advanced
+// clients can also provide their own implementation of the underlying ops table
+// to provide drop-in replacements for zxio objects with different backends.
 
 // Threading model
 
