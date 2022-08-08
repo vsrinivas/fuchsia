@@ -6,8 +6,6 @@
 #define SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
 
 #include <stdint.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 // ZBI_TYPE_KERNEL_DRIVER item types (for zbi_header_t.extra)
 #define KDRV_ARM_PSCI 0x49435350                // 'PSCI'
@@ -114,7 +112,7 @@ typedef struct {
 } dcfg_generic_32bit_watchdog_action_t;
 
 #define KDRV_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED ((uint32_t)0x00000001)
-#define KDRV_GENERIC_32BIT_WATCHDOG_MIN_PERIOD ZX_MSEC(1)
+#define KDRV_GENERIC_32BIT_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))  // 1ms
 
 // Definitions of actions which may be taken by a generic 32 bit watchdog timer
 // kernel driver which may be passed by a bootloader.  Field definitions are as
@@ -146,7 +144,7 @@ typedef struct {
   dcfg_generic_32bit_watchdog_action_t pet_action;
   dcfg_generic_32bit_watchdog_action_t enable_action;
   dcfg_generic_32bit_watchdog_action_t disable_action;
-  zx_duration_t watchdog_period_nsec;
+  int64_t watchdog_period_nsec;
   uint32_t flags;
   uint32_t reserved;
 } dcfg_generic_32bit_watchdog_t;
