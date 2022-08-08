@@ -17,6 +17,7 @@
 #include <lib/vfs/cpp/vmo_file.h>
 #include <string.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/object.h>
 
 #include <vector>
 
@@ -32,12 +33,22 @@ namespace {
 
 struct PublisherPayload {
   static constexpr std::string_view kSink = "llvm-profile";
+  static constexpr std::string_view kCustomSink = "my-custom-sink";
 
-  bool Init(cpp20::source_location curr = cpp20::source_location::current()) {
+  bool Init(std::string_view name,
+            cpp20::source_location curr = cpp20::source_location::current()) {
     if (auto res = zx::vmo::create(4096, 0, &vmo); res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to init PublisherPayload vmo at " << curr.line()
                      << ". Error: " << zx_status_get_string(res);
       return false;
+    }
+
+    if (!name.empty()) {
+      if (auto res = vmo.set_property(ZX_PROP_NAME, name.data(), name.size()); res != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to init PublisherPayload vmo name at " << curr.line()
+                       << ". Error: " << zx_status_get_string(res);
+        return false;
+      }
     }
 
     if (auto res = zx::eventpair::create(0, &token_1, &token_2); res != ZX_OK) {
@@ -88,6 +99,8 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
     channels_ = std::make_unique<Channels>();
     payload_1_ = std::make_unique<PublisherPayload>();
     payload_2_ = std::make_unique<PublisherPayload>();
+    payload_3_ = std::make_unique<PublisherPayload>();
+    payload_4_ = std::make_unique<PublisherPayload>();
     FillStash();
   }
 
@@ -103,14 +116,16 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
     if (!channels_->Init()) {
       FX_LOGS(ERROR) << "Failed to initialize channels for Publisher data.";
     } else {
-      // We will publish two vmos, we will close the token for 1 and not the other.
-      if (!payload_1_->Init() ||  //
-          !payload_2_->Init()) {
+      if (!payload_1_->Init("profraw") ||  // llvm-profile static
+          !payload_2_->Init("profraw") ||  // llvm-profile dynamic
+          !payload_3_->Init("custom") ||   // custom static
+          !payload_4_->Init("")) {         // custom dynamic
         FX_LOGS(ERROR) << "Failed to initialize payloads for Publisher data.";
       }
 
       // payload_1 is static.
       payload_1_->token_1.reset();
+      payload_3_->token_1.reset();
 
       // Add some unique content to the vmos.
       if (auto res = payload_1_->vmo.write("1234", 0, 4); res != ZX_OK) {
@@ -119,6 +134,15 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
 
       if (auto res = payload_2_->vmo.write("567890123", 0, 9); res != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to initialize payload_2_ content for Publisher data.";
+      }
+
+      // Add some unique content to the vmos.
+      if (auto res = payload_3_->vmo.write("789", 0, 3); res != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to initialize payload_3_ content for Publisher data.";
+      }
+
+      if (auto res = payload_4_->vmo.write("43218765", 0, 8); res != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to initialize payload_4_ content for Publisher data.";
       }
     }
 
@@ -150,6 +174,22 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
           res != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to publish payload_2_. Error: " << zx_status_get_string(res);
       }
+
+      if (auto res = publisher
+                         ->Publish(fidl::StringView::FromExternal(PublisherPayload::kCustomSink),
+                                   std::move(payload_3_->vmo), std::move(payload_3_->token_2))
+                         .status();
+          res != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to publish payload_3_. Error: " << zx_status_get_string(res);
+      }
+
+      if (auto res = publisher
+                         ->Publish(fidl::StringView::FromExternal(PublisherPayload::kCustomSink),
+                                   std::move(payload_4_->vmo), std::move(payload_4_->token_2))
+                         .status();
+          res != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to publish payload_4_. Error: " << zx_status_get_string(res);
+      }
     }
 
     fidl::WireSyncClient<fuchsia_boot::SvcStash> svc_stash;
@@ -167,7 +207,7 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
   fidl::ServerEnd<fuchsia_boot::SvcStash> stash_;
 
   std::unique_ptr<Channels> channels_;
-  std::unique_ptr<PublisherPayload> payload_1_, payload_2_;
+  std::unique_ptr<PublisherPayload> payload_1_, payload_2_, payload_3_, payload_4_;
 };
 
 }  // namespace

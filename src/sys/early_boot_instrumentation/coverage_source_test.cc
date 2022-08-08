@@ -26,6 +26,7 @@
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <zircon/syscalls/object.h>
 
 #include <cstdint>
 #include <memory>
@@ -187,7 +188,60 @@ TEST_F(ExposePhysbootProfileDataTest, OnlyProfrawFileIsOk) {
   ASSERT_NE(out_dir.Lookup(symbolizer_file, &node), ZX_OK);
 }
 
-class ExposeEarlyBootStashedProfileDataTest : public ::testing::Test {
+struct PublishRequest {
+  std::string sink;
+  bool peer_closed;
+};
+
+constexpr std::string_view kData = "12345670123";
+constexpr size_t kDataOffset = 0xAD;
+
+zx::status<zx::vmo> MakeTestVmo(uint32_t data_offset) {
+  zx::vmo vmo;
+  if (auto status = zx::vmo::create(4096, 0, &vmo); status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (auto status = vmo.write(kData.data(), kDataOffset + data_offset, kDataOffset);
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(vmo));
+}
+
+void ValidatePublishedRequests(uint32_t svc_index, cpp20::span<PublishRequest> requests,
+                               SinkDirMap& sink_map) {
+  for (uint32_t i = 0; i < requests.size(); ++i) {
+    std::string path(requests[i].peer_closed ? kStaticDir : kDynamicDir);
+    std::string name = std::to_string(svc_index) + "-" + std::to_string(i);
+    if (requests[i].sink == kLlvmSink) {
+      name += "." + std::string(kLlvmSinkExtension);
+    }
+
+    auto it = sink_map.find(requests[i].sink);
+    ASSERT_NE(it, sink_map.end());
+    auto& sink_root = *it->second;
+
+    vfs::internal::Node* lookup_node = nullptr;
+    ASSERT_EQ(sink_root.Lookup(path, &lookup_node), ZX_OK);
+    ASSERT_TRUE(lookup_node->IsDirectory());
+
+    auto* typed_dir = reinterpret_cast<vfs::PseudoDir*>(lookup_node);
+    ASSERT_EQ(typed_dir->Lookup(name, &lookup_node), ZX_OK) << name;
+    ASSERT_TRUE(lookup_node->IsVMO());
+
+    auto* vmo_file = reinterpret_cast<vfs::VmoFile*>(lookup_node);
+    std::vector<uint8_t> actual_data;
+    ASSERT_EQ(vmo_file->ReadAt(kData.size(), kDataOffset + i, &actual_data), ZX_OK);
+
+    EXPECT_TRUE(memcmp(kData.data(), actual_data.data(), kData.size()) == 0);
+  }
+}
+
+void ValidatePublishedRequests(uint32_t svc_index, PublishRequest& request, SinkDirMap& sink_map) {
+  ValidatePublishedRequests(svc_index, {&request, 1}, sink_map);
+}
+
+class ExtractDebugDataTest : public ::testing::Test {
  public:
   void SetUp() final {
     zx::channel svc_stash_client;
@@ -196,36 +250,36 @@ class ExposeEarlyBootStashedProfileDataTest : public ::testing::Test {
     svc_stash_.Bind(std::move(client_end));
   }
 
-  // Publish |vmo| with |sink_name| into a svc directory, whose handle is moved to |out|.
-  // The read side of the |/svc| handle, is stashed into |svc_stash_write|, so it can be read
-  // by |svc_stash_read| handle.
-  void AddSvcWith(std::string_view sink_name, zx::vmo vmo, zx::eventpair& out_token) {
-    zx::channel svc_read, svc_write;
-    ASSERT_EQ(zx::channel::create(0, &svc_read, &svc_write), ZX_OK);
-
-    fidl::ServerEnd<fuchsia_io::Directory> dir(std::move(svc_read));
-    auto push_result = svc_stash_->Store(std::move(dir));
-    ASSERT_TRUE(push_result.ok()) << push_result.status_string();
-
-    PublishOne(svc_write.borrow(), sink_name, std::move(vmo), out_token);
+  void StashSvcWithPublishedData(const PublishRequest& publish_info, zx::eventpair& out_token) {
+    StashSvcWithPublishedData({&publish_info, 1}, {&out_token, 1});
   }
 
   // Same as above, but published multiple pairs of |<sink, vmo>| represented by sinks[i], vmos[i].
   // |out| is the write end of the handle.
-  void AddSvcWithMany(cpp20::span<std::string_view> sinks, cpp20::span<zx::vmo> vmos,
-                      cpp20::span<zx::eventpair> out_tokens) {
+  void StashSvcWithPublishedData(cpp20::span<const PublishRequest> publish_info,
+                                 cpp20::span<zx::eventpair> out_tokens) {
     zx::channel svc_read, svc_write;
 
-    ASSERT_EQ(sinks.size(), vmos.size());
-    ASSERT_EQ(sinks.size(), out_tokens.size());
+    ASSERT_EQ(publish_info.size(), out_tokens.size());
+
     ASSERT_EQ(zx::channel::create(0, &svc_read, &svc_write), ZX_OK);
 
     fidl::ServerEnd<fuchsia_io::Directory> dir(std::move(svc_read));
     auto push_result = svc_stash_->Store(std::move(dir));
     ASSERT_TRUE(push_result.ok()) << push_result.status_string();
 
-    for (size_t i = 0; i < sinks.size(); ++i) {
-      PublishOne(svc_write.borrow(), sinks[i], std::move(vmos[i]), out_tokens[i]);
+    for (uint32_t i = 0; i < publish_info.size(); ++i) {
+      auto vmo_or = MakeTestVmo(i);
+      ASSERT_TRUE(vmo_or.is_ok()) << vmo_or.status_string();
+      if (publish_info[i].sink == kLlvmSink) {
+        vmo_or.value().set_property(ZX_PROP_NAME, kLlvmSinkExtension.data(),
+                                    kLlvmSinkExtension.size());
+      }
+      PublishOne(svc_write.borrow(), publish_info[i].sink, std::move(vmo_or).value(),
+                 out_tokens[i]);
+      if (publish_info[i].peer_closed) {
+        out_tokens[i].reset();
+      }
     }
   }
 
@@ -259,309 +313,70 @@ class ExposeEarlyBootStashedProfileDataTest : public ::testing::Test {
   fidl::WireSyncClient<fuchsia_boot::SvcStash> svc_stash_;
 };
 
-constexpr std::string_view kData = "12345670123";
-constexpr size_t kDataOffset = 0xAD;
-constexpr std::string_view kSink = "llvm-profile";
-constexpr std::string_view kUnhandledSink = "not-llvm-profile";
-
-zx::status<zx::vmo> MakeTestVmo(uint32_t data_offset) {
-  zx::vmo vmo;
-  if (auto status = zx::vmo::create(4096, 0, &vmo); status != ZX_OK) {
-    return zx::error(status);
-  }
-  if (auto status = vmo.write(kData.data(), kDataOffset + data_offset, kDataOffset);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::move(vmo));
-}
-
-void MakeTestVmos(cpp20::span<zx::vmo> vmos) {
-  for (uint32_t i = 0; i < vmos.size(); ++i) {
-    vmos[i] = std::move(MakeTestVmo(i).value());
-  }
-}
-
-struct EntryContext {
-  std::vector<std::string_view> sinks;
-  bool peer_closed;
-};
-
-void ValidateVmos(cpp20::span<EntryContext> entries, vfs::PseudoDir& static_dir,
-                  vfs::PseudoDir& dynamic_dir) {
-  for (uint32_t svc_index = 0; svc_index < entries.size(); ++svc_index) {
-    auto& entry = entries[svc_index];
-    auto& sinks = entry.sinks;
-    for (uint32_t vmo_index = 0, unhandled_count = 0; vmo_index < entry.sinks.size(); ++vmo_index) {
-      if (sinks[vmo_index] == kUnhandledSink) {
-        unhandled_count++;
-        continue;
-      }
-
-      auto& out_dir = entry.peer_closed ? static_dir : dynamic_dir;
-
-      // Should be added to the static dir.
-      vfs::internal::Node* node = nullptr;
-
-      // This is the first and only one in the stash.
-      std::string exposed_as = std::to_string(svc_index) + "-" +
-                               std::to_string(vmo_index - unhandled_count) + ".profraw";
-
-      ASSERT_EQ(out_dir.Lookup(exposed_as, &node), ZX_OK);
-      ASSERT_NE(node, nullptr);
-      ASSERT_TRUE(node->IsVMO());
-      auto* vmo_node = reinterpret_cast<vfs::VmoFile*>(node);
-      std::vector<uint8_t> file_contents(kData.size(), 0);
-      ASSERT_EQ(vmo_node->ReadAt(file_contents.size(), kDataOffset + vmo_index, &file_contents),
-                ZX_OK);
-
-      EXPECT_TRUE(memcmp(kData.data(), file_contents.data(), kData.size()) == 0);
-    }
-  }
-}
-
-void ValidateVmo(std::string_view name, bool peer_closed, vfs::PseudoDir& static_dir,
-                 vfs::PseudoDir& dynamic_dir) {
-  EntryContext entry = {
-      .sinks = {name},
-      .peer_closed = peer_closed,
-  };
-  ValidateVmos({&entry, 1}, static_dir, dynamic_dir);
-}
-
-TEST_F(ExposeEarlyBootStashedProfileDataTest, SinglePublisherWithOneElement) {
-  vfs::PseudoDir static_dir, dynamic_dir;
-  zx::vmo published_vmo = MakeTestVmo(0).value();
-  zx::eventpair local_token;
-
-  AddSvcWith(kSink, std::move(published_vmo), local_token);
-
+TEST_F(ExtractDebugDataTest, NoRequestsIsEmpty) {
   auto svc_stash = take_stash_read();
-
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
-
-  ValidateVmo(kSink, false, static_dir, dynamic_dir);
-  ASSERT_TRUE(static_dir.IsEmpty());
+  auto sink_map = ExtractDebugData(svc_stash.borrow());
+  ASSERT_TRUE(sink_map.empty());
 }
 
-TEST_F(ExposeEarlyBootStashedProfileDataTest, SinglePublisherWithOneElementAndSvcPeerClosed) {
-  vfs::PseudoDir static_dir, dynamic_dir;
-  zx::vmo published_vmo = MakeTestVmo(0).value();
-  zx::eventpair local_token;
-
-  AddSvcWith(kSink, std::move(published_vmo), local_token);
-
-  // Close the peer.
-  local_token.reset();
-
+TEST_F(ExtractDebugDataTest, SingleStashedSvcWithSingleOutstandingPublishRequest) {
   auto svc_stash = take_stash_read();
+  PublishRequest req = {"my-custom-sink", true};
+  zx::eventpair token;
 
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
-
-  ValidateVmo(kSink, true, static_dir, dynamic_dir);
-  ASSERT_TRUE(dynamic_dir.IsEmpty());
+  ASSERT_NO_FATAL_FAILURE(StashSvcWithPublishedData(req, token));
+  auto sink_map = ExtractDebugData(svc_stash.borrow());
+  ASSERT_FALSE(sink_map.empty());
+  ValidatePublishedRequests(0u, req, sink_map);
 }
 
-TEST_F(ExposeEarlyBootStashedProfileDataTest, SinglePublisherWithMultipleElement) {
-  vfs::PseudoDir static_dir, dynamic_dir;
-  constexpr std::string_view kName = "llvm-profile";
-  constexpr std::string_view kUnhandledName = "not-llvm-profile";
-  constexpr uint32_t kVmoCount = 4;
-
-  std::array<zx::vmo, kVmoCount> published_vmos;
-  std::array<zx::eventpair, kVmoCount> local_token;
-  EntryContext entry = {
-      .sinks = {kName, kName, kUnhandledName, kName},
-      .peer_closed = false,
-  };
-
-  MakeTestVmos(published_vmos);
-  AddSvcWithMany(entry.sinks, published_vmos, local_token);
-
+TEST_F(ExtractDebugDataTest, LlvmSinkHaveProfrawExtension) {
   auto svc_stash = take_stash_read();
+  auto reqs = cpp20::to_array<PublishRequest>(
+      {{std::string(kLlvmSink), true}, {std::string(kLlvmSink), false}});
+  std::vector<zx::eventpair> tokens;
+  tokens.resize(reqs.size());
 
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
+  ASSERT_NO_FATAL_FAILURE(StashSvcWithPublishedData(reqs, tokens));
 
-  ValidateVmos({&entry, 1}, static_dir, dynamic_dir);
-  ASSERT_TRUE(static_dir.IsEmpty());
+  auto sink_map = ExtractDebugData(svc_stash.borrow());
+  ASSERT_FALSE(sink_map.empty());
+
+  ValidatePublishedRequests(0u, reqs, sink_map);
 }
 
-TEST_F(ExposeEarlyBootStashedProfileDataTest, SinglePublisherWithMultipleElementAndTokenSignaled) {
-  vfs::PseudoDir static_dir, dynamic_dir;
-  constexpr std::string_view kName = "llvm-profile";
-  constexpr std::string_view kUnhandledName = "not-llvm-profile";
-  constexpr uint32_t kVmoCount = 4;
-
-  std::array<zx::vmo, kVmoCount> published_vmos;
-  std::array<zx::eventpair, kVmoCount> local_tokens;
-  EntryContext entry = {
-      .sinks = {kName, kName, kUnhandledName, kName},
-      .peer_closed = true,
-  };
-
-  MakeTestVmos(published_vmos);
-  AddSvcWithMany(entry.sinks, published_vmos, local_tokens);
-
-  for (auto& token : local_tokens) {
-    token.reset();
-  }
-
+TEST_F(ExtractDebugDataTest, SingleStashedSvcWithMultipleOutstandingPublishRequest) {
   auto svc_stash = take_stash_read();
+  auto reqs = cpp20::to_array<PublishRequest>(
+      {{"my-custom-sink", true}, {"another-sink", true}, {"my-custom-sink", false}});
+  std::vector<zx::eventpair> tokens;
+  tokens.resize(reqs.size());
 
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
+  ASSERT_NO_FATAL_FAILURE(StashSvcWithPublishedData(reqs, tokens));
 
-  ValidateVmos({&entry, 1}, static_dir, dynamic_dir);
-  ASSERT_TRUE(dynamic_dir.IsEmpty());
+  auto sink_map = ExtractDebugData(svc_stash.borrow());
+  ASSERT_FALSE(sink_map.empty());
+
+  ValidatePublishedRequests(0u, reqs, sink_map);
 }
 
-TEST_F(ExposeEarlyBootStashedProfileDataTest, MultiplePublisherWithSingleElement) {
-  constexpr uint32_t kPublisherCount = 3;
-
-  vfs::PseudoDir static_dir, dynamic_dir;
-  std::array<zx::eventpair, kPublisherCount> local_tokens;
-  std::array<EntryContext, kPublisherCount> entries = {{
-      {
-          .sinks = {kSink},
-          .peer_closed = false,
-      },
-      {
-          .sinks = {kSink},
-          .peer_closed = false,
-      },
-      {
-          .sinks = {kSink},
-          .peer_closed = false,
-      },
-  }};
-
-  for (size_t i = 0; i < kPublisherCount; ++i) {
-    for (size_t j = 0; j < entries[i].sinks.size(); ++j) {
-      zx::vmo published_vmo = MakeTestVmo(0).value();
-      AddSvcWith(entries[i].sinks[j], std::move(published_vmo), local_tokens[i]);
-    }
-  }
-
+TEST_F(ExtractDebugDataTest, MultipleStashedSvcWithSingleOutstandingPublishRequest) {
   auto svc_stash = take_stash_read();
+  auto reqs = cpp20::to_array<PublishRequest>(
+      {{"my-custom-sink", true}, {"another-sink", true}, {"my-custom-sink", false}});
+  std::vector<zx::eventpair> tokens;
+  tokens.resize(reqs.size());
 
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
-
-  ValidateVmos(entries, static_dir, dynamic_dir);
-  ASSERT_TRUE(static_dir.IsEmpty());
-}
-
-TEST_F(ExposeEarlyBootStashedProfileDataTest, MultiplePublisherWithSingleElementAndTokenSignaled) {
-  constexpr uint32_t kPublisherCount = 3;
-
-  vfs::PseudoDir static_dir, dynamic_dir;
-  std::array<zx::eventpair, kPublisherCount> local_tokens;
-  std::array<EntryContext, kPublisherCount> entries = {{
-      {
-          .sinks = {kSink},
-          .peer_closed = true,
-      },
-      {
-          .sinks = {kSink},
-          .peer_closed = true,
-      },
-      {
-          .sinks = {kSink},
-          .peer_closed = true,
-      },
-  }};
-
-  for (size_t i = 0; i < kPublisherCount; ++i) {
-    for (size_t j = 0; j < entries[i].sinks.size(); ++j) {
-      zx::vmo published_vmo = MakeTestVmo(0).value();
-      AddSvcWith(entries[i].sinks[j], std::move(published_vmo), local_tokens[i]);
-    }
+  for (uint32_t i = 0; i < reqs.size(); ++i) {
+    ASSERT_NO_FATAL_FAILURE(StashSvcWithPublishedData(reqs[i], tokens[i]));
   }
 
-  auto svc_stash = take_stash_read();
-  for (auto& svc : local_tokens) {
-    svc.reset();
+  auto sink_map = ExtractDebugData(svc_stash.borrow());
+  ASSERT_FALSE(sink_map.empty());
+
+  for (uint32_t i = 0; i < reqs.size(); ++i) {
+    ValidatePublishedRequests(i, reqs[i], sink_map);
   }
-
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
-
-  ValidateVmos(entries, static_dir, dynamic_dir);
-  ASSERT_TRUE(dynamic_dir.IsEmpty());
-}
-
-TEST_F(ExposeEarlyBootStashedProfileDataTest, MultiplePublisherWithMultipleElements) {
-  constexpr uint32_t kPublisherCount = 3;
-
-  vfs::PseudoDir static_dir, dynamic_dir;
-  std::array<std::vector<zx::eventpair>, kPublisherCount> local_tokens;
-  std::array<EntryContext, kPublisherCount> entries = {{
-      {
-          .sinks = {kSink, kSink, kUnhandledSink},
-          .peer_closed = false,
-      },
-      {
-          .sinks = {kUnhandledSink, kUnhandledSink},
-          .peer_closed = false,
-      },
-      {
-          .sinks = {kSink, kSink},
-          .peer_closed = false,
-      },
-  }};
-
-  for (size_t i = 0; i < kPublisherCount; ++i) {
-    std::vector<zx::vmo> published_vmos(entries[i].sinks.size());
-    local_tokens[i].resize(entries[i].sinks.size());
-    MakeTestVmos(published_vmos);
-    AddSvcWithMany(entries[i].sinks, published_vmos, local_tokens[i]);
-  }
-
-  auto svc_stash = take_stash_read();
-
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
-
-  ValidateVmos(entries, static_dir, dynamic_dir);
-  ASSERT_TRUE(static_dir.IsEmpty());
-}
-
-TEST_F(ExposeEarlyBootStashedProfileDataTest,
-       MultiplePublisherWithMultipleElementAndTokenSignaled) {
-  constexpr uint32_t kPublisherCount = 3;
-
-  vfs::PseudoDir static_dir, dynamic_dir;
-  std::array<std::vector<zx::eventpair>, kPublisherCount> local_tokens;
-  std::array<EntryContext, kPublisherCount> entries = {{
-      {
-          .sinks = {kSink, kSink, kUnhandledSink},
-          .peer_closed = true,
-      },
-      {
-          .sinks = {kUnhandledSink, kUnhandledSink},
-          .peer_closed = true,
-      },
-      {
-          .sinks = {kSink, kSink},
-          .peer_closed = true,
-      },
-  }};
-
-  for (size_t i = 0; i < kPublisherCount; ++i) {
-    std::vector<zx::vmo> published_vmos(entries[i].sinks.size());
-    local_tokens[i].resize(entries[i].sinks.size());
-    MakeTestVmos(published_vmos);
-    AddSvcWithMany(entries[i].sinks, published_vmos, local_tokens[i]);
-  }
-
-  for (auto& token_list : local_tokens) {
-    for (auto& token : token_list) {
-      token.reset();
-    }
-  }
-
-  auto svc_stash = take_stash_read();
-
-  ExposeEarlyBootStashedProfileData(svc_stash.borrow(), dynamic_dir, static_dir);
-
-  ValidateVmos(entries, static_dir, dynamic_dir);
-  ASSERT_TRUE(dynamic_dir.IsEmpty());
 }
 
 }  // namespace

@@ -22,6 +22,7 @@ executable("provider") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

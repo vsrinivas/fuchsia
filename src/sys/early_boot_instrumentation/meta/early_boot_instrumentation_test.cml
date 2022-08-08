@@ -26,6 +26,12 @@
             rights: [ "r*" ],
             path: "/profraw",
         },
+        {
+            directory: "debugdata",
+            from: "#early-boot-instrumentation",
+            rights: [ "r*" ],
+            path: "/debugdata",
+        },
     ],
     offer: [
         {

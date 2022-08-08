@@ -13,6 +13,11 @@
             rights: [ "r*" ],
             path: "/prof-data",
         },
+        {
+            directory: "debugdata",
+            rights: [ "r*" ],
+            path: "/debugdata",
+        },
     ],
     use: [
         {
@@ -27,6 +32,10 @@
     expose: [
         {
             directory: "prof-data",
+            from: "self",
+        },
+        {
+            directory: "debugdata",
             from: "self",
         },
     ],

@@ -205,6 +205,35 @@ void OnEachMessage(zx::unowned_channel& src, MessageVisitor visitor) {
   }
 }
 
+enum class DataType {
+  kDynamic,
+  kStatic,
+};
+
+// Returns or creates the respective instance for a given |sink_name|.
+vfs::PseudoDir& GetOrCreate(std::string_view sink_name, DataType type, SinkDirMap& sink_map) {
+  auto it = sink_map.find(sink_name);
+
+  // If it's the first time we see this sink, fill up the base hierarchy:
+  //  root
+  //    +    /static
+  //    +    /dynamic
+  if (it == sink_map.end()) {
+    it = sink_map.insert(std::make_pair(sink_name, std::make_unique<vfs::PseudoDir>())).first;
+    it->second->AddEntry(std::string(kStaticDir), std::make_unique<vfs::PseudoDir>());
+    it->second->AddEntry(std::string(kDynamicDir), std::make_unique<vfs::PseudoDir>());
+  }
+
+  std::string path(type == DataType::kDynamic ? kDynamicDir : kStaticDir);
+
+  auto& root_dir = *(it->second);
+  vfs::internal::Node* node = nullptr;
+  // Both subdirs should always be available.
+  ZX_ASSERT(root_dir.Lookup(path, &node) == ZX_OK);
+  ZX_ASSERT(node->IsDirectory());
+  return *reinterpret_cast<vfs::PseudoDir*>(node);
+}
+
 }  // namespace
 
 zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::PseudoDir& out_dir) {
@@ -247,34 +276,40 @@ zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::P
   return Export(out_dir, exported_fds);
 }
 
-void ExposeEarlyBootStashedProfileData(zx::unowned_channel svc_stash, vfs::PseudoDir& dynamic_dir,
-                                       vfs::PseudoDir& static_dir) {
+SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash) {
+  SinkDirMap sink_to_dir;
+
+  // Results from a publish request.
   std::vector<PublishedData> published_data;
 
-  // Used to craft outgoing filenames as:
-  //    * svc_id-publish_id.profraw
-  // This allows grouping up publish request from the same svc_id(e.g. process). This id is opaque
-  // and has no meaning, but for easier debugability.
+  // used for name generation.
   int svc_id = 0;
-  int publish_id = 0;
-  auto on_publish_request = [&dynamic_dir, &static_dir, &publish_id, &svc_id](
-                                zx_status_t status, auto bytes, auto handles) {
+  int req_id = 0;
+
+  auto on_publish_request = [&sink_to_dir, &svc_id, &req_id](zx_status_t status, auto bytes,
+                                                             auto handles) {
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Encountered error status while processing open requests "
                     << zx_status_get_string(status);
       return;
     }
+
     if (auto published_data_or = GetPublishedData(bytes, handles); published_data_or.is_ok()) {
       auto& [sink, vmo, token, content_size] = *published_data_or;
-      if (sink == "llvm-profile") {
-        auto& dir = IsSignalled(token, ZX_EVENTPAIR_PEER_CLOSED) ? static_dir : dynamic_dir;
-        auto name = std::to_string(svc_id) + "-" + std::to_string(publish_id) + ".profraw";
-
-        dir.AddEntry(name, std::make_unique<vfs::VmoFile>(std::move(vmo), content_size));
-        ++publish_id;
-      } else {
-        FX_LOGS(INFO) << "Ignoring unhandled data sink " << sink;
+      DataType published_data_type =
+          IsSignalled(token, ZX_EVENTPAIR_PEER_CLOSED) ? DataType::kStatic : DataType::kDynamic;
+      auto& dir = GetOrCreate(sink, published_data_type, sink_to_dir);
+      std::array<char, ZX_MAX_NAME_LEN> name_buff = {};
+      auto name = std::to_string(svc_id) + "-" + std::to_string(req_id);
+      if (auto res = vmo.get_property(ZX_PROP_NAME, name_buff.data(), name_buff.size());
+          res == ZX_OK) {
+        std::string name_prop(name_buff.data());
+        if (!name_prop.empty()) {
+          name += "." + name_prop;
+        }
       }
+      dir.AddEntry(std::move(name), std::make_unique<vfs::VmoFile>(std::move(vmo), content_size));
+      ++req_id;
     } else {
       FX_LOGS(INFO) << "Encountered error(" << published_data_or.status_string()
                     << " while parsing publish request. Skipping entry.";
@@ -306,8 +341,8 @@ void ExposeEarlyBootStashedProfileData(zx::unowned_channel svc_stash, vfs::Pseud
     }
   };
 
-  auto on_stashed_svc = [&on_open_request, &publish_id, &svc_id](zx_status_t status, auto bytes,
-                                                                 auto handles) {
+  auto on_stashed_svc = [&on_open_request, &req_id, &svc_id](zx_status_t status, auto bytes,
+                                                             auto handles) {
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Encountered error status while processing open requests "
                     << zx_status_get_string(status);
@@ -333,11 +368,12 @@ void ExposeEarlyBootStashedProfileData(zx::unowned_channel svc_stash, vfs::Pseud
 
     zx::unowned_channel stashed_svc(handles[0]);
     OnEachMessage(stashed_svc, on_open_request);
-    publish_id = 0;
+    req_id = 0;
     svc_id++;
   };
 
   OnEachMessage(svc_stash, on_stashed_svc);
+  return sink_to_dir;
 }
 
 }  // namespace early_boot_instrumentation

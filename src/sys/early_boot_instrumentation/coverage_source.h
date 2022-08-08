@@ -32,6 +32,14 @@ static constexpr std::string_view kPhysFile = "physboot.profraw";
 // This might eventually be replaced by self-describing profraw file.
 static constexpr std::string_view kPhysSymbolizerFile = "physboot.log";
 
+// Subdirectory names for each type of debugdata.
+static constexpr std::string_view kDynamicDir = "dynamic";
+static constexpr std::string_view kStaticDir = "static";
+
+// llvm-profile sink and extension.
+static constexpr std::string_view kLlvmSink = "llvm-profile";
+static constexpr std::string_view kLlvmSinkExtension = "profraw";
+
 // Given a handle to |kernel_data_dir|, will extract the kernel coverage vmos from it,
 // and add them as VMO file into |out_dir|.
 //
@@ -44,12 +52,29 @@ zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::Pseud
 // Usually |phys_data_dir| is '/boot/kernel/data/phys'.
 zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::PseudoDir& out_dir);
 
-// Given a channel which is a server end of 'fuchsia.boot.SvcStash', will inspect all queued request
-// on each stashed 'svc' and expose the published DebugData as a vmo file.
-// Following the |debugdata.Publisher| protocol, the vmos are exposed as dynamic if the provided
-// token has been signaled with |ZX_EVENTPAIR_PEER_CLOSED|, and static otherwise.
-void ExposeEarlyBootStashedProfileData(zx::unowned_channel svc_stash, vfs::PseudoDir& dynamic_out,
-                                       vfs::PseudoDir& static_out);
+// Alias for str to unique_ptr<PseudoDir> map that allows lookup by string_view.
+using SinkDirMap = std::map<std::string, std::unique_ptr<vfs::PseudoDir>, std::less<>>;
+
+// Given a channel speaking the |fuchsia.boot.SvcStash| protocol, this will extract all published
+// debug data, and return a map from 'sink_name' to a root directory for each sink. Each root
+// directory contains two child directories, 'static' and 'dynamic'.
+//
+// Following the |debugdata.Publisher/Publish| protocol, data associated to a publish request is
+// considered 'static' if the provided token(|zx::eventpair|) in the request has the
+// |ZX_EVENTPAIR_PEER_CLOSED| signal. Otherwise, it's considered 'dynamic'.
+//
+// Once the data associated with a request has been tagged as 'static' or 'dynamic' it is exposed
+// as a |vfs::VmoFile| under the respective root directory of the |sink_name| associated with the
+// request.
+//
+// The filenames are generated as follow:
+//    Each stashed handle is assigned an index (monotonically increasing) 'svc_id'.
+//    Each request in the stashed handle is assigned another index (monotonically increasing)
+//    Each published vmo has a names 'vmo_name'.
+//    'req_id'. Then the name generated for the data associated with the request(svc_id, req_id) =
+//    "svc_id"-"req_id"."vmo_name".
+// In essence "vmo_name" acts like the extension.
+SinkDirMap ExtractDebugData(zx::unowned_channel svc_stash);
 
 }  // namespace early_boot_instrumentation
 

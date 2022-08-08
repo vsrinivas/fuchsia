@@ -38,7 +38,7 @@ TEST(EarlyBootInstrumentationTest, HasPhysbootInStatic) {
   ASSERT_TRUE(CheckContents("physboot", std::move(physboot_file)));
 }
 
-TEST(EarlyBootInstrumentationTest, HasSvcStashData) {
+TEST(EarlyBootInstrumentationTest, HasSvcStashDataWithLlvmProfile) {
   fbl::unique_fd static_file(open("/profraw/static/0-0.profraw", O_RDONLY));
   ASSERT_TRUE(static_file);
   ASSERT_TRUE(CheckContents("1234", std::move(static_file)));
@@ -46,4 +46,14 @@ TEST(EarlyBootInstrumentationTest, HasSvcStashData) {
   fbl::unique_fd dynamic_file(open("/profraw/dynamic/0-1.profraw", O_RDONLY));
   ASSERT_TRUE(dynamic_file);
   ASSERT_TRUE(CheckContents("567890123", std::move(dynamic_file)));
+}
+
+TEST(EarlyBootInstrumentationTest, HasSvcStashDataWithCustomSink) {
+  fbl::unique_fd static_file(open("/debugdata/my-custom-sink/static/0-2.custom", O_RDONLY));
+  ASSERT_TRUE(static_file);
+  ASSERT_TRUE(CheckContents("789", std::move(static_file)));
+
+  fbl::unique_fd dynamic_file(open("/debugdata/my-custom-sink/dynamic/0-3", O_RDONLY));
+  ASSERT_TRUE(dynamic_file);
+  ASSERT_TRUE(CheckContents("43218765", std::move(dynamic_file)));
 }
