@@ -310,13 +310,13 @@ class CommandTest(TestCaseWithFuzzer):
             '{}/BUILD.gn updated.'.format(fuzzer.corpus.srcdir))
 
     def test_measure_coverage(self):
-        fuzzer = self.create_fuzzer('1/1')
+        fuzzer = self.create_fuzzer('1/4', include_tests=True)
         output_dir = 'my/dir'
         self.host.mkdir(output_dir)
-        args = self.parse_args('coverage', '-o', output_dir, str(fuzzer))
+        args = self.parse_args('coverage', '-o', output_dir, '-l', str(fuzzer))
         self.assertError(
             lambda: command.measure_coverage(args, self.factory),
-            'Failed to open /fuchsia_dir/build_dir/args.json.')
+            'Failed to open my/dir/testsharder_out.json.')
 
 
 if __name__ == '__main__':

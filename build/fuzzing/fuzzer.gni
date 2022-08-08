@@ -149,6 +149,7 @@ template("fuzzer") {
     output_name = test_executable_output
     configs -= [ "//build/config/fuzzer:engine" ]
     deps += [ "//src/lib/fuzzing/cpp:fuzzer_test" ]
+    variant_selector_target_type = "fuzzer_test_executable"
   }
   test_component_deps += [ ":$test_executable_target" ]
 

@@ -74,6 +74,7 @@ class Fuzzer(object):
                 r'_test\.cmx$', '.cmx', fuzz_spec['test_manifest'])
             self._is_test = True
 
+        self._has_coverage = fuzz_spec.get('has_coverage', False)
         self._executable_url = '{}#meta/{}'.format(self._package_url, manifest)
         self._ns = Namespace(self)
         self._corpus = Corpus(self, fuzz_spec.get('corpus'))
@@ -180,6 +181,10 @@ class Fuzzer(object):
     @property
     def corpus(self):
         return self._corpus
+
+    @property
+    def has_coverage(self):
+        return self._has_coverage
 
     @property
     def dictionary(self):
@@ -620,13 +625,8 @@ class Fuzzer(object):
         else:
             self.host.error('Unable to determine device address.')
 
-        # TODO fxb/60971
-        args_json_file = os.path.join(self.buildenv.build_dir, 'args.json')
-        with self.host.open(args_json_file) as f:
-            args = json.load(f)
-            if (not 'select_variant' in args) or (not 'profile'
-                                                  in args['select_variant']):
-                self.host.error('Not built with profile variant.')
+        if not self.has_coverage:
+            self.host.error('Not built with coverage variant.')
 
         # Set the realm_label so we can push corpus data to the device.
         if not local or input_dirs:

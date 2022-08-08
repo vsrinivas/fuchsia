@@ -570,7 +570,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_generate_coverage_report_local(self):
         # Prerequisites
-        fuzzer = self.create_fuzzer('1/1')
+        fuzzer = self.create_fuzzer('1/5', include_tests=True)
 
         # Assert that we need an ssh identity.
         # This cannot be tested since device is instantiated as part of the
@@ -588,17 +588,12 @@ class FuzzerTest(TestCaseWithFuzzer):
         #     'Unable to determine device address.'
         # )
 
-        # Assert that not building with profile variant causes an error.
-        with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
-                                                  'args.json'), 'w') as f:
-            json.dump({'select_variant': ['not-profile']}, f)
+        # Assert that not building with coverage variant causes an error.
         self.assertError(
             lambda: self.fuzzer.generate_coverage_report(local=True),
-            'Not built with profile variant.')
+            'Not built with coverage variant.')
 
-        with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
-                                                  'args.json'), 'w') as f:
-            json.dump({'select_variant': ['profile']}, f)
+        fuzzer = self.create_fuzzer('1/4', include_tests=True)
 
         self._setup_coverage(fuzzer)
 
@@ -606,12 +601,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_generate_coverage_report_with_clusterfuzz(self):
         # Prerequisites
-        fuzzer = self.create_fuzzer('1/1')
-        fuzzer._is_test = True
-
-        with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
-                                                  'args.json'), 'w') as f:
-            json.dump({'select_variant': ['profile']}, f)
+        fuzzer = self.create_fuzzer('1/4', include_tests=True)
 
         self._setup_coverage(fuzzer)
 
@@ -637,12 +627,7 @@ class FuzzerTest(TestCaseWithFuzzer):
 
     def test_generate_coverage_report_with_local_corpus(self):
         # Prerequisites
-        fuzzer = self.create_fuzzer('1/1')
-        fuzzer._is_test = True
-
-        with self.host.open(self.buildenv.abspath(self.buildenv.build_dir,
-                                                  'args.json'), 'w') as f:
-            json.dump({'select_variant': ['profile']}, f)
+        fuzzer = self.create_fuzzer('1/4', include_tests=True)
 
         self._setup_coverage(fuzzer)
 

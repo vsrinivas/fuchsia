@@ -575,7 +575,7 @@ class ArgsTest(TestCaseWithFactory):
                 'Usage: fx fuzz coverage [OPTIONS] NAME',
                 '',
                 '[EXPERIMENTAL] Generates a coverage report for a set of tests.',
-                'Requires --variant profile to be set via fx set to generate the',
+                'Requires --variant coverage to be set via fx set to generate the',
                 'necessary symbols. It is suggested to run with --no-goma in order',
                 'to preserve linking to files in the report.',
                 '',

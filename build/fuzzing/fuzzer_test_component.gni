@@ -47,6 +47,21 @@ template("fuzzer_test_component") {
       deps = invoker.deps + [ ":$meta_target_name" ]
     }
 
+    # Determine whether this fuzzer test is being built as a variant with coverage
+    has_coverage = false
+    foreach(selector, select_variant_canonical) {
+      if (!has_coverage && selector.variant_tags + [ "coverage" ] -
+                           [ "coverage" ] != selector.variant_tags) {
+        has_coverage =
+            (defined(selector.target_type) &&
+             selector.target_type == [ "fuzzer_test_executable" ]) ||
+            (defined(selector.output_name) &&
+             selector.output_name == [ fuzzer_test ]) ||
+            (defined(selector.label) && selector.label == [ label ]) ||
+            (defined(selector.name) && selector.name == [ fuzzer_test ])
+      }
+    }
+
     group(meta_target_name) {
       testonly = true
       deps = invoker.deps + [ "//build/fuzzing:includes_cml" ]
@@ -72,6 +87,7 @@ template("fuzzer_test_component") {
           {
             label = invoker.label
             fuzzer_test = fuzzer_test
+            has_coverage = has_coverage
             test_manifest = get_target_outputs(":${invoker.target_name}")
             test_manifest = get_path_info(test_manifest[0], "file")
           },

@@ -44,14 +44,16 @@
         "manifest": "an-extremely-verbose-target-name.cmx"
     },
     {
-        "_COMMENT": "Simulate fuzzer('target4') in //src/fake/package1/BUILD.gn that is NOT instrumented",
+        "_COMMENT": "Simulate fuzzer('target4') in //src/fake/package1/BUILD.gn that is NOT instrumented, with coverage",
         "fuzzer_test": "fake-target4_test",
+        "has_coverage": true,
         "label": "//src/fake/package1:target4",
         "test_manifest": "fake-target4_test.cmx"
     },
     {
-        "_COMMENT": "Simulate fuzzer('target5') in //src/fake/package1/BUILD.gn that is NOT instrumented",
+        "_COMMENT": "Simulate fuzzer('target5') in //src/fake/package1/BUILD.gn that is NOT instrumented, without coverage",
         "fuzzer_test": "fake-target5_test",
+        "has_coverage": false,
         "label": "//src/fake/package1:target5",
         "test_manifest": "fake-target5_test.cmx"
     },
