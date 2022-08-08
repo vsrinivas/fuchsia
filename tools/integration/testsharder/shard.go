@@ -55,7 +55,7 @@ type Shard struct {
 }
 
 // CreatePackageRepo creates a package repository for the given shard.
-func (s *Shard) CreatePackageRepo(buildDir string, globalRepoMetadata string) error {
+func (s *Shard) CreatePackageRepo(buildDir string, globalRepoMetadata string, cacheTestPackages bool) error {
 	globalRepoMetadata = filepath.Join(buildDir, globalRepoMetadata)
 
 	// The path to the package repository should be unique so as to not
@@ -86,32 +86,33 @@ func (s *Shard) CreatePackageRepo(buildDir string, globalRepoMetadata string) er
 			}
 		}
 	}
+	// Add the blobs we expect the shard to access if the caller wants us to
+	// set up a local package cache.
+	if cacheTestPackages {
+		var pkgManifests []string
+		for _, t := range s.Tests {
+			pkgManifests = append(pkgManifests, t.PackageManifests...)
+		}
 
-	// Aggregate the package manifests we know will be used by the shard.
-	var pkgManifests []string
-	for _, t := range s.Tests {
-		pkgManifests = append(pkgManifests, t.PackageManifests...)
-	}
-
-	// Add the blobs we expect the shard to access.
-	blobsDir := filepath.Join(localRepo, blobsDirName)
-	addedBlobs := make(map[string]struct{})
-	if err := os.Mkdir(blobsDir, os.ModePerm); err != nil {
-		return err
-	}
-	for _, p := range pkgManifests {
-		manifest, err := pm_build.LoadPackageManifest(filepath.Join(buildDir, p))
-		if err != nil {
+		blobsDir := filepath.Join(localRepo, blobsDirName)
+		addedBlobs := make(map[string]struct{})
+		if err := os.Mkdir(blobsDir, os.ModePerm); err != nil {
 			return err
 		}
-		for _, blob := range manifest.Blobs {
-			if _, exists := addedBlobs[blob.Merkle.String()]; !exists {
-				src := filepath.Join(buildDir, blob.SourcePath)
-				dst := filepath.Join(blobsDir, blob.Merkle.String())
-				if err := linkOrCopy(src, dst); err != nil {
-					return err
+		for _, p := range pkgManifests {
+			manifest, err := pm_build.LoadPackageManifest(filepath.Join(buildDir, p))
+			if err != nil {
+				return err
+			}
+			for _, blob := range manifest.Blobs {
+				if _, exists := addedBlobs[blob.Merkle.String()]; !exists {
+					src := filepath.Join(buildDir, blob.SourcePath)
+					dst := filepath.Join(blobsDir, blob.Merkle.String())
+					if err := linkOrCopy(src, dst); err != nil {
+						return err
+					}
+					addedBlobs[blob.Merkle.String()] = struct{}{}
 				}
-				addedBlobs[blob.Merkle.String()] = struct{}{}
 			}
 		}
 	}
