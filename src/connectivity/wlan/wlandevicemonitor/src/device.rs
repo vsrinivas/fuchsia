@@ -20,7 +20,7 @@ use {
 use crate::{device_watch, inspect, watchable_map::WatchableMap};
 
 /// Iface's PHY information.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PhyOwnership {
     // Iface's global PHY ID.
     pub phy_id: u16,
@@ -28,7 +28,7 @@ pub struct PhyOwnership {
     pub phy_assigned_id: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NewIface {
     // Global, unique iface ID.
     pub id: u16,

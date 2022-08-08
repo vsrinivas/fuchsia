@@ -21,7 +21,6 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.diagnostics.persist.DataPersistence-wlan",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.wlan.device.service.DeviceMonitor",
             ],
         },
     ],

@@ -37,7 +37,6 @@ pub async fn serve_device_requests(
     ifaces: Arc<IfaceMap>,
     mut req_stream: fidl_svc::DeviceServiceRequestStream,
     inspect_tree: Arc<inspect::WlanstackTree>,
-    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), anyhow::Error> {
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
@@ -53,7 +52,6 @@ pub async fn serve_device_requests(
                     &ifaces,
                     &iface_counter,
                     &inspect_tree,
-                    dev_monitor_proxy.clone(),
                     persistence_req_sender.clone(),
                 )
                 .await;
@@ -92,7 +90,6 @@ async fn add_iface(
     ifaces: &Arc<IfaceMap>,
     iface_counter: &Arc<IfaceCounter>,
     inspect_tree: &Arc<inspect::WlanstackTree>,
-    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> AddIfaceResult {
     // Utilize the provided MLME channel to construct a future to serve the SME.
@@ -142,7 +139,6 @@ async fn add_iface(
         mac_sublayer_support,
         security_support,
         spectrum_management_support,
-        dev_monitor_proxy,
         persistence_req_sender,
         req.generic_sme,
     ) {
@@ -214,9 +210,6 @@ mod tests {
         let iface_map = Arc::new(IfaceMap::new());
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (dev_monitor_proxy, _) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
-                .expect("failed to create DeviceMonitor proxy");
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
@@ -233,15 +226,8 @@ mod tests {
             iface: mlme_channel,
             generic_sme,
         };
-        let fut = add_iface(
-            req,
-            &cfg,
-            &iface_map,
-            &iface_counter,
-            &inspect_tree,
-            dev_monitor_proxy,
-            persistence_req_sender,
-        );
+        let fut =
+            add_iface(req, &cfg, &iface_map, &iface_counter, &inspect_tree, persistence_req_sender);
         pin_mut!(fut);
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -297,9 +283,6 @@ mod tests {
         let iface_map = Arc::new(IfaceMap::new());
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (dev_monitor_proxy, _) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
-                .expect("failed to create DeviceMonitor proxy");
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
@@ -319,15 +302,8 @@ mod tests {
             iface: mlme_channel,
             generic_sme,
         };
-        let fut = add_iface(
-            req,
-            &cfg,
-            &iface_map,
-            &iface_counter,
-            &inspect_tree,
-            dev_monitor_proxy,
-            persistence_req_sender,
-        );
+        let fut =
+            add_iface(req, &cfg, &iface_map, &iface_counter, &inspect_tree, persistence_req_sender);
         pin_mut!(fut);
 
         // The future should have returned bad status here.
@@ -346,9 +322,6 @@ mod tests {
         let iface_map = Arc::new(IfaceMap::new());
         let iface_counter = Arc::new(IfaceCounter::new());
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (dev_monitor_proxy, _) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
-                .expect("failed to create DeviceMonitor proxy");
         let cfg = ServiceCfg { wep_supported: false, wpa1_supported: false };
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
@@ -366,15 +339,8 @@ mod tests {
             iface: mlme_channel,
             generic_sme,
         };
-        let fut = add_iface(
-            req,
-            &cfg,
-            &iface_map,
-            &iface_counter,
-            &inspect_tree,
-            dev_monitor_proxy,
-            persistence_req_sender,
-        );
+        let fut =
+            add_iface(req, &cfg, &iface_map, &iface_counter, &inspect_tree, persistence_req_sender);
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 

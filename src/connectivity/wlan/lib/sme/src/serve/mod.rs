@@ -37,7 +37,7 @@ pub enum SmeServer {
 }
 
 async fn serve_generic_sme(
-    generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
+    mut generic_sme_stream: <fidl_sme::GenericSmeMarker as fidl::endpoints::ProtocolMarker>::RequestStream,
     mlme_sink: crate::MlmeSink,
     mut sme_server_sender: SmeServer,
     mut telemetry_server_sender: Option<
@@ -47,10 +47,6 @@ async fn serve_generic_sme(
         fidl::endpoints::ServerEnd<fidl_sme::FeatureSupportMarker>,
     >,
 ) -> Result<(), anyhow::Error> {
-    let mut generic_sme_stream = match generic_sme.into_stream() {
-        Ok(stream) => stream,
-        Err(e) => return Err(format_err!("Failed to handle Generic SME stream: {}", e)),
-    };
     loop {
         match generic_sme_stream.next().await {
             Some(Ok(req)) => {
@@ -139,7 +135,7 @@ pub fn create_sme(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
-    generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
+    generic_sme_stream: <fidl_sme::GenericSmeMarker as fidl::endpoints::ProtocolMarker>::RequestStream,
 ) -> (MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let device_info = device_info.clone();
     let (server, mlme_req_sink, mlme_req_stream, telemetry_sender, sme_fut) = match device_info.role
@@ -198,7 +194,7 @@ pub fn create_sme(
         serve_fidl(mlme_req_sink.clone(), feature_support_receiver, handle_feature_support_query)
             .map(|result| result.map(|_| ()));
     let generic_sme_fut = serve_generic_sme(
-        generic_sme,
+        generic_sme_stream,
         mlme_req_sink,
         server,
         telemetry_sender,
@@ -333,7 +329,7 @@ mod tests {
     use {
         super::*,
         crate::test_utils,
-        fidl::endpoints::create_proxy,
+        fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fuchsia_async as fasync,
         fuchsia_inspect::Inspector,
         futures::task::Poll,
@@ -360,8 +356,9 @@ mod tests {
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, _persistence_stream) =
             test_utils::create_inspect_persistence_channel();
-        let (generic_sme_proxy, generic_sme_server) =
-            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
+        let (generic_sme_proxy, generic_sme_stream) =
+            create_proxy_and_stream::<fidl_sme::GenericSmeMarker>()
+                .expect("failed to create MlmeProxy");
         let (_mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
             mlme_event_stream,
@@ -372,7 +369,7 @@ mod tests {
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,
-            generic_sme_server,
+            generic_sme_stream,
         );
         pin_mut!(serve_fut);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
@@ -406,8 +403,9 @@ mod tests {
         let iface_tree_holder = IfaceTreeHolder::new(inspector.root().create_child("sme"));
         let (persistence_req_sender, persistence_stream) =
             test_utils::create_inspect_persistence_channel();
-        let (generic_sme_proxy, generic_sme_server) =
-            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
+        let (generic_sme_proxy, generic_sme_stream) =
+            create_proxy_and_stream::<fidl_sme::GenericSmeMarker>()
+                .expect("failed to create MlmeProxy");
         let device_info = fidl_mlme::DeviceInfo { role, ..test_utils::fake_device_info([0; 6]) };
         let (mlme_req_stream, serve_fut) = create_sme(
             crate::Config::default(),
@@ -419,7 +417,7 @@ mod tests {
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,
-            generic_sme_server,
+            generic_sme_stream,
         );
         let mut serve_fut = Box::pin(serve_fut);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);

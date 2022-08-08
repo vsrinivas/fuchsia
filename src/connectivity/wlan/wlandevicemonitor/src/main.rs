@@ -19,7 +19,8 @@ use {
     fuchsia_inspect::Inspector,
     fuchsia_syslog as syslog,
     futures::{
-        future::{try_join3, BoxFuture},
+        channel::mpsc,
+        future::{try_join4, BoxFuture},
         StreamExt, TryFutureExt,
     },
     log::{error, info},
@@ -34,6 +35,7 @@ async fn serve_fidl(
     ifaces: Arc<device::IfaceMap>,
     watcher_service: watcher_service::WatcherService<device::PhyDevice, device::IfaceDevice>,
     dev_svc: fidl_svc::DeviceServiceProxy,
+    new_iface_sink: mpsc::UnboundedSender<device::NewIface>,
 ) -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |reqs| {
         let fut = service::serve_monitor_requests(
@@ -42,6 +44,7 @@ async fn serve_fidl(
             ifaces.clone(),
             watcher_service.clone(),
             dev_svc.clone(),
+            new_iface_sink.clone(),
         )
         .unwrap_or_else(|e| error!("error serving device monitor API: {}", e));
         fasync::Task::spawn(fut).detach()
@@ -99,12 +102,19 @@ async fn main() -> Result<(), Error> {
     let inspect_tree = Arc::new(inspect::WlanMonitorTree::new(inspector));
 
     let phy_server = serve_phys(phys.clone(), inspect_tree.clone());
-    let fidl_fut = serve_fidl(fs, phys, ifaces, watcher_service, dev_svc);
 
-    let ((), (), ()) = try_join3(
+    let (new_iface_sink, new_iface_stream) = mpsc::unbounded();
+    let fidl_fut =
+        serve_fidl(fs, phys.clone(), ifaces.clone(), watcher_service, dev_svc, new_iface_sink);
+
+    let new_iface_fut =
+        service::handle_new_iface_stream(phys.clone(), ifaces.clone(), new_iface_stream);
+
+    let ((), (), (), ()) = try_join4(
         fidl_fut,
         phy_server.map_ok(|_: void::Void| ()),
         watcher_fut.map_ok(|_: void::Void| ()),
+        new_iface_fut,
     )
     .await?;
     error!("Exiting");

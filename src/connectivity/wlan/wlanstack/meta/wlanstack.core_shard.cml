@@ -20,12 +20,6 @@
             to: "#wlanstack",
         },
         {
-            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
-            from: "#wlandevicemonitor",
-            to: "#wlanstack",
-            dependency: "weak",
-        },
-        {
             protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
             from: "#diagnostics-persistence",
             to: "#wlanstack",

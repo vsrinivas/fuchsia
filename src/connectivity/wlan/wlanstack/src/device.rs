@@ -4,9 +4,11 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl::endpoints::ControlHandle,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{auto_persist, inspect_log},
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, future::Future, select, FutureExt, StreamExt},
     log::info,
     parking_lot::Mutex,
@@ -82,11 +84,12 @@ pub fn create_and_serve_sme(
     mac_sublayer_support: fidl_common::MacSublayerSupport,
     security_support: fidl_common::SecuritySupport,
     spectrum_management_support: fidl_common::SpectrumManagementSupport,
-    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let (mlme_event_sender, mlme_event_receiver) = mpsc::unbounded();
+    let (generic_sme_stream, generic_sme_control_handle) =
+        generic_sme.into_stream_and_control_handle()?;
     let (mlme_req_stream, sme_fut) = create_sme(
         cfg.into(),
         mlme_event_receiver,
@@ -97,7 +100,7 @@ pub fn create_and_serve_sme(
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
         persistence_req_sender,
-        generic_sme,
+        generic_sme_stream,
     );
     let forward_mlme_msgs_fut = forward_mlme_msgs(
         mlme_proxy.clone(),
@@ -135,13 +138,12 @@ pub fn create_and_serve_sme(
         inspect_tree.unmark_active_client_iface(id);
         ifaces.remove(&id);
 
-        // Upon any error associated with the iface in wlanstack, the iface should be destroyed
-        // since it can no longer being managed by wlanstack. This includes either the associated
-        // MLME or SME FIDL channels being closed.
-        let mut req = fidl_fuchsia_wlan_device_service::DestroyIfaceRequest { iface_id: id };
-        if let Err(e) = dev_monitor_proxy.destroy_iface(&mut req).await {
-            info!("unable to inform DeviceMonitor of interface removal: {:?}", e);
-        }
+        let epitaph = match result {
+            Ok(()) => zx::Status::OK,
+            Err(_) => zx::Status::CONNECTION_ABORTED,
+        };
+        // If this shutdown is due to the generic SME closing, this is a no-op.
+        generic_sme_control_handle.shutdown_with_epitaph(epitaph);
 
         result
     })
@@ -231,7 +233,6 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
         futures::task::Poll,
-        futures::StreamExt,
         pin_utils::pin_mut,
         wlan_common::{
             assert_variant, test_utils::fake_features::fake_spectrum_management_support_empty,
@@ -281,9 +282,6 @@ mod tests {
         let iface_map = Arc::new(iface_map);
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
-        let (dev_monitor_proxy, _) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
-                .expect("failed to create DeviceMonitor proxy");
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
         let (generic_sme_proxy, generic_sme_server) =
@@ -304,7 +302,6 @@ mod tests {
             fake_mac_sublayer_support(),
             fake_security_support(),
             fake_spectrum_management_support_empty(),
-            dev_monitor_proxy,
             persistence_req_sender,
             generic_sme_server,
         )
@@ -335,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    fn sme_shutdown_signal() {
+    fn sme_shutdown_by_generic_sme() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mlme_proxy, _mlme_server) =
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
@@ -343,12 +340,6 @@ mod tests {
         let iface_map = Arc::new(iface_map);
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
-        let (dev_monitor_proxy, dev_monitor_server) =
-            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
-                .expect("failed to create DeviceMonitor proxy");
-        let mut dev_monitor_stream = dev_monitor_server
-            .into_stream()
-            .expect("failed to create DeviceMonitor request stream");
         let (persistence_req_sender, _persistence_stream) =
             test_helper::create_inspect_persistence_channel();
         let (generic_sme_proxy, generic_sme_server) =
@@ -369,7 +360,6 @@ mod tests {
             fake_mac_sublayer_support(),
             fake_security_support(),
             fake_spectrum_management_support_empty(),
-            dev_monitor_proxy,
             persistence_req_sender,
             generic_sme_server,
         )
@@ -385,21 +375,66 @@ mod tests {
 
         // SME closes when generic SME is closed.
         drop(generic_sme_proxy);
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Verify that a notification is sent to DeviceMonitor.
-        assert_variant!(
-            exec.run_until_stalled(&mut dev_monitor_stream.next()),
-            Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::DestroyIface {
-                req,
-                responder,
-            }))) => {
-            assert_eq!(req, fidl_fuchsia_wlan_device_service::DestroyIfaceRequest { iface_id: 5 });
-            responder.send(0).expect("failed to send result to SME fut.");
-        });
 
         // The SME future should complete successfully.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Ready(Ok(())));
+    }
+
+    #[test]
+    fn sme_shutdown_by_mlme_proxy() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (mlme_proxy, mlme_server) =
+            create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let iface_map = IfaceMap::new();
+        let iface_map = Arc::new(iface_map);
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
+        let iface_tree_holder = inspect_tree.create_iface_child(1);
+        let (persistence_req_sender, _persistence_stream) =
+            test_helper::create_inspect_persistence_channel();
+        let (generic_sme_proxy, generic_sme_server) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("failed to create MlmeProxy");
+
+        // Assert that the IfaceMap is initially empty.
+        assert!(iface_map.get(&5).is_none());
+
+        let serve_fut = create_and_serve_sme(
+            ServiceCfg::default(),
+            5,
+            PhyOwnership { phy_id: 1, phy_assigned_id: 2 },
+            mlme_proxy,
+            iface_map.clone(),
+            inspect_tree.clone(),
+            iface_tree_holder,
+            fake_device_info(),
+            fake_mac_sublayer_support(),
+            fake_security_support(),
+            fake_spectrum_management_support_empty(),
+            persistence_req_sender,
+            generic_sme_server,
+        )
+        .expect("failed to create SME");
+
+        // Assert that the IfaceMap now has an entry for the new iface.
+        assert!(iface_map.get(&5).is_some());
+
+        pin_mut!(serve_fut);
+
+        // Progress to cause SME creation and serving.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        drop(mlme_server);
+
+        // The SME future should complete successfully.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Ready(Ok(())));
+
+        // Verify that the generic SME stream completes with an epitaph.
+        let mut generic_sme_stream = generic_sme_proxy.take_event_stream();
+        assert_variant!(
+            exec.run_until_stalled(&mut generic_sme_stream.next()),
+            Poll::Ready(Some(Err(fidl::Error::ClientChannelClosed { status, .. }))) => {
+                assert_eq!(status, zx::Status::OK);
+            }
+        );
     }
 
     #[test]

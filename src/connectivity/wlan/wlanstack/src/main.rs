@@ -90,12 +90,7 @@ async fn main() -> Result<(), Error> {
     let ifaces = IfaceMap::new();
     let ifaces = Arc::new(ifaces);
 
-    let dev_monitor = fuchsia_component::client::connect_to_protocol::<
-        fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
-    >()
-    .context("Failed to connect to DeviceMonitor.")?;
-    let serve_fidl_fut =
-        serve_fidl(cfg, fs, ifaces, inspect_tree, dev_monitor, persistence_req_sender);
+    let serve_fidl_fut = serve_fidl(cfg, fs, ifaces, inspect_tree, persistence_req_sender);
 
     let ((), ()) = try_join(serve_fidl_fut, persistence_req_forwarder_fut.map(Ok)).await?;
     info!("Exiting");
@@ -111,7 +106,6 @@ async fn serve_fidl(
     mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
     ifaces: Arc<IfaceMap>,
     inspect_tree: Arc<inspect::WlanstackTree>,
-    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
@@ -122,7 +116,6 @@ async fn serve_fidl(
         let cfg = cfg.clone();
         let inspect_tree = inspect_tree.clone();
         let iface_counter = iface_counter.clone();
-        let dev_monitor_proxy = dev_monitor_proxy.clone();
         let persistence_req_sender = persistence_req_sender.clone();
         async move {
             match s {
@@ -133,7 +126,6 @@ async fn serve_fidl(
                         ifaces,
                         stream,
                         inspect_tree,
-                        dev_monitor_proxy,
                         persistence_req_sender,
                     )
                     .unwrap_or_else(|e| println!("{:?}", e))
