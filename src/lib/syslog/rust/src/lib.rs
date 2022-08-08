@@ -467,15 +467,30 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use diagnostics_data::{assert_data_tree, Severity};
-    use diagnostics_message::{self as message, LoggerMessage, MonikerWithUrl};
+    use diagnostics_data::Severity;
+    use diagnostics_message::LoggerMessage;
     use log::{debug, error, info, trace, warn};
-    use std::convert::TryFrom;
-    use std::fs::File;
-    use std::io::Read;
-    use std::os::unix::io::AsRawFd;
+    use std::convert::TryFrom as _;
     use std::ptr;
-    use tempfile::TempDir;
+
+    #[track_caller]
+    fn assert_message(
+        socket: &zx::Socket,
+        severity: Severity,
+        verbosity: Option<i8>,
+        tags: &[&str],
+        payload: impl AsRef<str>,
+    ) {
+        let mut buffer: [u8; 1024] = [0; 1024];
+        let read_len = socket.read(&mut buffer).expect("socket read failed");
+        let msg = LoggerMessage::try_from(&buffer[..read_len])
+            .expect("couldn't decode message from buffer");
+
+        assert_eq!(msg.severity, severity);
+        assert_eq!(msg.verbosity, verbosity);
+        assert_eq!(&*msg.message, payload.as_ref());
+        assert_eq!(msg.tags.iter().map(|s| &**s).collect::<Vec<_>>().as_slice(), tags);
+    }
 
     #[test]
     /// Validate that using `build_with_tags_and_socket` results in log packets
@@ -485,49 +500,22 @@ mod test {
         // and write a simple message to it.
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
             .expect("Datagram socket could not be made");
-        let tags: [&str; 1] = ["[testing]"];
-        let logger = build_with_tags_and_socket(rx, &tags).expect("failed to create logger");
+        let tags = ["[testing]"];
+        let logger = build_with_tags_and_socket(tx, &tags).expect("failed to create logger");
         logger.log_f(levels::ERROR, format_args!("{}-{}", "hello", "world"), None);
 
-        // Read out of the socket into a `Message`, but using a fake
-        // component identity.
-        let mut buffer: [u8; 1024] = [0; 1024];
-        let read_len = tx.read(&mut buffer).expect("socket read failed");
-        let src_id = MonikerWithUrl {
-            moniker: "fake-test-env/test-component.cmx".to_string(),
-            url: "fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string(),
-        };
-
-        let msg = message::from_logger(
-            src_id.clone(),
-            LoggerMessage::try_from(&buffer[..read_len])
-                .expect("couldn't decode message from buffer"),
-        );
-
-        // Check metadata and payload
-        assert_eq!(msg.metadata.errors, None);
-        assert_eq!(msg.metadata.component_url, Some(src_id.url.to_string()));
-        assert_eq!(msg.metadata.severity, Severity::Error);
-        assert_eq!(msg.metadata.tags, Some(tags.map(|e| e.to_string()).to_vec()));
-        assert_data_tree!(msg.payload.as_ref().expect("message had no payload"),
-            root: {
-                message: {
-                    value: "hello-world"
-                }
-            }
-        );
+        assert_message(&rx, Severity::Error, None, &tags[..], "hello-world");
     }
 
     #[test]
     fn test() {
-        let tmp_dir = TempDir::new().expect("should have created tempdir");
-        let file_path = tmp_dir.path().join("tmp_file");
-        let tmp_file = File::create(&file_path).expect("should have created file");
+        let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            .expect("Datagram socket could not be made");
         let config = syslog::fx_logger_config_t {
             min_severity: levels::INFO,
-            console_fd: tmp_file.as_raw_fd(),
+            console_fd: -1,
             log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
-            log_sink_socket: zx::sys::ZX_HANDLE_INVALID,
+            log_sink_socket: tx.into_raw(),
             tags: ptr::null(),
             num_tags: 0,
         };
@@ -535,32 +523,36 @@ mod test {
         assert_eq!(status, zx::Status::OK.into_raw());
 
         fx_log_info!("info msg {}", 10);
-        let mut expected: Vec<String> = vec![String::from("[] INFO: info msg 10")];
+        assert_message(&rx, Severity::Info, None, &[], "info msg 10");
 
         fx_log_warn!("warn msg {}", 10);
-        expected.push(String::from("[] WARNING: warn msg 10"));
+        assert_message(&rx, Severity::Warn, None, &[], "warn msg 10");
 
         fx_log_err!("err msg {}", 10);
         let line = line!() - 1;
-        expected.push(format!(
-            "[] ERROR: [{}({})] err msg 10",
-            file!().trim_start_matches("../"),
-            line
-        ));
+        assert_message(
+            &rx,
+            Severity::Error,
+            None,
+            &[],
+            format!("[{}({})] err msg 10", file!().trim_start_matches("../"), line),
+        );
 
         fx_log_info!(tag:"info_tag", "info msg {}", 10);
-        expected.push(String::from("[info_tag] INFO: info msg 10"));
+        assert_message(&rx, Severity::Info, None, &["info_tag"], "info msg 10");
 
         fx_log_warn!(tag:"warn_tag", "warn msg {}", 10);
-        expected.push(String::from("[warn_tag] WARNING: warn msg 10"));
+        assert_message(&rx, Severity::Warn, None, &["warn_tag"], "warn msg 10");
 
         fx_log_err!(tag:"err_tag", "err msg {}", 10);
         let line = line!() - 1;
-        expected.push(format!(
-            "[err_tag] ERROR: [{}({})] err msg 10",
-            file!().trim_start_matches("../"),
-            line
-        ));
+        assert_message(
+            &rx,
+            Severity::Error,
+            None,
+            &["err_tag"],
+            format!("[{}({})] err msg 10", file!().trim_start_matches("../"), line),
+        );
 
         //test verbosity
         fx_vlog!(1, "verbose msg {}", 10); // will not log
@@ -568,68 +560,47 @@ mod test {
 
         set_verbosity(1);
         fx_vlog!(1, "verbose2 msg {}", 10);
-        expected.push(String::from("[] VLOG(1): verbose2 msg 10"));
+        assert_message(&rx, Severity::Debug, Some(1), &[], "verbose2 msg 10");
 
         fx_vlog!(tag:"v_tag", 1, "verbose2 msg {}", 10);
-        expected.push(String::from("[v_tag] VLOG(1): verbose2 msg 10"));
+        assert_message(&rx, Severity::Debug, Some(1), &["v_tag"], "verbose2 msg 10");
 
         // test log crate
-        log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
-
-        set_severity(levels::DEBUG);
-        info!("log info: {}", 10);
         let tag = "fuchsia_syslog_lib_test::test";
-        expected.push(format!("[{}] INFO: log info: 10", tag));
+        log::set_logger(&*LOGGER).expect("Attempted to initialize multiple loggers");
+        set_severity(levels::DEBUG);
+
+        info!("log info: {}", 10);
+        assert_message(&rx, Severity::Info, None, &[tag], "log info: 10");
 
         warn!("log warn: {}", 10);
-        expected.push(format!("[{}] WARNING: log warn: 10", tag));
+        assert_message(&rx, Severity::Warn, None, &[tag], "log warn: 10");
 
         error!("log err: {}", 10);
         let line = line!() - 1;
-        expected.push(format!(
-            "[{}] ERROR: [{}({})] log err: 10",
-            tag,
-            file!().trim_start_matches("../"),
-            line
-        ));
+        assert_message(
+            &rx,
+            Severity::Error,
+            None,
+            &[tag],
+            format!("[{}({})] log err: 10", file!().trim_start_matches("../"), line),
+        );
 
         debug!("log debug: {}", 10);
-        expected.push(format!("[{}] DEBUG: log debug: 10", tag));
+        assert_message(&rx, Severity::Debug, None, &[tag], "log debug: 10");
 
         trace!("log trace: {}", 10); // will not log
 
         set_severity(levels::TRACE);
+
         trace!("log trace2: {}", 10);
-        expected.push(format!("[{}] TRACE: log trace2: 10", tag));
+        assert_message(&rx, Severity::Trace, None, &[tag], "log trace2: 10");
 
         // test set_severity
         set_severity(levels::WARN);
+
         info!("log info, will not log: {}", 10);
         warn!("log warn, will log: {}", 10);
-        expected.push(format!("[{}] WARNING: log warn, will log: 10", tag));
-
-        let mut tmp_file = File::open(&file_path).expect("should have opened the file");
-        let mut content = String::new();
-        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
-        let msgs = content.split("\n");
-        let mut i = 0;
-        for msg in msgs {
-            if msg == "" {
-                // last line - blank message
-                continue;
-            }
-            if expected.len() <= i {
-                panic!("Got extra line in msg \"{}\", full content\n{}", msg, content);
-            } else if !msg.ends_with(&expected[i]) {
-                panic!(
-                    "expected msg:\n\"{}\"\nto end with\n\"{}\"\nfull content\n{}",
-                    msg, expected[i], content
-                );
-            }
-            i = i + 1;
-        }
-        if expected.len() != i {
-            panic!("expected msgs:\n{:?}\nfull content\n{}", expected, content);
-        }
+        assert_message(&rx, Severity::Warn, None, &[tag], "log warn, will log: 10");
     }
 }

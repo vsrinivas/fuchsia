@@ -15,8 +15,11 @@ int main(int argc, const char** argv) {
   fx_logger_config_t config = {
       // TODO(brunodalbo) load severity from argc (we use this as injected-services, which doesn't
       // seem to be respecting arguments)
-      .min_severity = FX_LOG_INFO,          .console_fd = -1, .log_sink_channel = ZX_HANDLE_INVALID,
-      .log_sink_socket = ZX_HANDLE_INVALID, .tags = nullptr,  .num_tags = 0,
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = ZX_HANDLE_INVALID,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = nullptr,
+      .num_tags = 0,
   };
   fx_log_reconfigure(&config);
 

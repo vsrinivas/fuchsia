@@ -58,9 +58,7 @@ typedef struct fx_logger_config {
   // Log messages with lower severity will be discarded.
   fx_log_severity_t min_severity;
 
-  // The file descriptor to which formatted log messages should be written,
-  // or -1 if log messages should not be written to the console.
-  // logger takes ownership of this fd.
+  // Unused.
   int console_fd;
 
   // A handle to the channel for a fuchsia.logger/LogSink instance to receive
@@ -112,7 +110,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
 
 // Destroys a logger object.
 //
-// This closes |console_fd|, |log_sink_channel|, or |log_sink_socket| which were passed in
+// This closes |log_sink_channel|, or |log_sink_socket| which were passed in
 // |fx_logger_config_t|.
 void fx_logger_destroy(fx_logger_t* logger);
 
@@ -140,8 +138,8 @@ void fx_logger_set_connection(fx_logger_t* logger, zx_handle_t handle);
 void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd);
 
 // Reconfigures the given logger with the specified configuration.
-// If |console_fd|, |log_sink_channel|, and |log_sink_socket| are invalid in |config|,
-// this function doesn't change the currently used file descriptor or channel.
+// If |log_sink_channel| and |log_sink_socket| are invalid in |config|, this
+// function doesn't change the currently used file descriptor or channel.
 //
 // Returns:
 // - ZX_ERR_INVALID_ARGS if config is invalid (i.e. is null or has more than
@@ -150,8 +148,8 @@ void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd);
 zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t* config);
 
 // Reconfigures the given logger with the specified configuration.
-// If |console_fd|, |log_sink_channel|, and |log_sink_socket| are invalid in |config|,
-// this function doesn't change the currently used file descriptor or channel.
+// If |log_sink_channel| and |log_sink_socket| are invalid in |config|, this
+// function doesn't change the currently used file descriptor or channel.
 // Any passed in socket is assumed to be structured.
 //
 // Returns:

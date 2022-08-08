@@ -67,7 +67,6 @@ class LoggingSocketTest : public LoggingBaseSocketTest {
 
     fx_logger_config_t config = {
         .min_severity = syslog::LOG_INFO,
-        .console_fd = -1,
         .log_sink_socket = local.release(),
         .tags = nullptr,
         .num_tags = 0,
@@ -81,7 +80,6 @@ TEST_F(LoggingBaseSocketTest, LoggerCreatedNotConnected) {
   fx_logger_t* logger = NULL;
   fx_logger_config_t config = {
       .min_severity = syslog::LOG_INFO,
-      .console_fd = -1,
       .tags = nullptr,
       .num_tags = 0,
   };
@@ -98,7 +96,6 @@ TEST_F(LoggingBaseSocketTest, LoggerCreatedConnected) {
   fx_logger_t* logger = NULL;
   fx_logger_config_t config = {
       .min_severity = syslog::LOG_INFO,
-      .console_fd = -1,
       .tags = nullptr,
       .num_tags = 0,
   };
@@ -115,7 +112,6 @@ TEST_F(LoggingBaseSocketTest, LoggerReconfiguredConnected) {
   fx_logger_t* logger = NULL;
   fx_logger_config_t config = {
       .min_severity = syslog::LOG_INFO,
-      .console_fd = -1,
       .tags = nullptr,
       .num_tags = 0,
   };
@@ -130,7 +126,6 @@ TEST_F(LoggingBaseSocketTest, LoggerReconfiguredConnected) {
 
   config = {
       .min_severity = syslog::LOG_INFO,
-      .console_fd = -1,
       .log_sink_socket = local.release(),
       .tags = nullptr,
       .num_tags = 0,
@@ -148,7 +143,6 @@ TEST_F(LoggingBaseSocketTest, LoggerSetConnected) {
   fx_logger_t* logger = NULL;
   fx_logger_config_t config = {
       .min_severity = syslog::LOG_INFO,
-      .console_fd = -1,
       .tags = nullptr,
       .num_tags = 0,
   };

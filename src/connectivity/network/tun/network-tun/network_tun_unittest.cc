@@ -480,7 +480,6 @@ class TunTest : public gtest::RealLoopFixture {
   void SetUp() override {
     fx_logger_config_t log_cfg = {
         .min_severity = -2,
-        .console_fd = -1,
         .tags = nullptr,
         .num_tags = 0,
     };

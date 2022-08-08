@@ -26,16 +26,6 @@ const char* kFilePath = syslog::internal::StripDots(__FILE__);
 
 constexpr std::array<const char*, FX_LOG_MAX_TAGS + 1> kTooManyTags = {"1", "2", "3", "4", "5"};
 
-bool ends_with(const char* str, const fbl::String& suffix) {
-  size_t str_len = strlen(str);
-  size_t suffix_len = suffix.size();
-  if (str_len < suffix_len) {
-    return false;
-  }
-  str += str_len - suffix_len;
-  return strcmp(str, suffix.c_str()) == 0;
-}
-
 void smallest_unused_fd(int* fd_out) {
   for (int fd = 0; fd < INT_MAX; ++fd) {
     if (fcntl(fd, F_GETFD, nullptr) < 0) {
@@ -45,17 +35,6 @@ void smallest_unused_fd(int* fd_out) {
     }
   }
   FAIL("did not find unused FD");
-}
-
-zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
-  fx_logger_config_t config = {
-      .min_severity = FX_LOG_INFO,
-      .console_fd = fd,
-      .tags = tags,
-      .num_tags = ntags,
-  };
-
-  return fx_log_reconfigure(&config);
 }
 
 // Ensure accessing the global logger is safe when a global object is being torn down.
@@ -70,22 +49,24 @@ class LogDuringTeardownTest {
 TEST(SyslogTests, test_log_init_with_socket) {
   zx::socket socket0, socket1;
   EXPECT_OK(zx::socket::create(0, &socket0, &socket1));
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_socket = socket1.release(),
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_socket = socket1.release(),
+      .tags = nullptr,
+      .num_tags = 0,
+  };
   EXPECT_OK(fx_log_reconfigure(&config), "");
 }
 
 TEST(SyslogTests, test_log_enabled_macro) {
   zx::socket socket0, socket1;
   EXPECT_OK(zx::socket::create(0, &socket0, &socket1));
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_socket = socket1.release(),
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_socket = socket1.release(),
+      .tags = nullptr,
+      .num_tags = 0,
+  };
   EXPECT_OK(fx_log_reconfigure(&config), "");
   if (FX_VLOG_IS_ENABLED(4)) {
     EXPECT_TRUE(false, "control should not reach this line");
@@ -98,230 +79,18 @@ TEST(SyslogTests, test_log_enabled_macro) {
   }
 }
 
-TEST(SyslogTests, test_log_simple_write) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  FX_LOG(INFO, NULL, "test message");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "test message\n"), "%s", buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_log_write) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  int line = __LINE__ + 1;
-  FX_LOGF(INFO, NULL, "%d, %s", 10, "just some number");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(
-      ends_with(buf, fbl::StringPrintf("INFO: [%s(%d)] 10, just some number\n", kFileName, line)),
-      "%s", buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_log_preprocessed_message) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  int line = __LINE__ + 1;
-  FX_LOG(INFO, NULL, "%d, %s");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("INFO: [%s(%d)] %%d, %%s\n", kFileName, line)), "%s",
-              buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_log_severity) {
-  struct pollfd fd;
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  FX_LOG_SET_SEVERITY(WARNING);
-  FX_LOGF(INFO, NULL, "%d, %s", 10, "just some number");
-  fd.fd = pipefd[1];
-  fd.events = POLLIN;
-  EXPECT_EQ(poll(&fd, 1, 1), 0, "");
-  close(pipefd[1]);
-}
-
 TEST(SyslogTests, test_log_severity_invalid) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
   fx_logger_t* logger = fx_log_get_logger();
   EXPECT_EQ(FX_LOG_INFO, fx_logger_get_min_severity(logger));
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fx_logger_set_min_severity(logger, FX_LOG_FATAL + 1));
   EXPECT_EQ(FX_LOG_INFO, fx_logger_get_min_severity(logger));
 }
 
-TEST(SyslogTests, test_log_write_with_tag) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  int line = __LINE__ + 1;
-  FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("[tag] INFO: [%s(%d)] 10, just some string\n",
-                                               kFileName, line)),
-              "%s", buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_log_write_with_global_tag) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  const char* tags[] = {"gtag"};
-  EXPECT_OK(init_helper(pipefd[0], tags, 1), "");
-  int line = __LINE__ + 1;
-  FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("[gtag, tag] INFO: [%s(%d)] 10, just some string\n",
-                                               kFileName, line)),
-              "%s", buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_get_tags) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  const char* tags[] = {"gtag", "gTag"};
-  EXPECT_OK(init_helper(pipefd[0], tags, 2), "");
-  std::vector<std::string> logger_tags;
-  fx_logger_get_tags(
-      fx_log_get_logger(),
-      [](void* context, const char* tag) {
-        static_cast<std::vector<std::string>*>(context)->push_back(tag);
-      },
-      &logger_tags);
-  EXPECT_EQ(logger_tags.size(), 2);
-  EXPECT_EQ(logger_tags[0], "gtag");
-  EXPECT_EQ(logger_tags[1], "gTag");
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_log_write_with_multi_global_tag) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  const char* tags[] = {"gtag", "gtag2"};
-  EXPECT_OK(init_helper(pipefd[0], tags, 2), "");
-  int line = __LINE__ + 1;
-  FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(
-      ends_with(buf, fbl::StringPrintf("[gtag, gtag2, tag] INFO: [%s(%d)] 10, just some string\n",
-                                       kFileName, line)),
-      "%s", buf);
-  close(pipefd[1]);
-}
-
 TEST(SyslogTestsEdgeCases, test_global_tag_limit) {
-  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, init_helper(-1, nullptr, FX_LOG_MAX_TAGS + 1), "");
-}
-
-TEST(SyslogTestsEdgeCases, test_msg_length_limit) {
-  constexpr size_t kMessageSize = fuchsia_logger::wire::kMaxDatagramLenBytes + 5;
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  char msg[kMessageSize] = {0};
-  char buf[kMessageSize] = {0};
-  memset(msg, 'a', sizeof(msg) - 1);
-  FX_LOGF(INFO, NULL, "%s", msg);
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  msg[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "a...\n"), "%s", buf);
-
-  msg[0] = '%';
-  msg[1] = 's';
-  FX_LOG(INFO, NULL, msg);
-  n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  msg[n] = 0;
-  EXPECT_TRUE(ends_with(buf, "a...\n"), "%s", buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_vlog_simple_write) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  FX_LOG_SET_VERBOSITY(5);  // INFO - 5
-  int line = __LINE__ + 1;
-  FX_VLOG(5, NULL, "test message");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(
-      ends_with(buf, fbl::StringPrintf("VLOG(5): [%s(%d)] test message\n", kFileName, line)), "%s",
-      buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_vlog_write) {
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  FX_LOG_SET_VERBOSITY(1);  // INFO - 1
-  int line = __LINE__ + 1;
-  FX_VLOGF(1, NULL, "%d, %s", 10, "just some number");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("VLOG(1): [%s(%d)] 10, just some number\n",
-                                               kFileName, line)),
-              "%s", buf);
-  close(pipefd[1]);
-}
-
-TEST(SyslogTests, test_log_reconfiguration) {
-  // Initialize with no tags.
-  int pipefd[2];
-  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
-  EXPECT_OK(init_helper(pipefd[0], nullptr, 0), "");
-  int line = __LINE__ + 1;
-  FX_LOG(INFO, NULL, "Hi");
-  char buf[256];
-  size_t n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(ends_with(buf, fbl::StringPrintf("INFO: [%s(%d)] Hi\n", kFileName, line)), "%s", buf);
-
-  // Now reconfigure the logger and add tags.
-  const char* tags[] = {"tag1", "tag2"};
-  EXPECT_OK(init_helper(-1, tags, 2), "");
-  line = __LINE__ + 1;
-  FX_LOG(INFO, NULL, "Hi");
-  n = read(pipefd[1], buf, sizeof(buf));
-  EXPECT_GT(n, 0u, "");
-  buf[n] = 0;
-  EXPECT_TRUE(
-      ends_with(buf, fbl::StringPrintf("[tag1, tag2] INFO: [%s(%d)] Hi\n", kFileName, line)), "%s",
-      buf);
-
-  close(pipefd[1]);
+  fx_logger_config_t config = {
+      .num_tags = FX_LOG_MAX_TAGS + 1,
+  };
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fx_log_reconfigure(&config));
 }
 
 TEST(SyslogTests, test_log_dont_dup) {
@@ -332,11 +101,12 @@ TEST(SyslogTests, test_log_dont_dup) {
   // Create a logger
   fx_logger_t* logger;
   zx_status_t status;
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
   status = fx_logger_create(&config, &logger);
   ASSERT_OK(status);
 
@@ -355,22 +125,24 @@ TEST(SyslogTests, test_fx_logger_create_with_null_config) {
 }
 
 TEST(SyslogTests, test_fx_logger_create_with_null_output_pointer) {
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, nullptr));
 }
 
 TEST(SyslogTests, test_fx_logger_reconfigure_with_null_config) {
   // Create a logger
   fx_logger_t* logger;
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
   ASSERT_OK(fx_logger_create(&config, &logger));
 
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, fx_logger_reconfigure(logger, nullptr));
@@ -385,12 +157,13 @@ TEST(SyslogTests, test_log_sink_channel_closed_on_create_fail) {
   EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const zx_handle_t passed_handle = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = passed_handle,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = kTooManyTags.data(),
-                               .num_tags = kTooManyTags.size()};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = passed_handle,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = kTooManyTags.data(),
+      .num_tags = kTooManyTags.size(),
+  };
 
   // This should fail because there are too many tags, and closing the
   // handle should fail because it is already closed.
@@ -407,12 +180,13 @@ TEST(SyslogTests, test_log_sink_socket_closed_on_create_fail) {
   EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const zx_handle_t passed_handle = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = ZX_HANDLE_INVALID,
-                               .log_sink_socket = passed_handle,
-                               .tags = kTooManyTags.data(),
-                               .num_tags = kTooManyTags.size()};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = ZX_HANDLE_INVALID,
+      .log_sink_socket = passed_handle,
+      .tags = kTooManyTags.data(),
+      .num_tags = kTooManyTags.size(),
+  };
 
   // This should fail because there are too many tags, and closing the
   // handle should fail because it is already closed.
@@ -428,12 +202,13 @@ TEST(SyslogTests, test_both_handles_specified_fails_create_and_handles_closed) {
   const zx_handle_t passed_log_sink_channel = local.release();
   const zx_handle_t passed_log_sink_socket = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = passed_log_sink_channel,
-                               .log_sink_socket = passed_log_sink_socket,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = passed_log_sink_channel,
+      .log_sink_socket = passed_log_sink_socket,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   // This should fail because both handles were specified, and closing the
   // handle should fail because it is already closed.
@@ -452,12 +227,13 @@ TEST(SyslogTests, test_log_sink_channel_closed_on_reconfigure_fail) {
   EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const zx_handle_t passed_handle = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = passed_handle,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = kTooManyTags.data(),
-                               .num_tags = kTooManyTags.size()};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = passed_handle,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = kTooManyTags.data(),
+      .num_tags = kTooManyTags.size(),
+  };
 
   // This should fail because there are too many tags, and closing the
   // handle should fail because it is already closed.
@@ -473,12 +249,13 @@ TEST(SyslogTests, test_log_sink_socket_closed_on_reconfigure_fail) {
   EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const zx_handle_t passed_handle = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = ZX_HANDLE_INVALID,
-                               .log_sink_socket = passed_handle,
-                               .tags = kTooManyTags.data(),
-                               .num_tags = kTooManyTags.size()};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = ZX_HANDLE_INVALID,
+      .log_sink_socket = passed_handle,
+      .tags = kTooManyTags.data(),
+      .num_tags = kTooManyTags.size(),
+  };
 
   // This should fail because there are too many tags, and closing the
   // handle should fail because it is already closed.
@@ -493,12 +270,13 @@ TEST(SyslogTests, test_both_handles_specified_fails_reconfigure_and_handles_clos
   const zx_handle_t passed_log_sink_channel = local.release();
   const zx_handle_t passed_log_sink_socket = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = passed_log_sink_channel,
-                               .log_sink_socket = passed_log_sink_socket,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = passed_log_sink_channel,
+      .log_sink_socket = passed_log_sink_socket,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   // This should fail because both handles were specified, and closing the
   // handle should fail because it is already closed.
@@ -515,12 +293,13 @@ TEST(SyslogTests, test_create_with_log_sink_channel_not_supported) {
   EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const zx_handle_t passed_handle = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = passed_handle,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = passed_handle,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   // This should fail because log_sink_channel is not supported, and closing the
   // handle should fail because it is already closed.
@@ -535,12 +314,13 @@ TEST(SyslogTests, test_reconfigure_with_log_sink_channel_not_supported) {
   EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const zx_handle_t passed_handle = remote.release();
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_channel = passed_handle,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_channel = passed_handle,
+      .log_sink_socket = ZX_HANDLE_INVALID,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   // This should fail because log_sink_channel is not supported, and closing the
   // handle should fail because it is already closed.

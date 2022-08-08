@@ -204,7 +204,6 @@ rustc_test("syslog-tests") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:tempfile",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 
@@ -233,7 +232,6 @@ rustc_library("syslog-listener") {
 }
 
 fuchsia_unittest_package("fuchsia-syslog-tests") {
-  manifest = "meta/fuchsia_syslog_lib_test.cml"
   deps = [ ":syslog-tests" ]
 }
 

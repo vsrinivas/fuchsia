@@ -68,7 +68,6 @@ void fx_logger::ActivateFallback(int fallback_fd) {
     fallback_fd = STDERR_FILENO;
   }
   // Do not change fd_to_close_ as we don't want to close fallback_fd.
-  // We will still close original console_fd_
   logger_fd_.store(fallback_fd, std::memory_order_relaxed);
   socket_.reset();
 }
@@ -115,12 +114,10 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config, bool is_str
 #endif
   }
 
-  if (socket.is_valid() || config->console_fd != -1) {
+  if (socket.is_valid()) {
     socket_.swap(socket);
-    fd_to_close_.reset(config->console_fd);
-    logger_fd_.store(config->console_fd, std::memory_order_relaxed);
-    // We don't expect to have a console fd and a socket at the same time.
-    ZX_DEBUG_ASSERT(fd_to_close_ != socket_.is_valid());
+    fd_to_close_.reset(-1);
+    logger_fd_.store(-1, std::memory_order_relaxed);
   }
 
   SetSeverity(config->min_severity);

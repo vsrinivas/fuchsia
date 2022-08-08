@@ -29,7 +29,6 @@ fx_logger_t* MakeDefaultLogger() {
 
   fx_logger_config_t config = {
       .min_severity = FX_LOG_SEVERITY_DEFAULT,
-      .console_fd = -1,
       .tags = &tag,
       .num_tags = 1,
   };
@@ -57,8 +56,7 @@ fx_logger_t* fx_log_get_logger() { return get_or_create_global_logger(); }
 SYSLOG_EXPORT
 zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
   fx_logger_t* logger = get_or_create_global_logger();
-  return logger->Reconfigure(
-      config, (config->console_fd == -1 && config->log_sink_socket == ZX_HANDLE_INVALID));
+  return logger->Reconfigure(config, config->log_sink_socket == ZX_HANDLE_INVALID);
 }
 
 SYSLOG_EXPORT

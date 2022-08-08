@@ -37,11 +37,12 @@ bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> channel) {
   if (result.status() != ZX_OK)
     return false;
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_sink_socket = local_socket.release(),
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .log_sink_socket = local_socket.release(),
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   status = fx_log_reconfigure(&config);
   if (status != ZX_OK)
