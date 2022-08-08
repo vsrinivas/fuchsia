@@ -55,29 +55,18 @@ zx_status_t VirtioGpu::Start(
   if (status != ZX_OK) {
     return status;
   }
-  fuchsia::virtualization::hardware::StartInfo start_info;
+  fuchsia_virtualization_hardware::wire::StartInfo start_info;
   status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Convert to llcpp types
-  fuchsia_virtualization_hardware::wire::StartInfo start_info_llcpp{
-      .trap =
-          {
-              .addr = start_info.trap.addr,
-              .size = start_info.trap.size,
-          },
-      .guest = std::move(start_info.guest),
-      .event = std::move(start_info.event),
-      .vmo = std::move(start_info.vmo),
-  };
   fidl::ClientEnd<fuchsia_virtualization_hardware::KeyboardListener> llcpp_keyboard_listener(
       keyboard_listener.TakeChannel());
   fidl::ClientEnd<fuchsia_virtualization_hardware::PointerListener> llcpp_pointer_listener(
       pointer_listener.TakeChannel());
   return gpu_.sync()
-      ->Start(std::move(start_info_llcpp), std::move(llcpp_keyboard_listener),
+      ->Start(std::move(start_info), std::move(llcpp_keyboard_listener),
               std::move(llcpp_pointer_listener))
       .status();
 }

@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_VIRTIO_DEVICE_H_
 
+#include <fidl/fuchsia.virtualization.hardware/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/trace-engine/types.h>
 #include <lib/trace/event.h>
@@ -15,7 +16,6 @@
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 #include "src/virtualization/bin/vmm/virtio_pci.h"
-
 // Set of features that are supported transparently for all devices.
 static constexpr uint32_t kVirtioFeatures = 0;
 
@@ -221,6 +221,20 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
     }
     return this->phys_mem_.vmo().duplicate(
         ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &start_info->vmo);
+  }
+
+  zx_status_t PrepStart(const zx::guest& guest, async_dispatcher_t* dispatcher,
+                        fuchsia_virtualization_hardware::wire::StartInfo* start_info) {
+    fuchsia::virtualization::hardware::StartInfo hlcpp_start_info;
+    zx_status_t status = PrepStart(guest, dispatcher, &hlcpp_start_info);
+    if (status == ZX_OK) {
+      start_info->trap.addr = hlcpp_start_info.trap.addr;
+      start_info->trap.size = hlcpp_start_info.trap.size;
+      start_info->guest = std::move(hlcpp_start_info.guest);
+      start_info->event = std::move(hlcpp_start_info.event);
+      start_info->vmo = std::move(hlcpp_start_info.vmo);
+    }
+    return status;
   }
 
   const zx::event& event() const { return event_; }

@@ -48,24 +48,13 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::Rea
     return status;
   }
 
-  fuchsia::virtualization::hardware::StartInfo start_info;
+  fuchsia_virtualization_hardware::wire::StartInfo start_info;
   status = PrepStart(guest, device_loop_dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }
   started_ = true;
-  // Convert to llcpp types
-  fuchsia_virtualization_hardware::wire::StartInfo start_info_llcpp{
-      .trap =
-          {
-              .addr = start_info.trap.addr,
-              .size = start_info.trap.size,
-          },
-      .guest = std::move(start_info.guest),
-      .event = std::move(start_info.event),
-      .vmo = std::move(start_info.vmo),
-  };
-  return balloon_.sync()->Start(std::move(start_info_llcpp)).status();
+  return balloon_.sync()->Start(std::move(start_info)).status();
 }
 
 zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
