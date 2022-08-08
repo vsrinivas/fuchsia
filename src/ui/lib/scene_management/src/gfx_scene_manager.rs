@@ -422,7 +422,9 @@ impl SceneManager for GfxSceneManager {
 impl GfxSceneManager {
     /// The depth of the bounds of any added views. This can be used to compute where a view
     /// should be placed to render "in front of" another view.
-    const VIEW_BOUNDS_DEPTH: f32 = -800.0;
+    /// Note: -1000 is hardcoded in a lot of other locations, so don't change
+    /// this unless you're sure it's safe. TODO(fxbug.dev/24474).
+    const VIEW_BOUNDS_DEPTH: f32 = -1000.0;
     /// The depth at which to draw the cursor in order to ensure it's on top of everything else
     const CURSOR_DEPTH: f32 = GfxSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
 
