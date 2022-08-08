@@ -120,6 +120,7 @@ void DumpVisitor::Visit(ViewHolder* r) {
   View* v = r->view();
   WriteProperty("view_holder") << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
   WriteProperty("focus_change") << r->GetViewProperties().focus_change;
+  WriteProperty("local_bounding_box") << r->GetLocalBoundingBox();
   VisitNode(r);
   EndItem();
 
