@@ -61,35 +61,36 @@ static const device_fragment_part_t p2_out_codec_fragment[] = {
     {std::size(p2_out_codec_match), p2_out_codec_match},
 };
 
-static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
+static const zx_bind_inst_t out_enable_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
 };
-static const zx_bind_inst_t ref_out_fault_gpio_match[] = {
+static const zx_bind_inst_t out_fault_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
 };
-static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
-    {std::size(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
+static const device_fragment_part_t out_enable_gpio_fragment[] = {
+    {std::size(out_enable_gpio_match), out_enable_gpio_match},
 };
-static const device_fragment_part_t ref_out_fault_gpio_fragment[] = {
-    {std::size(ref_out_fault_gpio_match), ref_out_fault_gpio_match},
+static const device_fragment_part_t out_fault_gpio_fragment[] = {
+    {std::size(out_fault_gpio_match), out_fault_gpio_match},
 };
 
 static const device_fragment_t ref_codec_fragments[] = {
     {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-    {"gpio-fault", std::size(ref_out_fault_gpio_fragment), ref_out_fault_gpio_fragment},
+    {"gpio-enable", std::size(out_enable_gpio_fragment), out_enable_gpio_fragment},
+    {"gpio-fault", std::size(out_fault_gpio_fragment), out_fault_gpio_fragment},
 };
 static const device_fragment_t p2_codec_fragments[] = {
     {"i2c", std::size(p2_out_i2c_fragment), p2_out_i2c_fragment},
+    {"gpio-fault", std::size(out_fault_gpio_fragment), out_fault_gpio_fragment},
 };
 static const device_fragment_t ref_controller_fragments[] = {
-    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"gpio-enable", std::size(out_enable_gpio_fragment), out_enable_gpio_fragment},
     {"codec-01", std::size(ref_out_codec_fragment), ref_out_codec_fragment},
 };
 static const device_fragment_t p2_controller_fragments[] = {
-    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"gpio-enable", std::size(out_enable_gpio_fragment), out_enable_gpio_fragment},
     {"codec-01", std::size(p2_out_codec_fragment), p2_out_codec_fragment},
 };
 

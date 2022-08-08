@@ -4,6 +4,7 @@
 
 #include "tas58xx.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
@@ -30,6 +31,10 @@ constexpr uint8_t kRegSapCtrl1    = 0x33;
 constexpr uint8_t kRegSapCtrl2    = 0x34;
 constexpr uint8_t kRegDigitalVol  = 0x4c;
 constexpr uint8_t kRegDspMisc     = 0x66;
+constexpr uint8_t kRegChanFault    = 0x70;
+constexpr uint8_t kRegGlobalFault1 = 0x71;
+constexpr uint8_t kRegGlobalFault2 = 0x72;
+constexpr uint8_t kRegOtWarning    = 0x73;
 constexpr uint8_t kRegClearFault  = 0x78;
 constexpr uint8_t kRegSelectBook  = 0x7f;
 
@@ -74,8 +79,8 @@ static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
     .bits_per_sample = kSupportedDaiBitsPerSample,
 };
 
-Tas58xx::Tas58xx(zx_device_t* device, ddk::I2cChannel i2c)
-    : SimpleCodecServer(device), i2c_(std::move(i2c)) {
+Tas58xx::Tas58xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio)
+    : SimpleCodecServer(device), i2c_(std::move(i2c)), fault_gpio_(std::move(fault_gpio)) {
   size_t actual = 0;
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata_), &actual);
@@ -180,7 +185,48 @@ zx_status_t Tas58xx::Reset() {
   return ZX_OK;
 }
 
+void Tas58xx::ScheduleFaultPolling() {
+  if (!BackgroundFaultPollingIsEnabled())
+    return;
+
+  async::PostDelayedTask(
+      dispatcher(), [this]() { PeriodicPollFaults(); }, poll_interval_);
+}
+
+void Tas58xx::PeriodicPollFaults() {
+  uint8_t fault_state;
+  auto status = fault_gpio_.Read(&fault_state);
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "GPIO error while polling fault data");
+  } else if (fault_state == 0) {  // Active low; 0 means the pin is active!
+    // Codec is driving fault pin active.  Read the fault registers.
+    fault_info_.i2c_error = (ReadReg(kRegChanFault, &fault_info_.chan_fault) != ZX_OK) ||
+                            (ReadReg(kRegGlobalFault1, &fault_info_.global_fault1) != ZX_OK) ||
+                            (ReadReg(kRegGlobalFault2, &fault_info_.global_fault2) != ZX_OK) ||
+                            (ReadReg(kRegOtWarning, &fault_info_.ot_warning) != ZX_OK);
+
+    // Reset the fault indication at the codec.
+    WriteReg(kRegClearFault, kRegClearFaultBitsAnalog);
+
+    // Log the fault based on the data retrieved earlier.
+    zxlogf(WARNING, "Codec fault detected");
+    if (fault_info_.i2c_error)
+      zxlogf(WARNING, "I2C error while retrieving fault data");
+    if (fault_info_.chan_fault)
+      zxlogf(WARNING, "Channel fault seen: %02X", fault_info_.chan_fault);
+    if (fault_info_.global_fault1)
+      zxlogf(WARNING, "Global fault1 seen: %02X", fault_info_.global_fault1);
+    if (fault_info_.global_fault2)
+      zxlogf(WARNING, "Global fault2 seen: %02X", fault_info_.global_fault2);
+    if (fault_info_.ot_warning)
+      zxlogf(WARNING, "OT warning seen: %02X", fault_info_.ot_warning);
+  }
+
+  ScheduleFaultPolling();
+}
+
 zx::status<DriverIds> Tas58xx::Initialize() {
+  ScheduleFaultPolling();
   return zx::ok(DriverIds{
       .vendor_id = PDEV_VID_TI,
       .device_id = PDEV_DID_TI_TAS58xx,
@@ -195,7 +241,14 @@ zx_status_t Tas58xx::Create(zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  return SimpleCodecServer::CreateAndAddToDdk<Tas58xx>(parent, std::move(i2c));
+  ddk::GpioProtocolClient fault_gpio(parent, "gpio-fault");
+  if (!fault_gpio.is_valid()) {
+    zxlogf(ERROR, "Could not get gpio-fault");
+    return ZX_ERR_INTERNAL;
+  }
+
+  return SimpleCodecServer::CreateAndAddToDdk<Tas58xx>(parent, std::move(i2c),
+                                                       std::move(fault_gpio));
 }
 
 Info Tas58xx::GetInfo() {

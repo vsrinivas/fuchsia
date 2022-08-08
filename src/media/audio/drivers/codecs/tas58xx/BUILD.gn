@@ -24,6 +24,7 @@ fuchsia_driver("tas58xx-driver") {
   sources = [ "tas58xx.cc" ]
   deps = [
     ":ti_tas58xx-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
@@ -31,6 +32,7 @@ fuchsia_driver("tas58xx-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
     "//zircon/system/ulib/zircon-internal",
@@ -54,6 +56,8 @@ test("tas58xx-test") {
   ]
   deps = [
     ":ti_tas58xx-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",

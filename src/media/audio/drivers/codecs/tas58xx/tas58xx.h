@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS58XX_TAS58XX_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS58XX_TAS58XX_H_
 
+#include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/async/cpp/irq.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -28,7 +30,7 @@ class Tas58xx : public SimpleCodecServer,
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Tas58xx(zx_device_t* device, ddk::I2cChannel i2c);
+  explicit Tas58xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio_fault);
 
   // Implementation for SimpleCodecServer.
   zx_status_t Shutdown() override;
@@ -71,6 +73,10 @@ class Tas58xx : public SimpleCodecServer,
   uint64_t GetTopologyId() { return kTopologyId; }
   uint64_t GetAglPeId() { return kAglPeId; }
   uint64_t GetEqPeId() { return kEqPeId; }
+  virtual bool BackgroundFaultPollingIsEnabled() {
+    return true;  // Unit test can override to disable.
+  }
+  void PeriodicPollFaults();  // Unit test can invoke this directly.
 
  private:
   static constexpr float kMaxGain = 24.0;
@@ -104,6 +110,21 @@ class Tas58xx : public SimpleCodecServer,
   bool started_ = false;
   uint32_t number_of_channels_ = 2;
   uint32_t rate_ = 48'000;
+
+  // How often to poll for codec faults.  Would be nice to use IRQ for this,
+  // but we've exhausted the IRQ supply, so 20 seconds gives a balance between
+  // keeping overhead low but polling often enough to catch faults on a
+  // relatively timely basis.
+  static constexpr zx::duration poll_interval_ = zx::sec(20);
+  void ScheduleFaultPolling();
+  ddk::GpioProtocolClient fault_gpio_;
+  struct {
+    bool i2c_error;         // True if saw an I2C error while reading fault
+    uint8_t chan_fault;     // Channel fault bits
+    uint8_t global_fault1;  // Global fault bits
+    uint8_t global_fault2;  // More global fault bits
+    uint8_t ot_warning;     // Over-temperature warning bit
+  } fault_info_;
 
   // AGL.
   bool last_agl_ = false;
