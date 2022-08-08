@@ -270,6 +270,88 @@ constexpr inline void FlexibleBits::operator^=(
   this->value_ ^= other.value_;
 }
 
+// |EmptyBits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+class EmptyBits final {
+ public:
+  constexpr EmptyBits() = default;
+
+  // Constructs an instance of |EmptyBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  explicit constexpr EmptyBits(uint32_t value) : value_(value) {}
+  const static EmptyBits kMask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const EmptyBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const EmptyBits& other) const { return value_ != other.value_; }
+  constexpr inline EmptyBits operator~() const;
+  constexpr inline EmptyBits operator|(const EmptyBits& other) const;
+  constexpr inline EmptyBits operator&(const EmptyBits& other) const;
+  constexpr inline EmptyBits operator^(const EmptyBits& other) const;
+  constexpr inline void operator|=(const EmptyBits& other);
+  constexpr inline void operator&=(const EmptyBits& other);
+  constexpr inline void operator^=(const EmptyBits& other);
+
+  // Constructs an instance of |EmptyBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |std::nullopt|.
+  constexpr inline static std::optional<EmptyBits> TryFrom(uint32_t value) {
+    if (value & ~kMask.value_) {
+      return std::nullopt;
+    }
+    return EmptyBits(value & EmptyBits::kMask.value_);
+  }
+
+  // Constructs an instance of |EmptyBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static EmptyBits TruncatingUnknown(uint32_t value) {
+    return EmptyBits(value & EmptyBits::kMask.value_);
+  }
+  constexpr inline EmptyBits unknown_bits() const {
+    return *this & EmptyBits(~kMask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
+
+ private:
+  uint32_t value_ = 0;
+};
+constexpr const ::test_bits::EmptyBits EmptyBits::kMask = ::test_bits::EmptyBits(0u);
+
+constexpr inline ::test_bits::EmptyBits EmptyBits::operator~() const {
+  return ::test_bits::EmptyBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
+}
+
+constexpr inline ::test_bits::EmptyBits EmptyBits::operator|(
+    const ::test_bits::EmptyBits& other) const {
+  return ::test_bits::EmptyBits(static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::test_bits::EmptyBits EmptyBits::operator&(
+    const ::test_bits::EmptyBits& other) const {
+  return ::test_bits::EmptyBits(static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::test_bits::EmptyBits EmptyBits::operator^(
+    const ::test_bits::EmptyBits& other) const {
+  return ::test_bits::EmptyBits(static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void EmptyBits::operator|=(
+    const ::test_bits::EmptyBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void EmptyBits::operator&=(
+    const ::test_bits::EmptyBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void EmptyBits::operator^=(
+    const ::test_bits::EmptyBits& other) {
+  this->value_ ^= other.value_;
+}
+
 }  // namespace test_bits
 namespace fidl {
 
@@ -293,5 +375,12 @@ template <>
 struct ContainsHandle<::test_bits::FlexibleBits> : public std::false_type {};
 static_assert(std::is_standard_layout_v<::test_bits::FlexibleBits>);
 static_assert(sizeof(::test_bits::FlexibleBits) == sizeof(uint64_t));
+
+template <>
+struct IsFidlType<::test_bits::EmptyBits> : public std::true_type {};
+template <>
+struct ContainsHandle<::test_bits::EmptyBits> : public std::false_type {};
+static_assert(std::is_standard_layout_v<::test_bits::EmptyBits>);
+static_assert(sizeof(::test_bits::EmptyBits) == sizeof(uint32_t));
 
 }  // namespace fidl

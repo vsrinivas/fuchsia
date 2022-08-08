@@ -300,6 +300,9 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	for _, v := range val.Members {
 		e.Members = append(e.Members, fmt.Sprintf("%s_%s", e.Name, v.Name))
 	}
+	if val.IsFlexible() {
+		e.Members = append(e.Members, fmt.Sprintf("%s__UNKNOWN", e.Name))
+	}
 	return e
 }
 

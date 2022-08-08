@@ -216,9 +216,10 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 * Discrete subset of bit values chosen from an underlying integer primitive
   type.
 * Never optional.
-* Bits must have at least one member.
 * Bits can either be [`strict` or `flexible`](#strict-vs-flexible).
 * Bits default to `flexible`.
+* `strict` bits must have at least one member (`flexible` bits can be
+  memberless).
 
 #### Operators
 

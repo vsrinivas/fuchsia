@@ -39,6 +39,46 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+class EmptyBits extends $fidl.Bits {
+  factory EmptyBits(int _v) {
+    return EmptyBits._(_v);
+  }
+  static const EmptyBits $none = EmptyBits._(0);
+  static const EmptyBits $mask = EmptyBits._(0x0);
+
+  const EmptyBits._(this.$value);
+
+  EmptyBits operator |(EmptyBits other) {
+    return EmptyBits._($value | other.$value);
+  }
+
+  EmptyBits operator &(EmptyBits other) {
+    return EmptyBits._($value & other.$value);
+  }
+
+  EmptyBits operator ~() {
+    return EmptyBits._(~$value & $mask.$value);
+  }
+
+  @override
+  final int $value;
+
+  @override
+  bool hasUnknownBits() {
+    return getUnknownBits() != 0;
+  }
+
+  @override
+  int getUnknownBits() {
+    return $value & ~$mask.$value;
+  }
+
+  static EmptyBits _ctor(int v) => EmptyBits(v);
+}
+
+const $fidl.BitsType<EmptyBits> kEmptyBits_Type =
+    $fidl.BitsType<EmptyBits>(type: $fidl.Uint32Type(), ctor: EmptyBits._ctor);
+
 class FlexibleBits extends $fidl.Bits {
   factory FlexibleBits(int _v) {
     return FlexibleBits._(_v);

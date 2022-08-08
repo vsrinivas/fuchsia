@@ -633,7 +633,7 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
     strictness = layout->modifiers->maybe_strictness->value;
 
   if (layout->members.empty()) {
-    if (!std::is_same<T, Enum>::value || strictness != types::Strictness::kFlexible)
+    if (strictness != types::Strictness::kFlexible)
       return Fail(ErrMustHaveOneMember, layout->span());
   }
 

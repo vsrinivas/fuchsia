@@ -16,6 +16,7 @@ namespace fuzzing {
 using StrictBits = ::test::bits::StrictBits;
 using MyBits = ::test::bits::MyBits;
 using FlexibleBits = ::test::bits::FlexibleBits;
+using EmptyBits = ::test::bits::EmptyBits;
 
 template <>
 struct MinSize<StrictBits> {
@@ -54,6 +55,17 @@ struct Allocate<FlexibleBits> {
   FlexibleBits operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= sizeof(uint64_t));
     return FlexibleBits(*reinterpret_cast<const uint64_t*>(src->TakeBytes(sizeof(uint64_t))));
+  }
+};
+template <>
+struct MinSize<EmptyBits> {
+  operator size_t() { return sizeof(uint32_t); }
+};
+template <>
+struct Allocate<EmptyBits> {
+  EmptyBits operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= sizeof(uint32_t));
+    return EmptyBits(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
   }
 };
 

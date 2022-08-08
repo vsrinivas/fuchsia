@@ -219,6 +219,98 @@ inline zx_status_t Clone(::test::bits::FlexibleBits value,
   return ZX_OK;
 }
 
+// |EmptyBits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+class EmptyBits final {
+ public:
+  constexpr EmptyBits() = default;
+
+  // Constructs an instance of |EmptyBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
+  constexpr inline static cpp17::optional<EmptyBits> TryFrom(uint32_t value) {
+    if (value & ~kMask.value_) {
+      return cpp17::nullopt;
+    }
+    return EmptyBits(value & EmptyBits::kMask.value_);
+  }
+
+  // Constructs an instance of |EmptyBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static EmptyBits TruncatingUnknown(uint32_t value) {
+    return EmptyBits(value & EmptyBits::kMask.value_);
+  }
+
+  // Constructs an instance of |EmptyBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  constexpr explicit EmptyBits(uint32_t value) : value_(value) {}
+  const static EmptyBits kMask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const EmptyBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const EmptyBits& other) const { return value_ != other.value_; }
+  constexpr inline EmptyBits operator~() const;
+  constexpr inline EmptyBits operator|(const EmptyBits& other) const;
+  constexpr inline EmptyBits operator&(const EmptyBits& other) const;
+  constexpr inline EmptyBits operator^(const EmptyBits& other) const;
+  constexpr inline void operator|=(const EmptyBits& other);
+  constexpr inline void operator&=(const EmptyBits& other);
+  constexpr inline void operator^=(const EmptyBits& other);
+  constexpr inline EmptyBits unknown_bits() const {
+    return *this & EmptyBits(~kMask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const { return static_cast<bool>(unknown_bits()); }
+
+ private:
+  uint32_t value_ = 0;
+};
+
+#if !(__cplusplus < 201703)
+constexpr const ::test::bits::EmptyBits EmptyBits::kMask = ::test::bits::EmptyBits(0u);
+
+#endif  // !(__cplusplus < 201703)
+
+constexpr inline ::test::bits::EmptyBits EmptyBits::operator~() const {
+  return ::test::bits::EmptyBits(static_cast<uint32_t>(~this->value_ & kMask.value_));
+}
+
+constexpr inline ::test::bits::EmptyBits EmptyBits::operator|(
+    const ::test::bits::EmptyBits& other) const {
+  return ::test::bits::EmptyBits(static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::test::bits::EmptyBits EmptyBits::operator&(
+    const ::test::bits::EmptyBits& other) const {
+  return ::test::bits::EmptyBits(static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::test::bits::EmptyBits EmptyBits::operator^(
+    const ::test::bits::EmptyBits& other) const {
+  return ::test::bits::EmptyBits(static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void EmptyBits::operator|=(
+    const ::test::bits::EmptyBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void EmptyBits::operator&=(
+    const ::test::bits::EmptyBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void EmptyBits::operator^=(
+    const ::test::bits::EmptyBits& other) {
+  this->value_ ^= other.value_;
+}
+
+inline zx_status_t Clone(::test::bits::EmptyBits value,
+                         ::test::bits::EmptyBits* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 }  // namespace bits
 }  // namespace test
 namespace fidl {
@@ -306,6 +398,35 @@ struct Equality<::test::bits::FlexibleBits> {
   bool operator()(const ::test::bits::FlexibleBits& _lhs, const ::test::bits::FlexibleBits& _rhs) const {
     uint64_t _lhs_underlying = static_cast<uint64_t>(_lhs);
     uint64_t _rhs_underlying = static_cast<uint64_t>(_rhs);
+    return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};
+template <>
+struct CodingTraits<::test::bits::EmptyBits> {
+  static constexpr size_t inline_size_v2 = sizeof(::test::bits::EmptyBits);
+  static void Encode(Encoder* encoder, ::test::bits::EmptyBits* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::bits::EmptyBits* value, size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::bits::EmptyBits>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::bits::EmptyBits value,
+                         ::test::bits::EmptyBits* result) {
+  return ::test::bits::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::bits::EmptyBits> {
+  bool operator()(const ::test::bits::EmptyBits& _lhs, const ::test::bits::EmptyBits& _rhs) const {
+    uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
+    uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };

@@ -38,6 +38,14 @@ template <>
 struct WireTypeForNaturalType<::test_bits::FlexibleBits> {
   using type = ::test_bits::wire::FlexibleBits;
 };
+template <>
+struct NaturalTypeForWireType<::test_bits::wire::EmptyBits> {
+  using type = ::test_bits::EmptyBits;
+};
+template <>
+struct WireTypeForNaturalType<::test_bits::EmptyBits> {
+  using type = ::test_bits::wire::EmptyBits;
+};
 
 #ifdef __Fuchsia__
 

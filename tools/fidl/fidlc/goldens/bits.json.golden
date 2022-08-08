@@ -3,6 +3,45 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
+      "name": "test.bits/EmptyBits",
+      "naming_context": [
+        "EmptyBits"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
+        "line": 20,
+        "column": 6,
+        "length": 9
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "mask": "0",
+      "members": [],
+      "strict": false
+    },
+    {
       "name": "test.bits/FlexibleBits",
       "naming_context": [
         "FlexibleBits"
@@ -270,9 +309,11 @@
   "declaration_order": [
     "test.bits/StrictBits",
     "test.bits/MyBits",
-    "test.bits/FlexibleBits"
+    "test.bits/FlexibleBits",
+    "test.bits/EmptyBits"
   ],
   "declarations": {
+    "test.bits/EmptyBits": "bits",
     "test.bits/FlexibleBits": "bits",
     "test.bits/MyBits": "bits",
     "test.bits/StrictBits": "bits"

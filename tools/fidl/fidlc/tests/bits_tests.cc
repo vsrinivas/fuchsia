@@ -130,13 +130,31 @@ type Fruit = bits : uint64 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
-TEST(BitsTests, BadBitsTestNoMembers) {
+TEST(BitsTests, BadBitsTestNoMembersWhenStrict) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type B = strict bits {};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
+}
+
+TEST(BitsTests, GoodBitsTestNoMembersAllowedWhenFlexible) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type B = flexible bits {};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(BitsTests, GoodBitsTestNoMembersAllowedWhenDefaultsToFlexible) {
   TestLibrary library(R"FIDL(
 library example;
 
 type B = bits {};
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
+  ASSERT_COMPILED(library);
 }
 
 TEST(BitsTests, GoodBitsTestKeywordNames) {

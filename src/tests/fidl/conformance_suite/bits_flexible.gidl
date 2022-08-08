@@ -133,3 +133,25 @@ success("FlexibleBitsUint64UnknownValue") {
         ],
     },
 }
+
+decode_success("EmptyFlexibleBitsDecodeUnknownValue") {
+    value = EmptyBitsStruct{
+        b: 0xff,
+    },
+    bytes = {
+        v1, v2 = [
+            0xff, padding:7,
+        ],
+    },
+}
+
+decode_success("EmptyFlexibleBitsDecodeZero") {
+    value = EmptyBitsStruct{
+        b: 0,
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0):8,
+        ],
+    },
+}

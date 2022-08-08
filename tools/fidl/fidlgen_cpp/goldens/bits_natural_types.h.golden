@@ -67,5 +67,17 @@ struct internal::NaturalCodingTraits<::test_bits::FlexibleBits, ::fidl::internal
     *value = *decoder->template GetPtr<::test_bits::FlexibleBits>(offset);
   }
 };
+template <>
+struct internal::NaturalCodingTraits<::test_bits::EmptyBits, ::fidl::internal::NaturalCodingConstraintEmpty> {
+  static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = true;
+
+  static void Encode(internal::NaturalEncoder* encoder, ::test_bits::EmptyBits* value, size_t offset, size_t recursion_depth) {
+    *encoder->template GetPtr<::test_bits::EmptyBits>(offset) = *value;
+  }
+  static void Decode(internal::NaturalDecoder* decoder, ::test_bits::EmptyBits* value, size_t offset, size_t recursion_depth) {
+    *value = *decoder->template GetPtr<::test_bits::EmptyBits>(offset);
+  }
+};
 
 }  // namespace fidl

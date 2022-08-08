@@ -6,6 +6,7 @@
 __LOCAL extern const struct FidlCodedBits test_bits_StrictBitsTable;
 __LOCAL extern const struct FidlCodedBits test_bits_MyBitsTable;
 __LOCAL extern const struct FidlCodedBits test_bits_FlexibleBitsTable;
+__LOCAL extern const struct FidlCodedBits test_bits_EmptyBitsTable;
 
 
 
@@ -14,4 +15,6 @@ const struct FidlCodedBits test_bits_StrictBitsTable = {.tag=kFidlTypeBits, .und
 const struct FidlCodedBits test_bits_MyBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=7ul, .name="test.bits/MyBits"};
 
 const struct FidlCodedBits test_bits_FlexibleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint64, .strictness=kFidlStrictness_Flexible, .mask=9223372036854775809ul, .name="test.bits/FlexibleBits"};
+
+const struct FidlCodedBits test_bits_EmptyBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .mask=0ul, .name="test.bits/EmptyBits"};
 

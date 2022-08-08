@@ -5,7 +5,7 @@
 
 include <test/versions/c/fidl.h>
 test_versions_Enum = test_versions_Enum_A, test_versions_Enum__UNKNOWN
-test_versions_Bits = test_versions_Bits_A
+test_versions_Bits = test_versions_Bits_A, test_versions_Bits__UNKNOWN
 test_versions_StructInLine {
     x int32
 } [packed]

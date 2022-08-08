@@ -17,6 +17,11 @@ constexpr const ::test::bits::FlexibleBits FlexibleBits::kMask = ::test::bits::F
 
 #endif  // (__cplusplus < 201703)
 
+#if (__cplusplus < 201703)
+constexpr const ::test::bits::EmptyBits EmptyBits::kMask = ::test::bits::EmptyBits(0u);
+
+#endif  // (__cplusplus < 201703)
+
 //
 // Proxies and stubs definitions
 //

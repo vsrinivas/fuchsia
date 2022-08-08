@@ -27,6 +27,7 @@ namespace wire {
 using StrictBits = ::test_bits::StrictBits;
 using MyBits = ::test_bits::MyBits;
 using FlexibleBits = ::test_bits::FlexibleBits;
+using EmptyBits = ::test_bits::EmptyBits;
 
 }  // namespace wire
 }  // namespace test_bits
@@ -77,6 +78,18 @@ struct internal::WireCodingTraits<::test_bits::wire::FlexibleBits, ::fidl::inter
 
   static void Encode(internal::WireEncoder* encoder, ::test_bits::wire::FlexibleBits* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<::test_bits::wire::FlexibleBits>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <bool IsRecursive>
+struct internal::WireCodingTraits<::test_bits::wire::EmptyBits, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = true;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_bits::wire::EmptyBits* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<::test_bits::wire::EmptyBits>() = *value;
   }
   static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }

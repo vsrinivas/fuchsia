@@ -6,8 +6,8 @@
 include <test/anonymous/c/fidl.h>
 test_anonymous_Op = test_anonymous_Op_ADD, test_anonymous_Op_MUL, test_anonymous_Op_DIV, test_anonymous_Op__UNKNOWN
 test_anonymous_SomeProtocol_SomeMethod_Error = test_anonymous_SomeProtocol_SomeMethod_Error_ERROR_ONE, test_anonymous_SomeProtocol_SomeMethod_Error_ERROR_TWO, test_anonymous_SomeProtocol_SomeMethod_Error__UNKNOWN
-test_anonymous_BitsMember = test_anonymous_BitsMember_BIT_ONE, test_anonymous_BitsMember_BIT_TWO
-test_anonymous_Flags = test_anonymous_Flags_INLINE
+test_anonymous_BitsMember = test_anonymous_BitsMember_BIT_ONE, test_anonymous_BitsMember_BIT_TWO, test_anonymous_BitsMember__UNKNOWN
+test_anonymous_Flags = test_anonymous_Flags_INLINE, test_anonymous_Flags__UNKNOWN
 test_anonymous_OverrideTestInLine {
     op flags[test_anonymous_Op, int32]
     leftInLine test_anonymous_ExpressionInLine

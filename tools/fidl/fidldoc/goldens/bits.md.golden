@@ -12,6 +12,15 @@
 
 ## **BITS**
 
+### EmptyBits [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#EmptyBits}
+Type: <code>uint32</code>
+
+*Defined in [test.bits/bits.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits.test.fidl;l=20)*
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+</table>
+
 ### FlexibleBits [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#FlexibleBits}
 Type: <code>uint64</code>
 

@@ -26,6 +26,34 @@ use {
 };
 
 bitflags! {
+    pub struct EmptyBits: u32 {
+    }
+}
+
+impl EmptyBits {
+    #[inline(always)]
+    pub fn from_bits_allow_unknown(bits: u32) -> Self {
+        unsafe { Self::from_bits_unchecked(bits) }
+    }
+
+    #[inline(always)]
+    pub fn has_unknown_bits(&self) -> bool {
+        self.get_unknown_bits() != 0
+    }
+
+    #[inline(always)]
+    pub fn get_unknown_bits(&self) -> u32 {
+        self.bits & !Self::all().bits
+    }
+}
+
+fidl_bits! {
+    name: EmptyBits,
+    prim_ty: u32,
+    flexible: true,
+}
+
+bitflags! {
     pub struct FlexibleBits: u64 {
         const SMALLEST = 1;
         const BIGGEST = 9223372036854775808;

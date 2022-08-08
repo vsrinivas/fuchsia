@@ -7,6 +7,52 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+var _ _bindings.Bits = EmptyBits(0)
+
+type EmptyBits uint32
+
+const (
+	EmptyBits_Mask EmptyBits = 0
+)
+
+func (_ EmptyBits) I_BitsMask() EmptyBits {
+	return EmptyBits_Mask
+}
+
+func (_ EmptyBits) I_BitsIsStrict() bool {
+	return false
+}
+
+func (x EmptyBits) HasUnknownBits() bool {
+	return x.GetUnknownBits() != 0
+}
+
+func (x EmptyBits) GetUnknownBits() uint64 {
+	return uint64(^EmptyBits_Mask & x)
+}
+
+func (x EmptyBits) InvertBits() EmptyBits {
+	return EmptyBits_Mask & ^x
+}
+
+// HasBits validates that all flipped bits in the mask are set.
+func (x EmptyBits) HasBits(mask EmptyBits) bool {
+	return mask|x == x
+}
+
+// ClearBits ensures all flipped bits in the mask are unset.
+func (x EmptyBits) ClearBits(mask EmptyBits) EmptyBits {
+	return ^mask & x
+}
+
+func (x EmptyBits) String() string {
+	var buf _strings.Builder
+	if buf.Len() == 0 {
+		buf.WriteString("<empty bits>")
+	}
+	return buf.String()
+}
+
 var _ _bindings.Bits = FlexibleBits(0)
 
 type FlexibleBits uint64

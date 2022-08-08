@@ -21,6 +21,10 @@ template <>
 struct NaturalToHLCPPTraits<::test_bits::FlexibleBits> : public NaturalToHLCPPTraitsBits<::test_bits::FlexibleBits, ::test::bits::FlexibleBits, uint64_t> {};
 template <>
 struct HLCPPToNaturalTraits<::test::bits::FlexibleBits> : public HLCPPToNaturalTraitsBits<::test::bits::FlexibleBits, ::test_bits::FlexibleBits, uint64_t> {};
+template <>
+struct NaturalToHLCPPTraits<::test_bits::EmptyBits> : public NaturalToHLCPPTraitsBits<::test_bits::EmptyBits, ::test::bits::EmptyBits, uint32_t> {};
+template <>
+struct HLCPPToNaturalTraits<::test::bits::EmptyBits> : public HLCPPToNaturalTraitsBits<::test::bits::EmptyBits, ::test_bits::EmptyBits, uint32_t> {};
 
 }  // namespace internal
 }  // namespace fidl

@@ -23,6 +23,8 @@ type FlexibleBitsUint64 = flexible bits : uint64 {
     B = 0x2;
 };
 
+type EmptyBits = flexible bits {};
+
 type FlexibleBitsUint8Struct = struct {
     b FlexibleBitsUint8;
 };
@@ -37,4 +39,8 @@ type FlexibleBitsUint32Struct = struct {
 
 type FlexibleBitsUint64Struct = struct {
     b FlexibleBitsUint64;
+};
+
+type EmptyBitsStruct = struct {
+    b EmptyBits;
 };
