@@ -54,7 +54,11 @@ impl Mocks for FactoryResetTest {
 // commands sent to the service.
 #[fuchsia::test]
 async fn test_set() {
-    // Initialize channel with buffer of 0 so that the senders can only send one item at a time.
+    // This bounded channel is initialized with 0 initial capacity so that the sender (which adds 1
+    // capacity) can only send one message at a time, so that we can more closely verify when the
+    // mock receives requests. This makes it so that if the mock receives two requests in a row
+    // without the test verifying at least the first one, the test will fail in order to indicate
+    // something unexpected has happened.
     let (reset_allowed_sender, mut reset_allowed_receiver) =
         futures::channel::mpsc::channel::<bool>(0);
     let instance =
