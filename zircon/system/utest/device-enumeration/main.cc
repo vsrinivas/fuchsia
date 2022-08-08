@@ -124,6 +124,10 @@ fbl::String GetTestFilter() {
     return "*QemuX64Q35*";
   } else if (!strcmp(board_name, "av400")) {
     return "*Av400*";
+  } else if (!strcmp(board_name, "Google Compute Engine")) {
+#ifdef __aarch64__
+    return "*GceArm64*";
+#endif
   } else if (!strcmp(board_name, "arm64") || !strcmp(board_name, "x64")) {
     return "*GenericShouldFail*";
   }
@@ -173,6 +177,16 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:a/thermal",
       "class/thermal/000",
       "/dev/sys/platform/00:00:1b/sysmem",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, GceArm64Test) {
+  static const char* kDevicePaths[] = {
+      // TODO(fxbug.dev/101529): Once we use userspace PCI, add PCI devices we expect to see.
+      "sys/platform/platform-passthrough/acpi",
+      "sys/platform/platform-passthrough/acpi/acpi-_SB_",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
