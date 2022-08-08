@@ -249,6 +249,35 @@ present in `fuchsia.net.interfaces/Watcher`,
 `fuchsia.net.neighbor/EntryIterator`, and a hypothetical
 `fuchsia.net.routes/Watcher`.
 
+## API compatibility with Netstack2
+
+Netstack3 must be fully API compatible with Netstack2 and, when it comes the
+time to transition to it, we must be able to drop it in the network realm
+without any change to API clients.
+
+### Why?
+
+A drop-in replacement means we can iteratively assert proper operation and
+feature-completeness without carrying the burden of maintaining parallel client
+implementations. Similarly, it decreases the cost of parallel test cases and
+tooling. The shared test batteries also increase confidence since they run
+against the production-ready Netstack2.
+
+Furthermore, it allows an incremental approach to enabling Netstack3 in specific
+product configurations, possibly accelerating real-world adoption before it is
+at full parity with Netstack2.
+
+### How?
+
+As Netstack3 progresses towards feature-completeness we will iteratively enable
+[FIDL integration] and [POSIX][posix-tests] tests. In the event we discover
+shortcomings in the API surface, we *may* update existing APIs, but Netstack2's
+implementation must be carried forward with it.
+
+Note that `inspect` data is not considered part of the API surface and is not
+part of this contract. Netstack3 is not expected to generate fully compatible
+debugging or metrics information.
+
 [`fuchsia.net.interfaces/Watcher`]: https://fuchsia.dev/reference/fidl/fuchsia.net.interfaces?hl=en#Watcher
 [DAD implementation]: https://fuchsia-review.googlesource.com/c/fuchsia/+/648202
 [Originally in Netstack3]: https://cs.opensource.google/fuchsia/fuchsia/+/07b825aab40438237b2c47239786aae08c179139:src/connectivity/network/netstack3/
@@ -256,3 +285,5 @@ present in `fuchsia.net.interfaces/Watcher`,
 [RFC 6724 Section 2.2]: https://datatracker.ietf.org/doc/html/rfc6724#section-2.2
 [RFC 6724 Section 5]: https://datatracker.ietf.org/doc/html/rfc6724#section-5
 [RFC 6724 Section 6]: https://datatracker.ietf.org/doc/html/rfc6724#section-6
+[FIDL integration]: /src/connectivity/network/tests/fidl
+[posix-tests]: /src/connectivity/network/tests/bsdsocket_test.cc
