@@ -13,13 +13,14 @@
 namespace screenshot {
 
 ScreenshotManager::ScreenshotManager(
-    bool use_flatland, std::shared_ptr<allocation::Allocator> allocator_,
+    bool use_flatland, std::shared_ptr<allocation::Allocator> allocator,
     std::shared_ptr<flatland::Renderer> renderer, GetRenderables get_renderables,
     TakeGfxScreenshot take_gfx_screenshot,
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers,
     fuchsia::math::SizeU display_size)
     : use_flatland_(use_flatland),
       take_gfx_screenshot_(std::move(take_gfx_screenshot)),
+      allocator_(std::move(allocator)),
       renderer_(renderer),
       get_renderables_(std::move(get_renderables)),
       buffer_collection_importers_(std::move(buffer_collection_importers)),

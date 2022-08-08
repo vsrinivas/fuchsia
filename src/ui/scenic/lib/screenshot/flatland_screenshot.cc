@@ -144,24 +144,19 @@ void FlatlandScreenshot::Take(fuchsia::ui::composition::ScreenshotTakeRequest fo
 
   callback_ = std::move(callback);
 
-  zx::event event;
+  FX_DCHECK(!render_event_);
   zx::event dup;
-  zx_status_t status = zx::event::create(0, &event);
+  zx_status_t status = zx::event::create(0, &render_event_);
   FX_DCHECK(status == ZX_OK);
-  event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  render_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
 
   GetNextFrameArgs frame_args;
   frame_args.set_event(std::move(dup));
 
-  fpromise::result<FrameInfo, ScreenCaptureError> gnf_response;
-  screen_capturer_->GetNextFrame(
-      std::move(frame_args),
-      [&gnf_response](fpromise::result<FrameInfo, ScreenCaptureError> result) {
-        gnf_response = std::move(result);
-      });
+  screen_capturer_->GetNextFrame(std::move(frame_args), [](auto result) {});
 
   // Wait for the frame to render in an async fashion.
-  render_wait_ = std::make_shared<async::WaitOnce>(event.get(), ZX_EVENTPAIR_SIGNALED);
+  render_wait_ = std::make_shared<async::WaitOnce>(render_event_.get(), ZX_EVENT_SIGNALED);
   status = render_wait_->Begin(async_get_default_dispatcher(),
                                [weak_ptr = weak_factory_.GetWeakPtr()](
                                    async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
@@ -181,8 +176,8 @@ void FlatlandScreenshot::HandleFrameRender() {
   fuchsia::ui::composition::ScreenshotTakeResponse response;
 
   zx::vmo response_vmo;
-  zx_status_t status =
-      buffer_collection_info_.buffers[0].vmo.duplicate(ZX_RIGHT_READ | ZX_RIGHT_MAP, &response_vmo);
+  zx_status_t status = buffer_collection_info_.buffers[0].vmo.duplicate(
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &response_vmo);
   FX_DCHECK(status == ZX_OK);
 
   response.set_vmo(std::move(response_vmo));
@@ -190,6 +185,7 @@ void FlatlandScreenshot::HandleFrameRender() {
   callback_(std::move(response));
 
   callback_ = nullptr;
+  render_event_.reset();
 }
 
 }  // namespace screenshot

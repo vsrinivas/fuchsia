@@ -44,6 +44,7 @@ class FlatlandScreenshot : public fuchsia::ui::composition::Screenshot {
 
   // The client-supplied callback to be fired after the screenshot occurrs.
   TakeCallback callback_ = nullptr;
+  zx::event render_event_;
   std::shared_ptr<async::WaitOnce> render_wait_;
 
   // Used to ensure that the first Take() call happens after the asynchronous sysmem buffer
