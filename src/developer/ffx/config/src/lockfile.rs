@@ -18,13 +18,13 @@ use tracing::warn;
 #[derive(Debug)]
 pub struct Lockfile {
     path: PathBuf,
-    _handle: File,
+    handle: File,
 }
 
 #[derive(thiserror::Error, Debug)]
 /// An error while creating a lockfile, including the underlying file io error
 /// and if possible the error
-#[error("Error obtaining lock on {:?} (existing owner if present: '{:?}')", .lock_path, .owner)]
+#[error("Error obtaining lock on {:?} (existing owner if present: '{:?}', our pid is {pid})", .lock_path, .owner, pid=std::process::id())]
 pub struct LockfileCreateError {
     /// The underlying error attempting to obtain the lockfile
     #[source]
@@ -79,16 +79,24 @@ impl Lockfile {
     /// from the file create call. Note that this won't retry. Use [`Lockfile::lock`]
     /// or [`Lockfile::lock_for`] to do that.
     pub fn new(lock_path: &Path) -> Result<Self, LockfileCreateError> {
-        match OpenOptions::new().create_new(true).write(true).open(&lock_path) {
-            Ok(handle) => {
-                LockContext::current()
-                    .write_to(&handle)
-                    .map_err(|e| LockfileCreateError::new(lock_path, e))?;
-                let lock_path = lock_path.to_owned();
-                Ok(Self { _handle: handle, path: lock_path })
-            }
-            Err(e) => Err(LockfileCreateError::new(lock_path, e)),
-        }
+        // create the lock file -- if this succeeds the file exists now and is brand new
+        // so we can write our details to it.
+        OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&lock_path)
+            .and_then(|handle| {
+                // but then once we've got the file, if we write to it and fail somehow
+                // we have to clean up after ourselves, so immediately create the Lockfile
+                // object, that way if we fail to write to it it will clean up after itself
+                // in drop().
+                let path = lock_path.to_owned();
+                let mut lock_file = Self { handle, path };
+                LockContext::current().write_to(&lock_file.handle)?;
+                lock_file.handle.flush()?;
+                Ok(lock_file)
+            })
+            .map_err(|e| LockfileCreateError::new(lock_path, e))
     }
 
     /// Creates a lockfile at `filename`.lock if possible. See [`Lockfile::new`] for details on the return value.
