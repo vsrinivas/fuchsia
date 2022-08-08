@@ -70,7 +70,7 @@ void main() {
     expect(
         await helper.performance.processTrace(metricsSpecSet, jsonTraceFile,
             converterPath: _catapultConverterPath,
-            expectedMetricNamesFile: 'fuchsia.input_latency.simplest_app'),
+            expectedMetricNamesFile: 'fuchsia.input_latency.simplest_app.txt'),
         isNotNull);
 
     // Clean up by killing the processes.  The reason for this is that we want

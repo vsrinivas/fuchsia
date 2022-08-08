@@ -18,6 +18,6 @@ void main() {
         packageName: 'fidlc_microbenchmarks',
         componentName: 'fidlc_microbenchmarks.cm',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
-        expectedMetricNamesFile: 'fuchsia.fidlc_microbenchmarks');
+        expectedMetricNamesFile: 'fuchsia.fidlc_microbenchmarks.txt');
   }, timeout: Timeout.none);
 }
