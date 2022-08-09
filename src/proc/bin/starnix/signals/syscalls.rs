@@ -529,7 +529,7 @@ fn wait_on_pid(
     };
     loop {
         if let Some(child) = task.thread_group.get_waitable_child(selector, options)? {
-            return Ok(Some(child))
+            return Ok(Some(child));
         }
 
         if !options.block {

@@ -634,9 +634,11 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
     }
 
-    /// Returns any waitable child matching the given `selector` and `options`.
+    /// Returns any waitable child matching the given `selector` and `options`. Returns None if no
+    /// child matching the selector is waitable. Returns ECHILD if no child matches the selector at
+    /// all.
     ///
-    ///Will remove the waitable status from the child depending on `options`.
+    /// Will remove the waitable status from the child depending on `options`.
     pub fn get_waitable_child(
         &mut self,
         children: Vec<ThreadGroupWriteGuard<'_>>,
