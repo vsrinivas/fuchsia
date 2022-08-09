@@ -173,16 +173,24 @@ class AudioRendererShim : public RendererShimImpl {
   // appropriately bound into the test environment.
   AudioRendererShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format fmt,
                     int64_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
-                    size_t inspect_id, std::optional<zx::clock> reference_clock)
+                    size_t inspect_id, std::optional<zx::clock> reference_clock,
+                    std::optional<float> initial_gain_db)
       : RendererShimImpl(fmt, payload_frame_count, inspect_id) {
     audio_core->CreateAudioRenderer(fidl().NewRequest());
     fixture->AddErrorHandler(fidl(), "AudioRenderer");
     WatchEvents();
 
+    fidl()->BindGainControl(gain().NewRequest());
+    if (initial_gain_db) {
+      // In this case, the caller wants us to set an initial gain before calling SetPcmStreamType.
+      gain()->SetGain(*initial_gain_db);
+    }
+
+    fidl()->SetUsage(usage);
     if (reference_clock) {
       SetReferenceClock(fixture, *reference_clock);
     }
-    fidl()->SetUsage(usage);
+
     fidl()->SetPcmStreamType(
         {.sample_format = format().sample_format(),
          .channels = static_cast<uint32_t>(format().channels()),
@@ -192,7 +200,6 @@ class AudioRendererShim : public RendererShimImpl {
     fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
     RetrieveReferenceClock(fixture);
 
-    fidl()->BindGainControl(gain().NewRequest());
     fixture->AddErrorHandler(gain(), "GainControl");
   }
 

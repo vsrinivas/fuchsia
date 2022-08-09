@@ -73,6 +73,16 @@ AudioRenderer::~AudioRenderer() {
 
 void AudioRenderer::OnLinkAdded() {
   // With a link, our Mixer and Gain objects have been created, so we can set initial gain levels.
+  if (mute_ || stream_gain_db_ != 0.0f) {
+    if constexpr (kLogRendererSetGainMuteRampCalls) {
+      FX_LOGS(INFO) << static_cast<const void*>(this)
+                    << " SetInitialGainMute gain=" << stream_gain_db_ << "dB, mute=" << mute_;
+    }
+    PostStreamGainMute({
+        .gain_db = stream_gain_db_,
+        .mute = mute_,
+    });
+  }
   context().volume_manager().NotifyStreamChanged(this);
 
   BaseRenderer::OnLinkAdded();
@@ -518,7 +528,8 @@ void AudioRenderer::SetGain(float gain_db) {
 void AudioRenderer::SetGainInternal(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
   if constexpr (kLogRendererSetGainMuteRampCalls) {
-    FX_LOGS(INFO) << __FUNCTION__ << "(" << gain_db << " dB)";
+    FX_LOGS(INFO) << static_cast<const void*>(this) << " " << __FUNCTION__ << "(" << gain_db
+                  << " dB)";
   }
 
   // Before setting stream_gain_db_, always perform this range check.
@@ -548,8 +559,8 @@ void AudioRenderer::SetGainWithRampInternal(float gain_db, int64_t duration_ns,
                                             fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetGainWithRamp");
   if constexpr (kLogRendererSetGainMuteRampCalls) {
-    FX_LOGS(INFO) << __FUNCTION__ << "(to " << gain_db << " dB over " << duration_ns / 1000
-                  << " usec)";
+    FX_LOGS(INFO) << static_cast<const void*>(this) << " " << __FUNCTION__ << "(to " << gain_db
+                  << " dB over " << duration_ns / 1000 << " usec)";
   }
 
   if (duration_ns <= 0) {
@@ -582,7 +593,7 @@ void AudioRenderer::SetMute(bool mute) {
 void AudioRenderer::SetMuteInternal(bool mute) {
   TRACE_DURATION("audio", "AudioRenderer::SetMute");
   if constexpr (kLogRendererSetGainMuteRampCalls) {
-    FX_LOGS(INFO) << __FUNCTION__ << "(" << mute << ")";
+    FX_LOGS(INFO) << static_cast<const void*>(this) << " " << __FUNCTION__ << "(" << mute << ")";
   }
   // Only do the work if the request represents a change in state.
   if (mute_ == mute) {
