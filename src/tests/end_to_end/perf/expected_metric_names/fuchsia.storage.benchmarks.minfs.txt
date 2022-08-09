@@ -1,0 +1,4 @@
+fuchsia.storage.benchmarks.minfs: random/read/8192
+fuchsia.storage.benchmarks.minfs: random/write/8192
+fuchsia.storage.benchmarks.minfs: sequential/read/8192
+fuchsia.storage.benchmarks.minfs: sequential/write/8192

@@ -165,6 +165,10 @@ if (is_host) {
     "fuchsia.rust_inspect.benchmarks.txt",
     "fuchsia.rust_inspect.reader_benchmarks.txt",
     "fuchsia.rust_inspect.selectors.txt",
+    "fuchsia.storage.benchmarks.f2fs.txt",
+    "fuchsia.storage.benchmarks.fxfs.txt",
+    "fuchsia.storage.benchmarks.memfs.txt",
+    "fuchsia.storage.benchmarks.minfs.txt",
   ]
 
   host_test_data("runtime_deps") {

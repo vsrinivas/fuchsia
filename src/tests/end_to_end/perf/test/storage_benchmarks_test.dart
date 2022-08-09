@@ -125,6 +125,7 @@ void _addOduTest(String filesystem, List<String> extraLauncherArgs) {
       registry: {
         'storage': _storageBenchmarksMetricsProcessor,
       },
+      expectedMetricNamesFile: "$testName.txt",
     );
   }, timeout: Timeout.none);
 }
