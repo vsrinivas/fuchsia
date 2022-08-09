@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  sources = [
+    "composite_manager_bridge.h",
+    "device_group.cc",
+    "device_group.h",
+    "device_group_manager.cc",
+    "device_group_manager.h",
+  ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_cpp",
+    "//src/devices/lib/log",
+  ]
+}

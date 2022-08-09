@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_DEVICE_GROUP_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_DEVICE_GROUP_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <fidl/fuchsia.driver.index/cpp/wire.h>
 
 #include <fbl/array.h>
 
-#include "src/devices/bin/driver_manager/composite_manager_bridge.h"
+#include "src/devices/bin/driver_manager/device_group/composite_manager_bridge.h"
 
 // Stores the state of a device group node.
 struct DeviceGroupNode {
@@ -45,4 +44,4 @@ class DeviceGroup {
   fbl::Array<DeviceGroupNode> device_group_nodes_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_DEVICE_GROUP_H_

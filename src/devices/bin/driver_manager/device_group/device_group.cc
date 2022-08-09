@@ -2,13 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bin/driver_manager/device_group.h"
+#include "src/devices/bin/driver_manager/device_group/device_group.h"
 
-#include "src/devices/bin/driver_manager/v1/init_task.h"
-#include "src/devices/bin/driver_manager/v1/resume_task.h"
-#include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
-#include "src/devices/bin/driver_manager/v1/suspend_task.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/lib/log/log.h"
 
 namespace fdi = fuchsia_driver_index;

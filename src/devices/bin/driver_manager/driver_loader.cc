@@ -78,6 +78,33 @@ zx::status<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::Mat
   return zx::ok(driver.driver());
 }
 
+MatchedCompositeDevice CreateMatchedCompositeDevice(
+    fuchsia_driver_index::wire::MatchedCompositeInfo composite_info) {
+  MatchedCompositeDevice composite = {};
+  if (composite_info.has_num_nodes()) {
+    composite.num_nodes = composite_info.num_nodes();
+  }
+
+  if (composite_info.has_node_index()) {
+    composite.node = composite_info.node_index();
+  }
+
+  if (composite_info.has_composite_name()) {
+    composite.name =
+        std::string(composite_info.composite_name().data(), composite_info.composite_name().size());
+  }
+
+  if (composite_info.has_node_names()) {
+    std::vector<std::string> names;
+    for (auto& name : composite_info.node_names()) {
+      names.push_back(std::string(name.data(), name.size()));
+    }
+    composite.node_names = std::move(names);
+  }
+
+  return composite;
+}
+
 bool ShouldUseUniversalResolver(fdi::wire::DriverPackageType package_type) {
   return package_type == fdi::wire::DriverPackageType::kUniverse ||
          package_type == fdi::wire::DriverPackageType::kCached;

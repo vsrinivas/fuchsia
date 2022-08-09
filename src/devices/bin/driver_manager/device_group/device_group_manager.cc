@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/bin/driver_manager/device_group_manager.h"
+#include "src/devices/bin/driver_manager/device_group/device_group_manager.h"
 
 #include "src/devices/lib/log/log.h"
 
@@ -16,7 +16,7 @@ zx::status<> DeviceGroupManager::AddDeviceGroup(fdf::wire::DeviceGroup fidl_grou
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto topological_path = fidl_group.topological_path().get();
+  auto topological_path = std::string(fidl_group.topological_path().get());
   if (device_groups_.find(topological_path) != device_groups_.end()) {
     LOGF(ERROR, "Duplicate device group %.*s", static_cast<int>(topological_path.size()),
          topological_path.data());
@@ -27,6 +27,7 @@ zx::status<> DeviceGroupManager::AddDeviceGroup(fdf::wire::DeviceGroup fidl_grou
   if (!result.is_ok()) {
     // Return ZX_OK if a composite driver is not available.
     if (result.status_value() == ZX_ERR_NOT_FOUND) {
+      device_groups_[topological_path] = nullptr;
       return zx::ok();
     }
 
@@ -39,12 +40,12 @@ zx::status<> DeviceGroupManager::AddDeviceGroup(fdf::wire::DeviceGroup fidl_grou
 }
 
 zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(fdf::wire::DeviceGroup fidl_group,
-                                                          fdi::wire::MatchedCompositeInfo driver) {
+                                                          fdi::MatchedCompositeInfo driver) {
   if (!fidl_group.has_topological_path() || !fidl_group.has_nodes() || fidl_group.nodes().empty()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto topological_path = fidl_group.topological_path().get();
+  auto topological_path = std::string(fidl_group.topological_path().get());
   if (device_groups_[topological_path]) {
     LOGF(ERROR, "Device group %.*s is already bound to a composite driver",
          static_cast<int>(topological_path.size()), topological_path.data());
@@ -67,17 +68,33 @@ zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(fdf::wire::DeviceGroup
   return zx::ok();
 }
 
-zx::status<> DeviceGroupManager::BindDeviceGroupNode(MatchedDeviceGroupNodeInfo match_info,
+zx::status<> DeviceGroupManager::BindDeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo match_info,
                                                      DeviceOrNode node) {
+  if (!match_info.device_groups().has_value() || match_info.device_groups().value().empty()) {
+    LOGF(ERROR, "MatchedDeviceGroupNodeInfo needs to contain as least one device group");
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
   // Go through each device group until we find an available one with an unbound node.
-  for (auto device_group_info : match_info.groups) {
-    auto& device_group = device_groups_[device_group_info.topological_path];
-    if (!device_group) {
-      LOGF(ERROR, "Missing device group: %d", ZX_ERR_INTERNAL);
+  for (auto device_group_info : match_info.device_groups().value()) {
+    if (!device_group_info.topological_path().has_value() ||
+        !device_group_info.node_index().has_value()) {
+      LOGF(ERROR, "MatchedDeviceGroupInfo missing field(s)");
       continue;
     }
 
-    auto result = device_group->BindNode(device_group_info.node_index, node);
+    auto topological_path = device_group_info.topological_path().value();
+    if (device_groups_.find(topological_path) == device_groups_.end()) {
+      LOGF(ERROR, "Missing device group %s", topological_path.c_str());
+      continue;
+    }
+
+    auto& device_group = device_groups_[topological_path];
+    if (!device_group) {
+      continue;
+    }
+
+    auto result = device_group->BindNode(device_group_info.node_index().value(), node);
     if (result.is_ok()) {
       return zx::ok();
     }

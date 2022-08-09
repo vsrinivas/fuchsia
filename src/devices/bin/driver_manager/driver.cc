@@ -152,33 +152,6 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
 
 }  // namespace
 
-MatchedCompositeDevice CreateMatchedCompositeDevice(
-    fuchsia_driver_index::wire::MatchedCompositeInfo composite_info) {
-  MatchedCompositeDevice composite = {};
-  if (composite_info.has_num_nodes()) {
-    composite.num_nodes = composite_info.num_nodes();
-  }
-
-  if (composite_info.has_node_index()) {
-    composite.node = composite_info.node_index();
-  }
-
-  if (composite_info.has_composite_name()) {
-    composite.name =
-        std::string(composite_info.composite_name().data(), composite_info.composite_name().size());
-  }
-
-  if (composite_info.has_node_names()) {
-    std::vector<std::string> names;
-    for (auto& name : composite_info.node_names()) {
-      names.push_back(std::string(name.data(), name.size()));
-    }
-    composite.node_names = std::move(names);
-  }
-
-  return composite;
-}
-
 zx::status<MatchedDeviceGroupNodeInfo> CreateMatchedDeviceGroupNodeInfo(
     fuchsia_driver_index::wire::MatchedDeviceGroupNodeInfo fidl_info) {
   if (!fidl_info.has_device_groups() || fidl_info.device_groups().empty()) {
