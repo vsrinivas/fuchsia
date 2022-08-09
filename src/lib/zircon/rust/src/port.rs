@@ -319,6 +319,9 @@ impl GuestVcpuPacket {
                     entry: self.0.union.startup.entry,
                 }
             },
+            sys::zx_packet_guest_vcpu_type_t::ZX_PKT_GUEST_VCPU_EXIT => unsafe {
+                VcpuContents::Exit { retcode: self.0.union.exit.retcode }
+            },
             _ => panic!("unexpected VCPU packet type"),
         }
     }

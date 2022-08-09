@@ -13,7 +13,7 @@ pub struct Vcpu(Handle);
 impl_handle_based!(Vcpu);
 
 impl Vcpu {
-    // Create a VCPU, for use with a `guest`.
+    /// Create a VCPU, for use with `guest` that begins execution at `entry`.
     pub fn create(guest: &Guest, entry: usize) -> Result<Vcpu, Status> {
         unsafe {
             let mut vcpu_handle = 0;
@@ -22,24 +22,24 @@ impl Vcpu {
         }
     }
 
-    // Enter a VCPU, causing it to resume execution.
+    /// Enter a VCPU, causing it to resume execution.
     pub fn enter(&self) -> Result<Packet, Status> {
         let mut packet = Default::default();
         ok(unsafe { sys::zx_vcpu_enter(self.raw_handle(), &mut packet) })?;
         Ok(Packet(packet))
     }
 
-    // Kick a VCPU, causing it to stop execution.
+    /// Kick a VCPU, causing it to stop execution.
     pub fn kick(&self) -> Result<(), Status> {
         ok(unsafe { sys::zx_vcpu_kick(self.raw_handle()) })
     }
 
-    // Raise an interrupt on a VCPU.
+    /// Raise an interrupt on a VCPU.
     pub fn interrupt(&self, vector: u32) -> Result<(), Status> {
         ok(unsafe { sys::zx_vcpu_interrupt(self.raw_handle(), vector) })
     }
 
-    // Read the state of a VCPU.
+    /// Read the state of a VCPU.
     pub fn read_state(&self) -> Result<sys::zx_vcpu_state_t, Status> {
         let mut state = sys::zx_vcpu_state_t::default();
         let status = unsafe {
@@ -53,7 +53,7 @@ impl Vcpu {
         ok(status).map(|_| state)
     }
 
-    // Write the state of a VCPU.
+    /// Write the state of a VCPU.
     pub fn write_state(&self, state: &sys::zx_vcpu_state_t) -> Result<(), Status> {
         let status = unsafe {
             sys::zx_vcpu_write_state(
@@ -71,6 +71,7 @@ impl Vcpu {
 pub enum VcpuContents {
     Interrupt { mask: u64, vector: u8 },
     Startup { id: u64, entry: sys::zx_gpaddr_t },
+    Exit { retcode: i64 },
 }
 
 #[cfg(test)]
@@ -90,9 +91,9 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn vcpu_create() {
+    async fn vcpu_normal_create() {
         let hypervisor = get_hypervisor().await;
-        let (guest, _vmar) = match Guest::create(&hypervisor) {
+        let (guest, _vmar) = match Guest::normal(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;
@@ -103,9 +104,9 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn vcpu_interrupt() {
+    async fn vcpu_normal_interrupt() {
         let hypervisor = get_hypervisor().await;
-        let (guest, _vmar) = match Guest::create(&hypervisor) {
+        let (guest, _vmar) = match Guest::normal(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;
@@ -118,9 +119,56 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn vcpu_read_write_state() {
+    async fn vcpu_normal_read_write_state() {
         let hypervisor = get_hypervisor().await;
-        let (guest, _vmar) = match Guest::create(&hypervisor) {
+        let (guest, _vmar) = match Guest::normal(&hypervisor) {
+            Err(Status::NOT_SUPPORTED) => {
+                println!("Hypervisor not supported");
+                return;
+            }
+            result => result.unwrap(),
+        };
+        let vcpu = Vcpu::create(&guest, 0).unwrap();
+
+        let state = vcpu.read_state().unwrap();
+        vcpu.write_state(&state).unwrap();
+    }
+
+    #[fuchsia::test]
+    async fn vcpu_direct_create() {
+        let hypervisor = get_hypervisor().await;
+        let (guest, _vmar) = match Guest::direct(&hypervisor) {
+            Err(Status::NOT_SUPPORTED) => {
+                println!("Hypervisor not supported");
+                return;
+            }
+            result => result.unwrap(),
+        };
+        let _vcpu = Vcpu::create(&guest, 0).unwrap();
+    }
+
+    #[fuchsia::test]
+    async fn vcpu_direct_interrupt() {
+        let hypervisor = get_hypervisor().await;
+        let (guest, _vmar) = match Guest::direct(&hypervisor) {
+            Err(Status::NOT_SUPPORTED) => {
+                println!("Hypervisor not supported");
+                return;
+            }
+            result => result.unwrap(),
+        };
+        let vcpu = Vcpu::create(&guest, 0).unwrap();
+
+        match vcpu.interrupt(0) {
+            Err(Status::NOT_SUPPORTED) => (),
+            _ => panic!("Interrupt should not be supported"),
+        }
+    }
+
+    #[fuchsia::test]
+    async fn vcpu_direct_read_write_state() {
+        let hypervisor = get_hypervisor().await;
+        let (guest, _vmar) = match Guest::direct(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;

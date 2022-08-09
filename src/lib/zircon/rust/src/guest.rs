@@ -21,14 +21,26 @@ pub struct Guest(Handle);
 impl_handle_based!(Guest);
 
 impl Guest {
-    /// Create a guest that is used to run virtual machines.
-    pub fn create(hypervisor: &Resource) -> Result<(Guest, Vmar), Status> {
+    /// Create a normal guest, that is used to run normal virtual machines.
+    pub fn normal(hypervisor: &Resource) -> Result<(Guest, Vmar), Status> {
+        Self::create(hypervisor, sys::ZX_GUEST_OPT_NORMAL)
+    }
+
+    /// Create a direct guest, that is able to access Zircon syscalls.
+    pub fn direct(hypervisor: &Resource) -> Result<(Guest, Vmar), Status> {
+        Self::create(hypervisor, sys::ZX_GUEST_OPT_DIRECT)
+    }
+
+    fn create(
+        hypervisor: &Resource,
+        options: sys::zx_guest_option_t,
+    ) -> Result<(Guest, Vmar), Status> {
         unsafe {
             let mut guest_handle = 0;
             let mut vmar_handle = 0;
             ok(sys::zx_guest_create(
                 hypervisor.raw_handle(),
-                0,
+                options,
                 &mut guest_handle,
                 &mut vmar_handle,
             ))?;
@@ -149,9 +161,21 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn guest_create() {
+    async fn guest_normal_create() {
         let hypervisor = get_hypervisor().await;
-        match Guest::create(&hypervisor) {
+        match Guest::normal(&hypervisor) {
+            Err(Status::NOT_SUPPORTED) => {
+                println!("Hypervisor not supported");
+                return;
+            }
+            result => result.unwrap(),
+        };
+    }
+
+    #[fuchsia::test]
+    async fn guest_direct_create() {
+        let hypervisor = get_hypervisor().await;
+        match Guest::direct(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;

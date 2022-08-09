@@ -772,6 +772,7 @@ impl Default for zx_packet_type_t {
 pub enum zx_packet_guest_vcpu_type_t {
     ZX_PKT_GUEST_VCPU_INTERRUPT = 0,
     ZX_PKT_GUEST_VCPU_STARTUP = 1,
+    ZX_PKT_GUEST_VCPU_EXIT = 2,
     #[doc(hidden)]
     __Nonexhaustive,
 }
@@ -830,10 +831,18 @@ pub struct zx_packet_guest_vcpu_startup_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_packet_guest_vcpu_exit_t {
+    pub retcode: i64,
+    reserved: u64,
+}
+
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub union zx_packet_guest_vcpu_union_t {
     pub interrupt: zx_packet_guest_vcpu_interrupt_t,
     pub startup: zx_packet_guest_vcpu_startup_t,
+    pub exit: zx_packet_guest_vcpu_exit_t,
 }
 
 #[repr(C)]
@@ -853,6 +862,9 @@ impl Debug for zx_packet_guest_vcpu_t {
             }
             zx_packet_guest_vcpu_type_t::ZX_PKT_GUEST_VCPU_STARTUP => {
                 write!(f, "type: {:?} union: {:?}", self.r#type, unsafe { self.union.startup })
+            }
+            zx_packet_guest_vcpu_type_t::ZX_PKT_GUEST_VCPU_EXIT => {
+                write!(f, "type: {:?} union: {:?}", self.r#type, unsafe { self.union.exit })
             }
             _ => panic!("unexpected VCPU packet type"),
         }
@@ -1453,6 +1465,11 @@ struct_decl_macro! {
 zx_info_maps_t!(zx_info_maps_t);
 
 // from //zircon/system/public/zircon/syscalls/hypervisor.h
+multiconst!(zx_guest_option_t, [
+    ZX_GUEST_OPT_NORMAL = 0;
+    ZX_GUEST_OPT_DIRECT = 1;
+]);
+
 multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_BELL = 0;
     ZX_GUEST_TRAP_MEM  = 1;
