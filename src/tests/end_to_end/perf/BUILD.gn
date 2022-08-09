@@ -151,6 +151,7 @@ if (is_host) {
     "fuchsia.audio.txt",
     "fuchsia.fidlc_microbenchmarks.txt",
     "fuchsia.input_latency.simplest_app.txt",
+    "fuchsia.kernel.boot.txt",
   ]
 
   host_test_data("runtime_deps") {

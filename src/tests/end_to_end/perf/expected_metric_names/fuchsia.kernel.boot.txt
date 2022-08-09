@@ -1,0 +1,12 @@
+fuchsia.kernel.boot: KernelBootComplete
+fuchsia.kernel.boot: KernelBootDecompression
+fuchsia.kernel.boot: KernelBootFreeMemoryAfterInit
+fuchsia.kernel.boot: KernelBootLoader
+fuchsia.kernel.boot: KernelBootPhysHandoff
+fuchsia.kernel.boot: KernelBootPhysSetup
+fuchsia.kernel.boot: KernelBootPhysZbiIngestion
+fuchsia.kernel.boot: KernelBootPhysZbiScan
+fuchsia.kernel.boot: KernelBootPhysical
+fuchsia.kernel.boot: KernelBootThreads
+fuchsia.kernel.boot: KernelBootTotal
+fuchsia.kernel.boot: KernelBootUser
