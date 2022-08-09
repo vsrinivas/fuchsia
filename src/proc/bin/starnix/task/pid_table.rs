@@ -36,14 +36,26 @@ impl PidTable {
         self.table.entry(pid).or_insert(Default::default())
     }
 
+    pub fn allocate_pid(&mut self) -> pid_t {
+        // TODO: wrap the pid number and check for collisions
+        self.last_pid += 1;
+        return self.last_pid;
+    }
+
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
         self.get_entry(pid).and_then(|entry| entry.task.as_ref()).and_then(|task| task.upgrade())
     }
 
-    pub fn get_process_group(&self, pid: pid_t) -> Option<Arc<ProcessGroup>> {
-        self.get_entry(pid)
-            .and_then(|entry| entry.process_group.as_ref())
-            .and_then(|process_group| process_group.upgrade())
+    pub fn add_task(&mut self, task: &Arc<Task>) {
+        let entry = self.get_entry_mut(task.id);
+        assert!(entry.task.is_none());
+        self.get_entry_mut(task.id).task = Some(Arc::downgrade(task));
+    }
+
+    pub fn remove_task(&mut self, pid: pid_t) {
+        let entry = self.get_entry_mut(pid);
+        assert!(entry.task.is_some());
+        entry.task = None;
     }
 
     pub fn get_thread_groups(&self) -> Vec<Arc<ThreadGroup>> {
@@ -53,40 +65,28 @@ impl PidTable {
             .collect()
     }
 
-    pub fn allocate_pid(&mut self) -> pid_t {
-        // TODO: wrap the pid number and check for collisions
-        self.last_pid += 1;
-        return self.last_pid;
-    }
-
-    pub fn add_task(&mut self, task: &Arc<Task>) {
-        let entry = self.get_entry_mut(task.id);
-        assert!(entry.task.is_none());
-        self.get_entry_mut(task.id).task = Some(Arc::downgrade(task));
-    }
-
     pub fn add_thread_group(&mut self, thread_group: &Arc<ThreadGroup>) {
         let entry = self.get_entry_mut(thread_group.leader);
         assert!(entry.group.is_none());
         entry.group = Some(Arc::downgrade(thread_group));
     }
 
-    pub fn add_process_group(&mut self, process_group: &Arc<ProcessGroup>) {
-        let entry = self.get_entry_mut(process_group.leader);
-        assert!(entry.process_group.is_none());
-        entry.process_group = Some(Arc::downgrade(process_group));
-    }
-
-    pub fn remove_task(&mut self, pid: pid_t) {
-        let entry = self.get_entry_mut(pid);
-        assert!(entry.task.is_some());
-        entry.task = None;
-    }
-
     pub fn remove_thread_group(&mut self, pid: pid_t) {
         let entry = self.get_entry_mut(pid);
         assert!(entry.group.is_some());
         entry.group = None;
+    }
+
+    pub fn get_process_group(&self, pid: pid_t) -> Option<Arc<ProcessGroup>> {
+        self.get_entry(pid)
+            .and_then(|entry| entry.process_group.as_ref())
+            .and_then(|process_group| process_group.upgrade())
+    }
+
+    pub fn add_process_group(&mut self, process_group: &Arc<ProcessGroup>) {
+        let entry = self.get_entry_mut(process_group.leader);
+        assert!(entry.process_group.is_none());
+        entry.process_group = Some(Arc::downgrade(process_group));
     }
 
     pub fn remove_process_group(&mut self, pid: pid_t) {

@@ -20,14 +20,14 @@ use crate::types::*;
 pub struct ThreadGroupMutableState {
     /// The parent thread group.
     ///
-    /// The value needs to be writable so that it can be re-parent to the correct subreaper is the
+    /// The value needs to be writable so that it can be re-parent to the correct subreaper if the
     /// parent ends before the child.
     pub parent: Option<Arc<ThreadGroup>>,
 
     /// The tasks in the thread group.
     ///
     /// The references to Task is weak to prevent cycles as Task have a Arc reference to their
-    /// process.
+    /// thread group.
     /// It is still expected that these weak references are always valid, as tasks must unregister
     /// themselves before they are deleted.
     pub tasks: BTreeMap<pid_t, Weak<Task>>,
@@ -238,7 +238,24 @@ impl ThreadGroup {
     pub fn remove(self: &Arc<Self>, task: &Arc<Task>) {
         let mut pids = self.kernel.pids.write();
         let mut state = self.write();
-        if state.remove_internal(task, &mut pids) {
+
+        state.tasks.remove(&task.id);
+        pids.remove_task(task.id);
+
+        if task.id == state.leader() {
+            let exit_status = task.read().exit_status.clone().unwrap_or_else(|| {
+                tracing::error!("Process {:?} exiting without an exit code.", task.id);
+                ExitStatus::Exit(u8::MAX)
+            });
+            state.zombie_leader = Some(ZombieProcess {
+                pid: state.leader(),
+                pgid: state.process_group.leader,
+                uid: task.creds().uid,
+                exit_status,
+            });
+        }
+
+        if state.tasks.is_empty() {
             state.terminating = true;
 
             // Because of lock ordering, one cannot get a lock to the state of the children of this
@@ -249,7 +266,36 @@ impl ThreadGroup {
             let parent = state.parent.clone();
             std::mem::drop(state);
             let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
-            self.write().remove(children_state, &mut pids);
+            let mut state = self.write();
+            // Unregister this object.
+            pids.remove_thread_group(state.leader());
+            state.leave_process_group(&mut pids);
+
+            if let Some(parent) = state.parent.clone() {
+                let mut parent_writer = parent.write();
+                // Reparent the children.
+                parent_writer.adopt_children(&mut state, children_state, &pids);
+
+                let zombie = state.zombie_leader.take().expect("Failed to capture zombie leader.");
+
+                let signal_info = zombie.as_signal_info();
+                parent_writer.children.remove(&state.leader());
+                parent_writer.zombie_children.push(zombie);
+
+                // Send signals
+                // TODO: Should this be zombie_leader.exit_signal?
+                if let Some(signal_target) = parent_writer.get_signal_target(&SIGCHLD.into()) {
+                    send_signal(&signal_target, signal_info);
+                }
+                parent_writer.interrupt(InterruptionType::ChildChange);
+            }
+
+            // TODO: Set the error_code on the Zircon process object. Currently missing a way
+            // to do this in Zircon. Might be easier in the new execution model.
+
+            // Once the last zircon thread stops, the zircon process will also stop executing.
+
+            std::mem::drop(state);
             parent.map(|parent| parent.check_orphans());
         }
     }
@@ -598,26 +644,6 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
     }
 
-    pub fn remove_internal(&mut self, task: &Arc<Task>, pids: &mut PidTable) -> bool {
-        self.tasks.remove(&task.id);
-        pids.remove_task(task.id);
-
-        if task.id == self.leader() {
-            let exit_status = task.read().exit_status.clone().unwrap_or_else(|| {
-                tracing::error!("Process {:?} exiting without an exit code.", task.id);
-                ExitStatus::Exit(u8::MAX)
-            });
-            self.zombie_leader = Some(ZombieProcess {
-                pid: self.leader(),
-                pgid: self.process_group.leader,
-                uid: task.creds().uid,
-                exit_status,
-            });
-        }
-
-        self.tasks.is_empty()
-    }
-
     /// Returns any waitable child matching the given `selector` and `options`.
     ///
     ///Will remove the waitable status from the child depending on `options`.
@@ -700,7 +726,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         Ok(WaitableChild::Pending)
     }
 
-    pub fn adopt_children(
+    fn adopt_children(
         &mut self,
         other: &mut ThreadGroupMutableState,
         children: Vec<ThreadGroupWriteGuard<'_>>,
@@ -723,36 +749,6 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
 
         other.children.clear();
         self.zombie_children.append(&mut other.zombie_children);
-    }
-
-    pub fn remove(&mut self, children: Vec<ThreadGroupWriteGuard<'_>>, pids: &mut PidTable) {
-        // Unregister this object.
-        pids.remove_thread_group(self.leader());
-        self.leave_process_group(pids);
-
-        if let Some(parent) = self.parent.clone() {
-            let mut parent_writer = parent.write();
-            // Reparent the children.
-            parent_writer.adopt_children(self, children, &pids);
-
-            let zombie = self.zombie_leader.take().expect("Failed to capture zombie leader.");
-
-            let signal_info = zombie.as_signal_info();
-            parent_writer.children.remove(&self.leader());
-            parent_writer.zombie_children.push(zombie);
-
-            // Send signals
-            // TODO: Should this be zombie_leader.exit_signal?
-            if let Some(signal_target) = parent_writer.get_signal_target(&SIGCHLD.into()) {
-                send_signal(&signal_target, signal_info);
-            }
-            parent_writer.interrupt(InterruptionType::ChildChange);
-        }
-
-        // TODO: Set the error_code on the Zircon process object. Currently missing a way
-        // to do this in Zircon. Might be easier in the new execution model.
-
-        // Once the last zircon thread stops, the zircon process will also stop executing.
     }
 
     /// Returns a task in the current thread group.
