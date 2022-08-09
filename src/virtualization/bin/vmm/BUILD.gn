@@ -119,7 +119,10 @@ source_set("lib") {
   }
 
   configs += [ "//build/config:all_source" ]
-  configs += [ "//src/virtualization/bin:args" ]
+  if (!defined(public_configs)) {
+    public_configs = []
+  }
+  public_configs += [ "//src/virtualization/bin:args" ]
 
   deps = [
     "//sdk/fidl/fuchsia.component",
@@ -176,7 +179,6 @@ executable("bin") {
   ]
 
   configs += [ "//build/config:all_source" ]
-  configs += [ "//src/virtualization/bin:args" ]
 }
 
 resource("vmm-resources") {

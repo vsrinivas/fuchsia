@@ -41,7 +41,10 @@ source_set("lib") {
     "//zircon/system/ulib/bitmap",
   ]
 
-  configs += [ "//src/virtualization/bin:args" ]
+  if (!defined(public_configs)) {
+    public_configs = []
+  }
+  public_configs += [ "//src/virtualization/bin:args" ]
 }
 
 executable("bin") {
@@ -54,8 +57,6 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  configs += [ "//src/virtualization/bin:args" ]
 }
 
 fuchsia_package("zircon_guest_manager") {
@@ -100,8 +101,6 @@ executable("guest_manager_test_bin") {
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
   ]
-
-  configs += [ "//src/virtualization/bin:args" ]
 }
 
 resource("test_configs") {
