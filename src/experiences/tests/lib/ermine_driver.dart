@@ -160,51 +160,6 @@ class ErmineDriver {
     });
   }
 
-  /// Got to the Overview screen.
-  Future<void> gotoOverview() async {
-    await _driver!.requestData('overview');
-    await _driver!.waitUntilNoTransientCallbacks(timeout: Duration(seconds: 2));
-    await _driver!.waitFor(find.byValueKey('overview'));
-  }
-
-  /// Enters text into Ask bar.
-  /// Optionally clear existing content and goto Ask in Overview.
-  Future<void> enterTextInAsk(
-    String text, {
-    bool clear = true,
-    bool gotoOverview = false,
-  }) async {
-    final input = Input(sl4f);
-
-    if (gotoOverview) {
-      await this.gotoOverview();
-    } else {
-      // Invoke Ask using keyboard shortcut.
-      await twoKeyShortcut(Key.leftAlt, Key.space);
-      await driver.waitFor(find.byType('Ask'));
-    }
-
-    if (clear) {
-      await driver.requestData('clear');
-      await driver.waitUntilNoTransientCallbacks();
-      // Add a space and delete using backspace to resolve auto-complete.
-      await input.text(' ');
-      await input.keyPress(kBackspaceKey);
-      await driver.waitUntilNoTransientCallbacks();
-    }
-
-    await input.text(text);
-
-    // Verify text was injected into flutter widgets.
-    await driver.waitUntilNoTransientCallbacks();
-    await driver.waitFor(find.text(text));
-    final askResult = await driver.getText(find.descendant(
-      of: find.byType('AskTextField'),
-      matching: find.text(text),
-    ));
-    expect(askResult, text);
-  }
-
   /// Tap the location given by [offset] in screen co-ordinates.
   ///
   /// Normalize to screen size of 1000x1000 expected by [Input.tap].
@@ -259,81 +214,6 @@ class ErmineDriver {
       KeyEvent(modifier1, key1Release, KeyEventType.released),
     ]);
     await driver.waitUntilNoTransientCallbacks();
-  }
-
-  /// Launches a simple browser and returns a [FlutterDriver] connected to it.
-  Future<FlutterDriver> launchSimpleBrowser() async {
-    expect(await launch(simpleBrowserUrl), isTrue);
-    print('Launched a browser');
-
-    // Initializes the browser's flutter driver connector.
-    final browserConnector = FlutterDriverConnector(sl4f);
-    await browserConnector.initialize();
-    print('Initialized a flutter driver connector for the browser.');
-
-    // Checks if Simple Browser is running.
-    // TODO(fxb/66577): Get the last isolate once it's supported by
-    // [FlutterDriverConnector] in flutter_driver_sl4f.dart
-    final browserIsolate = await browserConnector.isolate('simple-browser');
-    // ignore: unnecessary_null_comparison
-    if (browserIsolate == null) {
-      fail('couldn\'t find simple browser.');
-    }
-    print('Checked that the browser is running.');
-
-    // Connects to the browser.
-    // TODO(fxb/66577): Get the driver of the last isolate once it's supported by
-    // [FlutterDriverConnector] in flutter_driver_sl4f.dart
-    final browserDriver = await browserConnector.driverForIsolateBySelector(
-        'simple-browser', 'simple-browser.cmx');
-    // ignore: unnecessary_null_comparison
-    if (browserDriver == null) {
-      fail('unable to connect to simple browser.');
-    }
-    print('Connected the browser to a flutter driver.');
-
-    return browserDriver;
-  }
-
-  /// Launches a simple browser and sets up options for test convenience.
-  ///
-  /// Opens another new tab as soon as the browser is launched, unless you set
-  /// [openNewTab] to false. Contrarily, set [fullscreen] to true if you want
-  /// the browser to expand its size to full-screen upon its launch.
-  /// Also, you can set the text entry emulation of the browser's flutter driver
-  /// using [enableTextEntryEmulation], which has false by default.
-  Future<FlutterDriver> launchAndWaitForSimpleBrowser({
-    bool openNewTab = true,
-    bool enableTextEntryEmulation = false,
-  }) async {
-    final browserDriver = await launchSimpleBrowser();
-
-    // Set the flutter driver's text entry emulation.
-    await browserDriver.setTextEntryEmulation(
-        enabled: enableTextEntryEmulation);
-    print('Text entry emulation is enabled for the browser.');
-
-    // Opens another tab other than the tab opened on browser's launch,
-    // if required.
-    if (openNewTab) {
-      final addTab = find.byValueKey('new_tab');
-      await browserDriver.waitFor(addTab);
-
-      await browserDriver.tap(addTab);
-      await browserDriver.waitFor(find.text('NEW TAB'),
-          timeout: Duration(seconds: 10));
-      print('Opened a new tab');
-    } else {
-      await browserDriver.waitFor(find.text('     SEARCH'),
-          timeout: Duration(seconds: 10));
-      print('The first tab is ready.');
-    }
-
-    await browserDriver.waitUntilFirstFrameRasterized();
-    await browserDriver.waitUntilNoTransientCallbacks();
-    print('No further transient callbacks.');
-
-    return browserDriver;
   }
 
   Future<Rectangle> getViewRect(String viewUrl,

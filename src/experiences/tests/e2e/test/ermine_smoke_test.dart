@@ -68,7 +68,7 @@ void main() {
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks();
     await ermine.waitForAction('close');
-    expect(await ermine.isStopped(terminalUrl), isTrue);
+    await ermine.waitForViewAbsent(terminalUrl);
 
     // Get the current value of dark mode.
     bool darkMode = (await ermine.snapshot).darkMode;
