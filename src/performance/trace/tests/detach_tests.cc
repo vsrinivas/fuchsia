@@ -23,6 +23,8 @@ const char kTraceDurationArg[] = "--duration=1";
 // 60 seconds is typically the test timeout.
 const char kChildDurationArg[] = "60";
 
+const int kMaxRetryCount = 5;
+
 TEST(DetachTest, SpawnedAppNotDetached) {
   zx::job job{};
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
@@ -39,6 +41,16 @@ TEST(DetachTest, SpawnedAppNotDetached) {
   ASSERT_EQ(job.get_info(ZX_INFO_JOB_PROCESSES, &test_helper_pid, sizeof(test_helper_pid),
                          &actual_count, &avail_count),
             ZX_OK);
+  // Allow a little bit of slack for the process counts to update.
+  for (int retry_count = 0; retry_count < kMaxRetryCount; retry_count++) {
+    if (actual_count == 0 && avail_count == 0) {
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+    ASSERT_EQ(job.get_info(ZX_INFO_JOB_PROCESSES, &test_helper_pid, sizeof(test_helper_pid),
+                           &actual_count, &avail_count),
+              ZX_OK);
+  }
   ASSERT_EQ(actual_count, 0u);
   ASSERT_EQ(avail_count, 0u);
 }
@@ -59,6 +71,16 @@ TEST(DetachTest, SpawnedAppDetached) {
   ASSERT_EQ(job.get_info(ZX_INFO_JOB_PROCESSES, &test_helper_pid, sizeof(test_helper_pid),
                          &actual_count, &avail_count),
             ZX_OK);
+  // Allow a little bit of slack for the process counts to update.
+  for (int retry_count = 0; retry_count < kMaxRetryCount; retry_count++) {
+    if (actual_count == 1 && avail_count == 1) {
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+    ASSERT_EQ(job.get_info(ZX_INFO_JOB_PROCESSES, &test_helper_pid, sizeof(test_helper_pid),
+                           &actual_count, &avail_count),
+              ZX_OK);
+  }
   ASSERT_EQ(actual_count, 1u);
   ASSERT_EQ(avail_count, 1u);
 
