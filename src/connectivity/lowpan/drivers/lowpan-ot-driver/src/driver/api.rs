@@ -501,7 +501,7 @@ where
         //                 Long term we need to have this API connect to the manufacturing
         //                 commands and have the normal CLI commands plumbed via a different
         //                 route.
-        const WAIT_FOR_RESPONSE_TIMEOUT: Duration = Duration::from_millis(5000);
+        const WAIT_FOR_RESPONSE_TIMEOUT: Duration = Duration::from_seconds(120);
 
         info!("CLI command: {:?}", command);
 
