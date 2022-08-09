@@ -21,7 +21,7 @@ fidl("fuchsia.stash") {
     "//src/connectivity/bluetooth/core/bt-gap/*",
     "//src/connectivity/bluetooth/testing/*",
     "//src/connectivity/bluetooth/tests/bt-manifest-integration-tests/*",
-    "//src/connectivity/network/dhcp:*",
+    "//src/connectivity/network/dhcpv4/*",
     "//src/connectivity/network/netstack",
     "//src/connectivity/network/netstack:lib",
     "//src/connectivity/network/tests/integration/common:*",

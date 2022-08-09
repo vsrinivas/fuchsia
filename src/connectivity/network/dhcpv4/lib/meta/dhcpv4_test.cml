@@ -7,12 +7,12 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/dhcp_lib_test",
+        binary: "bin/dhcpv4_lib_test",
     },
     children: [
         {
             name: "stash",
-            url: "fuchsia-pkg://fuchsia.com/dhcp-tests#meta/stash_secure.cm",
+            url: "#meta/stash_secure.cm",
         },
     ],
     use: [

@@ -10,7 +10,7 @@ mod errors;
 mod interface;
 mod virtualization;
 
-use dhcp::protocol::FromFidlExt as _;
+use ::dhcpv4::protocol::FromFidlExt as _;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::convert::TryInto as _;
 use std::fs;
@@ -1768,7 +1768,7 @@ impl<'a> NetCfg<'a> {
             .context("error setting DHCP LeaseLength parameter")
             .map_err(errors::Error::NonFatal)?;
 
-        let host_mask = dhcp::configuration::SubnetMask::new(WLAN_AP_PREFIX_LEN)
+        let host_mask = ::dhcpv4::configuration::SubnetMask::new(WLAN_AP_PREFIX_LEN)
             .ok_or_else(|| anyhow!("error creating host mask from prefix length"))
             .map_err(errors::Error::NonFatal)?;
         let broadcast_addr =

@@ -453,7 +453,7 @@ struct PacketAttributes {
 }
 
 const INVALID_PORT: NonZeroU16 = nonzero!(1234u16);
-const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcp::protocol::CLIENT_PORT);
+const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcpv4::protocol::CLIENT_PORT);
 
 #[variants_test]
 #[test_case(
@@ -541,11 +541,11 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
                         )
                         .expect("failed to parse UDP datagram");
                         match datagram.dst_port().get() {
-                            dhcp::protocol::SERVER_PORT => {
+                            dhcpv4::protocol::SERVER_PORT => {
                                 // Any DHCP message means the client is listening; we don't care
                                 // about the contents.
-                                let _: dhcp::protocol::Message =
-                                    dhcp::protocol::Message::from_buffer(datagram.body())
+                                let _: dhcpv4::protocol::Message =
+                                    dhcpv4::protocol::Message::from_buffer(datagram.body())
                                         .expect("failed to parse DHCP message");
                                 break;
                             }

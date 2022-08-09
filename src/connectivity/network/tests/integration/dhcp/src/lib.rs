@@ -7,7 +7,7 @@
 use std::cell::RefCell;
 
 use async_utils::async_once::Once;
-use dhcp::protocol::IntoFidlExt as _;
+use dhcpv4::protocol::IntoFidlExt as _;
 use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{
@@ -28,7 +28,7 @@ struct DhcpTestConfig {
     server_addr: fidl_fuchsia_net::Ipv4Address,
 
     // Address pool for the DHCP server.
-    managed_addrs: dhcp::configuration::ManagedAddresses,
+    managed_addrs: dhcpv4::configuration::ManagedAddresses,
 }
 
 impl DhcpTestConfig {
@@ -36,7 +36,7 @@ impl DhcpTestConfig {
         let Self {
             server_addr: _,
             managed_addrs:
-                dhcp::configuration::ManagedAddresses { mask, pool_range_start, pool_range_stop: _ },
+                dhcpv4::configuration::ManagedAddresses { mask, pool_range_start, pool_range_stop: _ },
         } = self;
         fidl_fuchsia_net::Subnet {
             addr: fidl_fuchsia_net::IpAddress::Ipv4(pool_range_start.into_fidl()),
@@ -48,7 +48,11 @@ impl DhcpTestConfig {
         let Self {
             server_addr,
             managed_addrs:
-                dhcp::configuration::ManagedAddresses { mask, pool_range_start: _, pool_range_stop: _ },
+                dhcpv4::configuration::ManagedAddresses {
+                    mask,
+                    pool_range_start: _,
+                    pool_range_stop: _,
+                },
         } = self;
         fidl_fuchsia_net::Subnet {
             addr: fidl_fuchsia_net::IpAddress::Ipv4(*server_addr),
@@ -67,9 +71,9 @@ impl DhcpTestConfig {
 
 const DEFAULT_TEST_CONFIG: DhcpTestConfig = DhcpTestConfig {
     server_addr: fidl_ip_v4!("192.168.0.1"),
-    managed_addrs: dhcp::configuration::ManagedAddresses {
+    managed_addrs: dhcpv4::configuration::ManagedAddresses {
         // We know this is safe because 25 is less than the size of an IPv4 address in bits.
-        mask: const_unwrap::const_unwrap_option(dhcp::configuration::SubnetMask::new(25)),
+        mask: const_unwrap::const_unwrap_option(dhcpv4::configuration::SubnetMask::new(25)),
         pool_range_start: std_ip_v4!("192.168.0.2"),
         pool_range_stop: std_ip_v4!("192.168.0.5"),
     },

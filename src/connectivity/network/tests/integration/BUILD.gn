@@ -71,8 +71,8 @@ package_deps = [
   # stash_secure is used by dhcpd and netstack.
   "//src/sys/stash:stash_secure_v2",
 
-  # dhcpd is used to test DHCP address acquisition.
-  "//src/connectivity/network/dhcp:component",
+  # DHCPv4 Server is used to test DHCP address acquisition.
+  "//src/connectivity/network/dhcpv4/server:component",
 
   # DHCPv6 client is under test.
   "//src/connectivity/network/dhcpv6/client:component",

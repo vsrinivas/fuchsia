@@ -7,6 +7,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/dhcpd_bin_test",
+        binary: "bin/dhcpv4_server_bin_test",
     },
 }

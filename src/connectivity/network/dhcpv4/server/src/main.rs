@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    dhcp::{
+    dhcpv4::{
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{
@@ -41,17 +41,17 @@ const DEFAULT_LEASE_DURATION_SECONDS: u32 = 24 * 60 * 60;
 fn default_parameters() -> configuration::ServerParameters {
     configuration::ServerParameters {
         server_ips: vec![],
-        lease_length: dhcp::configuration::LeaseLength {
+        lease_length: dhcpv4::configuration::LeaseLength {
             default_seconds: DEFAULT_LEASE_DURATION_SECONDS,
             max_seconds: DEFAULT_LEASE_DURATION_SECONDS,
         },
-        managed_addrs: dhcp::configuration::ManagedAddresses {
+        managed_addrs: dhcpv4::configuration::ManagedAddresses {
             mask: configuration::SubnetMask::new(0).unwrap(),
             pool_range_start: Ipv4Addr::UNSPECIFIED,
             pool_range_stop: Ipv4Addr::UNSPECIFIED,
         },
-        permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
-        static_assignments: dhcp::configuration::StaticAssignments(
+        permitted_macs: dhcpv4::configuration::PermittedMacs(vec![]),
+        static_assignments: dhcpv4::configuration::StaticAssignments(
             std::collections::hash_map::HashMap::new(),
         ),
         arp_probe: false,
@@ -465,7 +465,7 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
                 .options
                 .iter()
                 .find_map(|opt| match opt {
-                    dhcp::protocol::DhcpOption::ServerIdentifier(addr) => Some(addr.clone()),
+                    dhcpv4::protocol::DhcpOption::ServerIdentifier(addr) => Some(addr.clone()),
                     _ => None,
                 })
                 // TODO(https://fxbug.dev/105402): Eliminate this panic.
@@ -473,9 +473,9 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
                 .into();
             let response = msg.serialize();
             const SERVER_PORT: std::num::NonZeroU16 =
-                nonzero_ext::nonzero!(dhcp::protocol::SERVER_PORT);
+                nonzero_ext::nonzero!(dhcpv4::protocol::SERVER_PORT);
             const CLIENT_PORT: std::num::NonZeroU16 =
-                nonzero_ext::nonzero!(dhcp::protocol::CLIENT_PORT);
+                nonzero_ext::nonzero!(dhcpv4::protocol::CLIENT_PORT);
             let udp_builder = UdpPacketBuilder::new(src_ip, dst_ip, Some(SERVER_PORT), CLIENT_PORT);
             // Use the default TTL shared across UNIX systems.
             const TTL: u8 = 64;
@@ -589,7 +589,7 @@ struct ServerSocketCollection<S> {
 async fn run_server<S, C>(
     stream: fidl_fuchsia_net_dhcp::Server_RequestStream,
     server: &RefCell<ServerDispatcherRuntime<S>>,
-    default_params: &dhcp::configuration::ServerParameters,
+    default_params: &dhcpv4::configuration::ServerParameters,
     socket_sink: C,
 ) -> Result<(), fidl::Error>
 where
@@ -676,7 +676,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dhcp::configuration::ServerParameters;
+    use dhcpv4::configuration::ServerParameters;
     use fuchsia_async as fasync;
     use futures::{sink::drain, FutureExt};
     use net_declare::{fidl_ip_v4, std_ip_v4};
@@ -707,7 +707,7 @@ mod tests {
         }
 
         fn dispatch_message(&mut self, mut msg: Message) -> Result<ServerAction, ServerError> {
-            msg.op = dhcp::protocol::OpCode::BOOTREPLY;
+            msg.op = dhcpv4::protocol::OpCode::BOOTREPLY;
             Ok(ServerAction::SendResponse(msg, ResponseTarget::Broadcast))
         }
 
@@ -781,7 +781,7 @@ mod tests {
         }
         fn dispatch_reset_parameters(
             &mut self,
-            _defaults: &dhcp::configuration::ServerParameters,
+            _defaults: &dhcpv4::configuration::ServerParameters,
         ) -> Result<(), fuchsia_zircon::Status> {
             Ok(())
         }
@@ -793,20 +793,20 @@ mod tests {
 
     const DEFAULT_DEVICE_NAME: &str = "foo13";
 
-    fn default_params() -> dhcp::configuration::ServerParameters {
-        dhcp::configuration::ServerParameters {
+    fn default_params() -> dhcpv4::configuration::ServerParameters {
+        dhcpv4::configuration::ServerParameters {
             server_ips: vec![std_ip_v4!("192.168.0.1")],
-            lease_length: dhcp::configuration::LeaseLength {
+            lease_length: dhcpv4::configuration::LeaseLength {
                 default_seconds: 86400,
                 max_seconds: 86400,
             },
-            managed_addrs: dhcp::configuration::ManagedAddresses {
-                mask: dhcp::configuration::SubnetMask::new(25).unwrap(),
+            managed_addrs: dhcpv4::configuration::ManagedAddresses {
+                mask: dhcpv4::configuration::SubnetMask::new(25).unwrap(),
                 pool_range_start: std_ip_v4!("192.168.0.0"),
                 pool_range_stop: std_ip_v4!("192.168.0.0"),
             },
-            permitted_macs: dhcp::configuration::PermittedMacs(vec![]),
-            static_assignments: dhcp::configuration::StaticAssignments(HashMap::new()),
+            permitted_macs: dhcpv4::configuration::PermittedMacs(vec![]),
+            static_assignments: dhcpv4::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
             bound_device_names: vec![DEFAULT_DEVICE_NAME.to_string()],
         }
@@ -1051,7 +1051,7 @@ mod tests {
                 .expect("failed to create proxy");
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
-        let defaults = dhcp::configuration::ServerParameters {
+        let defaults = dhcpv4::configuration::ServerParameters {
             bound_device_names: Vec::new(),
             ..default_params()
         };

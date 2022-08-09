@@ -565,7 +565,7 @@ async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
                         ) {
                             Ok(udp) => {
                                 const DHCPV4_SERVER_PORT: std::num::NonZeroU16 =
-                                    nonzero_ext::nonzero!(dhcp::protocol::SERVER_PORT);
+                                    nonzero_ext::nonzero!(dhcpv4::protocol::SERVER_PORT);
                                 (udp.dst_port() == DHCPV4_SERVER_PORT).then(|| ())
                             }
                             Err(packet_formats::error::ParseError::NotExpected) => None,

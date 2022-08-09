@@ -5,7 +5,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/dhcpd",
+        binary: "bin/dhcpv4_server",
     },
     capabilities: [
         {

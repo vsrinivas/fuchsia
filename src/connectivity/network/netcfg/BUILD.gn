@@ -30,7 +30,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_rust",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/connectivity/lib/net-declare",
-    "//src/connectivity/network/dhcp:lib",
+    "//src/connectivity/network/dhcpv4/lib",
     "//src/connectivity/network/lib/dns_server_watcher",
     "//src/connectivity/network/lib/netfilter",
     "//src/lib/async-utils",

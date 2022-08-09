@@ -66,7 +66,7 @@ fuchsia_component("hermetic_network_v2") {
   manifest = "meta/hermetic_network_v2.cml"
   component_name = "hermetic_network_v2"
   deps = [
-    "//src/connectivity/network/dhcp:component",
+    "//src/connectivity/network/dhcpv4/server:component",
     "//src/connectivity/network/dhcpv6/client:component",
     "//src/connectivity/network/dns:component",
     "//src/connectivity/network/netstack:component-conformance",

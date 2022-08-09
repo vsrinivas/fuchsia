@@ -8,7 +8,7 @@
     children: [
         {
             name: "dhcpd",
-            url: "#meta/dhcpd.cm",
+            url: "#meta/dhcpv4_server.cm",
         },
         {
             name: "dhcpv6-client",

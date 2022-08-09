@@ -1,0 +1,66 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  name = "dhcpv4"
+  with_unit_tests = true
+  edition = "2021"
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp_rust",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
+    "//src/connectivity/lib/net-types",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_ext",
+    "//src/lib/zerocopy",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    "//src/connectivity/lib/net-declare",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:test-case",
+  ]
+
+  sources = [
+    "src/configuration.rs",
+    "src/lib.rs",
+    "src/protocol.rs",
+    "src/server.rs",
+    "src/stash.rs",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("dhcpv4_test") {
+  testonly = true
+  manifest = "meta/dhcpv4_test.cml"
+  deps = [ ":lib_test" ]
+}
+
+fuchsia_test_package("dhcpv4-test") {
+  test_components = [ ":dhcpv4_test" ]
+  deps = [ "//src/sys/stash:stash_secure_v2" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":dhcpv4-test" ]
+}

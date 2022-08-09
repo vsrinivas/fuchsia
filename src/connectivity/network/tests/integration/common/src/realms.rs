@@ -206,7 +206,7 @@ pub mod constants {
     }
     pub mod dhcp_server {
         pub const COMPONENT_NAME: &str = "dhcpd";
-        pub const COMPONENT_URL: &str = "#meta/dhcpd.cm";
+        pub const COMPONENT_URL: &str = "#meta/dhcpv4_server.cm";
     }
     pub mod dhcpv6_client {
         pub const COMPONENT_NAME: &str = "dhcpv6-client";
