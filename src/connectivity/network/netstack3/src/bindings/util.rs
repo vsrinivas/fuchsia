@@ -17,8 +17,8 @@ use net_types::{
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{
-    AddRouteError, AddableEntryEither, DeviceId, EntryEither, ExistsError, NetstackError,
-    NotFoundError,
+    AddRouteError, AddableEntry, AddableEntryEither, DeviceId, EntryEither, ExistsError,
+    NetstackError, NotFoundError,
 };
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};
@@ -588,8 +588,19 @@ impl TryFromFidlWithContext<fidl_net_stack::ForwardingEntry> for AddableEntryEit
             NonZeroU64::new(device_id).map(|d| d.get().try_into_core_with_ctx(ctx)).transpose()?;
         let next_hop: Option<SpecifiedAddr<IpAddr>> =
             next_hop.map(|next_hop| (*next_hop).try_into_core()).transpose()?;
-        AddableEntryEither::new(subnet, device, next_hop.map(Into::into))
-            .ok_or(ForwardingConversionError::TypeMismatch)
+
+        Ok(match (subnet, device, next_hop.map(Into::into)) {
+            (subnet, Some(device), None) => Self::without_gateway(subnet, device),
+            (SubnetEither::V4(subnet), device, Some(IpAddr::V4(gateway))) => {
+                AddableEntry::with_gateway(subnet, device, gateway).into()
+            }
+            (SubnetEither::V6(subnet), device, Some(IpAddr::V6(gateway))) => {
+                AddableEntry::with_gateway(subnet, device, gateway).into()
+            }
+            (SubnetEither::V4(_), _, Some(IpAddr::V6(_)))
+            | (SubnetEither::V6(_), _, Some(IpAddr::V4(_)))
+            | (_, None, None) => return Err(ForwardingConversionError::TypeMismatch),
+        })
     }
 }
 

@@ -17,8 +17,9 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
+use net_types::ip::Subnet;
 use net_types::{
-    ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither},
+    ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr},
     SpecifiedAddr,
 };
 use netstack3_core::{
@@ -26,8 +27,8 @@ use netstack3_core::{
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     transport::tcp::socket::ListenerId,
-    update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, RingBuffer,
+    update_ipv4_configuration, update_ipv6_configuration, AddableEntry, AddableEntryEither,
+    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, RingBuffer,
     TcpNonSyncContext, TimerId, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
@@ -1253,20 +1254,19 @@ async fn test_list_del_routes() {
     let test_stack = t.get(0);
     let stack = test_stack.connect_stack().unwrap();
     let if_id = test_stack.get_endpoint_id(1);
-    let device = test_stack.ctx().await.non_sync_ctx.get_core_id(if_id);
+    let device = test_stack.ctx().await.non_sync_ctx.get_core_id(if_id).expect("device exists");
     let route1_subnet_bytes = [192, 168, 0, 0];
     let route1_subnet_prefix = 24;
-    let route1 = AddableEntryEither::new(
-        SubnetEither::new(Ipv4Addr::from(route1_subnet_bytes).into(), route1_subnet_prefix)
+    let route1: AddableEntryEither<_> = AddableEntry::without_gateway(
+        Subnet::<Ipv4Addr>::new(Ipv4Addr::from(route1_subnet_bytes).into(), route1_subnet_prefix)
             .unwrap(),
         device,
-        None,
     )
-    .unwrap();
-    let sub10 = SubnetEither::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap();
-    let route2 = AddableEntryEither::new(sub10, device, None).unwrap();
-    let sub10_gateway = SpecifiedAddr::new(Ipv4Addr::from([10, 0, 0, 1])).map(Into::into);
-    let route3 = AddableEntryEither::new(sub10, None, sub10_gateway).unwrap();
+    .into();
+    let sub10 = Subnet::<Ipv4Addr>::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap();
+    let route2 = AddableEntry::without_gateway(sub10, device).into();
+    let sub10_gateway = SpecifiedAddr::new(Ipv4Addr::from([10, 0, 0, 1])).unwrap().into();
+    let route3 = AddableEntry::with_gateway(sub10, None, sub10_gateway).into();
 
     let () = test_stack
         .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
@@ -1278,11 +1278,11 @@ async fn test_list_del_routes() {
         .await;
 
     let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
-    let route3_with_device = AddableEntryEither::new(sub10, device, sub10_gateway).unwrap();
+    let route3_with_device = AddableEntry::with_gateway(sub10, Some(device), sub10_gateway).into();
     // Link local route is added automatically by core.
     let link_local_route =
-        AddableEntryEither::new(net_declare::net_subnet_v6!("fe80::/64").into(), device, None)
-            .unwrap();
+        AddableEntry::without_gateway(net_declare::net_subnet_v6!("fe80::/64").into(), device)
+            .into();
     assert_eq!(
         test_stack
             .with_ctx(|ctx| {

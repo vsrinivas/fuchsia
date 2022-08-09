@@ -28,13 +28,13 @@ use crate::{
     ip::{
         device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-        AddableEntryEither, IpLayerEvent, SendIpPacketMeta,
+        IpLayerEvent, SendIpPacketMeta,
     },
     transport::{
         tcp::{buffer::RingBuffer, socket::TcpNonSyncContext},
         udp::{BufferUdpContext, UdpContext},
     },
-    Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
+    AddableEntryEither, Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.
@@ -416,7 +416,7 @@ pub(crate) struct DummyEventDispatcherBuilder {
     ndp_table_entries: Vec<(usize, UnicastAddr<Ipv6Addr>, UnicastAddr<Mac>)>,
     // usize refers to index into devices Vec.
     device_routes: Vec<(SubnetEither, usize)>,
-    routes: Vec<(SubnetEither, SpecifiedAddr<IpAddr>)>,
+    routes: Vec<AddableEntryEither<DeviceId>>,
 }
 
 impl DummyEventDispatcherBuilder {
@@ -571,19 +571,12 @@ impl DummyEventDispatcherBuilder {
             crate::add_route(
                 sync_ctx,
                 non_sync_ctx,
-                AddableEntryEither::new(subnet, Some(device), None)
-                    .expect("valid forwarding table entry"),
+                AddableEntryEither::without_gateway(subnet, device),
             )
             .expect("add device route");
         }
-        for (subnet, next_hop) in routes {
-            crate::add_route(
-                sync_ctx,
-                non_sync_ctx,
-                AddableEntryEither::new(subnet, None, Some(next_hop.into()))
-                    .expect("valid forwarding table entry"),
-            )
-            .expect("add remote route");
+        for entry in routes {
+            crate::add_route(sync_ctx, non_sync_ctx, entry).expect("add remote route");
         }
 
         ctx

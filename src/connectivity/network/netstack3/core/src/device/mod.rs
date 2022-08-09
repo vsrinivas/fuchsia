@@ -58,7 +58,7 @@ use crate::{
         },
         IpDeviceId, IpDeviceIdContext,
     },
-    AddableEntryEither, BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
+    AddableEntry, BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
 /// An execution context which provides a `DeviceId` type for various device
@@ -795,8 +795,7 @@ pub fn add_ethernet_device<NonSyncCtx: NonSyncContext>(
     crate::add_route(
         sync_ctx,
         ctx,
-        AddableEntryEither::new(LINK_LOCAL_SUBNET.into(), Some(id), None)
-            .expect("create link local entry"),
+        AddableEntry::without_gateway(LINK_LOCAL_SUBNET.into(), id).into(),
     )
     // Adding the link local route must succeed: we're providing correct
     // arguments and the device has just been created.
@@ -818,10 +817,8 @@ pub fn add_loopback_device<NonSyncCtx: NonSyncContext>(
     let id = sync_ctx.state.device.add_loopback_device(mtu)?;
 
     for entry in [
-        AddableEntryEither::new(Ipv4::LOOPBACK_SUBNET.into(), Some(id), None)
-            .expect("error creating IPv4 route entry"),
-        AddableEntryEither::new(Ipv6::LOOPBACK_SUBNET.into(), Some(id), None)
-            .expect("error creating IPv6 route entry"),
+        AddableEntry::without_gateway(Ipv4::LOOPBACK_SUBNET, id).into(),
+        AddableEntry::without_gateway(Ipv6::LOOPBACK_SUBNET, id).into(),
     ] {
         crate::add_route(sync_ctx, ctx, entry)
             // Adding the loopback route must succeed: we're providing correct
