@@ -213,6 +213,16 @@ func serve(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Channe
 	}
 }
 
+type Epitaph struct {
+	Status zx.Status
+}
+
+var _ error = (*Epitaph)(nil)
+
+func (e *Epitaph) Error() string {
+	return fmt.Sprintf("epitaph: %s", e.Status)
+}
+
 func serveExclusive(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Channel, opts ServeOptions) {
 	if !opts.KeepChannelAlive {
 		defer func() {
@@ -229,6 +239,32 @@ func serveExclusive(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req 
 		opts.handleServeError(ctx, err)
 	}); err != nil {
 		opts.handleServeError(ctx, err)
+
+		if !opts.KeepChannelAlive {
+			var epitaph *Epitaph
+			if errors.As(err, &epitaph) {
+				marshalerCtx := fidl.NewCtx()
+				header := marshalerCtx.NewHeader()
+				header.Ordinal = fidl.EpitaphOrdinal
+				epitaph := fidl.EpitaphBody{
+					Error: epitaph.Status,
+				}
+				var b [24]byte
+				cnb, cnh, err := fidl.MarshalHeaderThenMessage(&header, &epitaph, b[:], nil)
+				if err != nil {
+					panic(err)
+				}
+				if got, want := cnb, len(b); got != want {
+					panic(fmt.Sprintf("got encoded epitaph size = %d bytes, want %d", got, want))
+				}
+				if got, want := cnh, 0; got != want {
+					panic(fmt.Sprintf("got encoded epitaph size = %d handles, want %d", got, want))
+				}
+				if err := req.WriteEtc(b[:], nil, 0); err != nil {
+					opts.handleServeError(ctx, fmt.Errorf("failed to write epitaph(%s): %w", epitaph.Error, err))
+				}
+			}
+		}
 	}
 }
 

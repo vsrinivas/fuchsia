@@ -91,7 +91,7 @@ func (t *targetImpl) EchoAsTransferableSignalableEvent(_ fidl.Context, handle zx
 }
 
 func (t *targetImpl) CloseWithEpitaph(_ fidl.Context, status int32) error {
-	panic("unimplemented")
+	return &component.Epitaph{Status: zx.Status(status)}
 }
 
 func (t *targetImpl) ByteVectorSize(_ fidl.Context, v []uint8) (uint32, error) {
@@ -125,10 +125,6 @@ var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
 func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, error) {
 	isEnabled := func(test serversuite.Test) bool {
 		switch test {
-		case serversuite.TestTwoWayTablePayload:
-			return false
-		case serversuite.TestTwoWayUnionPayload:
-			return false
 		case serversuite.TestOneWayWithNonZeroTxid:
 			return false
 		case serversuite.TestTwoWayNoPayloadWithZeroTxid:
@@ -136,8 +132,6 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 		case serversuite.TestBadAtRestFlagsCausesClose:
 			return false
 		case serversuite.TestBadDynamicFlagsCausesClose:
-			return false
-		case serversuite.TestServerSendsEpitaph:
 			return false
 		default:
 			return true
