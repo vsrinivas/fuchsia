@@ -372,18 +372,18 @@ func TestFFXTester(t *testing.T) {
 				if err = tester.EnsureSinks(ctx, sinks, outputs); err != nil {
 					t.Errorf("failed to collect sinks: %s", err)
 				}
-				foundKernelSinks := false
+				foundEarlyBootSinks := false
 				for _, test := range outputs.Summary.Tests {
-					if test.Name == "kernel_sinks" {
-						foundKernelSinks = true
+					if test.Name == "early_boot_sinks" {
+						foundEarlyBootSinks = true
 						if len(test.DataSinks["llvm-profile"]) != 1 {
-							t.Errorf("got %d kernel sinks, want 1", len(test.DataSinks["llvm-profile"]))
+							t.Errorf("got %d early boot sinks, want 1", len(test.DataSinks["llvm-profile"]))
 						}
 						break
 					}
 				}
-				if !foundKernelSinks {
-					t.Errorf("failed to find kernel sinks")
+				if !foundEarlyBootSinks {
+					t.Errorf("failed to find early boot sinks")
 				}
 			} else {
 				if _, ok := copier.remoteDirs[dataOutputDir]; !ok {
@@ -534,18 +534,18 @@ func TestSSHTester(t *testing.T) {
 				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{testResult.DataSinks}, outputs); err != nil {
 					t.Errorf("failed to collect v2 sinks: %s", err)
 				}
-				foundKernelSinks := false
+				foundEarlyBootSinks := false
 				for _, test := range outputs.Summary.Tests {
-					if test.Name == "kernel_sinks" {
-						foundKernelSinks = true
+					if test.Name == "early_boot_sinks" {
+						foundEarlyBootSinks = true
 						if len(test.DataSinks["llvm-profile"]) != 1 {
-							t.Errorf("got %d kernel sinks, want 1", len(test.DataSinks["llvm-profile"]))
+							t.Errorf("got %d early boot sinks, want 1", len(test.DataSinks["llvm-profile"]))
 						}
 						break
 					}
 				}
-				if !foundKernelSinks {
-					t.Errorf("failed to find kernel sinks")
+				if !foundEarlyBootSinks {
+					t.Errorf("failed to find early boot sinks")
 				}
 			}
 
@@ -581,7 +581,7 @@ func TestSSHTester(t *testing.T) {
 			if c.useRuntests {
 				expectedRemoteDirs := []string{dataOutputDir}
 				if c.runV2 {
-					expectedRemoteDirs = []string{dataOutputDirV2, dataOutputDirKernel}
+					expectedRemoteDirs = []string{dataOutputDirV2, dataOutputDirEarlyBoot}
 				}
 				for _, dir := range expectedRemoteDirs {
 					if _, ok := copier.remoteDirs[dir]; !ok {

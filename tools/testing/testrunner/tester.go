@@ -49,8 +49,8 @@ const (
 	// The output data directory for component v2 tests.
 	dataOutputDirV2 = "/tmp/test_manager:0/children/debug_data:0/data"
 
-	// The output data directory for kernel coverage.
-	dataOutputDirKernel = "/tmp/test_manager:0/data"
+	// The output data directory for early boot coverage.
+	dataOutputDirEarlyBoot = "/tmp/test_manager:0/data"
 
 	// Various tools for running tests.
 	runtestsName         = "runtests"
@@ -75,8 +75,8 @@ const (
 
 	testStartedTimeout = 5 * time.Second
 
-	// The name of the test to associate kernel data sinks with.
-	kernelSinksTestName = "kernel_sinks"
+	// The name of the test to associate early boot data sinks with.
+	earlyBootSinksTestName = "early_boot_sinks"
 )
 
 // Tester describes the interface for all different types of testers.
@@ -646,7 +646,7 @@ func (t *FFXTester) EnsureSinks(ctx context.Context, sinks []runtests.DataSinkRe
 		startTime := clock.Now(ctx)
 		// The runResult's artifacts should contain a directory with the profiles from
 		// component v2 tests along with a summary.json that lists the data sinks per test.
-		// It should also contain a second directory with the kernel profile.
+		// It should also contain a second directory with early boot data sinks.
 		for artifact := range runResult.Artifacts {
 			artifactPath := filepath.Join(runArtifactDir, artifact)
 			if err := t.getSinks(artifactPath, sinksPerTest, seen); err != nil {
@@ -658,14 +658,14 @@ func (t *FFXTester) EnsureSinks(ctx context.Context, sinks []runtests.DataSinkRe
 			logger.Debugf(ctx, "copied %d data sinks in %s", len(seen), copyDuration)
 		}
 	}
-	// If there were kernel sinks, record the "kernel_sinks" test in the outputs
-	// so that the test result can be updated with the kernel sinks.
-	if _, ok := sinksPerTest[kernelSinksTestName]; ok {
-		kernelSinksTest := &TestResult{
-			Name:   kernelSinksTestName,
+	// If there were early boot sinks, record the "early_boot_sinks" test in the outputs
+	// so that the test result can be updated with the early boot sinks.
+	if _, ok := sinksPerTest[earlyBootSinksTestName]; ok {
+		earlyBootSinksTest := &TestResult{
+			Name:   earlyBootSinksTestName,
 			Result: runtests.TestSuccess,
 		}
-		outputs.Record(ctx, *kernelSinksTest)
+		outputs.Record(ctx, *earlyBootSinksTest)
 	}
 	if len(sinksPerTest) > 0 {
 		outputs.updateDataSinks(sinksPerTest, "v2")
@@ -706,9 +706,9 @@ func (t *FFXTester) getSinks(artifactDir string, sinksPerTest map[string]runtest
 			}
 			return filepath.SkipDir
 		}
-		// Else, if the path is a .profraw file, then it must be a kernel profile.
+		// Else, if the path is a .profraw file, then it must be an early boot profile.
 		if filepath.Ext(path) == ".profraw" {
-			return t.getKernelSink(path, sinksPerTest, seen)
+			return t.getEarlyBootSink(path, sinksPerTest, seen)
 		}
 		return nil
 	})
@@ -737,9 +737,9 @@ func (t *FFXTester) getSinksPerTest(sinkDir string, summary runtests.TestSummary
 	return nil
 }
 
-// getKernelSink moves the kernel sink to the localOutputDir and records it with
-// a "kernel_sinks" test in sinksPerTest.
-func (t *FFXTester) getKernelSink(path string, sinksPerTest map[string]runtests.DataSinkReference, seen map[string]struct{}) error {
+// getEarlyBootSink moves the early boot sink to the localOutputDir and records it with
+// an "early_boot_sinks" test in sinksPerTest.
+func (t *FFXTester) getEarlyBootSink(path string, sinksPerTest map[string]runtests.DataSinkReference, seen map[string]struct{}) error {
 	sinkFile := filepath.Base(path)
 	if _, ok := seen[path]; !ok {
 		newPath := filepath.Join(t.localOutputDir, "v2", sinkFile)
@@ -751,12 +751,12 @@ func (t *FFXTester) getKernelSink(path string, sinksPerTest map[string]runtests.
 		}
 		seen[path] = struct{}{}
 	}
-	kernelSinks, ok := sinksPerTest[kernelSinksTestName]
+	earlyBootSinks, ok := sinksPerTest[earlyBootSinksTestName]
 	if !ok {
-		kernelSinks = runtests.DataSinkReference{Sinks: runtests.DataSinkMap{}}
+		earlyBootSinks = runtests.DataSinkReference{Sinks: runtests.DataSinkMap{}}
 	}
-	kernelSinks.Sinks["llvm-profile"] = append(kernelSinks.Sinks["llvm-profile"], runtests.DataSink{Name: sinkFile, File: sinkFile})
-	sinksPerTest[kernelSinksTestName] = kernelSinks
+	earlyBootSinks.Sinks["llvm-profile"] = append(earlyBootSinks.Sinks["llvm-profile"], runtests.DataSink{Name: sinkFile, File: sinkFile})
+	sinksPerTest[earlyBootSinksTestName] = earlyBootSinks
 	return nil
 }
 
@@ -961,24 +961,24 @@ func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 		}
 		outputs.updateDataSinks(v2Sinks, "v2")
 	}
-	// Collect kernel coverage.
-	kernelSinks, err := t.copier.GetAllDataSinks(dataOutputDirKernel)
+	// Collect early boot coverage.
+	earlyBootSinks, err := t.copier.GetAllDataSinks(dataOutputDirEarlyBoot)
 	if err != nil {
-		logger.Debugf(ctx, "failed to determine data sinks for the kernel: %s", err)
+		logger.Debugf(ctx, "failed to determine early boot data sinks: %s", err)
 	}
-	if len(kernelSinks) > 0 {
-		// If there were kernel sinks, record the "kernel_sinks" test in the outputs
-		// so that the test result can be updated with the kernel sinks.
-		kernelSinksTest := &TestResult{
-			Name:   kernelSinksTestName,
+	if len(earlyBootSinks) > 0 {
+		// If there were early boot sinks, record the "early_boot_sinks" test in the outputs
+		// so that the test result can be updated with the early boot sinks.
+		earlyBootSinksTest := &TestResult{
+			Name:   earlyBootSinksTestName,
 			Result: runtests.TestSuccess,
 		}
-		outputs.Record(ctx, *kernelSinksTest)
-		kernelSinkRef := runtests.DataSinkReference{Sinks: runtests.DataSinkMap{"llvm-profile": kernelSinks}, RemoteDir: dataOutputDirKernel}
-		if err := t.copySinks(ctx, []runtests.DataSinkReference{kernelSinkRef}, filepath.Join(t.localOutputDir, "kernel")); err != nil {
+		outputs.Record(ctx, *earlyBootSinksTest)
+		earlyBootSinkRef := runtests.DataSinkReference{Sinks: runtests.DataSinkMap{"llvm-profile": earlyBootSinks}, RemoteDir: dataOutputDirEarlyBoot}
+		if err := t.copySinks(ctx, []runtests.DataSinkReference{earlyBootSinkRef}, filepath.Join(t.localOutputDir, "early-boot")); err != nil {
 			return err
 		}
-		outputs.updateDataSinks(map[string]runtests.DataSinkReference{kernelSinksTestName: kernelSinkRef}, "kernel")
+		outputs.updateDataSinks(map[string]runtests.DataSinkReference{earlyBootSinksTestName: earlyBootSinkRef}, "early-boot")
 	}
 	return t.copySinks(ctx, sinkRefs, t.localOutputDir)
 }
