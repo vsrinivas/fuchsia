@@ -5,6 +5,11 @@
         "name": "fuchsia.net.interfaces/Address.addr"
     },
     {
+        "declaration": "fuchsia.net.interfaces/PreferredLifetimeInfo",
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Address.preferred_lifetime_info"
+    },
+    {
         "declaration": "int64",
         "kind": "table/member",
         "name": "fuchsia.net.interfaces/Address.valid_until"
@@ -67,6 +72,21 @@
         "kind": "const",
         "name": "fuchsia.net.interfaces/INTERFACE_NAME_LENGTH",
         "value": "15"
+    },
+    {
+        "declaration": "fuchsia.net.interfaces/Empty",
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/PreferredLifetimeInfo.deprecated"
+    },
+    {
+        "declaration": "int64",
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/PreferredLifetimeInfo.preferred_until"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net.interfaces/PreferredLifetimeInfo",
+        "strictness": "strict"
     },
     {
         "declaration": "vector<fuchsia.net.interfaces/Address>",

@@ -4,37 +4,9 @@
 library fuchsia.net.interfaces.admin;
 
 using zx;
+using fuchsia.net.interfaces;
 
 type Empty = struct {};
-
-/// Information about the preferred lifetime of an IP address.
-type PreferredLifetimeInfo = strict union {
-    /// The end of the preferred lifetime of the address.
-    ///
-    /// The address should *not* be considered deprecated if `zx.time` is in
-    /// the past. `preferred_lifetime_end` is exchanged as a means to inform
-    /// the deadline where deprecation is expected to happen.
-    ///
-    /// Refers to the preferred lifetime of the address, as defined in
-    /// [RFC 4862, section 2](https://tools.ietf.org/html/rfc4862#section-2).
-    ///
-    /// Must be greater than 0. If `zx.time.INFINITE`, the preferred lifetime
-    /// does not expire.
-    1: preferred_lifetime_end zx.time;
-
-    /// Set if the address is deprecated.
-    ///
-    /// When deprecated, the address should no longer be used for initiating
-    /// new connection unless explicitly requested, or if no other
-    /// non-deprecated addresses are assigned (as described in
-    /// [RFC 4862, section 1](https://tools.ietf.org/html/rfc4862#section-1)).
-    ///
-    /// Once deprecated, an address can become undeprecated if its preferred
-    /// lifetime is extended.
-    ///
-    /// This field is used to signal that the address should be deprecated.
-    2: deprecated Empty;
-};
 
 /// Properties of an IP address.
 type AddressProperties = table {
@@ -42,7 +14,7 @@ type AddressProperties = table {
     ///
     /// If not set, interpreted as
     /// `PreferredLifetimeInfo.preferred_lifetime_end = zx.time.INFINITE`.
-    1: preferred_lifetime_info PreferredLifetimeInfo;
+    1: preferred_lifetime_info fuchsia.net.interfaces.PreferredLifetimeInfo;
 
     /// The end of the valid lifetime of the address.
     ///
