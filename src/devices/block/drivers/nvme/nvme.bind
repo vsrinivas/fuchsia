@@ -10,8 +10,4 @@ fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.MASS_STORAGE;
 fuchsia.BIND_PCI_SUBCLASS == fuchsia.pci.massstorage.BIND_PCI_SUBCLASS.NVMEM;
 fuchsia.BIND_PCI_INTERFACE == 2;
-if fuchsia.BIND_COMPOSITE == 1 {
-	true;
-} else {
-	fuchsia.driver.framework.dfv2 == true;
-}
+fuchsia.BIND_COMPOSITE == 1;

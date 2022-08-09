@@ -5,10 +5,9 @@
 #include "src/devices/tests/composite-driver-v1/composite_driver_v1.h"
 
 #include <fidl/fuchsia.composite.test/cpp/wire.h>
+#include <lib/ddk/binding_driver.h>
 
 #include <set>
-
-#include "src/devices/tests/composite-driver-v1/composite_driver_v1-bind.h"
 
 namespace composite_driver_v1 {
 

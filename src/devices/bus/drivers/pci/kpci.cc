@@ -65,14 +65,6 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
     return status;
   }
 
-  // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
-  bool is_dfv2 = device_is_dfv2(parent);
-  if (is_dfv2) {
-    static_cast<void>(kpci.release());
-    return status;
-    return ZX_OK;
-  }
-
   // DFv2 does not support dynamic binding yet.
   const zx_bind_inst_t pci_fragment_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),

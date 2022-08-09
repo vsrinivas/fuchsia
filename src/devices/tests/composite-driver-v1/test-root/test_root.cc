@@ -12,6 +12,7 @@ zx_status_t TestRoot::Bind(void* ctx, zx_device_t* dev) {
   {
     zx_device_prop_t props[] = {
         {BIND_PCI_VID, 0, 1},
+        {BIND_PCI_DID, 0, 0},
     };
     auto device = std::make_unique<TestRoot>(dev);
     zx_status_t status = device->Bind("child_a", props);
@@ -24,6 +25,7 @@ zx_status_t TestRoot::Bind(void* ctx, zx_device_t* dev) {
   {
     zx_device_prop_t props[] = {
         {BIND_PCI_VID, 0, 2},
+        {BIND_PCI_DID, 0, 0},
     };
     auto device = std::make_unique<TestRoot>(dev);
     zx_status_t status = device->Bind("child_b", props);
@@ -36,12 +38,98 @@ zx_status_t TestRoot::Bind(void* ctx, zx_device_t* dev) {
   {
     zx_device_prop_t props[] = {
         {BIND_PCI_VID, 0, 3},
+        {BIND_PCI_DID, 0, 0},
     };
     auto device = std::make_unique<TestRoot>(dev);
     zx_status_t status = device->Bind("child_c", props);
     if (status != ZX_OK) {
       return status;
     }
+    __UNUSED auto ptr = device.release();
+  }
+
+  {
+    zx_device_prop_t props[] = {
+        {BIND_PCI_VID, 0, 1},
+        {BIND_PCI_DID, 0, 1},
+    };
+    auto device = std::make_unique<TestRoot>(dev);
+    zx_status_t status = device->Bind("fragment_a", props);
+    if (status != ZX_OK) {
+      return status;
+    }
+    __UNUSED auto ptr = device.release();
+  }
+
+  {
+    zx_device_prop_t props[] = {
+        {BIND_PCI_VID, 0, 2},
+        {BIND_PCI_DID, 0, 1},
+    };
+    auto device = std::make_unique<TestRoot>(dev);
+    zx_status_t status = device->Bind("fragment_b", props);
+    if (status != ZX_OK) {
+      return status;
+    }
+    __UNUSED auto ptr = device.release();
+  }
+
+  {
+    zx_device_prop_t props[] = {
+        {BIND_PCI_VID, 0, 3},
+        {BIND_PCI_DID, 0, 1},
+    };
+    auto device = std::make_unique<TestRoot>(dev);
+    zx_status_t status = device->Bind("fragment_c", props);
+    if (status != ZX_OK) {
+      return status;
+    }
+    const zx_bind_inst_t fragment1_match[] = {
+        BI_ABORT_IF(NE, BIND_PCI_VID, 1),
+        BI_MATCH_IF(EQ, BIND_PCI_DID, 1),
+    };
+    const zx_bind_inst_t fragment2_match[] = {
+        BI_ABORT_IF(NE, BIND_PCI_VID, 2),
+        BI_MATCH_IF(EQ, BIND_PCI_DID, 1),
+    };
+    const zx_bind_inst_t fragment3_match[] = {
+        BI_ABORT_IF(NE, BIND_PCI_VID, 3),
+        BI_MATCH_IF(EQ, BIND_PCI_DID, 1),
+    };
+    const device_fragment_part_t fragment1[] = {
+        {std::size(fragment1_match), fragment1_match},
+    };
+    const device_fragment_part_t fragment2[] = {
+        {std::size(fragment2_match), fragment2_match},
+    };
+    const device_fragment_part_t fragment3[] = {
+        {std::size(fragment3_match), fragment3_match},
+    };
+    const device_fragment_t fragments[] = {
+        {"a", std::size(fragment1), fragment1},
+        {"b", std::size(fragment2), fragment2},
+        {"c", std::size(fragment3), fragment3},
+    };
+
+    const zx_device_prop_t new_props[] = {
+        {BIND_PCI_VID, 0, 4},
+    };
+    const composite_device_desc_t comp_desc = {
+        .props = new_props,
+        .props_count = std::size(new_props),
+        .fragments = fragments,
+        .fragments_count = std::size(fragments),
+        .primary_fragment = "a",
+        .spawn_colocated = false,
+        .metadata_list = nullptr,
+        .metadata_count = 0,
+    };
+
+    status = device_add_composite(device->zxdev(), "composite-device", &comp_desc);
+    if (status != ZX_OK) {
+      return status;
+    }
+
     __UNUSED auto ptr = device.release();
   }
 

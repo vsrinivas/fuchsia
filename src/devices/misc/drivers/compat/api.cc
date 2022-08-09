@@ -119,7 +119,15 @@ __EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path,
 
 __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                           const composite_device_desc_t* comp_desc) {
-  return ZX_ERR_NOT_SUPPORTED;
+  // TODO(fxbug.dev/103658): In DFv2 we need to support vendor specific touchpads,
+  // which use composite drivers. We cannot create a DFv1 style composite for this,
+  // otherwise the DFv2 driver will not bind.
+  // This is not a great solution, but it is the simplest solution for now.
+  if (std::string("acpi-H015-composite") == name) {
+    FDF_LOGL(WARNING, dev->logger(), "DFv2 Compat shim refusing to create touchpad composite");
+    return ZX_OK;
+  }
+  return dev->AddComposite(name, comp_desc);
 }
 
 __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
@@ -179,12 +187,6 @@ __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* 
                                                   uint32_t proto_id, void* out) {
   bool has_fragment =
       std::find(dev->fragments().begin(), dev->fragments().end(), name) != dev->fragments().end();
-
-  // TODO(fxbug.dev/103306): We don't actually have composite support yet, so if the
-  // device isn't a composite, just pretend we found it.
-  if (dev->fragments().empty()) {
-    has_fragment = true;
-  }
 
   // TODO(fxbug.dev/103734): Fix sysmem routing and remove this.
   if (!has_fragment && proto_id != ZX_PROTOCOL_SYSMEM) {
