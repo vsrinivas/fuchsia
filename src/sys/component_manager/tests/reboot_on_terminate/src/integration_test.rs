@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fidl_test_components as ftest, fidl_fuchsia_data as fdata, fuchsia_async as fasync,
+    fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
+        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     futures::channel::mpsc,
     futures::prelude::*,
@@ -16,13 +16,11 @@ use {
 #[fuchsia::test]
 async fn reboot_on_terminate_success() {
     let (send_trigger_called, mut receive_trigger_called) = mpsc::unbounded();
-    let builder = build_reboot_on_terminate_realm(send_trigger_called).await;
-    set_component_manager_url(
-        &builder,
-        "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test#meta/reboot_on_terminate_success.cm",
+    let _instance = build_reboot_on_terminate_realm(
+        "#meta/reboot_on_terminate_success.cm",
+        send_trigger_called,
     )
     .await;
-    let _realm = builder.build().await.unwrap();
 
     // Wait for the test to signal that it received the shutdown request.
     info!("waiting for shutdown request");
@@ -32,13 +30,9 @@ async fn reboot_on_terminate_success() {
 #[fuchsia::test]
 async fn reboot_on_terminate_policy() {
     let (send_trigger_called, mut receive_trigger_called) = mpsc::unbounded();
-    let builder = build_reboot_on_terminate_realm(send_trigger_called).await;
-    set_component_manager_url(
-        &builder,
-        "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test#meta/reboot_on_terminate_policy.cm",
-    )
-    .await;
-    let _realm = builder.build().await.unwrap();
+    let _instance =
+        build_reboot_on_terminate_realm("#meta/reboot_on_terminate_policy.cm", send_trigger_called)
+            .await;
 
     // Wait for the test to signal that the security policy was correctly applied.
     info!("waiting for policy error");
@@ -46,23 +40,36 @@ async fn reboot_on_terminate_policy() {
 }
 
 async fn build_reboot_on_terminate_realm(
+    url: &str,
     send_trigger_called: mpsc::UnboundedSender<()>,
-) -> RealmBuilder {
+) -> RealmInstance {
+    // Define the realm inside component manager.
     let builder = RealmBuilder::new().await.unwrap();
-
-    // The actual test runs in a nested component manager that is configured with
-    // reboot_on_terminate_enabled.
-    let component_manager = builder
-        .add_child("component_manager", "#meta/component_manager.cm", ChildOptions::new().eager())
+    let realm = builder.add_child("realm", url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&realm),
+        )
         .await
         .unwrap();
-
-    // The root component will use Trigger to report its shutdown.
-    let trigger = builder
-        .add_local_child(
-            "trigger",
-            move |handles| Box::pin(trigger_mock(send_trigger_called.clone(), handles)),
-            ChildOptions::new(),
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.sys2.SystemController"))
+                .from(Ref::parent())
+                .to(&realm),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.boot.WriteOnlyLog"))
+                .from(Ref::parent())
+                .to(&realm),
         )
         .await
         .unwrap();
@@ -70,29 +77,55 @@ async fn build_reboot_on_terminate_realm(
         .add_route(
             Route::new()
                 .capability(Capability::protocol_by_name("fidl.test.components.Trigger"))
-                .from(&trigger)
-                .to(&component_manager),
+                .from(Ref::parent())
+                .to(&realm),
         )
         .await
         .unwrap();
-
     builder
         .add_route(
             Route::new()
-                // Forward logging to debug test breakages.
-                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                .capability(Capability::protocol_by_name("fuchsia.boot.WriteOnlyLog"))
-                // Forward loader so that nested component_manager can load packages.
-                .capability(Capability::protocol_by_name("fuchsia.sys.Loader"))
-                // Component manager needs fuchsia.process.Launcher to spawn new processes.
-                .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
-                .from(Ref::parent())
-                .to(&component_manager),
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.hardware.power.statecontrol.Admin",
+                ))
+                .from(&realm)
+                .to(Ref::parent()),
         )
         .await
         .unwrap();
 
-    builder
+    let (component_manager_realm, _task) =
+        builder.with_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+
+    // Define a mock component that serves the `/boot` directory to component manager
+    let trigger = component_manager_realm
+        .add_local_child(
+            "trigger",
+            move |handles| Box::pin(trigger_mock(send_trigger_called.clone(), handles)),
+            ChildOptions::new(),
+        )
+        .await
+        .unwrap();
+    component_manager_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.test.components.Trigger"))
+                .from(&trigger)
+                .to(Ref::child("component_manager")),
+        )
+        .await
+        .unwrap();
+    component_manager_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.boot.WriteOnlyLog"))
+                .from(Ref::parent())
+                .to(Ref::child("component_manager")),
+        )
+        .await
+        .unwrap();
+
+    component_manager_realm.build().await.unwrap()
 }
 
 async fn trigger_mock(
@@ -115,18 +148,4 @@ async fn trigger_mock(
     fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
-}
-
-async fn set_component_manager_url(builder: &RealmBuilder, url: &str) {
-    let mut cm_decl = builder.get_component_decl("component_manager").await.unwrap();
-    let program = cm_decl.program.as_mut().unwrap();
-    program.info.entries.as_mut().unwrap().push(fdata::DictionaryEntry {
-        key: "args".into(),
-        value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![
-            "--config".to_string(),
-            "/pkg/data/component_manager_config".to_string(),
-            url.to_string(),
-        ]))),
-    });
-    builder.replace_component_decl("component_manager", cm_decl).await.unwrap();
 }

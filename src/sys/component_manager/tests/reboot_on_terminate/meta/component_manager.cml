@@ -9,16 +9,19 @@
     program: {
         runner: "elf",
         binary: "bin/component_manager",
-
-        // Args are populated by RealmBuilder
+        args: [
+            "--config",
+            "/pkg/data/component_manager_config",
+        ],
     },
     use: [
         {
             protocol: [
                 "fidl.test.components.Trigger",
                 "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.component.resolver.RealmBuilder",
+                "fuchsia.component.runner.RealmBuilder",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Loader",
             ],
         },
     ],

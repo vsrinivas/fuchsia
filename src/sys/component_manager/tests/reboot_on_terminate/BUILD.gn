@@ -21,7 +21,6 @@ group("tests") {
 rustc_test("reboot_on_terminate_test_bin") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.data:fuchsia.data_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

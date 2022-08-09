@@ -15,15 +15,32 @@
     ],
     builtin_capabilities: [
         {
-           runner: "elf"
+            protocol: [
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.SystemController",
+                "fuchsia.time.Maintenance",
+            ],
+        },
+        {
+            runner: "elf",
+        },
+        {
+            runner: "realm_builder",
+        },
+        {
+            resolver: "realm_builder_resolver",
+        },
+        {
+            event: "directory_ready",
         },
     ],
-    builtin_pkg_resolver: "appmgr_bridge",
+    realm_builder_resolver_and_runner: "namespace",
     reboot_on_terminate_enabled: true,
     security_policy: {
         child_policy: {
             reboot_on_terminate: [
-                "/critical_child",
+                "/realm/critical_child",
             ],
         },
     },
