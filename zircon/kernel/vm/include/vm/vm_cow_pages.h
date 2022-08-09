@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_COW_PAGES_H_
 
 #include <assert.h>
+#include <lib/page_cache.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
@@ -626,6 +627,9 @@ class VmCowPages final
   // Only for use by loaned page reclaim.
   VmCowPagesContainer* raw_container();
 
+  // Initializes the PageCache instance for COW page allocations.
+  static void InitializePageCache(uint32_t level);
+
  private:
   // private constructor (use Create...())
   VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
@@ -724,6 +728,14 @@ class VmCowPages final
     DEBUG_ASSERT(result == !debug_is_user_pager_backed_locked());
     return result;
   }
+
+  static zx_status_t AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
+                                      list_node_t* alloc_list, LazyPageRequest* request,
+                                      vm_page_t** clone);
+
+  static zx_status_t CacheAllocPage(uint alloc_flags, vm_page_t** p, paddr_t* pa);
+  static void CacheFree(list_node_t* list);
+  static void CacheFree(vm_page_t* p);
 
   // Add a page to the object at |offset|.
   //
@@ -1048,7 +1060,7 @@ class VmCowPages final
   // this helper.
   void FreePagesLocked(list_node* pages, bool freeing_owned_pages) TA_REQ(lock_) {
     if (!freeing_owned_pages || !is_source_handling_free_locked()) {
-      pmm_free(pages);
+      CacheFree(pages);
       return;
     }
     page_source_->FreePages(pages);
@@ -1065,7 +1077,7 @@ class VmCowPages final
   void FreePageLocked(vm_page_t* page, bool freeing_owned_page) TA_REQ(lock_) {
     DEBUG_ASSERT(!list_in_list(&page->queue_node));
     if (!freeing_owned_page || !is_source_handling_free_locked()) {
-      pmm_free_page(page);
+      CacheFree(page);
       return;
     }
     list_node_t list;
@@ -1329,6 +1341,9 @@ class VmCowPages final
   // Tracks whether this VMO was modified (written / resized) if backed by a pager. This gets reset
   // to false if QueryPagerVmoStatsLocked() is called with |reset| set to true.
   bool pager_stats_modified_ TA_GUARDED(lock_) = false;
+
+  // PageCache instance for COW page allocations.
+  inline static page_cache::PageCache page_cache_;
 };
 
 // VmCowPagesContainer exists to essentially split the VmCowPages ref_count_ into two counts, so

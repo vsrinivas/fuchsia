@@ -13,6 +13,7 @@ zx_library("root_resource_filter") {
     "//zircon/kernel/lib/crypto",
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/page_cache",
     "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/region-alloc",
   ]
