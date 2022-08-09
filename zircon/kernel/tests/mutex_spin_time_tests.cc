@@ -22,9 +22,7 @@
 #include <ktl/enforce.h>
 
 namespace {
-
-// See that Acquire's spin phase is canceled by a preemption request.
-bool mutex_spin_preempt_test() {
+bool mutex_spin_time_test(void) {
   BEGIN_TEST;
 
   // We cannot run this test unless there are at least 2 CPUs currently online.  Either find two
@@ -55,17 +53,22 @@ bool mutex_spin_preempt_test() {
         Thread::Current::Get()->SetPriority(priority);
       });
 
+  constexpr zx::duration kTimeouts[] = {
+      zx::usec(0), zx::usec(50), zx::usec(250), zx::usec(750), zx::usec(5000),
+  };
+
   const affine::Ratio ticks_to_time = platform_get_ticks_to_time_ratio();
 
   struct Args {
     DECLARE_MUTEX(Args) the_mutex;
+    zx::duration spin_max_duration;
     ktl::atomic<bool> interlock{false};
   } args;
 
   // Our test thunk is very simple.  One we are started, we disable preemption
   // and then signal the timer thread via the interlock atomic.  Once the timer
   // thread has ack'ed our signal, we just grab and release the test mutex with
-  // an infinitely long spin phase.
+  // the specified spin timeout.
   auto thunk = [](void* ctx) -> int {
     auto& args = *(static_cast<Args*>(ctx));
 
@@ -75,7 +78,7 @@ bool mutex_spin_preempt_test() {
       arch::Yield();
     }
 
-    Guard<Mutex> guard{&args.the_mutex, ZX_TIME_INFINITE};
+    Guard<Mutex> guard{&args.the_mutex, args.spin_max_duration.get()};
     return 0;
   };
 
@@ -84,72 +87,75 @@ bool mutex_spin_preempt_test() {
   Thread::Current::Get()->SetCpuAffinity(timer_mask);
   Thread::Current::Get()->SetPriority(HIGH_PRIORITY);
 
-  zx::ticks start, end;
-  Thread* test_thread;
+  for (const auto& timeout : kTimeouts) {
+    zx::ticks start, end;
+    Thread* test_thread;
 
-  // Setup the timeout and create the test thread (but don't start it yet).
-  // Make sure that the thread runs on a different core from ours.
-  test_thread = Thread::Create("mutex spin timeout", thunk, &args, HIGH_PRIORITY);
-  ASSERT_NONNULL(test_thread, "Failed to create test thread");
-  test_thread->SetCpuAffinity(spinner_mask);
+    // Setup the timeout and create the test thread (but don't start it yet).
+    // Make sure that the thread runs on a different core from ours.
+    args.spin_max_duration = timeout;
+    test_thread = Thread::Create("mutex spin timeout", thunk, &args, HIGH_PRIORITY);
+    ASSERT_NONNULL(test_thread, "Failed to create test thread");
+    test_thread->SetCpuAffinity(spinner_mask);
 
-  // Hold onto the mutex while creating the thread.  Once the thread is up and
-  // running we're going to preempt it in order to cancel it's spin phase and
-  // cause it to block.
-  {
-    AutoPreemptDisabler ap_disabler;
-    Guard<Mutex> guard{&args.the_mutex};
-    test_thread->Resume();
-
-    // Wait until the spinner thread is ready to go, then mark the start time
-    // and tell the spinner it is OK to proceed.
-    while (args.interlock.load() == false) {
-      arch::Yield();
-    }
-    args.interlock.store(false);
-
-    // Preempt the spinning thread and see how long until it blocks.
-    start = zx::ticks(current_ticks());
+    // Hold onto the mutex while we create a thread and time how long it takes for the mutex to
+    // become blocked.
     {
-      Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-      mp_reschedule(spinner_mask, 0);
+      AutoPreemptDisabler ap_disabler;
+      Guard<Mutex> guard{&args.the_mutex};
+      test_thread->Resume();
+
+      // Wait until the spinner thread is ready to go, then mark the start time
+      // and tell the spinner it is OK to proceed.
+      while (args.interlock.load() == false) {
+        arch::Yield();
+      }
+      start = zx::ticks(current_ticks());
+      args.interlock.store(false);
+
+      // Spin until we notice that the thread is blocked.
+      thread_state s;
+      while (true) {
+        {
+          Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
+          s = test_thread->state();
+        }
+
+        if (s == THREAD_BLOCKED) {
+          break;
+        }
+
+        arch::Yield();
+      }
+
+      end = zx::ticks(current_ticks());
     }
 
-    // Wait until we notice that the thread is blocked.
-    thread_state s;
-    while (true) {
-      {
-        Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-        s = test_thread->state();
-      }
+    // Now that we are out of the lock, clean up the test thread and check our
+    // timing.  We should have spun for at _least_ the time specified.  For the
+    // benefit of a human test runner/observer, also print out how much over the
+    // limit we ended up.  There is technically no upper bound to this number,
+    // but we would like to observe the overshoot amount as being "reasonable"
+    // in an unloaded manual test environment.
+    zx_status_t status = test_thread->Join(nullptr, current_time() + ZX_SEC(30));
+    ASSERT_EQ(status, ZX_OK, "test thread failed to exit!");
 
-      if (s == THREAD_BLOCKED) {
-        break;
-      }
+    zx::duration actual_spin_time(ticks_to_time.Scale((end - start).get()));
+    EXPECT_GE(actual_spin_time.get(), timeout.get(), "Didn't spin for long enough!");
 
-      arch::Yield();
+    if (timeout.get() > 0) {
+      int64_t overshoot = (((actual_spin_time - timeout).get()) * 10000) / timeout.get();
+      printf("Target %7ld nSec, Actual %7ld nSec.  Overshot by %ld.%02ld%%.\n", timeout.get(),
+             actual_spin_time.get(), overshoot / 100, overshoot % 100);
+    } else {
+      printf("\nTarget %7ld nSec, Actual %7ld nSec.\n", timeout.get(), actual_spin_time.get());
     }
   }
 
-  end = zx::ticks(current_ticks());
-
-  // Now that we are out of the lock, clean up the test thread and check our
-  // timing.  We can't make hard guarantees about how long we should have spun
-  // for, but for the benefit of a human test runner/observer, print out the
-  // results.  There is technically no upper bound to this number, but we would
-  // like to observe the overshoot amount as being "reasonable" in an unloaded
-  // manual test environment.
-  zx_status_t status = test_thread->Join(nullptr, current_time() + ZX_SEC(30));
-  ASSERT_EQ(status, ZX_OK, "test thread failed to exit!");
-
-  zx::duration actual_spin_time(ticks_to_time.Scale((end - start).get()));
-  printf("Actual spin time %7ld nSec\n", actual_spin_time.get());
-
   END_TEST;
 }
-
 }  // namespace
 
 UNITTEST_START_TESTCASE(mutex_spin_time_tests)
-UNITTEST("Mutex spin preempt", (mutex_spin_preempt_test))
+UNITTEST("Mutex spin timeouts", (mutex_spin_time_test))
 UNITTEST_END_TESTCASE(mutex_spin_time_tests, "mutex_spin_time", "mutex_spin_time tests")

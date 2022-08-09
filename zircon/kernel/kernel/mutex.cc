@@ -126,8 +126,9 @@ Mutex::~Mutex() {
 
 // By parameterizing on whether we're going to set a timeslice extension or not
 // we can shave a few cycles.
-template <bool WithTimesliceExtension>
-bool Mutex::AcquireCommon(zx_duration_t spin_max_duration, zx_duration_t timeslice_extension) {
+template <bool TimesliceExtensionEnabled>
+bool Mutex::AcquireCommon(zx_duration_t spin_max_duration,
+                          TimesliceExtension<TimesliceExtensionEnabled> timeslice_extension) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
@@ -135,60 +136,50 @@ bool Mutex::AcquireCommon(zx_duration_t spin_max_duration, zx_duration_t timesli
   Thread* const current_thread = Thread::Current::Get();
   const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
 
-  // Make sure that we don't leave this scope with preemption disabled.
-  AutoPreemptDisabler preempt_disabler(AutoPreemptDisabler::Defer);
-
-  if constexpr (WithTimesliceExtension) {
-    // We've got a timeslice extension that we need to install after we've acquired the mutex.
-    // However, to avoid the (small) risk of getting preempted after acquiring the mutext, but
-    // before we've installed the timeslice extension, disable preemption.
-    preempt_disabler.Disable();
-  }
-
-  // Fast path: The mutex is unlocked and uncontested. Try to acquire it immediately.
-  //
-  // We use the weak form of compare exchange here, which is faster on some
-  // architectures (e.g. aarch64). In the rare case it spuriously fails, the slow
-  // path will handle it.
-  uintptr_t old_mutex_state = STATE_FREE;
-  if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state, ktl::memory_order_acquire,
-                                        ktl::memory_order_relaxed))) {
-    RecordInitialAssignedCpu();
-
-    // TODO(maniscalco): Is this the right place to put the KTracer?  Seems like
-    // it should be the very last thing we do.
-    //
-    // Don't bother to update the ownership of the wait queue. If another thread
-    // attempts to acquire the mutex and discovers it to be already locked, it
-    // will take care of updating the wait queue ownership while it is inside of
-    // the thread_lock.
-    KTracer{}.KernelMutexUncontestedAcquire(this);
-
-    if constexpr (WithTimesliceExtension) {
-      return Thread::Current::preemption_state().SetTimesliceExtension(timeslice_extension);
+  {
+    // Make sure that we don't leave this scope with preemption disabled.
+    AutoPreemptDisabler preempt_disabler(AutoPreemptDisabler::Defer);
+    if constexpr (TimesliceExtensionEnabled) {
+      // We've got a timeslice extension that we need to install after we've
+      // acquired the mutex.  However, to avoid the (small) risk of getting
+      // preempted after acquiring the mutex, but before we've installed the
+      // timeslice extension, disable preemption.
+      preempt_disabler.Disable();
     }
-    return false;
+
+    // Fast path: The mutex is unlocked and uncontested. Try to acquire it immediately.
+    //
+    // We use the weak form of compare exchange here, which is faster on some
+    // architectures (e.g. aarch64). In the rare case it spuriously fails, the slow
+    // path will handle it.
+    uintptr_t old_mutex_state = STATE_FREE;
+    if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state,
+                                          ktl::memory_order_acquire, ktl::memory_order_relaxed))) {
+      RecordInitialAssignedCpu();
+
+      // TODO(maniscalco): Is this the right place to put the KTracer?  Seems like
+      // it should be the very last thing we do.
+      //
+      // Don't bother to update the ownership of the wait queue. If another thread
+      // attempts to acquire the mutex and discovers it to be already locked, it
+      // will take care of updating the wait queue ownership while it is inside of
+      // the thread_lock.
+      KTracer{}.KernelMutexUncontestedAcquire(this);
+
+      if constexpr (TimesliceExtensionEnabled) {
+        return Thread::Current::preemption_state().SetTimesliceExtension(timeslice_extension.value);
+      }
+      return false;
+    }
   }
 
-  preempt_disabler.Disable();
-  AcquireContendedMutex(spin_max_duration, current_thread);
-
-  if constexpr (WithTimesliceExtension) {
-    return Thread::Current::preemption_state().SetTimesliceExtension(timeslice_extension);
-  }
-  return false;
+  return AcquireContendedMutex(spin_max_duration, current_thread, timeslice_extension);
 }
 
-__NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
-                                              Thread* current_thread) {
-  DEBUG_ASSERT(!Thread::Current::preemption_state().PreemptIsEnabled());
-  const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
-  const cpu_num_t curr_cpu_num = arch_curr_cpu_num();
-  const cpu_mask_t curr_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-
-  // Remember the last call to current_ticks.
-  zx_ticks_t now_ticks = current_ticks();
-
+template <bool TimesliceExtensionEnabled>
+__NO_INLINE bool Mutex::AcquireContendedMutex(
+    zx_duration_t spin_max_duration, Thread* current_thread,
+    TimesliceExtension<TimesliceExtensionEnabled> timeslice_extension) {
   // It looks like the mutex is most likely contested (at least, it was when we
   // just checked). Enter the adaptive mutex spin phase, where we spin on the
   // mutex hoping that the thread which owns the mutex is running on a different
@@ -229,6 +220,23 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
   // possible to drop out of a spin when we might want to stay in it.
   //
   // TODO(fxbug.dev/34646): Optimize cache pressure of spinners and default spin max.
+
+  const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
+
+  // Make sure that we don't leave this scope with preemption disabled.  If
+  // we've got a timeslice extension, we're going to disable preemption while
+  // spinning to ensure that we can't get "preempted early" if we end up
+  // acquiring the mutex in the spin phase.  However, if a preemption becomes
+  // pending while spinning, we'll briefly enable then disable preemption to
+  // allow a reschedule.
+  AutoPreemptDisabler preempt_disabler(AutoPreemptDisabler::Defer);
+  if constexpr (TimesliceExtensionEnabled) {
+    preempt_disabler.Disable();
+  }
+
+  // Remember the last call to current_ticks.
+  zx_ticks_t now_ticks = current_ticks();
+
   const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
   const zx_ticks_t spin_until_ticks =
       affine::utils::ClampAdd(now_ticks, time_to_ticks.Scale(spin_max_duration));
@@ -247,7 +255,11 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
       // Same as above in the fastest path: leave accounting to later contending
       // threads.
       KTracer{}.KernelMutexUncontestedAcquire(this);
-      return;
+
+      if constexpr (TimesliceExtensionEnabled) {
+        return Thread::Current::preemption_state().SetTimesliceExtension(timeslice_extension.value);
+      }
+      return false;
     }
 
     // Stop spinning if the mutex is or becomes contested. All spinners convert
@@ -256,15 +268,27 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
       break;
     }
 
-    // Stop spinning if it looks like we might be running on the same CPU which
-    // was assigned to the owner of the mutex.
-    if (curr_cpu_num == maybe_acquired_on_cpu_.load(ktl::memory_order_relaxed)) {
-      break;
-    }
+    {
+      // Stop spinning if it looks like we might be running on the same CPU which
+      // was assigned to the owner of the mutex.
+      //
+      // Note: The accuracy of |curr_cpu_num| depends on whether preemption is
+      // currently enabled or not and whether we re-enable it below.
+      const cpu_num_t curr_cpu_num = arch_curr_cpu_num();
+      if (curr_cpu_num == maybe_acquired_on_cpu_.load(ktl::memory_order_relaxed)) {
+        break;
+      }
 
-    // Stop spinning if this CPU has a pending preemption.
-    if ((Thread::Current::preemption_state().preempts_pending() & curr_cpu_mask) != 0) {
-      break;
+      if constexpr (TimesliceExtensionEnabled) {
+        // If this CPU has a preemption pending, briefly enable then disable
+        // preemption to give this CPU a chance to reschedule.
+        const cpu_mask_t curr_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
+        if ((Thread::Current::preemption_state().preempts_pending() & curr_cpu_mask) != 0) {
+          // Reenable preemption to trigger a local reschedule and then disable it again.
+          preempt_disabler.Enable();
+          preempt_disabler.Disable();
+        }
+      }
     }
 
     // Give the arch a chance to relax the CPU.
@@ -278,6 +302,9 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
   }
 
   ContentionTimer timer(current_thread, now_ticks);
+
+  // |OwnedWaitQueue::BlockAndAssignOwner| requires that preemption be disabled.
+  preempt_disabler.Disable();
 
   {
     // we contended with someone else, will probably need to block
@@ -303,7 +330,12 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
         // flag.
         val_.store(new_mutex_state, ktl::memory_order_relaxed);
         RecordInitialAssignedCpu();
-        return;
+
+        if constexpr (TimesliceExtensionEnabled) {
+          return Thread::Current::preemption_state().SetTimesliceExtension(
+              timeslice_extension.value);
+        }
+        return false;
       }
     }
 
@@ -317,8 +349,6 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
     zx_status_t ret = wait_.BlockAndAssignOwner(Deadline::infinite(), cur_owner,
                                                 ResourceOwnership::Normal, Interruptible::No);
 
-    // Note, curr_cpu_num and curr_cpu_mask are no longer valid.
-
     if (unlikely(ret < ZX_OK)) {
       // mutexes are not interruptible and cannot time out, so it
       // is illegal to return with any error state.
@@ -329,6 +359,11 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
     // someone must have woken us up, we should own the mutex now
     DEBUG_ASSERT(current_thread == holder());
   }
+
+  if constexpr (TimesliceExtensionEnabled) {
+    return Thread::Current::preemption_state().SetTimesliceExtension(timeslice_extension.value);
+  }
+  return false;
 }
 
 inline uintptr_t Mutex::TryRelease(Thread* current_thread) {
@@ -453,7 +488,5 @@ void Mutex::ReleaseThreadLocked() {
 }
 
 // Explicit instantiations since it's not defined in the header.
-template bool Mutex::AcquireCommon<false>(zx_duration_t spin_max_duration,
-                                          zx_duration_t timeslice_extension);
-template bool Mutex::AcquireCommon<true>(zx_duration_t spin_max_duration,
-                                         zx_duration_t timeslice_extension);
+template bool Mutex::AcquireCommon(zx_duration_t spin_max_duration, TimesliceExtension<false>);
+template bool Mutex::AcquireCommon(zx_duration_t spin_max_duration, TimesliceExtension<true>);
