@@ -17,7 +17,7 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
-use net_types::ip::Subnet;
+use net_types::ip::{Ip as _, Ipv4, Ipv6, Subnet};
 use net_types::{
     ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr},
     SpecifiedAddr,
@@ -1279,10 +1279,15 @@ async fn test_list_del_routes() {
 
     let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
     let route3_with_device = AddableEntry::with_gateway(sub10, Some(device), sub10_gateway).into();
-    // Link local route is added automatically by core.
-    let link_local_route =
+
+    let auto_routes = [
+        // Link local route is added automatically by core.
         AddableEntry::without_gateway(net_declare::net_subnet_v6!("fe80::/64").into(), device)
-            .into();
+            .into(),
+        // Multicast routes are added automatically by core.
+        AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, device).into(),
+        AddableEntry::without_gateway(Ipv6::MULTICAST_SUBNET, device).into(),
+    ];
     assert_eq!(
         test_stack
             .with_ctx(|ctx| {
@@ -1294,7 +1299,7 @@ async fn test_list_del_routes() {
                     .collect::<HashSet<_>>()
             })
             .await,
-        HashSet::from([route1, route2, route3_with_device, link_local_route])
+        HashSet::from_iter([route1, route2, route3_with_device].into_iter().chain(auto_routes))
     );
 
     // delete route1:
@@ -1331,7 +1336,7 @@ async fn test_list_del_routes() {
                     .collect::<HashSet<_>>()
             })
             .await,
-        HashSet::from([route2, route3_with_device, link_local_route])
+        HashSet::from_iter([route2, route3_with_device].into_iter().chain(auto_routes))
     );
 }
 
