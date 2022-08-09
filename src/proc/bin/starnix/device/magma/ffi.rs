@@ -13,7 +13,7 @@ use crate::device::{
         file::{BufferInfo, ConnectionMap},
         magma::create_drm_image,
     },
-    wayland::image_file::ImageInfo,
+    wayland::image_file::{ImageFile, ImageInfo},
 };
 use crate::fs::{Anon, FdFlags, VmoFileObject};
 use crate::task::CurrentTask;
@@ -235,6 +235,60 @@ pub fn execute_command(
             &mut magma_command_descriptor as *mut magma_command_descriptor,
         ) as u64
     };
+
+    Ok(())
+}
+
+/// Exports the provided magma buffer into a `zx::Vmo`, which is then wrapped in a file and added
+/// to `current_task`'s files.
+///
+/// The file's `fd` is then written to the response object, which allows the client to interact with
+/// the exported buffer.
+///
+/// # Parameters
+///   - `current_task`: The task that is exporting the buffer.
+///   - `control`: The control message that contains the buffer to export.
+///   - `response`: The response message that will be updated to write back to user space.
+///
+/// Returns an error if adding the file to `current_task` fails.
+///
+/// SAFETY: Makes an FFI call to populate the fields of `response`, and creates a `zx::Vmo` from
+/// a raw handle provided by magma.
+pub fn export_buffer(
+    current_task: &CurrentTask,
+    control: virtio_magma_export_ctrl_t,
+    response: &mut virtio_magma_export_resp_t,
+    connections: &ConnectionMap,
+) -> Result<(), Errno> {
+    let mut buffer_handle_out = 0;
+    let status = unsafe {
+        magma_export(
+            control.connection as magma_connection_t,
+            control.buffer as magma_buffer_t,
+            &mut buffer_handle_out as *mut magma_handle_t,
+        )
+    };
+    if status as u32 == MAGMA_STATUS_OK {
+        let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(buffer_handle_out)) };
+        let file = match connections
+            .get(&{ control.connection })
+            .and_then(|buffers| buffers.get(&(control.buffer as magma_buffer_t)))
+        {
+            Some(BufferInfo::Image(image_info)) => {
+                ImageFile::new(current_task, image_info.clone(), vmo)
+            }
+            _ => Anon::new_file(
+                current_task,
+                Box::new(VmoFileObject::new(Arc::new(vmo))),
+                OpenFlags::RDWR,
+            ),
+        };
+        let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
+        response.buffer_handle_out = fd.raw() as u64;
+    }
+
+    response.result_return = status as u64;
+    response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT as u32;
 
     Ok(())
 }

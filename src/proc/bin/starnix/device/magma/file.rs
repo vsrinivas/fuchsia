@@ -264,38 +264,8 @@ impl FileOps for MagmaFile {
                     virtio_magma_export_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                let mut buffer_handle_out = 0;
-                let status = unsafe {
-                    magma_export(
-                        control.connection as magma_connection_t,
-                        control.buffer as magma_buffer_t,
-                        &mut buffer_handle_out as *mut magma_handle_t,
-                    )
-                };
+                export_buffer(current_task, control, &mut response, &*self.connections.lock())?;
 
-                if status as u32 == MAGMA_STATUS_OK {
-                    let vmo = unsafe { zx::Vmo::from(zx::Handle::from_raw(buffer_handle_out)) };
-                    let file = match self
-                        .connections
-                        .lock()
-                        .get(&{ control.connection })
-                        .and_then(|buffers| buffers.get(&(control.buffer as magma_buffer_t)))
-                    {
-                        Some(BufferInfo::Image(image_info)) => {
-                            ImageFile::new(current_task, image_info.clone(), vmo)
-                        }
-                        _ => Anon::new_file(
-                            current_task,
-                            Box::new(VmoFileObject::new(Arc::new(vmo))),
-                            OpenFlags::RDWR,
-                        ),
-                    };
-                    let fd = current_task.files.add_with_flags(file, FdFlags::empty())?;
-                    response.buffer_handle_out = fd.raw() as u64;
-                }
-
-                response.result_return = status as u64;
-                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT as u32;
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_IMPORT => {
