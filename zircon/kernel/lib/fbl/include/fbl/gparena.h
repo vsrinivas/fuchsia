@@ -168,7 +168,7 @@ class __OWNER(void) GPArena {
   void Dump() {
     // Take the mapping lock so we can safely dump the vmar_ without mappings being done in
     // parallel.
-    Guard<Mutex> guard{&mapping_lock_};
+    Guard<CriticalMutex> guard{&mapping_lock_};
 
     DEBUG_ASSERT(vmar_ != nullptr);
     printf("GPArena<%#zx,%#zx> %s mappings:\n", PersistSize, ObjectSize, vmar_->name());
@@ -208,7 +208,7 @@ class __OWNER(void) GPArena {
   // Attempts to grow the committed memory range such that next_top is included in the range.
   bool Grow(uintptr_t next_top) {
     // take the mapping lock
-    Guard<Mutex> guard{&mapping_lock_};
+    Guard<CriticalMutex> guard{&mapping_lock_};
     // Cache committed_ as only we can change it as we have the lock.
     uintptr_t committed = committed_.load(ktl::memory_order_relaxed);
     // now that we have the lock, double check we need to proceed
@@ -260,7 +260,7 @@ class __OWNER(void) GPArena {
   // may not grow past end_.
   uintptr_t end_ = 0;
 
-  DECLARE_MUTEX(GPArena) mapping_lock_;
+  DECLARE_CRITICAL_MUTEX(GPArena) mapping_lock_;
 
   ktl::atomic<size_t> count_ = 0;
 
