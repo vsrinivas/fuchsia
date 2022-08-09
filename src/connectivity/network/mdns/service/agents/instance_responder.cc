@@ -118,7 +118,7 @@ void InstanceResponder::OnLocalHostAddressesChanged() {
     return;
   }
 
-  UpdateInstanceAddresses();
+  UpdateInstanceAddresses(false);
   ChangeLocalServiceInstance(instance_, false);
 }
 
@@ -331,7 +331,7 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
     return;
   }
 
-  UpdateInstanceAddresses();
+  UpdateInstanceAddresses(from_proxy());
 
   if (instance_ready_) {
     ChangeLocalServiceInstance(instance_, from_proxy());
@@ -368,13 +368,19 @@ void InstanceResponder::IdleCheck(const std::string& subtype) {
   }
 }
 
-void InstanceResponder::UpdateInstanceAddresses() {
+void InstanceResponder::UpdateInstanceAddresses(bool from_proxy) {
   auto host_addresses = local_host_addresses();
   instance_.addresses_.clear();
-  std::transform(host_addresses.begin(), host_addresses.end(),
-                 std::back_inserter(instance_.addresses_), [this](const HostAddress& address) {
-                   return inet::SocketAddress(address.address(), port_, address.interface_id());
-                 });
+  if (!from_proxy) {
+    std::transform(host_addresses.begin(), host_addresses.end(),
+                   std::back_inserter(instance_.addresses_), [this](const HostAddress& address) {
+                     return inet::SocketAddress(address.address(), port_, address.interface_id());
+                   });
+  } else {
+    for (auto addr : addresses_) {
+      instance_.addresses_.emplace_back(inet::SocketAddress(addr, port_, 0));
+    }
+  }
 }
 
 }  // namespace mdns

@@ -110,8 +110,9 @@ class InstanceResponder : public MdnsAgent {
     return reply_address;
   }
 
-  // Updates |instance_.addresses_| using |local_host_addresses| and |port_|.
-  void UpdateInstanceAddresses();
+  // Updates |instance_.addresses_| using |local_host_addresses| and |port_| for non-proxy services.
+  // For proxy services, the addresses of the service and |port_| are used.
+  void UpdateInstanceAddresses(bool from_proxy);
 
   std::string host_full_name_;
   const std::vector<inet::IpAddress> addresses_;
