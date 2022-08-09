@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/components.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
@@ -45,6 +46,20 @@ if (GIT_BRANCH != GIT_REVISION) {
   GIT_REVISION = read_file("${src}/.git/${GIT_BRANCH}", "trim string")
 }
 
+compiled_action("generate-syscall-definitions") {
+  tool = ":syz-sysgen"
+  outputs = [
+    "$target_gen_dir/sysgen/executor/defs.h",
+    "$target_gen_dir/sysgen/executor/syscalls.h",
+  ]
+  args = [
+    "--src",
+    src,
+    "--out",
+    rebase_path("$target_gen_dir/sysgen", root_build_dir),
+  ]
+}
+
 executable("syz-executor") {
   sources = [
     "${src}/executor/common.h",
@@ -70,20 +85,22 @@ executable("syz-executor") {
     "${src}/executor/test.h",
     "${src}/executor/test_linux.h",
   ]
+  sources += get_target_outputs(":generate-syscall-definitions")
   defines = [
     "GOOS_${GOOS}=1",
     "GOARCH_${GOARCH}=1",
     "HOSTGOOS_${HOSTGOOS}=1",
     "GIT_REVISION=\"${GIT_REVISION}\"",
   ]
-  cflags = [
-    # TODO(mdempsky): How do we avoid hard-coding this path?
-    "-Ihost_x64/gen/src/testing/fuzzing/syzkaller/sysgen/executor",
-  ]
+  generated_syscalls_dir =
+      rebase_path(
+          get_label_info(":generate-syscall-definitions", "target_gen_dir"),
+          root_build_dir)
+  cflags = [ "-I$generated_syscalls_dir/sysgen/executor" ]
   configs -= [ "//build/config:default_warnings" ]
   configs += [ ":warnings" ]
   deps = [
-    ":run-sysgen($host_toolchain)",
+    ":generate-syscall-definitions",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -390,21 +407,5 @@ if (is_host) {
     gopackage = "github.com/google/syzkaller/sys/syz-sysgen"
     ldflags = syz_ldflags
     deps = [ ":syzkaller-go" ]
-  }
-
-  action("run-sysgen") {
-    script = "run-sysgen.sh"
-    args = [
-      rebase_path("$root_out_dir/syz-sysgen", root_build_dir),
-      "--src",
-      src,
-      "--out",
-      rebase_path("$target_gen_dir/sysgen", root_build_dir),
-    ]
-    outputs = [
-      "$target_gen_dir/sysgen/executor/defs.h",
-      "$target_gen_dir/sysgen/executor/syscalls.h",
-    ]
-    deps = [ ":syz-sysgen" ]
   }
 }
