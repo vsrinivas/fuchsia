@@ -36,18 +36,27 @@ class FakeGuestVsockEndpoint
   fidl::BindingSet<fuchsia::virtualization::GuestVsockEndpoint> bindings_;
 };
 
-class GuestManagerTest : public gtest::TestLoopFixture {
+class GuestManagerTest : public gtest::TestLoopFixture, public ::testing::WithParamInterface<bool> {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
     provider_.service_directory_provider()->AddService(fake_guest_vsock_endpoint_.GetHandler());
   }
+
+  bool UseLegacyVsockDevice() const { return GetParam(); }
+
   sys::testing::ComponentContextProvider provider_;
   FakeGuestVsockEndpoint fake_guest_vsock_endpoint_;
 };
 
-TEST_F(GuestManagerTest, LaunchFailInvalidPath) {
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "invalid_path.cfg");
+INSTANTIATE_TEST_SUITE_P(UseLegacyVsockDevice, GuestManagerTest, ::testing::Bool(),
+                         [](const testing::TestParamInfo<bool>& info) {
+                           return info.param ? "LegacyVsockDevice" : "OutOfProcessVsockDevice";
+                         });
+
+TEST_P(GuestManagerTest, LaunchFailInvalidPath) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "invalid_path.cfg",
+                       UseLegacyVsockDevice());
   bool launch_callback_called = false;
   manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
@@ -57,9 +66,9 @@ TEST_F(GuestManagerTest, LaunchFailInvalidPath) {
   ASSERT_TRUE(launch_callback_called);
 }
 
-TEST_F(GuestManagerTest, LaunchFailInvalidConfig) {
+TEST_P(GuestManagerTest, LaunchFailInvalidConfig) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/",
-                       "data/configs/bad_schema_invalid_field.cfg");
+                       "data/configs/bad_schema_invalid_field.cfg", UseLegacyVsockDevice());
   bool launch_callback_called = false;
   manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
@@ -69,8 +78,9 @@ TEST_F(GuestManagerTest, LaunchFailInvalidConfig) {
   ASSERT_TRUE(launch_callback_called);
 }
 
-TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+TEST_P(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       UseLegacyVsockDevice());
   fuchsia::virtualization::GuestConfig user_guest_config;
   user_guest_config.mutable_cmdline_add()->emplace_back("extra_cmd_line_arg=0");
   user_guest_config.mutable_block_devices()->push_back({
@@ -110,9 +120,10 @@ TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
   ASSERT_TRUE(get_callback_called);
 }
 
-TEST_F(GuestManagerTest, DoubleLaunchFail) {
+TEST_P(GuestManagerTest, DoubleLaunchFail) {
   bool launch_callback_called = false;
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       UseLegacyVsockDevice());
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
   manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
@@ -132,9 +143,10 @@ TEST_F(GuestManagerTest, DoubleLaunchFail) {
   ASSERT_TRUE(launch_callback_called);
 }
 
-TEST_F(GuestManagerTest, LaunchAndGetInfo) {
+TEST_P(GuestManagerTest, LaunchAndGetInfo) {
   bool get_callback_called = false;
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       UseLegacyVsockDevice());
 
   manager.GetGuestInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status, fuchsia::virtualization::GuestStatus::NOT_STARTED);
@@ -160,9 +172,10 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   ASSERT_TRUE(get_callback_called);
 }
 
-TEST_F(GuestManagerTest, ConnectToGuest) {
+TEST_P(GuestManagerTest, ConnectToGuest) {
   bool connect_callback_called = false;
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       UseLegacyVsockDevice());
 
   fuchsia::virtualization::GuestPtr guest;
   manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
@@ -191,8 +204,14 @@ TEST_F(GuestManagerTest, ConnectToGuest) {
   ASSERT_TRUE(connect_callback_called);
 }
 
-TEST_F(GuestManagerTest, LaunchAndUseVsock) {
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+TEST_P(GuestManagerTest, LaunchAndUseVsock) {
+  if (!UseLegacyVsockDevice()) {
+    // Guest manager doesn't create a host vsock when not using the legacy device.
+    GTEST_SKIP();
+  }
+
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       /*use_legacy_vsock_device=*/true);
   fuchsia::virtualization::GuestConfig user_guest_config;
   user_guest_config.mutable_cmdline_add()->emplace_back("extra_cmd_line_arg=0");
 
@@ -218,8 +237,9 @@ TEST_F(GuestManagerTest, LaunchAndUseVsock) {
   ASSERT_TRUE(get_callback_called);
 }
 
-TEST_F(GuestManagerTest, DuplicateListenersProvidedByUserGuestConfig) {
-  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
+TEST_P(GuestManagerTest, DuplicateListenersProvidedByUserGuestConfig) {
+  GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg",
+                       UseLegacyVsockDevice());
   fuchsia::virtualization::GuestConfig user_guest_config;
 
   // Two listeners with the same port.
