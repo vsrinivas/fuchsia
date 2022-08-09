@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
+#include <lib/ui/scenic/cpp/view_identity.h>
 #include <vk_dispatch_table_helper.h>
 
 #include <vulkan/vk_layer.h>
@@ -15,23 +16,86 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/vulkan/swapchain/vulkan_utils.h"
 
+zx::channel allocator_endpoint_for_test;
+zx::channel flatland_endpoint_for_test;
+
+extern "C" {
+__attribute__((visibility("default"))) bool imagepipe_initialize_service_channel(
+    zx::channel allocator_endpoint, zx::channel flatland_endpoint) {
+  allocator_endpoint_for_test = std::move(allocator_endpoint);
+  flatland_endpoint_for_test = std::move(flatland_endpoint);
+  return true;
+}
+}
+
 namespace image_pipe_swapchain {
 
 namespace {
 
 const char* const kTag = "ImagePipeSurfaceAsync";
+const fuchsia::ui::composition::TransformId kRootTransform = {1};
 
 }  // namespace
 
 bool ImagePipeSurfaceAsync::Init() {
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator_.NewRequest().TakeChannel().release());
+  const zx_status_t status = fdio_service_connect(
+      "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    fprintf(stderr, "Couldn't connect to sysmem service\n");
+    fprintf(stderr, "%s: Couldn't connect to Sysmem service: %d\n", kTag, status);
     return false;
   }
-
   sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
+
+  async::PostTask(loop_.dispatcher(), [this] {
+    if (!view_creation_token_.value.is_valid()) {
+      fprintf(stderr, "%s: ViewCreationToken is invalid.\n", kTag);
+      std::lock_guard<std::mutex> lock(mutex_);
+      OnErrorLocked();
+      return;
+    }
+
+    if (allocator_endpoint_for_test.is_valid()) {
+      flatland_allocator_.Bind(std::move(allocator_endpoint_for_test));
+    } else {
+      const zx_status_t status =
+          fdio_service_connect("/svc/fuchsia.ui.composition.Allocator",
+                               flatland_allocator_.NewRequest().TakeChannel().release());
+      if (status != ZX_OK) {
+        fprintf(stderr, "%s: Couldn't connect to Flatland Allocator: %d\n", kTag, status);
+        std::lock_guard<std::mutex> lock(mutex_);
+        OnErrorLocked();
+        return;
+      }
+    }
+    flatland_allocator_.set_error_handler([this](auto status) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      OnErrorLocked();
+    });
+
+    if (flatland_endpoint_for_test.is_valid()) {
+      flatland_connection_ =
+          simple_present::FlatlandConnection::Create(std::move(flatland_endpoint_for_test), kTag);
+    } else {
+      flatland_connection_ = simple_present::FlatlandConnection::Create(kTag);
+      if (!flatland_connection_) {
+        fprintf(stderr, "%s: Couldn't connect to Flatland\n", kTag);
+        std::lock_guard<std::mutex> lock(mutex_);
+        OnErrorLocked();
+        return;
+      }
+    }
+    flatland_connection_->SetErrorCallback([this]() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      OnErrorLocked();
+    });
+
+    fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
+    flatland_connection_->flatland()->CreateView2(std::move(view_creation_token_),
+                                                  scenic::NewViewIdentityOnCreation(), {},
+                                                  parent_viewport_watcher.NewRequest());
+    flatland_connection_->flatland()->CreateTransform(kRootTransform);
+    flatland_connection_->flatland()->SetRootTransform(kRootTransform);
+  });
 
   return true;
 }
@@ -75,11 +139,30 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     return false;
   }
 
+  fuchsia::ui::composition::BufferCollectionExportToken export_token;
+  fuchsia::ui::composition::BufferCollectionImportToken import_token;
+  status = zx::eventpair::create(0, &export_token.value, &import_token.value);
+  if (status != ZX_OK) {
+    fprintf(stderr, "%s: Eventpair create failed: %d\n", kTag, status);
+    return false;
+  }
+
   async::PostTask(loop_.dispatcher(), [this, scenic_token = std::move(scenic_token),
-                                       new_buffer_id = ++current_buffer_id_]() {
+                                       export_token = std::move(export_token)]() mutable {
     // Pass |scenic_token| to Scenic to collect constraints.
-    if (image_pipe_.is_bound())
-      image_pipe_->AddBufferCollection(new_buffer_id, scenic_token->Unbind());
+    if (flatland_allocator_.is_bound()) {
+      fuchsia::ui::composition::RegisterBufferCollectionArgs args = {};
+      args.set_export_token(std::move(export_token));
+      args.set_buffer_collection_token(scenic_token->Unbind());
+      args.set_usage(fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT);
+      flatland_allocator_->RegisterBufferCollection(std::move(args), [this](auto result) {
+        if (result.is_err()) {
+          fprintf(stderr, "%s: Flatland Allocator registration failed.\n", kTag);
+          std::lock_guard<std::mutex> lock(mutex_);
+          OnErrorLocked();
+        }
+      });
+    }
   });
 
   // Set swapchain constraints |vulkan_token|.
@@ -188,7 +271,7 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     return false;
   }
 
-  // Insert width and height information while adding images because it wasnt passed in
+  // Insert width and height information while adding images because it wasn't passed in
   // AddBufferCollection().
   fuchsia::sysmem::ImageFormat_2 image_format = {};
   image_format.coded_width = extent.width;
@@ -255,16 +338,27 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
         .image_id = next_image_id(),
     };
     image_info_out->push_back(info);
-    async::PostTask(loop_.dispatcher(),
-                    [this, info, current_buffer_id = current_buffer_id_, i, image_format]() {
-                      std::lock_guard<std::mutex> lock(mutex_);
-                      if (image_pipe_.is_bound())
-                        image_pipe_->AddImage(info.image_id, current_buffer_id, i, image_format);
-                    });
 
-    image_id_to_buffer_id_.emplace(info.image_id, current_buffer_id_);
+    fuchsia::ui::composition::BufferCollectionImportToken import_token_dup;
+    zx_status_t status =
+        import_token.value.duplicate(ZX_RIGHT_SAME_RIGHTS, &import_token_dup.value);
+    if (status != ZX_OK) {
+      fprintf(stderr, "%s: Duplicate failed: %d\n", kTag, status);
+      return false;
+    }
+    async::PostTask(loop_.dispatcher(), [this, info, import_token_dup = std::move(import_token_dup),
+                                         i, extent]() mutable {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (!channel_closed_) {
+        fuchsia::ui::composition::ImageProperties image_properties;
+        image_properties.set_size({extent.width, extent.height});
+        flatland_connection_->flatland()->CreateImage({info.image_id}, std::move(import_token_dup),
+                                                      i, std::move(image_properties));
+        flatland_connection_->flatland()->SetImageDestinationSize({info.image_id},
+                                                                  {extent.width, extent.height});
+      }
+    });
   }
-  buffer_counts_.emplace(current_buffer_id_, image_count);
 
   pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
   buffer_collection->Close();
@@ -277,10 +371,8 @@ bool ImagePipeSurfaceAsync::IsLost() {
   return channel_closed_;
 }
 
-// Disable thread safety analysis because it can't handle unique_lock.
-void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
-    __attribute__((no_thread_safety_analysis)) {
-  std::unique_lock<std::mutex> lock(mutex_);
+void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
+  std::lock_guard<std::mutex> lock(mutex_);
   for (auto iter = queue_.begin(); iter != queue_.end();) {
     if (iter->image_id == image_id) {
       iter = queue_.erase(iter);
@@ -288,27 +380,12 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
       iter++;
     }
   }
-  // TODO(fxbug.dev/24315) - remove this workaround
-  static constexpr bool kUseWorkaround = true;
-  while (kUseWorkaround && present_pending_ && !channel_closed_) {
-    lock.unlock();
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    lock.lock();
-  }
-  async::PostTask(loop_.dispatcher(), [this, image_id]() {
-    if (image_pipe_.is_bound())
-      image_pipe_->RemoveImage(image_id);
-  });
 
-  // We do not expect same image to be removed multiple times.
-  auto buffer_it = buffer_counts_.find(image_id_to_buffer_id_[image_id]);
-  if (--buffer_it->second == 0) {
-    uint32_t collection_id = buffer_it->first;
-    async::PostTask(loop_.dispatcher(), [this, collection_id]() {
-      if (image_pipe_.is_bound())
-        image_pipe_->RemoveBufferCollection(collection_id);
-    });
-  }
+  async::PostTask(loop_.dispatcher(), [this, image_id]() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!channel_closed_)
+      flatland_connection_->flatland()->ReleaseImage({image_id});
+  });
 }
 
 void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id,
@@ -358,15 +435,13 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
   TRACE_DURATION("gfx", "ImagePipeSurfaceAsync::PresentNextImageLocked");
 
   // To guarantee FIFO mode, we can't have Scenic drop any of our frames.
-  // We accomplish that sending the next one only when we receive the callback
-  // for the previous one.  We don't use the presentation info timing
-  // parameters because we really just want to push out the next image asap.
+  // We accomplish that by setting unsquashable flag.
   uint64_t presentation_time = zx_clock_get_monotonic();
 
   auto& present = queue_.front();
   TRACE_FLOW_END("gfx", "image_pipe_swapchain_to_present", present.image_id);
-  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", present.image_id);
-  if (image_pipe_.is_bound()) {
+  TRACE_FLOW_BEGIN("gfx", "Flatland::Present", present.image_id);
+  if (!channel_closed_) {
     std::vector<zx::event> release_events;
     release_events.reserve(present.release_fences.size());
     for (auto& signaler : present.release_fences) {
@@ -374,22 +449,41 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
       signaler->event().duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
       release_events.push_back(std::move(event));
     }
-    image_pipe_->PresentImage(present.image_id, presentation_time,
-                              std::move(present.acquire_fences), std::move(release_events),
-                              // Called on the async loop.
-                              [this, release_fences = std::move(present.release_fences)](
-                                  fuchsia::images::PresentationInfo pinfo) {
-                                std::lock_guard<std::mutex> lock(mutex_);
-                                present_pending_ = false;
-                                for (auto& fence : release_fences) {
-                                  fence->reset();
-                                }
-                                PresentNextImageLocked();
-                              });
+
+    // In Flatland, release fences apply to the content of the previous present. Keeping track of
+    // the previous frame's release fences and swapping ensure we set the correct ones. When the
+    // current frame's OnFramePresented callback is called, it is safe to stop tracking the
+    // previous frame's |release_fences|.
+    previous_present_release_fences_.swap(present.release_fences);
+
+    fuchsia::ui::composition::PresentArgs present_args;
+    present_args.set_requested_presentation_time(presentation_time);
+    present_args.set_acquire_fences(std::move(present.acquire_fences));
+    present_args.set_release_fences(std::move(release_events));
+    present_args.set_unsquashable(true);
+    flatland_connection_->flatland()->SetContent(kRootTransform, {present.image_id});
+    flatland_connection_->Present(std::move(present_args),
+                                  // Called on the async loop.
+                                  [this, release_fences = std::move(present.release_fences)](
+                                      zx_time_t actual_presentation_time) {
+                                    std::lock_guard<std::mutex> lock(mutex_);
+                                    present_pending_ = false;
+                                    for (auto& fence : release_fences) {
+                                      fence->reset();
+                                    }
+                                    PresentNextImageLocked();
+                                  });
   }
 
   queue_.erase(queue_.begin());
   present_pending_ = true;
+}
+
+void ImagePipeSurfaceAsync::OnErrorLocked() {
+  channel_closed_ = true;
+  queue_.clear();
+  flatland_connection_.reset();
+  previous_present_release_fences_.clear();
 }
 
 }  // namespace image_pipe_swapchain

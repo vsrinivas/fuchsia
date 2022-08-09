@@ -790,7 +790,6 @@ config("Wno-conversion") {
     "//src/lib/ui/scenic/cpp:*",
     "//src/lib/usb_bulk/cpp:*",
     "//src/lib/vmo_store:*",
-    "//src/lib/vulkan/imagepipe_view:*",
     "//src/lib/vulkan/tests:*",
     "//src/media/audio/audio_core:*",
     "//src/media/audio/drivers/aml-g12-tdm/test:*",

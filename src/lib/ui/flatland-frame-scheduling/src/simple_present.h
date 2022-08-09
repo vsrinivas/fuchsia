@@ -13,20 +13,30 @@
 
 namespace simple_present {
 using OnFramePresentedCallback = fit::function<void(zx_time_t actual_presentation_time)>;
+using OnErrorCallback = fit::function<void()>;
 
 // This class is meant to help clients use the Flatland Present API correctly.
 class FlatlandConnection final {
  public:
-  explicit FlatlandConnection(sys::ComponentContext* context, const std::string& debug_name);
   ~FlatlandConnection();
-
   FlatlandConnection(const FlatlandConnection&) = delete;
   FlatlandConnection& operator=(const FlatlandConnection&) = delete;
 
+  // Creates a flatland connection using the given |context|.
+  static std::unique_ptr<FlatlandConnection> Create(sys::ComponentContext* context,
+                                                    const std::string& debug_name);
+  // Creates a flatland connection using fdio_service_connect.
+  static std::unique_ptr<FlatlandConnection> Create(const std::string& debug_name);
+  // Creates a flatland connection by binding the given channel.
+  static std::unique_ptr<FlatlandConnection> Create(zx::channel flatland_endpoint,
+                                                    const std::string& debug_name);
+
   fuchsia::ui::composition::Flatland* flatland() { return flatland_.get(); }
 
-  using OnFramePresentedCallback = fit::function<void(zx_time_t actual_presentation_time)>;
+  void SetErrorCallback(OnErrorCallback callback);
 
+  // Safe attempt to Present(). It goes through with default present args if present credits are
+  // available.
   void Present();
 
   // This version of Present can be readily used for steady-state rendering. Inside |callback|
@@ -36,6 +46,8 @@ class FlatlandConnection final {
                OnFramePresentedCallback callback);
 
  private:
+  FlatlandConnection(fuchsia::ui::composition::FlatlandPtr flatland, const std::string& debug_name);
+
   void OnError(fuchsia::ui::composition::FlatlandError error);
   void OnNextFrameBegin(fuchsia::ui::composition::OnNextFrameBeginValues values);
   void OnFramePresented(fuchsia::scenic::scheduling::FramePresentedInfo info);
@@ -57,7 +69,7 @@ class FlatlandConnection final {
   std::queue<PendingPresent> pending_presents_;
   std::vector<zx::event> previous_present_release_fences_;
   std::queue<OnFramePresentedCallback> presented_callbacks_;
-  sys::ComponentContext* context_;
+  OnErrorCallback error_callback_;
 };
 
 }  // namespace simple_present

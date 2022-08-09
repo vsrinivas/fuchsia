@@ -10,7 +10,6 @@ group("tests") {
     ":apptests",
     ":swapchain_tests",
     ":unittests",
-    "//src/graphics/examples:vkcube-on-scenic",
   ]
 }
 

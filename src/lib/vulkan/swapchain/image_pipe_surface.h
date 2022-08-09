@@ -5,8 +5,6 @@
 #ifndef SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_H_
 #define SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_H_
 
-#include <fuchsia/images/cpp/fidl.h>
-
 #include <unordered_map>
 #include <vector>
 
@@ -40,9 +38,8 @@ struct SupportedImageProperties {
   std::vector<VkSurfaceFormatKHR> formats;
 };
 
-// An abstract surface that must implement AddImage, RemoveImage, and
-// PresentImage. These methods are defined as per the ImagePipe fidl interface
-// (see image_pipe.fidl).
+// An abstract surface that must implement CreateImage, RemoveImage, and
+// PresentImage.
 class ImagePipeSurface {
  public:
   struct ImageInfo {
@@ -67,12 +64,15 @@ class ImagePipeSurface {
   virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) { return false; }
 
   virtual bool IsLost() { return false; }
+  // Adds an image resource to image pipe.
   virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
                            VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
                            VkExtent2D extent, uint32_t image_count,
                            const VkAllocationCallbacks* pAllocator,
                            std::vector<ImageInfo>* image_info_out) = 0;
+  // Removes an image resource from the pipe.
   virtual void RemoveImage(uint32_t image_id) = 0;
+  // Enqueues the specified image for presentation.
   virtual void PresentImage(uint32_t image_id,
                             std::vector<std::unique_ptr<PlatformEvent>> acquire_fences,
                             std::vector<std::unique_ptr<PlatformEvent>> release_fences,

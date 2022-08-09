@@ -58,7 +58,7 @@ test("test_image_pipe_swapchain") {
   output_name = "image-pipe-swapchain-tests"
   sources = [
     "test_extensions.cc",
-    "test_imagepipe_view.cc",
+    "test_flatland_view.cc",
     "test_surface.cc",
     "test_swapchain.cc",
   ]
@@ -69,7 +69,7 @@ test("test_image_pipe_swapchain") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/vulkan",
-    "//src/lib/vulkan/imagepipe_view",
+    "//src/lib/vulkan/flatland_view",
     "//zircon/system/ulib/zx",
   ]
 

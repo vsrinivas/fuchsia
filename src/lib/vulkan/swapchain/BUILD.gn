@@ -15,10 +15,7 @@ import("//build/dist/resource.gni")
 
 source_set("surface_header") {
   sources = [ "image_pipe_surface.h" ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.images",
-    "//src/lib/vulkan:headers",
-  ]
+  public_deps = [ "//src/lib/vulkan:headers" ]
 }
 
 loadable_module("swapchain") {
@@ -34,8 +31,12 @@ loadable_module("swapchain") {
   deps = [
     ":surface_header",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fdio",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+    "//src/lib/ui/flatland-frame-scheduling:simple_present",
     "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

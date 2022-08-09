@@ -4,14 +4,17 @@
 
 #include "simple_present.h"
 
+#include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <memory>
 
 namespace simple_present {
 
-FlatlandConnection::FlatlandConnection(sys::ComponentContext* context,
+FlatlandConnection::FlatlandConnection(fuchsia::ui::composition::FlatlandPtr flatland,
                                        const std::string& debug_name)
-    : context_(context) {
-  context_->svc()->Connect(flatland_.NewRequest());
+    : flatland_(std::move(flatland)) {
+  flatland_.set_error_handler([this](zx_status_t status) { error_callback_(); });
   flatland_->SetDebugName(debug_name);
   flatland_.events().OnError = fit::bind_member(this, &FlatlandConnection::OnError);
   flatland_.events().OnFramePresented =
@@ -21,6 +24,49 @@ FlatlandConnection::FlatlandConnection(sys::ComponentContext* context,
 }
 
 FlatlandConnection::~FlatlandConnection() = default;
+
+// static
+std::unique_ptr<FlatlandConnection> FlatlandConnection::Create(sys::ComponentContext* context,
+                                                               const std::string& debug_name) {
+  fuchsia::ui::composition::FlatlandPtr flatland;
+  const zx_status_t status = context->svc()->Connect(flatland.NewRequest());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not connect to Flatland, error: " << status;
+    return nullptr;
+  }
+  return std::unique_ptr<FlatlandConnection>(
+      new FlatlandConnection(std::move(flatland), debug_name));
+}
+
+// static
+std::unique_ptr<FlatlandConnection> FlatlandConnection::Create(const std::string& debug_name) {
+  fuchsia::ui::composition::FlatlandPtr flatland;
+  const zx_status_t status = fdio_service_connect("/svc/fuchsia.ui.composition.Flatland",
+                                                  flatland.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not connect to Flatland, error: " << status;
+    return nullptr;
+  }
+  return std::unique_ptr<FlatlandConnection>(
+      new FlatlandConnection(std::move(flatland), debug_name));
+}
+
+// static
+std::unique_ptr<FlatlandConnection> FlatlandConnection::Create(zx::channel flatland_endpoint,
+                                                               const std::string& debug_name) {
+  fuchsia::ui::composition::FlatlandPtr flatland;
+  zx_status_t status = flatland.Bind(std::move(flatland_endpoint));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not connect to Flatland, error: " << status;
+    return nullptr;
+  }
+  return std::unique_ptr<FlatlandConnection>(
+      new FlatlandConnection(std::move(flatland), debug_name));
+}
+
+void FlatlandConnection::SetErrorCallback(OnErrorCallback callback) {
+  error_callback_ = std::move(callback);
+}
 
 void FlatlandConnection::Present() {
   fuchsia::ui::composition::PresentArgs present_args;
@@ -51,6 +97,7 @@ void FlatlandConnection::Present(fuchsia::ui::composition::PresentArgs present_a
 
 void FlatlandConnection::OnError(fuchsia::ui::composition::FlatlandError error) {
   FX_LOGS(ERROR) << "Flatland error: " << static_cast<int>(error);
+  error_callback_();
 }
 
 void FlatlandConnection::OnNextFrameBegin(fuchsia::ui::composition::OnNextFrameBeginValues values) {

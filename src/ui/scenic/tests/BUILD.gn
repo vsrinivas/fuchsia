@@ -112,12 +112,6 @@ executable("gfx_focus_integration_test_bin") {
   ]
 }
 
-fuchsia_component("wrapper_vk_cube") {
-  testonly = true
-  manifest = "meta/wrapper_vk_cube.cml"
-  deps = [ "//third_party/Vulkan-Tools/cube:vkcube-on-scenic" ]
-}
-
 fuchsia_test_component("gfx_focus_integration_test") {
   component_name = "gfx_focus_integration_test"
   manifest = "meta/gfx_focus_integration_test.cml"
@@ -208,26 +202,6 @@ fuchsia_test_component("gfx_viewstate_apptest") {
   deps = [
     ":gfx_viewstate_apptest_bin",
     "//src/ui/bin/root_presenter:component_v2",
-  ]
-}
-
-executable("gfx_vkcube_test_bin") {
-  testonly = true
-  sources = [ "gfx_integration_tests/gfx_vkcube_test.cc" ]
-  deps = [
-    ":gfx_pixel_test",
-    ":scenic_realm_builder",
-    "//src/ui/scenic/lib/gfx/tests:gfx_tests_main",
-    "//src/ui/scenic/lib/gfx/tests:testing_deps",
-  ]
-}
-
-fuchsia_test_component("gfx_vkcube_test") {
-  component_name = "gfx_vkcube_test"
-  manifest = "meta/gfx_vkcube_test.cml"
-  deps = [
-    ":gfx_vkcube_test_bin",
-    ":wrapper_vk_cube",
   ]
 }
 
@@ -416,7 +390,6 @@ fuchsia_test_package("gfx_integration_tests") {
     ":gfx_view_ref_installed_integration_test",
     ":gfx_viewstate_apptest",
     ":scenic_pixeltest",
-    ":gfx_vkcube_test",
   ]
 
   test_specs = {

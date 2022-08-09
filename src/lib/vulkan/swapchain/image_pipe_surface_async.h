@@ -6,6 +6,8 @@
 #define SRC_LIB_VULKAN_SWAPCHAIN_IMAGE_PIPE_SURFACE_ASYNC_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -15,25 +17,17 @@
 #include <unordered_map>
 
 #include "image_pipe_surface.h"
+#include "src/lib/ui/flatland-frame-scheduling/src/simple_present.h"
 
 namespace image_pipe_swapchain {
 
-// An implementation of ImagePipeSurface based on an async fidl ImagePipe.
+// An implementation of ImagePipeSurface based on an async fidl Flatland.
 class ImagePipeSurfaceAsync : public ImagePipeSurface {
  public:
-  explicit ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle)
+  explicit ImagePipeSurfaceAsync(zx_handle_t view_creation_token_handle)
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     loop_.StartThread();
-    async::PostTask(loop_.dispatcher(), [this, image_pipe_handle] {
-      // image_pipe_ is thread hostile so it must be bound on the thread
-      // that will use it.
-      image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
-      image_pipe_.set_error_handler([this](zx_status_t status) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        channel_closed_ = true;
-        queue_.clear();
-      });
-    });
+    view_creation_token_.value = zx::channel(view_creation_token_handle);
     std::vector<VkSurfaceFormatKHR> formats(
         {{VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
          {VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
@@ -44,9 +38,10 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
 
   ~ImagePipeSurfaceAsync() override {
     async::PostTask(loop_.dispatcher(), [this] {
-      // image_pipe_ is thread hostile so it must be turn down on the thread
+      // flatland_ and flatland_allocator_ are thread hostile so it must be turn down on the thread
       // that will use it.
-      image_pipe_ = nullptr;
+      flatland_connection_.reset();
+      flatland_allocator_ = nullptr;
       loop_.Quit();
     });
     loop_.JoinThreads();
@@ -85,31 +80,33 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
 
   // Called on the async loop.
   void PresentNextImageLocked() __attribute__((requires_capability(mutex_)));
+  void OnErrorLocked() __attribute__((requires_capability(mutex_)));
 
   async::Loop loop_;
   std::mutex mutex_;
 
   // Can only be accessed from the async loop's thread.
-  fuchsia::images::ImagePipe2Ptr image_pipe_;
+  std::unique_ptr<simple_present::FlatlandConnection> flatland_connection_;
+  fuchsia::ui::composition::AllocatorPtr flatland_allocator_;
+  fuchsia::ui::views::ViewCreationToken view_creation_token_;
 
-  uint32_t current_buffer_id_ = 0;
-  std::unordered_map</*image_id=*/uint32_t, /*buffer_id=*/uint32_t> image_id_to_buffer_id_;
-  std::unordered_map</*buffer_id=*/uint32_t, /*image count=*/uint32_t> buffer_counts_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   struct PendingPresent {
     uint32_t image_id;
     std::vector<zx::event> acquire_fences;
     // These fences will automatically be signaled when they go out of scope, which could happen if
-    // the ImagePipe channel is closed. As these events are passed to the application as acquire
+    // the Flatland channel is closed. As these events are passed to the application as acquire
     // semaphores, this prevents semaphore waits on them from hanging until the GPU driver decides
     // to time them out.
-    // The only case where we don't automatically signal them is if the PresentImage callback is
+    // The only case where we don't automatically signal them is if the OnFramePresented callback is
     // run, in which case scenic is responsible for signaling them.
     std::vector<std::unique_ptr<FenceSignaler>> release_fences;
   };
   std::vector<PendingPresent> queue_ __attribute__((guarded_by(mutex_)));
   bool present_pending_ __attribute__((guarded_by(mutex_))) = false;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+  std::vector<std::unique_ptr<FenceSignaler>> previous_present_release_fences_
+      __attribute__((guarded_by(mutex_)));
   SupportedImageProperties supported_image_properties_;
   bool channel_closed_ __attribute__((guarded_by(mutex_))) = false;
 };
