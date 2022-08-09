@@ -434,7 +434,7 @@ impl PhyManagerApi for PhyManager {
             let mut lingering_ifaces = HashMap::new();
 
             for (iface_id, security_support) in phy_container.client_ifaces.drain() {
-                match destroy_iface(&self.device_monitor, iface_id).await {
+                match destroy_iface(&self.device_monitor, iface_id, &self.telemetry_sender).await {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
@@ -527,7 +527,7 @@ impl PhyManagerApi for PhyManager {
         // the request to destroy the interface results in a failure.
         for (_, phy_container) in self.phys.iter_mut() {
             if phy_container.ap_ifaces.remove(&iface_id) {
-                match destroy_iface(&self.device_monitor, iface_id).await {
+                match destroy_iface(&self.device_monitor, iface_id, &self.telemetry_sender).await {
                     Ok(()) => {}
                     Err(e) => {
                         let _ = phy_container.ap_ifaces.insert(iface_id);
@@ -550,7 +550,7 @@ impl PhyManagerApi for PhyManager {
             // Continue tracking interface IDs for which deletion fails.
             let mut lingering_ifaces = HashSet::new();
             for iface_id in phy_container.ap_ifaces.drain() {
-                match destroy_iface(&self.device_monitor, iface_id).await {
+                match destroy_iface(&self.device_monitor, iface_id, &self.telemetry_sender).await {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
@@ -659,18 +659,23 @@ async fn create_iface(
 async fn destroy_iface(
     proxy: &fidl_service::DeviceMonitorProxy,
     iface_id: u16,
+    telemetry_sender: &TelemetrySender,
 ) -> Result<(), PhyManagerError> {
     let mut request = fidl_service::DestroyIfaceRequest { iface_id: iface_id };
     match proxy.destroy_iface(&mut request).await {
         Ok(status) => match status {
             fuchsia_zircon::sys::ZX_OK => Ok(()),
             ref e => {
+                if *e != fuchsia_zircon::sys::ZX_ERR_NOT_FOUND {
+                    telemetry_sender.send(TelemetryEvent::IfaceDestructionFailure);
+                }
                 warn!("failed to destroy iface {}: {}", iface_id, e);
                 Err(PhyManagerError::IfaceDestroyFailure)
             }
         },
         Err(e) => {
             warn!("failed to send destroy iface {}: {}", iface_id, e);
+            telemetry_sender.send(TelemetryEvent::IfaceDestructionFailure);
             Err(PhyManagerError::IfaceDestroyFailure)
         }
     }
@@ -3188,6 +3193,109 @@ mod tests {
         assert_variant!(
             test_values.telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::IfaceCreationFailure))
+        )
+    }
+
+    #[fuchsia::test]
+    fn test_destroy_iface_succeeds() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        // Issue a destroy iface request
+        let fut = destroy_iface(&mut test_values.monitor_proxy, 0, &test_values.telemetry_sender);
+        pin_mut!(fut);
+
+        // Wait for the request to stall out waiting for DeviceMonitor.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send back a positive response from DeviceMonitor.
+        send_destroy_iface_response(&mut exec, &mut test_values.monitor_stream, ZX_OK);
+
+        // The future should complete.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+
+        // Verify that there is nothing waiting on the telemetry receiver.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_))
+    }
+
+    #[fuchsia::test]
+    fn test_destroy_iface_not_found() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        // Issue a destroy iface request
+        let fut = destroy_iface(&mut test_values.monitor_proxy, 0, &test_values.telemetry_sender);
+        pin_mut!(fut);
+
+        // Wait for the request to stall out waiting for DeviceMonitor.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send back NOT_FOUND from DeviceMonitor.
+        send_destroy_iface_response(&mut exec, &mut test_values.monitor_stream, ZX_ERR_NOT_FOUND);
+
+        // The future should complete.
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(PhyManagerError::IfaceDestroyFailure))
+        );
+
+        // Verify that no metric has been logged.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_))
+    }
+
+    #[fuchsia::test]
+    fn test_destroy_iface_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        // Issue a destroy iface request
+        let fut = destroy_iface(&mut test_values.monitor_proxy, 0, &test_values.telemetry_sender);
+        pin_mut!(fut);
+
+        // Wait for the request to stall out waiting for DeviceMonitor.
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Send back a non-NOT_FOUND failure from DeviceMonitor.
+        send_destroy_iface_response(
+            &mut exec,
+            &mut test_values.monitor_stream,
+            fuchsia_zircon::sys::ZX_ERR_NO_RESOURCES,
+        );
+
+        // The future should complete.
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(PhyManagerError::IfaceDestroyFailure))
+        );
+
+        // Verify that a metric has been logged.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::IfaceDestructionFailure))
+        )
+    }
+
+    #[fuchsia::test]
+    fn test_destroy_iface_request_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+
+        drop(test_values.monitor_stream);
+
+        // Issue a destroy iface request
+        let fut = destroy_iface(&mut test_values.monitor_proxy, 0, &test_values.telemetry_sender);
+        pin_mut!(fut);
+
+        // The request should immediately fail.
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(PhyManagerError::IfaceDestroyFailure))
+        );
+
+        // Verify that a metric has been logged.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::IfaceDestructionFailure))
         )
     }
 }

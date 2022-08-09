@@ -242,6 +242,8 @@ pub enum TelemetryEvent {
     },
     /// Notify the telemtry event loop that a PHY has failed to create an interface.
     IfaceCreationFailure,
+    /// Notify the telemtry event loop that a PHY has failed to destroy an interface.
+    IfaceDestructionFailure,
 }
 
 #[derive(Clone, Debug)]
@@ -1144,6 +1146,9 @@ impl Telemetry {
             }
             TelemetryEvent::IfaceCreationFailure => {
                 self.stats_logger.log_iface_creation_failure().await;
+            }
+            TelemetryEvent::IfaceDestructionFailure => {
+                self.stats_logger.log_iface_destruction_failure().await;
             }
         }
     }
@@ -2525,6 +2530,16 @@ impl StatsLogger {
             self.cobalt_1dot1_proxy,
             log_occurrence,
             metrics::INTERFACE_CREATION_FAILURE_METRIC_ID,
+            1,
+            &[]
+        )
+    }
+
+    async fn log_iface_destruction_failure(&mut self) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::INTERFACE_DESTRUCTION_FAILURE_METRIC_ID,
             1,
             &[]
         )
@@ -5914,6 +5929,23 @@ mod tests {
         test_helper.drain_cobalt_events(&mut test_fut);
         let logged_metrics =
             test_helper.get_logged_metrics(metrics::INTERFACE_CREATION_FAILURE_METRIC_ID);
+        assert_eq!(logged_metrics.len(), 1);
+    }
+
+    #[fuchsia::test]
+    fn test_log_iface_destruction_failure() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a notification that interface creation has failed.
+        test_helper.telemetry_sender.send(TelemetryEvent::IfaceDestructionFailure);
+
+        // Run the telemetry loop until it stalls.
+        assert_variant!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
+
+        // Expect that Cobalt has been notified of the interface creation failure.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let logged_metrics =
+            test_helper.get_logged_metrics(metrics::INTERFACE_DESTRUCTION_FAILURE_METRIC_ID);
         assert_eq!(logged_metrics.len(), 1);
     }
 
