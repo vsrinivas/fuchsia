@@ -179,24 +179,8 @@ class PageCache {
       if (requested_pages <= entry.available_pages) {
         return zx::ok(AllocateCachePages(entry, requested_pages));
       }
-
-      // If there are insufficient pages in the cache and the caller can wait
-      // for the allocation, drop the cache lock and fall back to the PMM.
-      // Either the PMM can fulfill the request or it will return SHOULD_WAIT
-      // and the caller can construct a page request to wait for memory.
-      if (alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) {
-        guard.Release();
-
-        list_node page_list = LIST_INITIAL_VALUE(page_list);
-        const zx_status_t status =
-            pmm_alloc_pages(requested_pages, PMM_ALLOC_FLAG_CAN_WAIT, &page_list);
-        if (status != ZX_OK) {
-          return zx::error_status(status);
-        }
-        return zx::ok(AllocateResult{ktl::move(page_list), requested_pages});
-      }
     }
-    return AllocatePagesAndFillCache(entry, requested_pages);
+    return AllocatePagesAndFillCache(entry, requested_pages, alloc_flags);
   }
 
   // Allocates the given number of pages from the given CPU cache.
@@ -255,8 +239,8 @@ class PageCache {
     CountFreePages(free_count);
   }
 
-  zx::status<AllocateResult> AllocatePagesAndFillCache(CpuCache& entry,
-                                                       size_t requested_pages) const
+  zx::status<AllocateResult> AllocatePagesAndFillCache(CpuCache& entry, size_t requested_pages,
+                                                       uint alloc_flags) const
       TA_EXCL(entry.fill_lock, entry.cache_lock) {
     LocalTraceDuration trace{"PageCache::AllocatePagesAndFillCache"_stringref};
 
@@ -289,8 +273,8 @@ class PageCache {
 
       // Release the cache lock while calling into the PMM to permit other
       // threads to access the cache if this thread blocks.
-      cache_guard.CallUnlocked([total_pages, &page_list, &status]() {
-        status = pmm_alloc_pages(total_pages, 0, &page_list);
+      cache_guard.CallUnlocked([total_pages, alloc_flags, &page_list, &status]() {
+        status = pmm_alloc_pages(total_pages, alloc_flags, &page_list);
       });
       if (status != ZX_OK) {
         return zx::error_status(status);
