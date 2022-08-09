@@ -75,9 +75,12 @@ Namespace::Namespace(PrivateConstructor p, fxl::RefPtr<Namespace> parent, fxl::W
   services_->AddService(
       fuchsia::process::Resolver::Name_,
       fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
-        resolver_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::process::Resolver>(std::move(channel)));
-        return ZX_OK;
+        if (realm_) {
+          realm_->environment_services()->Connect(
+              fidl::InterfaceRequest<fuchsia::process::Resolver>(std::move(channel)));
+          return ZX_OK;
+        }
+        return ZX_ERR_BAD_STATE;
       }));
 
   // WARNING! Do not add new services here! This makes services available in all
@@ -186,16 +189,6 @@ void Namespace::CreateComponent(
 }
 
 zx::channel Namespace::OpenServicesAsDirectory() { return Util::OpenAsDirectory(&vfs_, services_); }
-
-void Namespace::Resolve(std::string name, fuchsia::process::Resolver::ResolveCallback callback) {
-  if (realm_) {
-    realm_->Resolve(name, std::move(callback));
-  } else {
-    zx::vmo binary;
-    fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
-    callback(ZX_ERR_UNAVAILABLE, std::move(binary), std::move(loader));
-  }
-}
 
 void Namespace::NotifyComponentDiagnosticsDirReady(
     const std::string& component_url, const std::string& component_name,

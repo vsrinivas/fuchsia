@@ -160,9 +160,8 @@
         },
         {
             protocol: [ "fuchsia.process.Resolver" ],
-            from: "self",
+            from: "#process_resolver",
             to: "#test_manager",
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.sysmem.Allocator",

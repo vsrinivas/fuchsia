@@ -20,7 +20,7 @@
         },
         {
             protocol: [ "fuchsia.process.Resolver" ],
-            from: "self",
+            from: "#process_resolver",
             to: "#driver_playground",
         },
         {

@@ -26,7 +26,6 @@ class Realm;
 
 class Namespace : public fuchsia::sys::Environment,
                   public fuchsia::sys::Launcher,
-                  public fuchsia::process::Resolver,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
   enum Status {
@@ -52,11 +51,6 @@ class Namespace : public fuchsia::sys::Environment,
   zx_status_t ServeServiceDirectory(zx::channel request);
 
   zx::channel OpenServicesAsDirectory();
-
-  //
-  // fuchsia::process::Resolver implementation:
-  //
-  void Resolve(std::string name, fuchsia::process::Resolver::ResolveCallback callback) override;
 
   //
   // fuchsia::sys::Environment implementation:

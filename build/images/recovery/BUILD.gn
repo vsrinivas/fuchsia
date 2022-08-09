@@ -117,6 +117,7 @@ if (is_fuchsia) {
     deps = _core_realm_deps + [
              "//src/developer/sshd-host:core_shard",
              "//src/recovery/system:system_recovery_core_shard",
+             "//src/sys/process-resolver:core_shard",
            ]
   }
 
@@ -173,6 +174,7 @@ if (is_fuchsia) {
         # Enable SSH (for engineering builds):
         "//src/developer/sshd-host",
         "//src/developer/sshd-host:config",
+        "//src/sys/process-resolver",
 
         # Basic command-line tools:
         "//third_party/sbase",

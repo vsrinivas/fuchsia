@@ -24,6 +24,7 @@ template("assemble_network_conformance_system") {
     deps = [
       # Need ssh to test the system
       "//src/developer/sshd-host:core_shard",
+      "//src/sys/process-resolver:core_shard",
     ]
 
     # TODO(fxbug.dev/102390): deprecate appmgr from this product config
@@ -47,6 +48,7 @@ template("assemble_network_conformance_system") {
       ":core",
       "//src/developer/sshd-host",
       "//src/developer/sshd-host:config",
+      "//src/sys/process-resolver",
       "//src/connectivity/network",
       "//src/connectivity/network/mdns/bundles:config",
       "//src/connectivity/network/mdns/bundles:services",

@@ -29,7 +29,6 @@
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.power.manager.DriverManagerRegistration",
-                "fuchsia.process.Resolver",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.Launcher",
@@ -375,7 +374,6 @@
         {
             protocol: [
                 "fuchsia.hwinfo.Device",
-                "fuchsia.process.Resolver",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",

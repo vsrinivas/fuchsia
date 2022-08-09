@@ -16,6 +16,7 @@ core_realm("core") {
   deps = [
     "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
     "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
+    "//src/sys/process-resolver:core_shard",
   ]
 
   # TODO(fxbug.dev/102390): deprecate appmgr from this product config
@@ -35,6 +36,7 @@ assembled_system("guest") {
     "//src/sys/tools/run",
     "//src/performance/trace",
     "//src/diagnostics/log-stats:package",
+    "//src/security/root_ssl_certificates",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr:core_component_id_index",
@@ -45,6 +47,7 @@ assembled_system("guest") {
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
     "//src/sys/sysmgr",
+    "//src/sys/process-resolver",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
     "//src/cobalt/bin/app:cobalt",

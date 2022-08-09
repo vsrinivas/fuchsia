@@ -24,6 +24,9 @@ const MAX_RESOLVE_NAME_SIZE uint32 = 2048;
 /// This interface is rarely used directly. Instead, `fdio_spawn` and
 /// `fdio_spawn_etc` use this interface internally when they try to run a file
 /// with a `#!resolve` directive.
+///
+// TODO(https://fxbug.dev/105486): Delete this protocol once it is no longer needed.
+@deprecated
 @discoverable
 protocol Resolver {
     /// Resolves the given `name` to an `executable` and an shared library

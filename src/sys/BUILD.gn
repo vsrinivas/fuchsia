@@ -26,6 +26,7 @@ group("tests") {
     "lib:tests",
     "live_usb:tests",
     "pkg:tests",
+    "process-resolver:tests",
     "run_test_component:tests",
     "run_test_suite:tests",
     "stash:tests",

@@ -1,0 +1,27 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/process_resolver",
+    },
+    capabilities: [
+        { protocol: "fuchsia.process.Resolver" },
+    ],
+    use: [
+        { protocol: "fuchsia.pkg.PackageResolver" },
+        {
+            directory: "pkgfs",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.process.Resolver",
+            from: "self",
+        },
+    ],
+}

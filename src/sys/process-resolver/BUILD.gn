@@ -2,10 +2,113 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(fxrev.dev/705111): delete this temporary transition affordance.
-group("process-resolver") {
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/security.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+COMMON_DEPS = [
+  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+  "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc-rustc",
+  "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia",
+  "//src/lib/fuchsia-component",
+  "//src/lib/fuchsia-fs",
+  "//src/lib/fuchsia-url",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//src/sys/lib/library_loader",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:tracing",
+]
+
+rustc_binary("bin") {
+  name = "process_resolver"
+  edition = "2021"
+
+  deps = COMMON_DEPS
+
+  sources = [
+    "src/main.rs",
+    "src/resolve/mod.rs",
+  ]
+
+  if (auto_update_packages) {
+    # Allow resolving packages from the universe
+    features = [ "auto_update_packages" ]
+    deps += [ "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc" ]
+    sources += [ "src/resolve/auto_update.rs" ]
+  } else {
+    # Only resolve packages from the base set
+    sources += [ "src/resolve/base_set_only.rs" ]
+  }
 }
 
-# TODO(fxrev.dev/705111): delete this temporary transition affordance.
-group("core_shard") {
+fuchsia_component("component") {
+  component_name = "process_resolver"
+  manifest = "meta/process_resolver.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("process-resolver") {
+  deps = [ ":component" ]
+}
+
+core_shard("core_shard") {
+  shard_file = "meta/process_resolver.core_shard.cml"
+}
+
+# This test variant is for resolving only from the base set.
+rustc_test("unittests-no-auto-update") {
+  name = "process_resolver_unittests_no_auto_update"
+  edition = "2021"
+  source_root = "src/main.rs"
+
+  deps = COMMON_DEPS
+
+  sources = [
+    "src/main.rs",
+    "src/resolve/base_set_only.rs",
+    "src/resolve/mod.rs",
+  ]
+
+  deps += [ "//src/lib/storage/vfs/rust:vfs" ]
+}
+
+# This test variant is for resolving from the universe set.
+rustc_test("unittests-auto-update") {
+  name = "process_resolver_unittests_auto_update"
+  edition = "2021"
+  source_root = "src/main.rs"
+
+  deps = COMMON_DEPS
+
+  sources = [
+    "src/main.rs",
+    "src/resolve/auto_update.rs",
+    "src/resolve/mod.rs",
+  ]
+
+  features = [ "auto_update_packages" ]
+  deps += [
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/fuchsia-async",
+  ]
+}
+
+fuchsia_unittest_package("process-resolver-no-auto-update-unittests") {
+  deps = [ ":unittests-no-auto-update" ]
+}
+
+fuchsia_unittest_package("process-resolver-auto-update-unittests") {
+  deps = [ ":unittests-auto-update" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":process-resolver-auto-update-unittests",
+    ":process-resolver-no-auto-update-unittests",
+  ]
 }

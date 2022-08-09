@@ -346,10 +346,43 @@
                     // valid client of PackageResolver.  appmgr has its own
                     // allowlist for v1 components accessing pkg-resolver.
                     "/core",
+                    "/core/process_resolver",
                     "/core/full-resolver",
                     "/core/universe-resolver",
                     "/core/system-update-checker",
                     "/core/system-updater",
+                ],
+            },
+            {
+                // We restrict access to ProcessResolver because it is a deprecated protocol
+                // that allows resolving binaries from universe packages.
+                source_moniker: "/core/process_resolver",
+                source: "component",
+                source_name: "fuchsia.process.Resolver",
+                capability: "protocol",
+                target_monikers: [
+                    // This protocol is available in `fx shell`
+                    "/core",
+
+                    // This protocol is available in the serial console
+                    "/bootstrap/console-launcher",
+
+                    // This protocol is used by CTS tests
+                    "/core/test_manager/cts-tests:**",
+
+                    // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
+                    // ermine_shell component, via its "elements" collection. Terminal requires some
+                    // additional permissions gated through this policy file. If/when these
+                    // permissions can be migrated to an ermine-specific policy file (outside
+                    // fuchsia.git), the following entry should be removed here.
+                    //
+                    // This protocol is available to the terminal in workstation
+                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/elements:**",
+
+                    // TODO(https://fxbug.dev/106062): Scrutiny throws an routing error unless
+                    // this is added. `process_resolver` does not have a `use` declaration for
+                    // it's own capability.
+                    "/core/process_resolver",
                 ],
             },
             {
@@ -427,6 +460,7 @@
                     "/core",
                     "/core/appmgr",
                     "/core/sshd-host",
+                    "/core/process_resolver",
 
                     // TODO(fxbug.dev/105828): terminal.cm instances are launched as children of the
                     // ermine_shell component, via its "elements" collection. Terminal requires some
