@@ -110,6 +110,7 @@ source_set("time") {
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/lib/timekeeper",
     "//zircon/system/ulib/zx",
   ]

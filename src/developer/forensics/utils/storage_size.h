@@ -5,6 +5,9 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_STORAGE_SIZE_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_STORAGE_SIZE_H_
 
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/compiler.h>
+
 #include <cstdint>
 #include <numeric>
 
@@ -35,30 +38,38 @@ class StorageSize final {
   constexpr uint64_t Get() const { return bytes_; }
 
   constexpr StorageSize operator+(StorageSize other) const {
-    return StorageSize(bytes_ + other.bytes_);
+    uint64_t bytes = bytes_;
+    FX_CHECK(!add_overflow(bytes, other.bytes_, &bytes));
+    return StorageSize(bytes);
   }
 
   constexpr StorageSize operator-(StorageSize other) const {
-    return StorageSize(bytes_ - other.bytes_);
+    uint64_t bytes = bytes_;
+    FX_CHECK(!sub_overflow(bytes, other.bytes_, &bytes));
+    return StorageSize(bytes);
   }
 
-  constexpr StorageSize operator*(uint64_t scalar) const { return StorageSize(bytes_ * scalar); }
+  constexpr StorageSize operator*(uint64_t scalar) const {
+    uint64_t bytes = bytes_;
+    FX_CHECK(!mul_overflow(bytes, scalar, &bytes));
+    return StorageSize(bytes);
+  }
 
   constexpr uint64_t operator/(StorageSize other) const { return bytes_ / other.bytes_; }
   constexpr StorageSize operator/(uint64_t scalar) const { return StorageSize(bytes_ / scalar); }
 
   constexpr StorageSize& operator+=(StorageSize other) {
-    bytes_ += other.bytes_;
+    FX_CHECK(!add_overflow(bytes_, other.bytes_, &bytes_));
     return *this;
   }
 
   constexpr StorageSize& operator-=(StorageSize other) {
-    bytes_ -= other.bytes_;
+    FX_CHECK(!sub_overflow(bytes_, other.bytes_, &bytes_));
     return *this;
   }
 
   constexpr StorageSize& operator*=(uint64_t scalar) {
-    bytes_ *= scalar;
+    FX_CHECK(!mul_overflow(bytes_, scalar, &bytes_));
     return *this;
   }
 
