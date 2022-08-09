@@ -111,7 +111,7 @@ fn appropriate_check_interval(expression: &str, mode: &Mode) -> Result<zx::Durat
     Ok(zx::Duration::from_nanos(check_every))
 }
 
-fn build_signature(snapshot: triage::SnapshotTrigger, mode: Mode) -> String {
+fn build_signature(snapshot: triage_lib::SnapshotTrigger, mode: Mode) -> String {
     // Character and length restrictions are documented in
     // https://fuchsia.dev/reference/fidl/fuchsia.feedback#CrashReport
     let sanitized: String = snapshot
@@ -319,8 +319,8 @@ mod test {
 
     #[fuchsia::test]
     fn verify_build_signature() {
-        fn sig(signature: &str) -> triage::SnapshotTrigger {
-            triage::SnapshotTrigger { interval: 0, signature: signature.to_string() }
+        fn sig(signature: &str) -> triage_lib::SnapshotTrigger {
+            triage_lib::SnapshotTrigger { interval: 0, signature: signature.to_string() }
         }
 
         let long_sig_input = "A very very long string that just keeps going and going and won't \

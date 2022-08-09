@@ -8,19 +8,19 @@ use {
     crate::diagnostics::Selectors,
     anyhow::Error,
     std::collections::HashMap,
-    triage::{ActionTagDirective, ParseResult, SnapshotTrigger},
+    triage_lib::{ActionTagDirective, ParseResult, SnapshotTrigger},
 };
 
 pub fn evaluate_int_math(expression: &str) -> Result<i64, Error> {
-    triage::evaluate_int_math(expression)
+    triage_lib::evaluate_int_math(expression)
 }
 
 type ConfigFiles = HashMap<String, String>;
 
-type DiagnosticData = triage::DiagnosticData;
+type DiagnosticData = triage_lib::DiagnosticData;
 
 pub struct TriageLib {
-    triage_config: triage::ParseResult,
+    triage_config: triage_lib::ParseResult,
 }
 
 impl TriageLib {
@@ -30,14 +30,14 @@ impl TriageLib {
     }
 
     pub fn selectors(&self) -> Selectors {
-        Selectors::new().with_inspect_selectors(triage::all_selectors(&self.triage_config))
+        Selectors::new().with_inspect_selectors(triage_lib::all_selectors(&self.triage_config))
     }
 
     pub fn evaluate(
         &self,
         data: Vec<DiagnosticData>,
-    ) -> (Vec<SnapshotTrigger>, triage::WarningVec) {
-        triage::snapshots(&data, &self.triage_config)
+    ) -> (Vec<SnapshotTrigger>, triage_lib::WarningVec) {
+        triage_lib::snapshots(&data, &self.triage_config)
     }
 }
 
@@ -73,7 +73,7 @@ mod test {
         let lib = TriageLib::new(configs)?;
         let data = vec![DiagnosticData::new(
             "inspect.json".to_string(),
-            triage::Source::Inspect,
+            triage_lib::Source::Inspect,
             INSPECT.to_string(),
         )?];
         let expected_trigger =

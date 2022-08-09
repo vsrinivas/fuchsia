@@ -6,7 +6,7 @@ use {
     anyhow::{bail, Error},
     serde_json,
     std::{collections::HashMap, fs, path::Path},
-    triage::{ActionTagDirective, DiagnosticData, ParseResult, Source},
+    triage_lib::{ActionTagDirective, DiagnosticData, ParseResult, Source},
 };
 
 // Third field is whether the file is required.

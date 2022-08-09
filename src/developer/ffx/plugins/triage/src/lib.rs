@@ -11,8 +11,8 @@ use {
     fidl_fuchsia_feedback::DataProviderProxy,
     std::{env, io::Write, path::PathBuf},
     tempfile::tempdir,
-    triage::{analyze, analyze_structured, ActionResultFormatter, ActionTagDirective},
     triage_app_lib::file_io::{config_from_files, diagnostics_from_directory},
+    triage_lib::{analyze, analyze_structured, ActionResultFormatter, ActionTagDirective},
 };
 
 mod config;

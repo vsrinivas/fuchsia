@@ -8,7 +8,7 @@ use {
     maplit::hashmap,
     std::collections::HashMap,
     std::convert::TryFrom,
-    triage,
+    triage_lib,
 };
 
 const TRIAGE_PRESENCE_TEMPLATE: &'static str = r#"
@@ -45,7 +45,7 @@ const TRIAGE_LAMBDA_TEMPLATE: &'static str = r#"
 /// Wrapper for the context to evaluate incoming diagnostics data.
 pub(crate) struct EvaluationContext {
     /// The result of constructing and parsing a triage configuration for a specific test case.
-    config_parse_result: triage::ParseResult,
+    config_parse_result: triage_lib::ParseResult,
 
     /// The original config text, for debugging.
     config_text: String,
@@ -53,9 +53,9 @@ pub(crate) struct EvaluationContext {
 
 impl EvaluationContext {
     pub(crate) fn run(&self, json: &str) -> Result<(), EvaluationError> {
-        let data_vec = vec![triage::DiagnosticData::new(
+        let data_vec = vec![triage_lib::DiagnosticData::new(
             "inspect.json".to_string(),
-            triage::Source::Inspect,
+            triage_lib::Source::Inspect,
             json.to_string(),
         )
         .map_err(|e| EvaluationError::ParseFailure {
@@ -63,7 +63,7 @@ impl EvaluationContext {
             data: json.to_string(),
         })?];
 
-        let result = triage::analyze(&data_vec, &self.config_parse_result)
+        let result = triage_lib::analyze(&data_vec, &self.config_parse_result)
             .map_err(|e| EvaluationError::InternalFailure(e.to_string()))?;
         match result.get_warnings() {
             list if list.len() == 0 => Ok(()),
@@ -103,12 +103,11 @@ impl TryFrom<&TestCase> for EvaluationContext {
         };
 
         let config_parse_result =
-            triage::ParseResult::new(&configs, &triage::ActionTagDirective::AllowAll).map_err(
-                |e| ComponentError::TriageConfigError {
+            triage_lib::ParseResult::new(&configs, &triage_lib::ActionTagDirective::AllowAll)
+                .map_err(|e| ComponentError::TriageConfigError {
                     message: e.to_string(),
                     config: case_config.clone(),
-                },
-            )?;
+                })?;
 
         config_parse_result.validate().map_err(|e| ComponentError::TriageConfigError {
             message: e.to_string(),

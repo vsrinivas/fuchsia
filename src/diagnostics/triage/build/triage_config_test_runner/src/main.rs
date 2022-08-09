@@ -5,8 +5,8 @@
 use {
     anyhow::{bail, Error},
     structopt::StructOpt,
-    triage::ActionTagDirective,
     triage_app_lib::file_io::config_from_files,
+    triage_lib::ActionTagDirective,
 };
 
 #[derive(StructOpt, Debug)]

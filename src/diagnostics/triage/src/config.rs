@@ -7,7 +7,7 @@ use {
     crate::Options,
     anyhow::{bail, format_err, Error},
     std::{path::Path, str::FromStr},
-    triage::{ActionTagDirective, DiagnosticData, ParseResult},
+    triage_lib::{ActionTagDirective, DiagnosticData, ParseResult},
 };
 
 // TODO(fxbug.dev/50451): Add support for CSV.

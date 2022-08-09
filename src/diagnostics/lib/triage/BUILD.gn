@@ -49,6 +49,8 @@ library_sources = [
 ]
 
 rustc_library("triage") {
+  name = "triage-lib"
+
   edition = "2021"
   version = "0.0.1"
 

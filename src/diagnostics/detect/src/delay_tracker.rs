@@ -9,7 +9,7 @@ use {
     injectable_time::TimeSource,
     std::collections::HashMap,
     tracing::warn,
-    triage::SnapshotTrigger,
+    triage_lib::SnapshotTrigger,
 };
 
 pub struct DelayTracker<'a> {

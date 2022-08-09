@@ -8,7 +8,7 @@ use {
         Options,
     },
     anyhow::{bail, Context as _, Error},
-    triage::{
+    triage_lib::{
         analyze, analyze_structured, ActionResultFormatter, ActionResults, DiagnosticData,
         ParseResult, TriageOutput,
     },
@@ -131,7 +131,7 @@ impl StructuredRunResult {
 mod tests {
     use {
         super::*,
-        triage::{Action, ActionResults},
+        triage_lib::{Action, ActionResults},
     };
 
     #[fuchsia::test]
