@@ -64,7 +64,7 @@ class VmObjectPaged final : public VmObject {
 
   zx_status_t Resize(uint64_t size) override;
   uint64_t size() const override TA_EXCL(lock_) {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->size_locked();
   }
   bool is_paged() const override { return true; }
@@ -72,11 +72,11 @@ class VmObjectPaged final : public VmObject {
   bool is_resizable() const override { return (options_ & kResizable); }
   bool is_discardable() const override { return (options_ & kDiscardable); }
   bool is_user_pager_backed() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->is_root_source_user_pager_backed_locked();
   }
   bool is_private_pager_copy_supported() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->is_private_pager_copy_supported();
   }
   bool is_dirty_tracked_locked() const override TA_REQ(lock_) {
@@ -89,12 +89,12 @@ class VmObjectPaged final : public VmObject {
     if (is_slice()) {
       return ChildType::kSlice;
     }
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return parent_ ? ChildType::kCowClone : ChildType::kNotChild;
   }
   bool is_slice() const { return options_ & kSlice; }
   uint64_t parent_user_id() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     if (parent_) {
       AssertHeld(parent_->lock_ref());
       return parent_->user_id_locked();
@@ -103,23 +103,23 @@ class VmObjectPaged final : public VmObject {
   }
   void set_user_id(uint64_t user_id) override {
     VmObject::set_user_id(user_id);
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     cow_pages_locked()->set_page_attribution_user_id_locked(user_id);
   }
 
   uint64_t HeapAllocationBytes() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->HeapAllocationBytesLocked();
   }
 
   uint64_t EvictionEventCount() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
 
     return cow_pages_locked()->EvictionEventCountLocked();
   }
 
   size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return AttributedPagesInRangeLocked(offset, len);
   }
 
@@ -133,7 +133,7 @@ class VmObjectPaged final : public VmObject {
   zx_status_t ZeroRange(uint64_t offset, uint64_t len) override;
 
   void Unpin(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     cow_pages_locked()->UnpinLocked(offset, len, /*allow_gaps=*/false);
   }
 
@@ -154,36 +154,36 @@ class VmObjectPaged final : public VmObject {
   zx_status_t TakePages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) override;
   zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->FailPageRequestsLocked(offset, len, error_status);
   }
 
   zx_status_t DirtyPages(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->DirtyPagesLocked(offset, len);
   }
   zx_status_t EnumerateDirtyRanges(uint64_t offset, uint64_t len,
                                    DirtyRangeEnumerateFunction&& dirty_range_fn) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->EnumerateDirtyRangesLocked(offset, len, ktl::move(dirty_range_fn));
   }
 
   zx_status_t QueryPagerVmoStats(bool reset, zx_pager_vmo_stats_t* stats) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->QueryPagerVmoStatsLocked(reset, stats);
   }
 
   zx_status_t WritebackBegin(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->WritebackBeginLocked(offset, len);
   }
   zx_status_t WritebackEnd(uint64_t offset, uint64_t len) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->WritebackEndLocked(offset, len);
   }
 
   void Dump(uint depth, bool verbose) override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     DumpLocked(depth, verbose);
   }
 
@@ -201,14 +201,14 @@ class VmObjectPaged final : public VmObject {
   zx_status_t CacheOp(uint64_t offset, uint64_t len, CacheOpType type) override;
 
   uint32_t GetMappingCachePolicy() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return GetMappingCachePolicyLocked();
   }
   uint32_t GetMappingCachePolicyLocked() const TA_REQ(lock_) { return cache_policy_; }
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
   void DetachSource() override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
 
     cow_pages_locked()->DetachSourceLocked();
   }
@@ -228,7 +228,7 @@ class VmObjectPaged final : public VmObject {
   // hierarchy is corrupt and the system should probably panic as soon as possible. As a result,
   // if false is returned this may write various additional information to the debuglog.
   bool DebugValidatePageSplits() const {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->DebugValidatePageSplitsLocked();
   }
 
@@ -241,24 +241,24 @@ class VmObjectPaged final : public VmObject {
 
   // Exposed for testing.
   CachedPageAttribution GetCachedPageAttribution() const {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cached_page_attribution_;
   }
 
   // Called from VmMapping to cache page attribution counts.
   uint64_t GetHierarchyGenerationCount() const {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return GetHierarchyGenerationCountLocked();
   }
 
   // Exposed for testing.
   fbl::RefPtr<VmCowPages> DebugGetCowPages() const {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_;
   }
 
   vm_page_t* DebugGetPage(uint64_t offset) const {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return cow_pages_locked()->DebugGetPageLocked(offset);
   }
 
@@ -283,7 +283,7 @@ class VmObjectPaged final : public VmObject {
   zx_status_t HintRange(uint64_t offset, uint64_t len, EvictionHint hint) override;
 
   void MarkAsLatencySensitive() override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     cow_pages_locked()->MarkAsLatencySensitiveLocked();
   }
 
@@ -315,14 +315,15 @@ class VmObjectPaged final : public VmObject {
   // internal read/write routine that takes a templated copy function to help share some code
   template <typename T>
   zx_status_t ReadWriteInternalLocked(uint64_t offset, size_t len, bool write, T copyfunc,
-                                      Guard<Mutex>* guard) TA_REQ(lock_);
+                                      Guard<CriticalMutex>* guard) TA_REQ(lock_);
 
   // Zeroes a partial range in a page. May use CallUnlocked on the passed in guard. The page to zero
   // is looked up using page_base_offset, and will be committed if needed. The range of
   // [zero_start_offset, zero_end_offset) is relative to the page and so [0, PAGE_SIZE) would zero
   // the entire page.
   zx_status_t ZeroPartialPageLocked(uint64_t page_base_offset, uint64_t zero_start_offset,
-                                    uint64_t zero_end_offset, Guard<Mutex>* guard) TA_REQ(lock_);
+                                    uint64_t zero_end_offset, Guard<CriticalMutex>* guard)
+      TA_REQ(lock_);
 
   // Internal implementations that assume lock is already held.
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);

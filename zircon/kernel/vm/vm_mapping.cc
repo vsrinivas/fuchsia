@@ -193,7 +193,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
 
   DEBUG_ASSERT(object_);
   // grab the lock for the vmo
-  Guard<Mutex> guard{object_->lock()};
+  Guard<CriticalMutex> guard{object_->lock()};
 
   // Persist our current caching mode. Every protect region will have the same caching mode so we
   // can acquire this from any region.
@@ -290,7 +290,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   // Grab the lock for the vmo. This is acquired here so that it is held continuously over both the
   // architectural unmap and the set_size_locked call.
   DEBUG_ASSERT(object_);
-  Guard<Mutex> guard{object_->lock()};
+  Guard<CriticalMutex> guard{object_->lock()};
 
   // Check if unmapping from one of the ends
   if (base_ == base || base + size == base_ + size_) {
@@ -598,7 +598,7 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit, bool ign
   }
 
   // grab the lock for the vmo
-  Guard<Mutex> object_guard{object_->lock()};
+  Guard<CriticalMutex> object_guard{object_->lock()};
 
   // Cache whether the object is dirty tracked, we need to know this when computing mmu flags later.
   const bool dirty_tracked = object_->is_dirty_tracked_locked();
@@ -730,7 +730,7 @@ zx_status_t VmMapping::DestroyLocked() {
 
   // grab the object lock to unmap and remove ourselves from its list.
   {
-    Guard<Mutex> guard{object_->lock()};
+    Guard<CriticalMutex> guard{object_->lock()};
     // The unmap needs to be performed whilst the object lock is being held so that set_size_locked
     // can be called without there being an opportunity for mappings to be modified in between.
     zx_status_t status = aspace_->arch_aspace().Unmap(base_, size_ / PAGE_SIZE,
@@ -818,7 +818,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
   }
 
   // grab the lock for the vmo
-  Guard<Mutex> guard{object_->lock()};
+  Guard<CriticalMutex> guard{object_->lock()};
 
   // Determine how far to the end of the page table so we do not cause extra allocations.
   const uint64_t next_pt_base = ArchVmAspace::NextUserPageTableOffset(va);
@@ -1004,7 +1004,7 @@ void VmMapping::ActivateLocked() {
 }
 
 void VmMapping::Activate() {
-  Guard<Mutex> guard{object_->lock()};
+  Guard<CriticalMutex> guard{object_->lock()};
   ActivateLocked();
 }
 
@@ -1062,7 +1062,7 @@ void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
   {
     // Although it was safe to read size_ without holding the object lock, we need to acquire it to
     // perform changes.
-    Guard<Mutex> guard{right_candidate->object_->lock()};
+    Guard<CriticalMutex> guard{right_candidate->object_->lock()};
     AssertHeld(object_->lock_ref());
 
     // Attempt to merge the protection region lists first. This is done first as a node allocation

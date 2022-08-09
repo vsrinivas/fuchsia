@@ -72,8 +72,8 @@ class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase>,
  public:
   explicit VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state);
 
-  Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
-  Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
+  Lock<CriticalMutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
+  Lock<CriticalMutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
 
  protected:
   // private destructor, only called from refptr
@@ -87,7 +87,7 @@ class VmHierarchyBase : public fbl::RefCountedUpgradeable<VmHierarchyBase>,
 
   // The lock which protects this class. All objects in a clone tree
   // share the same lock.
-  Lock<Mutex>& lock_;
+  Lock<CriticalMutex>& lock_;
   // Pointer to state shared across all objects in a hierarchy.
   fbl::RefPtr<VmHierarchyState> const hierarchy_state_ptr_;
 
@@ -114,8 +114,8 @@ class VmHierarchyState : public fbl::RefCounted<VmHierarchyState> {
   VmHierarchyState() = default;
   ~VmHierarchyState() = default;
 
-  Lock<Mutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
-  Lock<Mutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+  Lock<CriticalMutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
+  Lock<CriticalMutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
 
   // Drops the refptr to the given object by either placing it on the deferred delete list for
   // another thread already running deferred delete to drop, or drops itself.
@@ -137,7 +137,7 @@ class VmHierarchyState : public fbl::RefCounted<VmHierarchyState> {
   }
 
  private:
-  DECLARE_MUTEX(VmHierarchyState) lock_;
+  DECLARE_CRITICAL_MUTEX(VmHierarchyState) lock_;
   bool running_delete_ TA_GUARDED(lock_) = false;
   fbl::SinglyLinkedListCustomTraits<fbl::RefPtr<VmHierarchyBase>,
                                     VmHierarchyBase::DeferredDeleteTraits>
@@ -532,7 +532,7 @@ class VmObject : public VmHierarchyBase,
   // should finalize the request with PageSource::FinalizeRequest.
   zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* alloc_list,
                       LazyPageRequest* page_request, vm_page_t** page, paddr_t* pa) {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return GetPageLocked(offset, pf_flags, alloc_list, page_request, page, pa);
   }
 
@@ -637,7 +637,7 @@ class VmObject : public VmHierarchyBase,
   // and ::OnUserChildRemoved are called where appropriate.
   //
   // |guard| must be this vmo's lock.
-  virtual void RemoveChild(VmObject* child, Guard<Mutex>&& guard) TA_REQ(lock_);
+  virtual void RemoveChild(VmObject* child, Guard<CriticalMutex>&& guard) TA_REQ(lock_);
 
   // Drops |c| from the child list without going through the full removal
   // process. ::RemoveChild is probably what you want here.
@@ -650,7 +650,7 @@ class VmObject : public VmHierarchyBase,
   // this vmo is removed. Updates state and notifies userspace if necessary.
   //
   // The guard passed to this function is the vmo's lock.
-  void OnUserChildRemoved(Guard<Mutex>&& guard) TA_REQ(lock_);
+  void OnUserChildRemoved(Guard<CriticalMutex>&& guard) TA_REQ(lock_);
 
   // Called by AddChildLocked. VmObject::OnChildAddedLocked eventually needs to be invoked
   // on the VmObject which is held by the dispatcher which matches |user_id|. Implementations
@@ -663,7 +663,7 @@ class VmObject : public VmHierarchyBase,
   // error value.
   template <typename T>
   static zx_status_t ForEach(T func) {
-    Guard<Mutex> guard{AllVmosLock::Get()};
+    Guard<CriticalMutex> guard{AllVmosLock::Get()};
     for (const auto& iter : all_vmos_) {
       zx_status_t s = func(iter);
       if (s != ZX_OK) {
@@ -746,7 +746,7 @@ class VmObject : public VmHierarchyBase,
 
   using GlobalList = fbl::TaggedDoublyLinkedList<VmObject*, internal::GlobalListTag>;
 
-  DECLARE_SINGLETON_MUTEX(AllVmosLock);
+  DECLARE_SINGLETON_CRITICAL_MUTEX(AllVmosLock);
   static GlobalList all_vmos_ TA_GUARDED(AllVmosLock::Get());
 
   using Cursor = VmoCursor<VmObject, AllVmosLock, GlobalList, GlobalList::iterator>;
