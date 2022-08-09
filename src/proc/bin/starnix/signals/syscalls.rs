@@ -528,15 +528,8 @@ fn wait_on_pid(
         Err(err) => (None, Err(err)),
     };
     loop {
-        let child = task.thread_group.get_waitable_child(selector, options)?;
-        match child {
-            WaitableChild::Available(zombie) => {
-                return Ok(Some(zombie));
-            }
-            WaitableChild::Pending => {}
-            WaitableChild::NotFound => {
-                return error!(ECHILD);
-            }
+        if let Some(child) = task.thread_group.get_waitable_child(selector, options)? {
+            return Ok(Some(child))
         }
 
         if !options.block {

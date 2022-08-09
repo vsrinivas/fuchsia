@@ -157,16 +157,6 @@ impl ZombieProcess {
     }
 }
 
-/// Return value of `get_waitable_child`/
-pub enum WaitableChild {
-    /// The given child matches the given option.
-    Available(ZombieProcess),
-    /// No child currently matches the given option, but some child may in the future.
-    Pending,
-    /// No child matches the given option, nor may in the future.
-    NotFound,
-}
-
 impl ThreadGroup {
     pub fn new(
         kernel: Arc<Kernel>,
@@ -412,7 +402,7 @@ impl ThreadGroup {
         self: &Arc<Self>,
         selector: ProcessSelector,
         options: &WaitingOptions,
-    ) -> Result<WaitableChild, Errno> {
+    ) -> Result<Option<ZombieProcess>, Errno> {
         let pids = self.kernel.pids.read();
         // Built a list of mutable child state before acquire a write lock to the state of this
         // object because lock ordering imposes the child lock is acquired before the parent.
@@ -653,7 +643,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         selector: ProcessSelector,
         options: &WaitingOptions,
         pids: &PidTable,
-    ) -> Result<WaitableChild, Errno> {
+    ) -> Result<Option<ZombieProcess>, Errno> {
         if options.wait_for_exited {
             if let Some(child) = match selector {
                 ProcessSelector::Any => {
@@ -677,7 +667,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                     self.zombie_children.remove(pos)
                 }
             }) {
-                return Ok(WaitableChild::Available(child));
+                return Ok(Some(child));
             }
         }
 
@@ -692,7 +682,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
 
         let mut selected_children = children.into_iter().filter(children_filter).peekable();
         if selected_children.peek().is_none() {
-            return Ok(WaitableChild::NotFound);
+            return error!(ECHILD);
         }
         for mut child in selected_children {
             if child.waitable.is_some() {
@@ -702,7 +692,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                     } else {
                         child.waitable.take().unwrap()
                     };
-                    return Ok(WaitableChild::Available(ZombieProcess::new(
+                    return Ok(Some(ZombieProcess::new(
                         &child,
                         &child.get_task()?.creds(),
                         ExitStatus::Continue(siginfo),
@@ -714,7 +704,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                     } else {
                         child.waitable.take().unwrap()
                     };
-                    return Ok(WaitableChild::Available(ZombieProcess::new(
+                    return Ok(Some(ZombieProcess::new(
                         &child,
                         &child.get_task()?.creds(),
                         ExitStatus::Stop(siginfo),
@@ -723,7 +713,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
             }
         }
 
-        Ok(WaitableChild::Pending)
+        Ok(None)
     }
 
     fn adopt_children(
