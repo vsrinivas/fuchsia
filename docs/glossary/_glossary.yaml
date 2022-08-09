@@ -414,6 +414,14 @@
   related_guides: [""]
   area: ["Devices", "System"]
 
+- term: "Core-sdk tarball"
+  short_description: "The artifact containing Fuchsia APIs, Fuchsia tools,
+  binaries, and metadata. Used to access the Fuchsia tools, or the Fuchsia APIs."
+  full_description: ""
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
+
 - term: "Data directory"
   short_description: "A private directory within which a
   <a href=\"/docs/glossary#component-instance\">component instance</a> may store data local
@@ -555,6 +563,13 @@
   related_guides: [""]
   area: ["UI"]
 
+- term: "Experimental-sdk tarball"
+  short_description: "The artifact containing experimental Fuchsia APIs."
+  full_description: ""
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
+
 - term: "expose"
   short_description: "A keyword for a component instance to indicate that it is making a capability
   available to its parent to route."
@@ -614,7 +629,16 @@
   against libfdio overrides these stubs with functional implementations."
   see_also: ["<a href=\"/sdk/lib/fdio/\">fdio source code</a>"]
   related_guides: [""]
-  area: [""]
+  area: ["Zircon"]
+
+- term: "ffx"
+  short_description: "Fuchsia's primary tool for working with a Fuchsia system
+  and Fuchsia tools. Example use cases include stream logs from a device and
+  start an emulator."
+  full_description: ""
+  see_also: ["<a href=\"https://fuchsia.dev/reference/tools/sdk/ffx\">ffx</a>"]
+  related_guides: [""]
+  area: ["General", "System"]
 
 - term: "FilledRect"
   short_description: "A solid color rectangle can be attached to a
@@ -700,14 +724,20 @@
   related_guides: [""]
   area: ["Component Framework", "System"]
 
-- term: "Fuchsia IDK"
-  short_description: "The Fuchsia IDK (integrator development kit) is a collection of libraries and
-  tools that the Fuchsia project provides to Fuchsia developers."
-  full_description: "Among other things, the Fuchsia IDK contains a
-  definition of the <a href=\"/docs/glossary#fuchsia-system-interface\">Fuchsia System Interface</a>
-  as well as a number of client libraries. The IDK is targeted at development environment integrators
-  that add environment specific tooling specific to the build
-environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a>."
+- term: "Fuchsia extension for VS Code"
+  short_description: "An extension for Visual Studio Code (VsCode) supporting
+  common developer workflows for Fuchsia, like environment set up, editing,
+  debugging, and testing."
+  full_description: ""
+  see_also: ["<a href=\"/docs/reference/tools/editors/vscode/fuchsia-ext-install.md\">Installing the Fuchsia developer extension</a>"]
+  related_guides: [""]
+  area: ["General"]
+
+- term: "Fuchsia provided developer artificats"
+  short_description: "Set of deliverables from the Fuchsia Authors that make it
+  easier to develop components against Fuchsia. Some artifacts include: Fuchsia
+  SDK, Fuchsia tools, components, and editor extensions."
+  full_description: ""
   see_also: [""]
   related_guides: [""]
   area: ["General"]
@@ -715,8 +745,16 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
 - term: "Fuchsia SDK"
   short_description: "The Fuchsia SDK is the set of APIs, tools, build system integrations, and language
   integration artifacts produced by Fuchsia that enable the production of software and products for and with Fuchsia."
-  full_description: "The Fuchsia SDK is produced from the <a href=\"/docs/glossary#fuchsia-idk\">Fuchsia IDK</a>
-  by adding integrations with build systems and language runtimes."
+  full_description: ""
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
+
+- term: "Fuchsia SDK with Bazel"
+  short_description: "An integration of the Bazel build system with the Fuchsia
+  SDK. Enables developers to compile, run, and test their software with Bazel.
+  Supports C++ through a bundled Clang toolchain."
+  full_description: ""
   see_also: [""]
   related_guides: [""]
   area: ["General"]
@@ -730,6 +768,14 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   see_also: ["<a href=\"/docs/concepts/system/abi/system.md\">Fuchsia System Interface</a>"]
   related_guides: [""]
   area: ["General", "System"]
+
+- term: "Fuchsia tools"
+  short_description: "Programs designed to help work with Fuchsia. For example,
+  tools to compile FIDL IDL (interactive data language), or tools to get logs
+  from a device."
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
 
 - term: "Fuchsia Volume Manager"
   short_description: "Fuchsia Volume Manager (FVM) is a partition manager providing dynamically
@@ -1345,6 +1391,14 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   see_also: [""]
   related_guides: [""]
   area: ["UI"]
+
+- term: "Toolchains"
+  short_description: "Tools used by developers to compile sources into binaries.
+  Fuchsia supports Clang for C/C++."
+  full_description: ""
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
 
 - term: "use"
   short_description: "A keyword for a component instance to consume a capability that was offered to it."
