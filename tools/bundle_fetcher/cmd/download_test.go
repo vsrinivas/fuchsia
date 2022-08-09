@@ -581,7 +581,7 @@ var contentsProductBundle = map[string][]byte{
 		  ],
 		  "images": [
 			{
-			  "base_uri": "file:/../../..",
+			  "base_uri": "file:/../../../..",
 			  "format": "files"
 			}
 		  ],
@@ -589,8 +589,8 @@ var contentsProductBundle = map[string][]byte{
 		  "packages": [
 			{
 			  "format": "files",
-			  "blob_uri": "file:/../../../../../../blobs",
-			  "repo_uri": "file:/../../../../packages"
+			  "blob_uri": "file:/../../../../../../../blobs",
+			  "repo_uri": "file:/../../../../../packages"
 			}
 		  ],
 		  "type": "product_bundle",
@@ -614,7 +614,7 @@ var contentsProductBundle = map[string][]byte{
 			  ],
 			  "images": [
 				{
-				  "base_uri": "file:/../../..",
+				  "base_uri": "file:/../../../..",
 				  "format": "files"
 				}
 			  ],
@@ -655,8 +655,8 @@ var contentsProductBundle = map[string][]byte{
 			  "packages": [
 				{
 				  "format": "files",
-				  "blob_uri": "file:/../../../../../../blobs",
-				  "repo_uri": "file:/../../../../packages"
+				  "blob_uri": "file:/../../../../../../../blobs",
+				  "repo_uri": "file:/../../../../../packages"
 				}
 			  ],
 			  "type": "product_bundle"
@@ -671,7 +671,7 @@ var contentsProductBundle = map[string][]byte{
 			  ],
 			  "images": [
 				{
-				  "base_uri": "file:/../../..",
+				  "base_uri": "file:/../../../..",
 				  "format": "files"
 				}
 			  ],
@@ -679,8 +679,8 @@ var contentsProductBundle = map[string][]byte{
 			  "packages": [
 				{
 				  "format": "files",
-				  "blob_uri": "file:/../../../../../../blobs",
-				  "repo_uri": "file:/../../../../packages"
+				  "blob_uri": "file:/../../../../../../../blobs",
+				  "repo_uri": "file:/../../../../../packages"
 				}
 			  ],
 			  "type": "product_bundle",

@@ -73,9 +73,8 @@ func updateProductManifest(buildDir, productBundlePath, packageNamespaceDir, blo
 	}
 
 	artifactoryProductBundlePath := filepath.Join(imageNamespaceDir, productBundlePath)
-	artifactoryProductBundleDir := filepath.Dir(artifactoryProductBundlePath)
 	for _, image := range productBundle.Data.Images {
-		imageURI, err := filepath.Rel(artifactoryProductBundleDir, imageNamespaceDir)
+		imageURI, err := filepath.Rel(artifactoryProductBundlePath, imageNamespaceDir)
 		if err != nil {
 			return nil, fmt.Errorf("unable to find relative path for artifactory product bundle path %s and image namespace %s: %w", artifactoryProductBundlePath, imageNamespaceDir, err)
 		}
@@ -83,12 +82,12 @@ func updateProductManifest(buildDir, productBundlePath, packageNamespaceDir, blo
 	}
 
 	for _, pkg := range productBundle.Data.Packages {
-		repoURI, err := filepath.Rel(artifactoryProductBundleDir, packageNamespaceDir)
+		repoURI, err := filepath.Rel(artifactoryProductBundlePath, packageNamespaceDir)
 		if err != nil {
 			return nil, fmt.Errorf("unable to find relative path for artifactory product bundle path %s and package namespace %s: %w", artifactoryProductBundlePath, packageNamespaceDir, err)
 		}
 
-		blobURI, err := filepath.Rel(artifactoryProductBundleDir, blobNamespaceDir)
+		blobURI, err := filepath.Rel(artifactoryProductBundlePath, blobNamespaceDir)
 		if err != nil {
 			return nil, fmt.Errorf("unable to find relative path for artifactory product bundle path %s and blob namespace %s: %w", artifactoryProductBundlePath, blobNamespaceDir, err)
 		}
