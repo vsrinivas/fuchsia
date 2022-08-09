@@ -120,13 +120,14 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
 }
 
 // fdf_dispatcher_t interface
-__EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
-                                            size_t scheduler_role_len,
+__EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
+                                            const char* scheduler_role, size_t scheduler_role_len,
                                             fdf_dispatcher_shutdown_observer_t* observer,
                                             fdf_dispatcher_t** out_dispatcher) {
   driver_runtime::Dispatcher* dispatcher;
-  auto status = driver_runtime::Dispatcher::Create(options, scheduler_role, scheduler_role_len,
-                                                   observer, &dispatcher);
+  auto status = driver_runtime::Dispatcher::Create(
+      options, std::string_view(name, name_len),
+      std::string_view(scheduler_role, scheduler_role_len), observer, &dispatcher);
   if (status != ZX_OK) {
     return status;
   }

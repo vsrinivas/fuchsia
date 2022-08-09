@@ -28,6 +28,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
+#include <fbl/string_buffer.h>
 
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
 #include "src/devices/bin/driver_runtime/callback_request.h"
@@ -95,8 +96,8 @@ class Dispatcher : public async_dispatcher_t,
 
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
-  Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls, const void* owner,
-             async_dispatcher_t* process_shared_dispatcher,
+  Dispatcher(uint32_t options, std::string_view name, bool unsynchronized, bool allow_sync_calls,
+             const void* owner, async_dispatcher_t* process_shared_dispatcher,
              fdf_dispatcher_shutdown_observer_t* observer);
 
   // Creates a dispatcher which is backed by |dispatcher|.
@@ -105,8 +106,8 @@ class Dispatcher : public async_dispatcher_t,
   // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
-  static fdf_status_t CreateWithAdder(uint32_t options, const char* scheduler_role,
-                                      size_t scheduler_role_len, const void* owner,
+  static fdf_status_t CreateWithAdder(uint32_t options, std::string_view name,
+                                      std::string_view scheduler_role, const void* owner,
                                       async_dispatcher_t* dispatcher, ThreadAdder adder,
                                       fdf_dispatcher_shutdown_observer_t*,
                                       Dispatcher** out_dispatcher);
@@ -117,8 +118,8 @@ class Dispatcher : public async_dispatcher_t,
   // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
-  static fdf_status_t CreateWithLoop(uint32_t options, const char* scheduler_role,
-                                     size_t scheduler_role_len, const void* owner,
+  static fdf_status_t CreateWithLoop(uint32_t options, std::string_view name,
+                                     std::string_view scheduler_role, const void* owner,
                                      async::Loop* loop, fdf_dispatcher_shutdown_observer_t*,
                                      Dispatcher** out_dispatcher);
 
@@ -126,8 +127,8 @@ class Dispatcher : public async_dispatcher_t,
   // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks cancelled or completed by the dispatcher.
-  static fdf_status_t Create(uint32_t options, const char* scheduler_role,
-                             size_t scheduler_role_len, fdf_dispatcher_shutdown_observer_t*,
+  static fdf_status_t Create(uint32_t options, std::string_view name,
+                             std::string_view scheduler_role, fdf_dispatcher_shutdown_observer_t*,
                              Dispatcher** out_dispatcher);
 
   // |dispatcher| must have been retrieved via `GetAsyncDispatcher`.
@@ -451,6 +452,9 @@ class Dispatcher : public async_dispatcher_t,
   bool IsRunningLocked() __TA_REQUIRES(&callback_lock_) {
     return state_ == DispatcherState::kRunning;
   }
+
+  // User provided name. Useful for debugging purposes.
+  fbl::StringBuffer<ZX_MAX_NAME_LEN> name_;
 
   // Dispatcher options set by the user.
   uint32_t options_;

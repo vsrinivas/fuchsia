@@ -145,7 +145,8 @@ void Device::SetTestData(SetTestDataRequestView request, SetTestDataCompleter::S
 void Device::ShutdownHandler(fdf_dispatcher_t* dispatcher) { unbind_txn_.Reply(); }
 
 zx_status_t Device::Init() {
-  auto dispatcher = fdf::Dispatcher::Create(0, fit::bind_member(this, &Device::ShutdownHandler));
+  auto dispatcher =
+      fdf::Dispatcher::Create(0, "parent-driver", fit::bind_member(this, &Device::ShutdownHandler));
   if (dispatcher.is_error()) {
     return dispatcher.status_value();
   }

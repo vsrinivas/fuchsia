@@ -76,16 +76,18 @@ class ChannelDispatcherTest {
 
     {
       DriverStackManager dsm(&client_fake_driver_);
-      auto dispatcher = fdf::Dispatcher::Create(
-          dispatcher_options, fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
+      auto dispatcher =
+          fdf::Dispatcher::Create(dispatcher_options, "client",
+                                  fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
       client_dispatcher_ = *std::move(dispatcher);
     }
 
     {
       DriverStackManager dsm(&server_fake_driver_);
-      auto dispatcher = fdf::Dispatcher::Create(
-          dispatcher_options, fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
+      auto dispatcher =
+          fdf::Dispatcher::Create(dispatcher_options, "server",
+                                  fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
       server_dispatcher_ = *std::move(dispatcher);
     }

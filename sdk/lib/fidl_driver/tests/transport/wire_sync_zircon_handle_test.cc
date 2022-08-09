@@ -39,13 +39,13 @@ TEST(DriverTransport, WireSendZirconHandleSync) {
 
   libsync::Completion client_dispatcher_shutdown;
   auto client_dispatcher = fdf::Dispatcher::Create(
-      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "",
       [&](fdf_dispatcher_t* dispatcher) { client_dispatcher_shutdown.Signal(); });
   ASSERT_OK(client_dispatcher.status_value());
 
   libsync::Completion server_dispatcher_shutdown;
   auto server_dispatcher = fdf::Dispatcher::Create(
-      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "",
       [&](fdf_dispatcher_t* dispatcher) { server_dispatcher_shutdown.Signal(); });
   ASSERT_OK(server_dispatcher.status_value());
 

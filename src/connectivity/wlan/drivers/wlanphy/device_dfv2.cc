@@ -46,7 +46,7 @@ Device::Device(zx_device_t* parent, fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::Wla
   ltrace_fn();
   ZX_ASSERT_MSG(parent != nullptr, "No parent device assigned for wlanphy device.");
 
-  auto client_dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) {
+  auto client_dispatcher = fdf::Dispatcher::Create(0, "wlanphy", [&](fdf_dispatcher_t*) {
     if (unbind_txn_)
       unbind_txn_->Reply();
   });

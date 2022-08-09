@@ -239,7 +239,7 @@ class DriverTest : public gtest::TestLoopFixture {
     auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
 
     auto dispatcher = fdf::Dispatcher::Create(
-        0, [this](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown_.Signal(); });
+        0, "compat-test", [this](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown_.Signal(); });
     EXPECT_EQ(ZX_OK, dispatcher.status_value());
     dispatcher_ = *std::move(dispatcher);
   }

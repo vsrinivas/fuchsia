@@ -61,7 +61,8 @@ Device::Device(zx_device_t* parent)
   brcmf_pub_->recovery_trigger =
       std::make_unique<wlan::brcmfmac::RecoveryTrigger>(recovery_start_callback);
 
-  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) { completion_.Signal(); });
+  auto dispatcher = fdf::Dispatcher::Create(0, "brcmfmac-wlanphy",
+                                            [&](fdf_dispatcher_t*) { completion_.Signal(); });
   ZX_ASSERT_MSG(!dispatcher.is_error(), "%s(): Dispatcher created failed: %s\n", __func__,
                 zx_status_get_string(dispatcher.status_value()));
   dispatcher_ = std::move(*dispatcher);

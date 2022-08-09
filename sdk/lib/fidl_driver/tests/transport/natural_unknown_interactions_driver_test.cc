@@ -124,7 +124,7 @@ class UnknownInteractions : public ::zxtest::Test {
  protected:
   void SetUp() override {
     auto dispatcher = fdf::Dispatcher::Create(
-        FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+        FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "",
         [dispatcher_shutdown = dispatcher_shutdown_](fdf_dispatcher_t* dispatcher) {
           dispatcher_shutdown->Signal();
         });

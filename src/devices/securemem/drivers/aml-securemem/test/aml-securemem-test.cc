@@ -131,8 +131,8 @@ class AmlogicSecureMemTest : public zxtest::Test {
     // We initialize this in a dispatcher thread so that fdf_dispatcher_get_current_dispatcher
     // works. This dispatcher isn't actually used in the test.
     fdf_internal_push_driver(reinterpret_cast<void*>(0x12345678));
-    auto dispatcher =
-        fdf::Dispatcher::Create(0, fit::bind_member(this, &AmlogicSecureMemTest::ShutdownHandler));
+    auto dispatcher = fdf::Dispatcher::Create(
+        0, "aml-securemem-test", fit::bind_member(this, &AmlogicSecureMemTest::ShutdownHandler));
     fdf_internal_pop_driver();
     ASSERT_OK(dispatcher.status_value());
     dispatcher_ = *std::move(dispatcher);

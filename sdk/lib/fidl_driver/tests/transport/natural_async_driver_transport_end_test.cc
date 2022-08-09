@@ -33,7 +33,7 @@ TEST(DriverTransport, NaturalSendDriverClientEnd) {
 
   libsync::Completion dispatcher_shutdown;
   auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
@@ -83,7 +83,7 @@ TEST(DriverTransport, NaturalSendDriverClientEndEncodeErrorShouldCloseHandle) {
   fidl_driver_testing::ScopedFakeDriver driver;
   libsync::Completion dispatcher_shutdown;
   zx::status dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
   zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();

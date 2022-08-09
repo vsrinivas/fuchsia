@@ -30,7 +30,7 @@ TEST(DriverTransport, NaturalSendFdfChannelAsync) {
 
   libsync::Completion dispatcher_shutdown;
   auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 

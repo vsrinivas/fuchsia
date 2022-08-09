@@ -45,7 +45,7 @@ TEST(DriverTransport, WireOneWayVector) {
 
   libsync::Completion dispatcher_shutdown;
   auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
@@ -79,7 +79,7 @@ TEST(DriverTransport, WireOneWayVectorSyncViaAsyncClient) {
 
   libsync::Completion dispatcher_shutdown;
   auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 

@@ -16,6 +16,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/dlfcn.h>
 
+#include <fbl/string_printf.h>
+
 #include "src/lib/storage/vfs/cpp/service.h"
 
 // The driver runtime libraries use the fdf namespace, but we would also like to use fdf
@@ -298,7 +300,10 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       uint32_t options = default_dispatcher_opts;
 
       auto dispatcher =
-          fdf::Dispatcher::Create(options, [driver_ref = *driver](fdf_dispatcher_t* dispatcher) {});
+          fdf::Dispatcher::Create(options,
+                                  fbl::StringPrintf("%.*s-default-%p", (int)manifest.size(),
+                                                    manifest.data(), (*driver).get()),
+                                  [driver_ref = *driver](fdf_dispatcher_t* dispatcher) {});
       if (dispatcher.is_error()) {
         completer.Close(dispatcher.status_value());
         return;

@@ -22,7 +22,7 @@ namespace wlanphyimpl_fidl = fuchsia_wlan_wlanphyimpl::wire;
 WlanphyImplDevice::WlanphyImplDevice(zx_device_t* parent)
     : ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable,
                     ddk::ServiceConnectable>(parent) {
-  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) {
+  auto dispatcher = fdf::Dispatcher::Create(0, "iwlwifi", [&](fdf_dispatcher_t*) {
     if (unbind_txn_)
       unbind_txn_->Reply();
   });

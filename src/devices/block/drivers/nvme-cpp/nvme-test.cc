@@ -28,7 +28,7 @@ class NvmeTest : public inspect::InspectTestHelper, public zxtest::Test {
 
     // Set up dispatcher.
     auto dispatcher =
-        fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+        fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "nvme-test",
                                 [this](fdf_dispatcher_t*) { sync_completion_signal(&shutdown_); });
     ASSERT_OK(dispatcher.status_value());
     dispatcher_ = std::move(*dispatcher);

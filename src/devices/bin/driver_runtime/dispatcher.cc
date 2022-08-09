@@ -274,8 +274,9 @@ void Dispatcher::AsyncIrq::OnSignal(async_dispatcher_t* global_dispatcher, zx_st
   dispatcher->QueueIrq(this, status);
 }
 
-Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls,
-                       const void* owner, async_dispatcher_t* process_shared_dispatcher,
+Dispatcher::Dispatcher(uint32_t options, std::string_view name, bool unsynchronized,
+                       bool allow_sync_calls, const void* owner,
+                       async_dispatcher_t* process_shared_dispatcher,
                        fdf_dispatcher_shutdown_observer_t* observer)
     : async_dispatcher_t{&g_dispatcher_ops},
       options_(options),
@@ -284,11 +285,13 @@ Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_ca
       owner_(owner),
       process_shared_dispatcher_(process_shared_dispatcher),
       timer_(this),
-      shutdown_observer_(observer) {}
+      shutdown_observer_(observer) {
+  name_.Append(name);
+}
 
 // static
-fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, const char* scheduler_role,
-                                         size_t scheduler_role_len, const void* owner,
+fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, std::string_view name,
+                                         std::string_view scheduler_role, const void* owner,
                                          async_dispatcher_t* parent_dispatcher, ThreadAdder adder,
                                          fdf_dispatcher_shutdown_observer_t* observer,
                                          Dispatcher** out_dispatcher) {
@@ -309,7 +312,7 @@ fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, const char* scheduler
     }
   }
 
-  auto dispatcher = fbl::MakeRefCounted<Dispatcher>(options, unsynchronized, allow_sync_calls,
+  auto dispatcher = fbl::MakeRefCounted<Dispatcher>(options, name, unsynchronized, allow_sync_calls,
                                                     owner, parent_dispatcher, observer);
 
   zx::event event;
@@ -343,25 +346,25 @@ fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, const char* scheduler
   return ZX_OK;
 }
 
-fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_role,
-                                        size_t scheduler_role_len, const void* owner,
+fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, std::string_view name,
+                                        std::string_view scheduler_role, const void* owner,
                                         async::Loop* loop,
                                         fdf_dispatcher_shutdown_observer_t* observer,
                                         Dispatcher** out_dispatcher) {
   return CreateWithAdder(
-      options, scheduler_role, scheduler_role_len, owner, loop->dispatcher(),
+      options, name, scheduler_role, owner, loop->dispatcher(),
       [&]() { return loop->StartThread(); }, observer, out_dispatcher);
 }
 
 // fdf_dispatcher_t implementation
 
 // static
-fdf_status_t Dispatcher::Create(uint32_t options, const char* scheduler_role,
-                                size_t scheduler_role_len,
+fdf_status_t Dispatcher::Create(uint32_t options, std::string_view name,
+                                std::string_view scheduler_role,
                                 fdf_dispatcher_shutdown_observer_t* observer,
                                 Dispatcher** out_dispatcher) {
   return CreateWithAdder(
-      options, scheduler_role, scheduler_role_len, driver_context::GetCurrentDriver(),
+      options, name, scheduler_role, driver_context::GetCurrentDriver(),
       GetDispatcherCoordinator().loop()->dispatcher(),
       []() { return GetDispatcherCoordinator().AddThread(); }, observer, out_dispatcher);
 }

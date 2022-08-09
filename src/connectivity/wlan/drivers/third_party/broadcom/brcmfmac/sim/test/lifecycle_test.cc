@@ -67,7 +67,8 @@ TEST(LifecycleTest, StartWithSmeChannel) {
 
   auto endpoints = fdf::CreateEndpoints<fuchsia_wlan_wlanphyimpl::WlanphyImpl>();
   ASSERT_FALSE(endpoints.is_error());
-  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) { completion_.Signal(); });
+  auto dispatcher =
+      fdf::Dispatcher::Create(0, __func__, [&](fdf_dispatcher_t*) { completion_.Signal(); });
 
   ASSERT_FALSE(dispatcher.is_error());
   auto client_dispatcher_ = *std::move(dispatcher);
@@ -102,7 +103,8 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   auto iface = dev_mgr->FindLatestByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL);
   ASSERT_NE(iface, nullptr);
   void* ctx = iface->DevArgs().ctx;
-  auto* iface_ops = static_cast<const wlan_fullmac_impl_protocol_ops_t*>(iface->DevArgs().proto_ops);
+  auto* iface_ops =
+      static_cast<const wlan_fullmac_impl_protocol_ops_t*>(iface->DevArgs().proto_ops);
   zx_handle_t mlme_channel = ZX_HANDLE_INVALID;
   wlan_fullmac_impl_ifc_protocol_t ifc_ops{};
   status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);

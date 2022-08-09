@@ -7,6 +7,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 
 #include <fbl/ref_ptr.h>
+#include <fbl/string_printf.h>
 
 #include "lib/fdf/dispatcher.h"
 #include "src/devices/bin/driver_host/driver_stack_manager.h"
@@ -18,6 +19,7 @@ zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
 
   auto dispatcher = fdf::Dispatcher::Create(
       FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+      fbl::StringPrintf("%s-default-%p", zx_driver->name(), driver.get()),
       [](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
   if (dispatcher.is_error()) {
     return dispatcher.take_error();

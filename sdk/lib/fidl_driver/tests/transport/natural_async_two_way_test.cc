@@ -34,7 +34,7 @@ TEST(DriverTransport, NaturalTwoWayAsync) {
 
   libsync::Completion dispatcher_shutdown;
   auto dispatcher = fdf::Dispatcher::Create(
-      0, [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
+      0, "", [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
   auto channels = fdf::ChannelPair::Create(0);
@@ -78,7 +78,7 @@ TEST(DriverTransport, NaturalTwoWayAsyncShared) {
 
   libsync::Completion dispatcher_shutdown;
   auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED,
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 

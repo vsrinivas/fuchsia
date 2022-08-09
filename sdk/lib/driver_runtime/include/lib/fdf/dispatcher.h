@@ -75,6 +75,9 @@ struct fdf_dispatcher_shutdown_observer {
 // Cannot be set in conjunction with FDF_DISPATCHER_OPTION_UNSYNCHRONIZED.
 #define FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS (1 << 1)
 
+// |name| is reported via diagnostics. It is similar to setting the name of a thread.
+// |name_len| is the length of the string, without including the terminated NULL character. If
+// |name| is greater than `ZX_MAX_NAME_LEN`, the length may be truncated.
 // |scheduler_role| is a hint. It may or not impact the priority the work scheduler against the
 // dispatcher is handled at. It may or may not impact the ability for other drivers to share zircon
 // threads with the dispatcher.
@@ -85,8 +88,8 @@ struct fdf_dispatcher_shutdown_observer {
 // and the dispatcher has completed its asynchronous shutdown.
 //
 // This must be called from a thread managed by the driver runtime.
-fdf_status_t fdf_dispatcher_create(uint32_t options, const char* scheduler_role,
-                                   size_t scheduler_role_len,
+fdf_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
+                                   const char* scheduler_role, size_t scheduler_role_len,
                                    fdf_dispatcher_shutdown_observer_t* observer,
                                    fdf_dispatcher_t** dispatcher);
 

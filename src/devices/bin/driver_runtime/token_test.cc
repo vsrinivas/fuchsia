@@ -36,8 +36,9 @@ void TokenTest::SetUp() {
     driver_context::PushDriver(CreateFakeDriver());
     auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
-    auto dispatcher = fdf::Dispatcher::Create(
-        0, [&](fdf_dispatcher_t* dispatcher) { dispatcher_local_shutdown_completion_.Signal(); });
+    auto dispatcher = fdf::Dispatcher::Create(0, "local", [&](fdf_dispatcher_t* dispatcher) {
+      dispatcher_local_shutdown_completion_.Signal();
+    });
     ASSERT_FALSE(dispatcher.is_error());
 
     dispatcher_local_ = std::move(*dispatcher);
@@ -47,8 +48,9 @@ void TokenTest::SetUp() {
     driver_context::PushDriver(CreateFakeDriver());
     auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
-    auto dispatcher = fdf::Dispatcher::Create(
-        0, [&](fdf_dispatcher_t* dispatcher) { dispatcher_remote_shutdown_completion_.Signal(); });
+    auto dispatcher = fdf::Dispatcher::Create(0, "remote", [&](fdf_dispatcher_t* dispatcher) {
+      dispatcher_remote_shutdown_completion_.Signal();
+    });
     ASSERT_FALSE(dispatcher.is_error());
 
     dispatcher_remote_ = std::move(*dispatcher);

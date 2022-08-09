@@ -431,7 +431,8 @@ zx_status_t SimTest::Init() {
   }
 
   // Create a dispatcher to wait on the runtime channel.
-  auto dispatcher = fdf::Dispatcher::Create(0, [&](fdf_dispatcher_t*) { completion_.Signal(); });
+  auto dispatcher =
+      fdf::Dispatcher::Create(0, "sim-test", [&](fdf_dispatcher_t*) { completion_.Signal(); });
 
   if (dispatcher.is_error()) {
     BRCMF_ERR("Failed to create dispatcher : %s", zx_status_get_string(dispatcher.error_value()));

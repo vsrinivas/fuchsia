@@ -75,7 +75,8 @@ class WlanphyDeviceTest : public ::zxtest::Test,
     // Create the server dispatcher of fuchsia_wlan_wlanphyimpl::WlanphyImpl protocol, its lifecycle
     // will be maintained by this test class.
     auto server_dispatcher_phy_impl_status = fdf::Dispatcher::Create(
-        0, [&](fdf_dispatcher_t*) { server_dispatcher_phy_impl_completion_.Signal(); });
+        0, "wlan-phy-test",
+        [&](fdf_dispatcher_t*) { server_dispatcher_phy_impl_completion_.Signal(); });
     ASSERT_FALSE(server_dispatcher_phy_impl_status.is_error());
     server_dispatcher_phy_impl_ = std::move(*server_dispatcher_phy_impl_status);
 

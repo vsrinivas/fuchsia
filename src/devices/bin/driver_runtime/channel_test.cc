@@ -66,7 +66,7 @@ void ChannelTest::SetUp() {
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(
-                FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role", 0, CreateFakeDriver(),
+                FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "scheduler_role", "", CreateFakeDriver(),
                 &loop_, dispatcher_observer_.fdf_observer(), &dispatcher));
 
   fdf_dispatcher_ = static_cast<fdf_dispatcher_t*>(dispatcher);
@@ -328,7 +328,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelUnqueuedRead) {
   driver_runtime::Dispatcher* sync_dispatcher;
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(
-                0, "", 0, driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
+                0, "", "", driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
@@ -352,7 +352,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
   driver_runtime::Dispatcher* sync_dispatcher;
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(
-                0, "", 0, driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
+                0, "", "", driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
 
   // Make calls reentrant so any callback will be queued on the async loop.
   driver_context::PushDriver(driver);
@@ -406,7 +406,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedReadFromTask) {
   driver_runtime::Dispatcher* sync_dispatcher;
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(
-                0, "", 0, driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
+                0, "", "", driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
 
   // Make calls reentrant so any callback will be queued on the async loop.
   driver_context::PushDriver(driver);
@@ -462,7 +462,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelTaskFromChannelRead) {
   driver_runtime::Dispatcher* sync_dispatcher;
   ASSERT_EQ(ZX_OK,
             driver_runtime::Dispatcher::CreateWithLoop(
-                0, "", 0, driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
+                0, "", "", driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
 
   // Make calls reentrant so any callback will be queued on the async loop.
   driver_context::PushDriver(driver);
@@ -505,7 +505,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelUnqueuedRead) {
   DispatcherShutdownObserver dispatcher_observer;
   driver_runtime::Dispatcher* unsync_dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
-                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0, driver, &loop_,
+                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", "", driver, &loop_,
                        dispatcher_observer.fdf_observer(), &unsync_dispatcher));
 
   // Make calls reentrant so that any callback will be queued on the async loop.
@@ -536,7 +536,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
   DispatcherShutdownObserver dispatcher_observer;
   driver_runtime::Dispatcher* unsync_dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
-                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0, driver, &loop_,
+                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", "", driver, &loop_,
                        dispatcher_observer.fdf_observer(), &unsync_dispatcher));
 
   // Make calls reentrant so that the callback will be queued on the async loop.
@@ -592,7 +592,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
   DispatcherShutdownObserver dispatcher_observer;
   driver_runtime::Dispatcher* unsync_dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
-                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0, driver, &loop_,
+                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", "", driver, &loop_,
                        dispatcher_observer.fdf_observer(), &unsync_dispatcher));
 
   // Make calls reentrant so that any callback will be queued on the async loop.
@@ -1010,7 +1010,7 @@ void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel s
   auto observer = std::make_unique<ChannelTest::DispatcherShutdownObserver>();
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
-                       0, "scheduler_role", 0, reinterpret_cast<void*>(&fake_driver), process_loop,
+                       0, "scheduler_role", "", reinterpret_cast<void*>(&fake_driver), process_loop,
                        observer->fdf_observer(), &dispatcher));
   auto fdf_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher);
 
@@ -1151,7 +1151,7 @@ TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
   DispatcherShutdownObserver dispatcher_observer;
   driver_runtime::Dispatcher* allow_sync_calls_dispatcher;
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
-                       FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "", 0, driver, &loop_,
+                       FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "", "", driver, &loop_,
                        dispatcher_observer.fdf_observer(), &allow_sync_calls_dispatcher));
 
   auto shutdown = fit::defer([&]() {

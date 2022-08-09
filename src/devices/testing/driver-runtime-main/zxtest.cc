@@ -16,8 +16,8 @@ __EXPORT int main(int argc, char** argv) {
   setlinebuf(stdout);
   const void* driver = reinterpret_cast<void*>(0x12345678);
   fdf_internal_push_driver(driver);
-  auto dispatcher =
-      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, [](fdf_dispatcher_t*) {});
+  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+                                            "driver-runtime-test-main", [](fdf_dispatcher_t*) {});
   fdf_internal_pop_driver();
   if (dispatcher.is_error()) {
     return dispatcher.status_value();

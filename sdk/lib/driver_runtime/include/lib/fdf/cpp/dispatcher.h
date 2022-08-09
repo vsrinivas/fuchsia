@@ -30,12 +30,13 @@ namespace fdf {
 //
 //  void Driver::Start() {
 //    // TODO(fxb/85946): update this once scheduler_role is supported.
-//    const char* scheduler_role = "";
+//    const std::string_view scheduler_role = "";
+//    const std::string_view name = "MyDriver";
 //
 //    auto shutdown_handler = [&]() {
 //      OnDispatcherShutdown();
 //    };
-//    auto dispatcher = fdf::Dispatcher::Create(0, shutdown_handler, scheduler_role);
+//    auto dispatcher = fdf::Dispatcher::Create(0, name, shutdown_handler, scheduler_role);
 //
 //    fdf::ChannelRead channel_read;
 //    ...
@@ -56,6 +57,9 @@ class Dispatcher {
   // |options| provides configuration for the dispatcher.
   // See also |FDF_DISPATCHER_OPTION_UNSYNCHRONIZED| and |FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS|.
   //
+  // |name| is reported via diagnostics. It is similar to setting the name of a thread. Names longer
+  // than `ZX_MAX_NAME_LEN` may be truncated.
+  //
   // |scheduler_role| is a hint. It may or not impact the priority the work scheduler against the
   // dispatcher is handled at. It may or may not impact the ability for other drivers to share
   // zircon threads with the dispatcher.
@@ -65,7 +69,8 @@ class Dispatcher {
   // (and unmodified) until the handler runs.
   //
   // This must be called from a thread managed by the driver runtime.
-  static zx::status<Dispatcher> Create(uint32_t options, ShutdownHandler shutdown_handler,
+  static zx::status<Dispatcher> Create(uint32_t options, cpp17::string_view name,
+                                       ShutdownHandler shutdown_handler,
                                        cpp17::string_view scheduler_role = {}) {
     // We need to create an additional shutdown context in addition to the fdf::Dispatcher
     // object, as the fdf::Dispatcher may be destructed before the shutdown handler
@@ -73,9 +78,9 @@ class Dispatcher {
     auto dispatcher_shutdown_context =
         std::make_unique<DispatcherShutdownContext>(std::move(shutdown_handler));
     fdf_dispatcher_t* dispatcher;
-    zx_status_t status =
-        fdf_dispatcher_create(options, scheduler_role.data(), scheduler_role.size(),
-                              dispatcher_shutdown_context->observer(), &dispatcher);
+    zx_status_t status = fdf_dispatcher_create(
+        options, name.data(), name.size(), scheduler_role.data(), scheduler_role.size(),
+        dispatcher_shutdown_context->observer(), &dispatcher);
     if (status != ZX_OK) {
       return zx::error(status);
     }
