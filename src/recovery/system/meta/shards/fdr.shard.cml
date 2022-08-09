@@ -4,16 +4,7 @@
 
 // This optional shard supports a vendor specific component that implements `fuchsia.recovery.policy.FactoryReset`
 {
-    children: [
-        {
-            name: "managed_recovery_service",
-            url: "fuchsia-pkg://fuchsia.com/managed_recovery_service#meta/managed_recovery_service.cm",
-        },
-    ],
     use: [
-        {
-            protocol: "fuchsia.recovery.policy.FactoryReset",
-            from: "#managed_recovery_service",
-        },
+        { protocol: "fuchsia.recovery.policy.FactoryReset" },
     ],
 }
