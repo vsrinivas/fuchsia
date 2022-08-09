@@ -96,13 +96,23 @@ pub enum LocalAddressError {
     #[error("Address in use")]
     AddressInUse,
 
-    /// The requested address requires a zone.
-    #[error("address requires a zone")]
-    AddressRequiresZone,
+    /// The address cannot be used because of its zone.
+    ///
+    /// TODO(https://fxbug.dev/103426): Make this an IP socket error once UDP
+    /// sockets contain IP sockets.
+    #[error("{}", _0)]
+    Zone(#[from] ZonedAddressError),
+}
 
-    /// The zone for an address cannot be updated.
-    #[error("zone cannot be changed")]
-    ZoneCannotBeChanged,
+/// Indicates a problem related to an address with a zone.
+#[derive(Copy, Clone, Debug, Error, Eq, PartialEq)]
+pub enum ZonedAddressError {
+    /// The address scope requires a zone but didn't have one.
+    #[error("the address requires a zone but didn't have one")]
+    RequiredZoneNotProvided,
+    /// The address has a zone that doesn't match an existing device constraint.
+    #[error("the socket's device does not match the zone")]
+    DeviceZoneMismatch,
 }
 
 // TODO(joshlf): Once we support a more general model of sockets in which UDP

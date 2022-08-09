@@ -38,8 +38,8 @@ use netstack3_core::{
     send_udp_conn, send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port,
     set_unbound_udp_device, BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext,
     BufferUdpStateNonSyncContext, Ctx, IdMap, IdMapCollection, IdMapCollectionKey,
-    IpDeviceIdContext, IpExt, IpSockCreationError, IpSockSendError, LocalAddressError,
-    NonSyncContext, SyncCtx, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
+    IpDeviceIdContext, IpExt, IpSockSendError, LocalAddressError, NonSyncContext, SyncCtx,
+    TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext,
     UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
     UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
 };
@@ -56,7 +56,8 @@ use thiserror::Error;
 use crate::bindings::{
     devices::Devices,
     util::{
-        DeviceNotFoundError, SocketAddressError, TryFromFidlWithContext, TryIntoFidlWithContext,
+        DeviceNotFoundError, SocketAddressError, TryFromFidlWithContext,
+        TryIntoCoreWithContext as _, TryIntoFidlWithContext,
     },
     CommonInfo, Lockable, LockableContext,
 };
@@ -221,7 +222,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::UnboundId,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError>;
 
@@ -237,7 +238,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::ListenerId,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)>;
 
@@ -247,7 +248,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::ConnId,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ReconnectConnError, Self::ConnId)>;
 
@@ -376,8 +377,8 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
 {
     type CreateConnError = UdpSockCreationError;
     type CreateListenerError = LocalAddressError;
-    type ConnectListenerError = IpSockCreationError;
-    type ReconnectConnError = IpSockCreationError;
+    type ConnectListenerError = UdpConnectListenerError;
+    type ReconnectConnError = UdpConnectListenerError;
     type SetSocketDeviceError = LocalAddressError;
     type LocalIdentifier = NonZeroU16;
     type RemoteIdentifier = NonZeroU16;
@@ -390,7 +391,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::UnboundId,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
         connect_udp(sync_ctx, ctx, id, remote_ip, remote_id)
@@ -410,7 +411,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::ListenerId,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)> {
         connect_udp_listener(sync_ctx, ctx, id, remote_ip, remote_id)
@@ -424,7 +425,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::ConnId,
-        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ReconnectConnError, Self::ConnId)> {
         reconnect_udp(sync_ctx, ctx, id, remote_ip, remote_id)
@@ -841,11 +842,13 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         sync_ctx: &mut SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         id: Self::UnboundId,
-        remote_addr: SpecifiedAddr<I::Addr>,
+        remote_addr: ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, Self::CreateConnError> {
         let IcmpRemoteIdentifier {} = remote_id;
-        I::new_icmp_connection(sync_ctx, ctx, id, remote_addr)
+        // TODO(https://fxbug.dev/105494): Handle scoped addresses correctly.
+        let (remote_ip, _zone): (_, Option<_>) = remote_addr.into_addr_zone();
+        I::new_icmp_connection(sync_ctx, ctx, id, remote_ip)
     }
 
     fn listen_on_unbound(
@@ -862,7 +865,7 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _sync_ctx: &mut SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
-        _remote_ip: SpecifiedAddr<I::Addr>,
+        _remote_ip: ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         _remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ListenerId)> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -880,7 +883,7 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _sync_ctx: &mut SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
-        _remote_ip: SpecifiedAddr<I::Addr>,
+        _remote_ip: ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         _remote_id: Self::RemoteIdentifier,
     ) -> Result<Self::ConnId, (Self::ConnectListenerError, Self::ConnId)> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -2095,6 +2098,18 @@ where
     SC: RequestHandlerContext<I, T>,
     SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+    Option<
+        ZonedAddr<
+            I::Addr,
+            <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                I,
+            >>::DeviceId,
+        >,
+    >: TryFromFidlWithContext<I::SocketAddress, Error = SocketAddressError>,
+            <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                I,
+            >>::DeviceId:
+            TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone>,
 {
     /// Handles a [POSIX socket connect request].
     ///
@@ -2104,12 +2119,11 @@ where
         trace!("connect sockaddr: {:?}", sockaddr);
         let remote_port =
             T::RemoteIdentifier::from_u16(sockaddr.port()).ok_or(fposix::Errno::Econnrefused)?;
-
-        let remote_addr = sockaddr
-            .get_specified_addr()
-            // Emulate Linux, which was emulating BSD, by treating the unspecified
-            // remote address as localhost.
-            .unwrap_or(I::LOOPBACK_ADDRESS);
+        let remote_addr: Option<ZonedAddr<_, _>> = sockaddr.try_into_core_with_ctx(&self.ctx.non_sync_ctx).
+        map_err(IntoErrno::into_errno)?;
+        // Emulate Linux, which was emulating BSD, by treating the unspecified
+        // remote address as localhost.
+        let remote_addr = remote_addr.unwrap_or(ZonedAddr::Unzoned(I::LOOPBACK_ADDRESS));
 
         let conn_id = match self.get_state().info.state {
             SocketState::Unbound { unbound_id } => {
@@ -2199,19 +2213,6 @@ where
     ///
     /// [POSIX socket bind request]: fposix_socket::SynchronousDatagramSocketRequest::Bind
     fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno>
-    where
-        Option<
-            ZonedAddr<
-                I::Addr,
-                <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
-                    I,
-                >>::DeviceId,
-            >,
-        >: TryFromFidlWithContext<I::SocketAddress, Error = SocketAddressError>,
-                <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
-                    I,
-                >>::DeviceId:
-                TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone>,
     {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("bind sockaddr: {:?}", sockaddr);
@@ -2500,7 +2501,8 @@ where
     <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId:
         IdMapCollectionKey
             + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
-            + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
+            + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>
+            + TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx:
         AsRef<
             Devices<
@@ -2509,6 +2511,14 @@ where
                 >>::DeviceId,
             >,
         >,
+    Option<
+        ZonedAddr<
+            I::Addr,
+            <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                I,
+            >>::DeviceId,
+        >,
+    >: TryFromFidlWithContext<I::SocketAddress, Error = SocketAddressError>,
 {
     fn send_msg(
         &mut self,

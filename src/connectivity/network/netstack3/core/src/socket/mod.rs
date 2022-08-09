@@ -17,7 +17,10 @@ use derivative::Derivative;
 
 use crate::{
     data_structures::{
-        socketmap::{Entry, IterShadows, SocketMap, Tagged},
+        id_map::{Entry as IdMapEntry, OccupiedEntry as IdMapOccupiedEntry},
+        socketmap::{
+            Entry, IterShadows, OccupiedEntry as SocketMapOccupiedEntry, SocketMap, Tagged,
+        },
         IdMap,
     },
     error::ExistsError,
@@ -301,6 +304,11 @@ pub(crate) trait SocketTypeStateMut<'a> {
     type State;
     type SharingState;
     type Addr;
+    type Entry: SocketTypeStateEntry<
+        State = Self::State,
+        SharingState = Self::SharingState,
+        Addr = Self::Addr,
+    >;
 
     fn get_by_id_mut(
         self,
@@ -314,13 +322,30 @@ pub(crate) trait SocketTypeStateMut<'a> {
         sharing_state: Self::SharingState,
     ) -> Result<Self::Id, (InsertError, Self::State, Self::SharingState)>;
 
-    fn remove(self, id: &Self::Id) -> Option<(Self::State, Self::SharingState, Self::Addr)>;
+    fn entry(self, id: &Self::Id) -> Option<Self::Entry>;
+
+    fn remove(self, id: &Self::Id) -> Option<(Self::State, Self::SharingState, Self::Addr)>
+    where
+        Self: Sized,
+    {
+        self.entry(id).map(SocketTypeStateEntry::remove)
+    }
 
     fn try_update_addr(
         self,
         id: &Self::Id,
         new_addr: impl FnOnce(Self::Addr) -> Self::Addr,
     ) -> Result<(), ExistsError>;
+}
+
+pub(crate) trait SocketTypeStateEntry {
+    type State;
+    type SharingState;
+    type Addr;
+
+    fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr);
+
+    fn remove(self) -> (Self::State, Self::SharingState, Self::Addr);
 }
 
 /// View struct over one type of sockets in a [`BoundSocketMap`].
@@ -374,6 +399,12 @@ where
     }
 }
 
+struct SocketStateEntry<'a, IdV, A: Eq + Hash, S: Tagged<A>, AddrState, Convert> {
+    id_entry: IdMapOccupiedEntry<'a, usize, IdV>,
+    addr_entry: SocketMapOccupiedEntry<'a, A, S>,
+    _marker: PhantomData<(AddrState, Convert)>,
+}
+
 impl<
         'a,
         State,
@@ -398,6 +429,14 @@ where
     type State = State;
     type SharingState = AddrState::SharingState;
     type Addr = Addr;
+    type Entry = SocketStateEntry<
+        'a,
+        (State, AddrState::SharingState, Addr),
+        AddrVec<A>,
+        Bound<S>,
+        AddrState,
+        Convert,
+    >;
 
     fn get_by_id_mut(
         self,
@@ -451,27 +490,18 @@ where
         }
     }
 
-    fn remove(self, id: &Self::Id) -> Option<(Self::State, Self::SharingState, Self::Addr)> {
+    fn entry(self, id: &Self::Id) -> Option<Self::Entry> {
         let Self(id_to_sock, addr_to_state, _) = self;
-        id_to_sock.remove(id.clone().into()).map(move |(state, tag_state, addr)| {
-            let mut entry = match addr_to_state.entry(Convert::to_addr_vec(&addr)) {
-                Entry::Vacant(_) => unreachable!("state is inconsistent"),
-                Entry::Occupied(o) => o,
-            };
-            match entry.map_mut(|value| {
-                let value = match Convert::from_bound_mut(value) {
-                    Some(value) => value,
-                    None => unreachable!("found {:?} for address {:?}", value, addr),
-                };
-                value.remove_by_id(id.clone())
-            }) {
-                RemoveResult::Success => (),
-                RemoveResult::IsLast => {
-                    let _: Bound<S> = entry.remove();
-                }
-            }
-            (state, tag_state, addr)
-        })
+        let id_entry = match id_to_sock.entry(id.clone().into()) {
+            IdMapEntry::Vacant(_) => return None,
+            IdMapEntry::Occupied(o) => o,
+        };
+        let (_, _, addr): &(Self::State, Self::SharingState, _) = id_entry.get();
+        let addr_entry = match addr_to_state.entry(Convert::to_addr_vec(addr)) {
+            Entry::Vacant(_) => unreachable!("state is inconsistent"),
+            Entry::Occupied(o) => o,
+        };
+        Some(SocketStateEntry { id_entry, addr_entry, _marker: PhantomData::default() })
     }
 
     fn try_update_addr(
@@ -513,6 +543,50 @@ where
         *addr = new_addr;
 
         Ok(())
+    }
+}
+
+impl<
+        'a,
+        State,
+        SharingState,
+        Addr: Debug,
+        AddrState: SocketMapAddrStateSpec,
+        Convert: ConvertSocketTypeState<A, S, Addr, AddrState>,
+        A: SocketMapAddrSpec,
+        S: SocketMapStateSpec,
+    > SocketTypeStateEntry
+    for SocketStateEntry<'a, (State, SharingState, Addr), AddrVec<A>, Bound<S>, AddrState, Convert>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    AddrState::Id: From<usize>,
+{
+    type State = State;
+    type SharingState = SharingState;
+    type Addr = Addr;
+
+    fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr) {
+        let Self { id_entry, addr_entry: _, _marker } = self;
+        id_entry.get()
+    }
+
+    fn remove(self) -> (Self::State, Self::SharingState, Self::Addr) {
+        let Self { id_entry, mut addr_entry, _marker } = self;
+        let id = *id_entry.key();
+        let (state, tag_state, addr) = id_entry.remove();
+        match addr_entry.map_mut(|value| {
+            let value = match Convert::from_bound_mut(value) {
+                Some(value) => value,
+                None => unreachable!("found {:?} for address {:?}", value, addr),
+            };
+            value.remove_by_id(id.clone().into())
+        }) {
+            RemoveResult::Success => (),
+            RemoveResult::IsLast => {
+                let _: Bound<S> = addr_entry.remove();
+            }
+        }
+        (state, tag_state, addr)
     }
 }
 
@@ -710,6 +784,7 @@ where
 mod tests {
     use alloc::{collections::HashSet, vec, vec::Vec};
 
+    use assert_matches::assert_matches;
     use net_declare::net_ip_v4;
     use net_types::{ip::Ipv4Addr, SpecifiedAddr};
 
@@ -1070,5 +1145,15 @@ mod tests {
         *val = 2;
 
         assert_eq!(map.conns_mut().remove(&conn_id), Some((2, 'a', addr)));
+    }
+
+    #[test]
+    fn nonexistent_conn_entry() {
+        let mut map = FakeBoundSocketMap::default();
+        let addr = CONN_ADDR;
+        let conn_id = map.conns_mut().try_insert(addr.clone(), 0, 'a').expect("failed to insert");
+        assert_matches!(map.conns_mut().remove(&conn_id), Some((0, 'a', CONN_ADDR)));
+
+        assert!(map.conns_mut().entry(&conn_id).is_none());
     }
 }

@@ -42,7 +42,7 @@ use crate::{
         socketmap::{IterShadows as _, SocketMap, Tagged as _},
         IdMapCollectionKey,
     },
-    error::{ExistsError, LocalAddressError},
+    error::{ExistsError, LocalAddressError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
         socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket},
@@ -61,7 +61,7 @@ use crate::{
             PosixSharingOptions, PosixSocketStateSpec, ToPosixSharingOptions,
         },
         AddrVec, Bound, BoundSocketMap, InsertError, SocketAddrType, SocketMapAddrSpec,
-        SocketTypeState as _, SocketTypeStateMut as _,
+        SocketTypeState as _, SocketTypeStateEntry as _, SocketTypeStateMut as _,
     },
     sync::RwLock,
 };
@@ -1375,15 +1375,28 @@ pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpUnboundId<I>,
-    remote_ip: SpecifiedAddr<I::Addr>,
+    remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
     // First remove the unbound socket being promoted.
-    let UnboundSocketState { device, sharing, multicast_memberships } = sync_ctx.with_sockets_mut(
-        |UdpSockets(DatagramSockets { bound: _, unbound, lazy_port_alloc: _ })| {
-            unbound.remove(id.into()).unwrap_or_else(|| panic!("unbound socket {:?} not found", id))
-        },
-    );
+    let (remote_ip, device, sharing, multicast_memberships) = sync_ctx
+        .with_sockets_mut(
+            |UdpSockets(DatagramSockets { bound: _, unbound, lazy_port_alloc: _ })| {
+                let occupied = match unbound.entry(id.into()) {
+                    IdMapEntry::Vacant(_) => panic!("unbound socket {:?} not found", id),
+                    IdMapEntry::Occupied(o) => o,
+                };
+                let UnboundSocketState { device, sharing: _, multicast_memberships: _ } =
+                    occupied.get();
+
+                let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, *device)?;
+
+                let UnboundSocketState { device: _, sharing, multicast_memberships } =
+                    occupied.remove();
+                Ok((remote_ip, socket_device, sharing, multicast_memberships))
+            },
+        )
+        .map_err(UdpSockCreationError::Zone)?;
 
     create_udp_conn(
         sync_ctx,
@@ -1534,7 +1547,7 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
         };
 
         if device != &device_id && addrs.any(must_have_zone) {
-            return Err(LocalAddressError::ZoneCannotBeChanged);
+            return Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch));
         }
         drop(addrs);
 
@@ -1692,6 +1705,17 @@ pub fn set_udp_multicast_membership<
     .map_err(Into::into)
 }
 
+/// Error returned when [`connect_udp_listener`] fails.
+#[derive(Debug, Error, Eq, PartialEq)]
+pub enum UdpConnectListenerError {
+    /// An error was encountered creating an IP socket.
+    #[error("{}", _0)]
+    Ip(#[from] IpSockCreationError),
+    /// There was a problem with the provided address relating to its zone.
+    #[error("{}", _0)]
+    Zone(#[from] ZonedAddressError),
+}
+
 /// Connects an already existing UDP socket to a remote destination.
 ///
 /// Replaces a previously created UDP socket indexed by the [`UdpListenerId`]
@@ -1706,20 +1730,24 @@ pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpListenerId<I>,
-    remote_ip: SpecifiedAddr<I::Addr>,
+    remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
     remote_port: NonZeroU16,
-) -> Result<UdpConnId<I>, (IpSockCreationError, UdpListenerId<I>)> {
-    let (addr, multicast_memberships, sharing) = sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
-        let (state, sharing, addr) =
-            bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
+) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpListenerId<I>)> {
+    let (ip, remote_ip, device, original_addr, multicast_memberships, sharing) = sync_ctx
+        .with_sockets_mut(|state| {
+            let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
+            let entry = bound.listeners_mut().entry(&id).expect("Invalid UDP listener ID");
+            let (_, _, ListenerAddr { ip, device }): (ListenerState<_, _>, PosixSharingOptions, _) =
+                *entry.get();
 
-        let ListenerState { multicast_memberships } = state;
-        (addr, multicast_memberships, sharing)
-    });
+            let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, device)?;
 
-    let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
-        addr;
+            let (ListenerState { multicast_memberships }, sharing, original_addr) = entry.remove();
+            Ok((ip, remote_ip, socket_device, original_addr, multicast_memberships, sharing))
+        })
+        .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
+
+    let ListenerIpAddr { addr: local_ip, identifier: local_port } = ip;
 
     create_udp_conn(
         sync_ctx,
@@ -1732,19 +1760,23 @@ pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
         sharing,
         multicast_memberships,
     )
-    .map_err(|(e, multicast_memberships)| match e {
-        UdpSockCreationError::CouldNotAllocateLocalPort => {
-            unreachable!("local port is already provided")
-        }
-        UdpSockCreationError::SockAddrConflict => unreachable!("the socket was just vacated"),
-        UdpSockCreationError::Ip(ip) => sync_ctx.with_sockets_mut(|state| {
+    .map_err(|(e, multicast_memberships)| {
+        let e = match e {
+            UdpSockCreationError::CouldNotAllocateLocalPort => {
+                unreachable!("local port is already provided")
+            }
+            UdpSockCreationError::SockAddrConflict => unreachable!("the socket was just vacated"),
+            UdpSockCreationError::Ip(ip) => ip.into(),
+            UdpSockCreationError::Zone(e) => UdpConnectListenerError::Zone(e),
+        };
+        sync_ctx.with_sockets_mut(|state| {
             let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
             let listener = bound
                 .listeners_mut()
-                .try_insert(addr, ListenerState { multicast_memberships }, sharing)
+                .try_insert(original_addr, ListenerState { multicast_memberships }, sharing)
                 .expect("reinserting just-removed listener failed");
-            (ip, listener)
-        }),
+            (e, listener)
+        })
     })
 }
 
@@ -1792,15 +1824,25 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpConnId<I>,
-    remote_ip: SpecifiedAddr<I::Addr>,
+    remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
     remote_port: NonZeroU16,
-) -> Result<UdpConnId<I>, (IpSockCreationError, UdpConnId<I>)> {
-    let (addr, conn_state, sharing) = sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
-        let (state, sharing, addr) = bound.conns_mut().remove(&id).expect("Invalid UDP conn ID");
-        (addr, state, sharing)
-    });
-    let ConnAddr { ip: ConnIpAddr { local: (local_ip, local_port), remote: _ }, device } = addr;
+) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpConnId<I>)> {
+    let ((local_ip, local_port), remote_ip, device, original_addr, conn_state, sharing) = sync_ctx
+        .with_sockets_mut(|state| {
+            let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
+            let entry = bound.conns_mut().entry(&id).expect("Invalid UDP conn ID");
+            let (_, _, ConnAddr { ip: ConnIpAddr { local, remote: _ }, device }): (
+                ConnState<_, _, _>,
+                PosixSharingOptions,
+                _,
+            ) = *entry.get();
+
+            let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, device)?;
+
+            let (state, sharing, original_addr) = entry.remove();
+            Ok((local, remote_ip, socket_device, original_addr, state, sharing))
+        })
+        .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
     let ConnState { multicast_memberships, socket } = conn_state;
 
     create_udp_conn(
@@ -1814,22 +1856,26 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
         sharing,
         multicast_memberships,
     )
-    .map_err(|(e, multicast_memberships)| match e {
-        UdpSockCreationError::CouldNotAllocateLocalPort => {
-            unreachable!("local port is already provided")
-        }
-        UdpSockCreationError::SockAddrConflict => unreachable!("the socket was just vacated"),
-        UdpSockCreationError::Ip(ip) => sync_ctx.with_sockets_mut(|state| {
-            // Restore the original socket if creation of the new socket fails.
+    .map_err(|(e, multicast_memberships)| {
+        let e = match e {
+            UdpSockCreationError::CouldNotAllocateLocalPort => {
+                unreachable!("local port is already provided")
+            }
+            UdpSockCreationError::SockAddrConflict => unreachable!("the socket was just vacated"),
+            UdpSockCreationError::Ip(ip) => ip.into(),
+            UdpSockCreationError::Zone(e) => UdpConnectListenerError::Zone(e),
+        };
+        // Restore the original socket if creation of the new socket fails.
+        sync_ctx.with_sockets_mut(|state| {
             let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
             let conn = bound
                 .conns_mut()
-                .try_insert(addr, ConnState { multicast_memberships, socket }, sharing)
+                .try_insert(original_addr, ConnState { multicast_memberships, socket }, sharing)
                 .unwrap_or_else(|(e, _, _): (_, ConnState<_, _, _>, PosixSharingOptions)| {
                     unreachable!("reinserting just-removed connected socket failed: {:?}", e)
                 });
-            (ip, conn)
-        }),
+            (e, conn)
+        })
     })
 }
 
@@ -1871,6 +1917,35 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCon
 
 fn must_have_zone<A: IpAddress>(addr: &SpecifiedAddr<A>) -> bool {
     addr.scope().can_have_zone() && !addr.get().is_loopback()
+}
+
+/// Returns the address and device that should be used for a socket.
+///
+/// Given an address for a socket and an optional device that the socket is
+/// already bound on, returns the address and device that should be used
+/// for the socket. If `addr` and `device` require inconsistent devices,
+/// or if `addr` requires a zone but there is none specified (by `addr` or
+/// `device`), an error is returned.
+fn resolve_addr_with_device<A: IpAddress, D: PartialEq>(
+    addr: ZonedAddr<A, D>,
+    device: Option<D>,
+) -> Result<(SpecifiedAddr<A>, Option<D>), ZonedAddressError> {
+    let (addr, zone) = addr.into_addr_zone();
+    let device = match (zone, device) {
+        (Some(zone), Some(device)) => {
+            (zone == device).then_some(Some(device)).ok_or(ZonedAddressError::DeviceZoneMismatch)?
+        }
+        (Some(zone), None) => Some(zone),
+        (None, Some(device)) => Some(device),
+        (None, None) => {
+            if must_have_zone(&addr) {
+                return Err(ZonedAddressError::RequiredZoneNotProvided);
+            } else {
+                None
+            }
+        }
+    };
+    Ok((addr, device))
 }
 
 /// Use an existing socket to listen for incoming UDP packets.
@@ -1926,22 +2001,8 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I,
                     // Extract the specified address and the device. The device
                     // is either the one from the address or the one to which
                     // the socket was previously bound.
-                    let (addr, device) = match addr {
-                        ZonedAddr::Unzoned(addr) => {
-                            if must_have_zone(&addr) {
-                                return Err(LocalAddressError::AddressRequiresZone);
-                            } else {
-                                (addr, *device)
-                            }
-                        }
-                        ZonedAddr::Zoned(addr) => {
-                            let (addr, zone) = addr.into_specified_addr_zone();
-                            if device.map_or(false, |device| device != zone) {
-                                return Err(LocalAddressError::AddressMismatch);
-                            }
-                            (addr, Some(zone))
-                        }
-                    };
+                    let (addr, device) = resolve_addr_with_device(addr, *device)?;
+
                     // Binding to multicast addresses is allowed regardless.
                     // Other addresses can only be bound to if they are assigned
                     // to the device.
@@ -2039,6 +2100,9 @@ pub enum UdpSockCreationError {
     /// existing UDP socket.
     #[error("the socket's IP address and port conflict with an existing socket")]
     SockAddrConflict,
+    /// There was a problem with the provided address relating to its zone.
+    #[error("{}", _0)]
+    Zone(#[from] ZonedAddressError),
 }
 
 #[cfg(test)]
@@ -2654,7 +2718,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             listener,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("connect_udp_listener failed");
@@ -2721,7 +2785,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             NonZeroU16::new(200).unwrap(),
         )
         .unwrap_err();
@@ -2791,7 +2855,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             NonZeroU16::new(100).unwrap(),
         )
         .unwrap_err();
@@ -2841,7 +2905,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             socket,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             nonzero!(200u16),
         )
         .expect("connect should succeed");
@@ -2908,13 +2972,14 @@ mod tests {
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 listener,
-                remote_ip,
+                ZonedAddr::Unzoned(remote_ip),
                 nonzero!(1234u16)
             ),
             Err((
+                UdpConnectListenerError::Ip(
                 IpSockCreationError::Route(IpSockRouteError::Unroutable(
                     IpSockUnroutableError::NoRouteToRemoteAddr
-                )),
+                ))),
                 listener
             )) => listener
         );
@@ -2976,7 +3041,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             bound,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("connect was expected to succeed");
@@ -2985,7 +3050,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             socket,
-            other_remote_ip,
+            ZonedAddr::Unzoned(other_remote_ip),
             other_remote_port,
         )
         .expect("reconnect_udp should succeed");
@@ -3022,19 +3087,29 @@ mod tests {
         )
         .expect("listen should succeed");
 
-        let socket =
-            connect_udp_listener(&mut sync_ctx, &mut non_sync_ctx, bound, remote_ip, REMOTE_PORT)
-                .expect("connect was expected to succeed");
+        let socket = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            bound,
+            ZonedAddr::Unzoned(remote_ip),
+            REMOTE_PORT,
+        )
+        .expect("connect was expected to succeed");
         let other_remote_port = NonZeroU16::new(300).unwrap();
         let (error, socket) = reconnect_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
             socket,
-            other_remote_ip,
+            ZonedAddr::Unzoned(other_remote_ip),
             other_remote_port,
         )
         .expect_err("reconnect_udp should fail");
-        assert_matches!(error, IpSockCreationError::Route(IpSockRouteError::Unroutable(_)));
+        assert_matches!(
+            error,
+            UdpConnectListenerError::Ip(IpSockCreationError::Route(IpSockRouteError::Unroutable(
+                _
+            )))
+        );
 
         assert_eq!(
             get_udp_conn_info(&sync_ctx, &mut non_sync_ctx, socket),
@@ -3188,7 +3263,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("connect_udp failed");
@@ -3247,7 +3322,7 @@ mod tests {
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 listen,
-                remote_ip,
+                ZonedAddr::Unzoned(remote_ip),
                 remote_port_a,
             )
             .expect("connect_udp_listener failed")
@@ -3589,7 +3664,7 @@ mod tests {
                 sync_ctx,
                 &mut non_sync_ctx,
                 listen,
-                I::get_other_remote_ip_address(1),
+                ZonedAddr::Unzoned(I::get_other_remote_ip_address(1)),
                 REMOTE_PORT,
             )
             .expect("connect should succeed");
@@ -3882,7 +3957,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             listener,
-            remote_ip::<I>(),
+            ZonedAddr::Unzoned(remote_ip::<I>()),
             remote_port,
         )
         .expect("connect_udp_listener failed");
@@ -3926,7 +4001,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            ip_a,
+            ZonedAddr::Unzoned(ip_a),
             NonZeroU16::new(1010).unwrap(),
         )
         .expect("connect_udp failed");
@@ -3935,7 +4010,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            ip_b,
+            ZonedAddr::Unzoned(ip_b),
             NonZeroU16::new(1010).unwrap(),
         )
         .expect("connect_udp failed");
@@ -3944,7 +4019,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            ip_a,
+            ZonedAddr::Unzoned(ip_a),
             NonZeroU16::new(2020).unwrap(),
         )
         .expect("connect_udp failed");
@@ -3953,7 +4028,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            ip_a,
+            ZonedAddr::Unzoned(ip_a),
             NonZeroU16::new(1010).unwrap(),
         )
         .expect("connect_udp failed");
@@ -4058,7 +4133,7 @@ mod tests {
                     &mut sync_ctx,
                     &mut non_sync_ctx,
                     listener,
-                    remote_ip,
+                    ZonedAddr::Unzoned(remote_ip),
                     remote_port,
                 )
             })
@@ -4264,7 +4339,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             listener,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             remote_port,
         )
         .expect("connect_udp failed");
@@ -4416,7 +4491,7 @@ mod tests {
             sync_ctx,
             non_sync_ctx,
             unbound,
-            I::get_other_remote_ip_address(1),
+            ZonedAddr::Unzoned(I::get_other_remote_ip_address(1)),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("connect should succeed")
@@ -4636,7 +4711,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            I::get_other_remote_ip_address(1),
+            ZonedAddr::Unzoned(I::get_other_remote_ip_address(1)),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("connect_udp failed");
@@ -4688,7 +4763,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             listener,
-            remote_ip,
+            ZonedAddr::Unzoned(remote_ip),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("connect_udp_listener failed");
@@ -4768,7 +4843,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            remote_ip::<I>(),
+            ZonedAddr::Unzoned(remote_ip::<I>()),
             nonzero!(569u16),
         )
         .expect("connect failed");
@@ -4841,7 +4916,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            remote_ip::<I>(),
+            ZonedAddr::Unzoned(remote_ip::<I>()),
             NonZeroU16::new(200).unwrap(),
         )
         .expect("failed to connect");
@@ -4924,11 +4999,14 @@ mod tests {
             Some(ZonedAddr::Unzoned(bind_addr)),
             NonZeroU16::new(200),
         );
-        assert_eq!(result, Err(LocalAddressError::AddressRequiresZone));
+        assert_eq!(
+            result,
+            Err(LocalAddressError::Zone(ZonedAddressError::RequiredZoneNotProvided))
+        );
     }
 
     #[test_case(MultipleDevicesId::A, Ok(()); "matching")]
-    #[test_case(MultipleDevicesId::B, Err(LocalAddressError::AddressMismatch); "not matching")]
+    #[test_case(MultipleDevicesId::B, Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch)); "not matching")]
     fn test_listen_udp_ipv6_link_local_with_bound_device_set(
         zone_id: MultipleDevicesId,
         expected_result: Result<(), LocalAddressError>,
@@ -5006,10 +5084,10 @@ mod tests {
         assert_eq!(result, expected_result);
     }
 
-    #[test_case(None, Err(LocalAddressError::ZoneCannotBeChanged); "clear device")]
+    #[test_case(None, Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch)); "clear device")]
     #[test_case(Some(MultipleDevicesId::A), Ok(()); "set same device")]
     #[test_case(Some(MultipleDevicesId::B),
-                Err(LocalAddressError::ZoneCannotBeChanged); "change device")]
+                Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch)); "change device")]
     fn test_listen_udp_ipv6_listen_link_local_update_bound_device(
         new_device: Option<MultipleDevicesId>,
         expected_result: Result<(), LocalAddressError>,
@@ -5053,8 +5131,117 @@ mod tests {
         );
     }
 
+    #[test_case(None; "bind all IPs")]
+    #[test_case(Some(ZonedAddr::Unzoned(local_ip::<Ipv6>())); "bind unzoned")]
+    #[test_case(Some(ZonedAddr::Zoned(AddrAndZone::new(net_ip_v6!("fe80::1"),
+        MultipleDevicesId::A).unwrap())); "bind with same zone")]
+    fn test_udp_ipv6_connect_with_unzoned(
+        bound_addr: Option<ZonedAddr<Ipv6Addr, MultipleDevicesId>>,
+    ) where
+        MultiDeviceDummySyncCtx<Ipv6>: DummyDeviceSyncCtxBound<Ipv6, MultipleDevicesId>,
+        DummyIpSocketCtx<Ipv6, MultipleDevicesId>: DummyIpSocketCtxExt<Ipv6, MultipleDevicesId>,
+    {
+        let remote_ips = vec![remote_ip::<Ipv6>()];
+
+        let MultiDeviceDummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            MultiDeviceDummyCtx::with_sync_ctx(MultiDeviceDummySyncCtx::with_state(
+                DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new([
+                    DummyDeviceConfig {
+                        device: MultipleDevicesId::A,
+                        local_ips: vec![
+                            local_ip::<Ipv6>(),
+                            SpecifiedAddr::new(net_ip_v6!("fe80::1")).unwrap(),
+                        ],
+                        remote_ips: remote_ips.clone(),
+                    },
+                    DummyDeviceConfig {
+                        device: MultipleDevicesId::B,
+                        local_ips: vec![SpecifiedAddr::new(net_ip_v6!("fe80::2")).unwrap()],
+                        remote_ips: remote_ips.clone(),
+                    },
+                ])),
+            ));
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+
+        let listener = listen_udp::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            bound_addr,
+            Some(LOCAL_PORT),
+        )
+        .unwrap();
+
+        assert_matches!(
+            connect_udp_listener(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                listener,
+                ZonedAddr::Unzoned(remote_ip::<Ipv6>()),
+                REMOTE_PORT,
+            ),
+            Ok(_)
+        );
+    }
+
+    #[test_case(ZonedAddr::Zoned(AddrAndZone::new(net_ip_v6!("fe80::2"),
+        MultipleDevicesId::B).unwrap()),
+        Err(UdpConnectListenerError::Zone(ZonedAddressError::DeviceZoneMismatch));
+        "connect to different zone")]
+    #[test_case(ZonedAddr::Unzoned(SpecifiedAddr::new(net_ip_v6!("fe80::3")).unwrap()),
+        Ok(MultipleDevicesId::A); "connect implicit zone")]
+    fn test_udp_ipv6_bind_zoned(
+        remote_addr: ZonedAddr<Ipv6Addr, MultipleDevicesId>,
+        expected: Result<MultipleDevicesId, UdpConnectListenerError>,
+    ) {
+        let remote_ips = vec![SpecifiedAddr::new(net_ip_v6!("fe80::3")).unwrap()];
+
+        let MultiDeviceDummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            MultiDeviceDummyCtx::with_sync_ctx(MultiDeviceDummySyncCtx::with_state(
+                DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new([
+                    DummyDeviceConfig {
+                        device: MultipleDevicesId::A,
+                        local_ips: vec![SpecifiedAddr::new(net_ip_v6!("fe80::1")).unwrap()],
+                        remote_ips: remote_ips.clone(),
+                    },
+                    DummyDeviceConfig {
+                        device: MultipleDevicesId::B,
+                        local_ips: vec![SpecifiedAddr::new(net_ip_v6!("fe80::2")).unwrap()],
+                        remote_ips: remote_ips.clone(),
+                    },
+                ])),
+            ));
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+
+        let listener = listen_udp::<Ipv6, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Zoned(
+                AddrAndZone::new(net_ip_v6!("fe80::1"), MultipleDevicesId::A).unwrap(),
+            )),
+            Some(LOCAL_PORT),
+        )
+        .unwrap();
+
+        let result = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
+            remote_addr,
+            REMOTE_PORT,
+        )
+        .map(|id: UdpConnId<_>| {
+            get_udp_bound_device(&sync_ctx, &mut non_sync_ctx, id.into()).unwrap()
+        })
+        .map_err(|(e, _id): (_, UdpListenerId<_>)| e);
+        assert_eq!(result, expected);
+    }
+
     #[ip_test]
-    fn test_listen_udp_ipv6_loopback_no_zone_is_required<I: Ip + TestIpExt>()
+    fn test_listen_udp_loopback_no_zone_is_required<I: Ip + TestIpExt>()
     where
         MultiDeviceDummySyncCtx<I>: DummyDeviceSyncCtxBound<I, MultipleDevicesId>,
         DummyIpSocketCtx<I, MultipleDevicesId>: DummyIpSocketCtxExt<I, MultipleDevicesId>,
@@ -5164,7 +5351,7 @@ mod tests {
                     sync_ctx,
                     non_sync_ctx,
                     listener,
-                    remote_ip::<I>(),
+                    ZonedAddr::Unzoned(remote_ip::<I>()),
                     NonZeroU16::new(4).unwrap(),
                 )
                 .unwrap(),

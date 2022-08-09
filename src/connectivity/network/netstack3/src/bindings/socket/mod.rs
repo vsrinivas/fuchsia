@@ -21,8 +21,8 @@ use net_types::{
 };
 use netstack3_core::{
     IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
-    LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
-    UdpSendListenerError, UdpSockCreationError,
+    LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpConnectListenerError,
+    UdpSendError, UdpSendListenerError, UdpSockCreationError, ZonedAddressError,
 };
 
 use crate::bindings::{
@@ -355,8 +355,7 @@ impl IntoErrno for LocalAddressError {
             | LocalAddressError::FailedToAllocateLocalPort => Errno::Eaddrnotavail,
             LocalAddressError::AddressMismatch => Errno::Einval,
             LocalAddressError::AddressInUse => Errno::Eaddrinuse,
-            LocalAddressError::AddressRequiresZone => Errno::Einval,
-            LocalAddressError::ZoneCannotBeChanged => Errno::Einval,
+            LocalAddressError::Zone(e) => e.into_errno(),
         }
     }
 }
@@ -445,8 +444,27 @@ impl IntoErrno for UdpSockCreationError {
     fn into_errno(self) -> Errno {
         match self {
             UdpSockCreationError::Ip(err) => err.into_errno(),
+            UdpSockCreationError::Zone(err) => err.into_errno(),
             UdpSockCreationError::CouldNotAllocateLocalPort => Errno::Eaddrnotavail,
             UdpSockCreationError::SockAddrConflict => Errno::Eaddrinuse,
+        }
+    }
+}
+
+impl IntoErrno for UdpConnectListenerError {
+    fn into_errno(self) -> Errno {
+        match self {
+            Self::Ip(err) => err.into_errno(),
+            Self::Zone(err) => err.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for ZonedAddressError {
+    fn into_errno(self) -> Errno {
+        match self {
+            Self::RequiredZoneNotProvided => Errno::Einval,
+            Self::DeviceZoneMismatch => Errno::Einval,
         }
     }
 }

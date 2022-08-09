@@ -56,7 +56,7 @@ pub use crate::{
     },
     error::{
         ExistsError, LocalAddressError, NetstackError, NotFoundError, RemoteAddressError,
-        SocketError,
+        SocketError, ZonedAddressError,
     },
     ip::{
         device::{
@@ -87,10 +87,10 @@ pub use crate::{
             remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
             set_bound_udp_device, set_udp_multicast_membership, set_udp_posix_reuse_port,
             set_unbound_udp_device, BufferUdpContext, BufferUdpStateContext,
-            BufferUdpStateNonSyncContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
-            UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-            UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext,
-            UdpUnboundId,
+            BufferUdpStateNonSyncContext, UdpBoundId, UdpConnId, UdpConnInfo,
+            UdpConnectListenerError, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
+            UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpStateContext,
+            UdpStateNonSyncContext, UdpUnboundId,
         },
         TransportStateBuilder,
     },
