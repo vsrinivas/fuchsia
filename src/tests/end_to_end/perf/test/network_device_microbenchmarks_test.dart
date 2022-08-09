@@ -17,6 +17,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'network-device-microbenchmarks',
         componentName: 'network-device-microbenchmarks.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile: 'fuchsia.network.device.txt');
   }, timeout: Timeout.none);
 }

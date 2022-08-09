@@ -17,6 +17,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'netstack3_benchmarks',
         componentName: 'netstack3_benchmarks.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.netstack3.core.txt');
   }, timeout: Timeout.none);
 }

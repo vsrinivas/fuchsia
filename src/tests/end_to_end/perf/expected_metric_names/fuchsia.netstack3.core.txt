@@ -1,0 +1,10 @@
+fuchsia.netstack3.core: ForwardIpv4/1024
+fuchsia.netstack3.core: ForwardIpv4/128
+fuchsia.netstack3.core: ForwardIpv4/256
+fuchsia.netstack3.core: ForwardIpv4/512
+fuchsia.netstack3.core: ForwardIpv4/64
+fuchsia.netstack3.core: TokenBucket/TryTake/AlmostEqualRate
+fuchsia.netstack3.core: TokenBucket/TryTake/DoubleRate
+fuchsia.netstack3.core: TokenBucket/TryTake/EqualRate
+fuchsia.netstack3.core: TokenBucket/TryTake/HalfRate
+fuchsia.netstack3.core: TokenBucket/TryTake/Slow

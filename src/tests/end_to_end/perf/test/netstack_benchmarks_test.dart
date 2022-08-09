@@ -17,7 +17,8 @@ void main() {
     await helper.runTestComponent(
         packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile: 'fuchsia.network.socket.loopback.txt');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_fast_udp', () async {
@@ -25,7 +26,8 @@ void main() {
     await helper.runTestComponent(
         packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks-with-fast-udp.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile: 'fuchsia.network.socket.loopback.fastudp.txt');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_netstack3', () async {
@@ -33,7 +35,9 @@ void main() {
     await helper.runTestComponent(
         packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks-with-netstack3.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile:
+            'fuchsia.network.socket.loopback.netstack3.txt');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_fake_netstack', () async {
@@ -41,7 +45,9 @@ void main() {
     await helper.runTestComponent(
         packageName: 'socket-benchmarks-tests',
         componentName: 'socket-benchmarks-with-fake-netstack.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile:
+            'fuchsia.network.socket.loopback.fake_netstack.txt');
   }, timeout: Timeout.none);
 
   test('udp_serde_benchmarks', () async {
@@ -49,6 +55,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'udp-serde-benchmarks',
         componentName: 'udp-serde-benchmarks.cm',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}',
+        expectedMetricNamesFile: 'fuchsia.network.udp_serde.txt');
   }, timeout: Timeout.none);
 }
