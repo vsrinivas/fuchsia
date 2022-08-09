@@ -16,6 +16,7 @@ mod list;
 mod serial;
 mod services;
 mod socat;
+mod vsockperf;
 mod wipe;
 
 #[fasync::run_singlethreaded]
@@ -72,6 +73,10 @@ async fn main() -> Result<(), Error> {
                 .context("Failed to connect to LinuxManager")?;
             wipe::handle_wipe(linux_manager).await
         }
+        SubCommands::VsockPerf(args) => match args.guest_type {
+            GuestType::Debian => vsockperf::run_micro_benchmark(args.guest_type).await,
+            _ => Err(anyhow!("Vsock Perf is not supported for '{}'", args.guest_type)),
+        },
         SubCommands::Socat(socat_args) => {
             let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_args.guest_type).await?;
             socat::handle_socat(vsock_endpoint, socat_args.port).await

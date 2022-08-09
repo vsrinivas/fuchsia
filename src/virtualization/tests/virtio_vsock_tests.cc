@@ -160,7 +160,7 @@ TYPED_TEST(VsockGuestTest, ConnectDisconnect) {
     this->cv_.wait(lock, [&] { return this->listen_complete_; });
   }
   std::string result;
-  EXPECT_EQ(this->RunUtil("virtio_vsock_test_util", {}, &result), ZX_OK);
+  EXPECT_EQ(this->RunUtil("virtio_vsock_test_util", {"integration_test"}, &result), ZX_OK);
 
   handle.wait();
 

@@ -82,6 +82,7 @@ pub enum SubCommands {
     Socat(SocatArgs),
     SocatListen(SocatListenArgs),
     Vsh(VshArgs),
+    VsockPerf(VsockPerfArgs),
     Wipe(WipeArgs),
 }
 
@@ -160,6 +161,15 @@ pub struct VshArgs {
 /// Clears the stateful data for the target guest. Currently only termina is supported.
 #[argh(subcommand, name = "wipe")]
 pub struct WipeArgs {
+    #[argh(positional)]
+    /// type of the guest
+    pub guest_type: GuestType,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Perform a vsock micro benchmark on the target guest. Only Debian is supported.
+#[argh(subcommand, name = "vsock-perf")]
+pub struct VsockPerfArgs {
     #[argh(positional)]
     /// type of the guest
     pub guest_type: GuestType,

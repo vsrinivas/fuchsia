@@ -24,7 +24,10 @@ rustc_binary("virtio_vsock_test_util") {
     source_root = "src/fuchsia_main.rs"
     sources = [ "src/fuchsia_main.rs" ]
   } else if (is_linux) {
-    deps = [ "//third_party/rust_crates:libc" ]
+    deps = [
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:libc",
+    ]
 
     source_root = "src/linux_main.rs"
     sources = [ "src/linux_main.rs" ]

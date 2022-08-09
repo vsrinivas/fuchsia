@@ -4,10 +4,38 @@
 
 #![deny(warnings)]
 
-use libc;
-use std::io::{Error, ErrorKind};
-use std::mem;
-use std::thread;
+use {
+    argh::FromArgs,
+    libc,
+    std::{
+        io::{Error, ErrorKind},
+        mem, thread,
+    },
+};
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Top-level command.
+pub struct Commands {
+    #[argh(subcommand)]
+    nested: SubCommands,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+enum SubCommands {
+    IntegrationTest(IntegrationTestArgs),
+    MicroBenchmark(MicroBenchmarkArgs),
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Run the test util in integration test mode.
+#[argh(subcommand, name = "integration_test")]
+struct IntegrationTestArgs {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Run the test util in micro benchmark mode (invoked by the guest tool).
+#[argh(subcommand, name = "micro_benchmark")]
+struct MicroBenchmarkArgs {}
 
 const VMADDR_CID_HOST: libc::c_uint = 2;
 const VMADDR_CID_ANY: libc::c_uint = std::u32::MAX;
@@ -150,7 +178,7 @@ fn spawn_server(
     Ok((fd, thread))
 }
 
-fn main() -> std::io::Result<()> {
+fn run_integration_test() -> std::io::Result<()> {
     let client_fd = VsockFd::open()?;
 
     // Register listeners early to avoid race conditions.
@@ -190,4 +218,308 @@ fn main() -> std::io::Result<()> {
 
     println!("PASS");
     Ok(())
+}
+
+fn run_latency_check(fd: &VsockFd) -> std::io::Result<()> {
+    // Read a page sized packet from the socket, and write it back as quickly as possible until
+    // the client closes the socket.
+    let mut buffer = [0u8; 4096];
+    loop {
+        let actual = fd.read(buffer.as_mut_ptr(), buffer.len())?;
+        if actual == 0 {
+            // EOF.
+            break;
+        } else if actual != buffer.len() as isize {
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                format!("expected to read {} bytes, but read {}", buffer.len(), actual),
+            ));
+        }
+
+        let result = fd.write(buffer.as_ptr(), buffer.len());
+        if let Err(e) = result {
+            if e.kind() == std::io::ErrorKind::BrokenPipe {
+                break;
+            } else {
+                return Err(Error::new(e.kind(), "failed to write to socket"));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// Read and write 128 MiB in 4 KiB chunks concurrently on a single connection.
+fn run_single_stream_bidirectional_round_trip(
+    data_fd: &VsockFd,
+    control_fd: &VsockFd,
+    count: u32,
+    magic: u8,
+) -> std::io::Result<()> {
+    // Send the magic byte when ready to start.
+    let magic_buf = [magic];
+    control_fd
+        .write(magic_buf.as_ptr(), magic_buf.len())
+        .map_err(|err| Error::new(err.kind(), "failed to write to control socket"))?;
+
+    let read_thread = {
+        let read_fd_clone = data_fd.clone();
+        thread::spawn(move || {
+            let mut buffer = [0u8; 4096]; // 4 KiB
+            let total_size = (1 << 20) * 128; // 128 MiB
+
+            for _ in 0..count {
+                let mut read_bytes_remaining = total_size;
+                while read_bytes_remaining > 0 {
+                    let read_segment = std::cmp::min(read_bytes_remaining, buffer.len());
+                    let actual = read_fd_clone.read(buffer.as_mut_ptr(), read_segment)?;
+                    if actual <= 0 {
+                        return Err(Error::new(ErrorKind::BrokenPipe, "Unexpected EOF"));
+                    }
+
+                    read_bytes_remaining -= actual as usize;
+                }
+            }
+
+            Ok(())
+        })
+    };
+
+    let write_thread = {
+        let write_fd_clone = data_fd.clone();
+        thread::spawn(move || {
+            let buffer = [0u8; 4096]; // 4 KiB
+            let total_size = (1 << 20) * 128; // 128 MiB
+            let segments = total_size / buffer.len();
+
+            for _ in 0..count {
+                for _ in 0..segments {
+                    let actual = write_fd_clone
+                        .write(buffer.as_ptr(), buffer.len())
+                        .map_err(|err| Error::new(err.kind(), "failed to write to socket"))?;
+                    if actual != buffer.len() as isize {
+                        return Err(Error::new(
+                            ErrorKind::InvalidData,
+                            format!(
+                                "expected to write {} bytes, but wrote {}",
+                                buffer.len(),
+                                actual
+                            ),
+                        ));
+                    }
+                }
+            }
+
+            Ok(())
+        })
+    };
+
+    read_thread.join().expect("failed to join read thread")?;
+    write_thread.join().expect("failed to join write thread")?;
+
+    Ok(())
+}
+
+// Read 128 MiB in 4 KiB chunks, and then write the same. As the client can measure both TX
+// and RX from its end, this is a reliable throughput measurement (although it can't differentiate
+// RX and TX speeds).
+fn run_single_stream_unidirectional_round_trip(
+    data_fd: &VsockFd,
+    control_fd: &VsockFd,
+    count: u32,
+    magic: u8,
+) -> std::io::Result<()> {
+    let mut buffer = [0u8; 4096]; // 4 KiB
+    let total_size = (1 << 20) * 128; // 128 MiB
+    let segments = total_size / buffer.len();
+
+    // Send the magic byte when ready to start.
+    let magic_buf = [magic];
+    control_fd
+        .write(magic_buf.as_ptr(), magic_buf.len())
+        .map_err(|err| Error::new(err.kind(), "failed to write to control socket"))?;
+
+    for _ in 0..count {
+        let mut read_bytes_remaining = total_size;
+        while read_bytes_remaining > 0 {
+            let read_segment = std::cmp::min(read_bytes_remaining, buffer.len());
+            let actual = data_fd.read(buffer.as_mut_ptr(), read_segment)?;
+            if actual <= 0 {
+                return Err(Error::new(ErrorKind::BrokenPipe, "Unexpected EOF"));
+            }
+
+            read_bytes_remaining -= actual as usize;
+        }
+
+        for _ in 0..segments {
+            let actual = data_fd
+                .write(buffer.as_ptr(), buffer.len())
+                .map_err(|err| Error::new(err.kind(), "failed to write to socket"))?;
+            if actual != buffer.len() as isize {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!("expected to write {} bytes, but wrote {}", buffer.len(), actual),
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// Read 128 MiB in 4 KiB chunks on 5 connections, and then write the same. As the client can measure
+// both TX and RX from its end, this is a reliable throughput measurement (although it can't
+// differentiate RX and TX speeds).
+fn run_multi_stream_unidirectional_round_trip(
+    data_fd1: &VsockFd,
+    data_fd2: &VsockFd,
+    data_fd3: &VsockFd,
+    data_fd4: &VsockFd,
+    data_fd5: &VsockFd,
+    control_fd: &VsockFd,
+    count: u32,
+) -> std::io::Result<()> {
+    let get_thread = |data_fd: &VsockFd, magic: u8| -> thread::JoinHandle<std::io::Result<()>> {
+        let data_fd_clone = data_fd.clone();
+        let control_fd_clone = control_fd.clone();
+        thread::spawn(move || {
+            run_single_stream_unidirectional_round_trip(
+                &data_fd_clone,
+                &control_fd_clone,
+                count,
+                magic,
+            )
+        })
+    };
+
+    let thread1 = get_thread(data_fd1, 124);
+    let thread2 = get_thread(data_fd2, 125);
+    let thread3 = get_thread(data_fd3, 126);
+    let thread4 = get_thread(data_fd4, 127);
+    let thread5 = get_thread(data_fd5, 128);
+
+    thread1.join().expect("failed to join stream1")?;
+    thread2.join().expect("failed to join stream1")?;
+    thread3.join().expect("failed to join stream1")?;
+    thread4.join().expect("failed to join stream1")?;
+    thread5.join().expect("failed to join stream1")?;
+
+    Ok(())
+}
+
+struct MicroBenchmarkSockets {
+    control_fd: VsockFd,
+    latency_fd: VsockFd,
+    single_stream_fd: VsockFd,
+    multi_stream_fd1: VsockFd,
+    multi_stream_fd2: VsockFd,
+    multi_stream_fd3: VsockFd,
+    multi_stream_fd4: VsockFd,
+    multi_stream_fd5: VsockFd,
+    bidirectional_single_stream_fd: VsockFd,
+}
+
+impl MicroBenchmarkSockets {
+    pub fn bind() -> std::io::Result<Self> {
+        let control_fd = VsockFd::open()?;
+        let latency_fd = VsockFd::open()?;
+        let single_stream_fd = VsockFd::open()?;
+        let multi_stream_fd1 = VsockFd::open()?;
+        let multi_stream_fd2 = VsockFd::open()?;
+        let multi_stream_fd3 = VsockFd::open()?;
+        let multi_stream_fd4 = VsockFd::open()?;
+        let multi_stream_fd5 = VsockFd::open()?;
+        let bidirectional_single_stream_fd = VsockFd::open()?;
+
+        control_fd.bind(8501)?;
+        control_fd.connect(8500)?;
+
+        latency_fd.bind(8502)?;
+        latency_fd.connect(8500)?;
+
+        single_stream_fd.bind(8503)?;
+        single_stream_fd.connect(8500)?;
+
+        multi_stream_fd1.bind(8504)?;
+        multi_stream_fd1.connect(8500)?;
+
+        multi_stream_fd2.bind(8505)?;
+        multi_stream_fd2.connect(8500)?;
+
+        multi_stream_fd3.bind(8506)?;
+        multi_stream_fd3.connect(8500)?;
+
+        multi_stream_fd4.bind(8507)?;
+        multi_stream_fd4.connect(8500)?;
+
+        multi_stream_fd5.bind(8508)?;
+        multi_stream_fd5.connect(8500)?;
+
+        bidirectional_single_stream_fd.bind(8509)?;
+        bidirectional_single_stream_fd.connect(8500)?;
+
+        Ok(MicroBenchmarkSockets {
+            control_fd,
+            latency_fd,
+            single_stream_fd,
+            multi_stream_fd1,
+            multi_stream_fd2,
+            multi_stream_fd3,
+            multi_stream_fd4,
+            multi_stream_fd5,
+            bidirectional_single_stream_fd,
+        })
+    }
+
+    pub fn unbind(self) -> std::io::Result<()> {
+        self.control_fd.close()?;
+        self.latency_fd.close()?;
+        self.single_stream_fd.close()?;
+        self.multi_stream_fd1.close()?;
+        self.multi_stream_fd2.close()?;
+        self.multi_stream_fd3.close()?;
+        self.multi_stream_fd4.close()?;
+        self.multi_stream_fd5.close()?;
+        self.bidirectional_single_stream_fd.close()?;
+
+        Ok(())
+    }
+}
+
+fn run_micro_benchmark() -> std::io::Result<()> {
+    let sockets = MicroBenchmarkSockets::bind()?;
+
+    run_latency_check(&sockets.latency_fd)?;
+    run_single_stream_bidirectional_round_trip(
+        &sockets.bidirectional_single_stream_fd,
+        &sockets.control_fd,
+        100,
+        129,
+    )?;
+    run_single_stream_unidirectional_round_trip(
+        &sockets.single_stream_fd,
+        &sockets.control_fd,
+        100,
+        123,
+    )?;
+    run_multi_stream_unidirectional_round_trip(
+        &sockets.multi_stream_fd1,
+        &sockets.multi_stream_fd2,
+        &sockets.multi_stream_fd3,
+        &sockets.multi_stream_fd4,
+        &sockets.multi_stream_fd5,
+        &sockets.control_fd,
+        50,
+    )?;
+
+    sockets.unbind()?;
+
+    Ok(())
+}
+
+fn main() -> std::io::Result<()> {
+    match argh::from_env::<Commands>().nested {
+        SubCommands::IntegrationTest(_) => run_integration_test(),
+        SubCommands::MicroBenchmark(_) => run_micro_benchmark(),
+    }
 }

@@ -52,6 +52,7 @@ rustc_binary("bin") {
     "src/serial.rs",
     "src/services.rs",
     "src/socat.rs",
+    "src/vsockperf.rs",
     "src/wipe.rs",
   ]
 }
