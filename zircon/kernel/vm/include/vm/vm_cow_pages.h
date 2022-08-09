@@ -1036,17 +1036,37 @@ class VmCowPages final
   // Returns the root parent's page source.
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
-  void FreePages(list_node* pages) {
-    if (!page_source_ || !page_source_->properties().is_handling_free) {
+  bool is_source_handling_free() const {
+    return page_source_ && page_source_->properties().is_handling_free;
+  }
+
+  // Helper to free |pages| to the PMM. |freeing_owned_pages| is set to true to indicate that this
+  // object had ownership of |pages|. This could either be true ownership, where the |pages| have
+  // been removed from this object's page list, or logical ownership, e.g. when a source page list
+  // has been handed over to SupplyPagesLocked(). If |freeing_owned_pages| is true, this function
+  // will also try to invoke FreePages() on the backing page source if it supports it.
+  //
+  // Callers should avoid calling pmm_free() directly from inside VmCowPages, and instead should use
+  // this helper.
+  void FreePages(list_node* pages, bool freeing_owned_pages) {
+    if (!freeing_owned_pages || !is_source_handling_free()) {
       pmm_free(pages);
       return;
     }
     page_source_->FreePages(pages);
   }
 
-  void FreePage(vm_page_t* page) {
+  // Helper to free |page| to the PMM. |freeing_owned_page| is set to true to indicate that this
+  // object had ownership of |page|. This could either be true ownership, where the |page| has
+  // been removed from this object's page list, or logical ownership, e.g. when a source page list
+  // has been handed over to SupplyPagesLocked(). If |freeing_owned_pages| is true, this function
+  // will also try to invoke FreePages() on the backing page source if it supports it.
+  //
+  // Callers should avoid calling pmm_free_page() directly from inside VmCowPages, and instead
+  // should use this helper.
+  void FreePage(vm_page_t* page, bool freeing_owned_page) {
     DEBUG_ASSERT(!list_in_list(&page->queue_node));
-    if (!page_source_ || !page_source_->properties().is_handling_free) {
+    if (!freeing_owned_page || !is_source_handling_free()) {
       pmm_free_page(page);
       return;
     }
