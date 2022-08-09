@@ -5,6 +5,10 @@
 
 # See usage() for description.
 
+# This script needs to work with bash-3.2 so:
+#   * cannot use mapfile or readarray
+#   * cannot use <(...) redirection
+
 script="$0"
 script_dir="$(dirname "$script")"
 
@@ -26,6 +30,8 @@ check_determinism_command=(
   ../../build/tracer/output_cacher.py
   --check-repeatability
 )
+
+readonly remote_rustc_subdir=prebuilt/third_party/rust/linux-x64
 
 function usage() {
 cat <<EOF
@@ -84,6 +90,13 @@ to download, and removed from the command prior to local and remote execution.
 
 EOF
 }
+
+detected_os="$(uname -s)"
+case "$detected_os" in
+  Darwin) readonly HOST_OS="mac" ;;
+  Linux) readonly HOST_OS="linux" ;;
+  *) echo >&2 "Unknown operating system: $detected_os" ; exit 1 ;;
+esac
 
 local_only=0
 trace=0
@@ -180,14 +193,14 @@ dep_only_command=("$env")
 first_source=
 
 # C toolchain linker
-linker=()
+remote_linker=()
 link_arg_files=()
 link_sysroot=()
 
 # input files referenced in environment variables
 envvar_files=()
 
-rust_lld=()
+rust_lld_remote=()
 
 # Remove these temporary files on exit.
 cleanup_files=()
@@ -297,7 +310,7 @@ EOF
       local_rustc="$opt"
       # remote executable is for running on RBE worker,
       # which could be the same as the local one.
-      remote_rustc="${local_rustc/rust\/.*\//rust\/linux-x64\/}"
+      remote_rustc="$project_root_rel"/"$remote_rustc_subdir"/bin/rustc
       ;;
 
     # This is equivalent to --local, but passed as a rustc flag,
@@ -398,14 +411,16 @@ EOF
     # that is the only RBE remote backend option available.
     cdylib)
       _rust_lld_rel="$(dirname "$remote_rustc")"/../lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld
-      rust_lld=("$(relpath "$project_root" "$_rust_lld_rel")")
+      rust_lld_remote=("$(relpath "$project_root" "$_rust_lld_rel")")
       ;;
 
     # Detect custom linker, preserve symlinks: clang++ -> clang -> clang-XX
     -Clinker=*)
-        linker_local="$optarg"
-        linker=( "$(relpath "$project_root" "$linker_local")" )
-        debug_var "[from -Clinker]" "${linker[@]}"
+        linker_local_arg="$optarg"
+        local_linker_rel=( "$(relpath "$project_root" "$linker_local_arg")" )
+        remote_linker=("${local_linker_rel[0]/clang\/*\/bin/clang/linux-x64/bin}")
+        debug_var "[from -Clinker (local)]" "${local_linker_rel[@]}"
+        debug_var "[from -Clinker (remote)]" "${remote_linker[@]}"
         ;;
 
     -Clink-arg=* )
@@ -536,7 +551,7 @@ IFS=, read -ra extra_outputs <<< "$comma_remote_outputs"
 # TODO(fangism): for host-independence, use llvm-otool and `llvm-readelf -d`,
 #   which requires uploading more tools.
 # TODO(fangism): need different tool from lld on Mac OS for linux binary
-function nonsystem_shlibs() {
+function host_nonsystem_shlibs() {
   # $1 is a binary
   ldd "$1" | grep "=>" | cut -d\  -f3 | \
     grep -v -e '^/lib' -e '^/usr/lib' | \
@@ -554,13 +569,29 @@ function depfile_inputs_by_line() {
 # Workaround reclient bug: strip prefix ./ from all outputs.
 output="${output#./}"
 
-# The rustc binary might be linked against shared libraries.
+# The remote rustc binary might be linked against shared libraries,
+# which need to be uploaded for remote execution.
 # Exclude system libraries in /usr/lib and /lib.
-# convert to paths relative to $project_root for rewrapper.
-mapfile -t rustc_shlibs < <(nonsystem_shlibs "$remote_rustc")
+# Convert to paths relative to $project_root for rewrapper.
+case "$HOST_OS" in
+  linux)
+    remote_rustc_shlibs=( $(host_nonsystem_shlibs "$remote_rustc") )
+    ;;
+  *) # Without ELF library tools (ldd), there is no good way to detect the shared libs
+    # of a linux binary on a Mac.  One option could be to use `otool -L` on the Mac
+    # binary and translate them to linux equivalents.
+    # For simplicity, we resort to hard-coding them.
+    _rel_shlibs=(
+      "$project_root_rel"/"$remote_rustc_subdir"/lib/librustc_driver-*.so
+      "$project_root_rel"/"$remote_rustc_subdir"/lib/libstd-*.so
+      "$project_root_rel"/"$remote_rustc_subdir"/lib/libLLVM-*-rust-*.so
+    )
+    remote_rustc_shlibs=( "${_rel_shlibs[@]##"$project_root_rel"/}" )
+    ;;
+esac
 
 # Rust standard libraries.
-rust_stdlib_dir="prebuilt/third_party/rust/linux-x64/lib/rustlib/$target_triple/lib"
+rust_stdlib_dir="$remote_rustc_subdir/lib/rustlib/$target_triple/lib"
 # The majority of stdlibs already appear in dep-info and are uploaded as needed.
 # However, libunwind.a is not listed, but is directly needed by code
 # emitted by rustc.  Listing this here works around a missing upload issue,
@@ -612,12 +643,35 @@ trace_depfile_scanning_prefix=(
 # Paths should be relative to the root_build_dir.
 sed -i -e "s|$PWD/||g" "$depfile.nolink"
 
+# Map from a lib from host-target combination to different_host-same_target.
+# Unfortunately, the name mapping across host platforms for the *same* target platform
+# is not consistent, as the filename hash suffixes (and contents!) differ.
+# input example:
+#   prebuilt/third_party/rust/mac-x64/lib/rustlib/x86_64-fuchsia/lib/libstd-0c588baa7fcccb3b.rlib
+# output example:
+#   prebuilt/third_party/rust/linux-x64/lib/rustlib/x86_64-fuchsia/lib/libstd-702aada9fd6fb728.rlib
+function remap_remote_rust_lib() {
+case "$1" in
+  *prebuilt/third_party/rust/*/lib/*)
+	ls $(echo "$1" | \
+	  sed -e "s|prebuilt/third_party/rust/[^/]*/lib|$remote_rustc_subdir/lib|" \
+	      -e 's|/lib\(.*\)-\(.*\)\.\(.*\)|/lib\1-*.\3|' ) ;;
+  *) echo "$1" ;;
+esac
+}
+
 # Convert depfile absolute paths to relative.
-mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
-  while read line
-    do relpath "$project_root" "$line"
+# The depfile will reference standard rlibs that reside in the host rust
+# toolchain.  For remote execution, these will need to be mapped to
+# the remote (linux) toolchain's stdlibs, even if the local and host
+# distributions contain the same files per target.
+remote_depfile_inputs=(
+  $(depfile_inputs_by_line "$depfile.nolink" | \
+    while read line
+    do relpath "$project_root" "$(remap_remote_rust_lib "$line")"
     done
   )
+)
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
 
@@ -629,7 +683,7 @@ rm -f "$depfile.nolink"
 # See https://github.com/rust-lang/rust/issues/90106
 # Workaround (https://fxbug.dev/86896): check for existence of .so and include it.
 depfile_shlibs=()
-for f in "${depfile_inputs[@]}"
+for f in "${remote_depfile_inputs[@]}"
 do
   case "$f" in
     *.rlib)
@@ -642,7 +696,7 @@ do
       ;;
   esac
 done
-depfile_inputs+=( "${depfile_shlibs[@]}" )
+remote_depfile_inputs+=( "${depfile_shlibs[@]}" )
 
 extra_outputs+=( "${extra_linker_outputs[@]}" )
 
@@ -667,18 +721,18 @@ test "$llvm_time_trace" = 0 || {
 }
 
 # When using the linker, also grab the necessary libraries.
-clang_dir=()
-lld=()
+clang_dir_remote=()
+lld_remote=()
 libcxx=()
 rt_libdir=()
-test "${#linker[@]}" = 0 || {
+test "${#remote_linker[@]}" = 0 || {
   # Assuming the linker is found in $clang_dir/bin/
-  clang_dir=("$(dirname "$(dirname "${linker[0]}")")")
-  clang_dir_local=("$(dirname "$(dirname "${linker_local[0]}")")")
+  clang_dir_remote=("$(dirname "$(dirname "${remote_linker[0]}")")")
+  clang_dir_local=("$(dirname "$(dirname "${linker_local_arg[0]}")")")
 
   # ld.lld -> lld, but the symlink is required for the clang linker driver
   # to be able to use lld.
-  lld=( "$(dirname "${linker[0]}")"/ld.lld )
+  lld_remote=( "$(dirname "${remote_linker[0]}")"/ld.lld )
 
   objdump="$clang_dir_local"/bin/llvm-objdump
   readelf="$clang_dir_local"/bin/llvm-readelf
@@ -702,7 +756,7 @@ test "${#linker[@]}" = 0 || {
   esac
 
   # Linking with clang++ generally requires libc++.
-  libcxx=( "${clang_dir[0]}"/lib/"$clang_lib_triple"/libc++.a )
+  libcxx=( "${clang_dir_remote[0]}"/lib/"$clang_lib_triple"/libc++.a )
 
   # Location of clang_rt.crt{begin,end}.o and libclang_rt.builtins.a
   # * is a version number like 14.0.0.
@@ -779,7 +833,7 @@ test "${#link_sysroot[@]}" = 0 || {
 
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$remote_rustc_relative]
-#     * rust tool shared libraries [$rustc_shlibs]
+#     * rust tool shared libraries [$remote_rustc_shlibs]
 #   * rust standard libraries [$extra_rust_stdlibs]
 #   * direct source files [$top_source]
 #   * indirect source files [$depfile.nolink]
@@ -788,9 +842,9 @@ test "${#link_sysroot[@]}" = 0 || {
 #   * transitive dependent libraries [$depfile.nolink]
 #   * objects and libraries used as linker arguments [$link_arg_files]
 #   * system rust libraries [$depfile.nolink]
-#   * clang++ linker driver [$linker]
+#   * clang++ linker driver [$remote_linker]
 #     * libc++ [$libcxx]
-#   * linker binary (called by the driver) [$lld]
+#   * linker binary (called by the driver) [$lld_remote]
 #       For example: -Clinker=.../lld
 #   * run-time libraries [$rt_libdir]
 #   * sysroot libraries [$sysroot_files]
@@ -798,15 +852,15 @@ test "${#link_sysroot[@]}" = 0 || {
 
 remote_inputs=(
   "$remote_rustc_relative"
-  "${rust_lld[@]}"
-  "${rustc_shlibs[@]}"
+  "${rust_lld_remote[@]}"
+  "${remote_rustc_shlibs[@]}"
   "${extra_rust_stdlibs[@]}"
   "$top_source"
-  "${depfile_inputs[@]}"
+  "${remote_depfile_inputs[@]}"
   "${extern_paths[@]}"
   "${envvar_files[@]}"
-  "${linker[@]}"
-  "${lld[@]}"
+  "${remote_linker[@]}"
+  "${lld_remote[@]}"
   "${libcxx[@]}"
   "${rt_libdir[@]}"
   "${link_arg_files[@]}"
@@ -833,18 +887,18 @@ test "${#relative_outputs[@]}" = 0 || {
 
 dump_vars() {
   debug_var "build subdir" "$build_subdir"
-  debug_var "clang dir" "${clang_dir[@]}"
+  debug_var "clang dir (remote)" "${clang_dir_remote[@]}"
   debug_var "target triple" "$target_triple"
   debug_var "clang lib triple" "$clang_lib_triple"
   debug_var "outputs" "${relative_outputs[@]}"
   debug_var "rustc binary (local)" "$local_rustc"
   debug_var "rustc binary (remote)" "$remote_rustc_relative"
-  debug_var "rustc shlibs" "${rustc_shlibs[@]}"
+  debug_var "rustc shlibs (remote)" "${remote_rustc_shlibs[@]}"
   debug_var "rust stdlibs" "${extra_rust_stdlibs[@]}"
-  debug_var "rust lld" "${rust_lld[@]}"
+  debug_var "rust lld (remote)" "${rust_lld_remote[@]}"
   debug_var "source root" "$top_source"
-  debug_var "linker" "${linker[@]}"
-  debug_var "lld" "${lld[@]}"
+  debug_var "linker (remote)" "${remote_linker[@]}"
+  debug_var "lld (remote)" "${lld_remote[@]}"
   debug_var "libc++" "$libcxx"
   debug_var "rt libdir" "${rt_libdir[@]}"
   debug_var "link args" "${link_arg_files[@]}"
@@ -854,7 +908,7 @@ dump_vars() {
   debug_var "env var files" "${envvar_files[@]}"
   debug_var "depfile" "$depfile"
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
-  debug_var "depfile inputs" "${depfile_inputs[@]}"
+  debug_var "depfile inputs (remote)" "${remote_depfile_inputs[@]}"
   debug_var "extern paths" "${extern_paths[@]}"
   debug_var "extra inputs" "${extra_inputs_rel_project_root[@]}"
   debug_var "extra outputs" "${extra_outputs[@]}"
@@ -977,11 +1031,12 @@ then
   # We forgive this for depfiles, but other artifacts should be verified
   # separately.
 
-  sed -i -e "s|$remote_project_root/out/[^/]*/||g" \
-    -e "s|$remote_project_root/set_by_reclient/[^/]*/||g" \
+  # Mac OS sed: cannot use -i -e ... -e ... file (interprets second -e as a file),
+  # so we are forced to combine into a single -e
+  sed -i -e "s|$remote_project_root/out/[^/]*/||g;s|$remote_project_root/set_by_reclient/[^/]*/||g" \
     "$depfile"
 
-  mapfile -t remote_depfile_inputs < <(depfile_inputs_by_line "$depfile")
+  remote_depfile_inputs=( $(depfile_inputs_by_line "$depfile") )
   for f in "${remote_depfile_inputs[@]}"
   do
     case "$f" in
@@ -1096,9 +1151,9 @@ test "$status" -ne 0 || test "$compare" = 0 || {
     test "$trace" = 0 || {
       echo "Comparing local (-) vs. remote (+) file access traces."
       # Use sed to normalize absolute paths.
-      diff -u \
-        <(sed -e "s|$project_root/||g" "$output.fsatrace") \
-        <(sed -e "s|$remote_project_root/||g" "$output.remote-fsatrace")
+      sed -e "s|$project_root/||g" "$output.fsatrace" > "$output.fsatrace.norm"
+      sed -e "s|$remote_project_root/||g" "$output.remote-fsatrace" > "$output.remote-fsatrace.norm"
+      diff -u "$output.fsatrace.norm" "$output.remote-fsatrace.norm"
     }
     status=1
   }
