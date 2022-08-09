@@ -8,6 +8,7 @@
 
 #include <lib/crypto/global_prng.h>
 
+#include <kernel/auto_preempt_disabler.h>
 #include <object/job_dispatcher.h>
 
 constexpr uint32_t kHandleMustBeOneMask = ((0x1u << kHandleReservedBits) - 1);
@@ -58,6 +59,7 @@ HandleTable::~HandleTable() {
 void HandleTable::Clean() {
   HandleList to_clean;
   {
+    AutoExpiringPreemptDisabler preempt_disable{Mutex::DEFAULT_TIMESLICE_EXTENSION};
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
 
     for (auto& cursor : cursors_) {
@@ -108,6 +110,7 @@ uint32_t HandleTable::HandleCount() const {
 }
 
 void HandleTable::AddHandle(HandleOwner handle) {
+  AutoExpiringPreemptDisabler preempt_disable{ZX_USEC(150)};
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
   AddHandleLocked(ktl::move(handle));
 }
@@ -132,6 +135,7 @@ HandleOwner HandleTable::RemoveHandleLocked(Handle* handle) {
 }
 
 HandleOwner HandleTable::RemoveHandle(ProcessDispatcher& caller, zx_handle_t handle_value) {
+  AutoExpiringPreemptDisabler preempt_disable{Mutex::DEFAULT_TIMESLICE_EXTENSION};
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
   return RemoveHandleLocked(caller, handle_value);
 }
@@ -146,6 +150,7 @@ HandleOwner HandleTable::RemoveHandleLocked(ProcessDispatcher& caller, zx_handle
 zx_status_t HandleTable::RemoveHandles(ProcessDispatcher& caller,
                                        ktl::span<const zx_handle_t> handles) {
   zx_status_t status = ZX_OK;
+  AutoExpiringPreemptDisabler preempt_disable{Mutex::DEFAULT_TIMESLICE_EXTENSION};
   Guard<BrwLockPi, BrwLockPi::Writer> guard{get_lock()};
 
   for (zx_handle_t handle_value : handles) {
@@ -210,6 +215,7 @@ zx_status_t HandleTable::GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* ha
 }
 
 HandleTable::HandleCursor::HandleCursor(HandleTable* handle_table) : handle_table_(handle_table) {
+  AutoExpiringPreemptDisabler preempt_disable{Mutex::DEFAULT_TIMESLICE_EXTENSION};
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_->lock_};
   if (!handle_table_->handles_.is_empty()) {
     iter_ = handle_table_->handles_.begin();
@@ -222,6 +228,7 @@ HandleTable::HandleCursor::HandleCursor(HandleTable* handle_table) : handle_tabl
 }
 
 HandleTable::HandleCursor::~HandleCursor() {
+  AutoExpiringPreemptDisabler preempt_disable{Mutex::DEFAULT_TIMESLICE_EXTENSION};
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_->lock_};
   handle_table_->cursors_.erase(*this);
 }

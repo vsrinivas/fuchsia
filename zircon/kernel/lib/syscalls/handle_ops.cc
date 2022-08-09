@@ -45,6 +45,7 @@ static zx_status_t handle_dup_replace(bool is_replace, zx_handle_t handle_value,
 
   auto up = ProcessDispatcher::GetCurrent();
 
+  AutoExpiringPreemptDisabler preempt_disable{Mutex::DEFAULT_TIMESLICE_EXTENSION};
   Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().get_lock()};
   auto source = up->handle_table().GetHandleLocked(*up, handle_value);
   if (!source)
