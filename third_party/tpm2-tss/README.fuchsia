@@ -1,0 +1,12 @@
+Name: tpm2-tss
+URL: https://fuchsia.googlesource.com/third_party/github.com/tpm2-software/tpm2-tss
+Version: git
+License: Apache & MIT
+License File: src/LICENSE
+Security Critical: yes
+
+Description:
+This is a port of the official TCG TSS 2.0 stack to Fuchsia.
+
+Upstream revision:
+https://fuchsia.googlesource.com/third_party/github.com/tpm2-software/tpm2-tss/+/512b90dd3a5b814ea4eca973b70e92538fd630c7
