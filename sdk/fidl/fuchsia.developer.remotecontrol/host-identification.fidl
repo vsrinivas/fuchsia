@@ -11,11 +11,7 @@ using fuchsia.buildinfo;
 
 
 type IdentifyHostResponse = table {
-    // TODO(https://fxbug.dev/100502): Delete this once it is safe to do so.
-    1: addresses_deprecated vector<@generated_name("InterfaceAddressDeprecated") strict union {
-        1: ipv4 fuchsia.net.Ipv4AddressWithPrefix;
-        2: ipv6 fuchsia.net.Ipv6Address;
-    }>:MAX;
+    1: reserved;
     2: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     // UTC timestamp of the target's time of boot, in nanoseconds.
     3: boot_timestamp_nanos uint64;

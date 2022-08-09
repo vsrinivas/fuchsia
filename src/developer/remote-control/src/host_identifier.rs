@@ -4,7 +4,7 @@
 use {
     anyhow::{Context as _, Result},
     fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-    fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo,
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fuchsia_zircon as zx,
     tracing::*,
@@ -89,22 +89,6 @@ impl HostIdentifier {
             )
             .collect::<Vec<_>>();
 
-        let addresses_deprecated = Some(
-            addresses
-                .iter()
-                .map(|fnet::Subnet { addr, prefix_len }| match addr {
-                    fnet::IpAddress::Ipv4(addr) => {
-                        rcs::InterfaceAddressDeprecated::Ipv4(fnet::Ipv4AddressWithPrefix {
-                            addr: addr.clone(),
-                            prefix_len: *prefix_len,
-                        })
-                    }
-                    fnet::IpAddress::Ipv6(addr) => {
-                        rcs::InterfaceAddressDeprecated::Ipv6(addr.clone())
-                    }
-                })
-                .collect(),
-        );
         let addresses = Some(addresses);
 
         let nodename = match self.name_provider_proxy.get_device_name().await {
@@ -126,7 +110,6 @@ impl HostIdentifier {
         Ok(rcs::IdentifyHostResponse {
             nodename,
             addresses,
-            addresses_deprecated,
             serial_number,
             boot_timestamp_nanos,
             product_config,

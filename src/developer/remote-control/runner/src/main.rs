@@ -124,7 +124,6 @@ mod test {
                         let _ = responder
                             .send(&mut Ok(IdentifyHostResponse {
                                 nodename: Some("".to_string()),
-                                addresses_deprecated: Some(vec![]),
                                 addresses: Some(vec![]),
                                 ids: Some(vec![last_id.borrow().clone()]),
                                 ..IdentifyHostResponse::EMPTY

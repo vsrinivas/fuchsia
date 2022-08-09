@@ -48,7 +48,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/selector-maps",
@@ -70,6 +69,7 @@ rustc_library("lib") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:tempfile",
   ]
