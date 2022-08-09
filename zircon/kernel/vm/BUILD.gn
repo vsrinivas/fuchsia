@@ -51,6 +51,7 @@ zx_library("vm") {
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/ktrace",
+    "//zircon/kernel/lib/page_cache",
     "//zircon/kernel/lib/user_copy",
     "//zircon/kernel/lib/userabi",
     "//zircon/system/ulib/pretty",
@@ -70,6 +71,9 @@ zx_library("vm") {
 
     # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
     "//zircon/kernel/lib/crypto:headers",
+
+    # <vm/vm_cow_pages.h> has #include <lib/page_cache.h>
+    "//zircon/kernel/lib/page_cache:headers",
 
     # "pmm_arena.h" has #include <lib/zx/status.h>.
     "//zircon/system/ulib/zxc:headers",

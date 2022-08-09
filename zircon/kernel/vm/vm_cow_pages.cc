@@ -12,6 +12,7 @@
 
 #include <kernel/range_check.h>
 #include <ktl/move.h>
+#include <lk/init.h>
 #include <vm/anonymous_page_requester.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
@@ -86,51 +87,6 @@ void InitializeVmPage(vm_page_t* p) {
   p->object.cow_right_split = 0;
   p->object.always_need = 0;
   p->object.dirty_state = uint8_t(VmCowPages::DirtyState::Untracked);
-}
-
-// Allocates a new page and populates it with the data at |parent_paddr|.
-zx_status_t AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
-                             list_node_t* alloc_list, LazyPageRequest* request, vm_page_t** clone) {
-  DEBUG_ASSERT(request || !(pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT));
-
-  vm_page_t* p_clone = nullptr;
-  if (alloc_list) {
-    p_clone = list_remove_head_type(alloc_list, vm_page, queue_node);
-  }
-
-  paddr_t pa_clone;
-  if (p_clone) {
-    pa_clone = p_clone->paddr();
-  } else {
-    zx_status_t status = pmm_alloc_page(pmm_alloc_flags, &p_clone, &pa_clone);
-    if (status != ZX_OK) {
-      DEBUG_ASSERT(!p_clone);
-      if (status == ZX_ERR_SHOULD_WAIT) {
-        status = AnonymousPageRequester::Get().FillRequest(request->get());
-      }
-      return status;
-    }
-    DEBUG_ASSERT(p_clone);
-  }
-
-  InitializeVmPage(p_clone);
-
-  void* dst = paddr_to_physmap(pa_clone);
-  DEBUG_ASSERT(dst);
-
-  if (parent_paddr != vm_get_zero_page_paddr()) {
-    // do a direct copy of the two pages
-    const void* src = paddr_to_physmap(parent_paddr);
-    DEBUG_ASSERT(src);
-    memcpy(dst, src, PAGE_SIZE);
-  } else {
-    // avoid pointless fetches by directly zeroing dst
-    arch_zero_page(dst);
-  }
-
-  *clone = p_clone;
-
-  return ZX_OK;
 }
 
 inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
@@ -208,6 +164,90 @@ class BatchPQRemove {
   vm_page_t* pages_[kMaxPages];
   list_node_t* freed_list_ = nullptr;
 };
+
+// Allocates a new page and populates it with the data at |parent_paddr|.
+zx_status_t VmCowPages::AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
+                                         list_node_t* alloc_list, LazyPageRequest* request,
+                                         vm_page_t** clone) {
+  DEBUG_ASSERT(request || !(pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT));
+
+  vm_page_t* p_clone = nullptr;
+  if (alloc_list) {
+    p_clone = list_remove_head_type(alloc_list, vm_page, queue_node);
+  }
+
+  paddr_t pa_clone;
+  if (p_clone) {
+    pa_clone = p_clone->paddr();
+  } else {
+    zx_status_t status = CacheAllocPage(pmm_alloc_flags, &p_clone, &pa_clone);
+    if (status != ZX_OK) {
+      DEBUG_ASSERT(!p_clone);
+      if (status == ZX_ERR_SHOULD_WAIT) {
+        status = AnonymousPageRequester::Get().FillRequest(request->get());
+      }
+      return status;
+    }
+    DEBUG_ASSERT(p_clone);
+  }
+
+  InitializeVmPage(p_clone);
+
+  void* dst = paddr_to_physmap(pa_clone);
+  DEBUG_ASSERT(dst);
+
+  if (parent_paddr != vm_get_zero_page_paddr()) {
+    // do a direct copy of the two pages
+    const void* src = paddr_to_physmap(parent_paddr);
+    DEBUG_ASSERT(src);
+    memcpy(dst, src, PAGE_SIZE);
+  } else {
+    // avoid pointless fetches by directly zeroing dst
+    arch_zero_page(dst);
+  }
+
+  *clone = p_clone;
+
+  return ZX_OK;
+}
+
+zx_status_t VmCowPages::CacheAllocPage(uint alloc_flags, vm_page_t** p, paddr_t* pa) {
+  if (!page_cache_) {
+    return pmm_alloc_page(alloc_flags, p, pa);
+  }
+
+  zx::status result = page_cache_.Allocate(1, alloc_flags);
+  if (result.is_error()) {
+    return result.error_value();
+  }
+
+  vm_page_t* page = list_remove_head_type(&result->page_list, vm_page_t, queue_node);
+  DEBUG_ASSERT(page != nullptr);
+  DEBUG_ASSERT(result->page_list.is_empty());
+
+  *p = page;
+  *pa = page->paddr();
+  return ZX_OK;
+}
+
+void VmCowPages::CacheFree(list_node_t* list) {
+  if (!page_cache_) {
+    pmm_free(list);
+  }
+
+  page_cache_.Free(ktl::move(*list));
+}
+
+void VmCowPages::CacheFree(vm_page_t* p) {
+  if (!page_cache_) {
+    pmm_free_page(p);
+  }
+
+  page_cache::PageCache::PageList list;
+  list_add_tail(&list, &p->queue_node);
+
+  page_cache_.Free(ktl::move(list));
+}
 
 VmCowPages::VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
                        const fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr,
@@ -6042,3 +6082,16 @@ VmCowPages& VmCowPagesContainer::cow() {
   DEBUG_ASSERT(is_cow_present_);
   return *reinterpret_cast<VmCowPages*>(&cow_space_);
 }
+
+void VmCowPages::InitializePageCache(uint32_t level) {
+  ASSERT(level < LK_INIT_LEVEL_THREADING);
+
+  const size_t reserve_pages = 64;
+  zx::status<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
+
+  ASSERT(result.is_ok());
+  page_cache_ = ktl::move(result.value());
+}
+
+// Initialize the cache after the percpu data structures are initialized.
+LK_INIT_HOOK(vm_cow_pages_cache_init, VmCowPages::InitializePageCache, LK_INIT_LEVEL_KERNEL + 1)

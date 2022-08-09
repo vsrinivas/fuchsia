@@ -61,6 +61,9 @@ class PageCache {
   PageCache(PageCache&&) = default;
   PageCache& operator=(PageCache&&) = default;
 
+  // Returns true if this PageCache instance is non-empty.
+  explicit operator bool() const { return bool(per_cpu_caches_); }
+
   // Utility type for returning a list of pages via zx::status. Automatically
   // frees a non-empty list of pages on destruction to improve safety and
   // ergonomics.
@@ -105,14 +108,25 @@ class PageCache {
 
   // Allocates the given number of pages from the page cache. Falls back to the
   // PMM if the cache is insufficient to fulfill the request.
-  zx::status<AllocateResult> Allocate(size_t page_count) {
+  zx::status<AllocateResult> Allocate(size_t page_count, uint alloc_flags = 0) {
     LocalTraceDuration trace{"PageCache::Allocate"_stringref};
     DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
     DEBUG_ASSERT(per_cpu_caches_ != nullptr);
 
+    // Fall back to the PMM for low mem/loaned pages.
+    if (alloc_flags &
+        (PMM_ALLOC_FLAG_LO_MEM | PMM_ALLOC_FLAG_MUST_BORROW | PMM_ALLOC_FLAG_CAN_BORROW)) {
+      list_node page_list = LIST_INITIAL_VALUE(page_list);
+      const zx_status_t status = pmm_alloc_pages(page_count, alloc_flags, &page_list);
+      if (status != ZX_OK) {
+        return zx::error_status(status);
+      }
+      return zx::ok(AllocateResult{ktl::move(page_list), page_count});
+    }
+
     AutoPreemptDisabler preempt_disable;
     const cpu_num_t current_cpu = arch_curr_cpu_num();
-    return Allocate(per_cpu_caches_[current_cpu], page_count);
+    return Allocate(per_cpu_caches_[current_cpu], page_count, alloc_flags);
   }
 
   // Returns the given pages to the page cache. Excess pages are returned to the
@@ -158,12 +172,28 @@ class PageCache {
   // cache is insufficient for the request, falls back to the PMM to fulfill the
   // request and refill the cache. The requested number of pages may be zero, in
   // which case only the cache is filled.
-  zx::status<AllocateResult> Allocate(CpuCache& entry, size_t requested_pages)
+  zx::status<AllocateResult> Allocate(CpuCache& entry, size_t requested_pages, uint alloc_flags)
       TA_EXCL(entry.fill_lock, entry.cache_lock) {
     if (requested_pages > 0) {
       Guard<Mutex> guard{&entry.cache_lock};
       if (requested_pages <= entry.available_pages) {
         return zx::ok(AllocateCachePages(entry, requested_pages));
+      }
+
+      // If there are insufficient pages in the cache and the caller can wait
+      // for the allocation, drop the cache lock and fall back to the PMM.
+      // Either the PMM can fulfill the request or it will return SHOULD_WAIT
+      // and the caller can construct a page request to wait for memory.
+      if (alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) {
+        guard.Release();
+
+        list_node page_list = LIST_INITIAL_VALUE(page_list);
+        const zx_status_t status =
+            pmm_alloc_pages(requested_pages, PMM_ALLOC_FLAG_CAN_WAIT, &page_list);
+        if (status != ZX_OK) {
+          return zx::error_status(status);
+        }
+        return zx::ok(AllocateResult{ktl::move(page_list), requested_pages});
       }
     }
     return AllocatePagesAndFillCache(entry, requested_pages);
@@ -196,28 +226,33 @@ class PageCache {
   void Free(CpuCache& entry, PageList* page_list) const TA_EXCL(entry.fill_lock, entry.cache_lock) {
     Guard<Mutex> guard{&entry.cache_lock};
 
-    // Set the page state of pages returning to the free list starting from the
-    // end of the list. Determine where to split the list if any pages should
-    // return to the PMM. Pages returning to the PMM are left at the front of
-    // page_list and are freed when it is destroyed.
-    size_t count = 0;
-    list_node* node = list_prev(page_list, page_list);
-    while (entry.available_pages < reserve_pages_ && node != nullptr) {
+    size_t free_count = 0;
+    size_t return_count = 0;
+    list_node return_list = LIST_INITIAL_VALUE(return_list);
+
+    // Filter out non-borrowed pages to return to the free list. Pages remaining
+    // in page_list are freed to the PMM outside the lock in the PageList dtor.
+    list_node* node;
+    list_node* temp;
+    list_for_every_safe(page_list, node, temp) {
       vm_page* page = containerof(node, vm_page, queue_node);
-      page->set_state(vm_page_state::CACHE);
-      node = list_prev(page_list, node);
-      entry.available_pages++;
-      count++;
+      if (entry.available_pages < reserve_pages_ && !page->is_loaned()) {
+        page->set_state(vm_page_state::CACHE);
+
+        list_delete(node);
+        list_add_tail(&return_list, node);
+
+        entry.available_pages++;
+        return_count++;
+      } else {
+        free_count++;
+      }
     }
 
-    CountReturnPages(count);
-
-    // Refill the free list with the selected pages.
-    list_node refill_list = LIST_INITIAL_VALUE(refill_list);
-    list_split_after(page_list, node ? node : page_list, &refill_list);
-    list_splice_after(&refill_list, &entry.free_list);
-
-    CountFreePages(list_length(page_list));
+    // Return the selected pages to the free list.
+    list_splice_after(&return_list, &entry.free_list);
+    CountReturnPages(return_count);
+    CountFreePages(free_count);
   }
 
   zx::status<AllocateResult> AllocatePagesAndFillCache(CpuCache& entry,
