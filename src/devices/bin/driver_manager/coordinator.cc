@@ -679,9 +679,10 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 }
 
 zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
-                                         fbl::RefPtr<DriverHost> target_driver_host) {
+                                         fbl::RefPtr<DriverHost> target_driver_host,
+                                         fbl::RefPtr<Device>* new_proxy_out) {
   zx_status_t status;
-  if (dev->new_proxy() == nullptr && (status = dev->CreateNewProxy()) != ZX_OK) {
+  if ((status = dev->CreateNewProxy(new_proxy_out)) != ZX_OK) {
     LOGF(ERROR, "Cannot create new proxy device '%s': %s", dev->name().data(),
          zx_status_get_string(status));
     return status;
@@ -698,9 +699,9 @@ zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
       return status;
     }
   }
-  dev->new_proxy()->set_host(std::move(target_driver_host));
-  if (status = CreateNewProxyDevice(dev->new_proxy(), dev->new_proxy()->host(),
-                                    dev->take_outgoing_dir());
+  (*new_proxy_out)->set_host(std::move(target_driver_host));
+  if (status =
+          CreateNewProxyDevice(*new_proxy_out, (*new_proxy_out)->host(), dev->clone_outgoing_dir());
       status != ZX_OK) {
     LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
          driver_hostname, zx_status_get_string(status));
@@ -735,11 +736,12 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
   if (dev->has_outgoing_directory()) {
     VLOGF(1, "Preparing new proxy for %s", dev->name().data());
     auto target_driver_host = (dev->flags & DEV_CTX_MUST_ISOLATE) ? nullptr : dev->host();
-    status = PrepareNewProxy(dev, target_driver_host);
+    fbl::RefPtr<Device> new_proxy;
+    status = PrepareNewProxy(dev, target_driver_host, &new_proxy);
     if (status != ZX_OK) {
       return status;
     }
-    status = BindDriverToDevice(dev->new_proxy(), drv->libname.c_str());
+    status = BindDriverToDevice(new_proxy, drv->libname.c_str());
   } else {
     VLOGF(1, "Preparing old proxy for %s", dev->name().data());
     status = PrepareProxy(dev, nullptr /* target_driver_host */);

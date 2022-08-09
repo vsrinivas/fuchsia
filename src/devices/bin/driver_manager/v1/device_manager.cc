@@ -254,8 +254,8 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
     if (dev->proxy()) {
       ScheduleRemove(dev->proxy());
     }
-    if (dev->new_proxy()) {
-      ScheduleRemove(dev->new_proxy());
+    for (auto& new_proxy : dev->new_proxies()) {
+      ScheduleRemove(new_proxy);
     }
   } else {
     // We should not be removing a device while the unbind task is still running.

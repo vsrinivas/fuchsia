@@ -1281,3 +1281,44 @@ TEST_F(CompositeTestCase, DeviceIteratorOrphanFragment) {
 
   ASSERT_TRUE(device(index)->device->children().is_empty());
 }
+
+TEST_F(CompositeTestCase, MultibindWithOutgoingDirectory) {
+  // Make sure that a device with an outgoing directory can have multiple
+  // composite devices bind to it. See fxbug.dev/105017 for details.
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
+
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "parent-device", 1 /* protocol id */,
+                                    "", true, true, true, std::move(endpoints->client), zx::vmo(),
+                                    &parent_index));
+
+  // If a parent device has these properties, any composite devices will be
+  // created without an intermediate fragment device.
+  ASSERT_TRUE(device(parent_index)->device->has_outgoing_directory());
+  ASSERT_TRUE(device(parent_index)->device->flags & DEV_CTX_MUST_ISOLATE);
+
+  uint32_t protocol_id = 1;
+  ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, &protocol_id, 1,
+                                                       nullptr, 0, "composite-1"));
+
+  DeviceState new_proxy;
+  ASSERT_NO_FATAL_FAILURE(CheckCreateNewProxyDeviceReceived(driver_host_server(), &new_proxy));
+
+  // Make sure the composite comes up.
+  DeviceState composite;
+  ASSERT_NO_FATAL_FAILURE(
+      CheckCreateCompositeDeviceReceived(driver_host_server(), "composite-1", 1, &composite));
+
+  uint32_t protocol_id2 = 1;
+  ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, &protocol_id2, 1,
+                                                       nullptr, 0, "composite-2"));
+
+  DeviceState new_proxy2;
+  ASSERT_NO_FATAL_FAILURE(CheckCreateNewProxyDeviceReceived(driver_host_server(), &new_proxy2));
+
+  // Make sure a second composite comes up.
+  DeviceState composite2;
+  ASSERT_NO_FATAL_FAILURE(
+      CheckCreateCompositeDeviceReceived(driver_host_server(), "composite-2", 1, &composite2));
+}

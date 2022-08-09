@@ -21,9 +21,11 @@ void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) {
     indent++;
     DumpDevice(vmo, dev->proxy().get(), indent);
   }
-  if (dev->new_proxy()) {
+  if (dev->new_proxies().size() > 0) {
     indent++;
-    DumpDevice(vmo, dev->new_proxy().get(), indent);
+    for (auto& new_proxy : dev->new_proxies()) {
+      DumpDevice(vmo, new_proxy.get(), indent);
+    }
   }
   for (const auto& child : dev->children()) {
     DumpDevice(vmo, &child, indent + 1);
@@ -126,8 +128,8 @@ void DumpDeviceProps(VmoWriter* vmo, const Device* dev) {
   if (dev->proxy()) {
     DumpDeviceProps(vmo, dev->proxy().get());
   }
-  if (dev->new_proxy()) {
-    DumpDeviceProps(vmo, dev->new_proxy().get());
+  for (auto& new_proxy : dev->new_proxies()) {
+    DumpDeviceProps(vmo, new_proxy.get());
   }
   for (const auto& child : dev->children()) {
     DumpDeviceProps(vmo, &child);

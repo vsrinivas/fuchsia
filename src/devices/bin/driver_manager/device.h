@@ -11,6 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
@@ -23,6 +24,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
+#include <fbl/vector.h>
 
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/inspect.h"
@@ -304,7 +306,7 @@ class Device
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
       fbl::RefPtr<Device>* device);
   zx_status_t CreateProxy();
-  zx_status_t CreateNewProxy();
+  zx_status_t CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out);
 
   static void Bind(fbl::RefPtr<Device> dev, async_dispatcher_t*,
                    fidl::ServerEnd<fuchsia_device_manager::Coordinator>);
@@ -381,8 +383,7 @@ class Device
   const fbl::RefPtr<Device>& proxy() { return proxy_; }
   fbl::RefPtr<const Device> proxy() const { return proxy_; }
 
-  const fbl::RefPtr<Device>& new_proxy() { return new_proxy_; }
-  fbl::RefPtr<const Device> new_proxy() const { return new_proxy_; }
+  const std::vector<fbl::RefPtr<Device>>& new_proxies() const { return new_proxies_; }
 
   uint32_t protocol_id() const { return protocol_id_; }
 
@@ -494,6 +495,10 @@ class Device
   zx::channel take_client_remote() { return std::move(client_remote_); }
   bool has_outgoing_directory() { return outgoing_dir_.is_valid(); }
   fidl::ClientEnd<fio::Directory> take_outgoing_dir() { return std::move(outgoing_dir_); }
+  fidl::ClientEnd<fio::Directory> clone_outgoing_dir() {
+    return fidl::ClientEnd<fio::Directory>(
+        zx::channel(fdio_service_clone(outgoing_dir_.handle()->get())));
+  }
 
   const fbl::String& name() const { return name_; }
   const fbl::String& libname() const { return libname_; }
@@ -597,7 +602,10 @@ class Device
   const uint32_t protocol_id_;
 
   fbl::RefPtr<Device> proxy_;
-  fbl::RefPtr<Device> new_proxy_;
+  // A vector of proxies to allow the device's children to connect to its
+  // outgoing directory. Each new proxy has its connection to the outgoing
+  // directory.
+  std::vector<fbl::RefPtr<Device>> new_proxies_;
 
   fbl::Array<const zx_device_prop_t> props_;
 

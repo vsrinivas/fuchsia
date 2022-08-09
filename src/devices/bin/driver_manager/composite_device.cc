@@ -300,10 +300,6 @@ zx_status_t CompositeDevice::TryAssemble() {
       bound_dev = bound_dev->proxy();
     }
 
-    if (bound_dev->new_proxy()) {
-      bound_dev = bound_dev->new_proxy();
-    }
-
     // Check if we need to use the proxy.  If not, share a reference to
     // the instance of the fragment device.
     // We always use a proxy when there is an outgoing directory involved.
@@ -318,21 +314,15 @@ zx_status_t CompositeDevice::TryAssemble() {
     fbl::RefPtr<Device> proxy;
     zx_status_t status;
     if (bound_dev->has_outgoing_directory()) {
-      if (driver_host != nullptr && bound_dev->new_proxy() != nullptr &&
-          bound_dev->new_proxy()->host() != nullptr &&
-          bound_dev->new_proxy()->host() != driver_host) {
-        LOGF(ERROR, "Cannot create composite device, device proxies are in different driver_hosts");
-        return ZX_ERR_BAD_STATE;
-      }
-
       VLOGF(1, "Preparing new proxy for %s", bound_dev->name().data());
-      status = coordinator->PrepareNewProxy(bound_dev, driver_host);
+      fbl::RefPtr<Device> new_proxy;
+      status = coordinator->PrepareNewProxy(bound_dev, driver_host, &new_proxy);
       if (status != ZX_OK) {
         return status;
       }
-      proxy = bound_dev->new_proxy();
+      proxy = std::move(new_proxy);
     } else {
-      if (driver_host != nullptr && fragment_dev->proxy() != nullptr &&
+      if (driver_host != nullptr && fragment_dev != nullptr && fragment_dev->proxy() != nullptr &&
           fragment_dev->proxy()->host() != nullptr &&
           fragment_dev->proxy()->host() != driver_host) {
         LOGF(ERROR, "Cannot create composite device, device proxies are in different driver_hosts");

@@ -176,7 +176,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
                            fbl::RefPtr<DriverHost> target_driver_host);
   zx_status_t PrepareNewProxy(const fbl::RefPtr<Device>& dev,
-                              fbl::RefPtr<DriverHost> target_driver_host);
+                              fbl::RefPtr<DriverHost> target_driver_host,
+                              fbl::RefPtr<Device>* new_proxy_out);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
