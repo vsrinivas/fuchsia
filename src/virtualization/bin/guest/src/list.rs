@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::Context,
     anyhow::Error,
     fidl_fuchsia_virtualization::{GuestManagerProxy, GuestStatus},
 };
@@ -10,14 +9,17 @@ use {
 pub async fn handle_list(managers: &Vec<(String, GuestManagerProxy)>) -> Result<String, Error> {
     let mut result = String::new();
     for (guest_name, guest_manager) in managers {
-        let guest_info =
-            guest_manager.get_guest_info().await.context("Could not get guest info")?;
-        if guest_info.guest_status == GuestStatus::Started {
-            result.push_str(format!(" guest:{:<4}\n", guest_name).as_str());
-        }
-    }
-    if result.is_empty() {
-        result.push_str("no guests\n");
+        let guest_status = match guest_manager.get_guest_info().await {
+            Ok(guest_info) => {
+                if guest_info.guest_status == GuestStatus::Started {
+                    "Started"
+                } else {
+                    "Stopped"
+                }
+            }
+            Err(_) => "Unavailable",
+        };
+        result.push_str(format!(" guest:{:<4}\t{:<4}\n", guest_name, guest_status).as_str());
     }
     Ok(result)
 }
@@ -34,7 +36,7 @@ mod test {
     };
 
     #[fasync::run_until_stalled(test)]
-    async fn list_valid_managers_no_started_guests_returns_ok() {
+    async fn list_valid_managers_no_started_guests_two_guests_unavailable_returns_ok() {
         let (debian_proxy, debian_stream) =
             create_proxy_and_stream::<GuestManagerMarker>().unwrap();
         let (zircon_proxy, zircon_stream) =
@@ -42,18 +44,12 @@ mod test {
         let (termina_proxy, termina_stream) =
             create_proxy_and_stream::<GuestManagerMarker>().unwrap();
 
-        let zircon_server = create_mock_manager_server(
-            zircon_stream,
-            GuestInfo { guest_status: GuestStatus::NotStarted },
-        );
+        let zircon_server = create_mock_manager_server(zircon_stream, None);
         let debian_server = create_mock_manager_server(
             debian_stream,
-            GuestInfo { guest_status: GuestStatus::NotStarted },
+            Some(GuestInfo { guest_status: GuestStatus::NotStarted }),
         );
-        let termina_server = create_mock_manager_server(
-            termina_stream,
-            GuestInfo { guest_status: GuestStatus::NotStarted },
-        );
+        let termina_server = create_mock_manager_server(termina_stream, None);
 
         let managers = vec![
             ("zircon".to_string(), zircon_proxy),
@@ -64,8 +60,10 @@ mod test {
 
         let (_, _, _, client_res) = join!(zircon_server, debian_server, termina_server, client);
 
-        let result_string = client_res.unwrap();
-        assert_eq!(result_string, "no guests\n");
+        assert_eq!(
+            client_res.unwrap(),
+            " guest:zircon\tUnavailable\n guest:debian\tStopped\n guest:termina\tUnavailable\n"
+        );
     }
 
     #[fasync::run_until_stalled(test)]
@@ -79,15 +77,15 @@ mod test {
 
         let zircon_server = create_mock_manager_server(
             zircon_stream,
-            GuestInfo { guest_status: GuestStatus::Started },
+            Some(GuestInfo { guest_status: GuestStatus::Started }),
         );
         let debian_server = create_mock_manager_server(
             debian_stream,
-            GuestInfo { guest_status: GuestStatus::NotStarted },
+            Some(GuestInfo { guest_status: GuestStatus::NotStarted }),
         );
         let termina_server = create_mock_manager_server(
             termina_stream,
-            GuestInfo { guest_status: GuestStatus::Started },
+            Some(GuestInfo { guest_status: GuestStatus::Started }),
         );
 
         let managers = vec![
@@ -99,15 +97,15 @@ mod test {
 
         let (_, _, _, client_res) = join!(zircon_server, debian_server, termina_server, client);
 
-        // Remove all whitespace to prevent failures in future if we change the formatting
-        let result_string: String =
-            client_res.unwrap().chars().filter(|c| !c.is_whitespace()).collect();
-        assert_eq!(result_string, "guest:zirconguest:termina");
+        assert_eq!(
+            client_res.unwrap(),
+            " guest:zircon\tStarted\n guest:debian\tStopped\n guest:termina\tStarted\n"
+        );
     }
 
     async fn create_mock_manager_server(
         mut stream: GuestManagerRequestStream,
-        mut guest_info: GuestInfo,
+        guest_info: Option<GuestInfo>,
     ) -> Result<(), Error> {
         let responder = stream
             .next()
@@ -116,7 +114,11 @@ mod test {
             .expect("Failed to parse request")
             .into_get_guest_info()
             .expect("Unexpected call to Manager Proxy");
-        responder.send(&mut guest_info).expect("Failed to send request to proxy");
+        if let Some(mut guest_info) = guest_info {
+            responder.send(&mut guest_info).expect("Failed to send request to proxy");
+        } else {
+            drop(responder);
+        };
 
         Ok(())
     }
