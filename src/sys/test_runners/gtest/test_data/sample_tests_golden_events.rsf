@@ -62,8 +62,7 @@
             "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:25: Skipped",
         ),
         RunEvent::case_stdout("SampleDisabled.DynamicSkip", ""),
-        // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
-        RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Passed),
+        RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Skipped),
         RunEvent::case_finished("SampleDisabled.DynamicSkip"),
 
         RunEvent::case_found("Tests/SampleParameterizedTestFixture.Test/0"),

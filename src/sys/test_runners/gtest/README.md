@@ -55,11 +55,6 @@ Test cases are executed sequentially by default.
 
 See [passing arguments][passing-arguments] to learn more.
 
-## Limitations
-
--   If a test calls `GTEST_SKIP()`, it will be recorded as `Passed` rather than
-    as `Skipped`. This is due to a bug in gtest itself.
-
 ## Testing
 
 Run:

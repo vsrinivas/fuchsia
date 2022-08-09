@@ -154,8 +154,9 @@ async fn launch_and_run_sample_test_include_disabled() {
             "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:25: Skipped",
         ),
         RunEvent::case_stdout("SampleDisabled.DynamicSkip", ""),
-        // gunit treats tests that call `GUNIT_SKIP()` as `Passed`.
-        RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Passed),
+        // gunit does not force run test skipped with `GTEST_SKIP()`
+        // https://github.com/google/googletest/issues/3831
+        RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Skipped),
         RunEvent::case_finished("SampleDisabled.DynamicSkip"),
     ]
     .into_iter()

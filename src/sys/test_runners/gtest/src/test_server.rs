@@ -106,6 +106,10 @@ struct IndividualTestOutput {
     pub status: IndividualTestOutputStatus,
     pub time: String,
     pub failures: Option<Vec<Failure>>,
+    /// This field is not documented, so using String. We can use serde_enum_str to convert it to
+    /// enum, but that is not in our third party crates.
+    /// Most common values seen in the output are COMPLETED, SKIPPED, SUPPRESSED
+    pub result: String,
 }
 
 /// Describes whether a test was run or skipped.
@@ -138,6 +142,8 @@ struct TestSuiteOutput {
 struct TestOutput {
     pub testsuites: Vec<TestSuiteOutput>,
 }
+
+const DYNAMIC_SKIP_RESULT: &str = "SKIPPED";
 
 /// Opens and reads file defined by `path` in `dir`.
 async fn read_file(dir: &fio::DirectoryProxy, path: &Path) -> Result<String, anyhow::Error> {
@@ -544,17 +550,20 @@ impl TestServer {
         let test_status = match &test_suite.status {
             IndividualTestOutputStatus::NotRun => Status::Skipped,
             IndividualTestOutputStatus::Run => {
-                match &test_suite.failures {
-                    Some(_failures) => {
-                        // TODO(fxbug.dev/53955): re-enable. currently we are getting these logs from test's
-                        // stdout which we are printing above.
-                        //for f in failures {
-                        //   test_stderr.write_str(format!("failure: {}\n", f.failure)).await?;
-                        // }
+                match test_suite.result.as_str() {
+                    DYNAMIC_SKIP_RESULT => Status::Skipped,
+                    _ => match &test_suite.failures {
+                        Some(_failures) => {
+                            // TODO(fxbug.dev/53955): re-enable. currently we are getting these logs from test's
+                            // stdout which we are printing above.
+                            //for f in failures {
+                            //   test_stderr.write_str(format!("failure: {}\n", f.failure)).await?;
+                            // }
 
-                        Status::Failed
-                    }
-                    None => Status::Passed,
+                            Status::Failed
+                        }
+                        None => Status::Passed,
+                    },
                 }
             }
         };
