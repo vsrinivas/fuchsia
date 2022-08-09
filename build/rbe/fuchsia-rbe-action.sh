@@ -240,7 +240,7 @@ inputs_joined="$(IFS=, echo "${inputs_array[*]+"${inputs_array[*]}"}")"
 output_files_joined="$(IFS=, echo "${output_files_array[*]+"${output_files_array[*]}"}")"
 
 output_files_rel=()
-for f in "${output_files_array[@]}"
+for f in "${output_files_array[@]+"${output_files_array[@]}"}"
 do output_files_rel+=( "${f#$build_subdir/}" )
 done
 
@@ -272,7 +272,7 @@ test "$want_auto_reproxy" = 0 ||
     --
   )
 
-full_command=( "${reproxy_prefix[@]}" "${rewrapped_command[@]}" )
+full_command=( "${reproxy_prefix[@]+"${reproxy_prefix[@]}"}" "${rewrapped_command[@]}" )
 
 if test -n "$label"
 then message_header="[$script][$label]:"
