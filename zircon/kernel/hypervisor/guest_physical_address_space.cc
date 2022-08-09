@@ -113,7 +113,7 @@ zx::status<> GuestPhysicalAddressSpace::ForPage(zx_gpaddr_t guest_paddr, ForPage
       fbl::RefPtr<VmObject> vmo = mapping->vmo_locked();
 
       zx_paddr_t host_paddr;
-      Guard<Mutex> vmo_guard(vmo->lock());
+      Guard<CriticalMutex> vmo_guard(vmo->lock());
       status = vmo->GetPageLocked(offset, kPfFlags, nullptr, &page_request, nullptr, &host_paddr);
       if (status == ZX_OK) {
         apply(host_paddr);

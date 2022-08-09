@@ -39,7 +39,7 @@ class VmObjectPhysical final : public VmObject {
   bool is_contiguous() const override { return true; }
   bool is_slice() const { return is_slice_; }
   uint64_t parent_user_id() const override {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return parent_user_id_;
   }
 

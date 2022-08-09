@@ -52,7 +52,7 @@ VmObject::~VmObject() {
 
 uint32_t VmObject::ScanAllForZeroPages(bool reclaim) {
   uint32_t count = 0;
-  Guard<Mutex> guard{AllVmosLock::Get()};
+  Guard<CriticalMutex> guard{AllVmosLock::Get()};
 
   for (auto& vmo : all_vmos_) {
     count += vmo.ScanForZeroPages(reclaim);
@@ -61,12 +61,12 @@ uint32_t VmObject::ScanAllForZeroPages(bool reclaim) {
 }
 
 void VmObject::AddToGlobalList() {
-  Guard<Mutex> guard{AllVmosLock::Get()};
+  Guard<CriticalMutex> guard{AllVmosLock::Get()};
   all_vmos_.push_back(this);
 }
 
 void VmObject::RemoveFromGlobalList() {
-  Guard<Mutex> guard{AllVmosLock::Get()};
+  Guard<CriticalMutex> guard{AllVmosLock::Get()};
   DEBUG_ASSERT(InGlobalList());
   Cursor::AdvanceCursors(all_vmos_cursors_, this);
   all_vmos_.erase(*this);
@@ -84,14 +84,14 @@ zx_status_t VmObject::set_name(const char* name, size_t len) {
 
 void VmObject::set_user_id(uint64_t user_id) {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(user_id_ == 0);
   user_id_ = user_id;
 }
 
 uint64_t VmObject::user_id() const {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return user_id_;
 }
 
@@ -112,13 +112,13 @@ void VmObject::RemoveMappingLocked(VmMapping* r) {
 
 uint32_t VmObject::num_mappings() const {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return mapping_list_len_;
 }
 
 bool VmObject::IsMappedByUser() const {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return ktl::any_of(mapping_list_.cbegin(), mapping_list_.cend(),
                      [](const VmMapping& m) -> bool { return m.aspace()->is_user(); });
 }
@@ -126,7 +126,7 @@ bool VmObject::IsMappedByUser() const {
 uint32_t VmObject::share_count() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (mapping_list_len_ < 2) {
     return 1;
   }
@@ -278,17 +278,17 @@ void VmObject::DropChildLocked(VmObject* c) {
   --children_list_len_;
 }
 
-void VmObject::RemoveChild(VmObject* o, Guard<Mutex>&& adopt) {
+void VmObject::RemoveChild(VmObject* o, Guard<CriticalMutex>&& adopt) {
   canary_.Assert();
   DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
-  Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
+  Guard<CriticalMutex> guard{AdoptLock, ktl::move(adopt)};
 
   DropChildLocked(o);
 
   OnUserChildRemoved(guard.take());
 }
 
-void VmObject::OnUserChildRemoved(Guard<Mutex>&& adopt) {
+void VmObject::OnUserChildRemoved(Guard<CriticalMutex>&& adopt) {
   DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
 
   // The observer may call back into this object so we must release the shared lock to prevent any
@@ -296,7 +296,7 @@ void VmObject::OnUserChildRemoved(Guard<Mutex>&& adopt) {
   // otherwise we have lock ordering issue, since we already allow the shared lock to be acquired
   // whilst holding the child_observer_lock.
   {
-    Guard<Mutex> guard{AdoptLock, ktl::move(adopt)};
+    Guard<CriticalMutex> guard{AdoptLock, ktl::move(adopt)};
 
     DEBUG_ASSERT(user_child_count_ > 0);
     --user_child_count_;
@@ -316,13 +316,13 @@ void VmObject::OnUserChildRemoved(Guard<Mutex>&& adopt) {
 
 uint32_t VmObject::num_children() const {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return children_list_len_;
 }
 
 uint32_t VmObject::num_user_children() const {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return user_child_count_;
 }
 
@@ -387,7 +387,7 @@ VmHierarchyBase::VmHierarchyBase(fbl::RefPtr<VmHierarchyState> state)
     : lock_(state->lock_ref()), hierarchy_state_ptr_(ktl::move(state)) {}
 
 void VmHierarchyState::DoDeferredDelete(fbl::RefPtr<VmHierarchyBase> vmo) {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   // If a parent has multiple children then it's possible for a given object to already be
   // queued for deletion.
   if (!vmo->deferred_delete_state_.InContainer()) {

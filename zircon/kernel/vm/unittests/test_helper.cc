@@ -263,7 +263,7 @@ zx_status_t vmo_lookup_pages(VmObject* vmo, uint64_t offset, uint pf_flags,
   zx_status_t status = ZX_OK;
   // TOOD(fxb/94078): Enforce no locks held here in case this gets waited on.
   __UNINITIALIZED LazyPageRequest page_request;
-  Guard<Mutex> guard{vmo->lock()};
+  Guard<CriticalMutex> guard{vmo->lock()};
   do {
     status = vmo->LookupPagesLocked(offset, pf_flags, mark_dirty, max_out_pages, alloc_list,
                                     &page_request, out);

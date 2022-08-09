@@ -234,7 +234,7 @@ void VmCowPages::fbl_recycle() {
   // a VmCowPages reference that could trigger a deletion is in this destructor when parent_ is
   // dropped, but that is always done without holding the lock.
   {  // scope guard
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
     // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
     // to be done before emptying the page list so that a hidden parent can't merge into this
@@ -328,7 +328,7 @@ VmCowPages::~VmCowPages() {
 bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   canary_.Assert();
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
 
   // TODO(fxb/101641): Formalize this.
   // Forbid zero page deduping if this is latency sensitive.
@@ -474,7 +474,7 @@ zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src, VmCowPagesOp
     // If the page source preserves content, initialize supply_zero_offset_ to size. All initial
     // content for a newly created VMO is provided by the page source, i.e. there is no content that
     // the kernel implicitly supplies with zero.
-    Guard<Mutex> guard{&cow->lock_};
+    Guard<CriticalMutex> guard{&cow->lock_};
     if (cow->is_source_preserving_page_content_locked()) {
       DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
       cow->UpdateSupplyZeroOffsetLocked(size);
@@ -3334,7 +3334,7 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
 }
 
 void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len,
-                                                   Guard<Mutex>* guard) {
+                                                   Guard<CriticalMutex>* guard) {
   canary_.Assert();
 
   // Hints only apply to pager backed VMOs.
@@ -4091,7 +4091,7 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
 zx_status_t VmCowPages::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
                                     bool new_zeroed_pages) {
   canary_.Assert();
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   IncrementHierarchyGenerationCountLocked();
   return SupplyPagesLocked(offset, len, pages, new_zeroed_pages);
 }
@@ -5071,7 +5071,7 @@ void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeCha
 // holds a refcount tally on the container.
 bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
                                        EvictionHintAction hint_action) {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
 
   // Without a page source to bring the page back in we cannot even think about eviction.
   if (!can_evict_locked()) {
@@ -5225,7 +5225,7 @@ zx_status_t VmCowPages::ReplacePagesWithNonLoanedLocked(uint64_t offset, uint64_
 }
 
 zx_status_t VmCowPages::ReplacePageWithLoaned(vm_page_t* before_page, uint64_t offset) {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return ReplacePageLocked(before_page, offset, true, nullptr, nullptr);
 }
 
@@ -5700,7 +5700,7 @@ zx_status_t VmCowPages::UnlockRangeLocked(uint64_t offset, uint64_t len) {
 }
 
 void VmCowPages::UpdateDiscardableStateLocked(DiscardableState state) {
-  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+  Guard<CriticalMutex> guard{DiscardableVmosLock::Get()};
 
   DEBUG_ASSERT(state != DiscardableState::kUnset);
 
@@ -5756,7 +5756,7 @@ void VmCowPages::UpdateDiscardableStateLocked(DiscardableState state) {
 }
 
 void VmCowPages::RemoveFromDiscardableListLocked() {
-  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+  Guard<CriticalMutex> guard{DiscardableVmosLock::Get()};
   if (discardable_state_ == DiscardableState::kUnset) {
     return;
   }
@@ -5797,7 +5797,7 @@ void VmCowPages::MoveToNonReclaimCandidatesListLocked(bool new_candidate) {
 
 bool VmCowPages::DebugIsInDiscardableListLocked(bool reclaim_candidate) const {
   AssertHeld(lock_);
-  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+  Guard<CriticalMutex> guard{DiscardableVmosLock::Get()};
 
   // Not on any list yet. Nothing else to verify.
   if (discardable_state_ == DiscardableState::kUnset) {
@@ -5845,7 +5845,7 @@ uint64_t VmCowPages::DebugGetPageCountLocked() const {
 }
 
 bool VmCowPages::DebugIsReclaimable() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (discardable_state_ != DiscardableState::kReclaimable) {
     return false;
   }
@@ -5853,7 +5853,7 @@ bool VmCowPages::DebugIsReclaimable() const {
 }
 
 bool VmCowPages::DebugIsUnreclaimable() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (discardable_state_ != DiscardableState::kUnreclaimable) {
     return false;
   }
@@ -5861,7 +5861,7 @@ bool VmCowPages::DebugIsUnreclaimable() const {
 }
 
 bool VmCowPages::DebugIsDiscarded() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (discardable_state_ != DiscardableState::kDiscarded) {
     return false;
   }
@@ -5870,27 +5870,27 @@ bool VmCowPages::DebugIsDiscarded() const {
 
 bool VmCowPages::DebugIsPage(uint64_t offset) const {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   const VmPageOrMarker* p = page_list_.Lookup(offset);
   return p && p->IsPage();
 }
 
 bool VmCowPages::DebugIsMarker(uint64_t offset) const {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   const VmPageOrMarker* p = page_list_.Lookup(offset);
   return p && p->IsMarker();
 }
 
 bool VmCowPages::DebugIsEmpty(uint64_t offset) const {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   const VmPageOrMarker* p = page_list_.Lookup(offset);
   return !p || p->IsEmpty();
 }
 
 vm_page_t* VmCowPages::DebugGetPage(uint64_t offset) const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return DebugGetPageLocked(offset);
 }
 
@@ -5904,14 +5904,14 @@ vm_page_t* VmCowPages::DebugGetPageLocked(uint64_t offset) const {
 }
 
 uint64_t VmCowPages::DebugGetSupplyZeroOffset() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return supply_zero_offset_;
 }
 
 VmCowPages::DiscardablePageCounts VmCowPages::GetDiscardablePageCounts() const {
   DiscardablePageCounts counts = {};
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (discardable_state_ == DiscardableState::kUnset) {
     return counts;
   }
@@ -5943,7 +5943,7 @@ VmCowPages::DiscardablePageCounts VmCowPages::GetDiscardablePageCounts() const {
 
 VmCowPages::DiscardablePageCounts VmCowPages::DebugDiscardablePageCounts() {
   DiscardablePageCounts total_counts = {};
-  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+  Guard<CriticalMutex> guard{DiscardableVmosLock::Get()};
 
   // The union of the two lists should give us a list of all discardable vmos.
   DiscardableList* lists_to_process[] = {&discardable_reclaim_candidates_,
@@ -5986,7 +5986,7 @@ uint64_t VmCowPages::DiscardPages(zx_duration_t min_duration_since_reclaimable,
                                   list_node_t* freed_list) {
   canary_.Assert();
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
 
   // Either this vmo is not discardable, or we've raced with a lock operation. Bail without doing
   // anything. If this was a discardable vmo, the lock operation will have already moved it to the
@@ -6026,7 +6026,7 @@ uint64_t VmCowPages::ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
                                                      zx_duration_t min_duration_since_reclaimable,
                                                      list_node_t* freed_list) {
   uint64_t total_pages_discarded = 0;
-  Guard<Mutex> guard{DiscardableVmosLock::Get()};
+  Guard<CriticalMutex> guard{DiscardableVmosLock::Get()};
 
   Cursor cursor(DiscardableVmosLock::Get(), discardable_reclaim_candidates_,
                 discardable_vmos_cursors_);

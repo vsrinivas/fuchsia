@@ -563,7 +563,7 @@ class VmCowPages final
   // set the |always_need| hint for pages in pager-backed VMOs. Any absent pages in the range will
   // be committed first, and the call will block on the fulfillment of the page request(s), dropping
   // |guard| while waiting (multiple times if multiple pages need to be supplied).
-  void ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len, Guard<Mutex>* guard)
+  void ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len, Guard<CriticalMutex>* guard)
       TA_REQ(lock_);
 
   void MarkAsLatencySensitiveLocked() TA_REQ(lock_);
@@ -574,7 +574,7 @@ class VmCowPages final
 
   // Exposed for testing.
   uint64_t DebugGetLockCount() const {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return lock_count_;
   }
   uint64_t DebugGetPageCountLocked() const TA_REQ(lock_);
@@ -983,7 +983,7 @@ class VmCowPages final
   // Lock that protects the global discardable lists.
   // This lock can be acquired with the vmo's |lock_| held. To prevent deadlocks, if both locks are
   // required the order of locking should always be 1) vmo's lock, and then 2) DiscardableVmosLock.
-  DECLARE_SINGLETON_MUTEX(DiscardableVmosLock);
+  DECLARE_SINGLETON_CRITICAL_MUTEX(DiscardableVmosLock);
 
   enum class DiscardableState : uint8_t {
     kUnset = 0,
@@ -1146,7 +1146,7 @@ class VmCowPages final
   // Unlocked wrapper around ReplacePageLocked intended to be called via the VmCowPagesContainer.
   zx_status_t ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned,
                           vm_page_t** after_page, LazyPageRequest* page_request) TA_EXCL(lock_) {
-    Guard<Mutex> guard{&lock_};
+    Guard<CriticalMutex> guard{&lock_};
     return ReplacePageLocked(before_page, offset, with_loaned, after_page, page_request);
   }
 
