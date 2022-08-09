@@ -319,6 +319,7 @@ impl TokenStore {
 
     /// Use the refresh token to get a new access token.
     async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<(), GcsError> {
+        tracing::debug!("refresh_access_token");
         match &self.refresh_token {
             Some(refresh_token) => {
                 let req_body = RefreshTokenRequest {
@@ -361,6 +362,7 @@ impl TokenStore {
         bucket: &str,
         object: &str,
     ) -> Result<Response<Body>> {
+        tracing::debug!("download {:?}, {:?}", bucket, object);
         // If the bucket and object are from a gs:// URL, the object may have a
         // undesirable leading slash. Trim it if present.
         let object = if object.starts_with('/') { &object[1..] } else { object };
@@ -448,6 +450,7 @@ impl TokenStore {
         prefix: &str,
         limit: Option<u32>,
     ) -> Result<Vec<String>> {
+        tracing::debug!("list");
         Ok(match self.attempt_list(https_client, bucket, prefix, limit).await {
             Err(e) => {
                 match e.downcast_ref::<GcsError>() {
@@ -565,6 +568,7 @@ pub fn auth_code_url() -> String {
 
 /// Convert an authorization code to a refresh token.
 pub async fn auth_code_to_refresh(auth_code: &str) -> Result<String> {
+    tracing::debug!("auth_code_to_refresh");
     use fuchsia_hyper::new_https_client;
     let token_store = TokenStore::new_with_code(&new_https_client(), auth_code).await?;
     match token_store.refresh_token() {

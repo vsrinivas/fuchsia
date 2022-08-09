@@ -222,7 +222,7 @@ where
         .context("finding product bundle")?;
 
     let start = std::time::Instant::now();
-    tracing::info!("Getting product data for {:?}", product_bundle.name);
+    tracing::info!("Getting product data for {:?} to {:?}", product_bundle.name, local_repo_dir);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
@@ -240,18 +240,20 @@ where
     tracing::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
 
     let start = std::time::Instant::now();
-    tracing::info!("\nGetting package data for {:?}", product_bundle.name);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
+    tracing::info!("Getting package data for {:?}, local_dir {:?}", product_bundle.name, local_dir);
 
-    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, progress).await?;
+    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, progress)
+        .await
+        .with_context(|| {
+            format!("fetch_package_repository_from_mirrors local_dir {:?}", local_dir)
+        })?;
 
     tracing::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
 
     tracing::info!("Download of product data for {:?} is complete.", product_bundle.name);
-    if let Some(parent) = local_dir.parent() {
-        tracing::debug!("Data written to \"{}\".", parent.display());
-    }
+    tracing::info!("Data written to \"{}\".", local_repo_dir.display());
     Ok(())
 }
 
@@ -314,14 +316,15 @@ async fn fetch_package_repository<F>(
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    if let Some(blob_uri) = &package.blob_uri {
-        tracing::debug!("    package repository: {} {}", package.repo_uri, blob_uri);
-    } else {
-        tracing::debug!("    package repository: {}", package.repo_uri);
-    }
-
+    tracing::debug!("local_dir {:?}, package {:?}", local_dir, package);
     let mut repo_metadata_uri = url::Url::parse(&package.repo_uri)
         .with_context(|| format!("parsing package.repo_uri {:?}", package.repo_uri))?;
+    tracing::debug!(
+        "package repository: repo_metadata_uri {:?}, repo_uri {}, blob_uri {:?}",
+        repo_metadata_uri,
+        package.repo_uri,
+        package.blob_uri
+    );
 
     match package.format.as_str() {
         "files" => {
@@ -333,15 +336,16 @@ where
                 repo_metadata_uri.set_path(&format!("{}/", repo_metadata_uri.path()));
             }
 
-            let repo_keys_uri = repo_metadata_uri.join("keys/")?;
-            repo_metadata_uri = repo_metadata_uri.join("repository/")?;
+            let repo_keys_uri = repo_metadata_uri.join("keys/").context("joining keys dir")?;
+            repo_metadata_uri =
+                repo_metadata_uri.join("repository/").context("joining repository dir")?;
 
             let repo_blobs_uri = if let Some(blob_repo_uri) = &package.blob_uri {
                 url::Url::parse(blob_repo_uri)
                     .with_context(|| format!("parsing package.repo_uri {:?}", blob_repo_uri))?
             } else {
                 // If the blob uri is unspecified, then use `$METADATA_URI/blobs/`.
-                repo_metadata_uri.join("blobs/")?
+                repo_metadata_uri.join("blobs/").context("joining blobs dir")?
             };
 
             fetch_package_repository_from_files(
@@ -352,6 +356,7 @@ where
                 progress,
             )
             .await
+            .context("fetch_package_repository_from_files")
         }
         "tgz" => {
             if package.blob_uri.is_some() {
@@ -424,7 +429,8 @@ where
             }
 
             let boto_path = get_boto_path().await?;
-            let client = get_gcs_client_with_auth(&boto_path)?;
+            let client =
+                get_gcs_client_with_auth(&boto_path).context("get_gcs_client_with_auth")?;
 
             let backend = Box::new(GcsRepository::new(
                 client,
@@ -441,6 +447,7 @@ where
                 progress,
             )
             .await
+            .context("fetch_package_repository_from_backend")
         }
         ("http" | "https", "http" | "https") => {
             let client = new_https_client();
@@ -459,6 +466,7 @@ where
                 progress,
             )
             .await
+            .context("fetch_package_repository_from_backend")
         }
         ("file", "file") => {
             // The files are already local, so we don't need to download them.
@@ -493,13 +501,16 @@ where
 
     // Download the repository private keys.
     fetch_bundle_uri(&repo_keys_uri.join("timestamp.json")?, keys_dir.as_std_path(), progress)
-        .await?;
+        .await
+        .context("fetch_bundle_uri timestamp.json")?;
 
     fetch_bundle_uri(&repo_keys_uri.join("snapshot.json")?, keys_dir.as_std_path(), progress)
-        .await?;
+        .await
+        .context("fetch_bundle_uri snapshot.json")?;
 
     fetch_bundle_uri(&repo_keys_uri.join("targets.json")?, keys_dir.as_std_path(), progress)
-        .await?;
+        .await
+        .context("fetch_bundle_uri targets.json")?;
 
     // TUF metadata may be expired, so pretend we're updating relative to the Unix Epoch so the
     // metadata won't expired.
@@ -631,6 +642,7 @@ where
         fetch_from_web(product_url, local_dir, progress).await.context("fetching from http(s)")?;
     } else if let Some(_) = &path_from_file_url(product_url) {
         // Since the file is already local, no fetch is necessary.
+        tracing::debug!("Found local file path {:?}", product_url);
     } else {
         bail!("Unexpected URI scheme in ({:?})", product_url);
     }

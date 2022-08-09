@@ -49,6 +49,7 @@ pub(crate) async fn get_boto_path() -> Result<PathBuf> {
 ///
 /// `boto_path` is the path to the .boto (gsutil) configuration file.
 pub(crate) fn get_gcs_client_with_auth(boto_path: &Path) -> Result<Client> {
+    tracing::debug!("get_gcs_client_with_auth");
     let auth = TokenStore::new_with_auth(
         read_boto_refresh_token(boto_path)
             .context("read boto refresh")?
@@ -77,6 +78,7 @@ pub(crate) async fn exists_in_gcs(gcs_url: &str) -> Result<bool> {
 ///
 /// Fallback from using `exists_in_gcs()` without auth.
 async fn exists_in_gcs_with_auth(gcs_bucket: &str, gcs_path: &str) -> Result<bool> {
+    tracing::debug!("exists_in_gcs_with_auth");
     let boto_path = get_boto_path().await?;
 
     loop {
@@ -115,9 +117,11 @@ pub(crate) async fn fetch_from_gcs<F>(
 where
     F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
+    tracing::debug!("fetch_from_gcs {:?}", gcs_url);
     let client = get_gcs_client_without_auth();
     let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
     if !client.fetch_all(bucket, gcs_path, &local_dir, progress).await.is_ok() {
+        tracing::debug!("Failed without auth, trying auth {:?}", gcs_url);
         fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, progress)
             .await
             .context("fetch with auth")?;
@@ -137,10 +141,12 @@ async fn fetch_from_gcs_with_auth<F>(
 where
     F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
 {
+    tracing::debug!("fetch_from_gcs_with_auth");
     let boto_path = get_boto_path().await?;
 
     loop {
         let client = get_gcs_client_with_auth(&boto_path)?;
+        tracing::debug!("gcs_bucket {:?}, gcs_path {:?}", gcs_bucket, gcs_path);
         match client
             .fetch_all(gcs_bucket, gcs_path, &local_dir, progress)
             .await
@@ -173,6 +179,7 @@ where
 /// authorization code, then convert that to a refresh token and write that
 /// refresh token to the ~/.boto file.
 async fn update_refresh_token(boto_path: &Path) -> Result<()> {
+    tracing::debug!("update_refresh_token {:?}", boto_path);
     println!("\nThe refresh token in the {:?} file needs to be updated.", boto_path);
     let auth_code = get_auth_code()?;
     let refresh_token = auth_code_to_refresh(&auth_code).await.context("get refresh token")?;
