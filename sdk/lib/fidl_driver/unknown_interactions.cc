@@ -10,7 +10,7 @@
 namespace fidl::internal {
 
 void SendDriverUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Transaction* txn) {
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'FIDL');
   if (!arena.is_ok()) {
     txn->InternalError(::fidl::UnbindInfo{::fidl::Status::TransportError(arena.status_value())},
                        fidl::ErrorOrigin::kSend);

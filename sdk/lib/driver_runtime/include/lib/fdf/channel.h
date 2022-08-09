@@ -24,7 +24,7 @@ __BEGIN_CDECLS
 // // Sends a request to the peer of |channel| and asynchronously waits for a response.
 // void send_request(fdf_handle_t channel, fdf_dispatcher_t* dispatcher dispatcher) {
 //   fdf_arena_t* arena;
-//   fdf_status_t status = fdf_arena_create(0, "", 0, &arena);
+//   fdf_status_t status = fdf_arena_create(0, 'exam', 0, &arena);
 //
 //   void* data = fdf_arena_allocate(arena, 0x1000);
 //   // Set the data to transfer

@@ -325,7 +325,7 @@ struct ReadResult {
 
 template <size_t N>
 void ChannelWrite(const fdf::Channel& channel, std::array<uint8_t, N> bytes) {
-  auto arena = fdf::Arena::Create(0, "unknown-interactions-test");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_TRUE(arena.is_ok());
   auto data = arena->Allocate(N);
   memcpy(data, bytes.data(), N);

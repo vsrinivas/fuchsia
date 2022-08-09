@@ -56,7 +56,7 @@ void TokenTest::SetUp() {
     dispatcher_remote_ = std::move(*dispatcher);
   }
 
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_FALSE(arena.is_error());
   arena_ = std::move(*arena);
 

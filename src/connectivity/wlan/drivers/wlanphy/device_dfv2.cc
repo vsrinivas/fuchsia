@@ -118,8 +118,8 @@ void Device::DdkUnbind(::ddk::UnbindTxn txn) {
 void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
                                   GetSupportedMacRolesCompleter::Sync& completer) {
   ltrace_fn();
-  std::string_view tag{"get_supported_mac_roles"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'GSMC';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
@@ -154,8 +154,8 @@ const fidl::Array<uint8_t, 6> NULL_MAC_ADDR{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 void Device::CreateIface(CreateIfaceRequestView request, CreateIfaceCompleter::Sync& completer) {
   ltrace_fn();
-  std::string_view tag{"create_iface"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'CIFC';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
@@ -200,8 +200,8 @@ void Device::CreateIface(CreateIfaceRequestView request, CreateIfaceCompleter::S
 
 void Device::DestroyIface(DestroyIfaceRequestView request, DestroyIfaceCompleter::Sync& completer) {
   ltrace_fn();
-  std::string_view tag{"destroy_iface"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'DIFC';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
@@ -237,8 +237,8 @@ void Device::DestroyIface(DestroyIfaceRequestView request, DestroyIfaceCompleter
 void Device::SetCountry(SetCountryRequestView request, SetCountryCompleter::Sync& completer) {
   ltrace_fn();
   ldebug_device("SetCountry to %s", wlan::common::Alpha2ToStr(request->req.alpha2).c_str());
-  std::string_view tag{"set_country"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'SCNT';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.Reply(ZX_ERR_INTERNAL);
     return;
@@ -272,8 +272,8 @@ void Device::SetCountry(SetCountryRequestView request, SetCountryCompleter::Sync
 
 void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync& completer) {
   ltrace_fn();
-  std::string_view tag{"get_country"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'GCNT';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
@@ -314,8 +314,8 @@ void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync
 
 void Device::ClearCountry(ClearCountryRequestView request, ClearCountryCompleter::Sync& completer) {
   ltrace_fn();
-  std::string_view tag{"clear_country"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'CCNT';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.Reply(ZX_ERR_INTERNAL);
     return;
@@ -346,8 +346,8 @@ void Device::ClearCountry(ClearCountryRequestView request, ClearCountryCompleter
 void Device::SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& completer) {
   ltrace_fn();
   ldebug_device("SetPsMode to %d", request->req);
-  std::string_view tag{"set_ps_mode"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'SPSM';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.Reply(ZX_ERR_INTERNAL);
     return;
@@ -380,8 +380,8 @@ void Device::SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& c
 
 void Device::GetPsMode(GetPsModeRequestView request, GetPsModeCompleter::Sync& completer) {
   ltrace_fn();
-  std::string_view tag{"get_ps_mode"};
-  auto fdf_arena = fdf::Arena::Create(0, tag);
+  constexpr uint32_t kTag = 'GPSM';
+  auto fdf_arena = fdf::Arena::Create(0, kTag);
   if (fdf_arena.is_error()) {
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;

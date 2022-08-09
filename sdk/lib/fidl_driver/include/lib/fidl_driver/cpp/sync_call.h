@@ -86,7 +86,7 @@ class SyncEndpointVeneer final {
 //
 //     // Call the |Foo| method synchronously, obtaining the results from the
 //     // return value.
-//     fdf::Arena arena = fdf::Arena::Create(0, "");
+//     fdf::Arena arena = fdf::Arena::Create(0, 'EXAM');
 //     fidl::WireResult result = client.buffer(arena)->Foo(args);
 //
 // |fdf::WireSyncClient| is suitable for code without access to an fdf
@@ -189,7 +189,7 @@ WireSyncClient(ClientEnd<FidlProtocol>) -> WireSyncClient<FidlProtocol>;
 // |WireCall| is used to make method calls directly on a |fdf::ClientEnd|
 // without having to set up a client. Call it like:
 //
-//     fdf::Arena arena = fdf::Arena::Create(0, "");
+//     fdf::Arena arena = fdf::Arena::Create(0, 'EXAM');
 //     fdf::WireCall(client_end).buffer(arena)->Method(args...);
 //
 template <typename FidlProtocol>
@@ -202,7 +202,7 @@ fidl::internal::SyncEndpointVeneer<fidl::internal::WireSyncClientImpl, FidlProto
 // |WireCall| is used to make method calls directly on a |fdf::ClientEnd|
 // without having to set up a client. Call it like:
 //
-//     fdf::Arena arena = fdf::Arena::Create(0, "");
+//     fdf::Arena arena = fdf::Arena::Create(0, 'EXAM');
 //     fdf::WireCall(client_end).buffer(arena)->Method(args...);
 //
 template <typename FidlProtocol>

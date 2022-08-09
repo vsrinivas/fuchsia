@@ -11,7 +11,7 @@ fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol>::SendH
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal, ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags};
 
-  auto _arena = fdf::Arena::Create(0, "");
+  auto _arena = fdf::Arena::Create(0, 'FIDL');
   if (!_arena.is_ok()) {
     return ::fidl::internal::ToFitxResult(
         ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena));

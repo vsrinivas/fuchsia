@@ -66,9 +66,9 @@ class WlanphyImplDeviceTest : public FakeUcodeTest {
         endpoints->server.TakeHandle());
 
     // Create test arena.
-    std::string_view tag{"WlanphyImplDevice-test"};
+    constexpr uint32_t kTag = 'TEST';
 
-    auto arena = fdf::Arena::Create(0, tag);
+    auto arena = fdf::Arena::Create(0, kTag);
     ASSERT_FALSE(arena.is_error());
 
     test_arena_ = *std::move(arena);

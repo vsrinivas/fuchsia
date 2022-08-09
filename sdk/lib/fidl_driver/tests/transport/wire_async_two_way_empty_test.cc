@@ -23,7 +23,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayEmptyArgsTest> 
   void TwoWayEmptyArgs(TwoWayEmptyArgsRequestView request, fdf::Arena& in_request_arena,
                        TwoWayEmptyArgsCompleter::Sync& completer) override {
     // Test using a different arena in the response.
-    auto response_arena = fdf::Arena::Create(0, "");
+    auto response_arena = fdf::Arena::Create(0, 'DIFF');
     completer.buffer(*response_arena).Reply();
   }
 };
@@ -50,7 +50,7 @@ TEST(DriverTransport, WireTwoWayEmptyArgAsyncShared) {
 
   fdf::WireSharedClient<test_transport::TwoWayEmptyArgsTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'ORIG');
   ASSERT_OK(arena.status_value());
 
   libsync::Completion done;

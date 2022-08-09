@@ -69,7 +69,7 @@ bool EchoCallSyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
       fidl::Arena<65536> fidl_arena;
       FidlType aligned_value = builder(fidl_arena);
 
-      auto arena = fdf::Arena::Create(0, "");
+      auto arena = fdf::Arena::Create(0, 'BNCH');
       ZX_ASSERT(arena.is_ok());
 
       state->NextStep();  // End: Setup. Begin: EchoCall.

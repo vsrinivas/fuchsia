@@ -18,8 +18,8 @@ namespace fdf {
 //
 // Example:
 //
-//   std::string_view tag;
-//   auto arena = fdf::Arena::Create(0, tag);
+//   consexptr uint32_t kTag = 'EXAM';
+//   auto arena = fdf::Arena::Create(0, kTag);
 //
 //   // Allocate new blocks of memory.
 //   void* addr1 = arena.Allocate(arena, 0x1000);
@@ -35,9 +35,9 @@ class Arena {
   // For example, adjusting the size of the buffer backing the arena
   // to the expected total size of allocations.
   // It may also be surfaced in debug information.
-  static zx::status<Arena> Create(uint32_t options, cpp17::string_view tag) {
+  static zx::status<Arena> Create(uint32_t options, uint32_t tag) {
     fdf_arena_t* arena;
-    fdf_status_t status = fdf_arena_create(options, tag.data(), tag.size(), &arena);
+    fdf_status_t status = fdf_arena_create(options, tag, &arena);
     if (status != ZX_OK) {
       return zx::error(status);
     }

@@ -75,7 +75,7 @@ class LeafDriver {
   }
 
   fpromise::result<void, zx_status_t> CallParentWithResult() {
-    auto arena = fdf::Arena::Create(0, "");
+    auto arena = fdf::Arena::Create(0, 'TEST');
     if (arena.is_error()) {
       return fpromise::error(arena.status_value());
     }

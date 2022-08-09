@@ -22,8 +22,7 @@ struct fdf_arena : public fbl::RefCounted<fdf_arena> {
   fdf_arena(fdf_arena& to_copy) = delete;
 
   // fdf_arena_t implementation
-  static fdf_status_t Create(uint32_t options, const char* tag, size_t tag_len,
-                             fdf_arena** out_arena);
+  static fdf_status_t Create(uint32_t options, uint32_t tag, fdf_arena** out_arena);
   void* Allocate(size_t bytes);
   bool Contains(const void* data, size_t num_bytes);
   void* Free(void* data);
@@ -50,12 +49,14 @@ struct fdf_arena : public fbl::RefCounted<fdf_arena> {
     alignas(FIDL_ALIGNMENT) uint8_t data_[kExtraSize];
   };
 
-  fdf_arena() = default;
+  fdf_arena(uint32_t tag) : tag_(tag) {}
 
   // Returns a pointer to the newest allocated buffer.
   uint8_t* NewestBufferLocked() __TA_REQUIRES(&lock_) {
     return extra_blocks_.is_empty() ? initial_buffer_ : extra_blocks_.front().data();
   }
+
+  [[maybe_unused]] uint32_t tag_;
 
   fbl::Mutex lock_;
   // Pointer to the next available data.

@@ -23,8 +23,8 @@ bool ChannelWriteReadTest(perftest::RepeatState* state, uint32_t message_size,
   auto channel_pair = fdf::ChannelPair::Create(0);
   ASSERT_OK(channel_pair.status_value());
 
-  std::string_view tag;
-  auto arena = fdf::Arena::Create(0, tag);
+  constexpr uint32 kTag = 'BNCH';
+  auto arena = fdf::Arena::Create(0, kTag);
   ASSERT_OK(arena.status_value());
 
   void* data = arena->Allocate(message_size);

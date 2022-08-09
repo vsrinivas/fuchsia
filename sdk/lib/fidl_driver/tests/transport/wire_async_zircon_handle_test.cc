@@ -65,7 +65,7 @@ void TestImpl() {
   // Use a scope block to close the local arena reference after the message is sent.
   // This ensures that handles stored in the arena are closed before the arena is destructed.
   {
-    auto arena = fdf::Arena::Create(0, "");
+    auto arena = fdf::Arena::Create(0, 'TEST');
     ASSERT_OK(arena.status_value());
 
     zx::event ev;
@@ -112,7 +112,7 @@ TEST(DriverTransport, WireSendZirconHandleEncodeErrorShouldCloseHandle) {
   ASSERT_OK(dispatcher.status_value());
   zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
   ASSERT_OK(endpoints.status_value());
-  zx::status arena = fdf::Arena::Create(0, "");
+  zx::status arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
 
   fdf::WireSharedClient client(std::move(endpoints->client), dispatcher->get());

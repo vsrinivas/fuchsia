@@ -29,7 +29,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
     ASSERT_EQ(fdf_request_arena, in_request_arena.get());
 
     // Test using a different arena in the response.
-    auto response_arena = fdf::Arena::Create(0, "");
+    auto response_arena = fdf::Arena::Create(0, 'DIFF');
     completer.buffer(*response_arena).Reply(kResponsePayload);
     fdf_response_arena = std::move(*response_arena);
   }
@@ -55,7 +55,7 @@ TEST(DriverTransport, WireTwoWayAsync) {
   auto server = std::make_shared<TestServer>();
   fdf::BindServer(dispatcher->get(), std::move(server_end), server,
                   fidl_driver_testing::FailTestOnServerError<::test_transport::TwoWayTest>());
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'ORIG');
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
 
@@ -108,7 +108,7 @@ TEST(DriverTransport, WireTwoWayAsyncShared) {
 
   fdf::WireSharedClient<test_transport::TwoWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'ORIG');
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
 

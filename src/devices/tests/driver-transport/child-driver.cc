@@ -47,8 +47,7 @@ class Device : public DeviceType {
 void Device::GetParentDataOverDriverTransport(
     GetParentDataOverDriverTransportRequestView request,
     GetParentDataOverDriverTransportCompleter::Sync& completer) {
-  std::string_view tag{""};
-  auto arena = fdf::Arena::Create(0, tag);
+  auto arena = fdf::Arena::Create(0, 'TDAT');
   if (arena.is_error()) {
     completer.ReplyError(arena.status_value());
     return;

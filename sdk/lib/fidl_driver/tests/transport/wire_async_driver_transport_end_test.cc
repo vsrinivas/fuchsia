@@ -48,7 +48,7 @@ TEST(DriverTransport, WireSendDriverClientEnd) {
 
   fdf::WireSharedClient<test_transport::SendDriverTransportEndTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
 
   auto endpoints = fdf::CreateEndpoints<test_transport::OneWayTest>();
@@ -84,7 +84,7 @@ TEST(DriverTransport, WireSendDriverClientEndEncodeErrorShouldCloseHandle) {
   ASSERT_OK(dispatcher.status_value());
   zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
   ASSERT_OK(endpoints.status_value());
-  zx::status arena = fdf::Arena::Create(0, "");
+  zx::status arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
 
   fdf::WireSharedClient client(std::move(endpoints->client), dispatcher->get());

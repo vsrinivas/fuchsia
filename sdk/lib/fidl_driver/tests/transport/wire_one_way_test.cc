@@ -61,7 +61,7 @@ TEST(DriverTransport, WireOneWayVector) {
 
   fdf::WireSharedClient<test_transport::OneWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
   auto result =
@@ -95,7 +95,7 @@ TEST(DriverTransport, WireOneWayVectorSyncViaAsyncClient) {
 
   fdf::WireSharedClient<test_transport::OneWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
   auto result = client.sync().buffer(*arena)->OneWay(

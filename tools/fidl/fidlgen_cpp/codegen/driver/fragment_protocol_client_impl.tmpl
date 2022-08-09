@@ -131,7 +131,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- EnsureNamespace "" }}
 {{ .NaturalThenable }}
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
-  auto _arena = fdf::Arena::Create(0, "");
+  auto _arena = fdf::Arena::Create(0, 'FIDL');
   if (!_arena.is_ok()) {
     return {{ .NaturalThenable }}(
         &client_base(), {}, &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }},
@@ -180,7 +180,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
 
-  auto _arena = fdf::Arena::Create(0, "");
+  auto _arena = fdf::Arena::Create(0, 'FIDL');
   if (!_arena.is_ok()) {
     return ::fidl::internal::ToFitxResult(
       ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena));

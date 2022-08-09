@@ -76,7 +76,7 @@ TEST(Client, ServerResetMidCall) {
   fdf::WireSharedClient<test_transport::TwoWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get(), &event_handler);
 
-  auto arena = fdf::Arena::Create(0, "");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
   sync_completion_t call_completion;
   client.buffer(*arena)->TwoWay(0u).ThenExactlyOnce(

@@ -57,8 +57,7 @@ class Device : public DeviceType {
 void Device::GetParentDataOverRuntimeChannel(
     GetParentDataOverRuntimeChannelRequestView request,
     GetParentDataOverRuntimeChannelCompleter::Sync& completer) {
-  std::string_view tag{""};
-  auto arena = fdf::Arena::Create(0, tag);
+  auto arena = fdf::Arena::Create(0, 'GPDA');
   if (arena.is_error()) {
     completer.ReplyError(arena.status_value());
     return;

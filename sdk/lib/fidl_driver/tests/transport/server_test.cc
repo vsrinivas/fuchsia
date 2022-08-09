@@ -102,7 +102,7 @@ TEST(Server, UnbindInMethodHandler) {
                       fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
   server->binding_ref = binding_ref;
 
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
+  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
 
   libsync::Completion sync_call;

@@ -58,7 +58,7 @@ void ChannelTest::SetUp() {
   local_ = std::move(channels->end0);
   remote_ = std::move(channels->end1);
 
-  std::string_view tag{""};
+  constexpr uint32_t tag = 'TEST';
   auto arena = fdf::Arena::Create(0, tag);
   ASSERT_OK(arena.status_value());
   arena_ = std::move(*arena);
@@ -737,7 +737,7 @@ TEST_F(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
     });
 
     fdf_arena_t* arena;
-    ASSERT_OK(fdf_arena_create(0, "", 0, &arena));
+    ASSERT_OK(fdf_arena_create(0, 'TEST', &arena));
     for (uint64_t i = 1; i <= kNumMessages; ++i) {
       void* data = fdf_arena_allocate(arena, sizeof(i));
       memcpy(data, &i, sizeof(i));

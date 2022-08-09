@@ -124,7 +124,7 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply({{ .NaturalResponseArg "respon
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
 
-  auto _arena = fdf::Arena::Create(0, "");
+  auto _arena = fdf::Arena::Create(0, 'FIDL');
   if (!_arena.is_ok()) {
     ::fidl::OutgoingMessage _failure{::fidl::Status::TransportError(_arena.status_value())};
     SendReply(&_failure, {});

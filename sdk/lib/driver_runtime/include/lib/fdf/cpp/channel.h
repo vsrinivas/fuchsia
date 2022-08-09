@@ -21,8 +21,8 @@ namespace fdf {
 //
 // Example:
 //
-//   std::string_view tag;
-//   auto arena = fdf::Arena::Create(0, tag);
+//   constexpr uint32_t kTag = 'EXAM';
+//   auto arena = fdf::Arena::Create(0, kTag);
 //
 //   void* data = arena.Allocate(0x1000);
 //   // Set the data to transfer

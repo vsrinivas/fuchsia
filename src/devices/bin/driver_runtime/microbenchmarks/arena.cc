@@ -16,8 +16,8 @@ namespace {
 
 // Measure the time taken to allocate and free a |buffer_size|-byte block.
 bool ArenaAllocFreeTest(perftest::RepeatState* state, size_t buffer_size) {
-  std::string_view tag;
-  auto arena = fdf::Arena::Create(0, tag);
+  constexpr uint32 kTag = 'BNCH';
+  auto arena = fdf::Arena::Create(0, kTag);
   ASSERT_OK(arena.status_value());
 
   state->DeclareStep("alloc");
@@ -38,8 +38,8 @@ bool ArenaAllocFreeTest(perftest::RepeatState* state, size_t buffer_size) {
 bool ArenaContainsTest(perftest::RepeatState* state, uint32_t num_blocks) {
   constexpr size_t kBlockSizeBytes = 0x1000;
 
-  std::string_view tag;
-  auto arena = fdf::Arena::Create(0, tag);
+  constexpr uint32 kTag = 'BNCH';
+  auto arena = fdf::Arena::Create(0, kTag);
   ASSERT_OK(arena.status_value());
 
   std::vector<uint32_t*> allocated;

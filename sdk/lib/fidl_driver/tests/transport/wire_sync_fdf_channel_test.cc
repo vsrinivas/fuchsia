@@ -60,7 +60,7 @@ TEST(DriverTransport, WireSendFdfChannelSync) {
   fdf::ServerBindingRef binding_ref = fdf::BindServer(
       server_dispatcher->get(), std::move(server_end), server,
       fidl_driver_testing::FailTestOnServerError<test_transport::SendFdfChannelTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
+  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'TEST');
   ASSERT_OK(arena.status_value());
 
   auto channel_pair = fdf::ChannelPair::Create(0);

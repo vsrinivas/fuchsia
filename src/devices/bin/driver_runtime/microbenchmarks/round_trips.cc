@@ -92,8 +92,8 @@ class ChannelDispatcherTest {
       server_dispatcher_ = *std::move(dispatcher);
     }
 
-    std::string_view tag;
-    auto arena = fdf::Arena::Create(0, tag);
+    constexpr uint32 kTag = 'BNCH';
+    auto arena = fdf::Arena::Create(0, kTag);
     ASSERT_OK(arena.status_value());
     arena_ = *std::move(arena);
 

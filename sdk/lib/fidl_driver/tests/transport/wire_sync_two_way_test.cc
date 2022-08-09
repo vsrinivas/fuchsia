@@ -34,7 +34,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
     ASSERT_EQ(fdf_request_arena, in_request_arena.get());
 
     // Test using a different arena in the response.
-    auto response_arena = fdf::Arena::Create(0, "");
+    auto response_arena = fdf::Arena::Create(0, 'DIFF');
     fdf_response_arena = response_arena->get();
     completer.buffer(*response_arena).Reply(kResponsePayload);
   }
@@ -72,7 +72,7 @@ TEST(DriverTransport, WireTwoWaySync) {
   fdf::ServerBindingRef binding_ref =
       fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,
                       fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
+  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'ORIG');
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
 
@@ -130,7 +130,7 @@ TEST(DriverTransport, WireTwoWaySyncViaAsyncClient) {
   fdf::ServerBindingRef binding_ref =
       fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,
                       fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
+  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'ORIG');
   ASSERT_OK(arena.status_value());
   server->fdf_request_arena = arena->get();
 

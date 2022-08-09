@@ -8,7 +8,7 @@ namespace test_drivertwoway {
 }  // namespace test_drivertwoway
 ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>
 fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(const ::fidl::Request<::test_drivertwoway::TwoWay::Add>& request) const {
-  auto _arena = fdf::Arena::Create(0, "");
+  auto _arena = fdf::Arena::Create(0, 'FIDL');
   if (!_arena.is_ok()) {
     return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
         &client_base(), {}, &::fidl::internal::DriverTransport::VTable, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags,
@@ -54,7 +54,7 @@ void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::Rep
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags};
 
-  auto _arena = fdf::Arena::Create(0, "");
+  auto _arena = fdf::Arena::Create(0, 'FIDL');
   if (!_arena.is_ok()) {
     ::fidl::OutgoingMessage _failure{::fidl::Status::TransportError(_arena.status_value())};
     SendReply(&_failure, {});

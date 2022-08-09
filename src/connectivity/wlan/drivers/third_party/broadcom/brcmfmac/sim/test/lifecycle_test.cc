@@ -78,9 +78,9 @@ TEST(LifecycleTest, StartWithSmeChannel) {
 
   device->DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_wlan_wlanphyimpl::WlanphyImpl>,
                             endpoints->server.TakeHandle());
-  std::string_view tag{"WlanphyImplDevice-test-lifecycle"};
+  constexpr uint32_t kTag = 'TEST';
 
-  auto arena = fdf::Arena::Create(0, tag);
+  auto arena = fdf::Arena::Create(0, kTag);
   ASSERT_FALSE(arena.is_error());
   auto test_arena_ = *std::move(arena);
 

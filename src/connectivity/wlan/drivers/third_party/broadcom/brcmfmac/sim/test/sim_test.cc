@@ -414,7 +414,7 @@ zx_status_t SimTest::Init() {
   }
 
   // Create test arena.
-  auto arena = fdf::Arena::Create(0, "WlanphyImplDevice-test");
+  auto arena = fdf::Arena::Create(0, 'TEST');
   if (arena.is_error()) {
     BRCMF_ERR("Failed to create arena");
     return ZX_ERR_INTERNAL;
