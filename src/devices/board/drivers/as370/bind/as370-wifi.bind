@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite wifi;
+
+using fuchsia.sdmmc;
+
+primary node "sdio-function-1" {
+  fuchsia.BIND_PROTOCOL == fuchsia.sdmmc.BIND_PROTOCOL.SDIO;
+  fuchsia.BIND_SDIO_VID == 0x02df;
+  fuchsia.BIND_SDIO_FUNCTION == 1;
+  accept fuchsia.BIND_SDIO_PID {
+    0x9135,
+    0x9139,
+    0x912d,
+    0x9145,
+    0x9159,
+    0x9141,
+    0x9149,
+  }
+}

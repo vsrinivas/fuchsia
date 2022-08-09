@@ -1,0 +1,86 @@
+[
+    {
+        "node": "sdio-function-1",
+        "tests": [
+            {
+                "name": "Match accept 0x9135",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x9135",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Match accept 0x9139",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x9139",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Match accept 0x912d",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x912d",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Match accept 0x9145",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x9145",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Match accept 0x9159",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x9159",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Match accept 0x9141",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x9141",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Match accept 0x9149",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_PID": "0x9149",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1",
+                    "fuchsia.BIND_SDIO_VID": "0x02df"
+                }
+            },
+            {
+                "name": "Accept mismatch value",
+                "expected": "abort",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.sdmmc.BIND_PROTOCOL.SDIO",
+                    "fuchsia.BIND_SDIO_VID": "0x02df",
+                    "fuchsia.BIND_SDIO_FUNCTION": "1"
+                }
+            }
+        ]
+    }
+]

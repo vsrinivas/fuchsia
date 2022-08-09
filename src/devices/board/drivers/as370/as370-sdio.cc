@@ -13,7 +13,7 @@
 #include <soc/as370/as370-hw.h>
 
 #include "as370.h"
-#include "src/devices/board/drivers/as370/as370-bind.h"
+#include "src/devices/board/drivers/as370/as370-wifi-bind.h"
 
 namespace board_as370 {
 
@@ -73,6 +73,28 @@ zx_status_t As370::SdioInit() {
   status = pbus_.DeviceAdd(&sdio_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd() error: %d", __func__, status);
+  }
+
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_NXP},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_MARVELL_88W8987},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MARVELL_WIFI},
+  };
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = std::size(props),
+      .fragments = wifi_fragments,
+      .fragments_count = std::size(wifi_fragments),
+      .primary_fragment = "sdio-function-1",
+      .spawn_colocated = true,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  status = DdkAddComposite("wifi", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAddComposite failed; %s", __func__, zx_status_get_string(status));
   }
 
   return status;
