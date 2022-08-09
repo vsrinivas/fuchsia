@@ -979,6 +979,15 @@
   related_guides: [""]
   area: ["Zircon", "System"]
 
+- term: "Root job"
+  short_description: "The root of the job tree and the first job in the system."
+  full_description: "The root job is created by the kernel to allow
+  <a href=\"/docs/glossary#userboot\">userboot</a> to begin execution."
+  see_also: ["<a href=\"/docs/glossary#job\">Job</a>",
+             "<a href=\"/docs/concepts/process/jobs.md\">Jobs</a>"]
+  related_guides: [""]
+  area: ["Zircon", "System"]
+
 - term: "Kernel object"
   short_description: "A kernel object is a kernel data structure that is used to regulate access to
   system resources such as memory, I/O, processor time and access to other processes."
