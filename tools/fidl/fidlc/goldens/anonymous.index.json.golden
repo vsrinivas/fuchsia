@@ -26,6 +26,9 @@
             "data": "ADD",
             "start_offset": 190,
             "end_offset": 193
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -36,6 +39,9 @@
             "data": "MUL",
             "start_offset": 211,
             "end_offset": 214
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -46,6 +52,9 @@
             "data": "DIV",
             "start_offset": 232,
             "end_offset": 235
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]
@@ -62,6 +71,9 @@
             "data": "ERROR_ONE",
             "start_offset": 1016,
             "end_offset": 1025
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -72,6 +84,9 @@
             "data": "ERROR_TWO",
             "start_offset": 1039,
             "end_offset": 1048
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

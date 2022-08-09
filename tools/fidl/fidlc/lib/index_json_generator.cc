@@ -161,6 +161,7 @@ void IndexJSONGenerator::Generate(const flat::Enum::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name.data(), Position::kFirst);
     GenerateObjectMember("location", value.name);
+    GenerateObjectMember("value", value.value);
   });
 }
 

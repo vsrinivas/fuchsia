@@ -80,6 +80,9 @@
             "data": "MEMBER",
             "start_offset": 307,
             "end_offset": 313
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

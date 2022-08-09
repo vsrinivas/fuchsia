@@ -45,6 +45,9 @@
             "data": "FOO",
             "start_offset": 144,
             "end_offset": 147
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -55,6 +58,9 @@
             "data": "BAR",
             "start_offset": 157,
             "end_offset": 160
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]
@@ -78,6 +84,9 @@
             "data": "FOO",
             "start_offset": 238,
             "end_offset": 241
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -88,6 +97,9 @@
             "data": "BAR",
             "start_offset": 251,
             "end_offset": 254
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -98,6 +110,9 @@
             "data": "CUSTOM_UNKNOWN",
             "start_offset": 277,
             "end_offset": 291
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]
@@ -121,6 +136,9 @@
             "data": "FOO",
             "start_offset": 67,
             "end_offset": 70
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -131,6 +149,9 @@
             "data": "BAR",
             "start_offset": 80,
             "end_offset": 83
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

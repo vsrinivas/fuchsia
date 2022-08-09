@@ -358,6 +358,9 @@
             "data": "E",
             "start_offset": 950,
             "end_offset": 951
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]
@@ -381,6 +384,15 @@
             "data": "VALUE",
             "start_offset": 410,
             "end_offset": 415
+          },
+          "value": {
+            "type": "binary_operator",
+            "lhs": {
+              "type": "literal"
+            },
+            "rhs": {
+              "type": "literal"
+            }
           }
         },
         {
@@ -391,6 +403,17 @@
             "data": "SECOND_VALUE",
             "start_offset": 429,
             "end_offset": 441
+          },
+          "value": {
+            "type": "identifier",
+            "identifier": "test.constants/UINT32",
+            "referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+              "data": "UINT32",
+              "start_offset": 444,
+              "end_offset": 450
+            }
           }
         }
       ]

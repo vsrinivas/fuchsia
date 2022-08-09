@@ -110,6 +110,9 @@
             "data": "A",
             "start_offset": 736,
             "end_offset": 737
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

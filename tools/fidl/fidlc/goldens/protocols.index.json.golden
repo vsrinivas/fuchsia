@@ -456,6 +456,9 @@
             "data": "ERR_FOO",
             "start_offset": 573,
             "end_offset": 580
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -466,6 +469,9 @@
             "data": "ERR_BAR",
             "start_offset": 590,
             "end_offset": 597
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

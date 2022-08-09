@@ -818,6 +818,9 @@
             "data": "VALUE",
             "start_offset": 605,
             "end_offset": 610
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -828,6 +831,9 @@
             "data": "true",
             "start_offset": 620,
             "end_offset": 624
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

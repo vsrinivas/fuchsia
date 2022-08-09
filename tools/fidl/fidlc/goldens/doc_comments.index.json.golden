@@ -47,6 +47,9 @@
             "data": "FOO",
             "start_offset": 1306,
             "end_offset": 1309
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -57,6 +60,9 @@
             "data": "BAR",
             "start_offset": 1448,
             "end_offset": 1451
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]
@@ -80,6 +86,9 @@
             "data": "FOO",
             "start_offset": 968,
             "end_offset": 971
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -90,6 +99,9 @@
             "data": "BAR",
             "start_offset": 1110,
             "end_offset": 1113
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

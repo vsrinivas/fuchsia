@@ -60,6 +60,9 @@
             "data": "A",
             "start_offset": 361,
             "end_offset": 362
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]

@@ -66,6 +66,9 @@
             "data": "NONE",
             "start_offset": 267,
             "end_offset": 271
+          },
+          "value": {
+            "type": "literal"
           }
         },
         {
@@ -76,6 +79,9 @@
             "data": "CHANNEL",
             "start_offset": 281,
             "end_offset": 288
+          },
+          "value": {
+            "type": "literal"
           }
         }
       ]
