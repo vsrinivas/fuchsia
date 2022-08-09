@@ -243,29 +243,43 @@ func serveExclusive(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req 
 		if !opts.KeepChannelAlive {
 			var epitaph *Epitaph
 			if errors.As(err, &epitaph) {
-				marshalerCtx := fidl.NewCtx()
-				header := marshalerCtx.NewHeader()
-				header.Ordinal = fidl.EpitaphOrdinal
-				epitaph := fidl.EpitaphBody{
-					Error: epitaph.Status,
-				}
-				var b [24]byte
-				cnb, cnh, err := fidl.MarshalHeaderThenMessage(&header, &epitaph, b[:], nil)
-				if err != nil {
-					panic(err)
-				}
-				if got, want := cnb, len(b); got != want {
-					panic(fmt.Sprintf("got encoded epitaph size = %d bytes, want %d", got, want))
-				}
-				if got, want := cnh, 0; got != want {
-					panic(fmt.Sprintf("got encoded epitaph size = %d handles, want %d", got, want))
-				}
-				if err := req.WriteEtc(b[:], nil, 0); err != nil {
-					opts.handleServeError(ctx, fmt.Errorf("failed to write epitaph(%s): %w", epitaph.Error, err))
+				if err := writeEpitaph(req, epitaph.Status); err != nil {
+					opts.handleServeError(ctx, fmt.Errorf("failed to write epitaph(%s): %w", &epitaph.Status, err))
 				}
 			}
 		}
 	}
+}
+
+func writeEpitaph(req zx.Channel, status zx.Status) error {
+	marshalerCtx := fidl.NewCtx()
+	header := marshalerCtx.NewHeader()
+	header.Ordinal = fidl.EpitaphOrdinal
+	epitaph := fidl.EpitaphBody{
+		Error: status,
+	}
+	var b [24]byte
+	cnb, cnh, err := fidl.MarshalHeaderThenMessage(&header, &epitaph, b[:], nil)
+	if err != nil {
+		panic(err)
+	}
+	if got, want := cnb, len(b); got != want {
+		panic(fmt.Sprintf("got encoded epitaph size = %d bytes, want %d", got, want))
+	}
+	if got, want := cnh, 0; got != want {
+		panic(fmt.Sprintf("got encoded epitaph size = %d handles, want %d", got, want))
+	}
+	return req.WriteEtc(b[:], nil, 0)
+}
+
+func CloseWithEpitaph(req zx.Channel, status zx.Status) error {
+	if err := writeEpitaph(req, status); err != nil {
+		return fmt.Errorf("write epitaph: %w", err)
+	}
+	if err := req.Close(); err != nil {
+		return fmt.Errorf("close channel: %w", err)
+	}
+	return nil
 }
 
 func (o *ServeOptions) handleServeError(ctx context.Context, err error) {

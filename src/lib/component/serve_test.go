@@ -545,5 +545,34 @@ func TestKeepChannelAlive(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestCloseWithEpitaph(t *testing.T) {
+	client, server, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := client.Close()
+		if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrBadHandle {
+			return
+		}
+		t.Errorf("got client.Close() = %v, want %s", err, zx.ErrBadHandle)
+	}()
+
+	status := zx.ErrInvalidArgs
+	if err := component.CloseWithEpitaph(server, status); err != nil {
+		t.Fatal(err)
+	}
+
+	proxy := bindingstest.Test1WithCtxInterface{Channel: client}
+
+	switch err := proxy.NoResponse(context.Background()).(type) {
+	case *zx.Error:
+		if err.Status != status {
+			t.Fatalf("got proxy.NoResponse() = %s, want %s", err.Status, status)
+		}
+	default:
+		t.Fatalf("got proxy.NoResponse() = %v, want %s", err, status)
+	}
 }

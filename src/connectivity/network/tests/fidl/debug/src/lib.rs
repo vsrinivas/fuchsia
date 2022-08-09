@@ -15,7 +15,7 @@ use futures::TryStreamExt as _;
 use net_declare::fidl_mac;
 use netstack_testing_common::{
     devices::{create_tun_device, create_tun_port, install_device},
-    realms::{Netstack, Netstack2, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, TestRealmExt as _, TestSandboxExt as _},
 };
 use netstack_testing_macros::variants_test;
 
@@ -49,15 +49,10 @@ async fn get_admin_unknown<N: Netstack>(name: &str) {
     let () = debug_interfaces.get_admin(id + 1, server_end).expect("get admin failed");
 
     let events = admin_control.take_event_stream().try_collect::<Vec<_>>().await;
-    if N::VERSION == NetstackVersion::Netstack3 {
-        assert_matches!(
-            events,
-            Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_FOUND, .. })
-        );
-    } else {
-        // TODO(https://fxbug.dev/8018): Sending epitaphs not supported in Go.
-        assert_matches!(events.as_ref().map(Vec::as_slice), Ok([]));
-    }
+    assert_matches!(
+        events,
+        Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_FOUND, .. })
+    );
 }
 
 #[variants_test]

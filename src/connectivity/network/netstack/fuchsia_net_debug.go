@@ -8,9 +8,11 @@
 package netstack
 
 import (
+	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/net/debug"
@@ -30,8 +32,7 @@ func (ci *debugInterfacesImpl) GetAdmin(_ fidl.Context, nicid uint64, request ad
 		nicid := tcpip.NICID(nicid)
 		nicInfo, ok := ci.ns.stack.NICInfo()[nicid]
 		if !ok {
-			// Just close the channel without a terminal event.
-			if err := request.Close(); err != nil {
+			if err := component.CloseWithEpitaph(request.Channel, zx.ErrNotFound); err != nil {
 				_ = syslog.WarnTf(debug.InterfacesName, "GetAdmin(%d) close error: %s", nicid, err)
 			}
 			return nil
