@@ -23,6 +23,9 @@ import("//build/product.gni")
 #     Flash manifest
 #     See //build/sdk/meta/flash_manifest-835e8f26.json
 #
+#   output(optional)
+#     Location to write the output product bundle file
+#
 #   deps (optional)
 #   public_deps (optional)
 #   testonly (optional)
@@ -32,8 +35,8 @@ template("product_metadata") {
   assert(defined(invoker.devices), "Devices names are required.")
 
   # All the paths are relative to the generated metadata json.
-  amber_files = rebase_path("$root_build_dir/amber-files", target_gen_dir)
-  image_base = rebase_path("$root_build_dir", target_gen_dir)
+  amber_files = rebase_path("$root_build_dir/amber-files", root_build_dir)
+  image_base = rebase_path("$root_build_dir", root_build_dir)
 
   # This is the most recent schema.
   schema_file = "product_bundle-6320eef1.json"
@@ -92,7 +95,11 @@ template("product_metadata") {
     }
   }
 
-  file = "$target_gen_dir/product_bundle.json"
+  if (defined(invoker.output)) {
+    file = invoker.output
+  } else {
+    file = "$target_gen_dir/product_bundle.json"
+  }
   generator_target = "${target_name}_json_generator"
   generated_file(generator_target) {
     visibility = [ ":*" ]

@@ -20,6 +20,9 @@ import("//build/json/validate_json.gni")
 #     The name or identifier of the device. This name will be referenced from
 #     the product bundle metadata.
 #
+#   output(optional)
+#     Location to write the output manifest
+#
 #   deps (optional)
 #   public_deps (optional)
 #   testonly (optional)
@@ -52,7 +55,12 @@ template("physical_device_manifest") {
       }
     }
   }
-  file = "$target_gen_dir/physical_device.json"
+
+  if (defined(invoker.output)) {
+    file = invoker.output
+  } else {
+    file = "$target_gen_dir/physical_device.json"
+  }
   generator_target = "${target_name}_json_generator"
   generated_file(generator_target) {
     visibility = [ ":*" ]

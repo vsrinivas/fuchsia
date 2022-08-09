@@ -22,6 +22,9 @@ import("//build/product.gni")
 #     The name or identifier of the device. This name will be referenced from
 #     the product bundle metadata.
 #
+#   output(optional)
+#     Location to write the output manifest
+#
 #   testonly (optional)
 #   visibility (optional)
 #     Standard GN meaning.
@@ -108,7 +111,11 @@ template("virtual_device_specification") {
     }
   }
 
-  output = "${target_gen_dir}/virtual_device.json"
+  if (defined(invoker.output)) {
+    file = invoker.output
+  } else {
+    file = "${target_gen_dir}/virtual_device.json"
+  }
   generator_target = "${target_name}_json_generator"
 
   generated_file(generator_target) {
@@ -116,13 +123,13 @@ template("virtual_device_specification") {
     forward_variables_from(invoker, [ "testonly" ])
     contents = file_contents
     output_conversion = "json"
-    outputs = [ output ]
+    outputs = [ file ]
     metadata = {
       images = [
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = "virtual_device"
-          path = rebase_path(output, root_build_dir)
+          path = rebase_path(file, root_build_dir)
           type = "manifest"
         },
       ]
@@ -148,7 +155,7 @@ template("virtual_device_specification") {
   validate_json(validator_target) {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
-    data = output
+    data = file
     deps = [ ":${generator_target}" ]
     schema = schema_target
     sources = [
