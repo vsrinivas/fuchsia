@@ -8,12 +8,19 @@ use fidl_fuchsia_settings::*;
 use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
+use futures::channel::mpsc::Sender;
 use futures::lock::Mutex;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use utils;
 
 const COMPONENT_URL: &str = "#meta/setui_service.cm";
+
+#[derive(PartialEq, Debug)]
+pub enum Request {
+    SetAutoBrightness,
+    SetManualBrightness,
+}
 
 #[async_trait]
 pub trait Mocks {
@@ -22,6 +29,7 @@ pub trait Mocks {
         manual_brightness: Arc<Mutex<Option<f32>>>,
         auto_brightness: Arc<Mutex<Option<bool>>>,
         num_changes: Arc<AtomicU32>,
+        requests_sender: Sender<Request>,
     ) -> Result<(), Error>;
 }
 
@@ -36,6 +44,7 @@ impl DisplayTest {
         manual_brightness: Arc<Mutex<Option<f32>>>,
         auto_brightness: Arc<Mutex<Option<bool>>>,
         num_changes: Arc<AtomicU32>,
+        requests_sender: Sender<Request>,
     ) -> Result<RealmInstance, Error> {
         let builder = RealmBuilder::new().await?;
         // Add setui_service as child of the realm builder.
@@ -60,6 +69,7 @@ impl DisplayTest {
                         Arc::clone(&manual_brightness),
                         Arc::clone(&auto_brightness),
                         Arc::clone(&num_changes),
+                        requests_sender.clone(),
                     ))
                 },
                 ChildOptions::new().eager(),

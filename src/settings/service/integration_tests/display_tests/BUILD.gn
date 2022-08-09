@@ -10,10 +10,10 @@ import("//build/rust/rustc_test.gni")
 rustc_test("bin") {
   name = "display_integration_test"
   edition = "2021"
-  source_root = "display_tests.rs"
+  source_root = "src/display_tests.rs"
   sources = [
-    "common.rs",
-    "display_tests.rs",
+    "src/common.rs",
+    "src/display_tests.rs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
