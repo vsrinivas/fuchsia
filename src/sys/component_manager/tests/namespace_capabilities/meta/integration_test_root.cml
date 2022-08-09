@@ -18,9 +18,6 @@
             url: "#meta/trigger.cm",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
     use: [
         {
             protocol: "fidl.test.components.Trigger",
@@ -40,12 +37,6 @@
             directory: "test-pkg",
             from: "parent",
             to: "#trigger",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
         },
     ],
 }

@@ -10,11 +10,23 @@
         runner: "elf",
         binary: "bin/component_manager",
         args: [
-            "fuchsia-pkg://fuchsia.com/namespace-capabilities-integration-test#meta/integration-test-root.cm",
             "--config",
             "/pkg/data/component_manager_config",
         ],
     },
+    capabilities: [
+        {
+            directory: "hub",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+        {
+            protocol: [
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.LifecycleController",
+            ],
+        },
+    ],
     use: [
         {
             protocol: [
@@ -25,6 +37,19 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Loader",
             ],
+        },
+    ],
+    expose: [
+        {
+            directory: "hub",
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.LifecycleController",
+            ],
+            from: "self",
         },
     ],
 }

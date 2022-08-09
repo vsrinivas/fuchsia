@@ -4,19 +4,80 @@
 
 use {
     component_events::{events::*, matcher::*},
-    fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::*,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn component_manager_namespace() {
-    let event_source = EventSource::new().unwrap();
+    // Define the realm inside component manager.
+    let builder = RealmBuilder::new().await.unwrap();
+    let realm = builder
+        .add_child("realm", "#meta/integration-test-root.cm", ChildOptions::new().eager())
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&realm),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(Ref::parent())
+                .to(&realm),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::directory("test-pkg"))
+                .from(Ref::parent())
+                .to(&realm),
+        )
+        .await
+        .unwrap();
+
+    let (component_manager_realm, _task) =
+        builder.with_nested_component_manager("#meta/component-manager.cm").await.unwrap();
+
+    let echo_server = component_manager_realm
+        .add_child("echo_server", "#meta/echo_server.cm", ChildOptions::new())
+        .await
+        .unwrap();
+
+    component_manager_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(&echo_server)
+                .to(Ref::child("component_manager")),
+        )
+        .await
+        .unwrap();
+
+    let instance = component_manager_realm.build().await.unwrap();
+
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let event_source = EventSource::from_proxy(proxy);
 
     let mut event_stream =
-        event_source.take_static_event_stream("StoppedEventStream").await.unwrap();
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+
+    // Unblock the component_manager.
+    instance.start_component_tree().await.unwrap();
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./nested_component_manager")
+        .moniker_regex("./realm")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

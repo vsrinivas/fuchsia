@@ -1,7 +1,8 @@
 {
+    debug: true,
     maintain_utc_clock: false,
     use_builtin_process_launcher: false,
-    builtin_pkg_resolver: "appmgr_bridge",
+    num_threads: 2,
     out_dir_contents: "hub",
     namespace_capabilities: [
         {
@@ -26,11 +27,43 @@
             protocol: [
                 "fuchsia.sys2.CrashIntrospect",
                 "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.SystemController",
             ],
         },
         {
             runner: "elf",
         },
+        {
+            runner: "realm_builder",
+        },
+        {
+            resolver: "realm_builder_resolver",
+        },
+        {
+            event: "directory_ready",
+        },
+        {
+            event_stream: "directory_ready_v2",
+        },
+        {
+            event_stream: "started_v2",
+        },
+        {
+            event_stream: "stopped_v2",
+        },
+        {
+            event_stream: "running_v2",
+        },
+        {
+            event_stream: "capability_requested_v2",
+        },
+        {
+            event_stream: "destroyed_v2",
+        },
+        {
+            event_stream: "resolved_v2",
+        },
     ],
+    realm_builder_resolver_and_runner: "namespace",
     log_all_events: true,
 }
