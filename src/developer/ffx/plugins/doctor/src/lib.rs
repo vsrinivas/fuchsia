@@ -404,18 +404,18 @@ async fn doctor<W: Write>(
 ) -> Result<()> {
     if restart_daemon {
         doctor_daemon_restart(daemon_manager, retry_delay, ledger).await?;
-    } else {
-        doctor_summary(
-            step_handler,
-            daemon_manager,
-            target_str,
-            retry_delay,
-            version_info,
-            default_target,
-            ledger,
-        )
-        .await?;
     }
+
+    doctor_summary(
+        step_handler,
+        daemon_manager,
+        target_str,
+        retry_delay,
+        version_info,
+        default_target,
+        ledger,
+    )
+    .await?;
 
     if record_params.record {
         let mut record_view = RecordLedgerView::new();
@@ -2235,7 +2235,6 @@ mod test {
             ],
             vec![Ok(vec![]), Ok(vec![]), Ok(vec![1]), Ok(vec![2]), Ok(vec![]), Ok(vec![3])],
         );
-        let mut handler = FakeStepHandler::new();
 
         // restart daemon
         {
@@ -2246,20 +2245,7 @@ mod test {
                 LedgerViewMode::Verbose,
             );
 
-            doctor(
-                &mut handler,
-                &mut ledger,
-                &fake,
-                "",
-                2,
-                DEFAULT_RETRY_DELAY,
-                true,
-                frontend_version_info(true),
-                Ok(None),
-                record_params_no_record(),
-            )
-            .await
-            .unwrap();
+            doctor_daemon_restart(&fake, DEFAULT_RETRY_DELAY, &mut ledger).await.unwrap();
 
             assert_eq!(
                 ledger.writer.get_data(),
@@ -2284,20 +2270,7 @@ mod test {
                 LedgerViewMode::Verbose,
             );
 
-            doctor(
-                &mut handler,
-                &mut ledger,
-                &fake,
-                "",
-                2,
-                DEFAULT_RETRY_DELAY,
-                true,
-                frontend_version_info(true),
-                Ok(None),
-                record_params_no_record(),
-            )
-            .await
-            .unwrap();
+            doctor_daemon_restart(&fake, DEFAULT_RETRY_DELAY, &mut ledger).await.unwrap();
 
             assert_eq!(
                 ledger.writer.get_data(),
@@ -2682,7 +2655,6 @@ mod test {
             vec![Ok(setup_responsive_daemon_server())],
             vec![Ok(vec![1, 2, 3]), Ok(vec![]), Ok(vec![4])],
         );
-        let mut handler = FakeStepHandler::new();
         let ledger_view = Box::new(FakeLedgerView::new());
         let mut ledger = DoctorLedger::<MockWriter>::new(
             MockWriter::new(),
@@ -2690,20 +2662,7 @@ mod test {
             LedgerViewMode::Verbose,
         );
 
-        doctor(
-            &mut handler,
-            &mut ledger,
-            &fake,
-            "",
-            1,
-            DEFAULT_RETRY_DELAY,
-            true,
-            frontend_version_info(true),
-            Ok(None),
-            record_params_no_record(),
-        )
-        .await
-        .unwrap();
+        doctor_daemon_restart(&fake, DEFAULT_RETRY_DELAY, &mut ledger).await.unwrap();
 
         assert_eq!(
             ledger.writer.get_data(),
@@ -2738,7 +2697,6 @@ mod test {
                 Err(anyhow!("some error msg")),
             ],
         );
-        let mut handler = FakeStepHandler::new();
         let ledger_view = Box::new(FakeLedgerView::new());
         let mut ledger = DoctorLedger::<MockWriter>::new(
             MockWriter::new(),
@@ -2746,20 +2704,7 @@ mod test {
             LedgerViewMode::Verbose,
         );
 
-        doctor(
-            &mut handler,
-            &mut ledger,
-            &fake,
-            "",
-            1,
-            DEFAULT_RETRY_DELAY,
-            true,
-            frontend_version_info(true),
-            Ok(None),
-            record_params_no_record(),
-        )
-        .await
-        .unwrap();
+        doctor_daemon_restart(&fake, DEFAULT_RETRY_DELAY, &mut ledger).await.unwrap();
 
         assert_eq!(
             ledger.writer.get_data(),
