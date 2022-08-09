@@ -11,6 +11,13 @@
             startup: "eager",
         },
     ],
+    capabilities: [
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc",
+        },
+    ],
     offer: [
         // Needed to configure sshd-host.
         {
@@ -33,17 +40,19 @@
             from: "#network",
             to: "#sshd-host",
         },
-
-        // Needed by chrealm lib to launch `ssh` subprocess in sys realm.
         {
             directory: "hub-legacy",
             from: "#appmgr",
             to: "#sshd-host",
         },
 
-        // Needed to create the shell environment
-        // for sshd-host children.
-        // TODO(fxbug.dev/97903): downscope this.
+        // Needed to create the shell environment.
+        // See: fxbug.dev/104522
+        {
+            directory: "svc_from_sys",
+            from: "self",
+            to: "#sshd-host",
+        },
         {
             directory: [
                 "bin",

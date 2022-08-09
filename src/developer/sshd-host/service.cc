@@ -17,6 +17,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -27,6 +28,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 
 #include <memory>
 #include <vector>
@@ -34,11 +37,9 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
-#include "src/lib/files/glob.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/sys/lib/chrealm/chrealm.h"
 
 const auto kSshdPath = "/pkg/bin/sshd";
 const char* kSshdArgv[] = {kSshdPath, "-ie", "-f", "/config/data/sshd_config", nullptr};
@@ -226,39 +227,58 @@ void Service::Launch(int conn, const std::string& peer_name) {
     return;
   }
 
-  // Launch process with chrealm so that it gets /svc of sys realm
-  const std::vector<fdio_spawn_action_t> actions{
-      // Transfer the socket as stdin and stdout
-      {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
-      {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-       .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}},
+  fdio_flat_namespace_t* flat_ns = nullptr;
+  zx_status_t status = fdio_ns_export_root(&flat_ns);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "fdio_ns_export_root failed: " << status;
+    return;
+  }
+  auto cleanup = fit::defer([&flat_ns]() { fdio_ns_free_flat_ns(flat_ns); });
+
+  // Room for stdio handles and namespace entries
+  fdio_spawn_action_t actions[3 + flat_ns->count];
+  size_t action = 0;
+
+  // Transfer the socket as stdin and stdout
+  actions[action++] = {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+                       .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}};
+  actions[action++] = {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+                       .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}};
+  actions[action++] =
       // Clone this process' stderr.
       {.action = FDIO_SPAWN_ACTION_CLONE_FD,
-       .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
-  };
+       .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}};
 
-  // Find the sys realm
-  // TODO(fxbug.dev/97903): don't give sshd all of legacy sys.
-  std::string sys_path;
-  files::Glob glob("/hub/r/sys/*");
-  if (glob.size() == 1) {
-    sys_path = *(glob.begin());
-  } else {
-    FX_LOGS(ERROR) << "Could not find sys realm, found " << glob.size() << " matches";
-    return;
+  // Clone own namespace into child
+  for (size_t i = 0; i < flat_ns->count; ++i) {
+    const char* path = flat_ns->path[i];
+    if (strcmp(path, "/svc") == 0) {
+      // Don't forward our /svc to the child
+      continue;
+    } else if (strcmp(path, "/svc_from_sys") == 0) {
+      // Instead, forward our /svc_from_sys as the child's /svc
+      path = "/svc";
+    }
+    actions[action++] = {
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns =
+            {
+                .prefix = path,
+                .handle = flat_ns->handle[i],
+            },
+    };
   }
 
   constexpr uint32_t kSpawnFlags =
       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
   zx::process process;
-  std::string error;
-  zx_status_t status =
-      chrealm::SpawnBinaryInRealmAsync(sys_path, kSshdArgv, child_job.get(), kSpawnFlags, actions,
-                                       process.reset_and_get_address(), &error);
+  char error[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  status = fdio_spawn_etc(child_job.get(), kSpawnFlags, kSshdPath, kSshdArgv, nullptr, action,
+                          actions, process.reset_and_get_address(), error);
   if (status < 0) {
     shutdown(conn, SHUT_RDWR);
     close(conn);
-    FX_LOGS(ERROR) << "Error from chrealm: " << error;
+    FX_LOGS(ERROR) << "Error from fdio_spawn_etc: " << error;
     return;
   }
 

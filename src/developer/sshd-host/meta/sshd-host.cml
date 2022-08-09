@@ -24,15 +24,18 @@
                 // Needed to listen on TCP port 22.
                 "fuchsia.posix.socket.Provider",
 
-                // Needed to launch `ssh` child processes.
+                // Needed to launch `sshd` child processes.
                 "fuchsia.process.Launcher",
             ],
         },
 
         // Needed to create the shell environment
         // for the ssh child process and its children.
-        // TODO(fxbug.dev/97903): try to remove each one of the below.
-        // TODO(fxbug.dev/98086): specifically reduce /bin.
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc_from_sys",
+        },
         {
             directory: "bin",
             rights: [ "rx*" ],

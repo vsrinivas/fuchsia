@@ -827,7 +827,6 @@ config("Wno-conversion") {
     "//src/sys/appmgr/integration_tests/mock_runner:*",
     "//src/sys/appmgr/integration_tests/sandbox/features/storage:*",
     "//src/sys/appmgr/integration_tests/util:*",
-    "//src/sys/lib/chrealm:*",
     "//src/sys/pkg/lib/far/cpp:*",
     "//src/sys/sysmgr:*",
     "//src/ui/a11y/bin/a11y_manager/tests:*",
