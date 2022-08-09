@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_
 
+#include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
@@ -38,6 +39,7 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // Set if this devnode is attached to a remote service.
   fidl::ClientEnd<fuchsia_io::Directory> service_dir;
   std::string service_path;
+  fuchsia_device_fs::wire::ExportOptions service_options;
 
   fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
 
@@ -92,7 +94,10 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* devic
 // each of these Devnodes are children of `dn`, they must live as long as `dn`.
 zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> service_dir,
                          std::string_view service_path, std::string_view devfs_path,
-                         uint32_t protocol_id, std::vector<std::unique_ptr<Devnode>>& out);
+                         uint32_t protocol_id, fuchsia_device_fs::wire::ExportOptions options,
+                         std::vector<std::unique_ptr<Devnode>>& out);
+
+void devfs_notify(Devnode* dn, std::string_view name, fuchsia_io::wire::WatchEvent op);
 
 // This method is exposed for testing. It returns true if the devfs has active watchers.
 bool devfs_has_watchers(Devnode* dn);

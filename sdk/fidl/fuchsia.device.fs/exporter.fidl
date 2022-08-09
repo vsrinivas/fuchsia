@@ -7,6 +7,11 @@ using fuchsia.io;
 
 using zx;
 
+type ExportOptions = strict bits : uint32 {
+    /// If present, the exported service will be invisible.
+    INVISIBLE = 0x00000001;
+};
+
 /// Protocol through which a driver can export services to devfs.
 @discoverable
 protocol Exporter {
@@ -18,5 +23,22 @@ protocol Exporter {
         service_path string:fuchsia.io.MAX_PATH;
         devfs_path string:fuchsia.io.MAX_PATH;
         protocol_id uint32;
+    }) -> (struct {}) error zx.status;
+
+    /// Export `service_path` from `service_dir` to `devfs_path`. If `protocol_id`
+    /// matches a known protocol, `service_path` will also be accessible through
+    /// a class path.
+    ExportOptions(resource struct {
+        service_dir client_end:fuchsia.io.Directory;
+        service_path string:fuchsia.io.MAX_PATH;
+        devfs_path string:fuchsia.io.MAX_PATH;
+        protocol_id uint32;
+        options ExportOptions;
+    }) -> (struct {}) error zx.status;
+
+    /// Make a `devfs_path` visible. Will return ZX_ERR_NOT_FOUND if the path
+    /// does not exist or ZX_ERR_BAD_STATE if the path is not invisible.
+    MakeVisible(struct {
+        devfs_path string:fuchsia.io.MAX_PATH;
     }) -> (struct {}) error zx.status;
 };

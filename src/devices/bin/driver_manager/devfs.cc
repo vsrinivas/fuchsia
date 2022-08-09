@@ -54,6 +54,11 @@ const size_t kDiagnosticsDirLen = strlen(kDiagnosticsDirName);
 
 zx::channel g_devfs_root;
 
+bool is_invisible(const Devnode* dn) {
+  return (dn->device && dn->device->flags & DEV_CTX_INVISIBLE) ||
+         (dn->service_options & fuchsia_device_fs::wire::ExportOptions::kInvisible);
+}
+
 }  // namespace
 
 struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>,
@@ -223,7 +228,9 @@ void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& n
   }
 }
 
-void devfs_notify(Devnode* dn, std::string_view name, fio::wire::WatchEvent op) {
+}  // namespace
+
+void devfs_notify(Devnode* dn, std::string_view name, fuchsia_io::wire::WatchEvent op) {
   if (dn->watchers.is_empty()) {
     return;
   }
@@ -259,8 +266,6 @@ void devfs_notify(Devnode* dn, std::string_view name, fio::wire::WatchEvent op) 
   }
 }
 
-}  // namespace
-
 void devfs_prepopulate_class(Devnode* dn) {
   for (auto& info : proto_infos) {
     if (!(info.flags & PF_NOPUB)) {
@@ -289,7 +294,7 @@ zx_status_t devfs_watch(Devnode* dn, fidl::ServerEnd<fio::DirectoryWatcher> serv
   // followed by the end-of-existing marker (IDLE).
   if (mask & fio::wire::WatchMask::kExisting) {
     for (const auto& child : dn->children) {
-      if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
+      if (is_invisible(&child)) {
         continue;
       }
       // TODO: send multiple per write
@@ -383,7 +388,7 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
       }
     } else {
       // invisible devices also do not show up
-      if (child.device->flags & DEV_CTX_INVISIBLE) {
+      if (is_invisible(&child)) {
         continue;
       }
     }
@@ -418,7 +423,7 @@ again:
   }
   for (auto& child : dn->children) {
     if (!strcmp(child.name.c_str(), name)) {
-      if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
+      if (is_invisible(&child)) {
         continue;
       }
       dn = &child;
@@ -498,7 +503,7 @@ void devfs_remove(Devnode* dn) {
   }
 
   // notify own file watcher
-  if ((dn->device == nullptr) || !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+  if (!is_invisible(dn)) {
     devfs_notify(dn, "", fio::wire::WatchEvent::kDeleted);
   }
 
@@ -508,14 +513,14 @@ void devfs_remove(Devnode* dn) {
       dn->device->self = nullptr;
 
       if ((dn->device->parent() != nullptr) && (dn->device->parent()->self != nullptr) &&
-          !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+          !is_invisible(dn)) {
         devfs_notify(dn->device->parent()->self, dn->name, fio::wire::WatchEvent::kRemoved);
       }
     }
     if (dn->device->link == dn) {
       dn->device->link = nullptr;
 
-      if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
+      if (!is_invisible(dn)) {
         Devnode* dir = devfs_proto_node(dn->device->protocol_id());
         devfs_notify(dir, dn->name, fio::wire::WatchEvent::kRemoved);
       }
@@ -830,7 +835,8 @@ zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) 
 
 zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> service_dir,
                          std::string_view service_path, std::string_view devfs_path,
-                         uint32_t protocol_id, std::vector<std::unique_ptr<Devnode>>& out) {
+                         uint32_t protocol_id, fuchsia_device_fs::wire::ExportOptions options,
+                         std::vector<std::unique_ptr<Devnode>>& out) {
   // Check if the `devfs_path` provided is valid.
   const auto is_valid_path = [](std::string_view path) {
     return !path.empty() && path.front() != '/' && path.back() != '/';
@@ -876,10 +882,14 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
   // Create Devnodes for the remainder of the path, and set `service_dir` and
   // `service_path` on the leaf Devnode.
   dn = prev_dn;
-  walk([&out, &dn](std::string_view name) {
+  walk([&out, &dn, options](std::string_view name) {
     out.push_back(devfs_mkdir(dn, name));
-    devfs_notify(dn, name, fio::wire::WatchEvent::kAdded);
-    dn = out.back().get();
+    auto new_dn = out.back().get();
+    new_dn->service_options = options;
+    if (!is_invisible(new_dn)) {
+      devfs_notify(dn, name, fio::wire::WatchEvent::kAdded);
+    }
+    dn = new_dn;
     return true;
   });
   dn->service_dir = std::move(service_dir);
@@ -894,7 +904,11 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
       return status;
     }
     out.push_back(devfs_mkdir(dir, name));
-    devfs_notify(dir, name, fio::wire::WatchEvent::kAdded);
+    Devnode* class_dn = out.back().get();
+    class_dn->service_options = options;
+    if (!is_invisible(class_dn)) {
+      devfs_notify(dir, name, fio::wire::WatchEvent::kAdded);
+    }
 
     // Clone the service node for the entry in the protocol directory.
     auto endpoints = fidl::CreateEndpoints<fio::Node>();
@@ -906,7 +920,6 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
     if (!result.ok()) {
       return result.status();
     }
-    Devnode* class_dn = out.back().get();
     class_dn->service_dir.channel().swap(endpoints->client.channel());
     class_dn->service_path = service_path;
   }

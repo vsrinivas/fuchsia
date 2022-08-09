@@ -22,7 +22,8 @@ class ExportWatcher : public fidl::WireAsyncEventHandler<fuchsia_io::Node> {
   static zx::status<std::unique_ptr<ExportWatcher>> Create(
       async_dispatcher_t* dispatcher, Devnode* root,
       fidl::ClientEnd<fuchsia_io::Directory> service_dir, std::string_view service_path,
-      std::string_view devfs_path, uint32_t protocol_id);
+      std::string_view devfs_path, uint32_t protocol_id,
+      fuchsia_device_fs::wire::ExportOptions options);
 
   // Set a callback that will be called when the connection to `service_path` is closed.
   void set_on_close_callback(fit::callback<void()> callback) { callback_ = std::move(callback); }
@@ -36,10 +37,15 @@ class ExportWatcher : public fidl::WireAsyncEventHandler<fuchsia_io::Node> {
     }
   }
 
+  std::string_view devfs_path() const { return devfs_path_; }
+
+  zx_status_t MakeVisible();
+
  private:
   fit::callback<void()> callback_;
   fidl::WireClient<fuchsia_io::Node> client_;
   std::vector<std::unique_ptr<Devnode>> devnodes_;
+  std::string devfs_path_;
 };
 
 class DevfsExporter : public fidl::WireServer<fuchsia_device_fs::Exporter> {
@@ -52,6 +58,11 @@ class DevfsExporter : public fidl::WireServer<fuchsia_device_fs::Exporter> {
  private:
   // fidl::WireServer<fuchsia_device_fs::Exporter>
   void Export(ExportRequestView request, ExportCompleter::Sync& completer) override;
+
+  void ExportOptions(ExportOptionsRequestView request,
+                     ExportOptionsCompleter::Sync& completer) override;
+
+  void MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& completer) override;
 
   Devnode* const root_;
   async_dispatcher_t* const dispatcher_;
