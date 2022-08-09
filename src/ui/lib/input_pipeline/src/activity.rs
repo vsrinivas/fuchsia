@@ -74,10 +74,14 @@ impl ActivityManager {
         while let Some(aggregator_request) = stream.next().await {
             let AggregatorRequest::ReportDiscreteActivity { event_time, responder } =
                 aggregator_request?;
-            let state_publisher = self.interaction_hanging_get.borrow().new_publisher();
 
-            let event_time =
-                zx::Time::from_nanos(event_time).clamp(zx::Time::ZERO, zx::Time::get_monotonic());
+            // Clamp the time to now so that clients cannot send events far off
+            // in the future to keep the system always active.
+            // Note: We use the global executor to get the current time instead
+            // of the kernel so that we do not unnecessarily clamp
+            // test-injected times.
+            let event_time = zx::Time::from_nanos(event_time)
+                .clamp(zx::Time::ZERO, fuchsia_async::Time::now().into_zx());
 
             // TODO(https://fxbug.dev/105111): Since many of these events may
             // come in a single second, we  may eventually drop events that
@@ -86,6 +90,7 @@ impl ActivityManager {
                 continue;
             }
 
+            let state_publisher = self.interaction_hanging_get.borrow().new_publisher();
             if let Some(t) = self.idle_transition_task.take() {
                 // If the task returns a completed output, we can assume the
                 // state has transitioned to Idle.
@@ -146,7 +151,7 @@ mod tests {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_input_interaction::{NotifierMarker, NotifierProxy},
         fidl_fuchsia_input_interaction_observation::{AggregatorMarker, AggregatorProxy},
-        fuchsia_async::{Task, TestExecutor, Time},
+        fuchsia_async::TestExecutor,
         pin_utils::pin_mut,
         std::task::Poll,
     };
@@ -206,7 +211,7 @@ mod tests {
     #[fuchsia::test]
     fn interaction_notifier_listener_gets_updated_idle_state() -> Result<(), Error> {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
-        executor.set_fake_time(Time::from_nanos(0));
+        executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
         let activity_manager = ActivityManager::new_for_test();
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
@@ -220,7 +225,7 @@ mod tests {
         assert_matches!(initial_state, Poll::Ready(Some(Ok(State::Active))));
 
         // Skip ahead by the activity timeout.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT));
         assert_eq!(executor.wake_expired_timers(), true);
 
         // State transitions to Idle.
@@ -235,7 +240,7 @@ mod tests {
     #[fuchsia::test]
     fn interaction_notifier_listener_gets_updated_active_state() -> Result<(), Error> {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
-        executor.set_fake_time(Time::from_nanos(0));
+        executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
         let activity_manager = ActivityManager::new_for_test();
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
@@ -249,7 +254,7 @@ mod tests {
         assert_matches!(initial_state, Poll::Ready(Some(Ok(State::Active))));
 
         // Skip ahead by the activity timeout.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT));
         assert_eq!(executor.wake_expired_timers(), true);
 
         // State transitions to Idle.
@@ -291,7 +296,7 @@ mod tests {
         assert_eq!(ACTIVITY_TIMEOUT.into_nanos() % 2, 0);
 
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
-        executor.set_fake_time(Time::from_nanos(0));
+        executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
         let activity_manager = ActivityManager::new_for_test();
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
@@ -305,7 +310,7 @@ mod tests {
         assert_matches!(initial_state, Poll::Ready(Some(Ok(State::Active))));
 
         // Skip ahead by half the activity timeout. No timer fires.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT / 2));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT / 2));
         assert_eq!(executor.wake_expired_timers(), false);
 
         // Send an activity, replacing the initial idleness timer.
@@ -315,7 +320,7 @@ mod tests {
         assert!(executor.run_until_stalled(&mut report_fut).is_ready());
 
         // Skip ahead by half the activity timeout.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT / 2));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT / 2));
         assert_eq!(executor.wake_expired_timers(), false);
 
         // Initial timer does not fire.
@@ -325,7 +330,7 @@ mod tests {
         assert_matches!(watch_state_res, Poll::Pending);
 
         // Skip ahead by half the activity timeout.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT / 2));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT / 2));
         assert_eq!(executor.wake_expired_timers(), true);
 
         // Second timer does fire.
@@ -338,7 +343,7 @@ mod tests {
     #[fuchsia::test]
     fn interactivity_notifier_drops_late_activities() -> Result<(), Error> {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
-        executor.set_fake_time(Time::from_nanos(0));
+        executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
         let activity_manager = ActivityManager::new_for_test();
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
@@ -352,7 +357,7 @@ mod tests {
         assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Active))));
 
         // Skip ahead by half the activity timeout. No timer fires.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT / 2));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT / 2));
         assert_eq!(executor.wake_expired_timers(), false);
 
         // Send an activity, replacing the initial idleness timer.
@@ -362,7 +367,7 @@ mod tests {
         assert!(executor.run_until_stalled(&mut report_fut).is_ready());
 
         // Skip ahead by half the activity timeout.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT / 2));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT / 2));
         assert_eq!(executor.wake_expired_timers(), false);
 
         // Send an activity with an earlier time.
@@ -379,7 +384,7 @@ mod tests {
         assert_matches!(initial_state, Poll::Pending);
 
         // Skip ahead by half the activity timeout.
-        executor.set_fake_time(Time::after(ACTIVITY_TIMEOUT / 2));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT / 2));
         assert_eq!(executor.wake_expired_timers(), true);
 
         // Second timer does fire.
