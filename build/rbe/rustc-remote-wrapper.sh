@@ -31,8 +31,6 @@ check_determinism_command=(
   --check-repeatability
 )
 
-readonly remote_rustc_subdir=prebuilt/third_party/rust/linux-x64
-
 function usage() {
 cat <<EOF
 This wrapper script helps dispatch a remote Rust compilation action by inferring
@@ -173,6 +171,30 @@ fi
 
 build_subdir="$(relpath "$project_root" . )"
 project_root_rel="$(relpath . "$project_root")"
+
+readonly remote_rustc_subdir=prebuilt/third_party/rust/linux-x64
+readonly remote_clang_subdir=prebuilt/third_party/clang/linux-x64
+
+_required_remote_tools=(
+  "$remote_rustc_subdir"
+  "$remote_clang_subdir"
+)
+_missing_remote_tools=()
+case "$HOST_OS" in
+  linux) ;;
+  *) for path in "${_required_remote_tools[@]}"
+     do [[ -d "$project_root_rel"/"$path" ]] || _missing_remote_tools+=( "$path" )
+     done
+     ;;
+esac
+[[ "${#_missing_remote_tools[@]}" == 0 ]] || {
+  msg "Remote building Rust requires prebuilts for linux.  Missing:"
+  for path in "${_missing_remote_tools[@]}"
+  do echo "        $path"
+  done
+  msg "Add these prebuilt packages to integration/fuchsia/toolchain.  Example: tqr/563535"
+  exit 1
+}
 
 # For debugging, trace the files accessed.
 fsatrace="$project_root_rel"/prebuilt/fsatrace/fsatrace
