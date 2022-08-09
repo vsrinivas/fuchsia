@@ -184,7 +184,7 @@ static bool count_committed_pages(vaddr_t start, vaddr_t end, size_t* committed,
   auto end_off = ROUNDUP(end, PAGE_SIZE) - mapping->base();
   uint64_t mapping_offset;
   {
-    Guard<Mutex> guard{mapping->lock()};
+    Guard<CriticalMutex> guard{mapping->lock()};
     mapping_offset = mapping->object_offset_locked();
   }
   *committed =

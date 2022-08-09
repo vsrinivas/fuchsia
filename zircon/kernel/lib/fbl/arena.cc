@@ -256,7 +256,7 @@ void Arena::Dump() const {
   DEBUG_ASSERT(vmar_ != nullptr);
   printf("%s mappings:\n", vmar_->name());
   {
-    Guard<Mutex> guard{vmar_->lock()};
+    Guard<CriticalMutex> guard{vmar_->lock()};
     vmar_->DumpLocked(/* depth */ 1, /* verbose */ true);
   }
   printf("%s pools:\n", vmar_->name());

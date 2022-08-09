@@ -156,7 +156,7 @@ zx_status_t VmAspace::Init() {
 
   InitializeAslr();
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
 
   if (likely(!root_vmar_)) {
     return VmAddressRegion::CreateRootLocked(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
@@ -217,7 +217,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
 void VmAspace::Rename(const char* name) {
   canary_.Assert();
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   strlcpy(name_, name ? name : "unnamed", sizeof(name_));
 }
 
@@ -251,7 +251,7 @@ VmAspace::~VmAspace() {
 }
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return RootVmarLocked();
 }
 
@@ -261,7 +261,7 @@ zx_status_t VmAspace::Destroy() {
   canary_.Assert();
   LTRACEF("%p '%s'\n", this, name_);
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
 
   // Don't let a vDSO mapping prevent destroying a VMAR
   // when the whole process is being destroyed.
@@ -289,7 +289,7 @@ zx_status_t VmAspace::Destroy() {
 }
 
 bool VmAspace::is_destroyed() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return aspace_destroyed_;
 }
 
@@ -583,7 +583,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       // for now, hold the aspace lock across the page fault operation,
       // which stops any other operations on the address space from moving
       // the region out from underneath it
-      Guard<Mutex> guard{&lock_};
+      Guard<CriticalMutex> guard{&lock_};
       DEBUG_ASSERT(!aspace_destroyed_);
       // First check if we're faulting on the same mapping as last time to short-circuit the vmar
       // walk.
@@ -600,7 +600,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       zx_status_t st = page_request->Wait();
       if (st != ZX_OK) {
         if (st == ZX_ERR_TIMED_OUT) {
-          Guard<Mutex> guard{&lock_};
+          Guard<CriticalMutex> guard{&lock_};
           AssertHeld(root_vmar_->lock_ref());
           root_vmar_->DumpLocked(0, false);
         }
@@ -637,7 +637,7 @@ zx_status_t VmAspace::AccessedFault(vaddr_t va) {
 }
 
 void VmAspace::Dump(bool verbose) const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   DumpLocked(verbose);
 }
 
@@ -656,7 +656,7 @@ void VmAspace::DumpLocked(bool verbose) const {
 zx_status_t VmAspace::EnumerateChildren(VmEnumerator* ve) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (root_vmar_ == nullptr || aspace_destroyed_) {
     // Aspace hasn't been initialized or has already been destroyed.
     return ZX_ERR_BAD_STATE;
@@ -691,7 +691,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
 size_t VmAspace::AllocatedPages() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (!root_vmar_) {
     return 0;
   }
@@ -721,12 +721,12 @@ void VmAspace::InitializeAslr() {
 }
 
 uintptr_t VmAspace::vdso_base_address() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return VDso::base_address(vdso_code_mapping_);
 }
 
 uintptr_t VmAspace::vdso_code_address() const {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   return vdso_code_mapping_ ? vdso_code_mapping_->base() : 0;
 }
 
@@ -741,7 +741,7 @@ void VmAspace::DropAllUserPageTables() {
 void VmAspace::DropUserPageTables() {
   if (!is_user())
     return;
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   arch_aspace().Unmap(base(), size() / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, nullptr);
 }
 
@@ -755,7 +755,7 @@ bool VmAspace::IsLatencySensitive() const {
 }
 
 void VmAspace::MarkAsLatencySensitive() {
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
   if (root_vmar_ == nullptr || aspace_destroyed_) {
     // Aspace hasn't been initialized or has already been destroyed.
     return;

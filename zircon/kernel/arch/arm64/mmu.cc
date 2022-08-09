@@ -473,7 +473,7 @@ uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
 }
 
 zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
-  Guard<Mutex> al{&lock_};
+  Guard<CriticalMutex> al{&lock_};
   return QueryLocked(vaddr, paddr, mmu_flags);
 }
 
@@ -1229,7 +1229,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
 
   ssize_t ret;
   {
-    Guard<Mutex> a{&lock_};
+    Guard<CriticalMutex> a{&lock_};
     ASSERT(updates_enabled_);
     if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
       ArmVmICacheConsistencyManager cache_cm;
@@ -1290,7 +1290,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
 
   size_t total_mapped = 0;
   {
-    Guard<Mutex> a{&lock_};
+    Guard<CriticalMutex> a{&lock_};
     ASSERT(updates_enabled_);
     if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
       ArmVmICacheConsistencyManager cache_cm;
@@ -1366,7 +1366,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, EnlargeOperation
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<Mutex> a{&lock_};
+  Guard<CriticalMutex> a{&lock_};
 
   ASSERT(updates_enabled_);
   ssize_t ret;
@@ -1399,7 +1399,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Guard<Mutex> a{&lock_};
+  Guard<CriticalMutex> a{&lock_};
   ASSERT(updates_enabled_);
   if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
     // If mappings are going to become executable then we first need to sync their caches.
@@ -1450,8 +1450,7 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
   // work performed with the lock held and preemption disabled is limited. Other
   // O(n) operations under this lock are opt-in by the user (e.g. Map, Protect)
   // and are performed with preemption enabled.
-  AutoPreemptDisabler preempt_disable;
-  Guard<Mutex> guard{&lock_};
+  Guard<CriticalMutex> guard{&lock_};
 
   const vaddr_t vaddr_rel = vaddr - vaddr_base_;
   const vaddr_t vaddr_rel_max = 1UL << top_size_shift_;
@@ -1516,14 +1515,10 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     // give other CPUs spinning on the aspace mutex a slight edge in acquiring
     // the mutex. Reenable preemption to flush any pending preemptions that may
     // have pended during the critical section.
-    guard.CallUnlocked([] {
-      PreemptionState& preemption_state = Thread::Current::preemption_state();
-      DEBUG_ASSERT(!preemption_state.PreemptIsEnabled());
-      preemption_state.PreemptReenable();
-
-      arch::Yield();
-
-      preemption_state.PreemptDisable();
+    guard.CallUnlocked([this] {
+      while (pending_access_faults_.load() != 0) {
+        arch::Yield();
+      }
     });
   }
 
@@ -1538,7 +1533,8 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  Guard<Mutex> a{&lock_};
+  AutoPendingAccessFault pending_access_fault{this};
+  Guard<CriticalMutex> a{&lock_};
 
   const vaddr_t vaddr_rel = vaddr - vaddr_base_;
   const vaddr_t vaddr_rel_max = 1UL << top_size_shift_;
@@ -1583,7 +1579,7 @@ zx_status_t ArmArchVmAspace::Init() {
   LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, type %*s\n", this, base_, size_,
           static_cast<int>(ArmAspaceTypeName(type_).size()), ArmAspaceTypeName(type_).data());
 
-  Guard<Mutex> a{&lock_};
+  Guard<CriticalMutex> a{&lock_};
 
   // Validate that the base + size is sane and doesn't wrap.
   DEBUG_ASSERT(size_ > PAGE_SIZE);
@@ -1676,7 +1672,7 @@ void ArmArchVmAspace::AssertEmptyLocked() const {
 void ArmArchVmAspace::DisableUpdates() {
   canary_.Assert();
 
-  Guard<Mutex> a{&lock_};
+  Guard<CriticalMutex> a{&lock_};
   updates_enabled_ = false;
   AssertEmptyLocked();
 }
@@ -1685,7 +1681,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
   canary_.Assert();
   LTRACEF("aspace %p\n", this);
 
-  Guard<Mutex> a{&lock_};
+  Guard<CriticalMutex> a{&lock_};
 
   // Not okay to destroy the kernel address space
   DEBUG_ASSERT(type_ != ArmAspaceType::kKernel);

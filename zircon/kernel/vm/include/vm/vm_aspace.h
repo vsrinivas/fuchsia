@@ -195,8 +195,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   friend class VmAddressRegionOrMapping;
   friend class VmAddressRegion;
   friend class VmMapping;
-  Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
-  Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
+  Lock<CriticalMutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
+  Lock<CriticalMutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
 
   // Expose the PRNG for ASLR to VmAddressRegion
   crypto::Prng& AslrPrngLocked() TA_REQ(lock_) {
@@ -278,7 +278,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // outside the lock, however writes should occur inside the lock.
   ktl::atomic<bool> is_latency_sensitive_ = false;
 
-  mutable DECLARE_MUTEX(VmAspace) lock_;
+  mutable DECLARE_CRITICAL_MUTEX(VmAspace) lock_;
 
   // Keep a cache of the VmMapping of the last PageFault that occurred. On a page fault this can be
   // checked to see if it matches more quickly than walking the full vmar tree. Mappings that are

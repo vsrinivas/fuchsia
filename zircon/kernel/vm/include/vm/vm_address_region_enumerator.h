@@ -171,7 +171,7 @@ class VmAddressRegionEnumerator {
   }
 
   // Expose our backing lock for annotation purposes.
-  Lock<Mutex>& lock_ref() const TA_RET_CAP(vmar_.lock_ref()) { return vmar_.lock_ref(); }
+  Lock<CriticalMutex>& lock_ref() const TA_RET_CAP(vmar_.lock_ref()) { return vmar_.lock_ref(); }
 
  private:
   struct PauseState {
