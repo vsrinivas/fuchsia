@@ -1,0 +1,15 @@
+{
+    "light_groups": [
+        {
+            "name": "LED",
+            "hardware_index": [
+                0
+            ],
+            "light_type": "Brightness",
+            "persist": false,
+            "disable_conditions": [
+                "MicSwitch"
+            ]
+        }
+    ]
+}

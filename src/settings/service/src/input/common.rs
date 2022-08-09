@@ -149,10 +149,7 @@ pub(crate) async fn monitor_media_buttons(
                 error
             );
         }
-    })
-    .detach();
 
-    fasync::Task::spawn(async move {
         while let Some(Ok(media_request)) = stream.next().await {
             // Support future expansion of FIDL
             #[allow(clippy::single_match)]

@@ -1,0 +1,175 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_library("light_realm") {
+  testonly = true
+  edition = "2021"
+  source_root = "src/light_realm.rs"
+  sources = [ "src/light_realm.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/settings/service/integration_tests/utils",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_test("hardware_only_bin") {
+  name = "light_hardware_only_integration_test"
+  edition = "2021"
+  source_root = "src/light_hardware_only_tests.rs"
+  sources = [ "src/light_hardware_only_tests.rs" ]
+  deps = [
+    ":light_realm",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/fuchsia",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_test("single_config_bin") {
+  name = "light_single_config_integration_test"
+  edition = "2021"
+  source_root = "src/light_single_config_tests.rs"
+  sources = [ "src/light_single_config_tests.rs" ]
+  deps = [
+    ":light_realm",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:futures",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_test("multi_config_bin") {
+  name = "light_multi_config_integration_test"
+  edition = "2021"
+  source_root = "src/light_multi_config_tests.rs"
+  sources = [ "src/light_multi_config_tests.rs" ]
+  deps = [
+    ":light_realm",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:test-case",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("light_hardware_only_integration_test") {
+  testonly = true
+  manifest = "meta/light_hardware_only_integration_test.cml"
+  deps = [ ":hardware_only_bin" ]
+}
+
+fuchsia_test_package("light_hardware_only_integration_test_pkg") {
+  package_name = "light_hardware_only_integration_test"
+  test_components = [ ":light_hardware_only_integration_test" ]
+  deps = [
+    ":hardware_only_interface_config",
+    ":light_hardware_only_integration_test",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+fuchsia_component("light_single_config_integration_test") {
+  testonly = true
+  manifest = "meta/light_single_config_integration_test.cml"
+  deps = [ ":single_config_bin" ]
+}
+
+fuchsia_test_package("light_single_config_integration_test_pkg") {
+  package_name = "light_single_config_integration_test"
+  test_components = [ ":light_single_config_integration_test" ]
+  deps = [
+    ":light_single_config_integration_test",
+    ":single_config_interface_config",
+    ":single_config_light_config",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+fuchsia_component("light_multi_config_integration_test") {
+  testonly = true
+  manifest = "meta/light_multi_config_integration_test.cml"
+  deps = [ ":multi_config_bin" ]
+}
+
+fuchsia_test_package("light_multi_config_integration_test_pkg") {
+  package_name = "light_multi_config_integration_test"
+  test_components = [ ":light_multi_config_integration_test" ]
+  deps = [
+    ":light_multi_config_integration_test",
+    ":multi_config_interface_config",
+    ":multi_config_light_config",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+config_data("hardware_only_interface_config") {
+  for_pkg = "light_hardware_only_integration_test_pkg"
+  sources = [ "testdata/interface_configuration.json" ]
+}
+
+config_data("single_config_interface_config") {
+  for_pkg = "light_single_config_integration_test_pkg"
+  sources = [
+    "testdata/agent_configuration.json",
+    "testdata/interface_configuration.json",
+  ]
+}
+
+config_data("multi_config_interface_config") {
+  for_pkg = "light_multi_config_integration_test_pkg"
+  sources = [
+    "testdata/agent_configuration.json",
+    "testdata/interface_configuration.json",
+  ]
+}
+
+config_data("single_config_light_config") {
+  for_pkg = "light_single_config_integration_test_pkg"
+  sources = [ "testdata/light_hardware_single_config.json" ]
+  outputs = [ "light_hardware_config.json" ]
+}
+
+config_data("multi_config_light_config") {
+  for_pkg = "light_multi_config_integration_test_pkg"
+  sources = [ "testdata/light_hardware_multi_config.json" ]
+  outputs = [ "light_hardware_config.json" ]
+}
+
+group("light_tests") {
+  testonly = true
+  public_deps = [
+    ":light_hardware_only_integration_test_pkg",
+    ":light_multi_config_integration_test_pkg",
+    ":light_single_config_integration_test_pkg",
+  ]
+}

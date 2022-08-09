@@ -54,7 +54,6 @@ mod input_tests;
 mod intl_tests;
 mod keyboard_tests;
 mod light_sensor_tests;
-mod light_tests;
 mod media_buttons_agent_tests;
 mod message_tests;
 pub(crate) mod message_utils;

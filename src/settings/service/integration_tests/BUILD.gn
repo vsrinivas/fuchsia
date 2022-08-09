@@ -16,6 +16,7 @@ group("integration_tests") {
     "input_tests",
     "intl_tests",
     "keyboard_tests",
+    "light_tests",
     "night_mode_tests",
     "privacy_tests",
     "setup_tests",

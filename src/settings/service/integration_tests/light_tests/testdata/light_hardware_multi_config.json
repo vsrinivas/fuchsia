@@ -1,0 +1,34 @@
+{
+    "light_groups": [
+        {
+            "name": "LED1",
+            "hardware_index": [
+                0,
+                1
+            ],
+            "light_type": "Brightness",
+            "persist": false,
+            "disable_conditions": [
+                "MicSwitch"
+            ]
+        },
+        {
+            "name": "LED2",
+            "hardware_index": [
+                2
+            ],
+            "light_type": "Simple",
+            "persist": true,
+            "disable_conditions": []
+        },
+        {
+            "name": "LED3",
+            "hardware_index": [
+                3
+            ],
+            "light_type": "Rgb",
+            "persist": true,
+            "disable_conditions": []
+        }
+    ]
+}

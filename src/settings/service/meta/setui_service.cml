@@ -60,7 +60,7 @@
         },
         {
             directory: "dev-light",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
             path: "/dev/class/light",
         },
 
