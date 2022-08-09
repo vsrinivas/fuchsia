@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define CAMERA_SENSOR_IMX_227_TEST 1
 #include "src/camera/drivers/sensors/imx227/imx227.h"
 
 #include <endian.h>
@@ -74,6 +75,11 @@ class FakeImx227Device : public Imx227Device {
     mock_clk24_.ExpectDisable(ZX_OK);
     mock_gpio_vdig_enable_.ExpectWrite(ZX_OK, false);
     mock_gpio_vana_enable_.ExpectWrite(ZX_OK, false);
+  }
+
+  void ExpectCycleResetOnAndOff() {
+    mock_gpio_cam_rst_.ExpectWrite(ZX_OK, 1);
+    mock_gpio_cam_rst_.ExpectWrite(ZX_OK, 0);
   }
 
   void ExpectGetSensorId() {
@@ -205,12 +211,10 @@ class Imx227DeviceTest : public zxtest::Test {
     fake_parent_->AddProtocol(ZX_PROTOCOL_CAMERA_SENSOR2, dut_.proto()->ops, &dut_);
   }
 
-  void SetUp() override {
-    dut_.ExpectInit();
-    dut_.ExpectDeInit();
-  }
+  void SetUp() override { dut_.ExpectInit(); }
 
   void TearDown() override {
+    dut_.ExpectDeInit();
     dut().CameraSensor2DeInit();
     ASSERT_NO_FATAL_FAILURE(dut().VerifyAll());
   }
@@ -240,6 +244,14 @@ static uint32_t GetCoarseMaxIntegrationTime(const frame_rate_info_t* lut, uint32
 TEST_F(Imx227DeviceTest, Sanity) {
   dut().ExpectCameraSensor2Init();
   ASSERT_OK(dut().CameraSensor2Init());
+}
+
+TEST_F(Imx227DeviceTest, ResetCycleOnAndOff) {
+  dut().ExpectCameraSensor2Init();
+  ASSERT_OK(dut().CameraSensor2Init());
+
+  dut().ExpectCycleResetOnAndOff();
+  dut().CycleReset();
 }
 
 // TODO(fxbug.dev/50737): The expected I2C operations don't match up with those made by

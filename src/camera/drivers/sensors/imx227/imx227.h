@@ -86,6 +86,14 @@ class Imx227Device : public DeviceType,
     return ValidateSensorID();
   }
 
+#if CAMERA_SENSOR_IMX_227_TEST
+  // Expose function for testing
+  void CycleReset() {
+    std::lock_guard guard(lock_);
+    CycleResetOnAndOff();
+  }
+#endif
+
   // OTP
 
   //  Read the sensor's entire OTP memory.
@@ -175,6 +183,7 @@ class Imx227Device : public DeviceType,
   zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
   void HwInit() __TA_REQUIRES(lock_);
   void HwDeInit() __TA_REQUIRES(lock_);
+  void CycleResetOnAndOff() __TA_REQUIRES(lock_);
   void ShutDown();
   bool ValidateSensorID() __TA_REQUIRES(lock_);
 

@@ -258,6 +258,13 @@ void Imx227Device::HwDeInit() {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
+void Imx227Device::CycleResetOnAndOff() {
+  gpio_cam_rst_.Write(1);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+  gpio_cam_rst_.Write(0);
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+}
+
 zx_status_t Imx227Device::InitMipiCsi(uint32_t mode) {
   mipi_info_t mipi_info;
   mipi_adap_info_t adap_info;

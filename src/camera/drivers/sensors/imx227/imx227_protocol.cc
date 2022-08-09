@@ -17,6 +17,11 @@
 
 namespace camera {
 
+// The number of attempts to reset the sensor after an I2C failure.
+// Although uncommon, I2C transaction failures can occur after
+// taking the sensor out of reset.
+constexpr uint32_t MAX_RESET_ATTEMPTS = 4;
+
 // |ZX_PROTOCOL_CAMERA_SENSOR2|
 
 zx_status_t Imx227Device::CameraSensor2Init() {
@@ -97,7 +102,22 @@ zx_status_t Imx227Device::CameraSensor2SetMode(uint32_t mode) {
   if (mode >= available_modes.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // Make several attempts to ensure the sensor is out of reset before continuing.
+  for (auto attempt_number = 0U; attempt_number < MAX_RESET_ATTEMPTS; attempt_number++) {
+    // Check to see if the sensor is alive.
+    if (ValidateSensorID()) {
+      break;
+    }
+
+    // The sensor is not yet alive. Try to reset it.
+    zxlogf(INFO, "Sensor is not responding to I2C register reads. Attempting reset.");
+    CycleResetOnAndOff();
+  }
+
+  // Last check before erroring out.
   if (!ValidateSensorID()) {
+    zxlogf(ERROR, "Unable to get a response from the sensor. Aborting SetMode.");
     return ZX_ERR_INTERNAL;
   }
   InitSensor(available_modes[mode].idx);
