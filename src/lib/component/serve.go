@@ -113,8 +113,7 @@ func serveOne(g *errgroup.Group, ctx context.Context, stub fidl.Stub, req zx.Cha
 	}
 
 	var reqHeader fidl.MessageHeader
-	err := fidl.Unmarshal(fidl.NewCtx(), b[:fidl.MessageHeaderSize], nil, &reqHeader)
-	if err != nil {
+	if err := fidl.Unmarshal(fidl.NewCtx(), b[:fidl.MessageHeaderSize], nil, &reqHeader); err != nil {
 		return err
 	}
 	if !reqHeader.IsSupportedVersion() {
