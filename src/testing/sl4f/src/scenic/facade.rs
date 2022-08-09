@@ -290,8 +290,11 @@ impl ScenicFacade {
         let bytes_per_row = bytes_per_row + (bytes_per_row & bytes_per_row_divisor);
         let pixels_per_row = bytes_per_row / 4;
 
-        if pixels_per_row == width {
-            // We already have a packed vmo, we can return it as-is.
+        let mut buf = vec![0u8; (width * 4) as usize];
+        let vmo_is_readable = image_vmo.read(&mut buf, 0).is_ok();
+
+        if vmo_is_readable && pixels_per_row == width {
+            // We already have a packed vmo and it is readable, we can return it as-is.
             let buffer = fidl_fuchsia_mem::Buffer {
                 vmo: image_vmo,
                 size: u64::from(scr_bc_info.settings.buffer_settings.size_bytes),
@@ -306,16 +309,18 @@ impl ScenicFacade {
 
             let packed_vmo = zx::Vmo::create((width * height * 4).into())?;
 
+            let image_vmo_mapping = mapped_vmo::Mapping::create_from_vmo(
+                &image_vmo,
+                scr_bc_info.settings.buffer_settings.size_bytes.try_into().unwrap(),
+                zx::VmarFlags::PERM_READ,
+            )
+            .expect("failed to map VMO");
+
             // Copy from image_vmo to buf, and from buf to packed_vmo. Maybe we can do this more efficiently.
-            let mut buf = vec![0u8; (width * 4) as usize];
             for i in 0..height {
-                match image_vmo.read(&mut buf, (i * bytes_per_row).into()) {
-                    Ok(_) => {}
-                    Err(_) => break,
-                }
-                match packed_vmo.write(&mut buf, (i * (width * 4)).into()) {
-                    Ok(_) => {}
-                    Err(_) => break,
+                image_vmo_mapping.read_at((i * bytes_per_row).try_into().unwrap(), &mut buf);
+                if let Err(status) = packed_vmo.write(&mut buf, (i * (width * 4)).into()) {
+                    return Err(format_err!("Vmo.write() failed with err: {}", status));
                 }
             }
 
