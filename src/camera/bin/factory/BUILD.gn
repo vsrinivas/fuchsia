@@ -63,6 +63,6 @@ fidl("fuchsia.factory.camera") {
 }
 
 fuchsia_package_with_single_component("camera_factory") {
-  manifest = "meta/camera_factory.cmx"
+  manifest = "meta/camera_factory.cml"
   deps = [ ":camera_factory_bin" ]
 }

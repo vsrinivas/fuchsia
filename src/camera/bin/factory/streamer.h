@@ -28,13 +28,13 @@ class Streamer {
       fit::closure stop_callback = nullptr);
 
   // once connected to device, return the number of available configs
-  uint32_t NumConfigs();
+  uint32_t NumConfigs() const;
 
   // if connected, return the connected config index
-  uint32_t ConnectedConfig();
+  uint32_t ConnectedConfig() const;
 
   // if connected to a config, return the number of currently connected streams (all are attempted)
-  uint32_t NumConnectedStreams();
+  uint32_t NumConnectedStreams() const;
 
   // request a switch to another config index
   void RequestConfig(uint32_t config);

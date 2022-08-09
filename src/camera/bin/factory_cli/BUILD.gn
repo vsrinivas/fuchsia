@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
+import("//build/components/fuchsia_shell_package.gni")
 
 group("factory_cli") {
   deps = [ ":camera_factory_cli" ]
@@ -21,7 +21,6 @@ executable("camera_factory_cli_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("camera_factory_cli") {
-  manifest = "meta/camera_factory_cli.cmx"
+fuchsia_shell_package("camera_factory_cli") {
   deps = [ ":camera_factory_cli_bin" ]
 }

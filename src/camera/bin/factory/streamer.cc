@@ -233,8 +233,8 @@ void Streamer::RequestCapture(uint32_t stream, const std::string& path, bool wan
       });
 }
 
-uint32_t Streamer::NumConfigs() { return config_count_; };
-uint32_t Streamer::ConnectedConfig() { return connected_config_index_; };
-uint32_t Streamer::NumConnectedStreams() { return connected_stream_count_; };
+uint32_t Streamer::NumConfigs() const { return config_count_; }
+uint32_t Streamer::ConnectedConfig() const { return connected_config_index_; }
+uint32_t Streamer::NumConnectedStreams() const { return connected_stream_count_; }
 
 }  // namespace camera
