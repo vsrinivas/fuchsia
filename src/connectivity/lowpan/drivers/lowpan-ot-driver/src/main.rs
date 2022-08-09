@@ -274,7 +274,7 @@ where
     let driver = OtDriver::new(ot_instance, net_if, backbone_if);
     let driver_ref = &driver;
 
-    let lowpan_device_task = register_and_serve_driver(name, registry, driver_ref).boxed();
+    let lowpan_device_task = register_and_serve_driver(name, registry, driver_ref);
 
     fx_log_info!("Registered OpenThread LoWPAN device {:?}", name);
 
@@ -294,22 +294,20 @@ where
         // If the factory interface throws an error, don't kill the driver;
         // just let the rest keep running.
         futures::future::pending::<Result<(), Error>>().await
-    }
-    .boxed();
-
-    let driver_stream = driver.main_loop_stream().try_collect::<()>();
+    };
 
     // All three of these tasks will run indefinitely
     // as long as there are no irrecoverable problems.
     //
-    // And, yes, strangely the parenthesis seem
-    // necessary, rustc complains about the `?` without
-    // them.
-    (futures::select! {
-        ret = driver_stream.fuse() => ret,
-        ret = lowpan_device_task.fuse() => ret,
-        _ = lowpan_device_factory_task.fuse() => unreachable!(),
-    })?;
+    // We use `stream::select_all` here so that only the
+    // futures that actually need to be polled get polled.
+    futures::stream::select_all([
+        driver.main_loop_stream().boxed(),
+        lowpan_device_task.into_stream().boxed(),
+        lowpan_device_factory_task.into_stream().boxed(),
+    ])
+    .try_collect::<()>()
+    .await?;
 
     fx_log_info!("OpenThread LoWPAN device {:?} has shutdown.", name);
 
