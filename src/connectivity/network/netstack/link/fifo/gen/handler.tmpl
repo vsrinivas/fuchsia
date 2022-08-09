@@ -9,13 +9,13 @@ package {{ .Pkg }}
 import (
 	"context"
 	"fmt"
-	"sync"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"reflect"
 	"unsafe"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
