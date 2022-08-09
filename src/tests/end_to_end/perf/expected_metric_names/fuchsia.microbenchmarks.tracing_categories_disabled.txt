@@ -1,0 +1,9 @@
+fuchsia.microbenchmarks.tracing_categories_disabled: Channel/WriteRead/1024bytes/1handles
+fuchsia.microbenchmarks.tracing_categories_disabled: Channel/WriteRead/1024bytes/1handles.read
+fuchsia.microbenchmarks.tracing_categories_disabled: Channel/WriteRead/1024bytes/1handles.write
+fuchsia.microbenchmarks.tracing_categories_disabled: Syscall/ManyArgs
+fuchsia.microbenchmarks.tracing_categories_disabled: Syscall/Null
+fuchsia.microbenchmarks.tracing_categories_disabled: Tracing/BeginEndDurationEvent
+fuchsia.microbenchmarks.tracing_categories_disabled: Tracing/InstantEvent
+fuchsia.microbenchmarks.tracing_categories_disabled: Tracing/InstantEventArgs
+fuchsia.microbenchmarks.tracing_categories_disabled: Tracing/ScopedDurationEvent

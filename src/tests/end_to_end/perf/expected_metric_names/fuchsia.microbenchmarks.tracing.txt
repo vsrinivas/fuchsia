@@ -1,0 +1,9 @@
+fuchsia.microbenchmarks.tracing: Channel/WriteRead/1024bytes/1handles
+fuchsia.microbenchmarks.tracing: Channel/WriteRead/1024bytes/1handles.read
+fuchsia.microbenchmarks.tracing: Channel/WriteRead/1024bytes/1handles.write
+fuchsia.microbenchmarks.tracing: Syscall/ManyArgs
+fuchsia.microbenchmarks.tracing: Syscall/Null
+fuchsia.microbenchmarks.tracing: Tracing/BeginEndDurationEvent
+fuchsia.microbenchmarks.tracing: Tracing/InstantEvent
+fuchsia.microbenchmarks.tracing: Tracing/InstantEventArgs
+fuchsia.microbenchmarks.tracing: Tracing/ScopedDurationEvent

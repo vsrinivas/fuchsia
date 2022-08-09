@@ -45,7 +45,8 @@ void main() {
         componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
         commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}'
             ' --runs $iterationsPerTestPerProcess',
-        processRuns: processRuns);
+        processRuns: processRuns,
+        expectedMetricNamesFile: 'fuchsia.microbenchmarks.txt');
   }, timeout: Timeout.none);
 
   // Run some of the microbenchmarks with tracing enabled to measure the
@@ -80,7 +81,8 @@ void main() {
           jsonEncode(results));
       resultsFiles.add(localResults);
     }
-    await helper.processResultsSummarized(resultsFiles);
+    await helper.processResultsSummarized(resultsFiles,
+        expectedMetricNamesFile: 'fuchsia.microbenchmarks.tracing.txt');
   }, timeout: Timeout.none);
 
   // Run some of the microbenchmarks with tracing enabled but each category
@@ -116,6 +118,8 @@ void main() {
           jsonEncode(results));
       resultsFiles.add(localResults);
     }
-    await helper.processResultsSummarized(resultsFiles);
+    await helper.processResultsSummarized(resultsFiles,
+        expectedMetricNamesFile:
+            'fuchsia.microbenchmarks.tracing_categories_disabled.txt');
   }, timeout: Timeout.none);
 }

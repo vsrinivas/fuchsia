@@ -96,7 +96,7 @@ class PerfTestHelper {
   // process described in summarize.dart, and publishes that as
   // results for the current test.
   Future<void> processResultsSummarized(List<File> jsonFiles,
-      [String expectedMetricNamesFile]) async {
+      {String expectedMetricNamesFile}) async {
     final jsonSummaryData = summarizeFuchsiaPerfFiles(jsonFiles);
 
     final File jsonSummaryFile = dump.createFile('results', 'fuchsiaperf.json');
@@ -180,7 +180,8 @@ class PerfTestHelper {
         expect(result.exitCode, equals(0));
       }
     }
-    await processResultsSummarized(localResultsFiles, expectedMetricNamesFile);
+    await processResultsSummarized(localResultsFiles,
+        expectedMetricNamesFile: expectedMetricNamesFile);
   }
 
   // Runs a component without processing any results.  This is useful when
