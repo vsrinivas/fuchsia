@@ -6,7 +6,7 @@
         {
             name: "weavestack",
             url: "fuchsia-pkg://fuchsia.com/weavestack#meta/weavestack.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

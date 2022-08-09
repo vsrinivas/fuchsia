@@ -70,13 +70,13 @@ legacy_base_package_labels += [
   "//src/security/root_ssl_certificates",
   "//src/sys/activity",
   "//src/sys/device_settings:device_settings_manager",
+  "//src/sys/full-resolver",  # This seems needed to run the session manager
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
+  "//src/sys/process-resolver",
   "//src/sys/stash:pkg",
   "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
   "//src/sys/time/timekeeper",
-  "//src/sys/universe-resolver",  # This seems needed to run the session manager
-  "//src/sys/process-resolver",
 ]
 
 product_bootfs_labels += [

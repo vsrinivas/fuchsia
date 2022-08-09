@@ -1,10 +1,10 @@
 [
-    // Products that wish to limit the use of /core/universe-resolver (and therefore
+    // Products that wish to limit the use of /core/full-resolver (and therefore
     // /core/pkg-resolver) for resolving components should use a custom instance of this allowlist
     // with an entry like:
     //{
     //    scheme: "fuchsia-pkg",
-    //    moniker: "/core/universe-resolver",
+    //    moniker: "/core/full-resolver",
     //    protocol: "fuchsia.pkg.PackageResolver",
     //    components: [
     //    ],

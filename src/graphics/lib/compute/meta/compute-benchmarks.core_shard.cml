@@ -6,7 +6,7 @@
         {
             name: "compute-benchmarks",
             url: "fuchsia-pkg://fuchsia.com/compute-benchmarks#meta/compute-benchmarks.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

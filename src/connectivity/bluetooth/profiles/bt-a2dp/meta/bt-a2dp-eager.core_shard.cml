@@ -10,7 +10,7 @@
             name: "bt-a2dp",
             url: "fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm",
             startup: "eager",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
 }

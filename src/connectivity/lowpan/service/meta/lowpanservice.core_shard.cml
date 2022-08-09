@@ -6,7 +6,7 @@
         {
             name: "lowpanservice",
             url: "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

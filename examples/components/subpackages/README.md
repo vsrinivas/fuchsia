@@ -23,7 +23,7 @@ $ fx set core.x64 --with //examples --with //examples:tests
 -->
 
 ```bash
-$ fx set core.x64 --args='universe_resolver_enable_subpackages=true' \
+$ fx set core.x64 --args='full_resolver_enable_subpackages=true' \
     --with //examples/components/subpackages:tests
 $ fx build
 ```

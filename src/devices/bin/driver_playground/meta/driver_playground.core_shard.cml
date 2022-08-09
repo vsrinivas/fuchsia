@@ -6,7 +6,7 @@
         {
             name: "driver_playground",
             url: "fuchsia-pkg://fuchsia.com/driver_playground#meta/driver_playground.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

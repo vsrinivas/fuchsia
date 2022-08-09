@@ -32,7 +32,7 @@ template("assemble_network_conformance_system") {
 
     package_name = core_name
     restrict_persistent_storage = false
-    restrict_full_resolver_to_base = false
+    restrict_core_env_to_base = false
   }
 
   root_realm("root") {
@@ -63,7 +63,7 @@ template("assemble_network_conformance_system") {
       "//src/sys/pkg/bin/pkg-cache",
       "//src/sys/pkg/bin/pkg-resolver",
       "//src/sys/sysmgr",
-      "//src/sys/universe-resolver",
+      "//src/sys/full-resolver",
     ]
     base_packages += invoker.additional_base_packages
 

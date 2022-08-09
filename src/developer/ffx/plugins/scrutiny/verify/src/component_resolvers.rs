@@ -253,7 +253,7 @@ mod tests {
             r#"[
             {
                 scheme: "fuchsia-pkg",
-                moniker: "/core/universe-resolver",
+                moniker: "/core/full-resolver",
                 protocol: "fuchsia.pkg.PackageResolver",
                 components: [
                 ],
@@ -264,7 +264,7 @@ mod tests {
         let scrutiny = MockQueryComponentResolvers::new().with_raw_response(
             (
                 "fuchsia-pkg".to_owned(),
-                "/core/universe-resolver".to_owned(),
+                "/core/full-resolver".to_owned(),
                 "fuchsia.pkg.PackageResolver".to_owned(),
             ),
             "invalid".to_owned(),
@@ -279,7 +279,7 @@ mod tests {
             r#"[
             {
                 scheme: "fuchsia-pkg",
-                moniker: "/core/universe-resolver",
+                moniker: "/core/full-resolver",
                 protocol: "fuchsia.pkg.PackageResolver",
                 components: [
                     "/core/allowed",
@@ -292,7 +292,7 @@ mod tests {
             r#"[
             {
                 scheme: "fuchsia-pkg",
-                moniker: "/core/universe-resolver",
+                moniker: "/core/full-resolver",
                 protocol: "fuchsia.pkg.PackageResolver",
                 components: [
                     "/core/stopme",
@@ -304,7 +304,7 @@ mod tests {
         let scrutiny = MockQueryComponentResolvers::new().with_response(
             (
                 "fuchsia-pkg".to_owned(),
-                "/core/universe-resolver".to_owned(),
+                "/core/full-resolver".to_owned(),
                 "fuchsia.pkg.PackageResolver".to_owned(),
             ),
             vec!["/core/allowed".to_owned(), "/core/stopme".to_owned()],
@@ -320,7 +320,7 @@ mod tests {
             r#"[
             {
                 scheme: "fuchsia-pkg",
-                moniker: "/core/universe-resolver",
+                moniker: "/core/full-resolver",
                 protocol: "fuchsia.pkg.PackageResolver",
                 components: [
                     "/core/allowed",
@@ -333,7 +333,7 @@ mod tests {
         let scrutiny = MockQueryComponentResolvers::new().with_response(
             (
                 "fuchsia-pkg".to_owned(),
-                "/core/universe-resolver".to_owned(),
+                "/core/full-resolver".to_owned(),
                 "fuchsia.pkg.PackageResolver".to_owned(),
             ),
             vec!["/core/allowed".to_owned(), "/core/also-allowed".to_owned()],

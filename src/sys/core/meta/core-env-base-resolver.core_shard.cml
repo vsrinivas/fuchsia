@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    // These environments inherit realm's resolver capability instead of overriding with the
+    // full-resolver's resolver capability (which is done by the full-resolver version of this
+    // shard).
     environments: [
+        {
+            name: "core-env",
+            extends: "realm",
+        },
+
+        // TODO(fxbug.dev/105528) Migrate clients to "core-env", then delete.
         {
             name: "full-resolver-env",
             extends: "realm",
-            resolvers: [
-                {
-                    resolver: "full-resolver",
-                    from: "#universe-resolver",
-                    scheme: "fuchsia-pkg",
-                },
-            ],
         },
         {
             name: "session-env",
@@ -25,13 +27,6 @@
                 {
                     runner: "starmium",
                     from: "#starnix_manager",
-                },
-            ],
-            resolvers: [
-                {
-                    resolver: "full-resolver",
-                    from: "#universe-resolver",
-                    scheme: "fuchsia-pkg",
                 },
             ],
         },

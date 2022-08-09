@@ -6,7 +6,7 @@
         {
             name: "linux_runner",
             url: "fuchsia-pkg://fuchsia.com/linux_runner#meta/linux_runner.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     capabilities: [

@@ -168,7 +168,7 @@ impl ResolvedAncestorComponent {
                 // resolved by the realm_builder_resolver, using URL scheme
                 // "realm-builder://"). The child component's URL is supposed to
                 // be relative to the test component (the parent of the realm),
-                // which was probably resolved by the universe-resolver (scheme
+                // which was probably resolved by the full-resolver (scheme
                 // "fuchsia-pkg://"). Knowing this expected topology, we can
                 // skip "realm-builder" components when searching for the
                 // required ancestor's URL scheme (to get the right resolver)

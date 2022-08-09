@@ -10,7 +10,7 @@
             // will be started when a client requests a capability.
             name: "bt-a2dp",
             url: "fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
 }

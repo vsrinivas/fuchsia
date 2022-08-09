@@ -596,7 +596,7 @@ mod tests {
                 json!({
                     "program": {
                         "runner": "elf",
-                        "binary": "bin/universe_resolver",
+                        "binary": "bin/full_resolver",
                     },
                     "capabilities": [
                         {

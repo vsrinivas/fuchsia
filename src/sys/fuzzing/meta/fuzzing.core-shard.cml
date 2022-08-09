@@ -8,12 +8,12 @@
         {
             name: "fuzz-manager",
             url: "fuchsia-pkg://fuchsia.com/fuzz-manager#meta/fuzz-manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "fuzz-registry",
             url: "fuchsia-pkg://fuchsia.com/fuzz-registry#meta/fuzz-registry.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

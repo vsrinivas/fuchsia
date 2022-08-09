@@ -26,7 +26,7 @@ BT_SET_UP() {
 
 # list-packages should return the entire contents of universe
 TEST_fx-list-packages-all() {
-  local test_package="universe-resolver"
+  local test_package="full-resolver"
   local out="${BT_TEMP_DIR}/output.log"
 
   echo "$test_package" > "${BT_TEMP_DIR}/out/default/universe_packages.list"
@@ -37,8 +37,8 @@ TEST_fx-list-packages-all() {
 
 # list-packages should return only packages matching pattern
 TEST_fx-list-packages-pattern() {
-  local test_pattern="universe"
-  local test_package="universe-resolver"
+  local test_pattern="full-res"
+  local test_package="full-resolver"
   local invalid_package="base-resolver"
   local out="${BT_TEMP_DIR}/output.log"
 
@@ -54,7 +54,7 @@ TEST_fx-list-packages-pattern() {
 # list-packages should return entire list with package tags
 TEST_fx-list-packages-verbose() {
   local base_package="base-resolver"
-  local cache_package="universe-resolver"
+  local cache_package="full-resolver"
   local out="${BT_TEMP_DIR}/output.log"
   local expected=$(cat <<-EOF
 $base_package [base universe]

@@ -6,13 +6,13 @@
         {
             name: "mediasession",
             url: "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     collections: [
         {
             name: "mediasession-examples",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
             durability: "transient",
         },
     ],

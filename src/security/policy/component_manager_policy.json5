@@ -344,7 +344,6 @@
                     "/core",
                     "/core/process_resolver",
                     "/core/full-resolver",
-                    "/core/universe-resolver",
                     "/core/system-update-checker",
                     "/core/system-updater",
                 ],

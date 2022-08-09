@@ -6,7 +6,7 @@
         {
             name: "emergency",
             url: "fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

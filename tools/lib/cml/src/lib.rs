@@ -1455,7 +1455,7 @@ pub enum EnvironmentExtends {
 ///         ],
 ///         resolvers: [
 ///             {
-///                 resolver: "universe-resolver",
+///                 resolver: "full-resolver",
 ///                 from: "parent",
 ///                 scheme: "fuchsia-pkg",
 ///             },
@@ -2062,8 +2062,8 @@ pub struct Use {
 ///         as: "web",
 ///     },
 ///     {
-///         resolver: "universe-resolver",
-///         from: "#universe_resolver",
+///         resolver: "full-resolver",
+///         from: "#full-resolver",
 ///     },
 /// ],
 /// ```
@@ -2169,7 +2169,7 @@ pub struct Expose {
 ///         to: [ "#user-shell" ],
 ///     },
 ///     {
-///         resolver: "universe-resolver",
+///         resolver: "full-resolver",
 ///         from: "parent",
 ///         to: [ "#user-shell" ],
 ///     },

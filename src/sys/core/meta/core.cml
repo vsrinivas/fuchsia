@@ -8,7 +8,7 @@
         {
             name: "sl4f_bridge_server",
             url: "fuchsia-pkg://fuchsia.com/sl4f-ffx-proxy-server#meta/sl4f_proxy_server.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "device_settings",
@@ -86,7 +86,7 @@
         {
             name: "brightness_manager",
             url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "cobalt",
@@ -115,7 +115,7 @@
         {
             name: "starnix_manager",
             url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "stash",
@@ -140,7 +140,7 @@
         {
             name: "overnetstack",
             url: "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "remote-control",
@@ -157,17 +157,17 @@
         {
             name: "system-metrics-logger",
             url: "fuchsia-pkg://fuchsia.com/system-metrics-logger#meta/system-metrics-logger-component.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "temperature-logger",
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "metrics-logger",
             url: "fuchsia-pkg://fuchsia.com/metrics-logger#meta/metrics-logger.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "pkg-resolver",
@@ -176,15 +176,15 @@
         {
             name: "vulkan_loader",
             url: "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "ssh-key-manager",
             url: "fuchsia-pkg://fuchsia.com/ssh-key-manager#meta/ssh-key-manager.cm",
         },
         {
-            name: "universe-resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+            name: "full-resolver",
+            url: "fuchsia-pkg://fuchsia.com/full-resolver#meta/full-resolver.cm",
         },
         {
             name: "network",
@@ -198,7 +198,7 @@
         {
             name: "agis",
             url: "fuchsia-pkg://fuchsia.com/agis#meta/agis.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ], // children
     capabilities: [
@@ -334,7 +334,7 @@
         {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#pkg-resolver",
-            to: "#universe-resolver",
+            to: "#full-resolver",
         },
         {
             protocol: [
@@ -418,6 +418,7 @@
                 "#exceptions",
                 "#feedback",
                 "#font_provider",
+                "#full-resolver",
                 "#hwinfo",
                 "#log-stats",
                 "#mdns",
@@ -440,7 +441,6 @@
                 "#system-update-committer",
                 "#temperature-logger",
                 "#timekeeper",
-                "#universe-resolver",
                 "#vulkan_loader",
             ],
         },
@@ -801,7 +801,7 @@
         },
         {
             resolver: "full-resolver",
-            from: "#universe-resolver",
+            from: "#full-resolver",
             to: "#session-manager",
         },
 
@@ -1047,7 +1047,7 @@
             ],
 
             // Weak offers to resolve dependency cycles that would be caused by
-            // using #full-resolver-env.
+            // using #core-env.
             dependency: "weak",
 
             // Trace manager may be excluded from builds where tracing is not
@@ -1153,7 +1153,7 @@
             resolvers: [
                 {
                     resolver: "full-resolver",
-                    from: "#universe-resolver",
+                    from: "#full-resolver",
                     scheme: "fuchsia-pkg",
                 },
             ],

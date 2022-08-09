@@ -22,6 +22,7 @@ group("tests") {
     "core:tests",
     "device_settings:tests",
     "early_boot_instrumentation:tests",
+    "full-resolver:tests",
     "fuzzing:tests",
     "lib:tests",
     "live_usb:tests",
@@ -35,6 +36,5 @@ group("tests") {
     "test_runners:tests",
     "time:tests",
     "tools:tests",
-    "universe-resolver:tests",
   ]
 }

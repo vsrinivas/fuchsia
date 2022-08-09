@@ -114,11 +114,11 @@
             url: "fuchsia-boot:///#meta/virtual-console.cm",
         },
 
-        // TODO(fxb/98535): Remove need for separate universe-resolver component here.
+        // TODO(fxb/98535): Remove need for separate full_resolver component here.
         // Full resolver clone to be used by the universe-pkg-drivers collection
         {
             name: "full_resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+            url: "fuchsia-pkg://fuchsia.com/full-resolver#meta/full-resolver.cm",
             environment: "#base-resolver-env",
         },
         {

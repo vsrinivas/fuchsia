@@ -6,13 +6,13 @@
         {
             name: "lowpan-ot-driver",
             url: "fuchsia-pkg://fuchsia.com/lowpan-ot-driver#meta/lowpan-ot-driver.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "lowpan-monitor",
             url: "fuchsia-pkg://fuchsia.com/lowpan-ot-driver#meta/lowpan-monitor.cm",
             startup: "eager",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

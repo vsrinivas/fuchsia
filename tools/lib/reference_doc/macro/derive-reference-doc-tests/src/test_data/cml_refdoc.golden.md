@@ -284,7 +284,7 @@ environments: [
         ],
         resolvers: [
             {
-                resolver: "universe-resolver",
+                resolver: "full-resolver",
                 from: "parent",
                 scheme: "fuchsia-pkg",
             },
@@ -502,8 +502,8 @@ expose: [
         as: "web",
     },
     {
-        resolver: "universe-resolver",
-        from: "#universe_resolver",
+        resolver: "full-resolver",
+        from: "#full-resolver",
     },
 ],
 ```
@@ -613,7 +613,7 @@ offer: [
         to: [ "#user-shell" ],
     },
     {
-        resolver: "universe-resolver",
+        resolver: "full-resolver",
         from: "parent",
         to: [ "#user-shell" ],
     },

@@ -6,7 +6,7 @@
         {
             name: "camera_device_watcher",
             url: "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

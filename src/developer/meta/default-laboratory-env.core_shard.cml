@@ -21,7 +21,7 @@
             resolvers: [
                 {
                     resolver: "full-resolver",
-                    from: "#universe-resolver",
+                    from: "#full-resolver",
                     scheme: "fuchsia-pkg",
                 },
             ],

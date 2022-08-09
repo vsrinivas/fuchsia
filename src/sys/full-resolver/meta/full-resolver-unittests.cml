@@ -9,6 +9,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/universe_resolver_bin_test",
+        binary: "bin/full_resolver_bin_test",
     },
 }

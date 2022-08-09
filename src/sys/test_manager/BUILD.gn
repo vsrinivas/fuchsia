@@ -179,8 +179,8 @@ group("test_manager") {
   deps = [
     ":test_manager_pkg",
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
+    "//src/sys/full-resolver",
     "//src/sys/test_runners",
-    "//src/sys/universe-resolver",
   ]
 }
 

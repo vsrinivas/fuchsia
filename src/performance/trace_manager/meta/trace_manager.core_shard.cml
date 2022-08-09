@@ -6,7 +6,7 @@
         {
             name: "trace_manager",
             url: "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
 

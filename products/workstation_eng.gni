@@ -140,12 +140,12 @@ legacy_base_package_labels -= [ "//src/virtualization/packages/termina_guest" ]
 # TODO(fxbug.dev/102651): Remove this setting when Subpackages is made
 # generally available. For now, the workstation product configuration will
 # enable subpackages so subpackage tests will be executed in CQ. Currently,
-# tests that use subpackages are only loaded by the universe resolver.
+# tests that use subpackages are only loaded by the full resolver.
 #
 # Otherwise, to enable subpackages locally, add the following `fx set`
 # flags, depending on which resolver(s) are used for which tests:
 #   fx set ... \
-#     --args='universe_resolver_enable_subpackages=true'
+#     --args='full_resolver_enable_subpackages=true'
 # and/or:
 #     --args='base_resolver_enable_subpackages=true'
-universe_resolver_enable_subpackages = true
+full_resolver_enable_subpackages = true

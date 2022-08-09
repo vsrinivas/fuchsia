@@ -10,16 +10,16 @@ group("tests") {
   testonly = true
   deps = [
     ":example",
-    ":universe-resolver-unittests",
+    ":unittests",
   ]
 }
 
 rustc_binary("bin") {
   edition = "2021"
-  output_name = "universe_resolver"
+  output_name = "full_resolver"
 
   # Generates a GN target for unit-tests with the label `bin_test`, and
-  # a binary named `universe_resolver_bin_test`.
+  # a binary named `full_resolver_bin_test`.
   with_unit_tests = true
 
   deps = [
@@ -58,8 +58,8 @@ rustc_binary("bin") {
 }
 
 fuchsia_component_manifest("manifest") {
-  component_name = "universe-resolver"
-  manifest = "meta/universe-resolver.cml"
+  component_name = "full-resolver"
+  manifest = "meta/full-resolver.cml"
 }
 
 fuchsia_component("component") {
@@ -69,25 +69,25 @@ fuchsia_component("component") {
 
 fuchsia_structured_config_rust_lib("config_lib") {
   cm_label = ":manifest"
-  name = "universe_resolver_config"
+  name = "full_resolver_config"
   visibility = [ ":*" ]
 }
 
 fuchsia_structured_config_values("config_values_from_gn") {
   cm_label = ":manifest"
   values = {
-    enable_subpackages = universe_resolver_enable_subpackages
+    enable_subpackages = full_resolver_enable_subpackages
   }
 }
 
 fuchsia_structured_config_values("config_values_from_gn_for_test") {
   cm_label = ":manifest"
   values = {
-    enable_subpackages = universe_resolver_enable_subpackages
+    enable_subpackages = full_resolver_enable_subpackages
   }
 }
 
-fuchsia_package("universe-resolver") {
+fuchsia_package("full-resolver") {
   deps = [
     ":component",
     ":config_values_from_gn",
@@ -98,8 +98,9 @@ fuchsia_component("example") {
   manifest = "meta/example.cml"
 }
 
-fuchsia_unittest_package("universe-resolver-unittests") {
-  manifest = "meta/universe-resolver-unittests.cml"
+fuchsia_unittest_package("unittests") {
+  package_name = "full-resolver-unittests"
+  manifest = "meta/full-resolver-unittests.cml"
   deps = [
     ":bin_test",
     ":component",

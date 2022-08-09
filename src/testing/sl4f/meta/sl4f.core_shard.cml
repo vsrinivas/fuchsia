@@ -13,12 +13,12 @@
         {
             name: "data_proxy",
             url: "fuchsia-pkg://fuchsia.com/sl4f#meta/data_proxy.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
         {
             name: "audio_recording",
             url: "fuchsia-pkg://fuchsia.com/sl4f#meta/audio_recording.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     capabilities: [

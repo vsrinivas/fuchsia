@@ -6303,8 +6303,8 @@ From //out/not-default/args.gn:13
 
 From //BUILD.gn:64
 
-### universe_resolver_enable_subpackages
-Whether to allow universe-resolver to resolve subpackages.
+### full_resolver_enable_subpackages
+Whether to allow full-resolver to resolve subpackages.
 TODO(fxbug.dev/102652): This configuration will be removed when subpackages
 is generally available.
 

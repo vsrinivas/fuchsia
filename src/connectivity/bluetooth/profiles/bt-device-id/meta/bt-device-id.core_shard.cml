@@ -6,7 +6,7 @@
         {
             name: "bt-device-id",
             url: "fuchsia-pkg://fuchsia.com/bt-device-id#meta/bt-device-id.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

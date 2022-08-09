@@ -14,11 +14,11 @@ use {
         PackageDirectory,
     },
     fuchsia_url::{ComponentUrl, Hash, PackageUrl, RelativePackageUrl, RepositoryUrl},
+    full_resolver_config::Config,
     futures::prelude::*,
     log::*,
     std::collections::HashMap,
     thiserror::Error,
-    universe_resolver_config::Config,
 };
 
 enum IncomingService {
@@ -99,7 +99,7 @@ async fn serve(
                     responder.send(&mut result).context("failed sending response")?;
                 } else {
                     error!(
-                        "universe-resolver ResolveWithContext is disabled. Config value `enable_subpackages` is false. Cannot resolve component URL {:?} with context {:?}",
+                        "full-resolver ResolveWithContext is disabled. Config value `enable_subpackages` is false. Cannot resolve component URL {:?} with context {:?}",
                         component_url,
                         context
                     );
@@ -537,15 +537,14 @@ mod tests {
         let (sender, mut receiver) = mpsc::channel(2);
         let tx = Arc::new(Mutex::new(Some(sender)));
         let resolver_url =
-            "fuchsia-pkg://fuchsia.com/universe-resolver-unittests#meta/universe-resolver.cm"
-                .to_string();
+            "fuchsia-pkg://fuchsia.com/full-resolver-unittests#meta/full-resolver.cm".to_string();
         let requested_url =
             "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
-        let universe_resolver = builder
-            .add_child("universe-resolver", resolver_url, ChildOptions::new())
+        let full_resolver = builder
+            .add_child("full-resolver", resolver_url, ChildOptions::new())
             .await
-            .expect("Failed add universe-resolver to test topology");
+            .expect("Failed add full-resolver to test topology");
         let fake_pkg_resolver = builder
             .add_local_child(
                 "fake-pkg-resolver",
@@ -577,27 +576,27 @@ mod tests {
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
                     .from(&fake_pkg_resolver)
-                    .to(&universe_resolver),
+                    .to(&full_resolver),
             )
             .await
-            .expect("Failed adding resolver route from fake-base-resolver to universe-resolver");
+            .expect("Failed adding resolver route from fake-base-resolver to full-resolver");
         builder
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name(
                         "fuchsia.component.resolution.Resolver",
                     ))
-                    .from(&universe_resolver)
+                    .from(&full_resolver)
                     .to(&requesting_component),
             )
             .await
-            .expect("Failed adding resolver route from universe-resolver to requesting-component");
+            .expect("Failed adding resolver route from full-resolver to requesting-component");
         builder
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .from(Ref::parent())
-                    .to(&universe_resolver)
+                    .to(&full_resolver)
                     .to(&fake_pkg_resolver)
                     .to(&requesting_component),
             )

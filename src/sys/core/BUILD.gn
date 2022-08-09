@@ -31,13 +31,13 @@ core_shard("core-storage-unrestricted") {
 }
 
 # This shard gives components access to the PackageResolver.
-core_shard("full-resolver") {
-  shard_file = "meta/full-resolver.core_shard.cml"
+core_shard("core-env-full-resolver") {
+  shard_file = "meta/core-env-full-resolver.core_shard.cml"
 }
 
 # This shard gives components access to the base resolver.
-core_shard("full-resolver-base-only") {
-  shard_file = "meta/full-resolver-base-only.core_shard.cml"
+core_shard("core-env-base-resolver") {
+  shard_file = "meta/core-env-base-resolver.core_shard.cml"
 }
 
 executable("core_proxy") {

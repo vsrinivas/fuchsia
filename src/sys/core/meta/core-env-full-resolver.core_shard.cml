@@ -1,0 +1,52 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    environments: [
+        {
+            name: "core-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#full-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+
+        // TODO(fxbug.dev/105528) Migrate clients to "core-env", then delete.
+        {
+            name: "full-resolver-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#full-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+        {
+            name: "session-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "starbionic",
+                    from: "#starnix_manager",
+                },
+                {
+                    runner: "starmium",
+                    from: "#starnix_manager",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#full-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+    ],
+}

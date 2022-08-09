@@ -8,7 +8,7 @@
         {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [
@@ -82,7 +82,7 @@
         },
         {
             protocol: "fuchsia.component.resolution.Resolver",
-            from: "#universe-resolver",
+            from: "#full-resolver",
             to: "#test_manager",
         },
         {

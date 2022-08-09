@@ -6,7 +6,7 @@
         {
             name: "termina-guest-manager",
             url: "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

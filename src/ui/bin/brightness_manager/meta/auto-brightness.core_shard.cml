@@ -7,7 +7,7 @@
             name: "auto-brightness",
             url: "fuchsia-pkg://fuchsia.com/auto-brightness#meta/auto-brightness.cm",
             startup: "eager",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

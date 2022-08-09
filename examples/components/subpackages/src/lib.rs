@@ -17,7 +17,7 @@ async fn routes_from_echo() {
 
     // Add the server component to the realm, fetched from a subpackage
     let echo_server = builder
-        // TODO(fxbug.dev/100060): When universe-resolver is updated to call
+        // TODO(fxbug.dev/100060): When full-resolver is updated to call
         // PackageResolver::ResolveWithContext, it will allow subpackages to
         // be renamed. At that time, update BUILD.gn to give the
         // echo_server_package an explicit name ("my-echo-server"), and replace

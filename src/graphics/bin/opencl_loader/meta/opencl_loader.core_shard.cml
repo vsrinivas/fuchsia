@@ -6,7 +6,7 @@
         {
             name: "opencl_loader",
             url: "fuchsia-pkg://fuchsia.com/opencl_loader#meta/opencl_loader.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

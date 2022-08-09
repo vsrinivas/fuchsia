@@ -13,7 +13,7 @@
             // for faster iterations, as for dynamically invoked components,
             // just relaunching them updates them if they are in the cache set.
             // Things in the base set would require an OTA update.
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

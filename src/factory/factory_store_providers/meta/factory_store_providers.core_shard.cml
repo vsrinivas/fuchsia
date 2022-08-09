@@ -8,7 +8,7 @@
         {
             name: "factory_store_providers",
             url: "fuchsia-pkg://fuchsia.com/factory_store_providers#meta/factory_store_providers.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

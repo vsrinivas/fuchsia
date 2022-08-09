@@ -7,7 +7,7 @@
         {
             name: "ui",
             url: "fuchsia-pkg://fuchsia.com/ui_headless#meta/ui_headless.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
 

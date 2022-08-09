@@ -6,7 +6,7 @@
         {
             name: "bt-avrcp",
             url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

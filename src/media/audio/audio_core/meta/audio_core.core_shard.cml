@@ -7,7 +7,7 @@
         {
             name: "audio_core",
             url: "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
             on_terminate: "reboot",
         },
     ],

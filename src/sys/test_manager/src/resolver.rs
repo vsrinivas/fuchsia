@@ -36,13 +36,13 @@ fn validate_hermetic_package(
 pub async fn serve_hermetic_resolver(
     handles: LocalComponentHandles,
     hermetic_test_package_name: Arc<String>,
-    universe_resolver: Arc<fresolution::ResolverProxy>,
+    full_resolver: Arc<fresolution::ResolverProxy>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     let mut tasks = vec![];
 
     fs.dir("svc").add_fidl_service(move |mut stream: fresolution::ResolverRequestStream| {
-        let universe_resolver = universe_resolver.clone();
+        let full_resolver = full_resolver.clone();
         let hermetic_test_package_name = hermetic_test_package_name.clone();
         tasks.push(fasync::Task::local(async move {
             while let Some(request) =
@@ -55,7 +55,7 @@ pub async fn serve_hermetic_resolver(
                         {
                             Err(err)
                         } else {
-                            universe_resolver.resolve(&component_url).await.unwrap_or_else(|err| {
+                            full_resolver.resolve(&component_url).await.unwrap_or_else(|err| {
                                 error!("failed to resolve component {}: {:?}", component_url, err);
                                 Err(fresolution::ResolverError::Internal)
                             })
@@ -74,7 +74,7 @@ pub async fn serve_hermetic_resolver(
                         {
                             Err(err)
                         } else {
-                            universe_resolver
+                            full_resolver
                                 .resolve_with_context(&component_url, &context)
                                 .await
                                 .unwrap_or_else(|err| {
@@ -220,7 +220,7 @@ mod tests {
     // route to our hermetic resolver.
     async fn construct_test_realm(
         hermetic_test_package_name: Arc<String>,
-        mock_universe_resolver: Arc<fresolution::ResolverProxy>,
+        mock_full_resolver: Arc<fresolution::ResolverProxy>,
     ) -> Result<RealmInstance, RealmBuilderError> {
         // Set up a realm to test the hermetic resolver.
         let builder = RealmBuilder::new().await?;
@@ -232,7 +232,7 @@ mod tests {
                     Box::pin(serve_hermetic_resolver(
                         handles,
                         hermetic_test_package_name.clone(),
-                        mock_universe_resolver.clone(),
+                        mock_full_resolver.clone(),
                     ))
                 },
                 ChildOptions::new(),
@@ -256,8 +256,8 @@ mod tests {
 
         let (resolver_proxy, mut resolver_request_stream) =
             create_proxy_and_stream::<fresolution::ResolverMarker>()
-                .expect("failed to create mock universe resolver proxy");
-        let universe_resolver_task = fasync::Task::spawn(async move {
+                .expect("failed to create mock full resolver proxy");
+        let full_resolver_task = fasync::Task::spawn(async move {
             respond_to_resolve_requests(&mut resolver_request_stream).await;
             drop(resolver_request_stream);
         });
@@ -275,7 +275,7 @@ mod tests {
                 .unwrap(),
             Ok(fresolution::Component::EMPTY)
         );
-        universe_resolver_task.await;
+        full_resolver_task.await;
     }
 
     #[fuchsia::test]
@@ -284,8 +284,8 @@ mod tests {
 
         let (resolver_proxy, mut resolver_request_stream) =
             create_proxy_and_stream::<fresolution::ResolverMarker>()
-                .expect("failed to create mock universe resolver proxy");
-        let universe_resolver_task = fasync::Task::spawn(async move {
+                .expect("failed to create mock full resolver proxy");
+        let full_resolver_task = fasync::Task::spawn(async move {
             respond_to_resolve_requests(&mut resolver_request_stream).await;
             drop(resolver_request_stream);
         });
@@ -300,14 +300,14 @@ mod tests {
             hermetic_resolver_proxy.resolve("fuchsia-pkg://fuchsia.com/package-one#meta/comp.cm");
         drop(hermetic_resolver_proxy); // code should not crash
 
-        universe_resolver_task.await;
+        full_resolver_task.await;
     }
 
     // Logging disabled as this outputs ERROR log, which will fail the test.
     #[fuchsia::test(logging = false)]
     async fn test_package_not_allowed() {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
-            .expect("failed to create mock universe resolver proxy");
+            .expect("failed to create mock full resolver proxy");
 
         let realm =
             construct_test_realm("package-two".to_string().into(), Arc::new(resolver_proxy))
@@ -329,8 +329,8 @@ mod tests {
     async fn test_failed_resolve() {
         let (resolver_proxy, mut resolver_request_stream) =
             create_proxy_and_stream::<fresolution::ResolverMarker>()
-                .expect("failed to create mock universe resolver proxy");
-        let universe_resolver_task = fasync::Task::spawn(async move {
+                .expect("failed to create mock full resolver proxy");
+        let full_resolver_task = fasync::Task::spawn(async move {
             respond_to_resolve_requests(&mut resolver_request_stream).await;
             drop(resolver_request_stream);
         });
@@ -350,13 +350,13 @@ mod tests {
                 .unwrap(),
             Err(fresolution::ResolverError::ResourceUnavailable)
         );
-        universe_resolver_task.await;
+        full_resolver_task.await;
     }
 
     #[fuchsia::test]
     async fn test_invalid_url() {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
-            .expect("failed to create mock universe resolver proxy");
+            .expect("failed to create mock full resolver proxy");
 
         let pkg_name = "package-two".to_string();
 

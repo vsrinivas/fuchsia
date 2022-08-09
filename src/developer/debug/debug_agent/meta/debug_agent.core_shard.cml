@@ -6,7 +6,7 @@
         {
             name: "debug_agent",
             url: "fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

@@ -16,10 +16,10 @@ rustc_library("routing") {
     "//src/security/scrutiny/plugins/*",
     "//src/sys/base-resolver:*",
     "//src/sys/component_manager/*",
+    "//src/sys/full-resolver:*",
     "//src/sys/lib/cm_rust/testing:*",
     "//src/sys/lib/routing/*",
     "//src/sys/test_manager/*",
-    "//src/sys/universe-resolver:*",
     "//tools/lib/cm_fidl_analyzer/*",
   ]
 

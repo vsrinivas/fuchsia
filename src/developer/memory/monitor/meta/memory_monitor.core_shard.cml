@@ -11,7 +11,7 @@
             // TODO(fxbug.dev/78680): need to start eagerly to collect memory
             // stats. Find a better solution than "eager".
             startup: "eager",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

@@ -185,10 +185,10 @@ declare_args() {
   # is generally available.
   base_resolver_enable_subpackages = false
 
-  # Whether to allow universe-resolver to resolve subpackages.
+  # Whether to allow full-resolver to resolve subpackages.
   # TODO(fxbug.dev/102652): This configuration will be removed when subpackages
   # is generally available.
-  universe_resolver_enable_subpackages = false
+  full_resolver_enable_subpackages = false
 }
 
 # Whether to allow testonly=true in base_packages/cache_packages.

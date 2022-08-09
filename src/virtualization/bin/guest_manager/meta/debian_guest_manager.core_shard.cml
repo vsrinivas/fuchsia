@@ -6,7 +6,7 @@
         {
             name: "debian-guest-manager",
             url: "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     use: [

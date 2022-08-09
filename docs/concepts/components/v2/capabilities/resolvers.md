@@ -114,7 +114,7 @@ support standard Fuchsia URL schemes:
 | ------------------- | -------------------------- |
 | `boot_resolver`     | [`fuchsia-boot`][url-boot] |
 | `base_resolver`     | [`fuchsia-pkg`][url-pkg]   |
-| `universe_resolver` | [`fuchsia-pkg`][url-pkg]   |
+| `full-resolver`     | [`fuchsia-pkg`][url-pkg]   |
 
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [glossary.environment]: /docs/glossary/README.md#environment

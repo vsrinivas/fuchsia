@@ -12,8 +12,8 @@ group("tests") {
   testonly = true
 
   # This Subpackages example will only work if subpackage resolution is enabled
-  # in the universe-resolver.
-  if (universe_resolver_enable_subpackages) {
+  # in the full-resolver.
+  if (full_resolver_enable_subpackages) {
     deps = [ ":package-with-subs" ]
   }
 }
@@ -71,7 +71,7 @@ fuchsia_test_package("package-with-subs") {
     },
     {
       # TODO(fxbug.dev/100060): It should be possible to rename the subpackage, by
-      # uncommenting the next line, but universe-resolver needs to be updated first,
+      # uncommenting the next line, but full-resolver needs to be updated first,
       # to resolve packages only by package hash (blob id). Until then, the subpackage
       # name is used to fill in the package name, so they must match.
       #

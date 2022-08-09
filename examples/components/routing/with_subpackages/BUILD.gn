@@ -11,8 +11,8 @@ group("with_subpackages") {
   testonly = true
 
   # This Subpackages example will only work if subpackage resolution is enabled
-  # in the universe-resolver.
-  if (universe_resolver_enable_subpackages) {
+  # in the full-resolver.
+  if (full_resolver_enable_subpackages) {
     deps = [
       ":subpackaged-echo-cpp",
       ":subpackaged-echo-rust",
@@ -92,8 +92,8 @@ group("tests") {
   testonly = true
 
   # This Subpackages example will only work if subpackage resolution is enabled
-  # in the universe-resolver.
-  if (universe_resolver_enable_subpackages) {
+  # in the full-resolver.
+  if (full_resolver_enable_subpackages) {
     deps = [
       "../integration_tests/cpp:subpackaged_echo_integration_test_cpp",
       "../integration_tests/rust:subpackaged_echo_integration_test_rust",

@@ -7,8 +7,8 @@
             name: "carnelian-examples",
 
             // The examples come from universe package set, so we have to set
-            // the resolver to the universe resolver, instead of the base resolver.
-            environment: "#full-resolver-env",
+            // the resolver to the full resolver, instead of the base resolver.
+            environment: "#core-env",
             durability: "transient",
         },
     ],
