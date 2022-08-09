@@ -80,6 +80,9 @@ KCOUNTER(thread_join_count, "thread.join")
 KCOUNTER(thread_suspend_count, "thread.suspend")
 // counts the number of calls to resume() that succeeded.
 KCOUNTER(thread_resume_count, "thread.resume")
+// counts the number of times a thread's timeslice extension was activated (see
+// |PreemptionState::SetTimesliceExtension|).
+KCOUNTER(thread_timeslice_extended, "thread.timeslice_extended")
 
 // The global thread list. This is a lazy_init type, since initial thread code
 // manipulates the list before global constructors are run. This is initialized by
@@ -1025,14 +1028,17 @@ void Thread::Current::Reschedule() {
   Scheduler::Reschedule();
 }
 
-void PreemptionState::FlushPending(Flush flush) {
-  // Early out to avoid unnecessarily taking the thread lock. This check races
-  // any potential flush due to context switch, however, the context switch can
-  // only clear bits that would have been flushed below, no new pending
-  // preemptions are possible in the mask bits indicated by |flush|.
-  if (likely(preempts_pending_ == 0)) {
-    return;
-  }
+void PreemptionState::SetPreemptionTimerForExtension(zx_time_t deadline) {
+  // Interrupts must be disabled when calling PreemptReset.
+  InterruptDisableGuard interrupt_disable;
+  percpu::Get(arch_curr_cpu_num()).timer_queue.PreemptReset(deadline);
+  kcounter_add(thread_timeslice_extended, 1);
+}
+
+void PreemptionState::FlushPendingContinued(Flush flush) {
+  // If we're flushing the local CPU, make sure OK to block since flushing
+  // local may trigger a reschedule.
+  DEBUG_ASSERT(((flush & FlushLocal) == 0) || !arch_blocking_disallowed());
 
   const auto do_flush = [this, flush]() TA_REQ(thread_lock) {
     // Recheck, pending preemptions could have been flushed by a context switch

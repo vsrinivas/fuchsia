@@ -176,4 +176,28 @@ class TA_SCOPED_CAP AnnotatedAutoEagerReschedDisabler {
   bool disabled_{true};
 };
 
+// AutoExpiringPreemptDisabler is an RAII helper that defers preemption of the
+// current thread until either |max_deferral_duration| nanoseconds after
+// preemption is requested or the object is destroyed, whichever comes first.
+class AutoExpiringPreemptDisabler {
+ public:
+  explicit AutoExpiringPreemptDisabler(zx_duration_t max_deferral_duration)
+      : should_clear_(
+            Thread::Current::preemption_state().SetTimesliceExtension(max_deferral_duration)) {}
+
+  ~AutoExpiringPreemptDisabler() {
+    if (should_clear_) {
+      Thread::Current::preemption_state().ClearTimesliceExtension();
+    }
+  }
+
+  AutoExpiringPreemptDisabler(const AutoExpiringPreemptDisabler&) = delete;
+  AutoExpiringPreemptDisabler& operator=(const AutoExpiringPreemptDisabler&) = delete;
+  AutoExpiringPreemptDisabler(AutoExpiringPreemptDisabler&&) = delete;
+  AutoExpiringPreemptDisabler& operator=(AutoExpiringPreemptDisabler&&) = delete;
+
+ private:
+  const bool should_clear_;
+};
+
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_PREEMPT_DISABLER_H_
