@@ -31,6 +31,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 
 	"github.com/creack/pty"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -103,6 +104,9 @@ type QEMUConfig struct {
 
 	// Path to the fvm host tool.
 	FVMTool string `json:"fvm_tool"`
+
+	// Path to the zbi host tool.
+	ZBITool string `json:"zbi_tool"`
 }
 
 // QEMUTarget is a QEMU target.
@@ -272,6 +276,28 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 
 	if err := copyImagesToDir(ctx, workdir, false, &qemuKernel, &zirconA, &storageFull); err != nil {
 		return err
+	}
+
+	if t.config.ZBITool != "" && t.SSHKey() != "" {
+		signers, err := parseOutSigners([]string{t.SSHKey()})
+		if err != nil {
+			return fmt.Errorf("could not parse out signers from private keys: %w", err)
+		}
+		var authorizedKeys []byte
+		for _, s := range signers {
+			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
+			authorizedKeys = append(authorizedKeys, authorizedKey...)
+		}
+		if len(authorizedKeys) == 0 {
+			return fmt.Errorf("missing authorized keys")
+		}
+		tmpFile := filepath.Join(workdir, "authorized_keys")
+		if err := ioutil.WriteFile(tmpFile, authorizedKeys, os.ModePerm); err != nil {
+			return fmt.Errorf("could not write authorized keys to file: %w", err)
+		}
+		if err := embedZBIWithKey(ctx, &zirconA, t.config.ZBITool, tmpFile); err != nil {
+			return fmt.Errorf("failed to embed zbi with key: %w", err)
+		}
 	}
 
 	// Now that the images hav successfully been copied to the working
@@ -461,6 +487,23 @@ func overwriteFileWithCopy(path string) error {
 		return err
 	}
 	return os.Rename(tmpfile.Name(), path)
+}
+
+func embedZBIWithKey(ctx context.Context, zbiImage *bootserver.Image, zbiTool string, authorizedKeysFile string) error {
+	absToolPath, err := filepath.Abs(zbiTool)
+	if err != nil {
+		return err
+	}
+	logger.Debugf(ctx, "embedding %s with key %s", zbiImage.Name, authorizedKeysFile)
+	cmd := exec.CommandContext(ctx, absToolPath, "-o", zbiImage.Path, zbiImage.Path, "--entry", fmt.Sprintf("data/ssh/authorized_keys=%s", authorizedKeysFile))
+	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
+	defer flush()
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func extendStorageFull(ctx context.Context, storageFull *bootserver.Image, fvmTool string, size int64) error {
