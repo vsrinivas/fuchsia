@@ -7,8 +7,10 @@
 
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 #include "internal/exception.h"
+#include "internal/variant.h"
 #include "utility.h"
 #include "version.h"
 
@@ -28,6 +30,7 @@ using std::variant_alternative;
 using std::variant_alternative_t;
 using std::variant_size;
 using std::variant_size_v;
+using std::visit;
 
 }  // namespace cpp17
 
@@ -54,34 +57,6 @@ struct monostate final {
   constexpr bool operator<=(const monostate& other) const { return true; }
   constexpr bool operator>=(const monostate& other) const { return true; }
 };
-
-namespace internal {
-
-// Helper type to avoid recursive instantiations of the full variant type.
-template <typename...>
-struct variant_list {};
-
-// Gets the number of alternatives in a variant_list as a compile-time constant.
-template <typename T>
-struct variant_list_size;
-
-template <typename... Ts>
-struct variant_list_size<variant_list<Ts...>> : std::integral_constant<size_t, sizeof...(Ts)> {};
-
-// Helper to get the type of a variant_list alternative with the given index.
-template <size_t Index, typename VariantList>
-struct variant_alternative;
-
-template <size_t Index, typename T0, typename... Ts>
-struct variant_alternative<Index, variant_list<T0, Ts...>>
-    : variant_alternative<Index - 1, variant_list<Ts...>> {};
-
-template <typename T0, typename... Ts>
-struct variant_alternative<0, variant_list<T0, Ts...>> {
-  using type = T0;
-};
-
-}  // namespace internal
 
 // Forward declaration.
 template <typename... Ts>
@@ -518,6 +493,8 @@ class variant
     return !has_value || result;
   }
 
+  constexpr bool valueless_by_exception() const { return storage_.is_empty(); }
+
  private:
   [[noreturn]] static constexpr void exception_invalid_index() {
     internal::throw_or_abort<bad_variant_access>("Invalid variant index for cpp17::get<>");
@@ -635,6 +612,37 @@ template <typename T, typename... Ts>
 constexpr bool holds_alternative(const variant<Ts...>& value) {
   constexpr auto index = ::cpp17::internal::selected_index<T, variant<Ts...>>::value;
   return value.index() == index;
+}
+
+namespace internal {
+
+struct dispatcher_container {
+  // Creates a compile dispatcher that calls |visitor| with the right set of
+  // active alternatives each variant.
+  template <size_t... Indexes>
+  struct dispatcher {
+    template <typename Visitor, typename... Variants>
+    static constexpr decltype(auto) dispatch(Visitor visitor, Variants... variants) {
+      return cpp20::invoke(visitor, cpp17::get<Indexes>(variants)...);
+    }
+  };
+};
+
+}  // namespace internal
+
+template <typename Visitor, typename... Variants>
+constexpr decltype(auto) visit(Visitor&& visitor, Variants&&... variants) {
+#if defined(__cpp_exceptions) && __cpp_exceptions >= 199711L
+  internal::throw_or_abort_if_any<bad_variant_access>(
+      "cpp17::visit encountered a valuless_by__exception variant. ",
+      variants.valueless_by_exception()...);
+#endif
+  using matrix = internal::visit_matrix<Visitor, Variants...>;
+  constexpr auto mat = matrix::template make_dispatcher_array<
+      internal::dispatcher_container,
+      std::make_index_sequence<cpp17::variant_size_v<cpp20::remove_cvref_t<Variants>>>...>();
+  return matrix::at(mat, variants.index()...)(std::forward<Visitor>(visitor),
+                                              std::forward<Variants>(variants)...);
 }
 
 }  // namespace cpp17

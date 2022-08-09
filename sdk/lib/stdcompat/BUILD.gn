@@ -50,6 +50,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/internal/tuple.h",
     "lib/stdcompat/internal/type_traits.h",
     "lib/stdcompat/internal/utility.h",
+    "lib/stdcompat/internal/variant.h",
   ]
 
   friend = [ "test:*" ]

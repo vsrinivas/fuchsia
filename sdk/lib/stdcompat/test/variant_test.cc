@@ -491,6 +491,129 @@ TEST(VariantTest, GetWrongTypeAbortsComplex) { get_wrong_type<complex_traits>();
 TEST(VariantTest, GetWrongIndexAbortsLiteral) { get_wrong_index<literal_traits>(); }
 TEST(VariantTest, GetWrongIndexAbortsComplex) { get_wrong_index<complex_traits>(); }
 
+struct A {
+  int val = 0;
+};
+
+void SetVal(A& a, int val) { a.val = val; }
+
+template <typename T>
+void SetVal(T& obj, int val) {
+  obj = T(val);
+}
+
+TEST(VariantTest, VisitSingleVariant) {
+  cpp17::variant<int, bool, A> var = A{};
+
+  ASSERT_TRUE(
+      cpp17::visit([](auto& v) { return std::is_same_v<std::decay_t<decltype(v)>, A>; }, var));
+
+  var = 1;
+  ASSERT_FALSE(
+      cpp17::visit([](auto& v) { return std::is_same_v<std::decay_t<decltype(v)>, A>; }, var));
+}
+
+TEST(VariantTest, VisitVisitorRefSingleVariant) {
+  cpp17::variant<int, bool, A> var = A{};
+
+  auto visitor = [](auto& v) { return std::is_same_v<std::decay_t<decltype(v)>, A>; };
+  ASSERT_TRUE(cpp17::visit(visitor, var));
+
+  var = 1;
+  ASSERT_FALSE(cpp17::visit(visitor, var));
+}
+
+TEST(VariantTest, VisitMultipleVariantsCopy) {
+  cpp17::variant<int, bool, A> var_1 = A{};
+  cpp17::variant<int, bool, A> var_2 = 4;
+  bool v1_right_type = false;
+  bool v2_right_type = false;
+
+  ASSERT_EQ(cpp17::visit(
+                [&](auto v1, auto v2) {
+                  v1_right_type = std::is_same_v<std::decay_t<decltype(v1)>, A>;
+                  v2_right_type = std::is_same_v<std::decay_t<decltype(v2)>, int>;
+
+                  SetVal(v1, 32);
+                  SetVal(v2, 5);
+                  return 123456;
+                },
+                var_1, var_2),
+            123456);
+  EXPECT_TRUE(v1_right_type);
+  EXPECT_TRUE(v2_right_type);
+  EXPECT_EQ(cpp17::get<A>(var_1).val, 0);
+  EXPECT_EQ(cpp17::get<int>(var_2), 4);
+}
+
+TEST(VariantTest, VisitMultipleVariants) {
+  cpp17::variant<int, bool, A> var_1 = A{};
+  cpp17::variant<int, bool, A> var_2 = 4;
+  bool v1_right_type = false;
+  bool v2_right_type = false;
+
+  ASSERT_EQ(cpp17::visit(
+                [&](auto& v1, auto& v2) {
+                  v1_right_type = std::is_same_v<std::decay_t<decltype(v1)>, A>;
+                  v2_right_type = std::is_same_v<std::decay_t<decltype(v2)>, int>;
+
+                  SetVal(v1, 32);
+                  SetVal(v2, 5);
+                  return 123456;
+                },
+                var_1, var_2),
+            123456);
+  EXPECT_TRUE(v1_right_type);
+  EXPECT_TRUE(v2_right_type);
+  EXPECT_EQ(cpp17::get<A>(var_1).val, 32);
+  EXPECT_EQ(cpp17::get<int>(var_2), 5);
+}
+
+TEST(VariantTest, VisitVisitorByRefMultipleVariants) {
+  cpp17::variant<int, bool, A> var_1 = A{};
+  cpp17::variant<int, bool, A> var_2 = 4;
+  bool v1_right_type = false;
+  bool v2_right_type = false;
+
+  auto visitor = [&](auto& v1, auto& v2) {
+    v1_right_type = std::is_same_v<std::decay_t<decltype(v1)>, A>;
+    v2_right_type = std::is_same_v<std::decay_t<decltype(v2)>, int>;
+
+    SetVal(v1, 32);
+    SetVal(v2, 5);
+    return 123456;
+  };
+  ASSERT_EQ(cpp17::visit(visitor, var_1, var_2), 123456);
+  EXPECT_TRUE(v1_right_type);
+  EXPECT_TRUE(v2_right_type);
+  EXPECT_EQ(cpp17::get<A>(var_1).val, 32);
+  EXPECT_EQ(cpp17::get<int>(var_2), 5);
+}
+
+#if defined(__cpp_exceptions) && __cpp_exceptions >= 199711L
+
+TEST(VariantTest, VisitVariantsWithValuelessByExceptionIsDeath) {
+  struct Boom {
+    Boom(const Boom&) { throw 124; }
+  };
+
+  cpp17::variant<int, bool, A> var_1 = A{};
+  cpp17::variant<int, bool, A> var_2 = false;
+  cpp17::variant<int, bool, Boom> var_3;
+
+  // var_3 is valueless_by_exception.
+  try {
+    var_3 = Boom();
+  } catch (const std::exception& e) {
+  }
+
+  ASSERT_THROW_OR_ABORT(
+      { cpp17::visit([](auto& v1, auto& v2, auto& v3) { __asm(""); }, var_1, var_2, var_3); },
+      cpp17::bad_variant_access);
+}
+
+#endif
+
 #if defined(__cpp_lib_variant) && __cpp_lib_variant >= 201606L && \
     !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
