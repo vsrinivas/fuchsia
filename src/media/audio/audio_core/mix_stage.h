@@ -101,6 +101,10 @@ class MixStage : public ReadableStream {
 
   // Used to variably throttle the amount of jam-sync-related logging we produce
   uint32_t jam_sync_count_ = 0;
+
+  // This is used by ForEachSource to snapshot `streams_`. It should be safe to store here because
+  // ForEachSource is always called by the same thread. This avoids an allocation in ForEachSource.
+  std::vector<StreamHolder> for_each_source_;
 };
 
 }  // namespace media::audio

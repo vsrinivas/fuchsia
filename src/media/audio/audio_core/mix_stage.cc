@@ -249,12 +249,10 @@ void MixStage::TrimImpl(Fixed dest_frame) {
 void MixStage::ForEachSource(TaskType task_type, Fixed dest_frame) {
   TRACE_DURATION("audio", "MixStage::ForEachSource");
 
-  std::vector<StreamHolder> sources;
+  std::vector<StreamHolder>& sources = for_each_source_;
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
-    for (const auto& holder : streams_) {
-      sources.emplace_back(holder);
-    }
+    sources = streams_;
   }
 
   for (auto& source : sources) {

@@ -87,20 +87,25 @@ std::optional<PipelineStage::Packet> PipelineStage::ForwardPacket(
   if (!packet) {
     return std::nullopt;
   }
+
+  // Logically, we are passing `packet` to the closure below. However, if we pass `packet` directly,
+  // this creates a recursive type (PipelineStage::Packet contains a dtor closure, which contains a
+  // PipelineStage::Packet), which means the compiler cannot prove that the closure can be created
+  // without heap allocation. To break that circular type, we store the forwarded packet in `this`.
+  forwarded_packet_ = std::move(packet);
+
   const auto packet_start = start_frame ? *start_frame : packet->start();
   return Packet(
       // Wrap the packet with a proxy so we can be notified when the packet is unlocked.
-      {packet->format(), packet_start, packet->length(), packet->payload()},
-      /*is_cached=*/false,
-      [this, packet_start, packet = std::move(packet)](int64_t frames_consumed) mutable {
+      {forwarded_packet_->format(), packet_start, forwarded_packet_->length(),
+       forwarded_packet_->payload()},
+      /*is_cached=*/false, [this, packet_start](int64_t frames_consumed) mutable {
         // Unlock the stream.
         is_locked_ = false;
-        // What is consumed from the proxy is also consumed from the source packet.
-        packet->set_frames_consumed(frames_consumed);
-        // Destroy the source packet before calling `AdvanceInternal` to ensure the source stream is
-        // unlocked before it is advanced.
-        packet = std::nullopt;
         AdvanceSelf(packet_start + Fixed(frames_consumed));
+        // What is consumed from the proxy is also consumed from the forwarded packet.
+        forwarded_packet_->set_frames_consumed(frames_consumed);
+        forwarded_packet_ = std::nullopt;
       });
 }
 

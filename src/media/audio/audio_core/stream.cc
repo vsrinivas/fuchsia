@@ -210,25 +210,32 @@ std::optional<ReadableStream::Buffer> ReadableStream::ForwardBuffer(
   if (!buffer) {
     return std::nullopt;
   }
+
+  // Logically, we are passing `buffer` to the closure below. However, if we pass `buffer` directly,
+  // this creates a recursive type (ReadableStream::Buffer contains a dtor closure, which contains a
+  // ReadableStream::Buffer), which means the compiler cannot prove that the closure can be created
+  // without heap allocation. To break that circular type, we store the forwarded buffer in `this`.
+  forwarded_buffer_ = std::move(buffer);
+
   auto buffer_start = start_frame ? *start_frame : buffer->start();
   return ReadableStream::Buffer(
       // Wrap the buffer with a proxy so we can be notified when the buffer is unlocked.
-      buffer_start, buffer->length(), buffer->payload(), false /* don't cache */,
-      buffer->usage_mask(), buffer->total_applied_gain_db(),
+      buffer_start, forwarded_buffer_->length(), forwarded_buffer_->payload(),
+      false /* don't cache */, forwarded_buffer_->usage_mask(),
+      forwarded_buffer_->total_applied_gain_db(),
       // Destructing this proxy unlocks the stream. Ensure the proxy holds a reference
-      // to this stream AND to the source buffer until the proxy is unlocked.
-      [this, buffer_start, buffer = std::move(buffer),
-       stream = shared_from_this()](int64_t frames_consumed) mutable {
+      // to this stream AND to forwarded_buffer_ until the proxy is unlocked.
+      [this, buffer_start, stream = shared_from_this()](int64_t frames_consumed) mutable {
         locked_ = false;
         Fixed trim_frame = buffer_start + Fixed(frames_consumed);
         if (frames_consumed > 0) {
           previous_buffer_end_ = trim_frame;
         };
-        // What is consumed from the proxy is also consumed from the source buffer.
-        buffer->set_frames_consumed(frames_consumed);
-        // Destroy the source buffer before calling Trim to ensure the source stream
+        // What is consumed from the proxy is also consumed from the forwarded buffer.
+        forwarded_buffer_->set_frames_consumed(frames_consumed);
+        // Destroy the forwarded buffer before calling Trim to ensure the source stream
         // is unlocked before it is Trim'd.
-        buffer = std::nullopt;
+        forwarded_buffer_ = std::nullopt;
         Trim(trim_frame);
         ReadUnlock();
       });

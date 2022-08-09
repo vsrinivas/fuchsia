@@ -56,7 +56,9 @@ class PipelineStage {
 
    private:
     friend class PipelineStage;
-    using DestructorType = fit::callback<void(int64_t frames_consumed)>;
+    // Use an inline_callback to ensure this type can be created without heap allocation.
+    // The compiler statically verifies that the inline size is large enough for all destructors.
+    using DestructorType = fit::inline_callback<void(int64_t frames_consumed), sizeof(void*) * 4>;
 
     Packet(Args args, bool is_cached, DestructorType destructor)
         : PacketView(args),
@@ -273,6 +275,10 @@ class PipelineStage {
   // Cached packet from the last call to `ReadImpl`. It remains valid until `next_dest_frame_`
   // reaches the end of the packet.
   std::optional<Packet> cached_packet_ = std::nullopt;
+
+  // If the last call to ReadLockImpl returned a forwarded packet, this is that packet.
+  // This is reset to std::nullopt when the packet is released.
+  std::optional<Packet> forwarded_packet_ = std::nullopt;
 
   // Next readable frame.
   std::optional<Fixed> next_readable_frame_ = std::nullopt;

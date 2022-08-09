@@ -4,7 +4,6 @@
 
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_STREAM_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_STREAM_H_
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
@@ -133,7 +132,9 @@ class ReadableStream : public BaseStream, public std::enable_shared_from_this<Re
 
    private:
     friend class ReadableStream;
-    using DestructorT = fit::callback<void(int64_t frames_consumed)>;
+    // Use an inline_callback to ensure this type can be created without heap allocation.
+    // The compiler statically verifies that the inline size is large enough for all destructors.
+    using DestructorT = fit::inline_callback<void(int64_t frames_consumed), sizeof(void*) * 4>;
 
     Buffer(Fixed start_frame, int64_t length_in_frames, void* payload, bool cache_this_buffer,
            StreamUsageMask usage_mask, float total_applied_gain_db, DestructorT dtor)
@@ -346,6 +347,10 @@ class ReadableStream : public BaseStream, public std::enable_shared_from_this<Re
   // This is cached from the last call to ReadLockImpl.
   // We hold onto this buffer until next_dest_frame_ >= cached_->end.
   std::optional<ReadableStream::Buffer> cached_;
+
+  // If the last call to ReadLockImpl returned a forwarded buffer, this is that buffer.
+  // This is reset to std::nullopt when the buffer is released.
+  std::optional<ReadableStream::Buffer> forwarded_buffer_;
 
   // For TRACE_DURATION, which requires C strings.
   const std::string name_for_read_lock_;
