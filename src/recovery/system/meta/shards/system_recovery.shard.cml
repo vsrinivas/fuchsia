@@ -10,6 +10,11 @@
     ],
     use: [
         {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
             directory: "dev-class-block",
             rights: [ "rw*" ],
             path: "/dev/class/block",

@@ -46,6 +46,12 @@
             to: "#system_recovery",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: "#system_recovery",
+            subdir: "system_recovery",
+        },
+        {
             directory: "root-ssl-certificates",
             from: "parent",
             to: "#system_recovery",

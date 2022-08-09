@@ -15,6 +15,12 @@
     ],
     offer: [
         {
+            directory: "config-data",
+            from: "parent",
+            to: "#system_recovery",
+            subdir: "system_recovery_fdr",
+        },
+        {
             directory: "dev",
             from: "parent",
             as: "dev-sys-platform",
