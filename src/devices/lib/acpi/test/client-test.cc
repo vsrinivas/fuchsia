@@ -34,7 +34,7 @@ class AcpiClientTest : public zxtest::Test {
                                      MockAcpiDevice::EvaluateObjectCompleter::Sync &sync) {
       ASSERT_BYTES_EQ(request->path.data(), "_DSM", request->path.size());
       ASSERT_EQ(request->mode, facpi::EvaluateObjectMode::kPlainObject);
-      ASSERT_EQ(request->parameters.count(), 3);
+      ASSERT_EQ(request->parameters.count(), 4);
       auto &params = request->parameters;
 
       ASSERT_TRUE(params[0].is_buffer_val());
@@ -44,6 +44,8 @@ class AcpiClientTest : public zxtest::Test {
       ASSERT_EQ(params[1].integer_val(), 1);
       ASSERT_TRUE(params[2].is_integer_val());
       ASSERT_EQ(params[2].integer_val(), 3);
+
+      ASSERT_TRUE(params[3].is_package_val());
 
       if (response_ == std::nullopt) {
         sync.ReplyError(facpi::Status::kError);
