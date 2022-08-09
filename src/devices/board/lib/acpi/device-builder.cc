@@ -27,6 +27,10 @@ static const zx_bind_inst_t kSysmemFragment[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 
+static const zx_bind_inst_t kSysmemFidlFragment[]{
+    BI_MATCH_IF(EQ, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_SYSMEM),
+};
+
 template <typename T>
 zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
   fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV2, &data);
@@ -281,7 +285,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
     return zx::ok();
   }
 
-  size_t fragment_count = buses_.size() + 2;
+  size_t fragment_count = buses_.size() + 3;
   // Bookkeeping.
   // We use fixed-size arrays here rather than std::vector because we don't want
   // pointers to array members to become invalidated when the vector resizes.
@@ -339,6 +343,18 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
   };
   fragments[bus_index] = device_fragment_t{
       .name = "sysmem",
+      .parts_count = 1,
+      .parts = &fragment_parts[bus_index],
+  };
+  bus_index++;
+
+  // Generate the sysmem-fidl fragment.
+  fragment_parts[bus_index] = device_fragment_part_t{
+      .instruction_count = sizeof(kSysmemFidlFragment) / sizeof(kSysmemFidlFragment[0]),
+      .match_program = kSysmemFidlFragment,
+  };
+  fragments[bus_index] = device_fragment_t{
+      .name = "sysmem-fidl",
       .parts_count = 1,
       .parts = &fragment_parts[bus_index],
   };
