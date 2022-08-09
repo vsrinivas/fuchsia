@@ -7,7 +7,6 @@
 #include <thread>
 #include <vector>
 
-#include <fbl/string_printf.h>
 #include <perftest/perftest.h>
 
 #include "assert.h"
@@ -60,10 +59,8 @@ bool HandleValid(perftest::RepeatState* state, uint32_t num_threads) {
 }
 
 void RegisterTests() {
-  for (unsigned i = 1; i <= zx_system_get_num_cpus(); i++) {
-    auto name = fbl::StringPrintf("HandleValid/%uThreads", i);
-    perftest::RegisterTest(name.c_str(), HandleValid, i);
-  }
+  perftest::RegisterTest("HandleValid/1Threads", HandleValid, 1);
+  perftest::RegisterTest("HandleValid/CpuCountThreads", HandleValid, zx_system_get_num_cpus());
 }
 PERFTEST_CTOR(RegisterTests)
 
