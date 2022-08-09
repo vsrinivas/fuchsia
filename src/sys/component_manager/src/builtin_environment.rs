@@ -136,6 +136,12 @@ pub fn get_next_vdso_vmo() -> Result<zx::Vmo, Error> {
     get_vdso_vmo("vdso/next")
 }
 
+/// Returns an owned VMO handle to the direct vDSO, duplicated from the handle
+/// provided to this process through its processargs bootstrap message.
+pub fn get_direct_vdso_vmo() -> Result<zx::Vmo, Error> {
+    get_vdso_vmo("vdso/direct")
+}
+
 pub struct BuiltinEnvironmentBuilder {
     // TODO(60804): Make component manager's namespace injectable here.
     runtime_config: Option<RuntimeConfig>,
@@ -275,6 +281,7 @@ impl BuiltinEnvironmentBuilder {
                 .ingest_bootfs_vmo(&system_resource_handle)?
                 .publish_kernel_vmo(get_stable_vdso_vmo()?)?
                 .publish_kernel_vmo(get_next_vdso_vmo()?)?
+                .publish_kernel_vmo(get_direct_vdso_vmo()?)?
                 .publish_kernel_vmo(get_vdso_vmo("vdso/test1")?)?
                 .publish_kernel_vmo(get_vdso_vmo("vdso/test2")?)?
                 .publish_kernel_vmos(HandleType::KernelFileVmo, 0)?

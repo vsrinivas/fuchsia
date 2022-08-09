@@ -16,6 +16,7 @@ const VMEX_KEY: &str = "job_policy_ambient_mark_vmo_exec";
 const STOP_EVENT_KEY: &str = "lifecycle.stop_event";
 const STOP_EVENT_VARIANTS: [&'static str; 2] = ["notify", "ignore"];
 const USE_NEXT_VDSO_KEY: &str = "use_next_vdso";
+const USE_DIRECT_VDSO_KEY: &str = "use_direct_vdso";
 
 /// Target sink for stdout and stderr output streams.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -34,6 +35,7 @@ pub struct ElfProgramConfig {
     main_process_critical: bool,
     create_raw_processes: bool,
     use_next_vdso: bool,
+    use_direct_vdso: bool,
     stdout_sink: StreamSink,
     stderr_sink: StreamSink,
     environ: Option<Vec<String>>,
@@ -87,6 +89,9 @@ impl ElfProgramConfig {
         let use_next_vdso = runner::get_bool(program, USE_NEXT_VDSO_KEY)
             .map_err(|_err| ElfRunnerError::program_dictionary_error(USE_NEXT_VDSO_KEY, url))?;
 
+        let use_direct_vdso = runner::get_bool(program, USE_DIRECT_VDSO_KEY)
+            .map_err(|_err| ElfRunnerError::program_dictionary_error(USE_DIRECT_VDSO_KEY, url))?;
+
         let stdout_sink = get_stream_sink(&program, FORWARD_STDOUT_KEY, url)?;
         let stderr_sink = get_stream_sink(&program, FORWARD_STDERR_KEY, url)?;
 
@@ -99,6 +104,7 @@ impl ElfProgramConfig {
             main_process_critical,
             create_raw_processes,
             use_next_vdso,
+            use_direct_vdso,
             stdout_sink,
             stderr_sink,
             environ,
@@ -123,6 +129,10 @@ impl ElfProgramConfig {
 
     pub fn should_use_next_vdso(&self) -> bool {
         self.use_next_vdso
+    }
+
+    pub fn should_use_direct_vdso(&self) -> bool {
+        self.use_direct_vdso
     }
 
     pub fn get_stdout_sink(&self) -> StreamSink {
@@ -257,6 +267,8 @@ mod tests {
     #[test_case("job_policy_create_raw_processes", new_string("false"), ElfProgramConfig { create_raw_processes: false, ..Default::default()} ; "when_create_raw_processes_false")]
     #[test_case("use_next_vdso", new_string("true"), ElfProgramConfig { use_next_vdso: true, ..Default::default()} ; "use_next_vdso_true")]
     #[test_case("use_next_vdso", new_string("false"), ElfProgramConfig { use_next_vdso: false, ..Default::default()} ; "use_next_vdso_false")]
+    #[test_case("use_direct_vdso", new_string("true"), ElfProgramConfig { use_direct_vdso: true, ..Default::default()} ; "use_direct_vdso_true")]
+    #[test_case("use_direct_vdso", new_string("false"), ElfProgramConfig { use_direct_vdso: false, ..Default::default()} ; "use_direct_vdso_false")]
     fn test_parse_and_check_with_permissive_policy(
         key: &str,
         value: fdata::DictionaryValue,
@@ -300,6 +312,7 @@ mod tests {
     #[test_case("forward_stderr_to", new_empty_vec() ; "for_stderr")]
     #[test_case("environ", new_empty_string() ; "for_environ")]
     #[test_case("use_next_vdso", new_empty_vec() ; "for_use_next_vdso")]
+    #[test_case("use_direct_vdso", new_empty_vec() ; "for_use_direct_vdso")]
     fn test_parse_and_check_with_invalid_value(key: &str, value: fdata::DictionaryValue) {
         // Use a permissive policy because we want to fail *iff* value set for
         // key is invalid.

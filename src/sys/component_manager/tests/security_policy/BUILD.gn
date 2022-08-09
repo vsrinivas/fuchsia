@@ -15,6 +15,7 @@ group("tests") {
   deps = [
     "ambient_mark_vmo_exec:tests",
     "capability_allowlist:tests",
+    "direct_vdso:tests",
     "main_process_critical:tests",
     "next_vdso:tests",
   ]

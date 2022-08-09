@@ -21,7 +21,7 @@ use {
     },
     crate::{
         builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
-        builtin_environment::get_next_vdso_vmo,
+        builtin_environment::{get_direct_vdso_vmo, get_next_vdso_vmo},
     },
     ::routing::{config::RuntimeConfig, policy::ScopedPolicyChecker},
     anyhow::{format_err, Context as _},
@@ -105,6 +105,7 @@ impl ElfRunner {
         launcher: &fidl_fuchsia_process::LauncherProxy,
         lifecycle_server: Option<zx::Channel>,
         custom_vdso: Option<zx::Vmo>,
+        direct_vdso: Option<zx::Vmo>,
     ) -> Result<Option<ConfigureLauncherResult>, ElfRunnerError> {
         let bin_path = runner::get_program_binary(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
@@ -191,6 +192,13 @@ impl ElfRunner {
             handle_infos.push(fproc::HandleInfo {
                 handle: custom_vdso.into_handle(),
                 id: HandleInfo::new(HandleType::VdsoVmo, 0).as_raw(),
+            });
+        }
+
+        if let Some(direct_vdso) = direct_vdso {
+            handle_infos.push(fproc::HandleInfo {
+                handle: direct_vdso.into_handle(),
+                id: HandleInfo::new(HandleType::VdsoVmo, 1).as_raw(),
             });
         }
 
@@ -350,6 +358,14 @@ impl ElfRunner {
             custom_vdso = Some(next_vdso);
         }
 
+        let mut direct_vdso = None;
+        if program_config.should_use_direct_vdso() {
+            let vdso = get_direct_vdso_vmo().map_err(|e| {
+                ElfRunnerError::component_direct_vdso_error(resolved_url.clone(), e)
+            })?;
+            direct_vdso = Some(vdso);
+        }
+
         let (lifecycle_client, lifecycle_server) = match program_config.notify_when_stopped() {
             true => {
                 fidl::endpoints::create_proxy::<LifecycleMarker>().map(|(c, s)| (Some(c), Some(s)))
@@ -374,6 +390,7 @@ impl ElfRunner {
                 &launcher,
                 lifecycle_server,
                 custom_vdso,
+                direct_vdso,
             )
             .await?
         {

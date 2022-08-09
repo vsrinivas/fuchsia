@@ -58,6 +58,12 @@ pub enum ElfRunnerError {
         #[source]
         err: ClonableError,
     },
+    #[error("failed to use direct vDSO for component with url \"{}\": {}", url, err)]
+    ComponentDirectVDSOError {
+        url: String,
+        #[source]
+        err: ClonableError,
+    },
     #[error("failed to add runtime/elf directory for component with url \"{}\"", url)]
     ComponentElfDirectoryError { url: String },
     #[error("program key \"{}\" invalid for component with url \"{}\"", key, url)]
@@ -137,6 +143,13 @@ impl ElfRunnerError {
         err: impl Into<Error>,
     ) -> ElfRunnerError {
         ElfRunnerError::ComponentNextVDSOError { url: url.into(), err: err.into().into() }
+    }
+
+    pub fn component_direct_vdso_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentDirectVDSOError { url: url.into(), err: err.into().into() }
     }
 
     pub fn component_elf_directory_error(url: impl Into<String>) -> ElfRunnerError {
