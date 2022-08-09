@@ -69,6 +69,15 @@ pub enum Error {
     __Nonexhaustive,
 }
 
+impl From<Error> for fidl_avrcp::BrowseControllerError {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::InvalidDirection => fidl_avrcp::BrowseControllerError::InvalidDirection,
+            _ => fidl_avrcp::BrowseControllerError::PacketEncoding,
+        }
+    }
+}
+
 pub type PacketResult<T> = result::Result<T, Error>;
 
 pub_decodable_enum! {
@@ -137,12 +146,12 @@ pub_decodable_enum! {
         AbortContinuingResponse => 0x41,
         SetAbsoluteVolume => 0x50,
         SetAddressedPlayer => 0x60,
+        SetBrowsedPlayer => 0x70,
         GetFolderItems => 0x71,
         PlayItem => 0x74,
         GetTotalNumberOfItems => 0x75,
         AddToNowPlaying => 0x90,
         GeneralReject => 0xa0,
-        SetBrowsedPlayer => 0x70,
     }
 }
 
@@ -163,8 +172,13 @@ pub_decodable_enum! {
         InternalError => 0x03,
         Success => 0x04,
         UidChanged => 0x05,
+        InvalidDirection => 0x07,
+        NonDirectory => 0x08,
+        DoesNotExist => 0x09,
         InvalidScope => 0x0a,
         RangeOutOfBounds => 0x0b,
+        ItemNotPlayable => 0x0c,
+        MediaInUse => 0x0d,
         InvalidPlayerId => 0x11,
         PlayerNotBrowsable => 0x12,
         PlayerNotAddressed => 0x13,
@@ -218,6 +232,30 @@ impl From<fidl_avrcp::TargetAvcError> for StatusCode {
             fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged => {
                 StatusCode::AddressedPlayerChanged
             }
+        }
+    }
+}
+
+impl From<StatusCode> for fidl_avrcp::BrowseControllerError {
+    fn from(status: StatusCode) -> Self {
+        match status {
+            StatusCode::Success => {
+                panic!("cannot convert StatusCode::Success to BrowseControllerError")
+            }
+            StatusCode::UidChanged => fidl_avrcp::BrowseControllerError::UidChanged,
+            StatusCode::InvalidDirection => fidl_avrcp::BrowseControllerError::InvalidDirection,
+            StatusCode::NonDirectory | StatusCode::DoesNotExist | StatusCode::InvalidPlayerId => {
+                fidl_avrcp::BrowseControllerError::InvalidId
+            }
+            StatusCode::InvalidScope => fidl_avrcp::BrowseControllerError::InvalidScope,
+            StatusCode::RangeOutOfBounds => fidl_avrcp::BrowseControllerError::RangeOutOfBounds,
+            StatusCode::ItemNotPlayable => fidl_avrcp::BrowseControllerError::ItemNotPlayable,
+            StatusCode::MediaInUse => fidl_avrcp::BrowseControllerError::MediaInUse,
+            StatusCode::PlayerNotBrowsable => fidl_avrcp::BrowseControllerError::PlayerNotBrowsable,
+            StatusCode::PlayerNotAddressed => fidl_avrcp::BrowseControllerError::PlayerNotAddressed,
+            StatusCode::NoValidSearchResults => fidl_avrcp::BrowseControllerError::NoValidResults,
+            StatusCode::NoAvailablePlayers => fidl_avrcp::BrowseControllerError::NoAvailablePlayers,
+            _ => fidl_avrcp::BrowseControllerError::PacketEncoding,
         }
     }
 }

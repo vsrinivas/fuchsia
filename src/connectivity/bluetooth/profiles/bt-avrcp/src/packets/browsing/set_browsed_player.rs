@@ -16,13 +16,12 @@ pub struct SetBrowsedPlayerCommand {
     player_id: u16,
 }
 
-// TODO(fxbug.dev/97150): remove this once used in controller code.
-#[allow(dead_code)]
 impl SetBrowsedPlayerCommand {
     pub fn new(player_id: u16) -> Self {
         Self { player_id }
     }
 
+    #[cfg(test)]
     pub fn player_id(&self) -> u16 {
         self.player_id
     }
@@ -73,8 +72,20 @@ pub struct SetBrowsedPlayerResponseParams {
     folder_names: Vec<String>,
 }
 
-// TODO(fxbug.dev/97150): remove this once used in controller code.
-#[allow(dead_code)]
+impl SetBrowsedPlayerResponseParams {
+    pub fn uid_counter(&self) -> u16 {
+        self.uid_counter
+    }
+
+    pub fn num_items(&self) -> u32 {
+        self.num_items
+    }
+
+    pub fn folder_names(self) -> Vec<String> {
+        self.folder_names
+    }
+}
+
 impl SetBrowsedPlayerResponse {
     /// Minimum encoded length that includes length of all required parameters
     /// for a failure response message.
@@ -89,6 +100,7 @@ impl SetBrowsedPlayerResponse {
     /// Defined in AVRCP 1.6.2, Section 6.9.3.2.
     const MIN_SUCCESS_PACKET_SIZE: usize = 10;
 
+    #[cfg(test)]
     pub fn new_success(
         uid_counter: u16,
         num_items: u32,
@@ -100,6 +112,7 @@ impl SetBrowsedPlayerResponse {
         Ok(Self::Success(SetBrowsedPlayerResponseParams { uid_counter, num_items, folder_names }))
     }
 
+    #[cfg(test)]
     pub fn new_failure(status: StatusCode) -> Result<Self, Error> {
         if status == StatusCode::Success {
             return Err(Error::InvalidMessage);

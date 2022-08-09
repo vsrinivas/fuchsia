@@ -41,9 +41,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [
+    "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
+    "//third_party/rust_crates:assert_matches",
+  ]
 
   sources = [
+    "src/browse_controller_service.rs",
+    "src/controller_service.rs",
     "src/main.rs",
     "src/metrics/mod.rs",
     "src/packets/browsing/change_path.rs",

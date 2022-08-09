@@ -30,7 +30,7 @@ impl BrowseChannelHandler {
     /// 2) Extracts the PduId from the BrowsePreamble.
     ///
     /// Returns the decoded PduId and the packet body.
-    fn decode_command(command: &AvctpCommand) -> Result<(PduId, Vec<u8>), Error> {
+    pub fn decode_command(command: &AvctpCommand) -> Result<(PduId, Vec<u8>), Error> {
         let packet_body = command.body();
         if !command.header().is_type(&avctp::AvctpMessageType::Command) {
             // Invalid header type. Send back general reject.

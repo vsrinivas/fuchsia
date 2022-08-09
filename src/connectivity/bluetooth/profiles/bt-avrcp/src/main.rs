@@ -15,6 +15,8 @@ use {
     tracing::{error, info, warn},
 };
 
+mod browse_controller_service;
+mod controller_service;
 mod metrics;
 mod packets;
 mod peer;

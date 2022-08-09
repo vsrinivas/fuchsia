@@ -6,10 +6,13 @@ use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     futures::channel::mpsc,
     packet_encoding::Decodable,
+    parking_lot::Mutex,
     std::convert::{TryFrom, TryInto},
+    std::num::NonZeroU16,
     tracing::trace,
 };
 
+use crate::packets::*;
 use crate::peer::*;
 use crate::types::PeerError as Error;
 
@@ -23,16 +26,56 @@ pub enum ControllerEvent {
 
 pub type ControllerEventStream = mpsc::Receiver<ControllerEvent>;
 
+impl From<Error> for fidl_avrcp::BrowseControllerError {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::PacketError(_) => fidl_avrcp::BrowseControllerError::PacketEncoding,
+            Error::AvctpError(_) => fidl_avrcp::BrowseControllerError::ProtocolError,
+            Error::RemoteNotFound => fidl_avrcp::BrowseControllerError::RemoteNotConnected,
+            Error::CommandNotSupported => fidl_avrcp::BrowseControllerError::CommandNotImplemented,
+            Error::ConnectionFailure(_) => fidl_avrcp::BrowseControllerError::ConnectionError,
+            _ => fidl_avrcp::BrowseControllerError::UnknownFailure,
+        }
+    }
+}
+
 /// Controller interface for a remote peer returned by the PeerManager using the
 /// ControllerRequest stream for a given ControllerRequest.
 #[derive(Debug)]
 pub struct Controller {
     peer: RemotePeerHandle,
+
+    // Information about the browsable player that is currently set, if any.
+    browsable_player: Mutex<Option<BrowsablePlayer>>,
+}
+
+/// Controller interface for a remote peer returned by the PeerManager using the
+/// ControllerRequest stream for a given ControllerRequest.
+#[allow(dead_code)]
+#[derive(Debug)]
+struct BrowsablePlayer {
+    player_id: u16,
+    // If the browsable player is not database aware, uid_counter will be none.
+    uid_counter: Option<NonZeroU16>,
+    // Number of items in the current folder.
+    num_items: u32,
+    sub_folders: Vec<String>,
+}
+
+impl BrowsablePlayer {
+    fn new(player_id: u16, params: SetBrowsedPlayerResponseParams) -> Self {
+        BrowsablePlayer {
+            player_id,
+            uid_counter: params.uid_counter().try_into().ok(),
+            num_items: params.num_items(),
+            sub_folders: params.folder_names(),
+        }
+    }
 }
 
 impl Controller {
     pub(crate) fn new(peer: RemotePeerHandle) -> Controller {
-        Controller { peer }
+        Controller { peer, browsable_player: Mutex::new(None) }
     }
 
     /// Sends a AVC key press and key release passthrough command.
@@ -230,14 +273,62 @@ impl Controller {
         self.peer.send_vendor_dependent_command(&command).await
     }
 
+    pub async fn set_browsed_player(
+        &self,
+        player_id: u16,
+    ) -> Result<(), fidl_avrcp::BrowseControllerError> {
+        let cmd = SetBrowsedPlayerCommand::new(player_id);
+        let buf = self.send_browse_command(PduId::SetBrowsedPlayer, &cmd).await?;
+        let response = SetBrowsedPlayerResponse::decode(&buf[..]).map_err(Error::PacketError)?;
+        let mut bp = self.browsable_player.lock();
+        match response {
+            SetBrowsedPlayerResponse::Failure(status) => {
+                // Clear any previously-set browsed player.
+                warn!("Failed to set a new browsable player (id = {}), keeping the previous browsable player ({:?})...", player_id, *bp);
+                Err(status.into())
+            }
+            SetBrowsedPlayerResponse::Success(r) => {
+                *bp = Some(BrowsablePlayer::new(player_id, r));
+                info!("Browsable player changed (id = {})", player_id);
+                Ok(())
+            }
+        }
+    }
+
+    async fn send_browse_command(
+        &self,
+        pdu_id: PduId,
+        command: &impl Encodable<Error = PacketError>,
+    ) -> Result<Vec<u8>, Error> {
+        let mut buf = vec![0; command.encoded_len()];
+        let _ = command.encode(&mut buf[..]).map_err(|e| Error::PacketError(e))?;
+        self.send_raw_browse_command(u8::from(&pdu_id), &buf).await
+    }
+
+    pub fn send_raw_browse_command(
+        &self,
+        pdu_id: u8,
+        payload: &[u8],
+    ) -> impl Future<Output = Result<Vec<u8>, Error>> {
+        let cmd = BrowsePreamble::new(pdu_id, payload.to_vec());
+        self.peer.send_browsing_command(pdu_id, cmd)
+    }
+
     /// For the FIDL test controller. Informational only and intended for logging only. The state is
     /// inherently racey.
     pub fn is_control_connected(&self) -> bool {
         self.peer.is_control_connected()
     }
 
-    /// Returns notification events from the peer.
-    pub fn take_event_stream(&self) -> ControllerEventStream {
+    /// For the FIDL test browse controller. Informational only and intended for logging only. The state is
+    /// inherently racey.
+    pub fn is_browse_connected(&self) -> bool {
+        self.peer.is_browse_connected()
+    }
+
+    /// Creates new stream for events and returns the receiveing end for
+    /// getting notification events from the peer.
+    pub fn add_event_listener(&self) -> ControllerEventStream {
         // TODO(fxbug.dev/44330) handle back pressure correctly and reduce mpsc::channel buffer sizes.
         let (sender, receiver) = mpsc::channel(512);
         self.peer.add_control_listener(sender);

@@ -8,12 +8,13 @@ use {
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avrcp::{
-        self as fidl_avrcp, ControllerEvent, ControllerEventStream, ControllerMarker,
-        ControllerProxy, Notifications, PeerManagerMarker, PlayerApplicationSettingAttributeId,
-        MAX_ATTRIBUTES,
+        self as fidl_avrcp, BrowseControllerMarker, BrowseControllerProxy, ControllerEvent,
+        ControllerEventStream, ControllerMarker, ControllerProxy, Notifications, PeerManagerMarker,
+        PlayerApplicationSettingAttributeId, MAX_ATTRIBUTES,
     },
     fidl_fuchsia_bluetooth_avrcp_test::{
-        ControllerExtMarker, ControllerExtProxy, PeerManagerExtMarker,
+        BrowseControllerExtMarker, BrowseControllerExtProxy, ControllerExtMarker,
+        ControllerExtProxy, PeerManagerExtMarker,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
@@ -55,13 +56,13 @@ async fn send_passthrough<'a>(
     }
     let cmd = avc_match_string(args[0]);
     if cmd.is_none() {
-        return Ok(String::from("invalid avc command"));
+        return Err(format_err!("invalid avc command"));
     }
 
     // `args[0]` is the identifier of the peer to connect to
     match controller.send_command(cmd.unwrap()).await? {
         Ok(_) => Ok(String::from("")),
-        Err(e) => Ok(format!("Error sending AVC Command: {:?}", e)),
+        Err(e) => Err(format_err!("Error sending AVC Command: {:?}", e)),
     }
 }
 
@@ -71,7 +72,7 @@ async fn get_media<'a>(
 ) -> Result<String, Error> {
     match controller.get_media_attributes().await? {
         Ok(media) => Ok(format!("Media attributes: {:#?}", media)),
-        Err(e) => Ok(format!("Error fetching media attributes: {:?}", e)),
+        Err(e) => Err(format_err!("Error fetching media attributes: {:?}", e)),
     }
 }
 
@@ -81,7 +82,7 @@ async fn get_play_status<'a>(
 ) -> Result<String, Error> {
     match controller.get_play_status().await? {
         Ok(status) => Ok(format!("Play status {:#?}", status)),
-        Err(e) => Ok(format!("Error fetching play status {:?}", e)),
+        Err(e) => Err(format_err!("Error fetching play status {:?}", e)),
     }
 }
 
@@ -110,13 +111,13 @@ async fn get_player_application_settings<'a>(
 
     let ids = match parse_pas_ids(args.to_vec()) {
         Ok(ids) => ids,
-        Err(_) => return Ok(format!("Invalid id in args {:?}", args)),
+        Err(_) => return Err(format_err!("Invalid id in args {:?}", args)),
     };
     let get_pas_fut = controller.get_player_application_settings(&mut ids.into_iter());
 
     match get_pas_fut.await? {
         Ok(settings) => Ok(format!("Player application setting attribute value: {:#?}", settings)),
-        Err(e) => Ok(format!("Error fetching player application attributes: {:?}", e)),
+        Err(e) => Err(format_err!("Error fetching player application attributes: {:?}", e)),
     }
 }
 
@@ -130,7 +131,7 @@ async fn set_player_application_settings<'a>(
 
     match controller.set_player_application_settings(settings).await? {
         Ok(set_settings) => Ok(format!("Set settings with: {:?}", set_settings)),
-        Err(e) => Ok(format!("Error in set settings {:?}", e)),
+        Err(e) => Err(format_err!("Error in set settings {:?}", e)),
     }
 }
 
@@ -140,7 +141,7 @@ async fn get_events_supported<'a>(
 ) -> Result<String, Error> {
     match controller.get_events_supported().await? {
         Ok(events) => Ok(format!("Supported events: {:#?}", events)),
-        Err(e) => Ok(format!("Error fetching supported events: {:?}", e)),
+        Err(e) => Err(format_err!("Error fetching supported events: {:?}", e)),
     }
 }
 
@@ -149,7 +150,7 @@ async fn send_raw_vendor<'a>(
     controller: &'a ControllerExtProxy,
 ) -> Result<String, Error> {
     if args.len() < 2 {
-        return Ok(format!("usage: {}", Cmd::SendRawVendorCommand.cmd_help()));
+        return Err(format_err!("usage: {}", Cmd::SendRawVendorCommand.cmd_help()));
     }
 
     match parse_raw_packet(args) {
@@ -158,10 +159,10 @@ async fn send_raw_vendor<'a>(
 
             match controller.send_raw_vendor_dependent_command(pdu_id, &buf).await? {
                 Ok(response) => Ok(format!("response: {:#?}", response)),
-                Err(e) => Ok(format!("Error sending raw dependent command: {:?}", e)),
+                Err(e) => Err(format_err!("Error sending raw dependent command: {:?}", e)),
             }
         }
-        Err(message) => Ok(message),
+        Err(message) => Err(format_err!("{:?}", message)),
     }
 }
 
@@ -222,27 +223,50 @@ async fn set_volume<'a>(
 
     let volume = if let Ok(val) = args[0].parse::<u8>() {
         if val > 127 {
-            return Ok(format!("invalid volume range {}", args[0]));
+            return Err(format_err!("invalid volume range {}", args[0]));
         }
         val
     } else {
-        return Ok(format!("unable to parse volume {}", args[0]));
+        return Err(format_err!("unable to parse volume {}", args[0]));
     };
 
     match controller.set_absolute_volume(volume).await? {
         Ok(set_volume) => Ok(format!("Volume set to: {:?}", set_volume)),
-        Err(e) => Ok(format!("Error setting volume: {:?}", e)),
+        Err(e) => Err(format_err!("Error setting volume: {:?}", e)),
+    }
+}
+
+async fn set_browsed_player<'a>(
+    args: &'a [&'a str],
+    controller: &'a BrowseControllerProxy,
+) -> Result<String, Error> {
+    if args.len() != 1 {
+        return Ok(format!("usage: {}", Cmd::SetVolume.cmd_help()));
+    }
+
+    let player_id = args[0].to_string().parse::<u16>()?;
+
+    match controller.set_browsed_player(player_id).await? {
+        Ok(_) => Ok(format!("Browsed player set to: {:?}", player_id)),
+        Err(e) => Err(format_err!("Error setting browsed player: {:?}", e)),
     }
 }
 
 async fn is_connected<'a>(
     _args: &'a [&'a str],
     controller: &'a ControllerExtProxy,
+    browse_controller: &'a BrowseControllerExtProxy,
 ) -> Result<String, Error> {
+    let mut s = Vec::new();
     match controller.is_connected().await {
-        Ok(status) => Ok(format!("Is Connected: {}", status)),
-        Err(e) => Ok(format!("Error fetching supported events: {:?}", e)),
-    }
+        Ok(status) => s.push(format!("Is control connected: {}", status)),
+        Err(e) => return Err(format_err!("Error checking control connection status: {:?}", e)),
+    };
+    match browse_controller.is_connected().await {
+        Ok(status) => s.push(format!("Is browse connected: {}", status)),
+        Err(e) => return Err(format_err!("Error checking browse connection status: {:?}", e)),
+    };
+    Ok(s.iter().fold("".to_owned(), |msg, m| format!("{}\n{}", msg, m)))
 }
 
 /// Handle a single raw input command from a user and indicate whether the command should
@@ -250,6 +274,8 @@ async fn is_connected<'a>(
 async fn handle_cmd<'a>(
     controller: &'a ControllerProxy,
     test_controller: &'a ControllerExtProxy,
+    browse_controller: &'a BrowseControllerProxy,
+    test_browse_controller: &'a BrowseControllerExtProxy,
     line: String,
 ) -> Result<ReplControl, Error> {
     let components: Vec<_> = line.trim().split_whitespace().collect();
@@ -268,7 +294,10 @@ async fn handle_cmd<'a>(
             Ok(Cmd::SendRawVendorCommand) => send_raw_vendor(args, &test_controller).await,
             Ok(Cmd::SupportedEvents) => get_events_supported(args, &test_controller).await,
             Ok(Cmd::SetVolume) => set_volume(args, &controller).await,
-            Ok(Cmd::IsConnected) => is_connected(args, &test_controller).await,
+            Ok(Cmd::SetBrowsedPlayer) => set_browsed_player(args, &browse_controller).await,
+            Ok(Cmd::IsConnected) => {
+                is_connected(args, &test_controller, &test_browse_controller).await
+            }
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
             Err(_) => Ok(format!("\"{}\" is not a valid command", raw_cmd)),
@@ -365,13 +394,23 @@ async fn controller_listener(
 async fn run_repl<'a>(
     controller: &'a ControllerProxy,
     test_controller: &'a ControllerExtProxy,
+    browse_controller: &'a BrowseControllerProxy,
+    test_browse_controller: &'a BrowseControllerExtProxy,
 ) -> Result<(), Error> {
     // `cmd_stream` blocks on input in a separate thread and passes commands and acks back to
     // the main thread via async channels.
     let (mut commands, mut acks) = cmd_stream();
     loop {
         if let Some(cmd) = commands.next().await {
-            match handle_cmd(controller, test_controller, cmd).await {
+            match handle_cmd(
+                controller,
+                test_controller,
+                browse_controller,
+                test_browse_controller,
+                cmd,
+            )
+            .await
+            {
                 Ok(ReplControl::Continue) => {}
                 Ok(ReplControl::Break) => {
                     println!("\n");
@@ -410,6 +449,17 @@ async fn main() -> Result<(), Error> {
         device = &device_id,
     );
 
+    // Create a channel for our Request<TestBrowseController> to live
+    let (tb_client, tb_server) = create_endpoints::<BrowseControllerExtMarker>()
+        .expect("Error creating Test Browse Controller endpoint");
+
+    let _status =
+        test_avrcp_svc.get_browse_controller_for_target(&mut device_id.into(), tb_server).await?;
+    eprintln!(
+        "Test browse controller obtained to device \"{device}\" AVRCP remote target service",
+        device = &device_id,
+    );
+
     // Connect to avrcp controller service.
 
     let avrcp_svc = connect_to_protocol::<PeerManagerMarker>()
@@ -425,11 +475,26 @@ async fn main() -> Result<(), Error> {
         device = &device_id,
     );
 
+    // Create a channel for our Request<Controller> to live
+    let (bc_client, bc_server) = create_endpoints::<BrowseControllerMarker>()
+        .expect("Error creating Browse Controller endpoint");
+
+    let _status =
+        avrcp_svc.get_browse_controller_for_target(&mut device_id.into(), bc_server).await?;
+    eprintln!(
+        "Browse controller obtained to device \"{device}\" AVRCP remote target service",
+        device = &device_id,
+    );
+
     // setup repl
 
     let controller = c_client.into_proxy().expect("error obtaining controller client proxy");
     let test_controller =
         t_client.into_proxy().expect("error obtaining test controller client proxy");
+    let browse_controller =
+        bc_client.into_proxy().expect("error obtaining browse controller client proxy");
+    let test_browse_controller =
+        tb_client.into_proxy().expect("error obtaining test browse controller client proxy");
 
     let evt_stream = controller.clone().take_event_stream();
 
@@ -443,7 +508,9 @@ async fn main() -> Result<(), Error> {
     )?;
 
     let event_fut = controller_listener(&controller, evt_stream).fuse();
-    let repl_fut = run_repl(&controller, &test_controller).fuse();
+    let repl_fut =
+        run_repl(&controller, &test_controller, &browse_controller, &test_browse_controller).fuse();
+
     pin_mut!(event_fut);
     pin_mut!(repl_fut);
 
@@ -462,6 +529,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl::endpoints::create_proxy;
 
     #[test]
@@ -572,10 +640,9 @@ mod tests {
         let args = [];
 
         let res = set_volume(&args, &proxy).await;
-        assert_eq!(
-            Ok("usage: set-volume <volume> -- send a set absolute volume command (0-127)"
-                .to_string()),
-            res.map_err(|e| format!("{:?}", e))
+        assert_matches!(
+            res,
+            Ok(m) if m.contains("usage")
         );
     }
 }

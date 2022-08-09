@@ -25,6 +25,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates/compat/rustyline",
   ]
 
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+
   sources = [
     "src/commands.rs",
     "src/main.rs",

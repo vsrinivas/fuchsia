@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     assert_matches::assert_matches,
-    bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
+    bt_avctp::{AvcCommand, AvcPeer, AvcResponseType, AvctpCommand, AvctpPeer},
     fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
@@ -16,7 +16,9 @@ use {
         types::{Channel, PeerId},
     },
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, future::FutureExt, stream::StreamExt, task::Poll},
+    futures::{
+        channel::mpsc, future::FutureExt, stream::StreamExt, stream::TryStreamExt, task::Poll,
+    },
     packet_encoding::{Decodable, Encodable},
     pin_utils::pin_mut,
     std::collections::HashSet,
@@ -24,48 +26,76 @@ use {
 };
 
 use crate::{
+    browse_controller_service, controller_service,
     packets::{
-        player_application_settings::PlayerApplicationSettingAttributeId,
+        player_application_settings::PlayerApplicationSettingAttributeId, Error as PacketError,
         GetCapabilitiesCapabilityId, PlaybackStatus, *,
     },
+    peer::BrowseChannelHandler,
     peer_manager::PeerManager,
     peer_manager::ServiceRequest,
     profile::{AvrcpProtocolVersion, AvrcpService, AvrcpTargetFeatures},
     service,
 };
 
-fn spawn_peer_manager() -> Result<
-    (PeerManager, ProfileRequestStream, PeerManagerProxy, mpsc::Receiver<ServiceRequest>),
-    Error,
-> {
-    let (client_sender, service_request_receiver) = mpsc::channel(2);
+fn spawn_peer_manager() -> (
+    PeerManager,
+    ProfileRequestStream,
+    PeerManagerProxy,
+    PeerManagerExtProxy,
+    mpsc::Receiver<ServiceRequest>,
+) {
+    let (client_sender, service_request_receiver) = mpsc::channel(512);
 
-    let (profile_proxy, profile_requests) = create_proxy_and_stream::<ProfileMarker>()?;
+    let (profile_proxy, profile_requests) =
+        create_proxy_and_stream::<ProfileMarker>().expect("should have initialized");
 
     let peer_manager = PeerManager::new(profile_proxy);
 
     let (peer_manager_proxy, peer_manager_requests) =
-        create_proxy_and_stream::<PeerManagerMarker>()?;
+        create_proxy_and_stream::<PeerManagerMarker>().expect("should have initialized");
 
+    let (ext_proxy, ext_requests) =
+        create_proxy_and_stream::<PeerManagerExtMarker>().expect("should have initialized");
+
+    let sender = client_sender.clone();
     fasync::Task::spawn(async move {
-        let _ = service::avrcp_client_stream_handler(
+        let _ = service::handle_peer_manager_requests(
             peer_manager_requests,
-            client_sender,
-            &service::spawn_avrcp_client_controller,
+            sender,
+            &controller_service::spawn_service,
+            &browse_controller_service::spawn_service,
         )
         .await;
     })
     .detach();
 
-    Ok((peer_manager, profile_requests, peer_manager_proxy, service_request_receiver))
+    let sender = client_sender.clone();
+    fasync::Task::spawn(async move {
+        let _ = service::handle_peer_manager_ext_requests(
+            ext_requests,
+            sender,
+            &controller_service::spawn_ext_service,
+            &browse_controller_service::spawn_ext_service,
+        )
+        .await;
+    })
+    .detach();
+
+    (peer_manager, profile_requests, peer_manager_proxy, ext_proxy, service_request_receiver)
 }
 
 #[test]
 fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
     let mut exec = fasync::TestExecutor::new().expect("executor should create");
 
-    let (mut peer_manager, _profile_requests, peer_manager_proxy, mut service_request_receiver) =
-        spawn_peer_manager()?;
+    let (
+        mut peer_manager,
+        _profile_requests,
+        peer_manager_proxy,
+        _ext_proxy,
+        mut service_request_receiver,
+    ) = spawn_peer_manager();
 
     // create an target handler.
     let (target_client, target_server) = create_endpoints::<TargetHandlerMarker>()?;
@@ -115,12 +145,45 @@ fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
     Ok(())
 }
 
+/// Helper function for decoding AVCTP command that the remote peer received.
+/// It checks that the PduId of the message is equal to the expected PduId.
+#[track_caller]
+fn decode_avctp_command(command: &AvctpCommand, expected_pdu_id: PduId) -> Vec<u8> {
+    // Decode the provided `command` into a PduId and command parameters.
+    match BrowseChannelHandler::decode_command(command) {
+        Ok((id, packet)) if id == expected_pdu_id => packet,
+        result => panic!("[Browse Channel] Received unexpected result: {:?}", result),
+    }
+}
+
+/// Helper function to send AVCTP response back as a remote peer.
+fn send_avctp_response(
+    pdu_id: PduId,
+    response: &impl Encodable<Error = PacketError>,
+    command: &AvctpCommand,
+) {
+    let mut buf = vec![0; response.encoded_len()];
+    response.encode(&mut buf[..]).expect("should have succeeded");
+
+    // Send the response back to the remote peer.
+    let response_packet = BrowsePreamble::new(u8::from(&pdu_id), buf);
+    let mut response_buf = vec![0; response_packet.encoded_len()];
+    response_packet.encode(&mut response_buf[..]).expect("Encoding should work");
+
+    let _ = command.send_response(&response_buf[..]).expect("should have succeeded");
+}
+
 #[test]
 fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
     let mut exec = fasync::TestExecutor::new().expect("executor should create");
 
-    let (mut peer_manager, _profile_requests, peer_manager_proxy, mut service_request_receiver) =
-        spawn_peer_manager()?;
+    let (
+        mut peer_manager,
+        _profile_requests,
+        peer_manager_proxy,
+        _ext_proxy,
+        mut service_request_receiver,
+    ) = spawn_peer_manager();
 
     // create a volume handler.
     let (volume_client, volume_server) = create_endpoints::<AbsoluteVolumeHandlerMarker>()?;
@@ -170,26 +233,26 @@ fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
     Ok(())
 }
 
-// Integration test of the peer manager and the FIDL front end with a mock BDEDR backend an
-// emulated remote peer. Validates we can get a controller to a device we discovered, we can send
-// commands on that controller, and that we can send responses and have them be dispatched back as
-// responses to the FIDL frontend in AVRCP. Exercises a majority of the peer manager
-// controller logic.
-// 1. Creates a front end FIDL endpoints for the test controller interface, a peer manager, and mock
-//    backend.
-// 2. It then creates a channel and injects a fake services discovered and incoming connection
-//    event into the mock profile service.
-// 3. Obtains both a regular and test controller from the FIDL service.
-// 4. Issues a Key0 passthrough keypress and validates we got both a key up and key down event
-// 4. Issues a GetCapabilities command using get_events_supported on the test controller FIDL
-// 5. Issues a SetAbsoluteVolume command on the controller FIDL
-// 6. Issues a GetElementAttributes command, encodes multiple packets, and handles continuations
-// 7. Issues a GetPlayStatus command on the controller FIDL.
-// 8. Issues a GetPlayerApplicationSettings command on the controller FIDL.
-// 9. Issues a SetPlayerApplicationSettings command on the controller FIDL.
-// 10. Register event notification for position change callbacks and mock responses.
-// 11. Waits until we have a response to all commands from our mock remote service return expected
-//    values and we have received enough position change events.
+/// Integration test of the peer manager and the FIDL front end with a mock BDEDR backend an
+/// emulated remote peer. Validates we can get a controller to a device we discovered, we can send
+/// commands on that controller, and that we can send responses and have them be dispatched back as
+/// responses to the FIDL frontend in AVRCP. Exercises a majority of the peer manager
+/// controller logic.
+/// 1. Creates a front end FIDL endpoints for the test controller interface, a peer manager, and mock
+///    backend.
+/// 2. It then creates a channel and injects a fake services discovered and incoming connection
+///    event into the mock profile service.
+/// 3. Obtains both a regular and test controller from the FIDL service.
+/// 4. Issues a Key0 passthrough keypress and validates we got both a key up and key down event
+/// 4. Issues a GetCapabilities command using get_events_supported on the test controller FIDL
+/// 5. Issues a SetAbsoluteVolume command on the controller FIDL
+/// 6. Issues a GetElementAttributes command, encodes multiple packets, and handles continuations
+/// 7. Issues a GetPlayStatus command on the controller FIDL.
+/// 8. Issues a GetPlayerApplicationSettings command on the controller FIDL.
+/// 9. Issues a SetPlayerApplicationSettings command on the controller FIDL.
+/// 10. Register event notification for position change callbacks and mock responses.
+/// 11. Waits until we have a response to all commands from our mock remote service return expected
+///    values and we have received enough position change events.
 #[fuchsia::test]
 async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Error> {
     const REQUESTED_VOLUME: u8 = 0x40;
@@ -244,18 +307,20 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
 
     peer_manager.new_control_connection(&fake_peer_id, local);
 
-    let handler_fut = service::avrcp_client_stream_handler(
+    let handler_fut = service::handle_peer_manager_requests(
         peer_manager_requests,
         client_sender.clone(),
-        &service::spawn_avrcp_client_controller,
+        &controller_service::spawn_service,
+        &browse_controller_service::spawn_service,
     )
     .fuse();
     pin_mut!(handler_fut);
 
-    let test_handler_fut = service::test_avrcp_client_stream_handler(
+    let test_handler_fut = service::handle_peer_manager_ext_requests(
         ext_requests,
         client_sender.clone(),
-        &service::spawn_test_avrcp_client_controller,
+        &controller_service::spawn_ext_service,
+        &browse_controller_service::spawn_ext_service,
     )
     .fuse();
     pin_mut!(test_handler_fut);
@@ -606,7 +671,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                 let _ = res?;
             }
             res = is_connected_fut => {
-                assert!(res? == true, "connected should return with true");
+                assert_eq!(res?, true);
             }
             res = passthrough_fut => {
                 expected_commands -= 1;
@@ -685,4 +750,120 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
             return Ok(());
         }
     }
+}
+
+/// Integration test of the peer manager and the FIDL front end with a mock BDEDR backend an
+/// emulated remote peer. Validates we can get a browse controller to a device we discovered,
+/// we can send browse commands on that controller, and that we can send responses
+/// and have them be dispatched back as responses to the FIDL frontend in AVRCP.
+/// Exercises a majority of the peer manager controller logic.
+/// 1. Creates a front end FIDL endpoints for the browse controller interface, a peer manager, and mock
+///    backend.
+/// 2. It then creates a channel and injects a fake services discovered and incoming connection
+///    event into the mock profile service.
+/// 3. Obtains both a regular and test browse controller from the FIDL service.
+/// 4. Test that appropriate commands are sent over the AVC/AVCTP channel and remote peer receives
+///      a properly encoded message.
+#[fuchsia::test]
+fn peer_manager_with_browse_controller_client() {
+    let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
+
+    let fake_peer_id = PeerId(0);
+
+    let (
+        mut peer_manager,
+        _profile_requests,
+        peer_manager_proxy,
+        ext_proxy,
+        mut peer_controller_request_receiver,
+    ) = spawn_peer_manager();
+
+    let (local_avc, _remote_avc) = Channel::create();
+    let (local_avctp, remote_avctp) = Channel::create();
+    let remote_avctp_peer = AvctpPeer::new(remote_avctp);
+
+    peer_manager.services_found(
+        &fake_peer_id,
+        vec![AvrcpService::Target {
+            features: AvrcpTargetFeatures::CATEGORY1 | AvrcpTargetFeatures::SUPPORTSBROWSING,
+            psm: Psm::AVCTP,
+            protocol_version: AvrcpProtocolVersion(1, 6),
+        }],
+    );
+
+    peer_manager.new_control_connection(&fake_peer_id, local_avc);
+    peer_manager.new_browse_connection(&fake_peer_id, local_avctp);
+
+    // Get browse controller client.
+    let (browse_controller_proxy, browse_controller_server) =
+        create_proxy().expect("should have initialized");
+    let get_browse_controller_fut = peer_manager_proxy
+        .get_browse_controller_for_target(&mut fake_peer_id.into(), browse_controller_server);
+    pin_mut!(get_browse_controller_fut);
+
+    assert!(exec.run_until_stalled(&mut get_browse_controller_fut).is_pending());
+    match exec.run_until_stalled(&mut peer_controller_request_receiver.next()) {
+        Poll::Ready(Some(request)) => {
+            peer_manager.handle_service_request(request);
+        }
+        x => panic!("Expected request to be ready, got {:?} instead.", x),
+    };
+    assert_matches!(
+        exec.run_until_stalled(&mut get_browse_controller_fut),
+        futures::task::Poll::Ready(Ok(Ok(())))
+    );
+
+    // Get test browse controller client.
+    let (browse_controller_ext_proxy, browse_controller_ext_server) =
+        create_proxy().expect("should have initialized");
+    let get_test_browse_controller_fut =
+        ext_proxy.get_controller_for_target(&mut fake_peer_id.into(), browse_controller_ext_server);
+    pin_mut!(get_test_browse_controller_fut);
+
+    assert!(exec.run_until_stalled(&mut get_test_browse_controller_fut).is_pending());
+    match exec.run_until_stalled(&mut peer_controller_request_receiver.next()) {
+        Poll::Ready(Some(request)) => {
+            peer_manager.handle_service_request(request);
+        }
+        x => panic!("Expected request to be ready, got {:?} instead.", x),
+    };
+    assert_matches!(
+        exec.run_until_stalled(&mut get_test_browse_controller_fut),
+        futures::task::Poll::Ready(Ok(Ok(())))
+    );
+
+    // Start testing actual commands.
+    let mut avctp_cmd_stream = remote_avctp_peer.take_command_stream();
+
+    // Test IsConnected.
+    let mut is_browse_connected_fut = browse_controller_ext_proxy.is_connected();
+
+    match exec.run_until_stalled(&mut is_browse_connected_fut) {
+        Poll::Ready(Ok(true)) => {}
+        x => panic!("Expected request to be ready, got {:?} instead.", x),
+    };
+
+    // Test SetBrowsedPlayer.
+    const PLAYER_ID: u16 = 1004;
+    let set_browsed_player_fut = browse_controller_proxy.set_browsed_player(PLAYER_ID);
+    pin_mut!(set_browsed_player_fut);
+
+    assert!(exec.run_until_stalled(&mut set_browsed_player_fut).is_pending());
+    match exec.run_until_stalled(&mut avctp_cmd_stream.try_next()) {
+        Poll::Ready(Ok(Some(command))) => {
+            let params = decode_avctp_command(&command, PduId::SetBrowsedPlayer);
+            let cmd = SetBrowsedPlayerCommand::decode(&params)
+                .expect("should have received valid command");
+            assert_eq!(cmd.player_id(), PLAYER_ID);
+            // Create mock response.
+            let resp = SetBrowsedPlayerResponse::new_success(1, 1, vec!["folder1".to_string()])
+                .expect("should be initialized");
+            send_avctp_response(PduId::SetBrowsedPlayer, &resp, &command);
+        }
+        x => panic!("Expected request to be ready, got {:?} instead.", x),
+    };
+    assert_matches!(
+        exec.run_until_stalled(&mut set_browsed_player_fut),
+        futures::task::Poll::Ready(Ok(Ok(())))
+    );
 }

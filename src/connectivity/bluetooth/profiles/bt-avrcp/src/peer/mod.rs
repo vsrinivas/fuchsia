@@ -37,8 +37,8 @@ use crate::{
     types::StateChangeListener,
 };
 
-pub use controller::{Controller, ControllerEvent, ControllerEventStream};
-use handlers::{browse_channel::BrowseChannelHandler, ControlChannelHandler};
+pub use controller::{Controller, ControllerEvent};
+pub use handlers::{browse_channel::BrowseChannelHandler, ControlChannelHandler};
 use inspect::RemotePeerInspect;
 
 /// The minimum amount of time to wait before establishing an AVCTP connection.
@@ -498,6 +498,22 @@ impl RemotePeer {
         self.wake_state_watcher();
     }
 
+    fn browse_connection(&mut self) -> Result<Arc<AvctpPeer>, Error> {
+        // If we are not connected, try to reconnect the next time we want to send a command.
+        if !self.browse_connected() {
+            if !self.control_connected() {
+                self.attempt_control_connection = true;
+                self.attempt_browse_connection = true;
+            }
+            self.wake_state_watcher();
+        }
+
+        match self.browse_channel.connection() {
+            Some(peer) => Ok(peer.clone()),
+            None => Err(Error::RemoteNotFound),
+        }
+    }
+
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
         let current_time = fasync::Time::now();
         trace!("Set browse connection for {} at: {}", self.peer_id, current_time.into_nanos());
@@ -623,6 +639,36 @@ async fn send_vendor_dependent_command_internal(
     Ok(buf)
 }
 
+async fn send_browsing_command_internal(
+    peer: Arc<RwLock<RemotePeer>>,
+    pdu_id: u8,
+    command: BrowsePreamble,
+) -> Result<Vec<u8>, Error> {
+    let avctp_peer = peer.write().browse_connection()?;
+
+    let mut buf = vec![0; command.encoded_len()];
+    let _ = command.encode(&mut buf[..])?;
+    let mut stream = avctp_peer.send_command(&buf[..])?;
+
+    // Wait for result.
+    let result = stream.next().await.ok_or(Error::CommandFailed)?;
+    let response = result.map_err(|e| Error::AvctpError(e))?;
+    trace!("AVRCP response {:?}", response);
+
+    match BrowsePreamble::decode(response.body()) {
+        Ok(preamble) => {
+            if preamble.pdu_id != pdu_id {
+                return Err(Error::UnexpectedResponse);
+            }
+            Ok(preamble.body)
+        }
+        Err(e) => {
+            warn!("Unable to parse browse preamble: {:?}", e);
+            Err(Error::PacketError(e))
+        }
+    }
+}
+
 /// Retrieve the events supported by the peer by issuing a GetCapabilities command.
 async fn get_supported_events_internal(
     peer: Arc<RwLock<RemotePeer>>,
@@ -734,6 +780,21 @@ impl RemotePeerHandle {
         command: &'a (impl PacketEncodable + VendorCommand),
     ) -> impl Future<Output = Result<Vec<u8>, Error>> + 'a {
         send_vendor_dependent_command_internal(self.peer.clone(), command)
+    }
+
+    /// Send AVRCP specific browsing commands as a AVCTP message. This method
+    /// first encodes the specific AVRCP command message as a browse preamble
+    /// message, which then gets encoded as part of a non-fragmented AVCTP
+    /// message. Once it receives a AVCTP response message, it will decode it
+    /// into a browse preamble and will return its parameters, so that the
+    /// upstream can further decode the message into a specific AVRCP response
+    /// message.
+    pub fn send_browsing_command<'a>(
+        &self,
+        pdu_id: u8,
+        command: BrowsePreamble,
+    ) -> impl Future<Output = Result<Vec<u8>, Error>> + 'a {
+        send_browsing_command_internal(self.peer.clone(), pdu_id, command)
     }
 
     /// Retrieve the events supported by the peer by issuing a GetCapabilities command.
