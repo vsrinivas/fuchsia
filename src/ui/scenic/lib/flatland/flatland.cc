@@ -906,7 +906,8 @@ void Flatland::CreateImage(ContentId image_id,
     auto& importer = buffer_collection_importers_[i];
 
     // TODO(fxbug.dev/62240): Give more detailed errors.
-    auto result = importer->ImportBufferImage(metadata);
+    auto result =
+        importer->ImportBufferImage(metadata, allocation::BufferCollectionUsage::kClientImage);
     if (!result) {
       // If this importer fails, we need to release the image from
       // all of the importers that it passed on. Luckily we can do

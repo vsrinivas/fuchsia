@@ -47,12 +47,14 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ImportBufferCollection) {
 
   // Import into GfxBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
-                                                  std::move(dup_token));
+  bool result = importer_->ImportBufferCollection(
+      collection_id, sysmem_allocator.get(), std::move(dup_token),
+      allocation::BufferCollectionUsage::kClientImage, std::nullopt);
   EXPECT_TRUE(result);
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id,
+                                     allocation::BufferCollectionUsage::kClientImage);
 }
 
 VK_TEST_F(GfxBufferCollectionImporterTest, ExtractImageForMultipleSessions) {
@@ -69,8 +71,9 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ExtractImageForMultipleSessions) {
 
   // Import into GfxBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
-                                                  std::move(dup_token));
+  bool result = importer_->ImportBufferCollection(
+      collection_id, sysmem_allocator.get(), std::move(dup_token),
+      allocation::BufferCollectionUsage::kClientImage, std::nullopt);
   EXPECT_TRUE(result);
 
   // Set constraints, including width and height which isn't specified by
@@ -130,7 +133,8 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ExtractImageForMultipleSessions) {
   EXPECT_TRUE(image2.get());
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id,
+                                     allocation::BufferCollectionUsage::kClientImage);
 }
 
 VK_TEST_F(GfxBufferCollectionImporterTest, ErrorCases) {
@@ -140,8 +144,9 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ErrorCases) {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr token1;
   zx_status_t status = sysmem_allocator->AllocateSharedCollection(token1.NewRequest());
   EXPECT_EQ(status, ZX_OK);
-  bool result =
-      importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token1));
+  bool result = importer_->ImportBufferCollection(
+      collection_id, sysmem_allocator.get(), std::move(token1),
+      allocation::BufferCollectionUsage::kClientImage, std::nullopt);
   EXPECT_TRUE(result);
 
   // Buffer collection id dup.
@@ -149,8 +154,9 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ErrorCases) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token2;
     status = sysmem_allocator->AllocateSharedCollection(token2.NewRequest());
     EXPECT_EQ(status, ZX_OK);
-    result =
-        importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token2));
+    result = importer_->ImportBufferCollection(
+        collection_id, sysmem_allocator.get(), std::move(token2),
+        allocation::BufferCollectionUsage::kClientImage, std::nullopt);
     EXPECT_FALSE(result);
   }
 
@@ -163,7 +169,8 @@ VK_TEST_F(GfxBufferCollectionImporterTest, ErrorCases) {
   }
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id,
+                                     allocation::BufferCollectionUsage::kClientImage);
 }
 
 }  // namespace test

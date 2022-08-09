@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
@@ -80,8 +81,8 @@ void ScreenCapture::Configure(ScreenCaptureConfig args, ConfigureCallback callba
     metadata.vmo_index = i;
     for (uint32_t j = 0; j < buffer_collection_importers_.size(); j++) {
       auto& importer = buffer_collection_importers_[j];
-
-      auto result = importer->ImportBufferImage(metadata);
+      auto result =
+          importer->ImportBufferImage(metadata, allocation::BufferCollectionUsage::kRenderTarget);
       if (!result) {
         // If this importer fails, we need to release the image from all of the importers
         // that successfully imported it and release all of the past buffer images as well.

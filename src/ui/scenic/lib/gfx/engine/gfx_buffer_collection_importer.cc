@@ -8,9 +8,11 @@
 #include <lib/trace/event.h>
 #include <zircon/assert.h>
 
+#include "fuchsia/math/cpp/fidl.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
@@ -37,9 +39,11 @@ GfxBufferCollectionImporter::~GfxBufferCollectionImporter() {
 bool GfxBufferCollectionImporter::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) {
   TRACE_DURATION("gfx", "GfxBufferCollectionImporter::ImportBufferCollection");
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+  FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
 
   if (buffer_collection_infos_.find(collection_id) != buffer_collection_infos_.end()) {
     FX_LOGS(ERROR) << __func__ << "failed, called with pre-existing collection_id " << collection_id
@@ -124,9 +128,10 @@ bool GfxBufferCollectionImporter::ImportBufferCollection(
 }
 
 void GfxBufferCollectionImporter::ReleaseBufferCollection(
-    allocation::GlobalBufferCollectionId collection_id) {
+    allocation::GlobalBufferCollectionId collection_id, BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "GfxBufferCollectionImporter::ReleaseBufferCollection");
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+  FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
 
   auto itr = buffer_collection_infos_.find(collection_id);
   if (itr == buffer_collection_infos_.end()) {
@@ -145,7 +150,8 @@ void GfxBufferCollectionImporter::ReleaseBufferCollection(
   buffer_collection_infos_.erase(itr);
 }
 
-bool GfxBufferCollectionImporter::ImportBufferImage(const allocation::ImageMetadata& metadata) {
+bool GfxBufferCollectionImporter::ImportBufferImage(const allocation::ImageMetadata& metadata,
+                                                    BufferCollectionUsage usage) {
   FX_NOTREACHED();
   return false;
 }

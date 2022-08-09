@@ -131,9 +131,12 @@ DisplayCompositor::~DisplayCompositor() {
 bool DisplayCompositor::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferCollection");
   FX_DCHECK(display_controller_);
+  // Expect the default Buffer Collection usage type.
+  FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
 
   // Create a duped renderer token.
   auto sync_token = token.BindSync();
@@ -145,8 +148,8 @@ bool DisplayCompositor::ImportBufferCollection(
   }
 
   // Import the collection to the renderer.
-  if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
-                                         std::move(renderer_token))) {
+  if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator, std::move(renderer_token),
+                                         usage, size)) {
     FX_LOGS(INFO) << "Renderer could not import buffer collection.";
     return false;
   }
@@ -237,18 +240,20 @@ bool DisplayCompositor::ImportBufferCollection(
   return result;
 }
 
-void DisplayCompositor::ReleaseBufferCollection(
-    allocation::GlobalBufferCollectionId collection_id) {
+void DisplayCompositor::ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                                                BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferCollection");
+  FX_DCHECK(usage == BufferCollectionUsage::kClientImage);
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);
-  renderer_->ReleaseBufferCollection(collection_id);
+  renderer_->ReleaseBufferCollection(collection_id, usage);
   display_tokens_.erase(collection_id);
   buffer_collection_supports_display_.erase(collection_id);
 }
 
-bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata) {
+bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata,
+                                          BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ImportBufferImage");
 
   FX_DCHECK(display_controller_);
@@ -269,7 +274,7 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     return false;
   }
 
-  if (!renderer_->ImportBufferImage(metadata)) {
+  if (!renderer_->ImportBufferImage(metadata, usage)) {
     FX_LOGS(ERROR) << "Renderer could not import image.";
     return false;
   }
@@ -868,8 +873,9 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
 
   // Register the buffer collection with the renderer
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  auto result = renderer_->RegisterRenderTargetCollection(
-      collection_id, sysmem_allocator_.get(), std::move(renderer_token), {width, height});
+  auto result = renderer_->ImportBufferCollection(
+      collection_id, sysmem_allocator_.get(), std::move(renderer_token),
+      BufferCollectionUsage::kRenderTarget, std::optional<fuchsia::math::SizeU>({width, height}));
   FX_DCHECK(result);
 
   fuchsia::hardware::display::ImageConfig image_config;
@@ -925,7 +931,7 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
                                         .height = height};
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
-    bool res = ImportBufferImage(target);
+    bool res = ImportBufferImage(target, BufferCollectionUsage::kRenderTarget);
     FX_DCHECK(res);
   }
 

@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/math/cpp/fidl.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
@@ -27,21 +28,22 @@ using fuchsia::ui::composition::RegisterBufferCollectionUsage;
 namespace allocation {
 namespace test {
 
-#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, usage, expect_success)         \
-  if (expect_success) {                                                                           \
-    EXPECT_CALL(*mock_buffer_collection_importer_,                                                \
-                ImportBufferCollection(fsl::GetKoid(export_token.value.get()), _, _))             \
-        .WillOnce(testing::Invoke(                                                                \
-            [](GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,                        \
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>) { return true; })); \
-  }                                                                                               \
-  bool processed_callback = false;                                                                \
-  allocator->RegisterBufferCollection(                                                            \
-      CreateArgs(std::move(export_token), token, usage),                                          \
-      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {                   \
-        EXPECT_EQ(!expect_success, result.is_err());                                              \
-        processed_callback = true;                                                                \
-      });                                                                                         \
+#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, usage, expect_success)      \
+  if (expect_success) {                                                                        \
+    EXPECT_CALL(*mock_buffer_collection_importer_,                                             \
+                ImportBufferCollection(fsl::GetKoid(export_token.value.get()), _, _, _, _))    \
+        .WillOnce(testing::Invoke(                                                             \
+            [](GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,                     \
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,                  \
+               BufferCollectionUsage, std::optional<fuchsia::math::SizeU>) { return true; })); \
+  }                                                                                            \
+  bool processed_callback = false;                                                             \
+  allocator->RegisterBufferCollection(                                                         \
+      CreateArgs(std::move(export_token), token, usage),                                       \
+      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {                \
+        EXPECT_EQ(!expect_success, result.is_err());                                           \
+        processed_callback = true;                                                             \
+      });                                                                                      \
   EXPECT_TRUE(processed_callback);
 
 RegisterBufferCollectionArgs CreateArgs(
@@ -69,7 +71,7 @@ class AllocatorTest : public gtest::TestLoopFixture {
         std::shared_ptr<BufferCollectionImporter>(mock_buffer_collection_importer_);
 
     // Capture uninteresting cleanup calls from Allocator dtor.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_))
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_, _))
         .Times(::testing::AtLeast(0));
   }
 
@@ -150,7 +152,7 @@ TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughAllocatorChann
   bool processed_callback = false;
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _, _, _))
       .WillOnce(Return(true));
   allocator_ptr->RegisterBufferCollection(
       CreateArgs(std::move(ref_pair.export_token), CreateToken(), usage),
@@ -164,12 +166,12 @@ TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughAllocatorChann
   // Closing channel should not trigger ReleaseBufferCollection, because the client still holds a
   // BufferCollectionImportToken.
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(0);
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(0);
     allocator_ptr.Unbind();
   }
   // Destruction of Allocator instance triggers ReleaseBufferCollection.
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(1);
     allocator.reset();
   }
 }
@@ -190,7 +192,7 @@ TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughMultipleAlloca
     bool processed_callback = false;
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
     const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _, _, _))
         .WillOnce(Return(true));
     allocator_ptr->RegisterBufferCollection(
         CreateArgs(std::move(ref_pair.export_token), CreateToken(), usage),
@@ -258,7 +260,7 @@ TEST_P(AllocatorTestParameterized, RegisterBufferCollectionErrorCases) {
   // The buffer importer call can fail.
   {
     // Mock the importer call to fail.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _, _, _))
         .WillOnce(Return(false));
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
     REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, false);
@@ -298,14 +300,14 @@ TEST_P(AllocatorTestParameterized, BufferCollectionImportPassesAndFailsOnDiffere
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
 
   // Return failure from the local importer.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _))
+  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _, _, _))
       .WillOnce(Return(false));
 
   // Expect buffer collection to be released from both instances.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
-  EXPECT_CALL(*local_mock_buffer_collection_importer, ReleaseBufferCollection(koid)).Times(0);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(1);
+  EXPECT_CALL(*local_mock_buffer_collection_importer, ReleaseBufferCollection(koid, _)).Times(0);
 
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, false);
 }
@@ -320,7 +322,7 @@ TEST_P(AllocatorTestParameterized, DroppingImportTokensTriggerRelease) {
 
   // Drop the import token via reset().
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(1);
     ref_pair.import_token.value.reset();
     RunLoopUntilIdle();
   }
@@ -339,12 +341,12 @@ TEST_P(AllocatorTestParameterized, RegisterAndReleaseMultipleBufferCollections) 
   { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_2.export_token, CreateToken(), usage, true); }
 
   // Drop the import token for the second buffer collection, which should be the only one released.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid_2)).Times(1);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid_2, _)).Times(1);
   ref_pair_2.import_token.value.reset();
   RunLoopUntilIdle();
 
   // Cleanup.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid_1)).Times(1);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid_1, _)).Times(1);
   allocator.reset();
 }
 
@@ -361,14 +363,14 @@ TEST_P(AllocatorTestParameterized, DuplicatedImportTokensKeepBufferCollectionReg
   // Drop the import token via reset(). That should not trigger release because |import_token_dup|
   // is valid.
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(0);
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(0);
     ref_pair.import_token.value.reset();
     RunLoopUntilIdle();
   }
 
   // Drop the duped import token to trigger release.
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(1);
     import_token_dup.value.reset();
     RunLoopUntilIdle();
   }
@@ -385,7 +387,7 @@ TEST_P(AllocatorTestParameterized, DestructorReleasesAllBufferCollections) {
   { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_2.export_token, CreateToken(), usage, true); }
 
   // Cleanup.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_)).Times(2);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_, _)).Times(2);
   allocator.reset();
 }
 
@@ -413,7 +415,7 @@ TEST_F(AllocatorTest, RegisterDefaultAndScreenshotBufferCollections) {
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
 
-  EXPECT_CALL(*default_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _))
+  EXPECT_CALL(*default_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _, _, _))
       .WillOnce(Return(true));
   bool processed_callback = false;
   allocator->RegisterBufferCollection(
@@ -429,7 +431,8 @@ TEST_F(AllocatorTest, RegisterDefaultAndScreenshotBufferCollections) {
   BufferCollectionImportExportTokens ref_pair2 = BufferCollectionImportExportTokens::New();
   const auto koid2 = fsl::GetKoid(ref_pair2.export_token.value.get());
 
-  EXPECT_CALL(*screenshot_mock_buffer_collection_importer, ImportBufferCollection(koid2, _, _))
+  EXPECT_CALL(*screenshot_mock_buffer_collection_importer,
+              ImportBufferCollection(koid2, _, _, _, _))
       .WillOnce(Return(true));
   processed_callback = false;
   allocator->RegisterBufferCollection(

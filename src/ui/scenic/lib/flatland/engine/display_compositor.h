@@ -27,6 +27,8 @@ class DisplayCompositorPixelTest;
 class DisplayCompositorTest;
 }  // namespace test
 
+using allocation::BufferCollectionUsage;
+
 // The DisplayCompositor is responsible for compositing Flatland render data onto the display(s).
 // It accomplishes this either by direct hardware compositing via the display controller
 // interface, or rendering on the GPU via a custom renderer API. It also handles the
@@ -63,16 +65,19 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   ~DisplayCompositor() override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+  bool ImportBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                              BufferCollectionUsage usage,
+                              std::optional<fuchsia::math::SizeU> size) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                               BufferCollectionUsage usage_type) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const allocation::ImageMetadata& metadata) override;
+  bool ImportBufferImage(const allocation::ImageMetadata& metadata,
+                         BufferCollectionUsage usage_type) override;
 
   // |BufferCollectionImporter|
   void ReleaseBufferImage(allocation::GlobalImageId image_id) override;

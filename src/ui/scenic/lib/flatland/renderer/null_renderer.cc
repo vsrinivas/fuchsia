@@ -9,44 +9,64 @@
 
 namespace flatland {
 
-bool NullRenderer::RegisterReadbackCollection(
-    allocation::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    fuchsia::math::SizeU size) {
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token), /*readback=*/true);
-}
-
-void NullRenderer::DeregisterReadbackCollection(
-    allocation::GlobalBufferCollectionId collection_id) {
-  DeregisterCollection(collection_id, /*readback=*/true);
-}
-
-bool NullRenderer::RegisterRenderTargetCollection(
-    allocation::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    fuchsia::math::SizeU size) {
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token));
-}
-
-void NullRenderer::DeregisterRenderTargetCollection(
-    allocation::GlobalBufferCollectionId collection_id) {
-  DeregisterCollection(collection_id);
-}
-
 bool NullRenderer::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token));
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) {
+  FX_DCHECK(collection_id != allocation::kInvalidId);
+
+  // Check for a null token here before we try to duplicate it to get the
+  // vulkan token.
+  if (!token.is_valid()) {
+    FX_LOGS(ERROR) << "Token is invalid.";
+    return false;
+  }
+
+  auto& map = usage == BufferCollectionUsage::kReadback ? readback_map_ : render_target_map_;
+
+  if (map.find(collection_id) != map.end()) {
+    FX_LOGS(ERROR) << "Duplicate GlobalBufferCollectionID: " << collection_id;
+    return false;
+  }
+
+  auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
+
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Unable to register collection.";
+    return false;
+  }
+
+  // Multiple threads may be attempting to read/write from |map| so we
+  // lock this function here.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
+  std::unique_lock<std::mutex> lock(lock_);
+  map[collection_id] = std::move(result.value());
+  return true;
 }
 
-void NullRenderer::ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) {
-  DeregisterCollection(collection_id);
+void NullRenderer::ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                                           BufferCollectionUsage usage) {
+  auto& map = usage == BufferCollectionUsage::kReadback ? readback_map_ : render_target_map_;
+
+  // Multiple threads may be attempting to read/write from the various maps,
+  // lock this function here.
+  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
+  std::unique_lock<std::mutex> lock(lock_);
+
+  auto collection_itr = map.find(collection_id);
+
+  // If the collection is not in the map, then there's nothing to do.
+  if (collection_itr == map.end()) {
+    return;
+  }
+
+  // Erase the sysmem collection from the map.
+  map.erase(collection_id);
 }
 
-bool NullRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
+bool NullRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata,
+                                     BufferCollectionUsage usage) {
   std::unique_lock<std::mutex> lock(lock_);
 
   // The metadata can't have an invalid collection id.
@@ -164,61 +184,6 @@ zx_pixel_format_t NullRenderer::ChoosePreferredPixelFormat(
   }
   FX_DCHECK(false) << "Preferred format is not available.";
   return ZX_PIXEL_FORMAT_NONE;
-}
-
-bool NullRenderer::RegisterCollection(
-    allocation::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token, bool readback) {
-  FX_DCHECK(collection_id != allocation::kInvalidId);
-
-  // Check for a null token here before we try to duplicate it to get the
-  // vulkan token.
-  if (!token.is_valid()) {
-    FX_LOGS(ERROR) << "Token is invalid.";
-    return false;
-  }
-
-  auto& map = readback ? readback_map_ : render_target_map_;
-
-  if (map.find(collection_id) != map.end()) {
-    FX_LOGS(ERROR) << "Duplicate GlobalBufferCollectionID: " << collection_id;
-    return false;
-  }
-
-  auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
-
-  if (result.is_error()) {
-    FX_LOGS(ERROR) << "Unable to register collection.";
-    return false;
-  }
-
-  // Multiple threads may be attempting to read/write from |map| so we
-  // lock this function here.
-  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
-  std::unique_lock<std::mutex> lock(lock_);
-  map[collection_id] = std::move(result.value());
-  return true;
-}
-
-void NullRenderer::DeregisterCollection(allocation::GlobalBufferCollectionId collection_id,
-                                        bool readback) {
-  auto& map = readback ? readback_map_ : render_target_map_;
-
-  // Multiple threads may be attempting to read/write from the various maps,
-  // lock this function here.
-  // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
-  std::unique_lock<std::mutex> lock(lock_);
-
-  auto collection_itr = map.find(collection_id);
-
-  // If the collection is not in the map, then there's nothing to do.
-  if (collection_itr == map.end()) {
-    return;
-  }
-
-  // Erase the sysmem collection from the map.
-  map.erase(collection_id);
 }
 
 }  // namespace flatland

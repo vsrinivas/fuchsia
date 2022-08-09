@@ -13,9 +13,20 @@
 #include <memory>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 
+using allocation::BufferCollectionUsage;
 using fuchsia::ui::composition::BufferCollectionExportToken;
 using fuchsia::ui::composition::RegisterBufferCollectionError;
+
+namespace {
+static BufferCollectionUsage ToBufferCollectionUsage(
+    fuchsia::ui::composition::RegisterBufferCollectionUsage usage) {
+  return usage == fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT
+             ? allocation::BufferCollectionUsage::kClientImage
+             : allocation::BufferCollectionUsage::kRenderTarget;
+}
+}  // namespace
 
 namespace allocation {
 
@@ -103,6 +114,8 @@ void Allocator::RegisterBufferCollection(
       usage == fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT
           ? &default_buffer_collection_importers_
           : &screenshot_buffer_collection_importers_;
+  BufferCollectionUsage usage_type = ToBufferCollectionUsage(usage);
+
   for (uint32_t i = 0; i < importers->size(); i++) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr extra_token;
     zx_status_t status =
@@ -146,8 +159,8 @@ void Allocator::RegisterBufferCollection(
   uint32_t i = 0;
   for (i = 0; i < importers->size(); i++) {
     auto importer = (*importers)[i];
-    auto result =
-        importer->ImportBufferCollection(koid, sysmem_allocator_.get(), std::move(tokens[i]));
+    auto result = importer->ImportBufferCollection(koid, sysmem_allocator_.get(),
+                                                   std::move(tokens[i]), usage_type, std::nullopt);
     // Exit the loop early if a importer fails to import the buffer collection.
     if (!result) {
       break;
@@ -160,7 +173,7 @@ void Allocator::RegisterBufferCollection(
     // We have to clean up the buffer collection from the importers where importation was
     // successful.
     for (uint32_t j = 0; j < i; j++) {
-      (*importers)[j]->ReleaseBufferCollection(koid);
+      (*importers)[j]->ReleaseBufferCollection(koid, usage_type);
     }
     FX_LOGS(ERROR) << "Failed to import the buffer collection to the BufferCollectionimporter.";
     callback(fpromise::error(RegisterBufferCollectionError::BAD_OPERATION));
@@ -202,8 +215,10 @@ void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) 
   auto importers = usage == fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT
                        ? &default_buffer_collection_importers_
                        : &screenshot_buffer_collection_importers_;
+  BufferCollectionUsage usage_type = ToBufferCollectionUsage(usage);
+
   for (auto& importer : (*importers)) {
-    importer->ReleaseBufferCollection(collection_id);
+    importer->ReleaseBufferCollection(collection_id, usage_type);
   }
 }
 

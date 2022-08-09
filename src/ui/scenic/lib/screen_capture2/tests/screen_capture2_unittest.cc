@@ -66,12 +66,13 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
                           uint32_t image_width, uint32_t image_height, bool is_mock) {
     flatland::BufferCollectionInfo buffer_info;
     if (is_mock) {
-      EXPECT_CALL(*mock_renderer_.get(), RegisterRenderTargetCollection(_, _, _, _))
+      EXPECT_CALL(*mock_renderer_.get(), ImportBufferCollection(_, _, _, _, _))
           .WillRepeatedly([&buffer_info](
                               allocation::GlobalBufferCollectionId collection_id,
                               fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                              fuchsia::math::SizeU size = {}) {
+                              allocation::BufferCollectionUsage,
+                              std::optional<fuchsia::math::SizeU> size) {
             auto result = flatland::BufferCollectionInfo::New(sysmem_allocator, std::move(token));
 
             if (result.is_error()) {
@@ -82,7 +83,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
             return true;
           });
 
-      EXPECT_CALL(*mock_renderer_.get(), ImportBufferImage(_))
+      EXPECT_CALL(*mock_renderer_.get(), ImportBufferImage(_, _))
           .WillRepeatedly(testing::Return(true));
 
       EXPECT_CALL(*mock_renderer_.get(), Render(_, _, _, _, _))
@@ -97,7 +98,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
             }
           });
 
-      EXPECT_CALL(*mock_renderer_.get(), DeregisterRenderTargetCollection(_))
+      EXPECT_CALL(*mock_renderer_.get(), ReleaseBufferCollection(_, _))
           .Times(::testing::AtLeast(0));
     }
 
@@ -231,12 +232,13 @@ TEST_F(ScreenCapture2Test, ConfigureWithMissingArguments) {
 TEST_F(ScreenCapture2Test, Configure_BufferCollectionFailure) {
   SetUpMockImporter();
   flatland::BufferCollectionInfo buffer_info;
-  EXPECT_CALL(*mock_renderer_.get(), RegisterRenderTargetCollection(_, _, _, _))
+  EXPECT_CALL(*mock_renderer_.get(), ImportBufferCollection(_, _, _, _, _))
       .WillRepeatedly(
           [&buffer_info](allocation::GlobalBufferCollectionId collection_id,
                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                         fuchsia::math::SizeU size = {}) {
+                         allocation::BufferCollectionUsage,
+                         std::optional<fuchsia::math::SizeU> size) {
             auto result = flatland::BufferCollectionInfo::New(sysmem_allocator, std::move(token));
 
             if (result.is_error()) {
@@ -266,7 +268,7 @@ TEST_F(ScreenCapture2Test, Configure_BufferCollectionFailure) {
   args.set_import_token(std::move(ref_pair.import_token));
   args.set_image_size({image_width, image_height});
 
-  EXPECT_CALL(*mock_renderer_.get(), ImportBufferImage(_))
+  EXPECT_CALL(*mock_renderer_.get(), ImportBufferImage(_, _))
       .WillOnce(testing::Return(true))
       .WillOnce(testing::Return(true))
       .WillOnce(testing::Return(false));

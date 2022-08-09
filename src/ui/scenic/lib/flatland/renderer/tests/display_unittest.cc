@@ -14,6 +14,7 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
@@ -115,8 +116,9 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   // Register the collection with the renderer, which sets the vk constraints.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto image_id = allocation::GenerateUniqueImageId();
-  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                std::move(tokens.dup_token));
+  auto result = renderer.ImportBufferCollection(
+      collection_id, sysmem_allocator_.get(), std::move(tokens.dup_token),
+      allocation::BufferCollectionUsage::kClientImage, std::nullopt);
   EXPECT_TRUE(result);
 
   allocation::ImageMetadata metadata = {.collection_id = collection_id,
@@ -126,7 +128,8 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
                                         .height = kHeight};
 
   // Importing an image should fail at this point because we've only set the renderer constraints.
-  auto import_result = renderer.ImportBufferImage(metadata);
+  auto import_result =
+      renderer.ImportBufferImage(metadata, allocation::BufferCollectionUsage::kClientImage);
   EXPECT_FALSE(import_result);
 
   // Set the display constraints on the display controller.
@@ -137,7 +140,8 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   ASSERT_TRUE(res);
 
   // Importing should fail again, because we've only set 2 of the 3 constraints.
-  import_result = renderer.ImportBufferImage(metadata);
+  import_result =
+      renderer.ImportBufferImage(metadata, allocation::BufferCollectionUsage::kClientImage);
   EXPECT_FALSE(import_result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
@@ -160,7 +164,8 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Now that the renderer, client, and the display have set their constraints, we import one last
   // time and this time it should return true.
-  import_result = renderer.ImportBufferImage(metadata);
+  import_result =
+      renderer.ImportBufferImage(metadata, allocation::BufferCollectionUsage::kClientImage);
   EXPECT_TRUE(import_result);
 
   // We should now be able to also import an image to the display controller, using the

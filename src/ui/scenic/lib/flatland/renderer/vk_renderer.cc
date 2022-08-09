@@ -31,6 +31,8 @@
 
 namespace {
 
+using allocation::BufferCollectionUsage;
+
 // Highest priority format first.
 const std::vector<vk::Format> kPreferredImageFormats = {
     vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb, vk::Format::eG8B8R83Plane420Unorm,
@@ -99,10 +101,13 @@ VkRenderer::VkRenderer(escher::EscherWeakPtr escher)
 VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  for (auto& [_, collection] : collections_) {
+  for (auto& [_, collection] : texture_collections_) {
     vk_device.destroyBufferCollectionFUCHSIA(collection.vk_collection, nullptr, vk_loader);
   }
-  collections_.clear();
+  for (auto& [_, collection] : render_target_collections_) {
+    vk_device.destroyBufferCollectionFUCHSIA(collection.vk_collection, nullptr, vk_loader);
+  }
+  render_target_collections_.clear();
   for (auto& [_, collection] : readback_collections_) {
     vk_device.destroyBufferCollectionFUCHSIA(collection.vk_collection, nullptr, vk_loader);
   }
@@ -111,25 +116,9 @@ VkRenderer::~VkRenderer() {
 
 bool VkRenderer::ImportBufferCollection(
     GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) {
   TRACE_DURATION("gfx", "flatland::VkRenderer::ImportBufferCollection");
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
-                            escher::RectangleCompositor::kTextureUsageFlags);
-}
-
-void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
-  TRACE_DURATION("gfx", "flatland::VkRenderer::ReleaseBufferCollection");
-  DeregisterCollection(collection_id);
-}
-
-bool VkRenderer::RegisterCollection(
-    GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token, vk::ImageUsageFlags usage,
-    fuchsia::math::SizeU size, bool readback) {
-  TRACE_DURATION("gfx", "VkRenderer::RegisterCollection");
-  const bool usage_is_render_target =
-      ((usage & escher::RectangleCompositor::kRenderTargetUsageFlags) ==
-       escher::RectangleCompositor::kRenderTargetUsageFlags);
 
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
@@ -157,6 +146,7 @@ bool VkRenderer::RegisterCollection(
 
   // Create the sysmem collection.
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  vk::ImageUsageFlags image_usage;
   {
     // Use local token to create a BufferCollection and then sync. We can trust
     // |buffer_collection->Sync()| to tell us if we have a bad or malicious channel. So if this call
@@ -176,9 +166,22 @@ bool VkRenderer::RegisterCollection(
 
     // Use a name with a priority that's greater than the vulkan implementation, but less than
     // what any client would use.
-    const char* image_name =
-        readback ? "FlatlandReadbackMemory"
-                 : (usage_is_render_target ? "FlatlandRenderTargetMemory" : "FlatlandImageMemory");
+    const char* image_name;
+    switch (usage) {
+      case BufferCollectionUsage::kRenderTarget:
+        image_name = "FlatlandRenderTargetMemory";
+        image_usage = escher::RectangleCompositor::kRenderTargetUsageFlags |
+                      vk::ImageUsageFlagBits::eTransferSrc;
+        break;
+      case BufferCollectionUsage::kReadback:
+        image_name = "FlatlandReadbackMemory";
+        image_usage = vk::ImageUsageFlagBits::eTransferDst;
+        break;
+      case BufferCollectionUsage::kClientImage:
+        image_usage = escher::RectangleCompositor::kTextureUsageFlags;
+        image_name = "FlatlandImageMemory";
+    }
+
     buffer_collection->SetName(10u, image_name);
     status = buffer_collection->SetConstraints(false /* has_constraints */,
                                                fuchsia::sysmem::BufferCollectionConstraints());
@@ -196,9 +199,9 @@ bool VkRenderer::RegisterCollection(
     std::vector<vk::ImageFormatConstraintsInfoFUCHSIA> create_infos;
     for (const auto& format : kPreferredImageFormats) {
       vk::ImageCreateInfo create_info =
-          escher::RectangleCompositor::GetDefaultImageConstraints(format, usage);
-      if (size.width && size.height) {
-        create_info.extent = vk::Extent3D{size.width, size.height, 1};
+          escher::RectangleCompositor::GetDefaultImageConstraints(format, image_usage);
+      if (size.has_value() && size.value().width && size.value().height) {
+        create_info.extent = vk::Extent3D{size.value().width, size.value().height, 1};
       }
 
       create_infos.push_back(escher::GetDefaultImageFormatConstraintsInfo(create_info));
@@ -230,11 +233,12 @@ bool VkRenderer::RegisterCollection(
   // so we lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(mutex_);
-  auto& collections = readback ? readback_collections_ : collections_;
-  auto [_, emplace_success] = collections.emplace(
+  std::unordered_map<GlobalBufferCollectionId, CollectionData>* collections =
+      UsageToCollection(usage);
+
+  auto [_, emplace_success] = collections->emplace(
       std::make_pair(collection_id, CollectionData{.collection = std::move(buffer_collection),
-                                                   .vk_collection = std::move(collection),
-                                                   .is_render_target = usage_is_render_target}));
+                                                   .vk_collection = std::move(collection)}));
   if (!emplace_success) {
     FX_LOGS(WARNING) << "Could not store buffer collection, because an entry already existed for "
                      << collection_id;
@@ -244,18 +248,19 @@ bool VkRenderer::RegisterCollection(
   return true;
 }
 
-void VkRenderer::DeregisterCollection(allocation::GlobalBufferCollectionId collection_id,
-                                      bool readback) {
+void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id,
+                                         BufferCollectionUsage usage) {
+  TRACE_DURATION("gfx", "flatland::VkRenderer::ReleaseBufferCollection");
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(mutex_);
-  auto& collections = readback ? readback_collections_ : collections_;
-
-  auto collection_itr = collections.find(collection_id);
+  std::unordered_map<GlobalBufferCollectionId, CollectionData>* collections =
+      UsageToCollection(usage);
+  auto collection_itr = collections->find(collection_id);
 
   // If the collection is not in the map, then there's nothing to do.
-  if (collection_itr == collections.end()) {
+  if (collection_itr == collections->end()) {
     FX_LOGS(WARNING) << "Attempting to release a non-existent buffer collection.";
     return;
   }
@@ -271,10 +276,11 @@ void VkRenderer::DeregisterCollection(allocation::GlobalBufferCollectionId colle
     FX_LOGS(ERROR) << "Error when closing buffer collection: " << zx_status_get_string(status);
   }
 
-  collections.erase(collection_id);
+  collections->erase(collection_id);
 }
 
-bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
+bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata,
+                                   BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "flatland::VkRenderer::ImportBufferImage");
 
   std::unique_lock<std::mutex> lock(mutex_);
@@ -300,8 +306,10 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
 
   // Make sure that the collection that will back this image's memory
   // is actually registered with the renderer.
-  auto collection_itr = collections_.find(metadata.collection_id);
-  if (collection_itr == collections_.end()) {
+  std::unordered_map<GlobalBufferCollectionId, CollectionData>* collections =
+      UsageToCollection(usage);
+  auto collection_itr = collections->find(metadata.collection_id);
+  if (collection_itr == collections->end()) {
     FX_LOGS(WARNING) << "Collection with id " << metadata.collection_id << " does not exist.";
     return false;
   }
@@ -315,30 +323,53 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
     return false;
   }
 
-  // Make sure we're not reusing the same image identifier.
-  if (texture_map_.find(metadata.identifier) != texture_map_.end() ||
-      render_target_map_.find(metadata.identifier) != render_target_map_.end()) {
-    FX_LOGS(WARNING) << "An image with this identifier already exists.";
-    return false;
+  // Make sure we're not reusing the same image identifier for the specific usage..
+  switch (usage) {
+    case BufferCollectionUsage::kRenderTarget:
+      if (render_target_map_.find(metadata.identifier) != render_target_map_.end()) {
+        FX_LOGS(WARNING) << "An image with this identifier already exists.";
+        return false;
+      }
+      break;
+    case BufferCollectionUsage::kReadback:
+      if (readback_image_map_.find(metadata.identifier) != readback_image_map_.end()) {
+        FX_LOGS(WARNING) << "An image with this identifier already exists.";
+        return false;
+      }
+      break;
+    default:
+      if (texture_map_.find(metadata.identifier) != texture_map_.end()) {
+        FX_LOGS(WARNING) << "An image with this identifier already exists.";
+        return false;
+      }
+      break;
   }
 
-  if (collection_itr->second.is_render_target) {
-    auto readback_collection_itr = readback_collections_.find(metadata.collection_id);
-    const bool needs_readback = readback_collection_itr != readback_collections_.end();
+  switch (usage) {
+    case BufferCollectionUsage::kRenderTarget: {
+      auto readback_collection_itr = readback_collections_.find(metadata.collection_id);
+      const bool needs_readback = readback_collection_itr != readback_collections_.end();
 
-    const vk::ImageUsageFlags kRenderTargetAsReadbackSourceUsageFlags =
-        escher::RectangleCompositor::kRenderTargetUsageFlags | vk::ImageUsageFlagBits::eTransferSrc;
-    auto image =
-        ExtractImage(metadata, collection_itr->second.vk_collection,
-                     needs_readback ? kRenderTargetAsReadbackSourceUsageFlags
-                                    : escher::RectangleCompositor::kRenderTargetUsageFlags);
-    if (!image) {
-      FX_LOGS(ERROR) << "Could not extract render target.";
-      return false;
+      const vk::ImageUsageFlags kRenderTargetAsReadbackSourceUsageFlags =
+          escher::RectangleCompositor::kRenderTargetUsageFlags |
+          vk::ImageUsageFlagBits::eTransferSrc;
+      auto image =
+          ExtractImage(metadata, collection_itr->second.vk_collection,
+                       needs_readback ? kRenderTargetAsReadbackSourceUsageFlags
+                                      : escher::RectangleCompositor::kRenderTargetUsageFlags);
+      if (!image) {
+        FX_LOGS(ERROR) << "Could not extract render target.";
+        return false;
+      }
+
+      image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
+      render_target_map_[metadata.identifier] = image;
+      depth_target_map_[metadata.identifier] = CreateDepthTexture(escher_.get(), image);
+      pending_render_targets_.insert(metadata.identifier);
+      break;
     }
-
-    escher::ImagePtr readback_image = nullptr;
-    if (needs_readback) {
+    case BufferCollectionUsage::kReadback: {
+      auto readback_collection_itr = readback_collections_.find(metadata.collection_id);
       // Check to see if the buffers are allocated and return false if not.
       zx_status_t allocation_status = ZX_OK;
       zx_status_t status =
@@ -349,27 +380,25 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
         return false;
       }
 
-      readback_image = ExtractImage(metadata, readback_collection_itr->second.vk_collection,
+      escher::ImagePtr readback_image = ExtractImage(metadata, readback_collection_itr->second.vk_collection,
                                     vk::ImageUsageFlagBits::eTransferDst);
       if (!readback_image) {
         FX_LOGS(ERROR) << "Could not extract readback image.";
         return false;
       }
       readback_image_map_[metadata.identifier] = readback_image;
+      break;
     }
-
-    image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
-    render_target_map_[metadata.identifier] = image;
-    depth_target_map_[metadata.identifier] = CreateDepthTexture(escher_.get(), image);
-    pending_render_targets_.insert(metadata.identifier);
-  } else {
-    auto texture = ExtractTexture(metadata, collection_itr->second.vk_collection);
-    if (!texture) {
-      FX_LOGS(ERROR) << "Could not extract client texture image.";
-      return false;
+    case BufferCollectionUsage::kClientImage: {
+      auto texture = ExtractTexture(metadata, collection_itr->second.vk_collection);
+      if (!texture) {
+        FX_LOGS(ERROR) << "Could not extract client texture image.";
+        return false;
+      }
+      texture_map_[metadata.identifier] = texture;
+      pending_textures_.insert(metadata.identifier);
+      break;
     }
-    texture_map_[metadata.identifier] = texture;
-    pending_textures_.insert(metadata.identifier);
   }
   return true;
 }
@@ -498,32 +527,6 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
   return escher::impl::NaiveImage::AdoptVkImage(escher_->resource_recycler(), escher_image_info,
                                                 image_result.value, std::move(gpu_mem),
                                                 create_info.initialLayout);
-}
-
-bool VkRenderer::RegisterRenderTargetCollection(
-    GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    fuchsia::math::SizeU size) {
-  return RegisterCollection(
-      collection_id, sysmem_allocator, std::move(token),
-      escher::RectangleCompositor::kRenderTargetUsageFlags | vk::ImageUsageFlagBits::eTransferSrc,
-      size);
-}
-
-void VkRenderer::DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) {
-  DeregisterCollection(collection_id, /*readback=*/false);
-}
-
-bool VkRenderer::RegisterReadbackCollection(
-    GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    fuchsia::math::SizeU size) {
-  return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
-                            vk::ImageUsageFlagBits::eTransferDst, size, true);
-}
-
-void VkRenderer::DeregisterReadbackCollection(GlobalBufferCollectionId collection_id) {
-  DeregisterCollection(collection_id, /*readback=*/true);
 }
 
 escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& metadata,
@@ -749,6 +752,20 @@ void VkRenderer::BlitRenderTarget(escher::CommandBuffer* command_buffer,
   command_buffer->Blit(
       source_image, vk::Offset2D(0, 0), vk::Extent2D(metadata.width, metadata.height), dest_image,
       vk::Offset2D(0, 0), vk::Extent2D(metadata.width, metadata.height), kDefaultFilter);
+}
+
+std::unordered_map<GlobalBufferCollectionId, VkRenderer::CollectionData>*
+VkRenderer::UsageToCollection(BufferCollectionUsage usage) {
+  switch (usage) {
+    case BufferCollectionUsage::kRenderTarget:
+      return &render_target_collections_;
+      break;
+    case BufferCollectionUsage::kReadback:
+      return &readback_collections_;
+      break;
+    default:
+      return &texture_collections_;
+  }
 }
 
 }  // namespace flatland

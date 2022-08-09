@@ -43,7 +43,7 @@ class ScreenCaptureTest : public gtest::TestLoopFixture {
         std::make_pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>>({}, {});
 
     // Capture uninteresting cleanup calls from Allocator dtor.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_))
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_, _))
         .Times(::testing::AtLeast(0));
   }
 
@@ -96,7 +96,7 @@ TEST_F(ScreenCaptureTest, ConfigureSingleImporterSuccess) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
@@ -125,7 +125,7 @@ TEST_F(ScreenCaptureTest, ConfigureSingleImporterFailure) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(false));
 
   ScreenCaptureError error;
@@ -157,9 +157,9 @@ TEST_F(ScreenCaptureTest, ConfigureMultipleImportersSuccess) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
-  EXPECT_CALL(*mock_buffer_collection_importer2, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer2, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
@@ -195,10 +195,10 @@ TEST_F(ScreenCaptureTest, ConfigureMultipleImportersImportFailure) {
   args.set_size({1, 1});
   args.set_buffer_count(3);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillOnce(testing::Return(true))
       .WillOnce(testing::Return(true));
-  EXPECT_CALL(*mock_buffer_collection_importer2, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer2, ImportBufferImage(_, _))
       .WillOnce(testing::Return(true))
       .WillOnce(testing::Return(false));
 
@@ -244,7 +244,7 @@ TEST_F(ScreenCaptureTest, ConfigureNoBuffers) {
   args.set_size({1, 1});
   args.set_buffer_count(0);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   sc.Configure(std::move(args), [](fpromise::result<void, ScreenCaptureError> result) {
@@ -269,7 +269,7 @@ TEST_F(ScreenCaptureTest, ConfigureTwice) {
   args1.set_size({1, 1});
   args1.set_buffer_count(2);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool alloc_result = false;
@@ -301,7 +301,7 @@ TEST_F(ScreenCaptureTest, ConfigureTwice) {
   // configure our new buffer collection.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(2);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   alloc_result = false;
@@ -357,7 +357,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameSuccess) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
@@ -392,7 +392,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameBufferFullError) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
@@ -433,7 +433,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameMultipleBuffers) {
   args.set_size({1, 1});
   args.set_buffer_count(2);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
@@ -477,7 +477,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameMissingArgs) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
@@ -519,7 +519,7 @@ TEST_F(ScreenCaptureTest, ReleaseAvailableFrame) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool alloc_result = false;
@@ -559,7 +559,7 @@ TEST_F(ScreenCaptureTest, ReleaseOutOfRangeFrame) {
   args.set_size({1, 1});
   args.set_buffer_count(1);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool alloc_result = false;
@@ -602,7 +602,7 @@ TEST_F(ScreenCaptureTest, ReleaseFrameFromFullBuffer) {
   args.set_size({1, 1});
   args.set_buffer_count(kNumBuffers);
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;

@@ -853,7 +853,6 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
   const auto& read_values2 =
       ExtractScreenCapture(cs_result2.value().buffer_id(), sc_buffer_collection_info,
                            kBytesPerPixel, render_target_width, render_target_height);
-
   EXPECT_EQ(read_values2.size(), num_pixels_ * kBytesPerPixel);
 
   // Compare read and write values.

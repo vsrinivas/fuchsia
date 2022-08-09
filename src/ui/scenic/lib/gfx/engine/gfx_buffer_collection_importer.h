@@ -18,6 +18,7 @@ namespace gfx {
 
 class GpuImage;
 class Session;
+using allocation::BufferCollectionUsage;
 
 class GfxBufferCollectionImporter : public allocation::BufferCollectionImporter {
  public:
@@ -25,16 +26,19 @@ class GfxBufferCollectionImporter : public allocation::BufferCollectionImporter 
   ~GfxBufferCollectionImporter() override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+  bool ImportBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                              BufferCollectionUsage usage,
+                              std::optional<fuchsia::math::SizeU> size) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                               BufferCollectionUsage usage) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const allocation::ImageMetadata& metadata) override;
+  bool ImportBufferImage(const allocation::ImageMetadata& metadata,
+                         BufferCollectionUsage usage) override;
 
   // |BufferCollectionImporter|
   void ReleaseBufferImage(allocation::GlobalImageId image_id) override;

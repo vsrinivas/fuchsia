@@ -6,6 +6,8 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <cstddef>
+
 #include <gtest/gtest.h>
 
 #include "../screen_capture.h"
@@ -23,6 +25,7 @@
 namespace screen_capture::test {
 
 using allocation::BufferCollectionImporter;
+using allocation::BufferCollectionUsage;
 using fuchsia::sysmem::PixelFormatType;
 
 class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessionTest {
@@ -45,8 +48,9 @@ class ScreenCaptureBufferCollectionTest : public scenic_impl::gfx::test::VkSessi
     auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
 
     // Import into ScreenCaptureBufferCollectionImporter.
-    bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
-                                                    std::move(dup_token));
+    bool result = importer_->ImportBufferCollection(
+        collection_id, sysmem_allocator.get(), std::move(dup_token),
+        BufferCollectionUsage::kRenderTarget, std::nullopt);
     EXPECT_TRUE(result);
 
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -90,13 +94,14 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportAndReleaseBufferCollection) {
 
   // Import into ScreenCaptureBufferCollectionImporter.
   auto collection_id = allocation::GenerateUniqueBufferCollectionId();
-  bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
-                                                  std::move(dup_token));
+  bool result =
+      importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(dup_token),
+                                        BufferCollectionUsage::kRenderTarget, std::nullopt);
 
   EXPECT_TRUE(result);
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
@@ -120,11 +125,11 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage) {
   metadata.identifier = 1;
 
   // Verify image has been imported correctly.
-  bool success = importer_->ImportBufferImage(metadata);
+  bool success = importer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget);
   EXPECT_TRUE(success);
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCountFromCollectionId) {
@@ -147,7 +152,7 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCountFromCollectionId) {
   EXPECT_EQ(info.value(), buffer_count);
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
 }
 
 VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) {
@@ -158,7 +163,8 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) 
   zx_status_t status = sysmem_allocator->AllocateSharedCollection(token1.NewRequest());
   EXPECT_EQ(status, ZX_OK);
   bool result =
-      importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token1));
+      importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token1),
+                                        BufferCollectionUsage::kRenderTarget, std::nullopt);
   EXPECT_TRUE(result);
 
   // Buffer collection id dup.
@@ -167,7 +173,8 @@ VK_TEST_F(ScreenCaptureBufferCollectionTest, ImportBufferCollection_ErrorCases) 
     status = sysmem_allocator->AllocateSharedCollection(token2.NewRequest());
     EXPECT_EQ(status, ZX_OK);
     result =
-        importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token2));
+        importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(token2),
+                                          BufferCollectionUsage::kRenderTarget, std::nullopt);
     EXPECT_FALSE(result);
   }
 }
@@ -193,7 +200,7 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
   {
     allocation::ImageMetadata metadata;
     metadata.collection_id = allocation::GenerateUniqueBufferCollectionId();
-    result = importer_->ImportBufferImage(metadata);
+    result = importer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget);
     EXPECT_FALSE(result);
   }
 
@@ -201,7 +208,7 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
   {
     allocation::ImageMetadata metadata;
     metadata.collection_id = 0;
-    result = importer_->ImportBufferImage(metadata);
+    result = importer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget);
     EXPECT_FALSE(result);
   }
 
@@ -211,7 +218,7 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
     metadata.collection_id = collection_id;
     metadata.width = 0;
     metadata.height = 0;
-    result = importer_->ImportBufferImage(metadata);
+    result = importer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget);
     EXPECT_FALSE(result);
   }
 
@@ -222,12 +229,12 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, ImportBufferImage_ErrorCases) {
     metadata.width = 32;
     metadata.height = 32;
     metadata.vmo_index = 3;
-    result = importer_->ImportBufferImage(metadata);
+    result = importer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget);
     EXPECT_FALSE(result);
   }
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_ErrorCases) {
@@ -252,7 +259,7 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_Error
   }
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
 }
 
 VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_BuffersNotAllocated) {
@@ -262,8 +269,9 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_Buffe
   // Create Sysmem tokens.
   auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator.get());
   // Import into ScreenCaptureBufferCollectionImporter.
-  bool result = importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(),
-                                                  std::move(dup_token));
+  bool result =
+      importer_->ImportBufferCollection(collection_id, sysmem_allocator.get(), std::move(dup_token),
+                                        BufferCollectionUsage::kRenderTarget, std::nullopt);
   EXPECT_TRUE(result);
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
@@ -276,7 +284,7 @@ VK_TEST_P(ScreenCaptureBCTestParameterized, GetBufferCollectionBufferCount_Buffe
   EXPECT_EQ(info, std::nullopt);
 
   // Cleanup.
-  importer_->ReleaseBufferCollection(collection_id);
+  importer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
 }
 
 }  // namespace screen_capture::test

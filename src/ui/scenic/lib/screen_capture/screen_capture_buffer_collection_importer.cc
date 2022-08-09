@@ -1,4 +1,4 @@
-  // Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,7 +13,11 @@
 #include <cstdint>
 #include <optional>
 
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
+
 namespace {
+
+using allocation::BufferCollectionUsage;
 // Image formats supported by Scenic in a priority order.
 const vk::Format kSupportedImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb};
 }  // anonymous namespace
@@ -29,7 +33,7 @@ ScreenCaptureBufferCollectionImporter::ScreenCaptureBufferCollectionImporter(
 
 ScreenCaptureBufferCollectionImporter::~ScreenCaptureBufferCollectionImporter() {
   for (auto id : buffer_collections_) {
-    renderer_->ReleaseBufferCollection(id);
+    renderer_->ReleaseBufferCollection(id, BufferCollectionUsage::kRenderTarget);
   }
   buffer_collections_.clear();
 }
@@ -37,8 +41,11 @@ ScreenCaptureBufferCollectionImporter::~ScreenCaptureBufferCollectionImporter() 
 bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
     allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+    BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) {
   TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ImportBufferCollection");
+  // Expect only RenderTarget usage.
+  FX_DCHECK(usage == BufferCollectionUsage::kRenderTarget);
 
   if (!token.is_valid()) {
     FX_LOGS(WARNING) << "ImportBufferCollection called with invalid token";
@@ -80,10 +87,11 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
   }
 
   if (!enable_copy_fallback_) {
-    const bool success = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
-                                                                   std::move(vulkan_token));
+    const bool success =
+        renderer_->ImportBufferCollection(collection_id, sysmem_allocator, std::move(vulkan_token),
+                                          BufferCollectionUsage::kRenderTarget, size);
     if (!success) {
-      ReleaseBufferCollection(collection_id);
+      ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
       FX_LOGS(WARNING) << __func__ << " failed, could not register with Renderer";
       return false;
     }
@@ -117,8 +125,9 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
       return false;
     }
 
-    if (!renderer_->RegisterReadbackCollection(collection_id, sysmem_allocator,
-                                               std::move(readback_token))) {
+    if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
+                                           std::move(readback_token),
+                                           BufferCollectionUsage::kReadback, std::nullopt)) {
       FX_LOGS(WARNING) << "Could not register readback token with VkRenderer";
       return false;
     }
@@ -126,7 +135,7 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
     status = readback_collection->SetConstraints(false /* has_constraints */,
                                                  fuchsia::sysmem::BufferCollectionConstraints());
     if (status != ZX_OK) {
-      renderer_->DeregisterReadbackCollection(collection_id);
+      renderer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kReadback);
       FX_LOGS(WARNING) << "Cannot set constraints on readback collection: "
                        << zx_status_get_string(status);
       return false;
@@ -136,7 +145,7 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
     status =
         readback_collection->AttachToken(ZX_RIGHT_SAME_RIGHTS, render_target_token.NewRequest());
     if (status != ZX_OK) {
-      renderer_->DeregisterReadbackCollection(collection_id);
+      renderer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kReadback);
       FX_LOGS(WARNING) << "Cannot create render target sync token via AttachToken: "
                        << zx_status_get_string(status);
       return false;
@@ -149,17 +158,18 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
       return false;
     }
 
-    if (!renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
-                                                   std::move(render_target_token))) {
-      renderer_->DeregisterReadbackCollection(collection_id);
+    if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
+                                           std::move(render_target_token),
+                                           BufferCollectionUsage::kRenderTarget, std::nullopt)) {
+      renderer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kReadback);
       FX_LOGS(WARNING) << "Could not register render target token with VkRenderer";
       return false;
     }
 
     status = readback_collection->Close();
     if (status != ZX_OK) {
-      renderer_->DeregisterRenderTargetCollection(collection_id);
-      renderer_->DeregisterReadbackCollection(collection_id);
+      renderer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kRenderTarget);
+      renderer_->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kReadback);
       FX_LOGS(WARNING) << "Cannot close readback collection: " << zx_status_get_string(status);
       return false;
     }
@@ -172,7 +182,7 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferCollection(
 }
 
 void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
-    allocation::GlobalBufferCollectionId collection_id) {
+    allocation::GlobalBufferCollectionId collection_id, BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection");
 
   // If the collection is not in the map, then there's nothing to do.
@@ -194,14 +204,11 @@ void ScreenCaptureBufferCollectionImporter::ReleaseBufferCollection(
     buffer_collection_buffer_counts_.erase(collection_id);
   };
 
-  if (enable_copy_fallback_) {
-    renderer_->DeregisterReadbackCollection(collection_id);
-  }
-  renderer_->DeregisterRenderTargetCollection(collection_id);
+  renderer_->ReleaseBufferCollection(collection_id, usage);
 }
 
 bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
-    const allocation::ImageMetadata& metadata) {
+    const allocation::ImageMetadata& metadata, BufferCollectionUsage usage) {
   TRACE_DURATION("gfx", "ScreenCaptureBufferCollectionImporter::ImportBufferImage");
 
   // The metadata can't have an invalid |collection_id|.
@@ -244,18 +251,23 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
     return false;
   }
 
-  if (renderer_->ImportBufferImage(metadata)) {
-    if (enable_copy_fallback_) {
-      // AttachToken succeeded. Readback images are unnecessary.
-      renderer_->DeregisterReadbackCollection(metadata.collection_id);
+  if (renderer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget)) {
+    if (reset_render_targets_.find(metadata.collection_id) != reset_render_targets_.end()) {
+      renderer_->ImportBufferImage(metadata, BufferCollectionUsage::kReadback);
+    } else if (enable_copy_fallback_) {
+      renderer_->ReleaseBufferCollection(metadata.collection_id, BufferCollectionUsage::kReadback);
     }
   } else if (enable_copy_fallback_) {
-    // Try to re-allocate and re-import readback render targets.
+    // Try to re-allocate and re-import render targets.
     if (!ResetRenderTargetsForReadback(metadata, buffer_count.value())) {
       FX_LOGS(WARNING) << "Cannot reallocate readback render targets!";
       return false;
     }
-    if (!renderer_->ImportBufferImage(metadata)) {
+    if (!renderer_->ImportBufferImage(metadata, BufferCollectionUsage::kReadback)) {
+      FX_LOGS(WARNING) << "Could not import fallback render target to VkRenderer";
+      return false;
+    }
+    if (!renderer_->ImportBufferImage(metadata, BufferCollectionUsage::kRenderTarget)) {
       FX_LOGS(WARNING) << "Could not import fallback render target to VkRenderer";
       return false;
     }
@@ -263,7 +275,6 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
     FX_LOGS(WARNING) << "Could not import render target to VkRenderer";
     return false;
   }
-
   return true;
 }
 
@@ -323,11 +334,11 @@ bool ScreenCaptureBufferCollectionImporter::ResetRenderTargetsForReadback(
   }
 
   FX_LOGS(WARNING) << "Could not import render target to VkRenderer; attempting to create fallback";
-  renderer_->DeregisterRenderTargetCollection(metadata.collection_id);
+  renderer_->ReleaseBufferCollection(metadata.collection_id, BufferCollectionUsage::kRenderTarget);
 
   auto deregister_collection =
       fit::defer([renderer = renderer_, collection_id = metadata.collection_id] {
-        renderer->DeregisterReadbackCollection(collection_id);
+        renderer->ReleaseBufferCollection(collection_id, BufferCollectionUsage::kReadback);
       });
 
   fuchsia::sysmem::BufferCollectionTokenSyncPtr fallback_render_target_sync_token;
@@ -357,9 +368,10 @@ bool ScreenCaptureBufferCollectionImporter::ResetRenderTargetsForReadback(
     return false;
   }
 
-  if (!renderer_->RegisterRenderTargetCollection(metadata.collection_id, sysmem_allocator_.get(),
-                                                 std::move(fallback_render_target_token),
-                                                 {metadata.width, metadata.height})) {
+  if (!renderer_->ImportBufferCollection(
+          metadata.collection_id, sysmem_allocator_.get(), std::move(fallback_render_target_token),
+          BufferCollectionUsage::kRenderTarget,
+          std::optional<fuchsia::math::SizeU>({metadata.width, metadata.height}))) {
     FX_LOGS(WARNING) << "Could not register fallback render target with VkRenderer";
     return false;
   }

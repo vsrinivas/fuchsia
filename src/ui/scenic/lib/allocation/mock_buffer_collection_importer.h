@@ -16,11 +16,13 @@ class MockBufferCollectionImporter : public BufferCollectionImporter {
  public:
   MOCK_METHOD(bool, ImportBufferCollection,
               (GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>));
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
+               allocation::BufferCollectionUsage, std::optional<fuchsia::math::SizeU>));
 
-  MOCK_METHOD(void, ReleaseBufferCollection, (GlobalBufferCollectionId));
+  MOCK_METHOD(void, ReleaseBufferCollection,
+              (GlobalBufferCollectionId, allocation::BufferCollectionUsage));
 
-  MOCK_METHOD(bool, ImportBufferImage, (const ImageMetadata&));
+  MOCK_METHOD(bool, ImportBufferImage, (const ImageMetadata&, allocation::BufferCollectionUsage));
 
   MOCK_METHOD(void, ReleaseBufferImage, (GlobalImageId));
 };

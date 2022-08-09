@@ -8,10 +8,13 @@
 #include <mutex>
 #include <unordered_map>
 
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace flatland {
+
+using allocation::BufferCollectionUsage;
 
 // A renderer implementation used for validation. It does everything a standard
 // renderer implementation does except for actually rendering.
@@ -20,41 +23,22 @@ class NullRenderer final : public Renderer {
   ~NullRenderer() override = default;
 
   // |BufferCollectionImporter|
-  bool ImportBufferCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+  bool ImportBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                              BufferCollectionUsage usage,
+                              std::optional<fuchsia::math::SizeU> size) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id,
+                               BufferCollectionUsage usage) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const allocation::ImageMetadata& metadata) override;
+  bool ImportBufferImage(const allocation::ImageMetadata& metadata,
+                         BufferCollectionUsage usage) override;
 
   // |BufferCollectionImporter|
   void ReleaseBufferImage(allocation::GlobalImageId image_id) override;
-
-  // |Renderer|.
-  bool RegisterRenderTargetCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      fuchsia::math::SizeU size = {}) override;
-
-  // |Renderer|.
-  void DeregisterRenderTargetCollection(
-      allocation::GlobalBufferCollectionId collection_id) override;
-
-  // |Renderer|.
-  virtual bool RegisterReadbackCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      fuchsia::math::SizeU size = {}) override;
-
-  // |Renderer|.
-  virtual void DeregisterReadbackCollection(
-      allocation::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   void Render(const allocation::ImageMetadata& render_target,
@@ -73,13 +57,6 @@ class NullRenderer final : public Renderer {
       const std::vector<zx_pixel_format_t>& available_formats) const override;
 
  private:
-  bool RegisterCollection(allocation::GlobalBufferCollectionId collection_id,
-                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                          bool readback = false);
-  void DeregisterCollection(allocation::GlobalBufferCollectionId collection_id,
-                            bool readback = false);
-
   // This mutex is used to protect access to |collection_map_| and |image_map|.
   std::mutex lock_;
   std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo> render_target_map_;

@@ -7,6 +7,7 @@
 
 #include <gmock/gmock.h>
 
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace flatland {
@@ -16,27 +17,16 @@ class MockRenderer : public Renderer {
  public:
   MOCK_METHOD(bool, ImportBufferCollection,
               (allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>));
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
+               allocation::BufferCollectionUsage, std::optional<fuchsia::math::SizeU> size));
 
-  MOCK_METHOD(void, ReleaseBufferCollection, (allocation::GlobalBufferCollectionId));
+  MOCK_METHOD(void, ReleaseBufferCollection,
+              (allocation::GlobalBufferCollectionId, allocation::BufferCollectionUsage));
 
-  MOCK_METHOD(bool, ImportBufferImage, (const allocation::ImageMetadata&));
+  MOCK_METHOD(bool, ImportBufferImage,
+              (const allocation::ImageMetadata&, allocation::BufferCollectionUsage));
 
   MOCK_METHOD(void, ReleaseBufferImage, (allocation::GlobalImageId image_id));
-
-  MOCK_METHOD(bool, RegisterRenderTargetCollection,
-              (allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
-               fuchsia::math::SizeU size));
-
-  MOCK_METHOD(void, DeregisterRenderTargetCollection, (allocation::GlobalBufferCollectionId));
-
-  MOCK_METHOD(bool, RegisterReadbackCollection,
-              (allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
-               fuchsia::math::SizeU size));
-
-  MOCK_METHOD(void, DeregisterReadbackCollection, (allocation::GlobalBufferCollectionId));
 
   MOCK_METHOD(void, Render,
               (const allocation::ImageMetadata&, const std::vector<Rectangle2D>&,

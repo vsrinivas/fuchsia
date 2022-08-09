@@ -90,7 +90,8 @@ void ScreenCapture::Configure(ScreenCaptureConfig args, ConfigureCallback callba
   for (uint32_t i = 0; i < buffer_count; i++) {
     metadata.identifier = allocation::GenerateUniqueImageId();
     metadata.vmo_index = i;
-    auto result = screen_capture_buffer_collection_importer_->ImportBufferImage(metadata);
+    auto result = screen_capture_buffer_collection_importer_->ImportBufferImage(
+        metadata, allocation::BufferCollectionUsage::kRenderTarget);
     if (!result) {
       ClearImages();
 

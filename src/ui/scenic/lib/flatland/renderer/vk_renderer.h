@@ -12,11 +12,13 @@
 #include <unordered_map>
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/allocation/id.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace flatland {
 
+using allocation::BufferCollectionUsage;
 using allocation::GlobalBufferCollectionId;
 using allocation::GlobalImageId;
 using allocation::ImageMetadata;
@@ -29,36 +31,21 @@ class VkRenderer final : public Renderer {
   ~VkRenderer() override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferCollection(
-      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
+  bool ImportBufferCollection(GlobalBufferCollectionId collection_id,
+                              fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+                              fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+                              BufferCollectionUsage usage,
+                              std::optional<fuchsia::math::SizeU> size) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(GlobalBufferCollectionId collection_id,
+                               BufferCollectionUsage usage) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const ImageMetadata& metadata) override;
+  bool ImportBufferImage(const ImageMetadata& metadata, BufferCollectionUsage usage) override;
 
   // |BufferCollectionImporter|
   void ReleaseBufferImage(GlobalImageId image_id) override;
-
-  // |Renderer|.
-  bool RegisterRenderTargetCollection(
-      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      fuchsia::math::SizeU size = {}) override;
-
-  // |Renderer|.
-  void DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) override;
-
-  // |Renderer|.
-  bool RegisterReadbackCollection(
-      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      fuchsia::math::SizeU size = {}) override;
-
-  // |Renderer|.
-  void DeregisterReadbackCollection(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
@@ -80,26 +67,11 @@ class VkRenderer final : public Renderer {
 
  private:
   // Wrapper struct to contain the sysmem collection handle, the vulkan
-  // buffer collection and a bool to determine if the collection is meant
-  // to be used for render targets or if it's meant to be used for
-  // client textures.
+  // buffer collection.
   struct CollectionData {
     fuchsia::sysmem::BufferCollectionSyncPtr collection;
     vk::BufferCollectionFUCHSIA vk_collection;
-    bool is_render_target;
   };
-
-  // Generic helper function used by both |ImportBufferCollection| and
-  // |RegisterRenderTargetCollection|.
-  bool RegisterCollection(GlobalBufferCollectionId collection_id,
-                          fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-                          fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                          vk::ImageUsageFlags usage, fuchsia::math::SizeU size = {},
-                          bool readback = false);
-
-  // Generic helper function used by both |ReleaseBufferCollection| and
-  // |DeregisterReadbackCollection|.
-  void DeregisterCollection(GlobalBufferCollectionId collection_id, bool readback = false);
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
   escher::ImagePtr ExtractImage(const ImageMetadata& metadata,
@@ -115,6 +87,9 @@ class VkRenderer final : public Renderer {
                         vk::ImageLayout* source_image_layout, escher::ImagePtr dest_image,
                         const ImageMetadata& metadata);
 
+  std::unordered_map<GlobalBufferCollectionId, CollectionData>* UsageToCollection(
+      BufferCollectionUsage usage);
+
   // Escher is how we access Vulkan.
   escher::EscherWeakPtr escher_;
 
@@ -123,7 +98,8 @@ class VkRenderer final : public Renderer {
 
   // This mutex is used to protect access to |collections_|.
   mutable std::mutex mutex_;
-  std::unordered_map<GlobalBufferCollectionId, CollectionData> collections_;
+  std::unordered_map<GlobalBufferCollectionId, CollectionData> texture_collections_;
+  std::unordered_map<GlobalBufferCollectionId, CollectionData> render_target_collections_;
   std::unordered_map<GlobalBufferCollectionId, CollectionData> readback_collections_;
   std::unordered_map<GlobalImageId, escher::TexturePtr> texture_map_;
   std::unordered_map<GlobalImageId, escher::ImagePtr> render_target_map_;

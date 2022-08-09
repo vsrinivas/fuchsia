@@ -22,6 +22,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/allocation/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_display.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
@@ -153,23 +154,25 @@ struct GlobalIdPair {
 #define PRESENT(flatland, expect_success) \
   { PRESENT_WITH_ARGS(flatland, PresentArgs(), expect_success); }
 
-#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, expect_success)                \
-  if (expect_success) {                                                                           \
-    EXPECT_CALL(*mock_buffer_collection_importer_,                                                \
-                ImportBufferCollection(fsl::GetKoid(export_token.value.get()), _, _))             \
-        .WillOnce(testing::Invoke(                                                                \
-            [](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,            \
-               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>) { return true; })); \
-  }                                                                                               \
-  bool processed_callback = false;                                                                \
-  fuchsia::ui::composition::RegisterBufferCollectionArgs args;                                    \
-  args.set_export_token(std::move(export_token));                                                 \
-  args.set_buffer_collection_token(token);                                                        \
-  allocator->RegisterBufferCollection(                                                            \
-      std::move(args), [&processed_callback](Allocator_RegisterBufferCollection_Result result) {  \
-        EXPECT_EQ(!expect_success, result.is_err());                                              \
-        processed_callback = true;                                                                \
-      });                                                                                         \
+#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, expect_success)               \
+  if (expect_success) {                                                                          \
+    EXPECT_CALL(*mock_buffer_collection_importer_,                                               \
+                ImportBufferCollection(fsl::GetKoid(export_token.value.get()), _, _, _, _))      \
+        .WillOnce(testing::Invoke(                                                               \
+            [](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,           \
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,                    \
+               allocation::BufferCollectionUsage,                                                \
+               std::optional<fuchsia::math::SizeU>) { return true; }));                          \
+  }                                                                                              \
+  bool processed_callback = false;                                                               \
+  fuchsia::ui::composition::RegisterBufferCollectionArgs args;                                   \
+  args.set_export_token(std::move(export_token));                                                \
+  args.set_buffer_collection_token(token);                                                       \
+  allocator->RegisterBufferCollection(                                                           \
+      std::move(args), [&processed_callback](Allocator_RegisterBufferCollection_Result result) { \
+        EXPECT_EQ(!expect_success, result.is_err());                                             \
+        processed_callback = true;                                                               \
+      });                                                                                        \
   EXPECT_TRUE(processed_callback);
 
 // This macro searches for a local matrix associated with a specific TransformHandle.
@@ -260,7 +263,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
         std::shared_ptr<allocation::BufferCollectionImporter>(mock_buffer_collection_importer_);
 
     // Capture uninteresting cleanup calls from Allocator dtor.
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_))
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_, _))
         .Times(::testing::AtLeast(0));
   }
 
@@ -487,8 +490,9 @@ class FlatlandTest : public gtest::TestLoopFixture {
     FX_DCHECK(properties.size().height);
 
     allocation::GlobalImageId global_image_id;
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
-        .WillOnce(testing::Invoke([&global_image_id](const ImageMetadata& metadata) {
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
+        .WillOnce(testing::Invoke([&global_image_id](const ImageMetadata& metadata,
+                                                     allocation::BufferCollectionUsage usage_type) {
           global_image_id = metadata.identifier;
           return true;
         }));
@@ -4434,7 +4438,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     const ContentId kId = {100};
     ImageProperties properties;
     properties.set_size({kDefaultWidth, kDefaultHeight});
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(false));
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(false));
     flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
                           std::move(properties));
     PRESENT(flatland, false);
@@ -4451,7 +4455,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
       // This is the first call in these series of test components that makes it down to
       // the BufferCollectionImporter. We have to make sure it returns true here so that
       // the test doesn't erroneously fail.
-      EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+      EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
+          .WillOnce(Return(true));
 
       flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
                             std::move(properties));
@@ -4464,7 +4469,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
 
       // We shouldn't even make it to the BufferCollectionImporter here due to the duplicate
       // ID causing CreateImage() to return early.
-      EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).Times(0);
+      EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).Times(0);
       flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
                             std::move(properties));
       PRESENT(flatland, false);
@@ -4503,7 +4508,7 @@ TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
   const uint64_t kNumImages = 3;
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _))
       .Times(kNumImages)
       .WillRepeatedly(Return(true));
 
@@ -4526,14 +4531,14 @@ TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
 
   // We can import the same image in both flatland instances.
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(true));
     ImageProperties properties;
     properties.set_size({150, 175});
     flatland1->CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
     PRESENT(flatland1, true);
   }
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(true));
     ImageProperties properties;
     properties.set_size({150, 175});
     flatland2->CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
@@ -4771,8 +4776,8 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionHappensAfterCreateImage) {
   // Send our only import token to CreateImage(). Buffer collection should be released only after
   // Image creation.
   {
-    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_)).Times(1);
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(true));
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_, _)).Times(1);
     flatland->CreateImage(kImageId, std::move(ref_pair.import_token), 0, std::move(properties));
     RunLoopUntilIdle();
   }
@@ -4800,7 +4805,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
 
     // Release the buffer collection.
 
-    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id, _))
         .Times(1);
     import_token_dup.value.reset();
     RunLoopUntilIdle();
@@ -4854,7 +4859,7 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
 
   // Release the buffer collection, but ensure that the ReleaseBufferImage call on the importer
   // has not happened.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id, _))
       .Times(1);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
   import_token_dup.value.reset();
@@ -4942,7 +4947,7 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
       /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
       uber_struct_system_->AllocateQueueForSession(session_id), importers, [](auto...) {},
       [](auto...) {}, [](auto...) {}, [](auto...) {});
-  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _))
+  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _, _, _))
       .WillOnce(Return(true));
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -4953,8 +4958,9 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
 
   // We have the first importer return true, signifying a successful import, and the second one
   // returning false. This should trigger the first importer to call ReleaseBufferImage().
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
-  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferImage(_)).WillOnce(Return(false));
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(true));
+  EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferImage(_, _))
+      .WillOnce(Return(false));
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).WillOnce(Return());
   flatland->CreateImage(/*image_id*/ {1}, std::move(ref_pair.import_token), /*vmo_idx*/ 0,
                         std::move(properties));
@@ -4973,7 +4979,7 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   ImageProperties properties1;
   properties1.set_size({150, 175});
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(true));
 
   // We've imported a proper image and we have the importer returning true, so
   // PRESENT should return true.
@@ -4982,7 +4988,7 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   PRESENT(flatland, true);
 
   // We're using the same buffer collection so we don't need to validate, only import.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(false));
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_, _)).WillOnce(Return(false));
 
   // Import again, but this time have the importer return false. Flatland should catch
   // this and PRESENT should return false.
@@ -5241,7 +5247,7 @@ TEST_F(FlatlandTest, ClearReleasesImagesAndBufferCollections) {
   flatland->Clear();
   import_token_dup.value.reset();
 
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id1))
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id1, _))
       .Times(1);
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(1);
   PRESENT(flatland, true);

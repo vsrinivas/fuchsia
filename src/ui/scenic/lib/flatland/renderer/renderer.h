@@ -29,40 +29,6 @@ using Rectangle2D = escher::Rectangle2D;
 // interface, whose concrete implementation is to be injected into Flatland.
 class Renderer : public allocation::BufferCollectionImporter {
  public:
-  // This function is for registering collections that contain render targets. In order for an image
-  // to be used as a render target in the Render() function below, the buffer collection it
-  // is associated with must have been registered with this function.
-  //
-  // This function is likewise threadsafe, although it is only meant to be called from the render
-  // loop, and not by any flatland instance directly.
-  //
-  // |size| may be optionally set to indicate the intended size usage so that it may be specified
-  // when setting constraints in |token|.
-  virtual bool RegisterRenderTargetCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      fuchsia::math::SizeU size = {}) = 0;
-
-  // Removes a buffer collection used for render targets from the renderer. Once done, the
-  // collection_id can be reused for another buffer collection.
-  virtual void DeregisterRenderTargetCollection(
-      allocation::GlobalBufferCollectionId collection_id) = 0;
-
-  // This function is for registering collections that are for copying from render targets. If the
-  // buffer collection is registered with this function, calling Render() also copies the render
-  // output of the buffer.
-  // |collection_id| must be matching with a registered render target.
-  virtual bool RegisterReadbackCollection(
-      allocation::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-      fuchsia::math::SizeU size = {}) = 0;
-
-  // Removes a buffer collection used for copying from render targets from the renderer. Once done,
-  // the collection_id can be reused for another buffer collection.
-  virtual void DeregisterReadbackCollection(allocation::GlobalBufferCollectionId collection_id) = 0;
-
   // This function is responsible for rendering a single batch of Flatland rectangles into a
   // render target. This function is designed to be called on the render thread, not on any
   // Flatland instance thread. The specific behavior may differ depending on the specific subclass

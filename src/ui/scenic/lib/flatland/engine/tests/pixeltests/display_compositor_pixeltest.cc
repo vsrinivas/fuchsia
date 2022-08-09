@@ -12,6 +12,7 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
@@ -22,6 +23,7 @@
 using ::testing::_;
 using ::testing::Return;
 
+using allocation::BufferCollectionUsage;
 using allocation::ImageMetadata;
 using flatland::LinkSystem;
 using flatland::Renderer;
@@ -246,8 +248,9 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     // Setup the buffer collection that will be used for the flatland rectangle's texture.
     auto texture_tokens = SysmemTokens::Create(sysmem_allocator_.get());
 
-    auto result = display_compositor->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                             std::move(texture_tokens.dup_token));
+    auto result = display_compositor->ImportBufferCollection(
+        collection_id, sysmem_allocator_.get(), std::move(texture_tokens.dup_token),
+        BufferCollectionUsage::kClientImage, std::nullopt);
     EXPECT_TRUE(result);
 
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
@@ -457,7 +460,8 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
                                       .vmo_index = 0,
                                       .width = kTextureWidth,
                                       .height = kTextureHeight};
-  auto result = display_compositor->ImportBufferImage(image_metadata);
+  auto result =
+      display_compositor->ImportBufferImage(image_metadata, BufferCollectionUsage::kClientImage);
   EXPECT_TRUE(result);
 
   // We cannot send to display because it is not supported in allocations.
@@ -844,7 +848,8 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
 
   // We now have to import the textures to the engine and the renderer.
   for (uint32_t i = 0; i < 2; i++) {
-    auto result = display_compositor->ImportBufferImage(image_metadatas[i]);
+    auto result = display_compositor->ImportBufferImage(image_metadatas[i],
+                                                        BufferCollectionUsage::kClientImage);
     EXPECT_TRUE(result);
   }
 
@@ -982,7 +987,8 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
 
   // We now have to import the textures to the engine and the renderer.
   for (uint32_t i = 0; i < 2; i++) {
-    auto result = display_compositor->ImportBufferImage(image_metadatas[i]);
+    auto result = display_compositor->ImportBufferImage(image_metadatas[i],
+                                                        BufferCollectionUsage::kClientImage);
     EXPECT_TRUE(result);
   }
 

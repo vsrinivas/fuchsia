@@ -22,6 +22,7 @@
 using ::testing::_;
 using ::testing::Return;
 
+using allocation::BufferCollectionUsage;
 using allocation::ImageMetadata;
 using flatland::LinkSystem;
 using flatland::Renderer;
@@ -115,8 +116,9 @@ class DisplayCompositorSmokeTest : public DisplayCompositorTestBase {
     // Setup the buffer collection that will be used for the flatland rectangle's texture.
     auto texture_tokens = SysmemTokens::Create(sysmem_allocator_.get());
 
-    auto result = display_compositor->ImportBufferCollection(collection_id, sysmem_allocator_.get(),
-                                                             std::move(texture_tokens.dup_token));
+    auto result = display_compositor->ImportBufferCollection(
+        collection_id, sysmem_allocator_.get(), std::move(texture_tokens.dup_token),
+        BufferCollectionUsage::kClientImage, std::nullopt);
     EXPECT_TRUE(result);
 
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
@@ -178,7 +180,8 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
                                       .width = kTextureWidth,
                                       .height = kTextureHeight,
                                       .blend_mode = fuchsia::ui::composition::BlendMode::SRC};
-  auto result = display_compositor->ImportBufferImage(image_metadata);
+  auto result =
+      display_compositor->ImportBufferImage(image_metadata, BufferCollectionUsage::kClientImage);
   EXPECT_TRUE(result);
 
   // We cannot send to display because it is not supported in allocations.

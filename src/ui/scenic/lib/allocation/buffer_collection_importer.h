@@ -12,6 +12,15 @@
 
 namespace allocation {
 
+// The usage of the buffer collection that is being used in ImportBufferCollection(),
+// ReleaseBufferCollection(), and ImportBufferImage().
+// |kClientImage| is for collections that contain textures.
+// |kRenderTarget| is for collections that contain render targets.
+// |kReadback| is for collections that are for copying from render targets. If the
+// buffer collection is imported with this type, calling Render() also copies the render
+// output of the buffer.
+enum class BufferCollectionUsage { kClientImage, kRenderTarget, kReadback };
+
 // Struct representing the data needed to extract an image from a buffer collection.
 // All pixel information is stored within the Vmo of the collection so this struct
 // only needs information regarding which collection and which vmo to point to, and
@@ -71,26 +80,33 @@ inline std::ostream& operator<<(std::ostream& str, const ImageMetadata& m) {
 
 // This interface is used for importing Flatland buffer collections and images to external services
 // that would like to also have access to the collection and set their own constraints. This
-// interface allows Flatland to remain agnostic as to the implementation details of a
+// interface allows Flatland to remain agnostic as to the implementation details of a buffer
+// collection consumer.
 class BufferCollectionImporter {
  public:
   // Allows the service to set its own constraints on the buffer collection. Must be set before
   // the buffer collection is fully allocated/validated. The return value indicates successful
   // importation via |true| and a failed importation via |false|. Returns false if |collection_id|
   // is already imported. The collection_id can be reused if the importation fails.
+  // |usage| determines the type of buffer collection to be imported.
+  // |size| may be optionally set to indicate the intended size usage so that it may be specified
+  // when setting constraints in |token|.
   virtual bool ImportBufferCollection(
       GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+      BufferCollectionUsage usage, std::optional<fuchsia::math::SizeU> size) = 0;
 
   // Releases the buffer collection from the service. It may be called while there are associated
   // Images alive.
-  virtual void ReleaseBufferCollection(GlobalBufferCollectionId collection_id) = 0;
+  virtual void ReleaseBufferCollection(GlobalBufferCollectionId collection_id,
+                                       BufferCollectionUsage usage_type) = 0;
 
   // Has the service create an image for itself from the provided buffer collection. Returns
   // true upon a successful import and false otherwise.
   //
   // TODO(62240): Give more detailed errors.
-  virtual bool ImportBufferImage(const ImageMetadata& metadata) = 0;
+  virtual bool ImportBufferImage(const ImageMetadata& metadata,
+                                 BufferCollectionUsage usage_type) = 0;
 
   // Releases the provided image from the service.
   virtual void ReleaseBufferImage(GlobalImageId image_id) = 0;
