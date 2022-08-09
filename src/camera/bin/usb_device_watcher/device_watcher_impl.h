@@ -26,9 +26,21 @@
 
 namespace camera {
 
+constexpr auto kCameraPath = "/dev/class/camera";
+
+constexpr std::string_view kUvcDeviceInstanceCollectionName{"usb_camera_devices"};
+constexpr std::string_view kUvcDeviceInstanceNamePrefix{"usb_camera_device_"};
+constexpr std::string_view kUvcDeviceInstanceUrl{
+    "fuchsia-pkg://fuchsia.com/usb_camera_device#meta/usb_camera_device.cm"};
+
 using ClientId = uint64_t;
 using TransientDeviceId = uint64_t;
 using PersistentDeviceId = uint64_t;
+
+enum CameraType {
+  kCameraTypeMipiCsi = 1,
+  kCameraTypeUvc = 2,
+};
 
 struct UniqueDevice {
   TransientDeviceId id;
@@ -42,8 +54,7 @@ class DeviceWatcherImpl {
   static fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create(
       std::unique_ptr<sys::ComponentContext> context, fuchsia::component::RealmHandle realm,
       async_dispatcher_t* dispatcher);
-  fpromise::result<PersistentDeviceId, zx_status_t> AddDevice(
-      fuchsia::hardware::camera::DeviceHandle camera, const std::string& path);
+  void AddDeviceByPath(const std::string& path);
   void UpdateClients();
   fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> GetHandler();
 
@@ -54,6 +65,12 @@ class DeviceWatcherImpl {
 
   void ConnectDynamicChild(fidl::InterfaceRequest<fuchsia::camera3::Device> request,
                            const UniqueDevice& unique_device);
+
+  fpromise::result<PersistentDeviceId, zx_status_t> AddMipiCsiDevice(
+      fuchsia::hardware::camera::DeviceHandle camera, const std::string& path);
+
+  fpromise::result<PersistentDeviceId, zx_status_t> AddUvcDevice(
+      fuchsia::hardware::camera::DeviceHandle camera, const std::string& path);
 
   // Implements the server endpoint for a single client, and maintains per-client state.
   class Client : public fuchsia::camera3::DeviceWatcher {

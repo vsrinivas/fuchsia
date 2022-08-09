@@ -18,10 +18,11 @@ namespace camera {
 
 fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create(
     fuchsia::hardware::camera::DeviceHandle camera, const fuchsia::component::RealmPtr& realm,
-    async_dispatcher_t* dispatcher, const std::string& name) {
+    async_dispatcher_t* dispatcher, const std::string& collection_name,
+    const std::string& child_name, const std::string& url) {
   auto instance = std::make_unique<DeviceInstance>();
   instance->dispatcher_ = dispatcher;
-  instance->name_ = name;
+  instance->name_ = child_name;
 
   // Bind the camera channel.
   zx_status_t status = instance->camera_.Bind(std::move(camera), instance->dispatcher_);
@@ -36,20 +37,20 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
 
   // Launch the child device.
   fuchsia::component::decl::CollectionRef collection;
-  collection.name = kDeviceInstanceCollectionName;
+  collection.name = collection_name;
   fuchsia::component::decl::Child child;
-  child.set_name(name);
-  child.set_url("fuchsia-pkg://fuchsia.com/usb_camera_device#meta/usb_camera_device.cm");
+  child.set_name(child_name);
+  child.set_url(url);
   child.set_startup(fuchsia::component::decl::StartupMode::LAZY);
   fuchsia::component::CreateChildArgs args;
   fuchsia::component::Realm::CreateChildCallback cb =
-      [name](fuchsia::component::Realm_CreateChild_Result result) {
+      [child_name](fuchsia::component::Realm_CreateChild_Result result) {
         if (result.is_err()) {
           FX_LOGS(ERROR) << "Failed to create camera device child. Result: "
                          << static_cast<long>(result.err());
           ZX_ASSERT(false);  // Should never happen.
         }
-        FX_LOGS(INFO) << "Created camera device child: " << name;
+        FX_LOGS(INFO) << "Created camera device child: " << child_name;
       };
   realm->CreateChild(std::move(collection), std::move(child), std::move(args), std::move(cb));
   return fpromise::ok(std::move(instance));

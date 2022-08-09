@@ -22,15 +22,13 @@
 
 namespace camera {
 
-constexpr std::string_view kDeviceInstanceCollectionName{"usb_camera_devices"};
-constexpr std::string_view kDeviceInstanceNamePrefix{"usb_camera_device_"};
-
 // Represents a launched device process.
 class DeviceInstance {
  public:
   static fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> Create(
       fuchsia::hardware::camera::DeviceHandle camera, const fuchsia::component::RealmPtr& realm,
-      async_dispatcher_t* dispatcher, const std::string& name);
+      async_dispatcher_t* dispatcher, const std::string& collection_name,
+      const std::string& child_name, const std::string& url);
 
   const std::string& name() { return name_; }
 
