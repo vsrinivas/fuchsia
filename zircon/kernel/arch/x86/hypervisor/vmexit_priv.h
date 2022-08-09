@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/tlb.h>
 #include <hypervisor/trap_map.h>
 
 // clang-format off
@@ -266,9 +267,7 @@ struct PvClockState;
 struct ExitInfo {
   bool entry_failure;
   ExitReason exit_reason;
-  uint64_t exit_qualification;
   uint32_t exit_instruction_length;
-  uint64_t guest_physical_address;
   uint64_t guest_rip;
 
   explicit ExitInfo(const AutoVmcs& vmcs);
@@ -331,9 +330,14 @@ struct InterruptCommandRegister {
   InterruptCommandRegister(uint32_t hi, uint32_t lo);
 };
 
-zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
-                           LocalApicState& local_apic_state, PvClockState& pv_clock,
-                           hypervisor::GuestPhysicalAddressSpace& gpas, hypervisor::TrapMap& traps,
-                           zx_port_packet_t& packet);
+zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
+                                  LocalApicState& local_apic_state, PvClockState& pv_clock,
+                                  hypervisor::GuestPhysicalAddressSpace& gpas,
+                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet);
+
+zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, uintptr_t& fs_base,
+                                  hypervisor::GuestPhysicalAddressSpace& gpas,
+                                  hypervisor::TrapMap& traps, hypervisor::DefaultTlb& tlb,
+                                  zx_port_packet_t& packet);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMEXIT_PRIV_H_

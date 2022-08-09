@@ -27,20 +27,20 @@ class VcpuDispatcher final : public SoloDispatcher<VcpuDispatcher, ZX_DEFAULT_VC
 
   zx_obj_type_t get_type() const { return ZX_OBJ_TYPE_VCPU; }
 
-  zx_status_t Enter(zx_port_packet_t* packet);
+  zx_status_t Enter(zx_port_packet_t& packet);
   void Kick();
-  void Interrupt(uint32_t vector);
-  zx_status_t ReadState(zx_vcpu_state_t* vcpu_state) const;
+  zx_status_t Interrupt(uint32_t vector);
+  zx_status_t ReadState(zx_vcpu_state_t& vcpu_state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
 
   void GetInfo(zx_info_vcpu_t* info);
 
  private:
-  fbl::RefPtr<GuestDispatcher> guest_;
-  ktl::unique_ptr<Vcpu> vcpu_;
+  VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest_dispatcher, ktl::unique_ptr<Vcpu> vcpu);
 
-  explicit VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, ktl::unique_ptr<Vcpu> vcpu);
+  fbl::RefPtr<GuestDispatcher> guest_dispatcher_;
+  ktl::unique_ptr<Vcpu> vcpu_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_VCPU_DISPATCHER_H_

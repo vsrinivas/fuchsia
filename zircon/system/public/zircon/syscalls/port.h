@@ -46,6 +46,7 @@ typedef uint32_t zx_packet_type_t;
 // zx_packet_guest_vcpu_t::type
 #define ZX_PKT_GUEST_VCPU_INTERRUPT   ((uint32_t)0)
 #define ZX_PKT_GUEST_VCPU_STARTUP     ((uint32_t)1)
+#define ZX_PKT_GUEST_VCPU_EXIT        ((uint32_t)2)
 
 // zx_packet_page_request_t::command
 #define ZX_PAGER_VMO_READ ((uint16_t) 0)
@@ -133,6 +134,10 @@ typedef struct zx_packet_guest_vcpu {
       uint64_t id;
       zx_gpaddr_t entry;
     } startup;
+    struct {
+      int64_t retcode;
+      uint64_t reserved;
+    } exit;
   };
   uint64_t reserved;
 } zx_packet_guest_vcpu_t;

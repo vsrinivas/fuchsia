@@ -19,6 +19,7 @@
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
+#include <hypervisor/tlb.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
@@ -42,13 +43,13 @@ class VmxPage : public hypervisor::Page {
 // Represents a guest within the hypervisor.
 class Guest {
  public:
-  static zx_status_t Create(ktl::unique_ptr<Guest>* out);
-  ~Guest();
-
-  Guest(Guest&&) = delete;
-  Guest& operator=(Guest&&) = delete;
   Guest(const Guest&) = delete;
+  Guest(Guest&&) = delete;
   Guest& operator=(const Guest&) = delete;
+  Guest& operator=(Guest&&) = delete;
+
+  virtual ~Guest();
+  virtual zx::status<> FreeVpid(hypervisor::Id<uint16_t> vpid) = 0;
 
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
@@ -57,20 +58,99 @@ class Guest {
   hypervisor::TrapMap& Traps() { return traps_; }
   zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
-  zx::status<hypervisor::Id<uint16_t>> AllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(hypervisor::Id<uint16_t> id) { return vpid_allocator_.Free(ktl::move(id)); }
-  template <typename F>
-  void MigrateVpid(hypervisor::Id<uint16_t>& id, F invalidate) {
-    vpid_allocator_.Migrate(id, invalidate);
+ protected:
+  template <typename G>
+  static zx::status<ktl::unique_ptr<G>> Create();
+
+  Guest() = default;
+
+  hypervisor::GuestPhysicalAddressSpace gpas_;
+  hypervisor::TrapMap traps_;
+  VmxPage msr_bitmaps_page_;
+};
+
+class NormalGuest : public Guest {
+ public:
+  static zx::status<ktl::unique_ptr<Guest>> Create();
+
+  zx::status<hypervisor::Id<uint16_t>> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::status<> FreeVpid(hypervisor::Id<uint16_t> vpid) override {
+    return vpid_allocator_.Free(std::move(vpid));
   }
 
  private:
-  hypervisor::GuestPhysicalAddressSpace gpas_;
-  hypervisor::TrapMap traps_;
   hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
-  VmxPage msr_bitmaps_page_;
+};
 
-  Guest() = default;
+class DirectGuest : public Guest {
+ public:
+  static zx::status<ktl::unique_ptr<Guest>> Create();
+
+  hypervisor::Id<uint16_t> AllocVpid() { return vpid_allocator_.Alloc(); }
+  zx::status<> FreeVpid(hypervisor::Id<uint16_t> vpid) override {
+    return vpid_allocator_.Free(std::move(vpid));
+  }
+  template <typename F>
+  void MigrateVpid(hypervisor::Id<uint16_t>& id, F invalidate) {
+    vpid_allocator_.Migrate(id, std::move(invalidate));
+  }
+
+  hypervisor::DefaultTlb& Tlb() { return tlb_; }
+
+ private:
+  hypervisor::DefaultTlb tlb_;
+  hypervisor::IdAllocator<uint16_t, UINT16_MAX> vpid_allocator_;
+};
+
+// Represents a virtual CPU within a guest.
+class Vcpu {
+ public:
+  Vcpu(const Vcpu&) = delete;
+  Vcpu(Vcpu&&) = delete;
+  Vcpu& operator=(const Vcpu&) = delete;
+  Vcpu& operator=(Vcpu&&) = delete;
+
+  virtual ~Vcpu();
+
+  zx_status_t Enter(zx_port_packet_t& packet);
+  virtual void Kick() = 0;
+  zx_status_t ReadState(zx_vcpu_state_t& vcpu_state);
+  zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
+
+  void GetInfo(zx_info_vcpu_t* info);
+
+ protected:
+  template <typename V, typename G>
+  static zx::status<ktl::unique_ptr<V>> Create(G& guest, hypervisor::Id<uint16_t>& vpid,
+                                               bool is_base, zx_vaddr_t entry);
+
+  Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+
+  void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
+  void LoadExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+  void SaveExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+
+  virtual zx_status_t PreEnter(AutoVmcs& vmcs) = 0;
+  virtual zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) = 0;
+
+  Guest& guest_;
+  hypervisor::Id<uint16_t> vpid_;
+  // |last_cpu_| contains the CPU dedicated to holding the guest's VMCS state,
+  // or INVALID_CPU if there is no such VCPU. If this Vcpu is actively running,
+  // then |last_cpu_| will point to that CPU.
+  //
+  // The VMCS state of this Vcpu must not be loaded prior to |last_cpu_| being
+  // set, nor must |last_cpu_| be modified prior to the VMCS state being cleared.
+  cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
+  // |thread_| will be set to nullptr when the thread exits.
+  ktl::atomic<Thread*> thread_;
+  ktl::atomic<bool> kicked_ = false;
+  VmxPage host_msr_page_;
+  VmxPage guest_msr_page_;
+  VmxPage vmcs_page_;
+  VmxState vmx_state_;
+  // The guest may enable any state, so the XSAVE area is the maximum size.
+  alignas(64) uint8_t extended_register_state_[X86_MAX_EXTENDED_REGISTER_SIZE];
 };
 
 // Stores the local APIC state for a virtual CPU.
@@ -97,49 +177,38 @@ struct PvClockState {
   hypervisor::GuestPtr guest_ptr;
 };
 
-// Represents a virtual CPU within a guest.
-class Vcpu {
+class NormalVcpu : public Vcpu {
  public:
-  static zx_status_t Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out);
-  ~Vcpu();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
+  static zx::status<ktl::unique_ptr<Vcpu>> Create(NormalGuest& guest, zx_vaddr_t entry);
 
-  zx_status_t Enter(zx_port_packet_t* packet);
-  void Kick();
+  NormalVcpu(NormalGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+  ~NormalVcpu() override;
+
+  void Kick() override;
   void Interrupt(uint32_t vector);
-  zx_status_t ReadState(zx_vcpu_state_t* vcpu_state);
-  zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
 
-  void GetInfo(zx_info_vcpu_t* info);
-
  private:
-  Guest* const guest_;
-  hypervisor::Id<uint16_t> vpid_;
-  // |last_cpu_| contains the CPU dedicated to holding the guest's VMCS state,
-  // or INVALID_CPU if there is no such VCPU. If this Vcpu is actively running,
-  // then |last_cpu_| will point to that CPU.
-  //
-  // The VMCS state of this Vcpu must not be loaded prior to |last_cpu_| being
-  // set, nor must |last_cpu_| be modified prior to the VMCS state being cleared.
-  cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
-  // |thread_| will be set to nullptr when the thread exits.
-  ktl::atomic<Thread*> thread_;
-  ktl::atomic<bool> kicked_ = false;
+  zx_status_t PreEnter(AutoVmcs& vmcs) override;
+  zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) override;
+
   LocalApicState local_apic_state_;
   PvClockState pv_clock_state_;
-  VmxPage host_msr_page_;
-  VmxPage guest_msr_page_;
-  VmxPage vmcs_page_;
-  VmxState vmx_state_;
-  // The guest may enable any state, so the XSAVE area is the maximum size.
-  alignas(64) uint8_t extended_register_state_[X86_MAX_EXTENDED_REGISTER_SIZE];
+};
 
-  Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+class DirectVcpu : public Vcpu {
+ public:
+  static zx::status<ktl::unique_ptr<Vcpu>> Create(DirectGuest& guest, zx_vaddr_t entry);
 
-  void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
-  void LoadExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
-  void SaveExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+  DirectVcpu(DirectGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+
+  void Kick() override;
+
+ private:
+  zx_status_t PreEnter(AutoVmcs& vmcs) override;
+  zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) override;
+
+  uintptr_t fs_base_ = 0;
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_

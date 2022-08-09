@@ -19,10 +19,6 @@
 
 zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_handle* guest_handle,
                              user_out_handle* vmar_handle) {
-  if (options != 0u) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   zx_status_t status =
       validate_ranged_resource(resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_HYPERVISOR_BASE, 1);
   if (status != ZX_OK) {
@@ -32,8 +28,8 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_ha
   KernelHandle<GuestDispatcher> new_guest_handle;
   KernelHandle<VmAddressRegionDispatcher> new_vmar_handle;
   zx_rights_t guest_rights, vmar_rights;
-  status =
-      GuestDispatcher::Create(&new_guest_handle, &guest_rights, &new_vmar_handle, &vmar_rights);
+  status = GuestDispatcher::Create(options, &new_guest_handle, &guest_rights, &new_vmar_handle,
+                                   &vmar_rights);
   if (status != ZX_OK) {
     return status;
   }
@@ -102,7 +98,7 @@ zx_status_t sys_vcpu_enter(zx_handle_t handle, user_out_ptr<zx_port_packet_t> us
   }
 
   zx_port_packet packet{};
-  status = vcpu->Enter(&packet);
+  status = vcpu->Enter(packet);
   if (status != ZX_OK) {
     return status;
   }
@@ -139,8 +135,7 @@ zx_status_t sys_vcpu_interrupt(zx_handle_t handle, uint32_t vector) {
     return status;
   }
 
-  vcpu->Interrupt(vector);
-  return ZX_OK;
+  return vcpu->Interrupt(vector);
 }
 
 zx_status_t sys_vcpu_read_state(zx_handle_t handle, uint32_t kind, user_out_ptr<void> user_buffer,
@@ -158,7 +153,7 @@ zx_status_t sys_vcpu_read_state(zx_handle_t handle, uint32_t kind, user_out_ptr<
   }
 
   zx_vcpu_state_t state{};
-  status = vcpu->ReadState(&state);
+  status = vcpu->ReadState(state);
   if (status != ZX_OK) {
     return status;
   }

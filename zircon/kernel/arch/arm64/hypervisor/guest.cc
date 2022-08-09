@@ -18,14 +18,14 @@ static constexpr zx_gpaddr_t kGicvAddress = 0x800001000;
 static constexpr size_t kGicvSize = 0x2000;
 
 // static
-zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
+zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
   if (arm64_get_boot_el() < 2) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   auto vmid = alloc_vmid();
   if (vmid.is_error()) {
-    return vmid.status_value();
+    return vmid.take_error();
   }
 
   fbl::AllocChecker ac;
@@ -33,12 +33,12 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   if (!ac.check()) {
     auto result = free_vmid(ktl::move(*vmid));
     ZX_ASSERT(result.is_ok());
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(vmid->val());
   if (gpas.is_error()) {
-    return gpas.status_value();
+    return gpas.take_error();
   }
   guest->gpas_ = ktl::move(*gpas);
 
@@ -51,14 +51,13 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   if (status == ZX_OK) {
     if (auto result = guest->gpas_.MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
         result.is_error()) {
-      return result.status_value();
+      return result.take_error();
     }
   } else if (status != ZX_ERR_NOT_FOUND) {
-    return status;
+    return zx::error(status);
   }
 
-  *out = ktl::move(guest);
-  return ZX_OK;
+  return zx::ok(ktl::move(guest));
 }
 
 Guest::Guest(hypervisor::Id<uint16_t>& vmid) : vmid_(ktl::move(vmid)) {}

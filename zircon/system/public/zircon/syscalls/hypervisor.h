@@ -10,6 +10,11 @@
 __BEGIN_CDECLS
 
 // clang-format off
+typedef uint32_t zx_guest_option_t;
+
+#define ZX_GUEST_OPT_NORMAL ((zx_guest_option_t) 0u)
+#define ZX_GUEST_OPT_DIRECT ((zx_guest_option_t) 1u)
+
 typedef uint32_t zx_guest_trap_t;
 
 #define ZX_GUEST_TRAP_BELL ((zx_guest_trap_t) 0u)
@@ -18,10 +23,13 @@ typedef uint32_t zx_guest_trap_t;
 
 typedef uint32_t zx_vcpu_state_topic_t;
 
+// Rename to ZX_VCPU_STATE_GENERAL_REGS
 #define ZX_VCPU_STATE ((zx_vcpu_state_topic_t) 0u)
+// Rename to ZX_VCPU_STATE_IO_REGS
 #define ZX_VCPU_IO    ((zx_vcpu_state_topic_t) 1u)
 // clang-format on
 
+// Rename to zx_vcpu_state_general_regs_t
 // Structure to read and write VCPU state.
 typedef struct zx_vcpu_state {
 #if __aarch64__
@@ -52,6 +60,7 @@ typedef struct zx_vcpu_state {
 #endif
 } zx_vcpu_state_t;
 
+// Rename to zx_vcpu_state_io_regs_t
 // Structure to read and write VCPU state for IO ports.
 typedef struct zx_vcpu_io {
   uint8_t access_size;

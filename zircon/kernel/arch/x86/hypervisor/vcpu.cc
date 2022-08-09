@@ -41,6 +41,44 @@ constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
 constexpr uint16_t kBaseProcessorVpid = 1;
 
+// INVVPID invalidation types.
+//
+// From Volume 3, Section 30.3: There are four INVVPID types currently defined:
+// • Individual-address invalidation: If the INVVPID type is 0, the logical
+//   processor invalidates mappings for the linear address and VPID specified in
+//   the INVVPID descriptor. In some cases, it may invalidate mappings for other
+//   linear addresses (or other VPIDs) as well.
+// * Single-context invalidation: If the INVVPID type is 1, the logical
+//   processor invalidates all mappings tagged with the VPID specified in the
+//   INVVPID descriptor. In some cases, it may invalidate mappings for other
+//   VPIDs as well.
+// * All-contexts invalidation: If the INVVPID type is 2, the logical processor
+//   invalidates all mappings tagged with all VPIDs except VPID 0000H. In some
+//   cases, it may invalidate translations with VPID 0000H as well.
+// * Single-context invalidation, retaining global translations: If the INVVPID
+//   type is 3, the logical processor invalidates all mappings tagged with the
+//   VPID specified in the INVVPID descriptor except global translations. In
+//   some cases, it may invalidate global translations (and mappings with other
+//   VPIDs) as well.
+enum class InvVpid : uint64_t {
+  INDIVIDUAL_ADDRESS = 0,
+  SINGLE_CONTEXT = 1,
+  ALL_CONTEXTS = 2,
+  SINGLE_CONTEXT_RETAIN_GLOBALS = 3,
+};
+
+void invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
+  uint8_t err;
+  uint64_t descriptor[] = {vpid, address};
+
+  __asm__ __volatile__("invvpid %[descriptor], %[invalidation]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
+                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
+                       : "cc");
+
+  ASSERT(!err);
+}
+
 void vmptrld(paddr_t pa) {
   uint8_t err;
 
@@ -83,44 +121,6 @@ void vmwrite(uint64_t field, uint64_t val) {
                        : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [val] "r"(val), [field] "r"(field)
                        : "cc");
-  ASSERT(!err);
-}
-
-// INVVPID invalidation types.
-//
-// From Volume 3, Section 30.3: There are four INVVPID types currently defined:
-// • Individual-address invalidation: If the INVVPID type is 0, the logical
-//   processor invalidates mappings for the linear address and VPID specified in
-//   the INVVPID descriptor. In some cases, it may invalidate mappings for other
-//   linear addresses (or other VPIDs) as well.
-// * Single-context invalidation: If the INVVPID type is 1, the logical
-//   processor invalidates all mappings tagged with the VPID specified in the
-//   INVVPID descriptor. In some cases, it may invalidate mappings for other
-//   VPIDs as well.
-// * All-contexts invalidation: If the INVVPID type is 2, the logical processor
-//   invalidates all mappings tagged with all VPIDs except VPID 0000H. In some
-//   cases, it may invalidate translations with VPID 0000H as well.
-// * Single-context invalidation, retaining global translations: If the INVVPID
-//   type is 3, the logical processor invalidates all mappings tagged with the
-//   VPID specified in the INVVPID descriptor except global translations. In
-//   some cases, it may invalidate global translations (and mappings with other
-//   VPIDs) as well.
-enum class InvVpid : uint64_t {
-  INDIVIDUAL_ADDRESS = 0,
-  SINGLE_CONTEXT = 1,
-  ALL_CONTEXTS = 2,
-  SINGLE_CONTEXT_RETAIN_GLOBALS = 3,
-};
-
-void invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
-  uint8_t err;
-  uint64_t descriptor[] = {vpid, address};
-
-  __asm__ __volatile__("invvpid %[descriptor], %[invalidation]"
-                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
-                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
-                       : "cc");
-
   ASSERT(!err);
 }
 
@@ -178,27 +178,27 @@ void swap_extended_registers(uint8_t* save_extended_registers, uint64_t& save_xc
 }
 
 template <typename Out, typename In>
-void register_copy(Out* out, const In& in) {
-  out->rax = in.rax;
-  out->rcx = in.rcx;
-  out->rdx = in.rdx;
-  out->rbx = in.rbx;
-  out->rbp = in.rbp;
-  out->rsi = in.rsi;
-  out->rdi = in.rdi;
-  out->r8 = in.r8;
-  out->r9 = in.r9;
-  out->r10 = in.r10;
-  out->r11 = in.r11;
-  out->r12 = in.r12;
-  out->r13 = in.r13;
-  out->r14 = in.r14;
-  out->r15 = in.r15;
+void register_copy(Out& out, const In& in) {
+  out.rax = in.rax;
+  out.rcx = in.rcx;
+  out.rdx = in.rdx;
+  out.rbx = in.rbx;
+  out.rbp = in.rbp;
+  out.rsi = in.rsi;
+  out.rdi = in.rdi;
+  out.r8 = in.r8;
+  out.r9 = in.r9;
+  out.r10 = in.r10;
+  out.r11 = in.r11;
+  out.r12 = in.r12;
+  out.r13 = in.r13;
+  out.r14 = in.r14;
+  out.r15 = in.r15;
 }
 
-zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uintptr_t entry,
-                      paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
-                      VmxPage* host_msr_page, VmxPage* guest_msr_page,
+zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool is_base,
+                      uintptr_t entry, paddr_t msr_bitmaps_address, paddr_t pml4_address,
+                      VmxState* vmx_state, VmxPage* host_msr_page, VmxPage* guest_msr_page,
                       uint8_t* extended_register_state) {
   vmclear(vmcs_address);
   AutoVmcs vmcs(vmcs_address);
@@ -295,7 +295,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   // Setup VM-entry VMCS controls.
   // Load the guest IA32_PAT MSR and IA32_EFER MSR on entry.
   uint32_t entry_ctls = kEntryCtlsLoadIa32Pat | kEntryCtlsLoadIa32Efer;
-  if (vpid.val() == kBaseProcessorVpid) {
+  if (is_base) {
     // On the BSP, go straight to 64-bit mode on entry.
     entry_ctls |= kEntryCtls64bitMode;
   }
@@ -303,32 +303,6 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
                            read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), entry_ctls, 0);
   if (status != ZX_OK) {
     return status;
-  }
-
-  // Enable use of PAUSE-loop exiting if available.
-  status =
-      vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
-                      vmcs.Read(VmcsField32::PROCBASED_CTLS2), kProcbasedCtls2PauseLoopExiting, 0);
-  if (status == ZX_OK) {
-    // From Volume 3, Section 25.1.3: The processor determines the amount of
-    // time between this execution of PAUSE and the previous execution of PAUSE
-    // at CPL 0. If this amount of time exceeds the value of the VM-execution
-    // control field PLE_Gap, the processor considers this execution to be the
-    // first execution of PAUSE in a loop. (It also does so for the first
-    // execution of PAUSE at CPL 0 after VM entry.)
-    //
-    // Otherwise, the processor determines the amount of time since the most
-    // recent execution of PAUSE that was considered to be the first in a loop.
-    // If this amount of time exceeds the value of the VM-execution control
-    // field PLE_Window, a VM exit occurs.
-    //
-    // For purposes of these computations, time is measured based on a counter
-    // that runs at the same rate as the timestamp counter (TSC).
-    //
-    // NOTE: These values are based on KVM, which was based on empirical
-    // analysis.
-    vmcs.Write(VmcsField32::PLE_GAP, 1u << 7);
-    vmcs.Write(VmcsField32::PLE_WINDOW, 1u << 12);
   }
 
   // From Volume 3, Section 24.6.3: The exception bitmap is a 32-bit field
@@ -439,7 +413,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   uint64_t cr0 = X86_CR0_PE |  // Enable protected mode
                  X86_CR0_PG |  // Enable paging
                  X86_CR0_NE;   // Enable internal x87 exception handling
-  if (vpid.val() != kBaseProcessorVpid) {
+  if (!is_base) {
     // Disable protected mode and paging on secondary VCPUs.
     cr0 &= ~(X86_CR0_PE | X86_CR0_PG);
   }
@@ -470,7 +444,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
 
   // Enable FXSAVE, XSAVE, and VMX.
   uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_OSXSAVE | X86_CR4_VMXE;
-  if (vpid.val() == kBaseProcessorVpid) {
+  if (is_base) {
     // Enable the PAE bit on the BSP for 64-bit paging.
     cr4 |= X86_CR4_PAE;
   }
@@ -480,14 +454,13 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   vmcs.Write(VmcsFieldXX::GUEST_CR4, cr4);
 
   // For now, the guest can own all of the CR4 bits except VMXE, which it shouldn't touch.
-  // TODO(andymutton): Implement proper CR4 handling.
   vmcs.Write(VmcsFieldXX::CR4_GUEST_HOST_MASK, X86_CR4_VMXE);
   vmcs.Write(VmcsFieldXX::CR4_READ_SHADOW, 0);
 
   vmcs.Write(VmcsField64::GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
 
   uint64_t guest_efer = read_msr(X86_MSR_IA32_EFER);
-  if (vpid.val() != kBaseProcessorVpid) {
+  if (!is_base) {
     // Disable LME and LMA on all but the BSP.
     guest_efer &= ~(X86_EFER_LME | X86_EFER_LMA);
   }
@@ -495,7 +468,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
 
   uint32_t cs_access_rights =
       kGuestXxAccessRightsDefault | kGuestXxAccessRightsTypeE | kGuestXxAccessRightsTypeCode;
-  if (vpid.val() == kBaseProcessorVpid) {
+  if (is_base) {
     // Ensure that the BSP starts with a 64-bit code segment.
     cs_access_rights |= kGuestXxAccessRightsL;
   }
@@ -513,7 +486,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS,
              kGuestXxAccessRightsTypeW | kGuestXxAccessRightsP);
 
-  if (vpid.val() == kBaseProcessorVpid) {
+  if (is_base) {
     // Use GUEST_RIP to set the entry point on the BSP.
     vmcs.Write(VmcsFieldXX::GUEST_CS_BASE, 0);
     vmcs.Write(VmcsField16::GUEST_CS_SELECTOR, 0);
@@ -639,6 +612,17 @@ zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
   local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_VIRT + 1);
 
   return ZX_OK;
+}
+
+void interrupt_cpus(Thread* thread, cpu_num_t last_cpu) TA_REQ(ThreadLock::Get()) {
+  // Check if the VCPU is running and whether to send an IPI. We hold the thread
+  // lock to guard against thread migration between CPUs during the check.
+  //
+  // NOTE: `last_cpu` may be currently set to `INVALID_CPU` due to thread
+  // migration between CPUs.
+  if (thread != nullptr && thread->state() == THREAD_RUNNING && last_cpu != INVALID_CPU) {
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu));
+  }
 }
 
 }  // namespace
@@ -788,62 +772,50 @@ bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value) {
 }
 
 // static
-zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
-  hypervisor::GuestPhysicalAddressSpace& gpas = guest->AddressSpace();
+template <typename V, typename G>
+zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, hypervisor::Id<uint16_t>& vpid, bool is_base,
+                                            zx_vaddr_t entry) {
+  hypervisor::GuestPhysicalAddressSpace& gpas = guest.AddressSpace();
   if (entry >= gpas.size()) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
-
-  auto vpid = guest->AllocVpid();
-  if (vpid.is_error()) {
-    return vpid.status_value();
-  }
-  auto free_vpid = fit::defer([guest, &vpid]() {
-    auto result = guest->FreeVpid(ktl::move(*vpid));
-    DEBUG_ASSERT(result.is_ok());
-  });
 
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, *vpid, thread));
+  ktl::unique_ptr<V> vcpu(new (&ac) V(guest, vpid, thread));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
-  free_vpid.cancel();
-
-  vcpu->pv_clock_state_.is_stable = x86_hypervisor_has_pv_clock()
-                                        ? pv_clock_is_stable()
-                                        : x86_feature_test(X86_FEATURE_INVAR_TSC);
 
   VmxInfo vmx_info;
   zx_status_t status = vcpu->host_msr_page_.Alloc(vmx_info, 0);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   status = vcpu->guest_msr_page_.Alloc(vmx_info, 0);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   status = vcpu->vmcs_page_.Alloc(vmx_info, 0);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
+  VmxRegion* region = vcpu->vmcs_page_.template VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
 
   zx_paddr_t pml4_address = gpas.arch_table_phys();
-  status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), *vpid, entry, guest->MsrBitmapsAddress(),
-                     pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_,
-                     vcpu->extended_register_state_);
+  status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, is_base, entry,
+                     guest.MsrBitmapsAddress(), pml4_address, &vcpu->vmx_state_,
+                     &vcpu->host_msr_page_, &vcpu->guest_msr_page_, vcpu->extended_register_state_);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // Only set the thread migrate function after we have initialised the VMCS.
@@ -854,11 +826,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   thread->SetMigrateFn([vcpu = vcpu.get()](Thread* thread, auto stage)
                            TA_NO_THREAD_SAFETY_ANALYSIS { vcpu->MigrateCpu(thread, stage); });
 
-  *out = ktl::move(vcpu);
-  return ZX_OK;
+  return zx::ok(ktl::move(vcpu));
 }
 
-Vcpu::Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+Vcpu::Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
     : guest_(guest),
       vpid_(ktl::move(vpid)),
       last_cpu_(thread->LastCpu()),
@@ -868,8 +839,6 @@ Vcpu::Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
 }
 
 Vcpu::~Vcpu() {
-  local_apic_state_.timer.Cancel();
-
   cpu_num_t cpu;
   {
     // Taking the ThreadLock guarantees that thread_ isn't going to be freed
@@ -897,7 +866,7 @@ Vcpu::~Vcpu() {
         reinterpret_cast<void*>(paddr));
   }
 
-  auto result = guest_->FreeVpid(ktl::move(vpid_));
+  auto result = guest_.FreeVpid(ktl::move(vpid_));
   DEBUG_ASSERT(result.is_ok());
 }
 
@@ -960,7 +929,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
               reinterpret_cast<uint64_t>(&percpu->default_tss));
 
       // Invalidate TLB mappings for the EPT.
-      zx_paddr_t pml4_address = guest_->AddressSpace().arch_table_phys();
+      zx_paddr_t pml4_address = guest_.AddressSpace().arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer_from_pml4(pml4_address));
       break;
     }
@@ -1004,7 +973,7 @@ zx_status_t vmx_enter(VmxState* vmx_state) {
   return status;
 }
 
-zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
+zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
   Thread* current_thread = Thread::Current::Get();
   if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
@@ -1036,7 +1005,6 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return status;
     }
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-    guest_->MigrateVpid(vpid_, [](uint16_t vpid) { invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0); });
 
     // We check whether a kick was requested before entering the guest so that:
     // 1. When we enter the syscall, we can return immediately without entering
@@ -1054,13 +1022,10 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return ZX_ERR_CANCELED;
     }
 
-    status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
+    status = PreEnter(vmcs);
     if (status != ZX_OK) {
       return status;
     }
-
-    // Updates guest system time if the guest subscribed to updates.
-    pv_clock_update_system_time(&pv_clock_state_, &guest_->AddressSpace());
 
     if (!extended_registers_loaded) {
       LoadExtendedRegisters(current_thread, vmcs);
@@ -1068,12 +1033,12 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     }
 
     if (x86_cpu_should_l1d_flush_on_vmentry()) {
-      // L1TF: Flush L1D$ before entering vCPU. If the CPU is affected by MDS, also flush
-      // microarchitectural buffers.
+      // L1TF: Flush L1D$ before entering vCPU. If the CPU is affected by MDS,
+      // also flush microarchitectural buffers.
       write_msr(X86_MSR_IA32_FLUSH_CMD, 1);
     } else if (x86_cpu_should_md_clear_on_user_return()) {
-      // MDS: If the processor is not affected by L1TF but is affected by MDS or TAA,
-      // flush microarchitectural buffers.
+      // MDS: If the processor is not affected by L1TF but is affected by MDS or
+      // TAA, flush microarchitectural buffers.
       mds_buff_overwrite();
     }
 
@@ -1091,54 +1056,23 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     if (status != ZX_OK) {
       ktrace_vcpu_exit(VCPU_FAILURE, vmcs.Read(VmcsFieldXX::GUEST_RIP));
       uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
-      dprintf(INFO, "VCPU enter failed: %#lx\n", error);
+      dprintf(INFO, "VCPU enter failed: Instruction error %lu\n", error);
     } else {
       vmx_state_.resume = true;
-      status = vmexit_handler(vmcs, vmx_state_.guest_state, local_apic_state_, pv_clock_state_,
-                              guest_->AddressSpace(), guest_->Traps(), *packet);
+      status = PostExit(vmcs, packet);
     }
   } while (status == ZX_OK);
   return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
-void Vcpu::Kick() {
-  kicked_.store(true);
-  // Cancel any pending or upcoming wait-for-interrupts.
-  local_apic_state_.interrupt_tracker.Cancel();
-  // Check if the VCPU is running and whether to send an IPI. We hold the thread
-  // lock to guard against thread migration between CPUs during the check.
-  //
-  // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
-  // migration between CPUs.
-  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  auto t = thread_.load();
-  if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
-    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
-  }
-}
-
-void Vcpu::Interrupt(uint32_t vector) {
-  local_apic_state_.interrupt_tracker.Interrupt(vector);
-  // Check if the VCPU is running and whether to send an IPI. We hold the thread
-  // lock to guard against thread migration between CPUs during the check.
-  //
-  // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
-  // migration between CPUs.
-  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  auto t = thread_.load();
-  if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
-    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
-  }
-}
-
-zx_status_t Vcpu::ReadState(zx_vcpu_state_t* vcpu_state) {
+zx_status_t Vcpu::ReadState(zx_vcpu_state_t& vcpu_state) {
   if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
   register_copy(vcpu_state, vmx_state_.guest_state);
   AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-  vcpu_state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
-  vcpu_state->rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
+  vcpu_state.rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
+  vcpu_state.rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
   return ZX_OK;
 }
 
@@ -1146,7 +1080,7 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
   if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
-  register_copy(&vmx_state_.guest_state, vcpu_state);
+  register_copy(vmx_state_.guest_state, vcpu_state);
   AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
   vmcs.Write(VmcsFieldXX::GUEST_RSP, vcpu_state.rsp);
   if (vcpu_state.rflags & X86_FLAGS_RESERVED_ONES) {
@@ -1157,7 +1091,94 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& vcpu_state) {
   return ZX_OK;
 }
 
-zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
+void Vcpu::GetInfo(zx_info_vcpu_t* info) {
+  if (kicked_.load()) {
+    info->flags |= ZX_INFO_VCPU_FLAG_KICKED;
+  }
+}
+
+// static
+zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vaddr_t entry) {
+  auto vpid = guest.TryAllocVpid();
+  if (vpid.is_error()) {
+    return vpid.take_error();
+  }
+  auto vcpu = Vcpu::Create<NormalVcpu>(guest, *vpid, vpid->val() == kBaseProcessorVpid, entry);
+  if (vcpu.is_error()) {
+    auto result = guest.FreeVpid(ktl::move(*vpid));
+    ASSERT(result.is_ok());
+    return vcpu.take_error();
+  }
+  // Setup PV clock state.
+  vcpu->pv_clock_state_.is_stable = x86_hypervisor_has_pv_clock()
+                                        ? pv_clock_is_stable()
+                                        : x86_feature_test(X86_FEATURE_INVAR_TSC);
+  // Enable use of PAUSE-loop exiting if available.
+  AutoVmcs vmcs(vcpu->vmcs_page_.PhysicalAddress());
+  zx_status_t status =
+      vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
+                      vmcs.Read(VmcsField32::PROCBASED_CTLS2), kProcbasedCtls2PauseLoopExiting, 0);
+  if (status == ZX_OK) {
+    // From Volume 3, Section 25.1.3: The processor determines the amount of
+    // time between this execution of PAUSE and the previous execution of PAUSE
+    // at CPL 0. If this amount of time exceeds the value of the VM-execution
+    // control field PLE_Gap, the processor considers this execution to be the
+    // first execution of PAUSE in a loop. (It also does so for the first
+    // execution of PAUSE at CPL 0 after VM entry.)
+    //
+    // Otherwise, the processor determines the amount of time since the most
+    // recent execution of PAUSE that was considered to be the first in a loop.
+    // If this amount of time exceeds the value of the VM-execution control
+    // field PLE_Window, a VM exit occurs.
+    //
+    // For purposes of these computations, time is measured based on a counter
+    // that runs at the same rate as the timestamp counter (TSC).
+    //
+    // NOTE: These values are based on KVM, which was based on empirical
+    // analysis.
+    vmcs.Write(VmcsField32::PLE_GAP, 1u << 7);
+    vmcs.Write(VmcsField32::PLE_WINDOW, 1u << 12);
+  }
+  return zx::ok(ktl::move(*vcpu));
+}
+
+NormalVcpu::NormalVcpu(NormalGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+    : Vcpu(guest, vpid, thread) {}
+
+NormalVcpu::~NormalVcpu() { local_apic_state_.timer.Cancel(); }
+
+zx_status_t NormalVcpu::PreEnter(AutoVmcs& vmcs) {
+  zx_status_t status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Updates guest system time if the guest subscribed to updates.
+  pv_clock_update_system_time(&pv_clock_state_, &guest_.AddressSpace());
+  return ZX_OK;
+}
+
+zx_status_t NormalVcpu::PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) {
+  return vmexit_handler_normal(vmcs, vmx_state_.guest_state, local_apic_state_, pv_clock_state_,
+                               guest_.AddressSpace(), guest_.Traps(), packet);
+}
+
+void NormalVcpu::Kick() {
+  kicked_.store(true);
+  // Cancel any pending or upcoming wait-for-interrupts.
+  local_apic_state_.interrupt_tracker.Cancel();
+
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  interrupt_cpus(thread_.load(), last_cpu_);
+}
+
+void NormalVcpu::Interrupt(uint32_t vector) {
+  local_apic_state_.interrupt_tracker.Interrupt(vector);
+
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  interrupt_cpus(thread_.load(), last_cpu_);
+}
+
+zx_status_t NormalVcpu::WriteState(const zx_vcpu_io_t& io_state) {
   if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
@@ -1169,8 +1190,39 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
   return ZX_OK;
 }
 
-void Vcpu::GetInfo(zx_info_vcpu_t* info) {
-  if (kicked_.load()) {
-    info->flags |= ZX_INFO_VCPU_FLAG_KICKED;
+// static
+zx::status<ktl::unique_ptr<Vcpu>> DirectVcpu::Create(DirectGuest& guest, zx_vaddr_t entry) {
+  auto vpid = guest.AllocVpid();
+  auto vcpu = Vcpu::Create<DirectVcpu>(guest, vpid, /*is_base*/ true, entry);
+  if (vcpu.is_error()) {
+    auto result = guest.FreeVpid(ktl::move(vpid));
+    ASSERT(result.is_ok());
+    return vcpu.take_error();
   }
+  return zx::ok(ktl::move(*vcpu));
+}
+
+DirectVcpu::DirectVcpu(DirectGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+    : Vcpu(guest, vpid, thread) {}
+
+zx_status_t DirectVcpu::PreEnter(AutoVmcs& vmcs) {
+  static_cast<DirectGuest&>(guest_).MigrateVpid(
+      vpid_, [](uint16_t vpid) { invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0); });
+  if (fs_base_ != 0) {
+    vmcs.Write(VmcsFieldXX::GUEST_FS_BASE, fs_base_);
+    fs_base_ = 0;
+  }
+  return ZX_OK;
+}
+
+zx_status_t DirectVcpu::PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) {
+  auto& guest = static_cast<DirectGuest&>(guest_);
+  return vmexit_handler_direct(vmcs, vmx_state_.guest_state, fs_base_, guest.AddressSpace(),
+                               guest.Traps(), guest.Tlb(), packet);
+}
+
+void DirectVcpu::Kick() {
+  kicked_.store(true);
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  interrupt_cpus(thread_.load(), last_cpu_);
 }

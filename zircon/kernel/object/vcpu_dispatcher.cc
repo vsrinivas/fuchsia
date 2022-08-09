@@ -13,24 +13,43 @@
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <ktl/type_traits.h>
 #include <object/guest_dispatcher.h>
 #include <vm/vm_object.h>
 
 KCOUNTER(dispatcher_vcpu_create_count, "dispatcher.vcpu.create")
 KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy")
 
+namespace {
+
+zx::status<ktl::unique_ptr<Vcpu>> CreateVcpu(Guest& guest, uint32_t guest_options,
+                                             zx_vaddr_t entry) {
+  switch (guest_options) {
+    case ZX_GUEST_OPT_NORMAL:
+      return NormalVcpu::Create(static_cast<NormalGuest&>(guest), entry);
+    case ZX_GUEST_OPT_DIRECT:
+#if ARCH_X86
+      return DirectVcpu::Create(static_cast<DirectGuest&>(guest), entry);
+#else
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+#endif  // ARCH_X86
+    default:
+      return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+}
+
+}  // namespace
+
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
                                    KernelHandle<VcpuDispatcher>* handle, zx_rights_t* rights) {
-  Guest* guest = guest_dispatcher->guest();
-
-  ktl::unique_ptr<Vcpu> vcpu;
-  zx_status_t status = Vcpu::Create(guest, entry, &vcpu);
-  if (status != ZX_OK)
-    return status;
+  auto vcpu = CreateVcpu(guest_dispatcher->guest(), guest_dispatcher->options(), entry);
+  if (vcpu.is_error()) {
+    return vcpu.status_value();
+  }
 
   fbl::AllocChecker ac;
   KernelHandle new_handle(
-      fbl::AdoptRef(new (&ac) VcpuDispatcher(guest_dispatcher, ktl::move(vcpu))));
+      fbl::AdoptRef(new (&ac) VcpuDispatcher(guest_dispatcher, ktl::move(*vcpu))));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
@@ -39,14 +58,15 @@ zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher
   return ZX_OK;
 }
 
-VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, ktl::unique_ptr<Vcpu> vcpu)
-    : guest_(guest), vcpu_(ktl::move(vcpu)) {
+VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest_dispatcher,
+                               ktl::unique_ptr<Vcpu> vcpu)
+    : guest_dispatcher_(guest_dispatcher), vcpu_(ktl::move(vcpu)) {
   kcounter_add(dispatcher_vcpu_create_count, 1);
 }
 
 VcpuDispatcher::~VcpuDispatcher() { kcounter_add(dispatcher_vcpu_destroy_count, 1); }
 
-zx_status_t VcpuDispatcher::Enter(zx_port_packet_t* packet) {
+zx_status_t VcpuDispatcher::Enter(zx_port_packet_t& packet) {
   canary_.Assert();
   return vcpu_->Enter(packet);
 }
@@ -56,12 +76,16 @@ void VcpuDispatcher::Kick() {
   vcpu_->Kick();
 }
 
-void VcpuDispatcher::Interrupt(uint32_t vector) {
+zx_status_t VcpuDispatcher::Interrupt(uint32_t vector) {
   canary_.Assert();
-  vcpu_->Interrupt(vector);
+  if (guest_dispatcher_->options() == ZX_GUEST_OPT_NORMAL) {
+    static_cast<NormalVcpu*>(vcpu_.get())->Interrupt(vector);
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VcpuDispatcher::ReadState(zx_vcpu_state_t* vcpu_state) const {
+zx_status_t VcpuDispatcher::ReadState(zx_vcpu_state_t& vcpu_state) const {
   canary_.Assert();
   return vcpu_->ReadState(vcpu_state);
 }
@@ -73,7 +97,10 @@ zx_status_t VcpuDispatcher::WriteState(const zx_vcpu_state_t& vcpu_state) {
 
 zx_status_t VcpuDispatcher::WriteState(const zx_vcpu_io_t& io_state) {
   canary_.Assert();
-  return vcpu_->WriteState(io_state);
+  if (guest_dispatcher_->options() == ZX_GUEST_OPT_NORMAL) {
+    return static_cast<NormalVcpu*>(vcpu_.get())->WriteState(io_state);
+  }
+  return ZX_ERR_INVALID_ARGS;
 }
 
 void VcpuDispatcher::GetInfo(zx_info_vcpu_t* info) {

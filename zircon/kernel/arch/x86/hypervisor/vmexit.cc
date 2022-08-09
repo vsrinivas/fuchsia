@@ -20,10 +20,8 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pv.h>
-#include <fbl/canary.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/ktrace.h>
-#include <kernel/auto_lock.h>
 #include <kernel/percpu.h>
 #include <kernel/stats.h>
 #include <ktl/algorithm.h>
@@ -32,8 +30,10 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
+#include "guest_copy_priv.h"
 #include "pv_priv.h"
 #include "vcpu_priv.h"
+#include "vmcall_priv.h"
 #include "vmexit_priv.h"
 
 #include <ktl/enforce.h>
@@ -69,8 +69,8 @@ constexpr uint64_t kKvmFeatureNoIoDelay = 1u << 1;
 void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) {
   dprintf(INFO, " RAX: %#18lx  RCX: %#18lx  RDX: %#18lx  RBX: %#18lx\n", guest_state.rax,
           guest_state.rcx, guest_state.rdx, guest_state.rbx);
-  dprintf(INFO, " RBP: %#18lx  RSI: %#18lx  RDI: %#18lx\n", guest_state.rbp, guest_state.rsi,
-          guest_state.rdi);
+  dprintf(INFO, " RSP:  xxxxxxxx xxxxxxxx  RBP: %#18lx  RSI: %#18lx  RDI: %#18lx\n",
+          guest_state.rbp, guest_state.rsi, guest_state.rdi);
   dprintf(INFO, "  R8: %#18lx   R9: %#18lx  R10: %#18lx  R11: %#18lx\n", guest_state.r8,
           guest_state.r9, guest_state.r10, guest_state.r11);
   dprintf(INFO, " R12: %#18lx  R13: %#18lx  R14: %#18lx  R15: %#18lx\n", guest_state.r12,
@@ -79,9 +79,7 @@ void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) 
           guest_state.xcr0);
 
   dprintf(INFO, "entry failure: %d\n", exit_info.entry_failure);
-  dprintf(INFO, "exit qualification: %#lx\n", exit_info.exit_qualification);
   dprintf(INFO, "exit instruction length: %#x\n", exit_info.exit_instruction_length);
-  dprintf(INFO, "guest physical address: %#lx\n", exit_info.guest_physical_address);
 }
 
 void next_rip(const ExitInfo& exit_info, AutoVmcs& vmcs) {
@@ -409,7 +407,7 @@ zx_status_t register_value(AutoVmcs& vmcs, const GuestState& guest_state, uint8_
 zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs& vmcs,
                                            const GuestState& guest_state,
                                            LocalApicState& local_apic_state) {
-  CrAccessInfo cr_access_info(exit_info.exit_qualification);
+  CrAccessInfo cr_access_info(vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION));
   switch (cr_access_info.access_type) {
     case CrAccessType::MOV_TO_CR: {
       // Handle CR0 only.
@@ -436,7 +434,7 @@ zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs& 
 zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs& vmcs,
                                   GuestState& guest_state, hypervisor::TrapMap& traps,
                                   zx_port_packet_t& packet) {
-  IoInfo io_info(exit_info.exit_qualification);
+  IoInfo io_info(vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION));
   if (io_info.string || io_info.repeat) {
     dprintf(INFO, "hypervisor: Unsupported guest IO instruction\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -919,8 +917,8 @@ zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs& vmcs, bool read,
 zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs& vmcs,
                                  hypervisor::GuestPhysicalAddressSpace& gpas,
                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet) {
-  EptViolationInfo ept_violation_info(exit_info.exit_qualification);
-  zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
+  EptViolationInfo ept_violation_info(vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION));
+  zx_gpaddr_t guest_paddr = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
   zx_status_t status =
       handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, traps, packet);
   switch (status) {
@@ -969,8 +967,9 @@ zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState&
       // x87 state must be enabled.
       (xcr0 & X86_XSAVE_STATE_BIT_X87) != X86_XSAVE_STATE_BIT_X87 ||
       // If AVX state is enabled, SSE state must be enabled.
-      (xcr0 & (X86_XSAVE_STATE_BIT_AVX | X86_XSAVE_STATE_BIT_SSE)) == X86_XSAVE_STATE_BIT_AVX)
+      (xcr0 & (X86_XSAVE_STATE_BIT_AVX | X86_XSAVE_STATE_BIT_SSE)) == X86_XSAVE_STATE_BIT_AVX) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   guest_state.xcr0 = xcr0;
   next_rip(exit_info, vmcs);
@@ -982,17 +981,20 @@ zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs& vmcs) {
   return ZX_OK;
 }
 
-zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs& vmcs,
-                          hypervisor::GuestPhysicalAddressSpace& gpas, GuestState& guest_state) {
-  next_rip(exit_info, vmcs);
-
+bool is_cpl0(AutoVmcs& vmcs, GuestState& guest_state) {
   const uint32_t access_rights = vmcs.Read(VmcsField32::GUEST_SS_ACCESS_RIGHTS);
-  if ((access_rights & kGuestXxAccessRightsDplUser) != 0) {
-    // We only accept a VMCALL if CPL is 0.
+  // We only accept a VMCALL if CPL is 0.
+  return (access_rights & kGuestXxAccessRightsDplUser) == 0;
+}
+
+zx_status_t handle_vmcall_regular(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                                  GuestState& guest_state,
+                                  hypervisor::GuestPhysicalAddressSpace& gpas) {
+  next_rip(exit_info, vmcs);
+  if (!is_cpl0(vmcs, guest_state)) {
     guest_state.rax = VmCallStatus::NOT_PERMITTED;
     return ZX_OK;
   }
-
   vmcs.Invalidate();
   VmCallInfo info(guest_state);
   switch (info.type) {
@@ -1023,6 +1025,21 @@ zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs& vmcs,
   return ZX_OK;
 }
 
+zx_status_t handle_vmcall_direct(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state,
+                                 uintptr_t& fs_base, hypervisor::GuestPhysicalAddressSpace& gpas,
+                                 hypervisor::DefaultTlb& tlb, zx_port_packet_t& packet) {
+  next_rip(exit_info, vmcs);
+  if (!is_cpl0(vmcs, guest_state)) {
+    guest_state.rax = ZX_ERR_ACCESS_DENIED;
+    return ZX_OK;
+  }
+  vmcs.Invalidate();
+
+  // TODO(fxbug.dev/95763): Disabled while we decide on user-copy strategy.
+  // return vmcall_dispatch(guest_state, fs_base, tlb, packet);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 }  // namespace
 
 ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
@@ -1031,9 +1048,7 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
   entry_failure = BIT(full_exit_reason, 31);
   exit_reason = static_cast<ExitReason>(BITS(full_exit_reason, 15, 0));
 
-  exit_qualification = vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION);
   exit_instruction_length = vmcs.Read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
-  guest_physical_address = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
   guest_rip = vmcs.Read(VmcsFieldXX::GUEST_RIP);
 
   if (exit_reason == ExitReason::EXTERNAL_INTERRUPT || exit_reason == ExitReason::IO_INSTRUCTION) {
@@ -1043,12 +1058,10 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
   LTRACEF("entry failure: %d\n", entry_failure);
   LTRACEF("exit reason: %#x (%s)\n", static_cast<uint32_t>(exit_reason),
           exit_reason_name(exit_reason));
-  LTRACEF("exit qualification: %#lx\n", exit_qualification);
   LTRACEF("exit instruction length: %#x\n", exit_instruction_length);
   LTRACEF("guest activity state: %#x\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
   LTRACEF("guest interruptibility state: %#x\n",
           vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
-  LTRACEF("guest physical address: %#lx\n", guest_physical_address);
   LTRACEF("guest linear address: %#lx\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
   LTRACEF("guest rip: %#lx\n", guest_rip);
 }
@@ -1100,10 +1113,10 @@ VmCallInfo::VmCallInfo(const GuestState& guest_state) {
   arg[3] = guest_state.rsi;
 }
 
-zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
-                           LocalApicState& local_apic_state, PvClockState& pv_clock,
-                           hypervisor::GuestPhysicalAddressSpace& gpas, hypervisor::TrapMap& traps,
-                           zx_port_packet_t& packet) {
+zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
+                                  LocalApicState& local_apic_state, PvClockState& pv_clock,
+                                  hypervisor::GuestPhysicalAddressSpace& gpas,
+                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet) {
   zx_status_t status;
   ExitInfo exit_info(vmcs);
   switch (exit_info.exit_reason) {
@@ -1113,25 +1126,21 @@ zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
       status = handle_external_interrupt(vmcs);
       break;
     case ExitReason::INTERRUPT_WINDOW:
-      LTRACEF("handling interrupt window\n\n");
       ktrace_vcpu_exit(VCPU_INTERRUPT_WINDOW, exit_info.guest_rip);
       GUEST_STATS_INC(interrupt_windows);
       status = handle_interrupt_window(vmcs);
       break;
     case ExitReason::CPUID:
-      LTRACEF("handling CPUID\n\n");
       ktrace_vcpu_exit(VCPU_CPUID, exit_info.guest_rip);
       GUEST_STATS_INC(cpuid_instructions);
       status = handle_cpuid(exit_info, vmcs, guest_state);
       break;
     case ExitReason::HLT:
-      LTRACEF("handling HLT\n\n");
       ktrace_vcpu_exit(VCPU_HLT, exit_info.guest_rip);
       GUEST_STATS_INC(hlt_instructions);
       status = handle_hlt(exit_info, vmcs, local_apic_state);
       break;
     case ExitReason::CONTROL_REGISTER_ACCESS:
-      LTRACEF("handling control-register access\n\n");
       ktrace_vcpu_exit(VCPU_CONTROL_REGISTER_ACCESS, exit_info.guest_rip);
       GUEST_STATS_INC(control_register_accesses);
       status = handle_control_register_access(exit_info, vmcs, guest_state, local_apic_state);
@@ -1142,50 +1151,45 @@ zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
       status = handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
       break;
     case ExitReason::RDMSR:
-      LTRACEF("handling RDMSR %#lx\n\n", guest_state.rcx);
       ktrace_vcpu_exit(VCPU_RDMSR, exit_info.guest_rip);
       GUEST_STATS_INC(rdmsr_instructions);
       status = handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
       break;
     case ExitReason::WRMSR:
-      LTRACEF("handling WRMSR %#lx\n\n", guest_state.rcx);
       ktrace_vcpu_exit(VCPU_WRMSR, exit_info.guest_rip);
       GUEST_STATS_INC(wrmsr_instructions);
       status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas, packet);
       break;
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
-      LTRACEF("handling VM entry failure\n\n");
+    case ExitReason::ENTRY_FAILURE_MACHINE_CHECK:
       ktrace_vcpu_exit(VCPU_VM_ENTRY_FAILURE, exit_info.guest_rip);
       status = ZX_ERR_BAD_STATE;
       break;
     case ExitReason::EPT_VIOLATION:
-      LTRACEF("handling EPT violation\n\n");
       ktrace_vcpu_exit(VCPU_EPT_VIOLATION, exit_info.guest_rip);
       GUEST_STATS_INC(ept_violations);
       status = handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
       break;
     case ExitReason::XSETBV:
-      LTRACEF("handling XSETBV\n\n");
       ktrace_vcpu_exit(VCPU_XSETBV, exit_info.guest_rip);
       GUEST_STATS_INC(xsetbv_instructions);
       status = handle_xsetbv(exit_info, vmcs, guest_state);
       break;
     case ExitReason::PAUSE:
-      LTRACEF("handling PAUSE\n\n");
       ktrace_vcpu_exit(VCPU_PAUSE, exit_info.guest_rip);
       GUEST_STATS_INC(pause_instructions);
       status = handle_pause(exit_info, vmcs);
       break;
     case ExitReason::VMCALL:
-      LTRACEF("handling VMCALL\n\n");
       ktrace_vcpu_exit(VCPU_VMCALL, exit_info.guest_rip);
       GUEST_STATS_INC(vmcall_instructions);
-      status = handle_vmcall(exit_info, vmcs, gpas, guest_state);
+      status = handle_vmcall_regular(exit_info, vmcs, guest_state, gpas);
       break;
-    // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
-    // and handled by host via IDT as any other interrupt/exception.
     case ExitReason::EXCEPTION_OR_NMI:
+    // Currently all exceptions, except NMIs, are delivered directly to guests.
+    // NMIs cause VM exits and are handled by the host via the IDT as any other
+    // interrupt/exception.
     default:
       ktrace_vcpu_exit(VCPU_NOT_SUPPORTED, exit_info.guest_rip);
       status = ZX_ERR_NOT_SUPPORTED;
@@ -1198,7 +1202,61 @@ zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
     case ZX_ERR_INTERNAL_INTR_KILLED:
       break;
     default:
-      dprintf(CRITICAL, "hypervisor: VM exit handler for %s (%u) returned %d\n",
+      dprintf(CRITICAL, "hypervisor: VM exit handler (regular) for %s (%u) returned %d\n",
+              exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
+              status);
+      dump_guest_state(guest_state, exit_info);
+      break;
+  }
+  return status;
+}
+
+zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, uintptr_t& fs_base,
+                                  hypervisor::GuestPhysicalAddressSpace& gpas,
+                                  hypervisor::TrapMap& traps, hypervisor::DefaultTlb& tlb,
+                                  zx_port_packet_t& packet) {
+  zx_status_t status;
+  ExitInfo exit_info(vmcs);
+  switch (exit_info.exit_reason) {
+    case ExitReason::EXTERNAL_INTERRUPT:
+      ktrace_vcpu_exit(VCPU_EXTERNAL_INTERRUPT, exit_info.guest_rip);
+      GUEST_STATS_INC(interrupts);
+      status = handle_external_interrupt(vmcs);
+      break;
+    case ExitReason::CPUID:
+      ktrace_vcpu_exit(VCPU_CPUID, exit_info.guest_rip);
+      GUEST_STATS_INC(cpuid_instructions);
+      status = handle_cpuid(exit_info, vmcs, guest_state);
+      break;
+    case ExitReason::EPT_VIOLATION:
+      ktrace_vcpu_exit(VCPU_EPT_VIOLATION, exit_info.guest_rip);
+      GUEST_STATS_INC(ept_violations);
+      status = handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
+      break;
+    case ExitReason::VMCALL:
+      ktrace_vcpu_exit(VCPU_VMCALL, exit_info.guest_rip);
+      GUEST_STATS_INC(vmcall_instructions);
+      status = handle_vmcall_direct(exit_info, vmcs, guest_state, fs_base, gpas, tlb, packet);
+      break;
+    case ExitReason::ENTRY_FAILURE_GUEST_STATE:
+    case ExitReason::ENTRY_FAILURE_MSR_LOADING:
+    case ExitReason::ENTRY_FAILURE_MACHINE_CHECK:
+      ktrace_vcpu_exit(VCPU_VM_ENTRY_FAILURE, exit_info.guest_rip);
+      status = ZX_ERR_BAD_STATE;
+      break;
+    default:
+      ktrace_vcpu_exit(VCPU_NOT_SUPPORTED, exit_info.guest_rip);
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+  }
+  switch (status) {
+    case ZX_OK:
+    case ZX_ERR_NEXT:
+    case ZX_ERR_INTERNAL_INTR_RETRY:
+    case ZX_ERR_INTERNAL_INTR_KILLED:
+      break;
+    default:
+      dprintf(CRITICAL, "hypervisor: VM exit handler (direct) for %s (%u) returned %d\n",
               exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
               status);
       dump_guest_state(guest_state, exit_info);

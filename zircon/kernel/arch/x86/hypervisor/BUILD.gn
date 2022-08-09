@@ -10,6 +10,7 @@ source_set("hypervisor") {
     "guest_copy.cc",
     "pv.cc",
     "vcpu.cc",
+    "vmcall.cc",
     "vmexit.cc",
     "vmx.S",
     "vmx_cpu_state.cc",
@@ -19,6 +20,7 @@ source_set("hypervisor") {
     "//zircon/kernel/arch/x86:headers",
     "//zircon/kernel/hypervisor:headers",
     "//zircon/kernel/lib/boot-options",
+    "//zircon/kernel/lib/syscalls:headers",
     "//zircon/kernel/platform/pc",
   ]
 }
@@ -32,5 +34,6 @@ source_set("tests") {
   deps = [
     "//zircon/kernel/hypervisor:headers",
     "//zircon/kernel/lib/unittest",
+    "//zircon/kernel/lib/user_copy:headers",
   ]
 }

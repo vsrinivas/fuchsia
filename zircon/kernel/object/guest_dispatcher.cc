@@ -16,26 +16,45 @@
 KCOUNTER(dispatcher_guest_create_count, "dispatcher.guest.create")
 KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy")
 
+namespace {
+
+zx::status<ktl::unique_ptr<Guest>> CreateGuest(uint32_t options) {
+  switch (options) {
+    case ZX_GUEST_OPT_NORMAL:
+      return NormalGuest::Create();
+    case ZX_GUEST_OPT_DIRECT:
+#if ARCH_X86
+      return DirectGuest::Create();
+#else
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+#endif  // ARCH_X86
+    default:
+      return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+}
+
+}  // namespace
+
 // static
-zx_status_t GuestDispatcher::Create(KernelHandle<GuestDispatcher>* guest_handle,
+zx_status_t GuestDispatcher::Create(uint32_t options, KernelHandle<GuestDispatcher>* guest_handle,
                                     zx_rights_t* guest_rights,
                                     KernelHandle<VmAddressRegionDispatcher>* vmar_handle,
                                     zx_rights_t* vmar_rights) {
-  ktl::unique_ptr<Guest> guest;
-  zx_status_t status = Guest::Create(&guest);
-  if (status != ZX_OK) {
-    return status;
+  auto guest = CreateGuest(options);
+  if (guest.is_error()) {
+    return guest.status_value();
   }
+  fbl::RefPtr<VmAddressRegion> vmar = (*guest)->AddressSpace().RootVmar();
 
   fbl::AllocChecker ac;
-  KernelHandle new_guest_handle(fbl::AdoptRef(new (&ac) GuestDispatcher(ktl::move(guest))));
+  KernelHandle new_guest_handle(
+      fbl::AdoptRef(new (&ac) GuestDispatcher(options, ktl::move(*guest))));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = VmAddressRegionDispatcher::Create(
-      new_guest_handle.dispatcher()->guest()->AddressSpace().RootVmar(), 0, vmar_handle,
-      vmar_rights);
+  zx_status_t status =
+      VmAddressRegionDispatcher::Create(std::move(vmar), 0, vmar_handle, vmar_rights);
   if (status != ZX_OK) {
     return status;
   }
@@ -45,7 +64,8 @@ zx_status_t GuestDispatcher::Create(KernelHandle<GuestDispatcher>* guest_handle,
   return ZX_OK;
 }
 
-GuestDispatcher::GuestDispatcher(ktl::unique_ptr<Guest> guest) : guest_(ktl::move(guest)) {
+GuestDispatcher::GuestDispatcher(uint32_t options, ktl::unique_ptr<Guest> guest)
+    : options_(options), guest_(ktl::move(guest)) {
   kcounter_add(dispatcher_guest_create_count, 1);
 }
 

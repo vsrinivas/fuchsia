@@ -36,34 +36,35 @@ void IgnoreMsr(const VmxPage& msr_bitmaps_page, uint32_t msr) {
 }  // namespace
 
 // static
-zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
+template <typename G>
+zx::status<ktl::unique_ptr<G>> Guest::Create() {
   // Check that the CPU supports VMX.
   if (!x86_feature_test(X86_FEATURE_VMX)) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   if (auto result = alloc_vmx_state(); result.is_error()) {
-    return result.status_value();
+    return result.take_error();
   }
   auto defer = fit::defer([] { free_vmx_state(); });
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<Guest> guest(new (&ac) Guest);
+  auto guest = ktl::make_unique<G>(&ac);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   defer.cancel();
 
   auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
   if (gpas.is_error()) {
-    return gpas.status_value();
+    return gpas.take_error();
   }
   guest->gpas_ = ktl::move(*gpas);
 
   // Setup common MSR bitmaps.
   VmxInfo vmx_info;
   if (zx_status_t status = guest->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX); status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // These are saved/restored by VMCS controls.
@@ -82,8 +83,7 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
 
-  *out = ktl::move(guest);
-  return ZX_OK;
+  return zx::ok(ktl::move(guest));
 }
 
 Guest::~Guest() { free_vmx_state(); }
@@ -119,3 +119,9 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key).status_value();
 }
+
+// static
+zx::status<ktl::unique_ptr<Guest>> NormalGuest::Create() { return Guest::Create<NormalGuest>(); }
+
+// static
+zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() { return Guest::Create<DirectGuest>(); }

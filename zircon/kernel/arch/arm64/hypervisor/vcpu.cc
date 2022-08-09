@@ -165,35 +165,35 @@ AutoGich::~AutoGich() {
 static uint8_t num_aprs(uint8_t num_pres) { return static_cast<uint8_t>(1u << (num_pres - 5u)); }
 
 // static
-zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
-  hypervisor::GuestPhysicalAddressSpace& gpas = guest->AddressSpace();
+zx::status<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
+  hypervisor::GuestPhysicalAddressSpace& gpas = guest.AddressSpace();
   if (entry >= gpas.size()) {
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto vpid = guest->AllocVpid();
+  auto vpid = guest.AllocVpid();
   if (vpid.is_error()) {
-    return vpid.status_value();
+    return vpid.take_error();
   }
-  auto free_vpid = fit::defer([guest, &vpid]() {
-    auto result = guest->FreeVpid(ktl::move(*vpid));
+  auto free_vpid = fit::defer([&guest, &vpid]() {
+    auto result = guest.FreeVpid(ktl::move(*vpid));
     ZX_ASSERT(result.is_ok());
   });
 
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, *vpid, thread));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   free_vpid.cancel();
 
   if (auto result = vcpu->el2_state_.Alloc(); result.is_error()) {
-    return result.status_value();
+    return result.take_error();
   }
 
   vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
@@ -207,11 +207,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_TWI |
                HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TSW | HCR_EL2_TVM | HCR_EL2_RW;
 
-  *out = ktl::move(vcpu);
-  return ZX_OK;
+  return zx::ok(ktl::move(vcpu));
 }
 
-Vcpu::Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+Vcpu::Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
     : guest_(guest), vpid_(ktl::move(vpid)), last_cpu_(thread->LastCpu()), thread_(thread) {
   thread->set_vcpu(true);
   // We have to disable thread safety analysis because it's not smart enough to
@@ -234,7 +233,7 @@ Vcpu::~Vcpu() {
     }
   }
 
-  auto result = guest_->FreeVpid(ktl::move(vpid_));
+  auto result = guest_.FreeVpid(ktl::move(vpid_));
   ZX_ASSERT(result.is_ok());
 }
 
@@ -255,13 +254,13 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   }
 }
 
-zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
+zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
   Thread* current_thread = Thread::Current::Get();
   if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  const hypervisor::GuestPhysicalAddressSpace& gpas = guest_->AddressSpace();
+  const hypervisor::GuestPhysicalAddressSpace& gpas = guest_.AddressSpace();
   zx_paddr_t vttbr = arm64_vttbr(gpas.arch_asid(), gpas.arch_table_phys());
   GuestState* guest_state = &el2_state_->guest_state;
   IchState* ich_state = &el2_state_->ich_state;
@@ -306,8 +305,8 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       GUEST_STATS_INC(interrupts);
       status = ZX_OK;
     } else if (status == ZX_OK) {
-      status = vmexit_handler(&hcr_, guest_state, &gich_state_, &guest_->AddressSpace(),
-                              &guest_->Traps(), packet);
+      status = vmexit_handler(&hcr_, guest_state, &gich_state_, &guest_.AddressSpace(),
+                              &guest_.Traps(), &packet);
     } else {
       ktrace_vcpu_exit(VCPU_FAILURE, guest_state->system_state.elr_el2);
       dprintf(INFO, "hypervisor: VCPU enter failed: %d\n", status);
@@ -346,15 +345,15 @@ void Vcpu::Interrupt(uint32_t vector) {
   }
 }
 
-zx_status_t Vcpu::ReadState(zx_vcpu_state_t* state) const {
+zx_status_t Vcpu::ReadState(zx_vcpu_state_t& state) const {
   if (Thread::Current::Get() != thread_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  ASSERT(sizeof(state->x) >= sizeof(el2_state_->guest_state.x));
-  memcpy(state->x, el2_state_->guest_state.x, sizeof(el2_state_->guest_state.x));
-  state->sp = el2_state_->guest_state.system_state.sp_el1;
-  state->cpsr = el2_state_->guest_state.system_state.spsr_el2 & kSpsrNzcv;
+  ASSERT(sizeof(state.x) >= sizeof(el2_state_->guest_state.x));
+  memcpy(state.x, el2_state_->guest_state.x, sizeof(el2_state_->guest_state.x));
+  state.sp = el2_state_->guest_state.system_state.sp_el1;
+  state.cpsr = el2_state_->guest_state.system_state.spsr_el2 & kSpsrNzcv;
   return ZX_OK;
 }
 

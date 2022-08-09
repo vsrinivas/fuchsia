@@ -7,10 +7,6 @@
 #include <lib/unittest/unittest.h>
 
 #include <arch/hypervisor.h>
-#include <arch/x86/hypervisor/vmx_state.h>
-
-#include "vcpu_priv.h"
-#include "vmx_cpu_state_priv.h"
 
 namespace {
 
@@ -19,13 +15,12 @@ bool vmlaunch_fail() {
 
   // Create a Guest object, which will both determine if VMX is supported, and
   // set up the CPU state correctly if so.
-  ktl::unique_ptr<Guest> guest;
-  zx_status_t status = Guest::Create(&guest);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
+  auto guest = NormalGuest::Create();
+  if (guest.is_error() && guest.status_value() == ZX_ERR_NOT_SUPPORTED) {
     printf("VMX not supported. Skipping test.\n");
     return true;
   }
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_TRUE(guest.is_ok());
 
   // Attempt to launch an empty VMCS state.
   //
@@ -34,7 +29,7 @@ bool vmlaunch_fail() {
   // shouldn't fault, but gracefully return ZX_ERR_INTERNAL.
   VmxState state = {};
   interrupt_saved_state_t interrupt_state = arch_interrupt_save();
-  status = vmx_enter(&state);
+  zx_status_t status = vmx_enter(&state);
   arch_interrupt_restore(interrupt_state);
   EXPECT_EQ(status, ZX_ERR_INTERNAL);
 
@@ -44,5 +39,5 @@ bool vmlaunch_fail() {
 }  // namespace
 
 UNITTEST_START_TESTCASE(x86_vmx)
-UNITTEST("Exercise the error path when a vmlaunch fails.", vmlaunch_fail)
-UNITTEST_END_TESTCASE(x86_vmx, "x86-vmx", "x86-specific VMX unit tests.")
+UNITTEST("Exercise the error path when a vmlaunch fails", vmlaunch_fail)
+UNITTEST_END_TESTCASE(x86_vmx, "x86-vmx", "x86-specific VMX unit tests")

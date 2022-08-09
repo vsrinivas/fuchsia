@@ -18,21 +18,24 @@ class VmObject;
 
 class GuestDispatcher final : public SoloDispatcher<GuestDispatcher, ZX_DEFAULT_GUEST_RIGHTS> {
  public:
-  static zx_status_t Create(KernelHandle<GuestDispatcher>* guest_handle, zx_rights_t* guest_rights,
+  static zx_status_t Create(uint32_t options, KernelHandle<GuestDispatcher>* guest_handle,
+                            zx_rights_t* guest_rights,
                             KernelHandle<VmAddressRegionDispatcher>* vmar_handle,
                             zx_rights_t* vmar_rights);
   ~GuestDispatcher();
 
   zx_obj_type_t get_type() const { return ZX_OBJ_TYPE_GUEST; }
-  Guest* guest() const { return guest_.get(); }
+  uint32_t options() const { return options_; }
+  Guest& guest() const { return *guest_; }
 
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
 
  private:
+  uint32_t options_;
   ktl::unique_ptr<Guest> guest_;
 
-  explicit GuestDispatcher(ktl::unique_ptr<Guest> guest);
+  GuestDispatcher(uint32_t options, ktl::unique_ptr<Guest> guest);
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_GUEST_DISPATCHER_H_

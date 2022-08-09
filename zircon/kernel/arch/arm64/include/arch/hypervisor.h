@@ -36,9 +36,10 @@ typedef struct zx_port_packet zx_port_packet_t;
 class PortDispatcher;
 enum class InterruptState : uint8_t;
 
+// Represents a guest within the hypervisor.
 class Guest {
  public:
-  static zx_status_t Create(ktl::unique_ptr<Guest>* out);
+  static zx::status<ktl::unique_ptr<Guest>> Create();
   ~Guest();
 
   Guest(Guest&&) = delete;
@@ -63,6 +64,8 @@ class Guest {
 
   explicit Guest(hypervisor::Id<uint16_t>& vmid);
 };
+
+using NormalGuest = Guest;
 
 // Stores the state of the GICH across VM exits.
 class GichState {
@@ -99,23 +102,28 @@ class AutoGich {
   interrupt_saved_state_t int_state_;
 };
 
+// Represents a virtual CPU within a guest.
 class Vcpu {
  public:
-  static zx_status_t Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out);
+  static zx::status<ktl::unique_ptr<Vcpu>> Create(Guest& guest, zx_vaddr_t entry);
   ~Vcpu();
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
-  zx_status_t Enter(zx_port_packet_t* packet);
+  Vcpu(Vcpu&&) = delete;
+  Vcpu& operator=(Vcpu&&) = delete;
+  Vcpu(const Vcpu&) = delete;
+  Vcpu& operator=(const Vcpu&) = delete;
+
+  zx_status_t Enter(zx_port_packet_t& packet);
   void Kick();
   void Interrupt(uint32_t vector);
-  zx_status_t ReadState(zx_vcpu_state_t* state) const;
+  zx_status_t ReadState(zx_vcpu_state_t& state) const;
   zx_status_t WriteState(const zx_vcpu_state_t& state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state) { return ZX_ERR_INVALID_ARGS; }
 
   void GetInfo(zx_info_vcpu_t* info);
 
  private:
-  Guest* const guest_;
+  Guest& guest_;
   hypervisor::Id<uint16_t> vpid_;
   cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
   // |thread_| will be set to nullptr when the thread exits.
@@ -128,9 +136,11 @@ class Vcpu {
   GichState gich_state_;
   uint64_t hcr_;
 
-  Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+  Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
 };
+
+using NormalVcpu = Vcpu;
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_HYPERVISOR_H_
