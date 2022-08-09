@@ -55,7 +55,7 @@ group("cmx_allowlist") {
     "//examples/fuzzers/cpp:dictionary_fuzzer_without_dictionary_component_manifest_compile",
     "//examples/fuzzers/cpp:fuzzed_data_provider_fuzzer_component_manifest_compile",
     "//examples/fuzzers/cpp:noop_fuzzer_component_manifest_compile",
-    "//examples/fuzzers/cpp:oom_fuzzer_component_manifest_compile",
+    "//examples/fuzzers/cpp:out_of_memory_fuzzer_component_manifest_compile",
     "//examples/fuzzers/cpp:overflow_fuzzer_component_manifest_compile",
     "//examples/fuzzers/fidl:echo-fuzzer_component_manifest_compile",
     "//examples/fuzzers/rust:toy_example_arbitrary_component_manifest_compile",

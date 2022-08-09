@@ -23,15 +23,11 @@ fuzzers_package("fuzzing-examples") {
   # Packages can have non-default names.
   package_name = "example-fuzzers"
 
-  # Variables set in the outer scope apply to all fuzzers.
-  fuzz_host = true
-
   # `fuzzers` (without a language prefix) are folded into `cpp_fuzzers` below.
   fuzzers = [ "cpp:crash_fuzzer" ]
 
   # Fuzzers are defined for each supported language
   cpp_fuzzers = [
-    # Each list of fuzzers can contain simple labels...
     "cpp:overflow_fuzzer",
     "cpp:corpus_fuzzer",
     "cpp:corpus_fuzzer_without_corpus",
@@ -39,16 +35,8 @@ fuzzers_package("fuzzing-examples") {
     "cpp:dictionary_fuzzer_without_dictionary",
     "cpp:fuzzed_data_provider_fuzzer",
     "cpp:noop_fuzzer",
-    {
-      # ... or scopes with additional fields, like a non-default output name.
-      label = "cpp:oom_fuzzer"
-      output_name = "out_of_memory_fuzzer"
-    },
-    {
-      # Variables set here override those in the outer scope.
-      label = "fidl:echo-fuzzer"
-      fuzz_host = false
-    },
+    "cpp:out_of_memory_fuzzer",
+    "fidl:echo-fuzzer",
   ]
 
   # A fuzzers package can have fuzzers for multiple languages.

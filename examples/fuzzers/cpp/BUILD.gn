@@ -44,8 +44,6 @@ fuzzer("noop_fuzzer") {
   sources = [ "noop.cc" ]
 }
 
-# Uses non-default output name. See the corresponding scope in //examples/fuzzer:fuzzing-examples
-fuzzer("oom_fuzzer") {
-  output_name = "out_of_memory_fuzzer"
+fuzzer("out_of_memory_fuzzer") {
   sources = [ "oom.cc" ]
 }
