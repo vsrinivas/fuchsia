@@ -5,7 +5,7 @@
 #ifndef LIB_UI_SCENIC_CPP_VIEW_CREATION_TOKENS_H_
 #define LIB_UI_SCENIC_CPP_VIEW_CREATION_TOKENS_H_
 
-#include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 
 namespace scenic {
 
