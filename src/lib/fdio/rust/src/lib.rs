@@ -13,17 +13,20 @@ pub use spawn_builder::{Error as SpawnBuilderError, SpawnBuilder};
 use {
     bitflags::bitflags,
     fidl_fuchsia_device as fdevice, fidl_fuchsia_io as fio,
+    fuchsia_runtime::{HandleInfo, HandleInfoError},
     fuchsia_zircon::{self as zx, AsHandleRef as _, HandleBased as _},
     std::{
         convert::TryInto as _,
         ffi::{CStr, CString, NulError},
         fs::File,
         marker::PhantomData,
-        mem::MaybeUninit,
+        mem::{self, MaybeUninit},
+        num::TryFromIntError,
         os::{
             raw,
             unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd},
         },
+        str::Utf8Error,
     },
 };
 
@@ -640,13 +643,9 @@ impl Namespace {
     /// Get the currently installed namespace.
     pub fn installed() -> Result<Self, zx::Status> {
         // we expect fdio to initialize this to a legal value.
-        let mut ns = MaybeUninit::new(std::ptr::null_mut());
-        let status = {
-            let ns = ns.as_mut_ptr();
-            unsafe { fdio_sys::fdio_ns_get_installed(ns) }
-        };
-        let () = zx::Status::ok(status)?;
-        let ns = unsafe { ns.assume_init() };
+        let mut ns = std::ptr::null_mut();
+        let status = { unsafe { fdio_sys::fdio_ns_get_installed(&mut ns) } };
+        zx::Status::ok(status)?;
         debug_assert_ne!(ns, std::ptr::null_mut());
         Ok(Namespace { ns })
     }
@@ -702,10 +701,59 @@ impl Namespace {
         zx::Status::ok(status)
     }
 
+    // Export this namespace, by returning a flat representation of it. The
+    // handles returned are clones of the handles within the namespace.
+    pub fn export(&self) -> Result<Vec<NamespaceEntry>, zx::Status> {
+        let mut flat: *mut fdio_sys::fdio_flat_namespace_t = std::ptr::null_mut();
+
+        unsafe {
+            zx::Status::ok(fdio_sys::fdio_ns_export(self.ns, &mut flat))?;
+            let entries = Self::export_entries(flat);
+            fdio_sys::fdio_ns_free_flat_ns(flat);
+            entries
+        }
+    }
+
+    unsafe fn export_entries(
+        flat: *mut fdio_sys::fdio_flat_namespace_t,
+    ) -> Result<Vec<NamespaceEntry>, zx::Status> {
+        let fdio_sys::fdio_flat_namespace_t { count, handle, type_, path } = *flat;
+        let capacity: usize =
+            count.try_into().map_err(|_: TryFromIntError| zx::Status::INVALID_ARGS)?;
+        let len: isize =
+            capacity.try_into().map_err(|_: TryFromIntError| zx::Status::INVALID_ARGS)?;
+        let mut entries = Vec::with_capacity(capacity);
+        for i in 0..len {
+            // Explicitly take ownership of the handle, and invalidate the source.
+            let handle = zx::Handle::from_raw(mem::replace(
+                &mut *handle.offset(i),
+                zx::sys::ZX_HANDLE_INVALID,
+            ));
+            entries.push(NamespaceEntry {
+                handle,
+                info: (*type_.offset(i))
+                    .try_into()
+                    .map_err(|_: HandleInfoError| zx::Status::INVALID_ARGS)?,
+                path: CStr::from_ptr(*path.offset(i))
+                    .to_str()
+                    .map_err(|_: Utf8Error| zx::Status::INVALID_ARGS)?
+                    .to_owned(),
+            });
+        }
+        Ok(entries)
+    }
+
     pub fn into_raw(self) -> *mut fdio_sys::fdio_ns_t {
         let Self { ns } = self;
         ns
     }
+}
+
+/// Entry in a flat representation of a namespace.
+pub struct NamespaceEntry {
+    pub handle: zx::Handle,
+    pub info: HandleInfo,
+    pub path: String,
 }
 
 /// Returns the handle for the given FIDL service, or a Zircon Error Status. This function takes
@@ -794,6 +842,14 @@ mod tests {
         let path = "/test_path4";
 
         assert_eq!(namespace.unbind(path), Err(zx::Status::NOT_FOUND));
+    }
+
+    #[test]
+    fn namespace_export() {
+        let namespace = Namespace::installed().unwrap();
+        let entries = namespace.export().unwrap();
+
+        assert!(!entries.is_empty());
     }
 
     fn cstr(orig: &str) -> CString {
