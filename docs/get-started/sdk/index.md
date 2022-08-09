@@ -27,7 +27,6 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 Before you begin, complete the prerequisite steps below:
 
 *   [Check host machine requirements](#check-host-machine-requirements)
-*   [Generate Fuchsia-specific SSH keys](#generate-fuchsia-specific-ssh-keys)
 
 ### Check host machine requirements {:#check-host-machine-requirements}
 
@@ -39,61 +38,6 @@ This guide requires that your host machine meets the following criteria:
    [QEMU][qemu]{:.external}-based emulator.
 *  IPv6 is enabled.
 *  [Git][git-install]{:.external} is installed.
-
-### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
-
-The `ffx` tool requires that [Fuchsia-specific SSH keys][fuchsia-ssh-keys] are stored
-on the host machine for connecting to Fuchsia devices (including the Fuchsia emulator).
-
-To check if your host machine already has Fuchsia SSH keys, do the following:
-
-1. Scan the `$HOME/.ssh` directory for Fuchsia SSH keys:
-
-   ```posix-terminal
-   ls $HOME/.ssh | grep fuchsia
-   ```
-
-1. Verify that the following `fuchsia_*` files are present:
-
-   ```none {:.devsite-disable-click-to-copy}
-   $ ls $HOME/.ssh | grep fuchsia
-   fuchsia_authorized_keys
-   fuchsia_ed25519
-   fuchsia_ed25519.pub
-   ```
-
-**If you don’t see these files**, you need to generate Fuchsia SSH keys on the host machine:
-
-1. Generate a new private and public SSH key pair:
-
-   Note: These Fuchsia SSH keys are only used for connecting to Fuchsia
-   devices during development. Generating these SSH keys won't alter your current
-   SSH settings.
-
-   ```posix-terminal
-   [[ -f "${HOME}/.ssh/fuchsia_ed25519" ]] || ssh-keygen -P "" -t ed25519 -f "${HOME}/.ssh/fuchsia_ed25519" -C "${USER}@$(hostname -f) Shared SSH Key for Fuchsia"
-   ```
-
-1. Generate a `fuchsia_authorized_keys` file:
-
-   ```posix-terminal
-   [[ -f "${HOME}/.ssh/fuchsia_authorized_keys" ]] || ssh-keygen -y -f "${HOME}/.ssh/fuchsia_ed25519" > "${HOME}/.ssh/fuchsia_authorized_keys"
-   ```
-
-1. Verify that Fuchsia SSH keys are generated:
-
-   ```posix-terminal
-   ls $HOME/.ssh | grep fuchsia
-   ```
-
-   This command prints output similar to the following:
-
-   ```none {:.devsite-disable-click-to-copy}
-   $ ls $HOME/.ssh | grep fuchsia
-   fuchsia_authorized_keys
-   fuchsia_ed25519
-   fuchsia_ed25519.pub
-   ```
 
 ## 2. Clone the SDK samples repository {:#clone-the-sdk-samples-repository}
 
