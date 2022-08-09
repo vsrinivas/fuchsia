@@ -611,19 +611,21 @@ The **body** contains the event arguments as if they were packed in a
 **struct**, just as with method result messages.
 Note that the body is padded to maintain 8-byte alignment.
 
-#### Epitaph (Control Message Ordinal 0xFFFFFFFF)
+#### Epitaph (Control Message Ordinal 0xFFFFFFFFFFFFFFFF)
 
-An epitaph is a message with ordinal **0xFFFFFFFF**. A server may send an
-epitaph as the last message prior to closing the connection, to provide an
-indication of why the connection is being closed. No further messages may be
-sent through the channel after the epitaph. Epitaphs are not sent from clients
-to servers.
+An epitaph is an event (txid zero) with ordinal **0xFFFFFFFFFFFFFFFF**. A server
+may send an epitaph as the last message prior to closing the connection, to
+provide an indication of why the connection is being closed. No further messages
+may be sent through the connection after the epitaph. Epitaphs are not sent from
+clients to servers.
 
-The epitaph contains an error status. The error status of the epitaph is stored
-in the reserved `uint32` of the message header. The reserved word is treated as
-being of type **zx_status_t**: negative numbers are reserved for system error
-codes, positive numbers are reserved for application error codes, and `ZX_OK` is
-used to indicate normal connection closure. The message is otherwise empty.
+An epitaph's wire representation is equivalent to this FIDL:
+```fidl
+struct {
+  error zx.status;
+};
+```
+Epitaphs may be formally defined in FIDL in the future.
 
 ## Details
 
