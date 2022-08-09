@@ -21,6 +21,7 @@ use {
 
 // TODO(https://fxbug.dev/103838): Use structured configuration for this value.
 const ACTIVITY_TIMEOUT: zx::Duration = zx::Duration::from_minutes(15);
+const ACTIVITY_RATE_LIMIT: zx::Duration = zx::Duration::from_minutes(1);
 
 type NotifyFn = Box<dyn Fn(&State, NotifierWatchStateResponder) -> bool>;
 type InteractionHangingGet = HangingGet<State, NotifierWatchStateResponder, NotifyFn>;
@@ -83,10 +84,8 @@ impl ActivityManager {
             let event_time = zx::Time::from_nanos(event_time)
                 .clamp(zx::Time::ZERO, fuchsia_async::Time::now().into_zx());
 
-            // TODO(https://fxbug.dev/105111): Since many of these events may
-            // come in a single second, we  may eventually drop events that
-            // occur within some threshold of the last, e.g. 1 minute.
             if *self.last_event_time.borrow() > event_time {
+                let _: Result<(), fidl::Error> = responder.send();
                 continue;
             }
 
@@ -101,7 +100,8 @@ impl ActivityManager {
 
             let _: Result<(), fidl::Error> = responder.send();
 
-            *self.last_event_time.borrow_mut() = event_time;
+            // Rate-limit subsequent events within the threshold.
+            *self.last_event_time.borrow_mut() = event_time + ACTIVITY_RATE_LIMIT;
             self.idle_transition_task.set(Some(Task::local(async move {
                 Timer::new(event_time + ACTIVITY_TIMEOUT).await;
                 state_publisher.set(State::Idle);
@@ -341,7 +341,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn interactivity_notifier_drops_late_activities() -> Result<(), Error> {
+    fn actvity_manager_drops_late_activities() -> Result<(), Error> {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
@@ -390,6 +390,118 @@ mod tests {
         // Second timer does fire.
         let watch_state_res = executor.run_until_stalled(&mut watch_state_fut);
         assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Idle))));
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn activity_manager_rate_limits_activities_notifies_idle_state() -> Result<(), Error> {
+        let less_than_one_minute = zx::Duration::from_seconds(59);
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
+
+        let activity_manager = ActivityManager::new_for_test();
+        let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
+
+        // Initial state is active.
+        let mut watch_state_stream =
+            HangingGetStream::new(notifier_proxy, NotifierProxy::watch_state);
+        let state_fut = watch_state_stream.next();
+        pin_mut!(state_fut);
+        let watch_state_res = executor.run_until_stalled(&mut state_fut);
+        assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Active))));
+
+        // Send an activity at time 0 to start rate-limiting.
+        let proxy = create_interaction_aggregator_proxy(activity_manager.clone());
+        let report_fut = proxy.report_discrete_activity(0);
+        pin_mut!(report_fut);
+        assert!(executor.run_until_stalled(&mut report_fut).is_ready());
+
+        // Skip ahead by less than one minute, since we rate-limit events
+        // within the same minute.
+        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_minute));
+        assert_eq!(executor.wake_expired_timers(), false);
+
+        // Send an activity. This should not replace the initial timer.
+        let report_fut = proxy.report_discrete_activity(less_than_one_minute.into_nanos());
+        pin_mut!(report_fut);
+        assert!(executor.run_until_stalled(&mut report_fut).is_ready());
+
+        // Skip ahead by the remainder of the initial activity timeout.
+        // Initial timer should fire, as the later activity within the same
+        // minute should have been dropped.
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT - less_than_one_minute));
+        assert_eq!(executor.wake_expired_timers(), true);
+
+        let watch_state_fut = watch_state_stream.next();
+        pin_mut!(watch_state_fut);
+        let watch_state_res = executor.run_until_stalled(&mut watch_state_fut);
+        assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Idle))));
+
+        // Skip ahead by less than one minute to the would-be timeout of the
+        // later event, to make sure a second timer was never created.
+        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_minute));
+        assert_eq!(executor.wake_expired_timers(), false);
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    fn activity_manager_rate_limits_activities_notifies_active_state() -> Result<(), Error> {
+        let less_than_one_minute = zx::Duration::from_seconds(59);
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
+
+        let activity_manager = ActivityManager::new_for_test();
+        let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
+
+        // Initial state is active.
+        let mut watch_state_stream =
+            HangingGetStream::new(notifier_proxy, NotifierProxy::watch_state);
+        let state_fut = watch_state_stream.next();
+        pin_mut!(state_fut);
+        let watch_state_res = executor.run_until_stalled(&mut state_fut);
+        assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Active))));
+
+        // Send an activity at time 0 to start rate-limiting.
+        let proxy = create_interaction_aggregator_proxy(activity_manager.clone());
+        let report_fut = proxy.report_discrete_activity(0);
+        pin_mut!(report_fut);
+        assert!(executor.run_until_stalled(&mut report_fut).is_ready());
+
+        // Skip ahead by less than one minute, since we rate-limit events
+        // within the same minute.
+        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_minute));
+        assert_eq!(executor.wake_expired_timers(), false);
+
+        // Send an activity. This should not replace the initial timer.
+        let report_fut = proxy.report_discrete_activity(less_than_one_minute.into_nanos());
+        pin_mut!(report_fut);
+        assert!(executor.run_until_stalled(&mut report_fut).is_ready());
+
+        // Skip ahead by the remainder of the initial activity timeout.
+        // Initial timer should fire, as the later activity within the same
+        // minute should have been dropped.
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT - less_than_one_minute));
+        assert_eq!(executor.wake_expired_timers(), true);
+
+        // State transitions to Idle.
+        let watch_state_fut = watch_state_stream.next();
+        pin_mut!(watch_state_fut);
+        let watch_state_res = executor.run_until_stalled(&mut watch_state_fut);
+        assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Idle))));
+
+        // Send an activity at the current time.
+        let proxy = create_interaction_aggregator_proxy(activity_manager.clone());
+        let report_fut = proxy.report_discrete_activity(ACTIVITY_TIMEOUT.into_nanos());
+        pin_mut!(report_fut);
+        assert!(executor.run_until_stalled(&mut report_fut).is_ready());
+
+        // State transitions to Active.
+        let watch_state_fut = watch_state_stream.next();
+        pin_mut!(watch_state_fut);
+        let watch_state_res = executor.run_until_stalled(&mut watch_state_fut);
+        assert_matches!(watch_state_res, Poll::Ready(Some(Ok(State::Active))));
 
         Ok(())
     }
