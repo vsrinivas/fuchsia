@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 executable("bin") {
   output_name = "perfetto-bridge"
@@ -28,4 +29,8 @@ fuchsia_package_with_single_component("perfetto-bridge") {
   manifest = "meta/perfetto_bridge.cml"
 
   deps = [ ":bin" ]
+}
+
+core_shard("perfetto_bridge_core_shard") {
+  shard_file = "meta/perfetto_bridge.core_shard.cml"
 }
