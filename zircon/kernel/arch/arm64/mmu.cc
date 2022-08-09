@@ -18,6 +18,7 @@
 #include <lib/instrumentation/asan.h>
 #include <lib/ktrace.h>
 #include <lib/lazy_init/lazy_init.h>
+#include <lib/page_cache.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -32,6 +33,7 @@
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mutex.h>
 #include <ktl/algorithm.h>
+#include <lk/init.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -98,6 +100,58 @@ lazy_init::LazyInit<AsidAllocator> asid;
 
 KCOUNTER(vm_mmu_protect_make_execute_calls, "vm.mmu.protect.make_execute_calls")
 KCOUNTER(vm_mmu_protect_make_execute_pages, "vm.mmu.protect.make_execute_pages")
+
+page_cache::PageCache page_cache;
+
+zx_status_t CacheAllocPage(vm_page_t** p, paddr_t* pa) {
+  if (!page_cache) {
+    return pmm_alloc_page(PMM_ALLOC_FLAG_ANY, p, pa);
+  }
+
+  zx::status result = page_cache.Allocate(1);
+  if (result.is_error()) {
+    return result.error_value();
+  }
+
+  vm_page_t* page = list_remove_head_type(&result->page_list, vm_page_t, queue_node);
+  DEBUG_ASSERT(page != nullptr);
+  DEBUG_ASSERT(result->page_list.is_empty());
+
+  *p = page;
+  *pa = page->paddr();
+  return ZX_OK;
+}
+
+void CacheFreePages(list_node_t* list) {
+  if (!page_cache) {
+    pmm_free(list);
+  }
+  page_cache.Free(ktl::move(*list));
+}
+
+void CacheFreePage(vm_page_t* p) {
+  if (!page_cache) {
+    pmm_free_page(p);
+  }
+
+  page_cache::PageCache::PageList list;
+  list_add_tail(&list, &p->queue_node);
+
+  page_cache.Free(ktl::move(list));
+}
+
+void InitializePageCache(uint32_t level) {
+  ASSERT(level < LK_INIT_LEVEL_THREADING);
+
+  const size_t reserve_pages = 8;
+  zx::status<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
+
+  ASSERT(result.is_ok());
+  page_cache = ktl::move(result.value());
+}
+
+// Initialize the cache after the percpu data structures are initialized.
+LK_INIT_HOOK(arm64_mmu_page_cache_init, InitializePageCache, LK_INIT_LEVEL_KERNEL + 1)
 
 // Convert user level mmu flags to flags that go in L1 descriptors.
 // Hypervisor flag modifies behavior to work for single translation regimes
@@ -367,7 +421,7 @@ class ArmArchVmAspace::ConsistencyManager {
   ~ConsistencyManager() {
     Flush();
     if (!list_is_empty(&to_free_)) {
-      pmm_free(&to_free_);
+      CacheFreePages(&to_free_);
     }
   }
 
@@ -536,12 +590,12 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp) {
   DEBUG_ASSERT(page_size_shift_ == PAGE_SIZE_SHIFT);
 
   // Allocate a page from the pmm via function pointer passed to us in Init().
-  // The default is pmm_alloc_page so test and explicitly call it to avoid any unnecessary
+  // The default is CacheAllocPage so test and explicitly call it to avoid any unnecessary
   // virtual functions.
   vm_page_t* page;
   zx_status_t status;
   if (likely(!test_page_alloc_func_)) {
-    status = pmm_alloc_page(0, &page, paddrp);
+    status = CacheAllocPage(&page, paddrp);
   } else {
     status = test_page_alloc_func_(0, &page, paddrp);
   }
@@ -1713,7 +1767,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
   // Free the top level page table.
   vm_page_t* page = paddr_to_vm_page(tt_phys_);
   DEBUG_ASSERT(page);
-  pmm_free_page(page);
+  CacheFreePage(page);
   pt_pages_--;
 
   tt_phys_ = 0;
