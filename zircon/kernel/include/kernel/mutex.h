@@ -38,6 +38,12 @@ class TA_CAP("mutex") Mutex {
   // and describe how to optimize this value.
   static constexpr zx_duration_t SPIN_MAX_DURATION = ZX_USEC(150);
 
+  // A constant for users of AutoExpiringPreemptDisabler to select a value
+  // consistent with the defaults for Mutex/CriticalMutex. Using this constant
+  // also improves readablity, providing a link to the motivating use case for
+  // timeslice extension.
+  static constexpr zx_duration_t DEFAULT_TIMESLICE_EXTENSION = SPIN_MAX_DURATION;
+
   // Acquire the mutex.
   inline void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ()
       TA_EXCL(thread_lock);
