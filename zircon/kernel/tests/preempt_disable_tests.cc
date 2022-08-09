@@ -609,6 +609,69 @@ static bool test_evaluate_timeslice_extension() {
   END_TEST;
 }
 
+// This test simulates a race condition where a preemption is requested (via IPI
+// or timer) concurrent with reenabling preemption / eager rescheduling while an
+// inactive timeslice extension is in place.
+static bool test_flush_race() {
+  BEGIN_TEST;
+
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // Test PreemptReenable.
+  {
+    AutoExpiringPreemptDisabler guard(ZX_TIME_INFINITE);
+    const cpu_mask_t curr_mask = cpu_num_to_mask(arch_curr_cpu_num());
+    {
+      AutoPreemptDisabler apd;
+      ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+
+      // We'll simulate a race by marking the current CPU as pending for
+      // preemption without going through the normal PreemptSetPending path
+      // because we want to test the behavior when the extension is
+      // inactive. and PreemptSetPending will activate it.
+      preemption_state.preempts_pending_add(curr_mask);
+      // When leave this scope and reenable preemption, we'd better not flush.
+    }
+    ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+    // See that we did not flush.
+    ASSERT_EQ(curr_mask, preemption_state.preempts_pending());
+  }
+
+  // Test PreemptReenableDelayFlush.
+  {
+    AutoExpiringPreemptDisabler guard(ZX_TIME_INFINITE);
+    const cpu_mask_t curr_mask = cpu_num_to_mask(arch_curr_cpu_num());
+    bool should_preempt;
+    {
+      InterruptDisableGuard irqd;
+      arch_set_blocking_disallowed(true);
+      auto cleanup = fit::defer([]() { arch_set_blocking_disallowed(false); });
+      preemption_state.PreemptDisable();
+      preemption_state.preempts_pending_add(curr_mask);
+      should_preempt = preemption_state.PreemptReenableDelayFlush();
+    }
+    ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+    ASSERT_FALSE(should_preempt);
+  }
+
+  // Test EagerReschedReenable.
+  {
+    AutoExpiringPreemptDisabler guard(ZX_TIME_INFINITE);
+    const cpu_mask_t curr_mask = cpu_num_to_mask(arch_curr_cpu_num());
+    {
+      AutoEagerReschedDisabler aerd;
+      ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+      preemption_state.preempts_pending_add(CPU_MASK_ALL);
+    }
+    ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+    // See that we flushed the remote CPUs, but not the local.
+    ASSERT_EQ(curr_mask, preemption_state.preempts_pending());
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(preempt_disable_tests)
 UNITTEST("test_in_timer_callback", test_in_timer_callback)
 UNITTEST("test_inc_dec_disable_counts", test_inc_dec_disable_counts)
@@ -620,4 +683,5 @@ UNITTEST("test_auto_preempt_disabler", test_auto_preempt_disabler)
 UNITTEST("test_auto_timeslice_extension", test_auto_timeslice_extension)
 UNITTEST("test_local_preempt_pending", test_local_preempt_pending)
 UNITTEST("test_evaluate_timeslice_extension", test_evaluate_timeslice_extension)
+UNITTEST("test_flush_race", test_flush_race)
 UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests", "preempt_disable_tests")
