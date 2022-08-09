@@ -327,7 +327,7 @@ class VmPageList final {
     // per page get a reference to the page pointer inside the page list node
     auto per_page_func = [&free_page_fn](VmPageOrMarker* p, uint64_t offset) {
       if (p->IsPage()) {
-        free_page_fn(p->ReleasePage());
+        free_page_fn(ktl::move(*p));
       }
       *p = VmPageOrMarker::Empty();
       return ZX_ERR_NEXT;
@@ -362,8 +362,8 @@ class VmPageList final {
   // For every page in |other| in the given range, if there is no corresponding page or marker
   // in |this|, then they will be passed to |migrate_fn|. If |migrate_fn| leaves the page in the
   // VmPageOrMarker it will be migrated into |this|, otherwise the migrate_fn is assumed to now own
-  // the page. For any pages in |other| outside the given range or which conflict with a page in
-  // |this|, they will be released given ownership to |release_fn|.
+  // the page. For any pages or markers in |other| outside the given range or which conflict with a
+  // page in |this|, they will be released given ownership to |release_fn|.
   //
   // The |offset| values passed to |release_fn| and |migrate_fn| are the original offsets
   // in |other|, not the adapted offsets in |this|.
@@ -371,17 +371,17 @@ class VmPageList final {
   // **NOTE** unlike MergeOnto, |other| will be empty at the end of this method.
   void MergeFrom(
       VmPageList& other, uint64_t offset, uint64_t end_offset,
-      fit::inline_function<void(vm_page*, uint64_t offset), 3 * sizeof(void*)> release_fn,
+      fit::inline_function<void(VmPageOrMarker&&, uint64_t offset), 3 * sizeof(void*)> release_fn,
       fit::inline_function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn);
 
   // Merges this pages in |this| onto |other|.
   //
   // For every page (or marker) in |this|, checks the same offset in |other|. If there is no
-  // page or marker, then it inserts the page into |other|. Otherwise, it releases the page and
-  // gives ownership to |release_fn|.
+  // page or marker, then it inserts the page into |other|. Otherwise, it releases the page (or
+  // marker) and gives ownership to |release_fn|.
   //
   // **NOTE** unlike MergeFrom, |this| will be empty at the end of this method.
-  void MergeOnto(VmPageList& other, fit::inline_function<void(vm_page*)> release_fn);
+  void MergeOnto(VmPageList& other, fit::inline_function<void(VmPageOrMarker&&)> release_fn);
 
   // Takes the pages and markers in the range [offset, length) out of this page list.
   VmPageSpliceList TakePages(uint64_t offset, uint64_t length);

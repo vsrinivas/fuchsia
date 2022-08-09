@@ -147,7 +147,8 @@ static bool vmpl_free_pages_last_page_test() {
 
   list_node_t list;
   list_initialize(&list);
-  pl.RemoveAllPages([&list](vm_page_t* p) { list_add_tail(&list, &p->queue_node); });
+  pl.RemoveAllPages(
+      [&list](VmPageOrMarker&& p) { list_add_tail(&list, &p.ReleasePage()->queue_node); });
   EXPECT_TRUE(pl.IsEmpty(), "not empty\n");
 
   EXPECT_EQ(list_length(&list), 1u, "too many pages");
@@ -170,7 +171,8 @@ static bool vmpl_near_last_offset_free() {
 
       list_node_t list;
       list_initialize(&list);
-      pl.RemoveAllPages([&list](vm_page_t* p) { list_add_tail(&list, &p->queue_node); });
+      pl.RemoveAllPages(
+          [&list](VmPageOrMarker&& p) { list_add_tail(&list, &p.ReleasePage()->queue_node); });
 
       EXPECT_EQ(list_length(&list), 1u, "too many pages");
       EXPECT_EQ(list_remove_head_type(&list, vm_page_t, queue_node), &page, "wrong page");
@@ -395,7 +397,9 @@ static bool vmpl_page_gap_iter_test_body(vm_page_t** pages, uint32_t count, uint
 
   list_node_t free_list;
   list_initialize(&free_list);
-  list.RemoveAllPages([&free_list](vm_page_t* p) { list_add_tail(&free_list, &p->queue_node); });
+  list.RemoveAllPages([&free_list](VmPageOrMarker&& p) {
+    list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+  });
   ASSERT_TRUE(list.IsEmpty());
 
   END_TEST;
@@ -454,7 +458,11 @@ static bool vmpl_merge_offset_test_helper(uint64_t list1_offset, uint64_t list2_
   list_initialize(&free_list);
   list2.MergeFrom(
       list, offsets[1], offsets[5],
-      [&](vm_page* page, uint64_t offset) {
+      [&](VmPageOrMarker&& p, uint64_t offset) {
+        if (p.IsMarker()) {
+          return;
+        }
+        vm_page_t* page = p.ReleasePage();
         DEBUG_ASSERT(page == test_pages || page == test_pages + 5);
         DEBUG_ASSERT(offset == offsets[0] || offset == offsets[5]);
         list_add_tail(&free_list, &page->queue_node);
@@ -514,7 +522,11 @@ static bool vmpl_merge_overlap_test_helper(uint64_t list1_offset, uint64_t list2
   list_initialize(&free_list);
   list2.MergeFrom(
       list, list2_offset, list2_offset + 4 * PAGE_SIZE,
-      [&](vm_page* page, uint64_t offset) {
+      [&](VmPageOrMarker&& p, uint64_t offset) {
+        if (p.IsMarker()) {
+          return;
+        }
+        vm_page_t* page = p.ReleasePage();
         DEBUG_ASSERT(page == test_pages);
         DEBUG_ASSERT(offset == list2_offset);
         list_add_tail(&free_list, &page->queue_node);
@@ -555,8 +567,7 @@ static bool vmpl_merge_marker_test() {
   VmPageList list2;
 
   // Put markers in our from list and one of marker, page and nothing in our destination list.
-  // In all circumstances when doing a MergeFrom we should not have either our release or migrate
-  // callbacks invoked, as they only get invoked for actual pages.
+  // Should see the markers given in the release calls, but no attempts to migrate.
   EXPECT_TRUE(AddMarker(&list1, 0));
   EXPECT_TRUE(AddMarker(&list1, PAGE_SIZE));
   EXPECT_TRUE(AddMarker(&list1, PAGE_SIZE * 2));
@@ -568,10 +579,13 @@ static bool vmpl_merge_marker_test() {
   int migrate_calls = 0;
   list2.MergeFrom(
       list1, 0, PAGE_SIZE * 3,
-      [&release_calls](vm_page_t* page, uint64_t offset) { release_calls++; },
+      [&release_calls](VmPageOrMarker&& p, uint64_t offset) {
+        ASSERT(p.IsMarker());
+        release_calls++;
+      },
       [&migrate_calls](VmPageOrMarker* page, uint64_t offset) { migrate_calls++; });
 
-  EXPECT_EQ(0, release_calls);
+  EXPECT_EQ(2, release_calls);
   EXPECT_EQ(0, migrate_calls);
 
   // Remove the page from our list as its not a real page.
@@ -628,7 +642,9 @@ static bool vmpl_for_every_page_test() {
 
   list_node_t free_list;
   list_initialize(&free_list);
-  list.RemoveAllPages([&free_list](vm_page_t* p) { list_add_tail(&free_list, &p->queue_node); });
+  list.RemoveAllPages([&free_list](VmPageOrMarker&& p) {
+    list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+  });
 
   END_TEST;
 }
@@ -651,7 +667,11 @@ static bool vmpl_merge_onto_test() {
   list_node_t free_list;
   list_initialize(&free_list);
 
-  list1.MergeOnto(list2, [&free_list](auto* p) { list_add_tail(&free_list, &p->queue_node); });
+  list1.MergeOnto(list2, [&free_list](VmPageOrMarker&& p) {
+    if (p.IsPage()) {
+      list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+    }
+  });
 
   // (test_pages + 0) should have covered this page
   EXPECT_EQ(1ul, list_length(&free_list));
@@ -663,7 +683,9 @@ static bool vmpl_merge_onto_test() {
   EXPECT_EQ(test_pages + 3,
             list2.Lookup(2 * VmPageListNode::kPageFanOut * PAGE_SIZE + PAGE_SIZE)->Page());
 
-  list2.RemoveAllPages([&free_list](vm_page_t* p) { list_add_tail(&free_list, &p->queue_node); });
+  list2.RemoveAllPages([&free_list](VmPageOrMarker&& p) {
+    list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+  });
   EXPECT_EQ(3ul, list_length(&free_list));
 
   END_TEST;

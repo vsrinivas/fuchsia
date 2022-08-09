@@ -328,7 +328,8 @@ void VmCowPages::fbl_recycle() {
 
     __UNINITIALIZED BatchPQRemove page_remover(&list);
     // free all of the pages attached to us
-    page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
+    page_list_.RemoveAllPages([&page_remover](VmPageOrMarker&& p) {
+      vm_page_t* page = p.ReleasePage();
       ASSERT(page->object.pin_count == 0);
       page_remover.Push(page);
     });
@@ -1015,8 +1016,11 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     // a source that was handling frees, which would require more work that simply freeing pages to
     // the PMM.
     DEBUG_ASSERT(!child.is_source_handling_free_locked());
-    child.page_list_.MergeOnto(page_list_,
-                               [&covered_remover](vm_page_t* p) { covered_remover.Push(p); });
+    child.page_list_.MergeOnto(page_list_, [&covered_remover](VmPageOrMarker&& p) {
+      if (p.IsPage()) {
+        covered_remover.Push(p.ReleasePage());
+      }
+    });
     child.page_list_ = ktl::move(page_list_);
 
     vm_page_t* p;
@@ -1039,7 +1043,11 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     } state = {pmm_page_queues(), removed_left, merge_start_offset, &child, &page_remover};
     child.page_list_.MergeFrom(
         page_list_, merge_start_offset, merge_end_offset,
-        [&page_remover](vm_page* page, uint64_t offset) { page_remover.Push(page); },
+        [&page_remover](VmPageOrMarker&& p, uint64_t offset) {
+          if (p.IsPage()) {
+            page_remover.Push(p.ReleasePage());
+          }
+        },
         [&state](VmPageOrMarker* page_or_marker, uint64_t offset) {
           DEBUG_ASSERT(page_or_marker->IsPage());
           vm_page_t* page = page_or_marker->Page();

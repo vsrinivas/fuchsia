@@ -161,7 +161,7 @@ bool VmPageList::HasNoPages() const {
 
 void VmPageList::MergeFrom(
     VmPageList& other, const uint64_t offset, const uint64_t end_offset,
-    fit::inline_function<void(vm_page*, uint64_t offset), 3 * sizeof(void*)> release_fn,
+    fit::inline_function<void(VmPageOrMarker&&, uint64_t offset), 3 * sizeof(void*)> release_fn,
     fit::inline_function<void(VmPageOrMarker*, uint64_t offset)> migrate_fn) {
   constexpr uint64_t kNodeSize = PAGE_SIZE * VmPageListNode::kPageFanOut;
   // The skewed |offset| in |other| must be equal to 0 skewed in |this|. This allows
@@ -169,11 +169,9 @@ void VmPageList::MergeFrom(
   DEBUG_ASSERT((other.list_skew_ + offset) % kNodeSize == list_skew_);
 
   auto release_fn_wrapper = [&release_fn](VmPageOrMarker* page_or_marker, uint64_t offset) {
-    if (page_or_marker->IsPage()) {
-      vm_page_t* page = page_or_marker->ReleasePage();
-      release_fn(page, offset);
+    if (!page_or_marker->IsEmpty()) {
+      release_fn(ktl::move(*page_or_marker), offset);
     }
-    *page_or_marker = VmPageOrMarker::Empty();
     return ZX_ERR_NEXT;
   };
 
@@ -210,8 +208,8 @@ void VmPageList::MergeFrom(
             migrate_fn(&page, src_offset);
           }
           target_page = ktl::move(page);
-        } else if (page.IsPage()) {
-          release_fn(page.ReleasePage(), src_offset);
+        } else if (!page.IsEmpty()) {
+          release_fn(ktl::move(page), src_offset);
         }
 
         // In all cases if we still have a page add it to the free list.
@@ -239,7 +237,8 @@ void VmPageList::MergeFrom(
   }
 }
 
-void VmPageList::MergeOnto(VmPageList& other, fit::inline_function<void(vm_page*)> release_fn) {
+void VmPageList::MergeOnto(VmPageList& other,
+                           fit::inline_function<void(VmPageOrMarker&&)> release_fn) {
   DEBUG_ASSERT(other.list_skew_ == list_skew_);
 
   auto iter = list_.begin();
@@ -256,8 +255,8 @@ void VmPageList::MergeOnto(VmPageList& other, fit::inline_function<void(vm_page*
         VmPageOrMarker& old_page = target->Lookup(i);
         VmPageOrMarker removed = ktl::move(old_page);
         old_page = ktl::move(page);
-        if (removed.IsPage()) {
-          release_fn(removed.ReleasePage());
+        if (!removed.IsEmpty()) {
+          release_fn(ktl::move(removed));
         }
       }
     } else {
