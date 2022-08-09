@@ -2,35 +2,59 @@
 
 Reviewed on: 2021-04-14
 
-Each Starnix test runner is a [test runner][test-runner] that launches its test components
-using a Starnix runner.
+This directory contains two [test runners][test-runner]:
 
-These test runners are useful for running test binaries that are compiled for Linux.
+  * `starnix_test_runner`: runs test binaries that are compiled for Linux.
+  * `starnix_unit_test_runner`: runs unit tests for the Starnix runner itself.
 
-Each Linux binary expects to run in a particular environment (e.g., different system images). Each
-environment is represented by a different test runner component. For example, a test that wants to
-run in an Android environment would use the `stardroid_test_runner`, while a test that wants to run
-in a ChromiumOS environment would use `starmium_test_runner`.
+## Starnix Test Runner
 
-An example component hierarchy looks as follows:
+The Starnix test runner runs test binaries that are compiled for Linux. Each
+such Linux binary expects to run in a particular environment (e.g., a particular
+system image). Starnix calls such an environment a "galaxy."
 
-  * `starnix_test_runners.cm`: bundles all the different runners under one component, makes it
-                               easier to add/remove test runners.
-    * `stardroid_test_runner.cm`
-      * `starnix_test_runner.cm`: the component that interacts with the test manager.
-      * `starnix_runner.cm`: the component that actually runs the test binaries, from
-	      	             a package that contains an Android system image.
-    * `starmium_test_runner.cm`
-      * `starnix_test_runner.cm`: the component that interacts with the test manager.
-      * `starnix_runner.cm`: the component that actually runs the test binaries, from
-	      		     a package that contains a ChromiumOS system image.
-    * `starnix_unit_test_runner`: the component that runs starnix runner unit tests.
+All galaxies share the same `starnix_runner.cml`, but they differ in their
+configuration. A galaxy is simply a package that contains the Starnix runner
+component along with a system image and configuration file.
 
-It's worthwhile to note that most of the `.cml` content and all of the code is the same between the
-different runners. The only difference is which package the `starnix_runner.cm` is loaded from,
-since the different packages contain different system images and configuration.
+The Starnix test runner expects each test component to bundle its galaxy inside
+of the test package. The Starnix test runner then instantiates the bundled
+Starnix runner for each test, and uses that runner to actually run the test
+binary.
 
-# Starnix Unit Test Runner
+This means that the same test runner can be used for all Starnix galaxies, and
+each test component runs hermetically.
+
+To create a new Starnix test component, first add the following include to the
+test `.cml`:
+
+```
+include: [ "//src/proc/tests/starnix_test.shard.cml" ]
+```
+
+This shard sets the `runner` of the component to `starnix_test_runner` and
+creates the collection that `starnix_test_runner` will use to instantiate the
+test's `starnix_runner` instance.
+
+Once the `.cml` is defined, the test package needs to be updated to include the
+appropriate galaxy.
+
+For example, the build template used for running tests in a [bionic][bionic]
+based environment:
+
+```
+template("starbionic_test_package") {
+  starnix_test_package(target_name) {
+    forward_variables_from(invoker, "*")
+
+    galaxy = "//src/proc/bin/galaxies/starbionic_test"
+  }
+}
+```
+
+The `galaxy` argument points to the directory containing the galaxy definition.
+
+## Starnix Unit Test Runner
 
 This runner is intended to be used by the starnix runner's unit tests. It is a
 wrapper around the regular Rust test runner that adds additional permissions
@@ -38,3 +62,4 @@ required by starnix unit tests that shouldn't be available to regular Rust test
 components.
 
 [test-runner]: ../README.md
+[bionic]: https://android.googlesource.com/platform/bionic/
