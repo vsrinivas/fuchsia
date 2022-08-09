@@ -116,6 +116,8 @@ tables_generator_tests_*.txt
 /third_party/nlassert/src
 !/third_party/openssl-ecjpake
 /third_party/openssl-ecjpake/src
+!/third_party/tpm2-tss/
+/third_party/tpm2-tss/src
 
 /tmp/
 /vendor/
