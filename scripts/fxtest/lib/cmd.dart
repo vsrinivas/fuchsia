@@ -64,6 +64,12 @@ class FuchsiaTestCommand {
 
   int _numberOfTests;
 
+  /// Used to obtain package hashes for component tests. Lazily loaded so that
+  /// host tests do not rely on a package repository.
+  PackageRepository? _packageRepository;
+
+  PackageRepository? get packageRepository => _packageRepository;
+
   FuchsiaTestCommand({
     required this.analyticsReporter,
     required this.outputFormatters,
@@ -290,11 +296,16 @@ class FuchsiaTestCommand {
         workingDirectory: testsConfig.fxEnv.outputDir!,
       );
 
-  bool _maybeAddPackageHash(
-      TestBundle testBundle, PackageRepository? repository) {
+  Future<bool> maybeAddPackageHash(TestBundle testBundle) async {
+    // TODO: This should not require checking if `buildDir != null`, as that is
+    // a temporary workaround to get tests passing on CQ. The correct
+    // implementation is to abstract file-reading just as we have process-launching.
     if (testsConfig.flags.shouldUsePackageHash &&
-        testBundle.testDefinition.packageUrl != null) {
-      if (repository == null) {
+        testBundle.testDefinition.packageUrl != null &&
+        testsConfig.fxEnv.outputDir != null) {
+      _packageRepository ??= await PackageRepository.fromManifest(
+          buildDir: testsConfig.fxEnv.outputDir!);
+      if (_packageRepository == null) {
         emitEvent(TestResult(
             runtime: Duration(seconds: 0),
             exitCode: failureExitCode,
@@ -305,7 +316,7 @@ class FuchsiaTestCommand {
         return false;
       } else {
         String packageName = testBundle.testDefinition.packageUrl!.packageName;
-        if (repository[packageName] == null) {
+        if (_packageRepository![packageName] == null) {
           emitEvent(TestResult(
               runtime: Duration(seconds: 0),
               exitCode: failureExitCode,
@@ -315,7 +326,8 @@ class FuchsiaTestCommand {
               command: ''));
           return false;
         }
-        testBundle.testDefinition.hash = repository[packageName]!.merkle;
+        testBundle.testDefinition.hash =
+            _packageRepository![packageName]!.merkle;
       }
     }
     return true;
@@ -335,19 +347,9 @@ class FuchsiaTestCommand {
     }
 
     // set merkle root hash on component tests
-    // TODO: This should not require checking if `buildDir != null`, as that is
-    // a temporary workaround to get tests passing on CQ. The correct
-    // implementation is to abstract file-reading just as we have process-launching.
-    PackageRepository? packageRepository;
-    if (testsConfig.flags.shouldUsePackageHash &&
-        testsConfig.fxEnv.outputDir != null) {
-      packageRepository = await PackageRepository.fromManifest(
-          buildDir: testsConfig.fxEnv.outputDir!);
-    }
-
     for (TestBundle testBundle in _testBundles) {
       if (!testsConfig.flags.infoOnly &&
-          !_maybeAddPackageHash(testBundle, packageRepository)) {
+          !await maybeAddPackageHash(testBundle)) {
         _exitCodeSetter(failureExitCode);
         continue;
       }

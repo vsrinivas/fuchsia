@@ -88,6 +88,7 @@ dart_test("fxtest_tests") {
 
   sources = [
     "args_test.dart",
+    "cmd_test.dart",
     "fake_fx_env.dart",
     "helper_test.dart",
     "helpers.dart",
