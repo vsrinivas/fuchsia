@@ -1,0 +1,5 @@
+fuchsia.rust_inspect.selectors: SnapshotAndSelect/10
+fuchsia.rust_inspect.selectors: SnapshotAndSelect/100
+fuchsia.rust_inspect.selectors: SnapshotAndSelect/1000
+fuchsia.rust_inspect.selectors: SnapshotAndSelect/10000
+fuchsia.rust_inspect.selectors: SnapshotAndSelect/100000

@@ -152,6 +152,9 @@ if (is_host) {
     "fuchsia.fidlc_microbenchmarks.txt",
     "fuchsia.input_latency.simplest_app.txt",
     "fuchsia.kernel.boot.txt",
+    "fuchsia.rust_inspect.benchmarks.txt",
+    "fuchsia.rust_inspect.reader_benchmarks.txt",
+    "fuchsia.rust_inspect.selectors.txt",
   ]
 
   host_test_data("runtime_deps") {

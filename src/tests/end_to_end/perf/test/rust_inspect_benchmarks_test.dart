@@ -17,7 +17,8 @@ void main() {
     await helper.runTestComponent(
         packageName: 'rust-inspect-benchmarks',
         componentName: 'reader.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.rust_inspect.reader_benchmarks.txt');
   }, timeout: Timeout.none);
 
   test('rust_inspect_writer_benchmarks', () async {
@@ -25,7 +26,8 @@ void main() {
     await helper.runTestComponent(
         packageName: 'rust-inspect-benchmarks',
         componentName: 'writer.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.rust_inspect.benchmarks.txt');
   }, timeout: Timeout.none);
 
   test('rust_inspect_snapshot_filter_benchmarks', () async {
@@ -33,6 +35,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'rust-inspect-benchmarks',
         componentName: 'snapshot_filter.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.rust_inspect.selectors.txt');
   }, timeout: Timeout.none);
 }
