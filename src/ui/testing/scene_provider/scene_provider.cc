@@ -6,7 +6,6 @@
 
 #include <fuchsia/session/scene/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -63,12 +62,72 @@ void SceneProvider::RegisterGeometryObserver(
   context_->svc()->Connect<fuchsia::ui::observation::test::Registry>(
       observer_registry.NewRequest());
   observer_registry->RegisterGlobalGeometryProvider(std::move(geometry_observer));
-
-  callback();
 }
 
-fidl::InterfaceRequestHandler<fuchsia::ui::test::scene::Provider> SceneProvider::GetHandler() {
+void SceneProvider::PresentView(
+    fuchsia::element::ViewSpec view_spec,
+    fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller,
+    fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller,
+    PresentViewCallback callback) {
+  if (annotation_controller) {
+    annotation_controller_.Bind(std::move(annotation_controller));
+  }
+
+  if (view_controller) {
+    fake_view_controller_.emplace(std::move(view_controller));
+  }
+
+  auto scene_provider_config = scene_provider_config_lib::Config::TakeFromStartupHandle();
+
+  // TODO(fxbug.dev/106094): Register client's scoped geometry observer, if
+  // requested.
+
+  // On GFX, |view_spec| will have the `view_ref` and `view_holder_token` fields
+  // set. On flatland, it will have the `viewport_creation_token` field set.
+  // Any other combination thereof is invalid.
+  if (view_spec.has_view_ref() && view_spec.has_view_holder_token()) {
+    if (scene_provider_config.use_scene_manager()) {
+      fuchsia::session::scene::ManagerSyncPtr scene_manager;
+      context_->svc()->Connect(scene_manager.NewRequest());
+
+      fuchsia::session::scene::Manager_PresentRootViewLegacy_Result set_root_view_result;
+      scene_manager->PresentRootViewLegacy(std::move(*view_spec.mutable_view_holder_token()),
+                                           std::move(*view_spec.mutable_view_ref()),
+                                           &set_root_view_result);
+    } else {
+      fuchsia::ui::policy::PresenterPtr root_presenter;
+      context_->svc()->Connect(root_presenter.NewRequest());
+      root_presenter->PresentOrReplaceView2(std::move(*view_spec.mutable_view_holder_token()),
+                                            std::move(*view_spec.mutable_view_ref()),
+                                            /* presentation */ nullptr);
+    }
+  } else if (view_spec.has_viewport_creation_token()) {
+    FX_CHECK(scene_provider_config.use_scene_manager())
+        << "Flatland not supported on root presenter";
+
+    fuchsia::session::scene::ManagerSyncPtr scene_manager;
+    context_->svc()->Connect(scene_manager.NewRequest());
+
+    fuchsia::session::scene::Manager_PresentRootView_Result set_root_view_result;
+    scene_manager->PresentRootView(std::move(*view_spec.mutable_viewport_creation_token()),
+                                   &set_root_view_result);
+  } else {
+    FX_LOGS(FATAL) << "Invalid view spec";
+  }
+
+  fuchsia::element::GraphicalPresenter_PresentView_Result result;
+  result.set_response({});
+  callback(std::move(result));
+}
+
+fidl::InterfaceRequestHandler<fuchsia::ui::test::scene::Provider>
+SceneProvider::GetSceneProviderHandler() {
   return scene_provider_bindings_.GetHandler(this);
+}
+
+fidl::InterfaceRequestHandler<fuchsia::element::GraphicalPresenter>
+SceneProvider::GetGraphicalPresenterHandler() {
+  return graphical_presenter_bindings_.GetHandler(this);
 }
 
 }  // namespace ui_testing

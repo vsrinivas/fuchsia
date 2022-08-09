@@ -20,7 +20,8 @@ int run_scene_provider(int argc, const char** argv) {
   auto context = sys::ComponentContext::Create();
 
   ui_testing::SceneProvider scene_provider(context.get());
-  context->outgoing()->AddPublicService(scene_provider.GetHandler());
+  context->outgoing()->AddPublicService(scene_provider.GetSceneProviderHandler());
+  context->outgoing()->AddPublicService(scene_provider.GetGraphicalPresenterHandler());
 
   context->outgoing()->ServeFromStartupInfo();
 

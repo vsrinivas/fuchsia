@@ -28,6 +28,7 @@ source_set("lib") {
 
   public_deps = [
     ":scene_provider_config_lib",
+    "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.session.scene",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.observation.test",
