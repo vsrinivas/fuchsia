@@ -88,7 +88,7 @@ fuchsia_component("boringssl_self_test64") {
   manifest = "meta/boringssl_self_test64.cml"
 }
 
-stardroid_test_package("android") {
+starbionic_test_package("android") {
   test_components = [
     ":adbd_test",
     ":boringssl_self_test64",
@@ -108,10 +108,10 @@ starnix_test_package("android_with_init") {
       max_severity = "ERROR"
     }
   }
-  galaxy = "//src/proc/bin/galaxies/stardroid"
+  galaxy = "//src/proc/bin/galaxies/starbionic"
 }
 
-stardroid_test_package("android_with_error_logs") {
+starbionic_test_package("android_with_error_logs") {
   test_components = [ ":binder_test" ]
   test_specs = {
     log_settings = {

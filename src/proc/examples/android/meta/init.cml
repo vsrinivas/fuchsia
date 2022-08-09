@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     program: {
-        runner: "stardroid",
+        runner: "starbionic",
         binary: "/system/bin/init",
     },
 }

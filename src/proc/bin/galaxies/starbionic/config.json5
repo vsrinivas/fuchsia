@@ -14,6 +14,6 @@
     mounts: [
         "/:ext4:data/system.img",
     ],
-    name: "stardroid",
+    name: "starbionic",
     startup_file_path: "/dev/binderfs",
 }

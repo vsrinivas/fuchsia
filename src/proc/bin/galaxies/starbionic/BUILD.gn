@@ -4,7 +4,7 @@
 
 import("//src/proc/bin/galaxies/galaxy.gni")
 
-starnix_galaxy_package("stardroid") {
+starnix_galaxy_package("starbionic") {
   config = "config.json5"
   system_image = "//prebuilt/starnix/android-image-amd64/system.img"
   deps = [ ":testcases_mount_point" ]

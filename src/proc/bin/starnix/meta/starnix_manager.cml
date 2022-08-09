@@ -4,6 +4,10 @@
 {
     children: [
         {
+            name: "starbionic",
+            url: "fuchsia-pkg://fuchsia.com/starbionic#meta/starnix_runner.cm",
+        },
+        {
             name: "stardroid",
             url: "fuchsia-pkg://fuchsia.com/stardroid#meta/starnix_runner.cm",
         },
@@ -34,6 +38,7 @@
             ],
             from: "parent",
             to: [
+                "#starbionic",
                 "#stardroid",
                 "#starless",
                 "#starmium",
@@ -48,6 +53,7 @@
             ],
             from: "parent",
             to: [
+                "#starbionic",
                 "#stardroid",
                 "#starless",
                 "#starmium",
@@ -60,6 +66,7 @@
             protocol: "fuchsia.component.Realm",
             from: "framework",
             to: [
+                "#starbionic",
                 "#stardroid",
                 "#starless",
                 "#starmium",
@@ -74,6 +81,7 @@
             directory: "dev-gpu",
             from: "parent",
             to: [
+                "#starbionic",
                 "#stardroid",
                 "#starless",
                 "#starmium",
@@ -81,6 +89,11 @@
         },
     ],
     expose: [
+        {
+            runner: "starnix",
+            from: "#starbionic",
+            as: "starbionic",
+        },
         {
             runner: "starnix",
             from: "#stardroid",
@@ -101,7 +114,7 @@
             // starnix_manager component itself, but that is blocked
             // behind fxb/74087
             protocol: "fuchsia.starnix.developer.Manager",
-            from: "#stardroid",
+            from: "#starbionic",
         },
     ],
     environments: [
@@ -116,8 +129,8 @@
                 },
                 {
                     runner: "starnix",
-                    from: "#stardroid",
-                    as: "stardroid",
+                    from: "#starbionic",
+                    as: "starbionic",
                 },
                 {
                     runner: "starnix",

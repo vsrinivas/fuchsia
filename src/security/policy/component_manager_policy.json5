@@ -48,6 +48,7 @@
             create_raw_processes: [
                 "/core/starnix_manager/starmium",
                 "/core/starnix_manager/stardroid",
+                "/core/starnix_manager/starbionic",
                 "/core/starnix_manager/starless",
                 "/core/test_manager/starnix_test_runners/starnix_unit_test_runner",
                 "/core/test_manager/starnix-tests:**",
@@ -232,6 +233,7 @@
                     "/core/termina-guest-manager/vmm",
                     "/core/starnix_manager/starmium",
                     "/core/starnix_manager/stardroid",
+                    "/core/starnix_manager/starbionic",
                     "/core/starnix_manager/starless",
                     "/core/test_manager/starnix_test_runners/starnix_unit_test_runner",
                     "/core/test_manager/starnix-tests:**",

@@ -21,6 +21,6 @@
         "/sys:sysfs",
         "/sys/fs/selinux:selinuxfs",
     ],
-    name: "stardroid_test",
+    name: "starbionic_test",
     startup_file_path: "",
 }

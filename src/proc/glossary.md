@@ -57,8 +57,8 @@ futexes.
 ## Galaxy
 
 The term "galaxy" refers to the [Starnix runner](#starnix-runner) bundled with a particular
-system image and configuration. For example, the `stardroid` galaxy is a starnix runner instance
-configured to run binaries using an Android system image.
+system image and configuration. For example, the `starbionic` galaxy is a starnix runner instance
+configured to run binaries using an Android system image (Bionic libc).
 
 
 ## gVisor

@@ -69,7 +69,7 @@ foreach(test_name, wayland_tests) {
   }
 }
 
-stardroid_test_package("starnix_wayland_tests") {
+starbionic_test_package("starnix_wayland_tests") {
   test_components = []
 
   foreach(test_name, wayland_tests) {

@@ -33,14 +33,14 @@ template("starnix_test_package") {
   }
 }
 
-# Define a test package for a linux test running in a stardroid galaxy.
+# Define a test package for a linux test running in a starbionic galaxy.
 #
 # The parameters are the same as fuchsia_test_package
-template("stardroid_test_package") {
+template("starbionic_test_package") {
   starnix_test_package(target_name) {
     forward_variables_from(invoker, "*")
 
-    galaxy = "//src/proc/bin/galaxies/stardroid_test"
+    galaxy = "//src/proc/bin/galaxies/starbionic_test"
   }
 }
 

@@ -23,7 +23,7 @@ fuchsia_test_component("test_component") {
   deps = [ ":bin" ]
 }
 
-stardroid_test_package("starnix_benchmarks") {
+starbionic_test_package("starnix_benchmarks") {
   package_name = "starnix_benchmarks"
   test_components = [ ":test_component" ]
 }

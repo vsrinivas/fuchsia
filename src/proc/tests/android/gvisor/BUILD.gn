@@ -19,7 +19,7 @@ group("gvisor") {
 expect_includes("gvisor_test") {
   includes = [ "meta/gvisor.shard.cml" ]
 
-  # Uses stardroid_test_runner
+  # Uses starbionic_test_runner
   deps = [ "//src/proc/tests:starnix_test" ]
 }
 
@@ -188,7 +188,7 @@ zip_resource("gvisor_runfiles") {
   dest_prefix = "data/tests"
 }
 
-stardroid_test_package("starnix_gvisor_tests") {
+starbionic_test_package("starnix_gvisor_tests") {
   deps = [ ":gvisor_runfiles" ]
 
   test_components = []
@@ -198,7 +198,7 @@ stardroid_test_package("starnix_gvisor_tests") {
   }
 }
 
-stardroid_test_package("starnix_gvisor_benchmarks") {
+starbionic_test_package("starnix_gvisor_benchmarks") {
   test_components = []
 
   foreach(benchmark_name, gvisor_benchmarks) {
