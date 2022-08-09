@@ -192,7 +192,7 @@ zx_koid_t JobDispatcher::get_related_koid() const { return parent_ ? parent_->ge
 bool JobDispatcher::AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& process) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if (state_ != State::READY)
     return false;
   procs_.push_back(process.get());
@@ -203,7 +203,7 @@ bool JobDispatcher::AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& proces
 bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (state_ != State::READY)
     return false;
@@ -229,7 +229,7 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
 
   bool should_die = false;
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     // The process dispatcher can call us in its destructor, Kill(),
     // or RemoveThread().
     if (!fbl::InContainer<ProcessDispatcher::RawJobListTag>(*process)) {
@@ -252,7 +252,7 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
 
   bool should_die = false;
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     if (!fbl::InContainer<JobDispatcher::RawListTag>(*job)) {
       return;
     }
@@ -268,7 +268,7 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
 }
 
 JobDispatcher::State JobDispatcher::GetState() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return state_;
 }
 
@@ -295,7 +295,7 @@ void JobDispatcher::FinishDeadTransitionUnlocked() {
   // finish dying.
   DEBUG_ASSERT(!parent_ || (parent_->GetState() != State::DEAD));
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     state_ = State::DEAD;
     exceptionate_.Shutdown();
     debug_exceptionate_.Shutdown();
@@ -327,7 +327,7 @@ void JobDispatcher::UpdateSignalsLocked() {
 }
 
 JobPolicy JobDispatcher::GetPolicy() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return policy_;
 }
 
@@ -364,7 +364,7 @@ bool JobDispatcher::KillJobWithKillOnOOM() {
 
 void JobDispatcher::CollectJobsWithOOMBit(OOMBitJobArray* into, int* count) {
   // As CollectJobsWithOOMBit will recurse we need to give a lock order to the guard.
-  Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
+  Guard<CriticalMutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
 
   if (kill_on_oom_) {
     if (*count >= static_cast<int>(into->size())) {
@@ -392,7 +392,7 @@ bool JobDispatcher::Kill(int64_t return_code) {
 
   bool should_die = false;
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     if (state_ != State::READY)
       return false;
 
@@ -479,7 +479,7 @@ zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v
 
 zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v2_t* in_policy,
                                           size_t policy_count) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (!CanSetPolicy()) {
     return ZX_ERR_BAD_STATE;
@@ -488,7 +488,7 @@ zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v
 }
 
 zx_status_t JobDispatcher::SetTimerSlackPolicy(const zx_policy_timer_slack& policy) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (!CanSetPolicy()) {
     return ZX_ERR_BAD_STATE;
@@ -531,7 +531,7 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
   zx_status_t result = ZX_OK;
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     proc_refs = ForEachChildInLocked<ProcessDispatcher>(
         procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) { return ZX_OK; });
@@ -575,7 +575,7 @@ bool JobDispatcher::EnumerateChildrenRecursive(JobEnumerator* je) {
 
   {
     // As EnumerateChildren will recurse we need to give a lock order to the guard.
-    Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
+    Guard<CriticalMutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
 
     proc_refs = ForEachChildInLocked<ProcessDispatcher>(
         procs_, &result, [&](const fbl::RefPtr<ProcessDispatcher>& proc) {
@@ -605,7 +605,7 @@ fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(zx_koid_t koid) 
 
   fbl::RefPtr<ProcessDispatcher> found_proc;
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     zx_status_t result;
 
     proc_refs = ForEachChildInLocked<ProcessDispatcher>(procs_, &result,
@@ -627,7 +627,7 @@ fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(zx_koid_t koid) {
 
   fbl::RefPtr<JobDispatcher> found_job;
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     zx_status_t result;
 
     jobs_refs =
@@ -660,19 +660,19 @@ Exceptionate* JobDispatcher::exceptionate(Exceptionate::Type type) {
 }
 
 void JobDispatcher::set_kill_on_oom(bool value) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   kill_on_oom_ = value;
 }
 
 bool JobDispatcher::get_kill_on_oom() const {
-  Guard<Mutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
+  Guard<CriticalMutex> guard{AssertOrderedLock, get_lock(), LockOrder()};
   return kill_on_oom_;
 }
 
 void JobDispatcher::GetInfo(zx_info_job_t* info) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   info->return_code = return_code_;
   info->exited = (state_ == State::DEAD) || (state_ == State::KILLING);
   info->kill_on_oom = kill_on_oom_;
@@ -682,7 +682,7 @@ void JobDispatcher::GetInfo(zx_info_job_t* info) const {
 zx_status_t JobDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   aggregated_runtime_stats_.AccumulateRuntimeTo(info);
 
   // At this point, the process in question may be in its destructor waiting to acquire the lock and

@@ -72,7 +72,7 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
     return status;
   }
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   // User may not pin new memory if either our BTI has hit zero handles, or if
   // we currently have quarantined pages.  In the case that there are active
   // quarantined pages, driver code is expected to take the steps to stop their
@@ -91,13 +91,13 @@ void BusTransactionInitiatorDispatcher::ReleaseQuarantine() {
   // The PMT dtor will call RemovePmo, which will reacquire this BTI's lock.
   // To avoid deadlock, drop the lock before letting the quarantined PMTs go.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     quarantine_.swap(tmp);
   }
 }
 
 void BusTransactionInitiatorDispatcher::on_zero_handles() {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   // Prevent new pinning from happening.  The Dispatcher will stick around
   // until all of the PMTs are closed.
   zero_handles_ = true;
@@ -131,13 +131,13 @@ void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher
 }
 
 void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* pmt) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   DEBUG_ASSERT(fbl::InContainer<PmtListTag>(*pmt));
   pinned_memory_.erase(*pmt);
 }
 
 void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   DEBUG_ASSERT(fbl::InContainer<PmtListTag>(*pmt));
   quarantine_.push_back(ktl::move(pmt));
@@ -151,13 +151,13 @@ void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryToken
 
 // The count of the pinned memory object tokens.
 uint64_t BusTransactionInitiatorDispatcher::pmo_count() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return pinned_memory_.size_slow();
 }
 
 // The count of the quarantined pinned memory object tokens.
 uint64_t BusTransactionInitiatorDispatcher::quarantine_count() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return quarantine_.size_slow();
 }
 

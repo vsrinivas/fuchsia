@@ -36,7 +36,7 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
     return ZX_ERR_NO_MEMORY;
   }
 
-  Guard<Mutex> guard{disp->get_lock()};
+  Guard<CriticalMutex> guard{disp->get_lock()};
 
   uint32_t interrupt_flags = 0;
 

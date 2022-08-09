@@ -87,7 +87,7 @@ zx_status_t Dispatcher::AddObserver(SignalObserver* observer, const Handle* hand
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (trigger_mode == Dispatcher::TriggerMode::Level) {
     // If the currently active signals already match the desired signals,
@@ -113,7 +113,7 @@ bool Dispatcher::RemoveObserver(SignalObserver* observer, zx_signals_t* signals)
   ZX_DEBUG_ASSERT(is_waitable());
   ZX_DEBUG_ASSERT(observer != nullptr);
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (signals != nullptr) {
     *signals = signals_.load(ktl::memory_order_acquire);
@@ -131,7 +131,7 @@ void Dispatcher::Cancel(const Handle* handle) {
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   const zx_signals_t signals = signals_.load(ktl::memory_order_acquire);
 
@@ -154,7 +154,7 @@ bool Dispatcher::CancelByKey(const Handle* handle, const void* port, uint64_t ke
   canary_.Assert();
   ZX_DEBUG_ASSERT(is_waitable());
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   const zx_signals_t signals = signals_.load(ktl::memory_order_acquire);
 
@@ -185,7 +185,7 @@ void Dispatcher::UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask) {
     return;
   }
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   UpdateStateLocked(clear_mask, set_mask);
 }
@@ -227,6 +227,6 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mas
 }
 
 zx_signals_t Dispatcher::PollSignals() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return GetSignalsStateLocked();
 }

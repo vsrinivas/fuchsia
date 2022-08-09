@@ -111,7 +111,7 @@ zx_status_t ThreadDispatcher::Initialize() {
     return result;
   }
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   // Associate the proc's address space with this thread.
   process_->aspace()->AttachToThread(core_thread_);
   // we've entered the initialized state
@@ -122,7 +122,7 @@ zx_status_t ThreadDispatcher::Initialize() {
 zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
   canary_.Assert();
 
-  Guard<Mutex> thread_guard{get_lock()};
+  Guard<CriticalMutex> thread_guard{get_lock()};
   if (core_thread_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
@@ -135,7 +135,7 @@ void ThreadDispatcher::get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const {
 
   memset(out_name, 0, ZX_MAX_NAME_LEN);
 
-  Guard<Mutex> thread_guard{get_lock()};
+  Guard<CriticalMutex> thread_guard{get_lock()};
   if (core_thread_ == nullptr) {
     return;
   }
@@ -159,7 +159,7 @@ zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspend
   if (!arch_is_valid_user_pc(entry.pc)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (state_.lifecycle() != ThreadState::Lifecycle::INITIALIZED)
     return ZX_ERR_BAD_STATE;
@@ -196,7 +196,7 @@ void ThreadDispatcher::Kill() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   switch (state_.lifecycle()) {
     case ThreadState::Lifecycle::INITIAL:
@@ -223,7 +223,7 @@ zx_status_t ThreadDispatcher::Suspend() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
@@ -261,7 +261,7 @@ void ThreadDispatcher::Resume() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   LTRACEF("%p: state %s\n", this, ThreadLifecycleToString(state_.lifecycle()));
 
@@ -289,7 +289,7 @@ void ThreadDispatcher::Resume() {
 }
 
 bool ThreadDispatcher::IsDyingOrDead() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return IsDyingOrDeadLocked();
 }
 
@@ -299,7 +299,7 @@ bool ThreadDispatcher::IsDyingOrDeadLocked() const {
 }
 
 bool ThreadDispatcher::HasStarted() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return HasStartedLocked();
 }
 
@@ -316,7 +316,7 @@ void ThreadDispatcher::ExitingCurrent() {
 
   // Set ourselves in the DYING state before calling the Debugger.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     SetStateLocked(ThreadState::Lifecycle::DYING);
   }
 
@@ -336,7 +336,7 @@ void ThreadDispatcher::ExitingCurrent() {
   // marked dead, and we don't want to have a state where the process is
   // dead but one thread is not.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // put ourselves into the dead state
     SetStateLocked(ThreadState::Lifecycle::DEAD);
@@ -359,7 +359,7 @@ void ThreadDispatcher::Suspending() {
   // Update the state before sending any notifications out. We want the
   // receiver to see the new state.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // Don't suspend if we are racing with our own death.
     if (state_.lifecycle() != ThreadState::Lifecycle::DYING) {
@@ -376,7 +376,7 @@ void ThreadDispatcher::Resuming() {
   // Update the state before sending any notifications out. We want the
   // receiver to see the new state.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // Don't resume if we are racing with our own death.
     if (state_.lifecycle() != ThreadState::Lifecycle::DYING) {
@@ -526,7 +526,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
 
   *info = {};
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   info->state = ThreadLifecycleToState(state_.lifecycle(), blocked_reason_);
   info->wait_exception_channel_type = exceptionate_type_;
 
@@ -553,7 +553,7 @@ zx_status_t ThreadDispatcher::GetStatsForUserspace(zx_info_thread_stats_t* info)
 
   *info = {};
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (core_thread_ == nullptr) {
     return ZX_ERR_BAD_STATE;
@@ -596,7 +596,7 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (InExceptionLocked()) {
     // We always leave exception handling before the report gets wiped
@@ -629,7 +629,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // We send the exception while locked so that if it succeeds we can
     // atomically update our state.
@@ -651,7 +651,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
 
   LTRACEF("received exception response %d\n", status);
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   // If both the thread was killed and the exception was resumed before we
   // started waiting, the exception resume status (ZX_OK) might be returned,
@@ -722,7 +722,7 @@ zx_status_t ThreadDispatcher::ReadStateGeneric(F get_state_func, user_out_ptr<vo
   T state{};
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     // We can't be reading regs while the thread transitions from SUSPENDED to RUNNING.
     if (!SuspendedOrInExceptionLocked()) {
       return ZX_ERR_BAD_STATE;
@@ -778,7 +778,7 @@ zx_status_t ThreadDispatcher::WriteStateGeneric(F set_state_func, user_in_ptr<co
     return status;
   }
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   // We can't be writing regs while the thread transitions from SUSPENDED to RUNNING.
   if (!SuspendedOrInExceptionLocked()) {
@@ -815,7 +815,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
 }
 
 zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
@@ -827,7 +827,7 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
 }
 
 zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& params) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {
@@ -839,7 +839,7 @@ zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& para
 }
 
 zx_status_t ThreadDispatcher::SetSoftAffinity(cpu_mask_t mask) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if ((state_.lifecycle() == ThreadState::Lifecycle::INITIAL) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DYING) ||
       (state_.lifecycle() == ThreadState::Lifecycle::DEAD)) {

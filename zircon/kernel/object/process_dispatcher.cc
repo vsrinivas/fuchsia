@@ -144,7 +144,7 @@ void ProcessDispatcher::on_zero_handles() {
   // we never detach from the parent job, so run the shutdown sequence for
   // that case.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     if (state_ != State::INITIAL) {
       // Initalized proceses are kept alive by their threads, see
       // RemoveThread() for the details.
@@ -167,7 +167,7 @@ zx_status_t ProcessDispatcher::set_name(const char* name, size_t len) {
 zx_status_t ProcessDispatcher::Initialize() {
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   DEBUG_ASSERT(state_ == State::INITIAL);
 
@@ -189,7 +189,7 @@ void ProcessDispatcher::Exit(int64_t retcode) {
   DEBUG_ASSERT(ProcessDispatcher::GetCurrent() == this);
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // check that we're in the RUNNING state or we're racing with something
     // else that has already pushed us until the DYING state
@@ -218,7 +218,7 @@ void ProcessDispatcher::Kill(int64_t retcode) {
   bool became_dead = false;
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // we're already dead
     if (state_ == State::DEAD)
@@ -249,7 +249,7 @@ zx_status_t ProcessDispatcher::Suspend() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   // If we're dying don't try to suspend.
   if (state_ == State::DYING || state_ == State::DEAD)
@@ -275,7 +275,7 @@ void ProcessDispatcher::Resume() {
 
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   // If we're in the process of dying don't try to resume, just let it continue to clean up.
   if (state_ == State::DYING || state_ == State::DEAD)
@@ -303,7 +303,7 @@ zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool in
                                                     const ThreadDispatcher::EntryState& entry) {
   LTRACE_ENTRY_OBJ;
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (initial_thread) {
     if (state_ != State::INITIAL)
@@ -349,7 +349,7 @@ void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
 
   {
     // we're going to check for state and possibly transition below
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // remove the thread from our list
     DEBUG_ASSERT(t != nullptr);
@@ -375,7 +375,7 @@ void ProcessDispatcher::RemoveThread(ThreadDispatcher* t) {
 zx_koid_t ProcessDispatcher::get_related_koid() const { return job_->get_koid(); }
 
 ProcessDispatcher::State ProcessDispatcher::state() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return state_;
 }
 
@@ -448,7 +448,7 @@ void ProcessDispatcher::FinishDeadTransition() {
   // holding the lock.
   fbl::RefPtr<JobDispatcher> kill_job;
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     if (critical_to_job_ != nullptr) {
       // Check if we accept any return code, or require it be non-zero.
       if (!retcode_nonzero_ || retcode_ != 0) {
@@ -470,7 +470,7 @@ void ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
   zx_info_process_flags_t flags = 0u;
   // retcode_ depends on the state: make sure they're consistent.
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     state = state_;
     start_time = start_time_;
     return_code = retcode_;
@@ -503,7 +503,7 @@ void ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
 
 zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {
   DEBUG_ASSERT(stats != nullptr);
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if (state_ == State::DEAD) {
     return ZX_ERR_BAD_STATE;
   }
@@ -520,7 +520,7 @@ zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {
 }
 
 zx_status_t ProcessDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   aggregated_runtime_stats_.AccumulateRuntimeTo(info);
   for (const auto& thread : thread_list_) {
     zx_status_t err = thread.AccumulateRuntimeTo(info);
@@ -545,7 +545,7 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(VmAspace* current_aspace,
 zx_status_t ProcessDispatcher::GetVmos(VmAspace* current_aspace, VmoInfoWriter& vmos, size_t max,
                                        size_t* actual_out, size_t* available_out) {
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     if (state_ != State::RUNNING) {
       return ZX_ERR_BAD_STATE;
     }
@@ -572,7 +572,7 @@ zx_status_t ProcessDispatcher::GetVmos(VmAspace* current_aspace, VmoInfoWriter& 
 }
 
 zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   size_t n = thread_list_.size_slow();
   fbl::Array<zx_koid_t> threads;
   fbl::AllocChecker ac;
@@ -591,7 +591,7 @@ zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) co
 
 zx_status_t ProcessDispatcher::SetCriticalToJob(fbl::RefPtr<JobDispatcher> critical_to_job,
                                                 bool retcode_nonzero) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (critical_to_job_) {
     // The process is already critical to a job.
@@ -623,14 +623,14 @@ Exceptionate* ProcessDispatcher::exceptionate(Exceptionate::Type type) {
 uint32_t ProcessDispatcher::ThreadCount() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return static_cast<uint32_t>(thread_list_.size_slow());
 }
 
 size_t ProcessDispatcher::PageCount() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if (state_ != State::RUNNING) {
     return 0;
   }
@@ -669,7 +669,7 @@ fbl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(zx_koid_t ko
 
 fbl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(zx_koid_t koid) {
   LTRACE_ENTRY_OBJ;
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   auto iter =
       thread_list_.find_if([koid](const ThreadDispatcher& t) { return t.get_koid() == koid; });
@@ -677,23 +677,23 @@ fbl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(zx_koid_t koid
 }
 
 uintptr_t ProcessDispatcher::get_debug_addr() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return debug_addr_;
 }
 
 zx_status_t ProcessDispatcher::set_debug_addr(uintptr_t addr) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   debug_addr_ = addr;
   return ZX_OK;
 }
 
 uintptr_t ProcessDispatcher::get_dyn_break_on_load() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return dyn_break_on_load_;
 }
 
 zx_status_t ProcessDispatcher::set_dyn_break_on_load(uintptr_t break_on_load) {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   dyn_break_on_load_ = break_on_load;
   return ZX_OK;
 }
@@ -728,12 +728,12 @@ zx_status_t ProcessDispatcher::EnforceBasicPolicy(uint32_t condition) {
 TimerSlack ProcessDispatcher::GetTimerSlackPolicy() const { return policy_.GetTimerSlack(); }
 
 TaskRuntimeStats ProcessDispatcher::GetAggregatedRuntime() const {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return aggregated_runtime_stats_;
 }
 
 uintptr_t ProcessDispatcher::cache_vdso_code_address() {
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   vdso_code_address_ = aspace_->vdso_code_address();
   return vdso_code_address_;
 }

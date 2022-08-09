@@ -105,7 +105,7 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
 }
 
 PortObserver::PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                           Lock<Mutex>* port_lock, uint64_t key, zx_signals_t signals)
+                           Lock<CriticalMutex>* port_lock, uint64_t key, zx_signals_t signals)
     : options_(options),
       packet_(handle, nullptr),
       port_(ktl::move(port)),
@@ -181,7 +181,7 @@ PortDispatcher::~PortDispatcher() {
 void PortDispatcher::on_zero_handles() {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   DEBUG_ASSERT(!zero_handles_);
   zero_handles_ = true;
 
@@ -272,7 +272,7 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
   canary_.Assert();
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     if (zero_handles_) {
       return ZX_ERR_BAD_HANDLE;
     }
@@ -338,7 +338,7 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
 
     // No interrupt packets queued. Check the regular packets.
     {
-      Guard<Mutex> guard{get_lock()};
+      Guard<CriticalMutex> guard{get_lock()};
       PortPacket* port_packet = packets_.pop_front();
       if (port_packet != nullptr) {
         if (IsDefaultAllocatedEphemeral(*port_packet)) {
@@ -381,7 +381,7 @@ void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) 
   fbl::RefPtr<Dispatcher> dispatcher;
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     // We may be racing with on_zero_handles. Whichever one of us unlinks the dispatcher will be
     // responsible for ensuring the observer is cleaned up.
@@ -421,7 +421,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
   }
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
     DEBUG_ASSERT(!zero_handles_);
 
     // If we're over the limit, raise an exception.
@@ -443,7 +443,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   // This loop can take a while if there are many items.
   // In practice, the number of pending signal packets is
@@ -488,7 +488,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
 bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (port_packet->InContainer()) {
     if (IsDefaultAllocatedEphemeral(*port_packet)) {

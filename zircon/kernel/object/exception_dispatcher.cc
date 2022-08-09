@@ -60,7 +60,7 @@ ExceptionDispatcher::~ExceptionDispatcher() { kcounter_add(dispatcher_exception_
 bool ExceptionDispatcher::FillReport(zx_exception_report_t* report) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   if (report_) {
     *report = *report_;
     return true;
@@ -71,7 +71,7 @@ bool ExceptionDispatcher::FillReport(zx_exception_report_t* report) const {
 void ExceptionDispatcher::SetTaskRights(zx_rights_t thread_rights, zx_rights_t process_rights) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   thread_rights_ = thread_rights;
   process_rights_ = process_rights;
 }
@@ -79,7 +79,7 @@ void ExceptionDispatcher::SetTaskRights(zx_rights_t thread_rights, zx_rights_t p
 zx_status_t ExceptionDispatcher::MakeThreadHandle(HandleOwner* handle) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (thread_rights_ == 0) {
     return ZX_ERR_ACCESS_DENIED;
@@ -95,7 +95,7 @@ zx_status_t ExceptionDispatcher::MakeThreadHandle(HandleOwner* handle) const {
 zx_status_t ExceptionDispatcher::MakeProcessHandle(HandleOwner* handle) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   if (process_rights_ == 0) {
     return ZX_ERR_ACCESS_DENIED;
@@ -119,28 +119,28 @@ void ExceptionDispatcher::on_zero_handles() {
 uint32_t ExceptionDispatcher::GetDisposition() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return disposition_;
 }
 
 void ExceptionDispatcher::SetDisposition(uint32_t disposition) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   disposition_ = disposition;
 }
 
 bool ExceptionDispatcher::IsSecondChance() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   return second_chance_;
 }
 
 void ExceptionDispatcher::SetWhetherSecondChance(bool second_chance) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   second_chance_ = second_chance;
 }
 
@@ -167,7 +167,7 @@ zx_status_t ExceptionDispatcher::WaitForHandleClose() {
   }
 
   // Return the close action and reset it for next time.
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   switch (disposition_) {
     case ZX_EXCEPTION_STATE_HANDLED:
       status = ZX_OK;
@@ -189,14 +189,14 @@ void ExceptionDispatcher::DiscardHandleClose() {
 
   response_event_.Unsignal();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   disposition_ = ZX_EXCEPTION_STATE_TRY_NEXT;
 }
 
 void ExceptionDispatcher::Clear() {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   report_ = nullptr;
   arch_context_ = nullptr;
 }

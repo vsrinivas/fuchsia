@@ -212,6 +212,15 @@ class TA_CAP("mutex") CriticalMutex : private Mutex {
     }
   }
 
+  // See |Mutex::ReleaseThreadLocked|.
+  void ReleaseThreadLocked() TA_REL() TA_REQ(thread_lock) {
+    Mutex::ReleaseThreadLocked();
+    if (should_clear_) {
+      Thread::Current::preemption_state().ClearTimesliceExtension();
+      should_clear_ = false;
+    }
+  }
+
   // See |Mutex::IsHeld|.
   bool IsHeld() const { return Mutex::IsHeld(); }
 

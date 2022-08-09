@@ -125,7 +125,7 @@ class PortObserver final : public SignalObserver {
                                                  fbl::SizeOrder::Constant>;
 
   PortObserver(uint32_t options, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-               Lock<Mutex>* port_lock, uint64_t key, zx_signals_t signals);
+               Lock<CriticalMutex>* port_lock, uint64_t key, zx_signals_t signals);
 
   ~PortObserver() final = default;
 
@@ -148,7 +148,7 @@ class PortObserver final : public SignalObserver {
   PortPacket packet_;
 
   fbl::RefPtr<PortDispatcher> const port_;
-  Lock<Mutex>* const port_lock_;
+  Lock<CriticalMutex>* const port_lock_;
 
   // Guarded by port_lock_;
   ListNodeState observer_list_node_state_;

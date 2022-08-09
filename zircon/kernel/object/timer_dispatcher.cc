@@ -72,7 +72,7 @@ TimerDispatcher::~TimerDispatcher() {
 void TimerDispatcher::on_zero_handles() {
   // The timers can be kept alive indefinitely by the callbacks, so
   // we need to cancel when there are no more user-mode clients.
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   // We must ensure that the timer callback (running in interrupt context,
   // possibly on a different CPU) has completed before possibly destroy
@@ -84,7 +84,7 @@ void TimerDispatcher::on_zero_handles() {
 zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack_amount) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
 
   bool did_cancel = CancelTimerLocked();
 
@@ -119,7 +119,7 @@ zx_status_t TimerDispatcher::Set(zx_time_t deadline, zx_duration_t slack_amount)
 
 zx_status_t TimerDispatcher::Cancel() {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   CancelTimerLocked();
   return ZX_OK;
 }
@@ -183,7 +183,7 @@ void TimerDispatcher::OnTimerFired() {
   canary_.Assert();
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<CriticalMutex> guard{get_lock()};
 
     if (cancel_pending_) {
       // We previously attempted to cancel the timer but the dpc had already
@@ -215,7 +215,7 @@ void TimerDispatcher::OnTimerFired() {
 void TimerDispatcher::GetInfo(zx_info_timer_t* info) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<CriticalMutex> guard{get_lock()};
   info->options = options_;
   info->deadline = deadline_;
   info->slack = slack_amount_;
