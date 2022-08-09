@@ -60,7 +60,7 @@ func TestProductBundleUploads(t *testing.T) {
     ],
     "images": [
       {
-        "base_uri": "file:/..",
+        "base_uri": "file:/.",
         "format": "files"
       }
     ],
@@ -69,8 +69,8 @@ func TestProductBundleUploads(t *testing.T) {
     "packages": [
       {
         "format": "files",
-        "blob_uri": "file:/../../blobs",
-        "repo_uri": "file:/../../packages"
+        "blob_uri": "file:/../blobs",
+        "repo_uri": "file:/../packages"
       }
     ],
     "description": "some emulator device",

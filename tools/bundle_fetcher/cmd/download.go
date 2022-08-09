@@ -235,7 +235,7 @@ func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, produc
 	if err != nil {
 		return "", err
 	}
-	baseURI := filepath.Join(productBundleJSONPath, u.Path)
+	baseURI := filepath.Join(filepath.Dir(productBundleJSONPath), u.Path)
 	// Check that the path actually exists in GCS.
 	validPath, err := sink.doesPathExist(ctx, baseURI)
 	if err != nil {
