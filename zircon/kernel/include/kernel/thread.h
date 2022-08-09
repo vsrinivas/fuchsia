@@ -734,7 +734,8 @@ class PreemptionState {
   //
   // This method should only be called in normal thread context.
   //
-  // Returns false if a timeslice extension was already present.
+  // Returns false if a timeslice extension was already present or if the
+  // supplied duration is <= 0.
   //
   // Note: It OK to call this from a context where preemption is (hard)
   // disabled.  If preemption is requested while the preempt disable count is
@@ -742,6 +743,10 @@ class PreemptionState {
   // activated, but preemption will not occur until the count has dropped to
   // zero and the extension has expired or has been clear.
   bool SetTimesliceExtension(zx_duration_t extension_duration) {
+    if (extension_duration <= 0) {
+      return false;
+    }
+
     uint32_t state = state_.load();
     if (HasTimesliceExtension(state)) {
       return false;

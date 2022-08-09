@@ -10,10 +10,11 @@
 
 namespace {
 
+template <typename MutexType>
 bool mutex_lock_unlock() {
   BEGIN_TEST;
 
-  Mutex mutex;
+  MutexType mutex;
 
   mutex.Acquire();
   mutex.Release();
@@ -24,10 +25,11 @@ bool mutex_lock_unlock() {
   END_TEST;
 }
 
+template <typename MutexType>
 bool mutex_is_held() {
   BEGIN_TEST;
 
-  Mutex mutex;
+  MutexType mutex;
 
   EXPECT_FALSE(mutex.IsHeld(), "Lock not held");
   mutex.Acquire();
@@ -38,10 +40,11 @@ bool mutex_is_held() {
   END_TEST;
 }
 
+template <typename MutexType>
 bool mutex_assert_held() {
   BEGIN_TEST;
 
-  Mutex mutex;
+  MutexType mutex;
 
   mutex.Acquire();
   mutex.AssertHeld();  // Lock is held: this should be a no-op.
@@ -51,17 +54,19 @@ bool mutex_assert_held() {
 }
 
 // A struct with a guarded value.
+template <typename MutexType>
 struct ObjectWithLock {
-  Mutex mu;
+  MutexType mu;
   int val TA_GUARDED(mu);
 
   void TakeLock() TA_NO_THREAD_SAFETY_ANALYSIS { mu.Acquire(); }
 };
 
-bool mutex_assert_held_compile_test() {
+template <typename MutexType>
+bool mutex_assert_held_compile() {
   BEGIN_TEST;
 
-  ObjectWithLock object;
+  ObjectWithLock<MutexType> object;
 
   // This shouldn't compile with thread analysis enabled.
 #if defined(ENABLE_ERRORS)
@@ -186,9 +191,17 @@ bool singleton_mutex_threadsafe() {
 }  // namespace
 
 UNITTEST_START_TESTCASE(mutex_tests)
-UNITTEST("mutex_lock_unlock", mutex_lock_unlock)
-UNITTEST("mutex_is_held", mutex_is_held)
-UNITTEST("mutex_assert_held", mutex_assert_held)
-UNITTEST("mutex_assert_held_compile_test", mutex_assert_held_compile_test)
+
+UNITTEST("mutex_lock_unlock", mutex_lock_unlock<Mutex>)
+UNITTEST("mutex_is_held", mutex_is_held<Mutex>)
+UNITTEST("mutex_assert_held", mutex_assert_held<Mutex>)
+UNITTEST("mutex_assert_held_compile", mutex_assert_held_compile<Mutex>)
+
+UNITTEST("critical_mutex_lock_unlock", mutex_lock_unlock<CriticalMutex>)
+UNITTEST("critical_mutex_is_held", mutex_is_held<CriticalMutex>)
+UNITTEST("critical_mutex_assert_held", mutex_assert_held<CriticalMutex>)
+UNITTEST("critical_mutex_assert_held_compile", mutex_assert_held_compile<CriticalMutex>)
+
 UNITTEST("singleton mutex has thread-safe init", singleton_mutex_threadsafe)
+
 UNITTEST_END_TESTCASE(mutex_tests, "mutex", "Mutex tests")
