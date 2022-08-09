@@ -5,7 +5,11 @@
 //! The qemu_base module encapsulates traits and functions specific
 //! for engines using QEMU as the emulator platform.
 
-use crate::{arg_templates::process_flag_template, serialization::SerializingEngine};
+use crate::{
+    arg_templates::process_flag_template,
+    qemu_based::comms::{spawn_pipe_thread, QemuSocket},
+    serialization::SerializingEngine,
+};
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use errors::ffx_bail;
@@ -19,10 +23,12 @@ use ffx_emulator_common::{
 };
 use ffx_emulator_config::{
     AccelerationMode, ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine,
-    GuestConfig, NetworkingMode,
+    EngineConsoleType, GuestConfig, NetworkingMode,
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use shared_child::SharedChild;
+use std::net::Shutdown;
+use std::sync::mpsc::channel;
 use std::{
     env, fs,
     fs::File,
@@ -35,8 +41,13 @@ use std::{
     time::Duration,
 };
 
+pub(crate) mod comms;
 pub(crate) mod femu;
 pub(crate) mod qemu;
+
+const COMMAND_CONSOLE: &'static str = "./monitor";
+const MACHINE_CONSOLE: &'static str = "./qmp";
+const SERIAL_CONSOLE: &'static str = "./serial";
 
 /// QemuBasedEngine collects the interface for
 /// emulator engine implementations that use
@@ -485,6 +496,33 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// Access to the engine's pid field.
     fn set_pid(&mut self, pid: u32);
     fn get_pid(&self) -> u32;
+
+    /// Attach to emulator's console socket.
+    fn attach_to(&self, path: &PathBuf, console: EngineConsoleType) -> Result<()> {
+        let console_path = self.get_path_for_console_type(path, console);
+        let mut socket = QemuSocket::new(&console_path);
+        socket.connect().context("Connecting to console.")?;
+        let stream = socket.stream().ok_or(anyhow!("No socket connected."))?;
+        let (tx, rx) = channel();
+
+        let _t1 = spawn_pipe_thread(std::io::stdin(), stream.try_clone()?, tx.clone());
+        let _t2 = spawn_pipe_thread(stream.try_clone()?, std::io::stdout(), tx.clone());
+
+        // Now that the threads are reading and writing, we wait for one to send back an error.
+        let error = rx.recv()?;
+        eprintln!("{:?}", error);
+        stream.shutdown(Shutdown::Both).context("Shutting down stream.")?;
+        Ok(())
+    }
+
+    fn get_path_for_console_type(&self, path: &PathBuf, console: EngineConsoleType) -> PathBuf {
+        path.join(match console {
+            EngineConsoleType::Command => COMMAND_CONSOLE,
+            EngineConsoleType::Machine => MACHINE_CONSOLE,
+            EngineConsoleType::Serial => SERIAL_CONSOLE,
+            EngineConsoleType::None => panic!("No path exists for EngineConsoleType::None"),
+        })
+    }
 }
 
 #[cfg(test)]
@@ -537,6 +575,9 @@ mod tests {
             todo!()
         }
         fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
+            todo!()
+        }
+        fn attach(&self, _console: EngineConsoleType) -> Result<()> {
             todo!()
         }
     }

@@ -1,0 +1,29 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+if (is_host) {
+  ffx_plugin("ffx_emulator_console") {
+    version = "0.1.0"
+    edition = "2021"
+    with_unit_tests = true
+    args_deps = [
+      "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
+    ]
+    deps = [
+      "//src/developer/ffx/lib/errors:lib",
+      "//src/developer/ffx/plugins/emulator/commands:ffx_emulator_commands",
+      "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
+      "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
+    ]
+    args_sources = [ "src/args.rs" ]
+    sources = [ "src/lib.rs" ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":ffx_emulator_console_test($host_toolchain)" ]
+  }
+}

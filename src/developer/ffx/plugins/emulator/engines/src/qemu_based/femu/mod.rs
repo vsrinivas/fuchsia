@@ -9,7 +9,7 @@ use crate::{qemu_based::QemuBasedEngine, serialization::SerializingEngine};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
-use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
+use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType};
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, process::Command};
@@ -83,6 +83,10 @@ impl EmulatorEngine for FemuEngine {
         process::is_running(self.pid)
     }
 
+    fn attach(&self, console: EngineConsoleType) -> Result<()> {
+        self.attach_to(&self.emulator_configuration.runtime.instance_directory, console)
+    }
+
     /// Build the Command to launch Android emulator running Fuchsia.
     fn build_emulator_cmd(&self) -> Command {
         let mut cmd = Command::new(&self.emulator_binary);
@@ -126,7 +130,6 @@ impl EmulatorEngine for FemuEngine {
     }
 }
 
-#[async_trait]
 impl SerializingEngine for FemuEngine {}
 
 impl QemuBasedEngine for FemuEngine {

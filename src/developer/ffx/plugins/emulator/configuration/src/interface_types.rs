@@ -8,8 +8,8 @@
 //! runtime.
 
 use crate::enumerations::{
-    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, OperatingSystem,
-    PortMapping, VirtualCpu,
+    AccelerationMode, ConsoleType, EngineConsoleType, EngineType, GpuType, LogLevel,
+    NetworkingMode, OperatingSystem, PortMapping, VirtualCpu,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -72,6 +72,9 @@ pub trait EmulatorEngine {
 
     /// Mutable access to the engine's emulator_configuration field.
     fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration;
+
+    /// Attach the current process to one of the emulator's consoles.
+    fn attach(&self, console: EngineConsoleType) -> Result<()>;
 }
 
 /// Collects the specific configurations into a single struct for ease of passing around.

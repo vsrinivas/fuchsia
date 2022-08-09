@@ -14,6 +14,7 @@ if (is_host) {
     args_sources = [ "src/args.rs" ]
     config_data = [ "data/config.json" ]
     plugin_deps = [
+      "commands/console:ffx_emulator_console",
       "commands/list:ffx_emulator_list",
       "commands/show:ffx_emulator_show",
       "commands/start:ffx_emulator_start",

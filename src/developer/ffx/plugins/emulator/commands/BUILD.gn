@@ -20,6 +20,7 @@ if (is_host) {
   group("tests") {
     testonly = true
     deps = [
+      "console:tests",
       "list:tests",
       "show:tests",
       "start:tests",

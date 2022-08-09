@@ -56,6 +56,31 @@ display_impl!(ConsoleType);
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
+pub enum EngineConsoleType {
+    /// An emulator console for issuing commands to the emulation hypervisor.
+    Command,
+
+    /// An emulator console designed for machine-to-machine communication through a structured
+    /// language such as JSON.
+    Machine,
+
+    /// An emulator console for communicating with the virtual serial port.
+    Serial,
+
+    /// A default value indicating none of the above.
+    None,
+}
+
+impl Default for EngineConsoleType {
+    fn default() -> Self {
+        EngineConsoleType::None
+    }
+}
+
+display_impl!(EngineConsoleType);
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum EngineType {
     /// Fuchsia Emulator based on AEMU. Supports graphics.
     Femu,

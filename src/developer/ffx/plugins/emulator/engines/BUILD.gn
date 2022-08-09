@@ -11,6 +11,7 @@ if (is_host) {
     sources = [
       "src/arg_templates.rs",
       "src/lib.rs",
+      "src/qemu_based/comms.rs",
       "src/qemu_based/femu/mod.rs",
       "src/qemu_based/mod.rs",
       "src/qemu_based/qemu/mod.rs",

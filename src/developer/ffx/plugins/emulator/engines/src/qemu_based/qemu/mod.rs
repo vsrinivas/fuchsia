@@ -15,7 +15,8 @@ use ffx_emulator_common::{
     process,
 };
 use ffx_emulator_config::{
-    CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice,
+    CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType,
+    PointingDevice,
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
@@ -119,6 +120,10 @@ impl EmulatorEngine for QemuEngine {
 
     fn is_running(&self) -> bool {
         process::is_running(self.pid)
+    }
+
+    fn attach(&self, console: EngineConsoleType) -> Result<()> {
+        self.attach_to(&self.emulator_configuration.runtime.instance_directory, console)
     }
 
     /// Build the Command to launch Qemu emulator running Fuchsia.
