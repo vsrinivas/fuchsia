@@ -155,8 +155,8 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	if res.ControlMessages.HasIPv6PacketInfo {
-		header := (*reflect.SliceHeader)(unsafe.Pointer(&recv_meta.cmsg_set.ipv6_pktinfo.addr))
-		copy(*(*[]byte)(unsafe.Pointer(&header)), res.ControlMessages.IPv6PacketInfo.Addr)
+		dst := recv_meta.cmsg_set.ipv6_pktinfo.addr[:]
+		copy(*(*[]byte)(unsafe.Pointer(&dst)), res.ControlMessages.IPv6PacketInfo.Addr)
 	}
 
 	return convertSerializeRecvMsgMetaErr(C.serialize_recv_msg_meta(&recv_meta, addrBuf, bufOut))
@@ -184,8 +184,8 @@ func SerializeSendMsgAddress(protocol tcpip.NetworkProtocolNumber, addr tcpip.Fu
 	ip_addr := C.IpAddress{
 		addr_type: fromAddrType,
 	}
-	header := (*reflect.SliceHeader)(unsafe.Pointer(&ip_addr.addr))
-	copy(*(*[]byte)(unsafe.Pointer(&header)), addrSlice)
+	dst := ip_addr.addr[:]
+	copy(*(*[]byte)(unsafe.Pointer(&dst)), addrSlice)
 
 	bufOut := C.Buffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&buf))).Data)),
