@@ -414,27 +414,33 @@ mod tests {
         let mut decls = HashMap::new();
         decls.insert(
             root_url.clone(),
-            new_component_with_capabilities(
-                vec![],
-                vec![
-                    OfferDecl::Directory(root_offer_good_dir),
-                    OfferDecl::Protocol(root_offer_protocol),
-                ],
-                vec![CapabilityDecl::Directory(root_good_dir_decl)],
-                vec![new_child_decl(child_name, child_url.to_string())],
+            (
+                new_component_with_capabilities(
+                    vec![],
+                    vec![
+                        OfferDecl::Directory(root_offer_good_dir),
+                        OfferDecl::Protocol(root_offer_protocol),
+                    ],
+                    vec![CapabilityDecl::Directory(root_good_dir_decl)],
+                    vec![new_child_decl(child_name, child_url.to_string())],
+                ),
+                None,
             ),
         );
         decls.insert(
             child_url,
-            new_component_with_capabilities(
-                vec![
-                    UseDecl::Directory(child_use_good_dir),
-                    UseDecl::Directory(child_use_bad_dir),
-                    UseDecl::Protocol(child_use_protocol),
-                ],
-                vec![],
-                vec![],
-                vec![],
+            (
+                new_component_with_capabilities(
+                    vec![
+                        UseDecl::Directory(child_use_good_dir),
+                        UseDecl::Directory(child_use_bad_dir),
+                        UseDecl::Protocol(child_use_protocol),
+                    ],
+                    vec![],
+                    vec![],
+                    vec![],
+                ),
+                None,
             ),
         );
 

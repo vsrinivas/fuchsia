@@ -12,6 +12,7 @@ use {
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_rust::{CapabilityDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl},
+    config_encoder::ConfigFields,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
@@ -38,6 +39,7 @@ pub struct ComponentInstanceForAnalyzer {
     instanced_moniker: InstancedAbsoluteMoniker,
     abs_moniker: AbsoluteMoniker,
     pub(crate) decl: ComponentDecl,
+    config: Option<ConfigFields>,
     url: String,
     parent: WeakExtendedInstanceInterface<Self>,
     children: RwLock<HashMap<ChildMoniker, Arc<Self>>>,
@@ -63,6 +65,7 @@ impl ComponentInstanceForAnalyzer {
     // Creates a new root component instance.
     pub(crate) fn new_root(
         decl: ComponentDecl,
+        config: Option<ConfigFields>,
         url: String,
         top_instance: Arc<TopInstanceForAnalyzer>,
         runtime_config: Arc<RuntimeConfig>,
@@ -79,6 +82,7 @@ impl ComponentInstanceForAnalyzer {
             instanced_moniker,
             abs_moniker,
             decl,
+            config,
             url,
             parent: WeakExtendedInstanceInterface::from(&ExtendedInstanceInterface::AboveRoot(
                 top_instance,
@@ -96,6 +100,7 @@ impl ComponentInstanceForAnalyzer {
         child: &Child,
         absolute_url: String,
         child_component_decl: ComponentDecl,
+        config: Option<ConfigFields>,
         parent: Arc<Self>,
         policy_checker: GlobalPolicyChecker,
         component_id_index: Arc<ComponentIdIndex>,
@@ -112,6 +117,7 @@ impl ComponentInstanceForAnalyzer {
             instanced_moniker,
             abs_moniker,
             decl: child_component_decl,
+            config,
             url: absolute_url,
             parent: WeakExtendedInstanceInterface::from(&ExtendedInstanceInterface::Component(
                 parent,
@@ -150,6 +156,10 @@ impl ComponentInstanceForAnalyzer {
 
     pub fn environment(&self) -> &Arc<EnvironmentForAnalyzer> {
         &self.environment
+    }
+
+    pub fn config_fields(&self) -> Option<&ConfigFields> {
+        self.config.as_ref()
     }
 }
 
@@ -298,6 +308,7 @@ mod tests {
 
         let instance = ComponentInstanceForAnalyzer::new_root(
             decl,
+            None,
             url,
             TopInstanceForAnalyzer::new(vec![], vec![]),
             Arc::new(RuntimeConfig::default()),

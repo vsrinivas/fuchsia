@@ -789,7 +789,7 @@ mod tests {
 
         let data_model = data_model.unwrap_or(fake_data_model());
         let components = hashmap! {
-            root_url.clone() => ComponentDecl{
+            root_url.clone() => (ComponentDecl{
                 program: Some(ProgramDecl{ runner: Some("some_runner".into()), ..ProgramDecl::default()}),
                 capabilities: vec![
                     DirectoryDecl{
@@ -837,8 +837,8 @@ mod tests {
                     },
                 ],
                 ..ComponentDecl::default()
-            },
-            two_dir_user_url => ComponentDecl{
+            }, None),
+            two_dir_user_url => (ComponentDecl{
                 uses: vec![
                     UseDirectoryDecl{
                         source: UseSource::Parent,
@@ -860,8 +860,8 @@ mod tests {
                     }.into(),
                 ],
                 ..ComponentDecl::default()
-            },
-            one_dir_provider_url => ComponentDecl{
+            }, None),
+            one_dir_provider_url => (ComponentDecl{
                 program: Some(ProgramDecl{ runner: Some("some_runner".into()), ..ProgramDecl::default()}),
                 capabilities: vec![
                     DirectoryDecl{
@@ -881,7 +881,7 @@ mod tests {
                     }.into(),
                 ],
                 ..ComponentDecl::default()
-            },
+            }, None),
         };
         let build_component_model = ModelBuilderForAnalyzer::new(root_url.clone()).build(
             components,

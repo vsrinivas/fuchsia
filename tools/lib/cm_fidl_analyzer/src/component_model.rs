@@ -17,6 +17,7 @@ use {
         ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseEventStreamDecl,
         UseStorageDecl,
     },
+    config_encoder::ConfigFields,
     fidl::prelude::*,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::AbsoluteComponentUrl,
@@ -189,7 +190,7 @@ impl ModelBuilderForAnalyzer {
 
     pub fn build(
         self,
-        decls_by_url: HashMap<Url, ComponentDecl>,
+        decls_by_url: HashMap<Url, (ComponentDecl, Option<ConfigFields>)>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,
         runner_registry: RunnerRegistry,
@@ -206,7 +207,7 @@ impl ModelBuilderForAnalyzer {
     pub fn build_with_dynamic_components(
         self,
         dynamic_components: HashMap<NodePath, (AbsoluteComponentUrl, Option<String>)>,
-        decls_by_url: HashMap<Url, ComponentDecl>,
+        decls_by_url: HashMap<Url, (ComponentDecl, Option<ConfigFields>)>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,
         runner_registry: RunnerRegistry,
@@ -257,9 +258,10 @@ impl ModelBuilderForAnalyzer {
                         .errors
                         .push(anyhow!("Failed to locate root component with URL: {}", &root_url));
                 }
-                Ok(Some(root_decl)) => {
+                Ok(Some((root_decl, root_config))) => {
                     let root_instance = ComponentInstanceForAnalyzer::new_root(
                         root_decl.clone(),
+                        root_config.clone(),
                         root_url.to_string(),
                         Arc::clone(&model.top_instance),
                         Arc::clone(&runtime_config),
@@ -294,7 +296,7 @@ impl ModelBuilderForAnalyzer {
     // `dynamic_components`.
     fn add_descendants(
         instance: &Arc<ComponentInstanceForAnalyzer>,
-        decls_by_url: &HashMap<Url, ComponentDecl>,
+        decls_by_url: &HashMap<Url, (ComponentDecl, Option<ConfigFields>)>,
         dynamic_components: &HashMap<AbsoluteMoniker, Vec<Child>>,
         model: &mut ComponentModelForAnalyzer,
         result: &mut BuildModelResult,
@@ -341,11 +343,12 @@ impl ModelBuilderForAnalyzer {
                         Err(err) => {
                             result.errors.push(err);
                         }
-                        Ok(Some(child_component_decl)) => {
+                        Ok(Some((child_component_decl, child_config))) => {
                             match ComponentInstanceForAnalyzer::new_for_child(
                                 child,
                                 absolute_url.to_string(),
                                 child_component_decl.clone(),
+                                child_config.clone(),
                                 Arc::clone(instance),
                                 model.policy_checker.clone(),
                                 Arc::clone(&model.component_id_index),
@@ -418,9 +421,9 @@ impl ModelBuilderForAnalyzer {
     }
 
     fn get_decl_by_url<'a>(
-        decls_by_url: &'a HashMap<Url, ComponentDecl>,
+        decls_by_url: &'a HashMap<Url, (ComponentDecl, Option<ConfigFields>)>,
         url: &Url,
-    ) -> Result<Option<&'a ComponentDecl>> {
+    ) -> Result<Option<&'a (ComponentDecl, Option<ConfigFields>)>> {
         // Non-`fuchsia-pkg` URLs are not matched with nuance: they must precisely match an entry in
         // `decls_by_url`.
         if url.scheme() != "fuchsia-pkg" {
@@ -1109,6 +1112,7 @@ mod tests {
             UseSource, UseStorageDecl,
         },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
+        config_encoder::ConfigFields,
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
         maplit::hashmap,
@@ -1141,8 +1145,10 @@ mod tests {
 
     fn make_decl_map(
         components: Vec<(&'static str, ComponentDecl)>,
-    ) -> HashMap<Url, ComponentDecl> {
-        HashMap::from_iter(components.into_iter().map(|(name, decl)| (make_test_url(name), decl)))
+    ) -> HashMap<Url, (ComponentDecl, Option<ConfigFields>)> {
+        HashMap::from_iter(
+            components.into_iter().map(|(name, decl)| (make_test_url(name), (decl, None))),
+        )
     }
 
     // Builds a model with structure `root -- child`, retrieves each of the 2 resulting component
@@ -1258,8 +1264,8 @@ mod tests {
         let absolute_child_url = Url::parse(&format!("{}#child", root_url)).unwrap();
 
         let mut decls_by_url = HashMap::new();
-        decls_by_url.insert(root_url.clone(), root_decl);
-        decls_by_url.insert(absolute_child_url.clone(), child_decl);
+        decls_by_url.insert(root_url.clone(), (root_decl, None));
+        decls_by_url.insert(absolute_child_url.clone(), (child_decl, None));
 
         let config = Arc::new(RuntimeConfig::default());
         let build_model_result = ModelBuilderForAnalyzer::new(root_url).build(
@@ -1493,9 +1499,9 @@ mod tests {
             Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap(),
         ];
         let decls_by_url_no_beta_beta = hashmap! {
-            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => (decl("alpha_beta"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => (decl("beta_alpha"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => (decl("gamma_beta"), None),
         };
 
         for beta_beta_url in beta_beta_urls.iter() {
@@ -1511,10 +1517,10 @@ mod tests {
         let fuchsia_boot_url = Url::parse("fuchsia-boot:///#meta/boot.cm").unwrap();
         let fuchsia_boot_component = decl("boot");
         let decls_by_url_with_fuchsia_boot = hashmap! {
-            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
-            fuchsia_boot_url.clone() => fuchsia_boot_component.clone(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => (decl("alpha_beta"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => (decl("beta_alpha"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => (decl("gamma_beta"), None),
+            fuchsia_boot_url.clone() => (fuchsia_boot_component.clone(), None),
         };
 
         let result = ModelBuilderForAnalyzer::get_decl_by_url(
@@ -1523,7 +1529,7 @@ mod tests {
         );
 
         assert!(result.is_ok());
-        assert_eq!(Some(&fuchsia_boot_component), result.ok().unwrap());
+        assert_eq!(Some(&(fuchsia_boot_component, None)), result.ok().unwrap());
     }
 
     #[fuchsia::test]
@@ -1543,17 +1549,17 @@ mod tests {
         let beta_beta_url = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
         let beta_beta_decl = decl("beta_beta");
         let decls_by_url_with_beta_beta = hashmap! {
-            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
-            beta_beta_url.clone() => beta_beta_decl.clone(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => (decl("alpha_beta"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => (decl("beta_alpha"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => (decl("gamma_beta"), None),
+            beta_beta_url.clone() => (beta_beta_decl.clone(), None),
         };
 
         let result =
             ModelBuilderForAnalyzer::get_decl_by_url(&decls_by_url_with_beta_beta, &beta_beta_url);
 
         assert!(result.is_ok());
-        assert_eq!(Some(&beta_beta_decl), result.ok().unwrap());
+        assert_eq!(Some(&(beta_beta_decl, None)), result.ok().unwrap());
     }
 
     #[fuchsia::test]
@@ -1569,10 +1575,10 @@ mod tests {
             Url::parse("fuchsia-pkg://test.fuchsia.com/beta#beta.cm").unwrap();
         let beta_beta_weak_decl_3 = decl("beta_beta_weak_3");
         let decls_by_url_with_4_beta_betas = hashmap! {
-            beta_beta_weak_url_1 => beta_beta_weak_decl_1,
-            beta_beta_weak_url_2 => beta_beta_weak_decl_2,
-            beta_beta_weak_url_3 => beta_beta_weak_decl_3,
-            beta_beta_strong_url.clone() => beta_beta_strong_decl.clone(),
+            beta_beta_weak_url_1 => (beta_beta_weak_decl_1, None),
+            beta_beta_weak_url_2 => (beta_beta_weak_decl_2, None),
+            beta_beta_weak_url_3 => (beta_beta_weak_decl_3, None),
+            beta_beta_strong_url.clone() => (beta_beta_strong_decl.clone(), None),
         };
 
         let result = ModelBuilderForAnalyzer::get_decl_by_url(
@@ -1581,7 +1587,7 @@ mod tests {
         );
 
         assert!(result.is_ok());
-        assert_eq!(Some(&beta_beta_strong_decl), result.ok().unwrap());
+        assert_eq!(Some(&(beta_beta_strong_decl, None)), result.ok().unwrap());
     }
 
     #[fuchsia::test]
@@ -1590,10 +1596,10 @@ mod tests {
         let beta_beta_weak_url = Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap();
         let beta_beta_decl = decl("beta_beta");
         let decls_by_url_with_strong_beta_beta = hashmap! {
-            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
-            beta_beta_strong_url.clone() => beta_beta_decl.clone(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => (decl("alpha_beta"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => (decl("beta_alpha"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => (decl("gamma_beta"), None),
+            beta_beta_strong_url.clone() => (beta_beta_decl.clone(), None),
         };
 
         let result = ModelBuilderForAnalyzer::get_decl_by_url(
@@ -1602,7 +1608,7 @@ mod tests {
         );
 
         assert!(result.is_ok());
-        assert_eq!(Some(&beta_beta_decl), result.ok().unwrap());
+        assert_eq!(Some(&(beta_beta_decl, None)), result.ok().unwrap());
     }
 
     #[fuchsia::test]
@@ -1616,12 +1622,12 @@ mod tests {
         let beta_beta_weakest_url =
             Url::parse("fuchsia-pkg://test.fuchsia.com/beta#beta.cm").unwrap();
         let decls_by_url_3_weak_matches = hashmap! {
-            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => decl("alpha_beta"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => decl("beta_alpha"),
-            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => decl("gamma_beta"),
-            beta_beta_url_1 => beta_beta_decl_1.clone(),
-            beta_beta_url_2 => beta_beta_decl_2.clone(),
-            beta_beta_url_3 => beta_beta_decl_3.clone(),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/alpha#beta.cm").unwrap() => (decl("alpha_beta"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/beta/0#alpha.cm").unwrap() => (decl("beta_alpha"), None),
+            Url::parse("fuchsia-pkg://test.fuchsia.com/gamma?hash=0000000000000000000000000000000000000000000000000000000000000000#beta.cm").unwrap() => (decl("gamma_beta"), None),
+            beta_beta_url_1 => (beta_beta_decl_1.clone(), None),
+            beta_beta_url_2 => (beta_beta_decl_2.clone(), None),
+            beta_beta_url_3 => (beta_beta_decl_3.clone(), None),
         };
 
         let result = ModelBuilderForAnalyzer::get_decl_by_url(
@@ -1632,9 +1638,9 @@ mod tests {
         assert!(result.is_ok());
         let actual_decl = result.ok().unwrap().unwrap();
         assert!(
-            &beta_beta_decl_1 == actual_decl
-                || &beta_beta_decl_2 == actual_decl
-                || &beta_beta_decl_3 == actual_decl
+            beta_beta_decl_1 == actual_decl.0
+                || beta_beta_decl_2 == actual_decl.0
+                || beta_beta_decl_3 == actual_decl.0
         );
     }
 }

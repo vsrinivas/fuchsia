@@ -69,7 +69,7 @@ pub struct RoutingTestForAnalyzer {
 
 pub struct RoutingTestBuilderForAnalyzer {
     root_url: cm_types::Url,
-    decls_by_url: HashMap<url::Url, ComponentDecl>,
+    decls_by_url: HashMap<url::Url, (ComponentDecl, Option<config_encoder::ConfigFields>)>,
     namespace_capabilities: Vec<CapabilityDecl>,
     builtin_capabilities: Vec<CapabilityDecl>,
     builtin_runner_registrations: Vec<RunnerRegistration>,
@@ -90,7 +90,7 @@ impl RoutingTestBuilderForAnalyzer {
         let root_url = cm_types::Url::new(root_url).expect("failed to parse root component url");
         let decls_by_url =
             HashMap::from_iter(components.into_iter().map(|(url_string, component_decl)| {
-                (Url::parse(&url_string).unwrap(), component_decl)
+                (Url::parse(&url_string).unwrap(), (component_decl, None))
             }));
         Self {
             root_url,
@@ -116,7 +116,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         let root_url = cm_types::Url::new(make_test_url(root_component))
             .expect("failed to parse root component url");
         let decls_by_url = HashMap::from_iter(components.into_iter().map(|(name, decl)| {
-            (Url::parse(&format!("{}{}", TEST_URL_PREFIX, name)).unwrap(), decl)
+            (Url::parse(&format!("{}{}", TEST_URL_PREFIX, name)).unwrap(), (decl, None))
         }));
         Self {
             root_url,

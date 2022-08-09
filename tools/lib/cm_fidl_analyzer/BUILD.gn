@@ -15,6 +15,7 @@ rustc_library("cm_fidl_analyzer") {
     "//src/lib/fuchsia-url",
     "//src/sys/lib/cm_moniker",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/config_encoder",
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
     "//src/sys/pkg/lib/fuchsia-merkle",

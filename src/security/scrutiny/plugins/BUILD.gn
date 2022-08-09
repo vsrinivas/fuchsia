@@ -34,6 +34,7 @@ if (is_host) {
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/lib/cm_rust",
       "//src/sys/lib/component_id_index",
+      "//src/sys/lib/config_encoder",
       "//src/sys/lib/moniker",
       "//src/sys/lib/routing",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",

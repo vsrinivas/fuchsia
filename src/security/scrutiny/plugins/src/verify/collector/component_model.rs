@@ -13,6 +13,7 @@ use {
     anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::{component_model::ModelBuilderForAnalyzer, node_path::NodePath},
     cm_rust::{ComponentDecl, FidlIntoNative, RegistrationSource, RunnerRegistration},
+    config_encoder::ConfigFields,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fuchsia_url::{boot_url::BootUrl, AbsoluteComponentUrl},
@@ -63,7 +64,10 @@ impl V2ComponentModelDataCollector {
         Self {}
     }
 
-    fn get_decls(&self, model: &Arc<DataModel>) -> Result<HashMap<Url, ComponentDecl>> {
+    fn get_decls(
+        &self,
+        model: &Arc<DataModel>,
+    ) -> Result<HashMap<Url, (ComponentDecl, Option<ConfigFields>)>> {
         let mut decls = HashMap::new();
         let mut urls = HashMap::new();
 
@@ -88,7 +92,7 @@ impl V2ComponentModelDataCollector {
                         );
                         match result {
                             Ok(decl) => {
-                                decls.insert(url, decl.fidl_into_native());
+                                decls.insert(url, (decl.fidl_into_native(), None));
                             }
                             Err(err) => {
                                 error!(

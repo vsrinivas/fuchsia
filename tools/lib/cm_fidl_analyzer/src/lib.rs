@@ -257,8 +257,10 @@ mod tests {
 
     fn make_decl_map(
         components: Vec<(&'static str, ComponentDecl)>,
-    ) -> HashMap<Url, ComponentDecl> {
-        HashMap::from_iter(components.into_iter().map(|(name, decl)| (make_test_url(name), decl)))
+    ) -> HashMap<Url, (ComponentDecl, Option<config_encoder::ConfigFields>)> {
+        HashMap::from_iter(
+            components.into_iter().map(|(name, decl)| (make_test_url(name), (decl, None))),
+        )
     }
 
     #[fuchsia::test]
