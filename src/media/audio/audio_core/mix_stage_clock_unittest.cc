@@ -433,18 +433,18 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
     }
 
     mix_stage_->ReadLock(rlctx, Fixed(kFramesToMix * mix_count), kFramesToMix);
-    ASSERT_EQ(mix_info.next_dest_frame, kFramesToMix * (mix_count + 1));
+    ASSERT_EQ(mix_info.next_dest_frame(), kFramesToMix * (mix_count + 1));
 
     // Track the worst-case position errors (overall min/max, 1%, 1us, final-settled).
-    if (mix_info.source_pos_error > max_err) {
-      max_err = mix_info.source_pos_error;
+    if (mix_info.source_pos_error() > max_err) {
+      max_err = mix_info.source_pos_error();
       mix_count_of_max_err = mix_count;
     }
-    if (mix_info.source_pos_error < min_err) {
-      min_err = mix_info.source_pos_error;
+    if (mix_info.source_pos_error() < min_err) {
+      min_err = mix_info.source_pos_error();
       mix_count_of_min_err = mix_count;
     }
-    auto abs_source_pos_error = zx::duration(std::abs(mix_info.source_pos_error.get()));
+    auto abs_source_pos_error = zx::duration(std::abs(mix_info.source_pos_error().get()));
     if (abs_source_pos_error > one_percent_err_) {
       actual_mix_count_one_percent_err = mix_count;
     }
@@ -456,13 +456,14 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
     }
 
     if (mix_count >= limit_mix_count_settled_) {
-      max_settled_err = std::max(mix_info.source_pos_error, max_settled_err);
-      min_settled_err = std::min(mix_info.source_pos_error, min_settled_err);
+      max_settled_err = std::max(mix_info.source_pos_error(), max_settled_err);
+      min_settled_err = std::min(mix_info.source_pos_error(), min_settled_err);
     }
 
     if constexpr (kTraceClockSyncConvergence) {
       FX_LOGS(INFO) << "Testing " << rate_adjust_ppm << " PPM: [" << std::right << std::setw(3)
-                    << mix_count << "], error " << std::setw(5) << mix_info.source_pos_error.get();
+                    << mix_count << "], error " << std::setw(5)
+                    << mix_info.source_pos_error().get();
     }
   }
 

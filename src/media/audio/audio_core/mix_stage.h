@@ -75,13 +75,11 @@ class MixStage : public ReadableStream {
 
   enum class TaskType { Mix, Trim };
   void ForEachSource(TaskType task_type, Fixed dest_frame);
-  void ReconcileClocksAndSetStepSize(::media_audio::ClockSynchronizer& clock_sync,
-                                     Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
+  void ReconcileClocksAndSetStepSize(::media_audio::ClockSynchronizer& clock_sync, Mixer& mixer,
                                      ReadableStream& stream);
   void SyncSourcePositionFromClocks(::media_audio::ClockSynchronizer& clock_sync,
                                     const Clock& source_clock, const Clock& dest_clock,
-                                    Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                                    int64_t dest_frame, zx::time mono_now_from_dest,
+                                    Mixer& mixer, int64_t dest_frame, zx::time mono_now_from_dest,
                                     bool timeline_changed);
 
   void MixStream(Mixer& mixer, ReadableStream& stream);

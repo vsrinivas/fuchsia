@@ -35,7 +35,7 @@ class Mixer {
 
   // SourceInfo
   //
-  // This struct contains position-related info needed by MixStage, to correctly feed this Mixer.
+  // This class contains position-related info needed by MixStage, to correctly feed this Mixer.
   //
   // This includes source-specific clock transforms (source-ref-clock-to-source-frame,
   // clock-mono-to-source-frame and dest-frame-to-source-frame), long-running source/dest positions
@@ -46,26 +46,21 @@ class Mixer {
   //
   // SourceInfo is not used by Mixer::Mix(). It could be moved to a per-stream facet of MixStage.
   //
-  struct SourceInfo {
+  class SourceInfo {
+   public:
     // This method resets long-running and per-Mix position counters, called when a destination
-    // discontinuity occurs. It sets next_dest_frame to the specified value and calculates
-    // next_source_frame based on the dest_frames_to_frac_source_frames transform.
-    void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping) {
+    // discontinuity occurs. It sets next_dest_frame_ to the specified value and calculates
+    // next_source_frame_ based on the dest_frames_to_frac_source_frames transform.
+    void ResetPositions(int64_t target_dest_frame, Bookkeeping& bookkeeping,
+                        const TimelineFunction& dest_frames_to_frac_source_frames) {
       if constexpr (media_audio::kTracePositionEvents) {
         TRACE_DURATION("audio", __func__, "target_dest_frame", target_dest_frame);
       }
-      next_dest_frame = target_dest_frame;
-      next_source_frame =
+      next_dest_frame_ = target_dest_frame;
+      next_source_frame_ =
           Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
+      source_pos_error_ = zx::duration(0);
       bookkeeping.set_source_pos_modulo(0);
-      source_pos_error = zx::duration(0);
-    }
-
-    // Used by custom code when debugging.
-    std::string PositionsToString(const std::string& tag = "") const {
-      return tag + ": next_dest " + std::to_string(next_dest_frame) + ", next_source " +
-             ffl::String(next_source_frame, ffl::String::DecRational).c_str() + ", pos_err " +
-             std::to_string(source_pos_error.get());
     }
 
     void UpdateRunningPositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping) {
@@ -79,7 +74,7 @@ class Mixer {
     // From current values, advance long-running positions to the specified absolute dest frame num.
     // "Advancing" negatively should be infrequent, but we support it.
     void AdvanceAllPositionsTo(int64_t dest_target_frame, Bookkeeping& bookkeeping) {
-      int64_t dest_frames = dest_target_frame - next_dest_frame;
+      const int64_t dest_frames = dest_target_frame - next_dest_frame_;
       AdvancePositionsBy(dest_frames, bookkeeping, true);
     }
 
@@ -94,7 +89,7 @@ class Mixer {
     // MONOTONIC nsecs from frac_source (including modulo), we scale the function by denominator;
     // then we can include source_pos_modulo at full resolution and round when reducing to nsec.
     // So in the TimelineFunction::Apply equation above, we will use:
-    //    in_param:         (next_source_frame.raw_value * denom + source_pos_modulo)
+    //    in_param:         (next_source_frame_.raw_value * denom + source_pos_modulo)
     //    reference_offset: (clock_mono_to_frac_source_frames.subject_time * denom)
     //    subject_delta and reference_delta: used as-is (factor denom out of both)
     //                      while remembering that the rate is inverted
@@ -106,14 +101,14 @@ class Mixer {
     // TODO(fxbug.dev/86743): Generalize this (remove the scale-down denominator optimization) and
     // extract the functionality into a 128-bit template specialization of audio/lib/timeline
     // TimelineRate and TimelineFunction.
-    static zx::time MonotonicNsecFromRunningSource(const SourceInfo& info,
-                                                   uint64_t initial_source_pos_modulo,
-                                                   uint64_t denominator) {
+    zx::time MonotonicNsecFromRunningSource(
+        uint64_t initial_source_pos_modulo, uint64_t denominator,
+        const TimelineFunction& clock_mono_to_frac_source_frames) const {
       FX_DCHECK(initial_source_pos_modulo < denominator);
 
-      __int128_t frac_src_from_offset =
-          static_cast<__int128_t>(info.next_source_frame.raw_value()) -
-          info.clock_mono_to_frac_source_frames.subject_time();
+      const __int128_t frac_src_from_offset =
+          static_cast<__int128_t>(next_source_frame_.raw_value()) -
+          clock_mono_to_frac_source_frames.subject_time();
 
       // The calculation that would first overflow a int128 is the partial calculation:
       //    frac_src_offset * denominator * reference_delta
@@ -122,11 +117,11 @@ class Mixer {
       //
       // __int128_t doesn't have an abs() right now so we do it manually.
       //  We add one fractional frame to accommodate any pos_modulo contribution.
-      __int128_t abs_frac_src_from_offset =
+      const __int128_t abs_frac_src_from_offset =
           (frac_src_from_offset < 0 ? -frac_src_from_offset : frac_src_from_offset) + 1;
-      __int128_t max_denominator = std::numeric_limits<__int128_t>::max() /
-                                   abs_frac_src_from_offset /
-                                   info.clock_mono_to_frac_source_frames.reference_delta();
+      const __int128_t max_denominator = std::numeric_limits<__int128_t>::max() /
+                                         abs_frac_src_from_offset /
+                                         clock_mono_to_frac_source_frames.reference_delta();
 
       __int128_t src_pos_mod_128 = static_cast<__int128_t>(initial_source_pos_modulo);
       __int128_t denom_128 = static_cast<__int128_t>(denominator);
@@ -148,21 +143,20 @@ class Mixer {
       }
 
       // First portion of our TimelineFunction::Apply
-      __int128_t frac_src_modulo = frac_src_from_offset * denom_128 + src_pos_mod_128;
+      const __int128_t frac_src_modulo = frac_src_from_offset * denom_128 + src_pos_mod_128;
 
       // Middle portion, including rate factors
       __int128_t monotonic_modulo =
-          frac_src_modulo * info.clock_mono_to_frac_source_frames.reference_delta();
-      monotonic_modulo /= info.clock_mono_to_frac_source_frames.subject_delta();
+          frac_src_modulo * clock_mono_to_frac_source_frames.reference_delta();
+      monotonic_modulo /= clock_mono_to_frac_source_frames.subject_delta();
 
       // Final portion, including adding in the monotonic offset
-      __int128_t monotonic_offset_modulo =
-          static_cast<__int128_t>(info.clock_mono_to_frac_source_frames.reference_time()) *
-          denom_128;
+      const __int128_t monotonic_offset_modulo =
+          static_cast<__int128_t>(clock_mono_to_frac_source_frames.reference_time()) * denom_128;
       monotonic_modulo += monotonic_offset_modulo;
 
       // While reducing from nsec_modulo to nsec, we add denom_128/2 in order to round.
-      __int128_t final_monotonic = (monotonic_modulo + denom_128 / 2) / denom_128;
+      const __int128_t final_monotonic = (monotonic_modulo + denom_128 / 2) / denom_128;
       // final_monotonic is 128-bit so we can double-check that we haven't overflowed.
       // But we reduced denom_128 as needed to avoid all overflows.
       FX_DCHECK(final_monotonic <= std::numeric_limits<int64_t>::max() &&
@@ -173,61 +167,16 @@ class Mixer {
       return zx::time(static_cast<zx_time_t>(final_monotonic));
     }
 
-    // This translates source reference_clock value (ns) into a source subframe value.
-    // Output values of this function are source subframes (raw_value of the Fixed type).
-    TimelineFunction source_ref_clock_to_frac_source_frames;
+    int64_t next_dest_frame() const { return next_dest_frame_; }
+    void set_next_dest_frame(int64_t next_dest_frame) { next_dest_frame_ = next_dest_frame; }
 
-    // This field is used to ensure that when a stream timeline changes, we re-establish the offset
-    // between destination frame and source fractional frame using clock calculations. If the
-    // timeline hasn't changed, we use step_size calculations to track whether we are drifting.
-    uint32_t source_ref_clock_to_frac_source_frames_generation = kInvalidGenerationId;
+    Fixed next_source_frame() const { return next_source_frame_; }
+    void set_next_source_frame(Fixed next_source_frame) { next_source_frame_ = next_source_frame; }
 
-    // This translates CLOCK_MONOTONIC time to source subframe. Output values of this function are
-    // source subframes (raw_value of the Fixed type).
-    // This TLF entails the source rate as well as the source reference clock.
-    TimelineFunction clock_mono_to_frac_source_frames;
-
-    // This translates destination frame to source subframe. Output values of this function are
-    // source subframes (raw_value of the Fixed type).
-    // It represents the INTENDED dest-to-source relationship based on latest clock info.
-    // The actual source position chases this timeline, via clock synchronization.
-    // Thus, the TLF entails both source and dest rates and both source and dest reference clocks,
-    // but NOT any additional micro-SRC being applied.
-    TimelineFunction dest_frames_to_frac_source_frames;
-
-    // These fields track our position in the destination and source streams. It may seem
-    // sufficient to track next_dest_frame and use that to compute our source position:
-    //
-    //   next_source_frame =
-    //       dest_frames_to_frac_source_frames.Apply(next_dest_frame)
-    //
-    // In practice, there are two reasons this is not sufficient:
-    //
-    //   1. Since next_source_frame typically increments by a fractional step size, it needs
-    //      to be updated with more precision than supported by a Fixed alone. The full-precision
-    //      next_source_frame is actually:
-    //
-    //          next_source_frame + bookkeeping.next_src_pos_modulo / bookkeeping.denominator
-    //
-    //      Where the full-precision step size is:
-    //
-    //          bookkeeping.step_size + bookkeeping.rate_modulo / bookkeeping.denominator
-    //
-    //   2. When reconciling clocks using micro SRC, next_source_frame may deviate from the ideal
-    //      position (as determined by dest_frames_to_frac_source_frames) until the clocks are
-    //      synchronized and source_pos_error = 0.
-    //
-    // We use the dest_frames_to_frac_source_frames transformation only at discontinuities in the
-    // source stream.
-    int64_t next_dest_frame = 0;
-    Fixed next_source_frame{0};
-
-    // This field represents the difference between next_source_frame (maintained on a relative
-    // basis after each Mix() call), and the clock-derived absolute source position (calculated from
-    // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
-    // next_source_frame is reset to that clock-derived value, and this field is set to zero. This
-    // field sets the direction and magnitude of any steps taken for clock reconciliation.
-    zx::duration source_pos_error{0};
+    zx::duration source_pos_error() const { return source_pos_error_; }
+    void set_source_pos_error(zx::duration source_pos_error) {
+      source_pos_error_ = source_pos_error;
+    }
 
    private:
     // From current values, advance the long-running positions by dest_frames, which
@@ -249,7 +198,7 @@ class Mixer {
 
       if (bookkeeping.rate_modulo()) {
         // rate_mod and pos_mods can be as large as UINT64_MAX-1; use 128-bit to avoid overflow
-        __int128_t denominator_128 = bookkeeping.denominator();
+        const __int128_t denominator_128 = bookkeeping.denominator();
         __int128_t source_pos_modulo_128 =
             static_cast<__int128_t>(bookkeeping.rate_modulo()) * dest_frames;
         if (advance_source_pos_modulo) {
@@ -274,15 +223,49 @@ class Mixer {
         }
         frac_source_frame_delta += static_cast<int64_t>(source_pos_modulo_128 / denominator_128);
       }
-      next_source_frame = Fixed::FromRaw(next_source_frame.raw_value() + frac_source_frame_delta);
-      next_dest_frame += dest_frames;
+      next_source_frame_ = Fixed::FromRaw(next_source_frame_.raw_value() + frac_source_frame_delta);
+      next_dest_frame_ += dest_frames;
       if constexpr (media_audio::kTracePositionEvents) {
         TRACE_DURATION("audio", "AdvancePositionsBy End", "nest_source_frame",
-                       next_source_frame.Integral().Floor(), "next_source_frame.frac",
-                       next_source_frame.Fraction().raw_value(), "next_dest_frame", next_dest_frame,
-                       "source_pos_modulo", bookkeeping.source_pos_modulo());
+                       next_source_frame_.Integral().Floor(), "next_source_frame_.frac",
+                       next_source_frame_.Fraction().raw_value(), "next_dest_frame_",
+                       next_dest_frame_, "source_pos_modulo", bookkeeping.source_pos_modulo());
       }
     }
+
+    // These fields track our position in the destination and source streams. It may seem
+    // sufficient to track next_dest_frame_ and use that to compute our source position:
+    //
+    //   next_source_frame_ =
+    //       dest_frames_to_frac_source_frames.Apply(next_dest_frame_)
+    //
+    // In practice, there are two reasons this is not sufficient:
+    //
+    //   1. Since next_source_frame_ typically increments by a fractional step size, it needs
+    //      to be updated with more precision than supported by a Fixed alone. The full-precision
+    //      next_source_frame_ is actually:
+    //
+    //          next_source_frame_ + bookkeeping.next_src_pos_modulo / bookkeeping.denominator
+    //
+    //      Where the full-precision step size is:
+    //
+    //          bookkeeping.step_size + bookkeeping.rate_modulo / bookkeeping.denominator
+    //
+    //   2. When reconciling clocks using micro SRC, next_source_frame_ may deviate from the ideal
+    //      position (as determined by dest_frames_to_frac_source_frames) until the clocks are
+    //      synchronized and source_pos_error_ = 0.
+    //
+    // We use the dest_frames_to_frac_source_frames transformation only at discontinuities in the
+    // source stream.
+    int64_t next_dest_frame_ = 0;
+    Fixed next_source_frame_{0};
+
+    // This field represents the difference between next_source_frame_ (maintained on a relative
+    // basis after each Mix() call), and the clock-derived absolute source position (calculated from
+    // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
+    // next_source_frame_ is reset to that clock-derived value, and this field is set to zero. This
+    // field sets the direction and magnitude of any steps taken for clock reconciliation.
+    zx::duration source_pos_error_{0};
   };
 
   virtual ~Mixer() = default;
@@ -412,6 +395,28 @@ class Mixer {
   // destination gain (the definitive value for destination gain is owned elsewhere). Gain accepts
   // level in dB, and provides gainscale as float multiplier.
   Gain gain;
+
+  // This translates source reference_clock value (ns) into a source subframe value.
+  // Output values of this function are source subframes (raw_value of the Fixed type).
+  TimelineFunction source_ref_clock_to_frac_source_frames;
+
+  // This field is used to ensure that when a stream timeline changes, we re-establish the offset
+  // between destination frame and source fractional frame using clock calculations. If the
+  // timeline hasn't changed, we use step_size calculations to track whether we are drifting.
+  uint32_t source_ref_clock_to_frac_source_frames_generation = kInvalidGenerationId;
+
+  // This translates CLOCK_MONOTONIC time to source subframe. Output values of this function are
+  // source subframes (raw_value of the Fixed type).
+  // This TLF entails the source rate as well as the source reference clock.
+  TimelineFunction clock_mono_to_frac_source_frames;
+
+  // This translates destination frame to source subframe. Output values of this function are
+  // source subframes (raw_value of the Fixed type).
+  // It represents the INTENDED dest-to-source relationship based on latest clock info.
+  // The actual source position chases this timeline, via clock synchronization.
+  // Thus, the TLF entails both source and dest rates and both source and dest reference clocks,
+  // but NOT any additional micro-SRC being applied.
+  TimelineFunction dest_frames_to_frac_source_frames;
 
   static constexpr int64_t kScaleArrLen = 960;
   std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);

@@ -23,19 +23,9 @@ class SourceInfoTest : public testing::Test {
 TEST_F(SourceInfoTest, Defaults) {
   Mixer::SourceInfo info;
 
-  EXPECT_EQ(info.next_dest_frame, 0);
-  EXPECT_EQ(info.next_source_frame, 0);
-  EXPECT_EQ(info.source_pos_error, zx::duration(0));
-
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_time(), 0);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_delta(), 0u);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_delta(), 1u);
-
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.subject_time(), 0);
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_time(), 0);
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.subject_delta(), 0u);
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_delta(), 1u);
+  EXPECT_EQ(info.next_dest_frame(), 0);
+  EXPECT_EQ(info.next_source_frame(), 0);
+  EXPECT_EQ(info.source_pos_error(), zx::duration(0));
 }
 
 // Reset with dest_frame: sets the running dest and frac_src position counters appropriately.
@@ -46,22 +36,21 @@ TEST_F(SourceInfoTest, ResetPositions) {
   bookkeeping.SetRateModuloAndDenominator(5, 7);
 
   Mixer::SourceInfo info;
-  info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate(17u, 1u));
   // All these values will be overwritten
   bookkeeping.set_source_pos_modulo(1u);
-  info.next_dest_frame = -97;
-  info.next_source_frame = Fixed(7);
-  info.source_pos_error = zx::duration(-777);
+  info.set_next_dest_frame(-97);
+  info.set_next_source_frame(Fixed(7));
+  info.set_source_pos_error(zx::duration(-777));
 
-  info.ResetPositions(100, bookkeeping);
+  info.ResetPositions(100, bookkeeping, TimelineFunction(TimelineRate(17u, 1u)));
 
-  EXPECT_EQ(info.next_dest_frame, 100);
+  EXPECT_EQ(info.next_dest_frame(), 100);
   // Calculated directly from the TimelineFunction
-  EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(1700));
+  EXPECT_EQ(info.next_source_frame(), Fixed::FromRaw(1700));
 
   // cleared by ResetPositions
   EXPECT_EQ(bookkeeping.source_pos_modulo(), 0ull);
-  EXPECT_EQ(info.source_pos_error, zx::duration(0));
+  EXPECT_EQ(info.source_pos_error(), zx::duration(0));
 }
 
 // From current values, AdvanceAllPositionsTo advances running positions for dest, source and
@@ -73,9 +62,9 @@ void SourceInfoTest::TestPositionAdvanceNoRateModulo(bool advance_source_pos_mod
   bookkeeping.set_source_pos_modulo(1u);
 
   Mixer::SourceInfo info;
-  info.next_source_frame = Fixed(3);
-  info.source_pos_error = zx::duration(-17);
-  info.next_dest_frame = 2;
+  info.set_next_source_frame(Fixed(3));
+  info.set_source_pos_error(zx::duration(-17));
+  info.set_next_dest_frame(2);
 
   if (advance_source_pos_modulo) {
     info.AdvanceAllPositionsTo(11, bookkeeping);
@@ -84,15 +73,15 @@ void SourceInfoTest::TestPositionAdvanceNoRateModulo(bool advance_source_pos_mod
   }
 
   // These should be unchanged
-  EXPECT_EQ(info.source_pos_error, zx::duration(-17));
+  EXPECT_EQ(info.source_pos_error(), zx::duration(-17));
   EXPECT_EQ(bookkeeping.source_pos_modulo(), 1u);
 
   // These should be updated
-  EXPECT_EQ(info.next_dest_frame, 11u);  // starts at 2, advance 9
+  EXPECT_EQ(info.next_dest_frame(), 11u);  // starts at 2, advance 9
   // Source starts at 3, step_size "1.002", advance by 9 dest, adds 9 frames 18 subframes
   // We expect new source_pos to be 12 frames, 18 subframes.
-  EXPECT_EQ(info.next_source_frame, Fixed(12) + Fixed::FromRaw(18))
-      << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
+  EXPECT_EQ(info.next_source_frame(), Fixed(12) + Fixed::FromRaw(18))
+      << "next_source_frame " << ffl::String::DecRational << info.next_source_frame();
 }
 
 TEST_F(SourceInfoTest, AdvanceAllPositions_NoRateModulo) {
@@ -109,9 +98,9 @@ void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_m
   bookkeeping.set_source_pos_modulo(2u);
 
   Mixer::SourceInfo info;
-  info.next_dest_frame = 2;
-  info.next_source_frame = Fixed(3);
-  info.source_pos_error = zx::duration(-17);
+  info.set_next_dest_frame(2);
+  info.set_next_source_frame(Fixed(3));
+  info.set_source_pos_error(zx::duration(-17));
 
   if (advance_source_pos_modulo) {
     info.AdvanceAllPositionsTo(11, bookkeeping);
@@ -120,7 +109,7 @@ void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_m
   }
 
   // This should be unchanged
-  EXPECT_EQ(info.source_pos_error, zx::duration(-17));
+  EXPECT_EQ(info.source_pos_error(), zx::duration(-17));
 
   // These should be updated
   // Source starts at 3 with position modulo 1/5, step_size "1.002" with rate_modulo 2/5.
@@ -139,9 +128,9 @@ void SourceInfoTest::TestPositionAdvanceWithRateModulo(bool advance_source_pos_m
     // Thus new source_pos should be 12 frames (3+9), 22 subframes (18+4), modulo 2/5.
     EXPECT_EQ(bookkeeping.source_pos_modulo(), 2ull);
   }
-  EXPECT_EQ(info.next_dest_frame, 11u);
-  EXPECT_EQ(info.next_source_frame, Fixed(Fixed(12) + Fixed::FromRaw(22)))
-      << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
+  EXPECT_EQ(info.next_dest_frame(), 11u);
+  EXPECT_EQ(info.next_source_frame(), Fixed(Fixed(12) + Fixed::FromRaw(22)))
+      << "next_source_frame " << ffl::String::DecRational << info.next_source_frame();
 }
 
 TEST_F(SourceInfoTest, AdvanceAllPositions_WithRateModulo) {
@@ -158,31 +147,29 @@ TEST_F(SourceInfoTest, MonotonicNsecFromRunningSource) {
 
   // 44100 Hz stream with +987ppm clock adjustment, started at ~59 sec after bootup.
   //
-  info.next_source_frame = Fixed(296) + Fixed::FromRaw(306);
-  info.clock_mono_to_frac_source_frames =
-      TimelineFunction(0, 59'468'459'010, {441'435'267, 1'220'703'125});
-  EXPECT_EQ(Mixer::SourceInfo::MonotonicNsecFromRunningSource(info, 26574, 78125),
+  info.set_next_source_frame(Fixed(296) + Fixed::FromRaw(306));
+  EXPECT_EQ(info.MonotonicNsecFromRunningSource(
+                26574, 78125, TimelineFunction(0, 59'468'459'010, {441'435'267, 1'220'703'125})),
             zx::time(59'475'165'257));
 
   // 48000 Hz stream with +4ppm clock adjustment +4ppm, started at ~319 sec after bootup.
   //
-  info.next_source_frame = Fixed(-743) + Fixed::FromRaw(-1286);
-  info.clock_mono_to_frac_source_frames =
-      TimelineFunction(0, 319'214'380'550, {96'000'384, 244'140'625});
-  EXPECT_EQ(Mixer::SourceInfo::MonotonicNsecFromRunningSource(info, 5627, 15625),
+  info.set_next_source_frame(Fixed(-743) + Fixed::FromRaw(-1286));
+  EXPECT_EQ(info.MonotonicNsecFromRunningSource(
+                5627, 15625, TimelineFunction(0, 319'214'380'550, {96'000'384, 244'140'625})),
             zx::time(319'198'898'176));
 
   // 6000 Hz stream with -3ppm clock adjustment, started at ~134 sec after bootup.
   //
-  info.next_source_frame = Fixed(-143) + Fixed::FromRaw(-3293);
-  info.clock_mono_to_frac_source_frames =
-      TimelineFunction(0, 134'260'312'077, {11'999'964, 244'140'625});
-  EXPECT_EQ(Mixer::SourceInfo::MonotonicNsecFromRunningSource(info, 0, 1),
+  info.set_next_source_frame(Fixed(-143) + Fixed::FromRaw(-3293));
+  EXPECT_EQ(info.MonotonicNsecFromRunningSource(
+                0, 1, TimelineFunction(0, 134'260'312'077, {11'999'964, 244'140'625})),
             zx::time(134'236'411'676));
 
   // same stream, from a mix 32 millisecs later
-  info.next_source_frame = Fixed(48) + Fixed::FromRaw(4892);
-  EXPECT_EQ(Mixer::SourceInfo::MonotonicNsecFromRunningSource(info, 15167, 15625),
+  info.set_next_source_frame(Fixed(48) + Fixed::FromRaw(4892));
+  EXPECT_EQ(info.MonotonicNsecFromRunningSource(
+                15167, 15625, TimelineFunction(0, 134'260'312'077, {11'999'964, 244'140'625})),
             zx::time(134'268'411'649));
 
   // Synthetic example that overflows a int128 if we don't prevent it
@@ -192,13 +179,11 @@ TEST_F(SourceInfoTest, MonotonicNsecFromRunningSource) {
   //
   // We expect a zx::time that is roughly 2 yrs (now + stream position), more than 6.2e16 nsec.
   // If this particular calculation overflows, the result is positive but approx half the magnitude.
-  info.next_source_frame = Fixed(6'000'000'000'000) + Fixed::FromRaw(8191);
-  info.clock_mono_to_frac_source_frames =
-      TimelineFunction(0, 31'556'736'000'000'000, {191'807'576'997, 122'070'312'500});
-  EXPECT_GT(
-      Mixer::SourceInfo::MonotonicNsecFromRunningSource(
-          info, std::numeric_limits<uint64_t>::max() - 1, std::numeric_limits<uint64_t>::max()),
-      zx::time(62'838'086'000'000'000));
+  info.set_next_source_frame(Fixed(6'000'000'000'000) + Fixed::FromRaw(8191));
+  EXPECT_GT(info.MonotonicNsecFromRunningSource(
+                std::numeric_limits<uint64_t>::max() - 1, std::numeric_limits<uint64_t>::max(),
+                TimelineFunction(0, 31'556'736'000'000'000, {191'807'576'997, 122'070'312'500})),
+            zx::time(62'838'086'000'000'000));
 }
 
 }  // namespace
