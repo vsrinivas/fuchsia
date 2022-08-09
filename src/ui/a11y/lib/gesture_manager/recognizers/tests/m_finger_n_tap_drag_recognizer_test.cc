@@ -13,6 +13,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 #include "src/ui/a11y/lib/testing/input.h"
 
 namespace accessibility_test {
@@ -76,7 +77,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragDetected) {
   // Send events for second tap.
   SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {})));
 
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -173,7 +174,7 @@ TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapWithDragDetected) {
   SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
                      DownEvents(1, {}) + MoveEvents(1, {}, {})));
 
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -245,7 +246,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragDetectedExtraF
   SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
                      DownEvents(1, {}) + MoveEvents(1, {}, {})));
 
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_->OnWin();
@@ -301,7 +302,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapRejectedEarlyTapLength
   recognizer_->OnContestStarted(member_.TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}));
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMaxTapDuration);
+  RunLoopFor(a11y::kMaxTapDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }
@@ -313,7 +314,7 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapRejectedLastTapLengthT
 
   SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
                     UpEvents(2, {}) + UpEvents(3, {}) + DownEvents(1, {}));
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMaxTapDuration);
+  RunLoopFor(a11y::kMaxTapDuration);
 
   EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kRejected);
 }

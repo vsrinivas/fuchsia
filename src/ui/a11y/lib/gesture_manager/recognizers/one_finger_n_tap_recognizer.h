@@ -8,17 +8,12 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 
 namespace a11y {
 // OneFingerNTapRecognizer class is responsible for implementing one finger N tap gesture.
 class OneFingerNTapRecognizer : public GestureRecognizer {
  public:
-  // Default value for maximum time the tap can take.
-  static constexpr zx::duration kMaxTapDuration = zx::msec(300);
-
-  // Default value for maximum time under which the next tap should start.
-  static constexpr zx::duration kMaxTimeBetweenTaps = zx::msec(300);
-
   // Callback which will be invoked when gesture has been recognized.
   using OnFingerTapGesture = fit::function<void(GestureContext)>;
 

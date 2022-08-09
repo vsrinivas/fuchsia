@@ -13,6 +13,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/m_finger_n_tap_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/testing/input.h"
 
@@ -260,7 +261,7 @@ TEST_F(GestureManagerTest, CallsActionOnSingleTap) {
   };
   listener_.events().OnStreamHandled = std::move(listener_callback);
   ExecuteOneFingerTapAction(&listener_);
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
+  RunLoopFor(a11y::kMaxTapDuration);
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
   EXPECT_EQ(actual_point_.x, kLocalPoint.x);
@@ -302,7 +303,7 @@ TEST_F(GestureManagerTest, CallsActionOnDoubleTap) {
 
   ExecuteOneFingerTapAction(&listener_);
   ExecuteOneFingerTapAction(&listener_);
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
+  RunLoopFor(a11y::kMaxTapDuration);
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
   EXPECT_EQ(actual_point_.x, kLocalPoint.x);
@@ -776,7 +777,7 @@ TEST_F(GestureManagerTest, CallsActionOnOneFingerTripleTapDrag) {
   event.set_pointer_id(kDefaultPointerId);
   event.set_phase(Phase::DOWN);
   listener_->OnEvent(std::move(event));
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
   EXPECT_EQ(actual_point_.x, kLocalPoint.x);
@@ -818,7 +819,7 @@ TEST_F(GestureManagerTest, NoGestureDetected) {
   // Send an ADD event.
   auto event = GetDefaultPointerEvent();
   listener_->OnEvent(std::move(event));
-  RunLoopFor(a11y::OneFingerNTapRecognizer::kMaxTapDuration);
+  RunLoopFor(a11y::kMaxTapDuration);
 
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::REJECTED);
   EXPECT_FALSE(double_tap_detected_);
@@ -910,7 +911,7 @@ TEST_F(GestureManagerTest, CallsActionOnThreeFingerDoubleTapDrag) {
   for (uint32_t finger = 0; finger < 3; finger++) {
     SendPointerEvents(&listener_, DownEvents(finger, {}));
   }
-  RunLoopFor(a11y::MFingerNTapDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
   RunLoopUntilIdle();
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);
@@ -953,7 +954,7 @@ TEST_F(GestureManagerTest, CallsActionOnTwoFingerDrag) {
     SendPointerEvents(&listener_, DownEvents(finger, {}));
   }
 
-  RunLoopFor(a11y::TwoFingerDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
   RunLoopUntilIdle();
 
   EXPECT_EQ(actual_viewref_koid_, kDefaultKoid);

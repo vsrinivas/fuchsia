@@ -12,6 +12,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 
 namespace a11y {
 

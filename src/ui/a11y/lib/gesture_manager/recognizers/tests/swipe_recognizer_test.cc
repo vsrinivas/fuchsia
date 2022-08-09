@@ -12,6 +12,7 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 #include "src/ui/a11y/lib/testing/input.h"
 
 #include <glm/glm.hpp>
@@ -27,8 +28,7 @@ constexpr char kSwipeRecognizerName[] = "test_swipe_recognizer";
 class TestSwipeRecognizer : public a11y::SwipeRecognizerBase {
  public:
   TestSwipeRecognizer(SwipeGestureCallback callback, uint32_t number_of_fingers)
-      : SwipeRecognizerBase(std::move(callback), number_of_fingers,
-                            SwipeRecognizerBase::kMaxSwipeDuration,
+      : SwipeRecognizerBase(std::move(callback), number_of_fingers, a11y::kMaxSwipeDuration,
                             kSwipeRecognizerName) {}
 
   void set_valid(bool valid) { valid_ = valid; }
@@ -199,7 +199,7 @@ TEST_P(SwipeRecognizerBaseTest, Timeout) {
     SendPointerEvents(DownEvents(finger, {}));
   }
 
-  RunLoopFor(a11y::SwipeRecognizerBase::kMaxSwipeDuration);
+  RunLoopFor(a11y::kMaxSwipeDuration);
   EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
@@ -217,7 +217,7 @@ TEST_P(SwipeRecognizerBaseTest, NoTimeoutAfterDetected) {
 
   // By now, the member has been released (verified in the |Accept| test), so state can no longer
   // change. Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
-  RunLoopFor(a11y::SwipeRecognizerBase::kMaxSwipeDuration);
+  RunLoopFor(a11y::kMaxSwipeDuration);
 }
 
 // Tests rejection case in which the swipe gesture does not cover long enough distance.

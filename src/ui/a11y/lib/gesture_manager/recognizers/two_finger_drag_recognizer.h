@@ -12,6 +12,7 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 
 namespace a11y {
 
@@ -23,10 +24,6 @@ namespace a11y {
 // original. This requirement should probably be dropped in the future.
 class TwoFingerDragRecognizer : public GestureRecognizer {
  public:
-  // Minimum duration of a drag (in milliseconds).
-  // This delay is intended to ensure behavioral consistency with other screen readers.
-  static constexpr zx::duration kMinDragDuration = zx::msec(500);
-
   // Displacements of less than 1/16 are considered valid for taps, so we want
   // to recognize slightly larger gestures as drags.
   static constexpr float kDragDisplacementThreshold = 1.f / 10;
@@ -34,9 +31,6 @@ class TwoFingerDragRecognizer : public GestureRecognizer {
   // If the distance between the two fingers changes by more than 20%, we can
   // accept this gesture as a drag.
   static constexpr float kFingerSeparationThresholdFactor = 6.f / 5;
-
-  // Maximum allowable time elapsed between the first and second fingers' DOWN events.
-  static constexpr zx::duration kMaxSecondFingerDownDelay = zx::msec(300);
 
   // Signature for various drag recognizer callback functions.
   using DragGestureCallback = fit::function<void(GestureContext)>;

@@ -8,6 +8,7 @@
 #include "lib/zx/time.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/swipe_recognizer_base.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 
 namespace a11y {
 
@@ -27,7 +28,7 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
   explicit UpSwipeGestureRecognizer(
       SwipeGestureCallback callback,
       uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kMaxSwipeDuration)
+      zx::duration swipe_gesture_timeout = kMaxSwipeDuration)
       : SwipeRecognizerBase(
             std::move(callback), number_of_finger, swipe_gesture_timeout,
             fxl::StringPrintf("%d Finger %s", number_of_finger, kUpSwipeRecognizerName)),
@@ -59,7 +60,7 @@ class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
   explicit DownSwipeGestureRecognizer(
       SwipeGestureCallback callback,
       uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kMaxSwipeDuration)
+      zx::duration swipe_gesture_timeout = kMaxSwipeDuration)
       : SwipeRecognizerBase(
             std::move(callback), number_of_finger, swipe_gesture_timeout,
             fxl::StringPrintf("%d Finger %s", number_of_finger, kDownSwipeRecognizerName)),
@@ -93,7 +94,7 @@ class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
   explicit RightSwipeGestureRecognizer(
       SwipeGestureCallback callback,
       uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kMaxSwipeDuration)
+      zx::duration swipe_gesture_timeout = kMaxSwipeDuration)
       : SwipeRecognizerBase(
             std::move(callback), number_of_finger, swipe_gesture_timeout,
             fxl::StringPrintf("%d Finger %s", number_of_finger, kRightSwipeRecognizerName)),
@@ -127,7 +128,7 @@ class LeftSwipeGestureRecognizer : public SwipeRecognizerBase {
   explicit LeftSwipeGestureRecognizer(
       SwipeGestureCallback callback,
       uint32_t number_of_finger = SwipeRecognizerBase::kDefaultNumberOfFingers,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kMaxSwipeDuration)
+      zx::duration swipe_gesture_timeout = kMaxSwipeDuration)
       : SwipeRecognizerBase(
             std::move(callback), number_of_finger, swipe_gesture_timeout,
             fxl::StringPrintf("%d Finger %s", number_of_finger, kLeftSwipeRecognizerName)),

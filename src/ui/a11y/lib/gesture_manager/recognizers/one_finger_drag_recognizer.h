@@ -12,6 +12,7 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 
 namespace a11y {
 
@@ -26,10 +27,6 @@ class OneFingerDragRecognizer : public GestureRecognizer {
   // Minimum distance (in NDC) that a drag gesture must cover in order to invoke another update.
   // Value 1.f / 16 is chosen based on one finger tap recognizer maximum displacement.
   static constexpr float kMinDragDistanceForUpdate = 1.f / 16.f;
-
-  // Minimum duration of a drag (in milliseconds).
-  // This delay is intended to ensure behavioral consistency with other screen readers.
-  static constexpr zx::duration kMinDragDuration = zx::msec(500);
 
   // Signature for various drag recognizer callback functions.
   using DragGestureCallback = fit::function<void(GestureContext)>;

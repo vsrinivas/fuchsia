@@ -13,6 +13,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/timing_constants.h"
 #include "src/ui/a11y/lib/testing/input.h"
 
 #include <glm/glm.hpp>
@@ -30,7 +31,7 @@ class OneFingerDragRecognizerTest : public gtest::TestLoopFixture {
             [this](a11y::GestureContext context) { gesture_start_callback_called_ = true; },
             [this](a11y::GestureContext context) { gesture_updates_.push_back(context); },
             [this](a11y::GestureContext context) { gesture_complete_callback_called_ = true; },
-            a11y::OneFingerDragRecognizer::kMinDragDuration) {}
+            a11y::kMinDragDuration) {}
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
     for (const auto& event : events) {
@@ -66,7 +67,7 @@ TEST_F(OneFingerDragRecognizerTest, WonAfterGestureDetected) {
 
   // Wait for the drag delay to elapse, at which point the recognizer should claim the win and
   // invoke the update callback.
-  RunLoopFor(a11y::OneFingerDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_.OnWin();
@@ -128,7 +129,7 @@ TEST_F(OneFingerDragRecognizerTest, SuppressMultitouchAfterAccept) {
 
   // Wait for the drag delay to elapse, at which point the recognizer should claim the win and
   // invoke the update callback.
-  RunLoopFor(a11y::OneFingerDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_.OnWin();
@@ -148,7 +149,7 @@ TEST_F(OneFingerDragRecognizerTest, MinimumDistanceRequirementForUpdatesEnforced
 
   // Wait for the drag delay to elapse, at which point the recognizer should claim the win and
   // invoke the update callback.
-  RunLoopFor(a11y::OneFingerDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   recognizer_.OnWin();
@@ -177,7 +178,7 @@ TEST_F(OneFingerDragRecognizerTest, DoNotAcceptPriorToDelayElapsing) {
   // The task calls Accept(), and then invokes the drag update callback. Therefore, if it was
   // cancelled successfully, we would not expect either method to have been called. The mock member_
   // has an assertion that if it was rejected, it may not have Accept() called on it.
-  RunLoopFor(a11y::OneFingerDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   EXPECT_TRUE(gesture_updates_.empty());
   EXPECT_FALSE(gesture_complete_callback_called_);
@@ -191,7 +192,7 @@ TEST_F(OneFingerDragRecognizerTest, Defeat) {
 
   // Wait for the drag delay to elapse, at which point the recognizer should attempt to claim the
   // win.
-  RunLoopFor(a11y::OneFingerDragRecognizer::kMinDragDuration);
+  RunLoopFor(a11y::kMinDragDuration);
 
   ASSERT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
   // When it loses, the recognizer should NOT call the update task, and should instead abandon the
