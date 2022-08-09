@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/input3/cpp/fidl.h>
@@ -64,6 +65,8 @@ int run_test_ui_stack(int argc, const char** argv) {
   // Base UI services.
   AddPublicService<fuchsia::accessibility::semantics::SemanticsManager>(
       context.get(), realm_exposed_services.get());
+  AddPublicService<fuchsia::element::GraphicalPresenter>(context.get(),
+                                                         realm_exposed_services.get());
   AddPublicService<fuchsia::ui::composition::Allocator>(context.get(),
                                                         realm_exposed_services.get());
   AddPublicService<fuchsia::ui::composition::Flatland>(context.get(), realm_exposed_services.get());

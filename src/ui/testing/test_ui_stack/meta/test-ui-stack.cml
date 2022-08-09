@@ -14,6 +14,7 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.ImeService",
@@ -48,6 +49,7 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.ImeService",
