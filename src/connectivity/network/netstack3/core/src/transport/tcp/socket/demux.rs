@@ -19,7 +19,7 @@ use thiserror::Error;
 
 use crate::{
     ip::{
-        socket::IpSocket as _, BufferIpTransportContext, BufferTransportIpContext,
+        socket::IpSocket as _, BufferIpTransportContext, BufferTransportIpContext, IpExt,
         TransportReceiveError,
     },
     socket::{
@@ -37,7 +37,7 @@ use crate::{
         state::{Closed, State},
         Control, UserError,
     },
-    Instant as _, IpExt,
+    Instant as _,
 };
 
 impl<I, B, C, SC> BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContext

@@ -18,7 +18,7 @@ use futures::{
     TryFutureExt as _, TryStreamExt as _,
 };
 use net_types::ip::{AddrSubnetEither, IpAddr, IpVersion};
-use netstack3_core::IpAddressState;
+use netstack3_core::ip::device::IpAddressState;
 
 /// Possible errors when serving `fuchsia.net.interfaces/State`.
 #[derive(thiserror::Error, Debug)]

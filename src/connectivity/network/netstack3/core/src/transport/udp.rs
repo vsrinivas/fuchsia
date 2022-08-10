@@ -2140,10 +2140,9 @@ mod tests {
                 testutil::{DummyDeviceConfig, DummyIpSocketCtx},
                 BufferIpSocketHandler, IpSockRouteError, IpSockUnroutableError, IpSocketHandler,
             },
-            DummyDeviceId, IpDeviceIdContext, SendIpPacketMeta,
+            DummyDeviceId, IpDeviceIdContext, SendIpPacketMeta, TransportIpContext,
         },
         testutil::{assert_empty, set_logger_for_test},
-        TransportIpContext,
     };
 
     /// The listener data sent through a [`DummyUdpCtx`].

@@ -8,8 +8,8 @@ use log::error;
 use net_types::SpecifiedAddr;
 
 use crate::{
-    icmp::IcmpIpExt, ip::IpTransportContext, transport::tcp::socket::TcpIpTransportContext,
-    IpDeviceIdContext,
+    ip::{icmp::IcmpIpExt, IpDeviceIdContext, IpTransportContext},
+    transport::tcp::socket::TcpIpTransportContext,
 };
 
 impl<I: IcmpIpExt, C, SC: IpDeviceIdContext<I> + ?Sized> IpTransportContext<I, C, SC>

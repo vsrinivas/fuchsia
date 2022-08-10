@@ -26,8 +26,8 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes,
-    transport::tcp::buffer::ReceiveBuffer, AddableEntryEither, Ctx, TcpNonSyncContext,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, ip::types::AddableEntryEither,
+    transport::tcp::buffer::ReceiveBuffer, Ctx, TcpNonSyncContext,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -340,7 +340,7 @@ where
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
         let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
 
-        get_all_routes(sync_ctx)
+        netstack3_core::ip::get_all_routes(sync_ctx)
             .into_iter()
             .filter_map(|entry| match entry.try_into_fidl_with_ctx(&non_sync_ctx) {
                 Ok(entry) => Some(entry),

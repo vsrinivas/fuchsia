@@ -32,12 +32,13 @@ use crate::bindings::{
 };
 
 use netstack3_core::{
+    ip::{socket::BufferIpSocketHandler, IpExt, TransportIpContext},
     transport::tcp::socket::{
         accept, bind, connect_bound, connect_unbound, create_socket, listen, AcceptError,
         BindError, BoundId, ConnectError, ConnectionId, ListenerId, SocketAddr, TcpSyncContext,
         UnboundId,
     },
-    BufferIpSocketHandler, Ctx, IpExt, RingBuffer, SyncCtx, TcpNonSyncContext, TransportIpContext,
+    Ctx, RingBuffer, SyncCtx, TcpNonSyncContext,
 };
 
 #[derive(Debug, Clone, Copy)]

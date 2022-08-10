@@ -45,8 +45,8 @@ use crate::{
         socketmap::{IterShadows as _, SocketMap, Tagged},
     },
     ip::{
-        socket::{IpSock, IpSocket as _},
-        BufferTransportIpContext, IpDeviceId,
+        socket::{IpSock, IpSockCreationError, IpSocket as _},
+        BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt, TransportIpContext,
     },
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
@@ -59,7 +59,7 @@ use crate::{
         socket::{demux::tcp_serialize_segment, isn::generate_isn},
         state::{Closed, Initial, State},
     },
-    Instant, IpDeviceIdContext, IpExt, IpSockCreationError, TransportIpContext,
+    Instant,
 };
 
 /// Non-sync context for TCP.

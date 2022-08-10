@@ -19,7 +19,10 @@ use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{
     device::DeviceId,
     error::{ExistsError, NetstackError, NotFoundError},
-    AddRouteError, AddableEntry, AddableEntryEither, EntryEither,
+    ip::{
+        forwarding::AddRouteError,
+        types::{AddableEntry, AddableEntryEither, EntryEither},
+    },
 };
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};

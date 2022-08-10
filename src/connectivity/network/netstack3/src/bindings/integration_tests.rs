@@ -26,10 +26,14 @@ use netstack3_core::{
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     device::{DeviceId, DeviceLayerEventDispatcher},
     get_all_ip_addr_subnets,
-    icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+    ip::{
+        icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+        types::{AddableEntry, AddableEntryEither},
+        IpExt,
+    },
     transport::tcp::socket::ListenerId,
-    AddableEntry, AddableEntryEither, BufferUdpContext, Ctx, IpExt, NonSyncContext, RingBuffer,
-    TcpNonSyncContext, TimerId, UdpBoundId, UdpContext,
+    BufferUdpContext, Ctx, NonSyncContext, RingBuffer, TcpNonSyncContext, TimerId, UdpBoundId,
+    UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};

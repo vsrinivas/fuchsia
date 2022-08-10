@@ -39,14 +39,15 @@ use netstack3_core::{
     },
     disconnect_udp_connected,
     error::LocalAddressError,
-    get_udp_bound_device, get_udp_conn_info, get_udp_listener_info, get_udp_posix_reuse_port, icmp,
+    get_udp_bound_device, get_udp_conn_info, get_udp_listener_info, get_udp_posix_reuse_port,
+    ip::{icmp, socket::IpSockSendError, IpDeviceIdContext, IpExt, TransportIpContext},
     listen_udp, reconnect_udp, remove_udp_conn, remove_udp_listener, remove_udp_unbound, send_udp,
     send_udp_conn, send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port,
     set_unbound_udp_device, BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext,
-    BufferUdpStateNonSyncContext, Ctx, IpDeviceIdContext, IpExt, IpSockSendError, NonSyncContext,
-    SyncCtx, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpConnectListenerError,
-    UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
-    UdpSockCreationError, UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
+    BufferUdpStateNonSyncContext, Ctx, NonSyncContext, SyncCtx, UdpBoundId, UdpConnId, UdpConnInfo,
+    UdpConnectListenerError, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
+    UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpStateContext,
+    UdpStateNonSyncContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{

@@ -28,13 +28,14 @@ use crate::{
     ip::{
         device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+        types::AddableEntryEither,
         IpLayerEvent, SendIpPacketMeta,
     },
     transport::{
         tcp::{buffer::RingBuffer, socket::TcpNonSyncContext},
         udp::{BufferUdpContext, UdpContext},
     },
-    AddableEntryEither, Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
+    Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.

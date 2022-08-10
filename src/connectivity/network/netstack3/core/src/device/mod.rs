@@ -56,9 +56,10 @@ use crate::{
             },
             BufferIpDeviceContext, IpDeviceContext, Ipv6DeviceContext,
         },
+        types::AddableEntry,
         IpDeviceId, IpDeviceIdContext,
     },
-    AddableEntry, BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
+    BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
 /// An execution context which provides a `DeviceId` type for various device

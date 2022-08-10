@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Common types for dealing with ip table entries.
+
 use core::fmt::Debug;
 
 use net_types::{
@@ -87,8 +89,11 @@ impl<D> From<AddableEntry<Ipv6Addr, D>> for AddableEntryEither<D> {
 /// `Entry` is a `Subnet` with an egress device and optional gateway.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Entry<A: IpAddress, D> {
+    /// The matching subnet.
     pub subnet: Subnet<A>,
+    /// The destination device.
     pub device: D,
+    /// An optional gateway if the subnet is not on link.
     pub gateway: Option<SpecifiedAddr<A>>,
 }
 

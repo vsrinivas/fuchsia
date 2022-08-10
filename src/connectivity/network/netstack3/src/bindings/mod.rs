@@ -61,9 +61,16 @@ use netstack3_core::{
     data_structures::id_map::IdMap,
     device::{DeviceId, DeviceLayerEventDispatcher},
     error::NetstackError,
-    handle_timer, icmp, BufferUdpContext, Ctx, IpDeviceConfiguration, IpExt,
-    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, SyncCtx,
-    TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    handle_timer,
+    ip::{
+        device::{
+            slaac::SlaacConfiguration,
+            state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
+        },
+        icmp, IpExt,
+    },
+    BufferUdpContext, Ctx, NonSyncContext, SyncCtx, TimerId, UdpBoundId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -399,10 +406,12 @@ where
     }
 }
 
-impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, event: netstack3_core::IpDeviceEvent<DeviceId, I>) {
+impl<I: Ip> EventContext<netstack3_core::ip::device::IpDeviceEvent<DeviceId, I>>
+    for BindingsNonSyncCtxImpl
+{
+    fn on_event(&mut self, event: netstack3_core::ip::device::IpDeviceEvent<DeviceId, I>) {
         let (device, event) = match event {
-            netstack3_core::IpDeviceEvent::AddressAdded { device, addr, state } => (
+            netstack3_core::ip::device::IpDeviceEvent::AddressAdded { device, addr, state } => (
                 device,
                 InterfaceUpdate::AddressAdded {
                     addr: addr.into(),
@@ -412,10 +421,14 @@ impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for Binding
                     },
                 },
             ),
-            netstack3_core::IpDeviceEvent::AddressRemoved { device, addr } => {
+            netstack3_core::ip::device::IpDeviceEvent::AddressRemoved { device, addr } => {
                 (device, InterfaceUpdate::AddressRemoved(addr.into()))
             }
-            netstack3_core::IpDeviceEvent::AddressStateChanged { device, addr, state } => (
+            netstack3_core::ip::device::IpDeviceEvent::AddressStateChanged {
+                device,
+                addr,
+                state,
+            } => (
                 device,
                 InterfaceUpdate::AddressAssignmentStateChanged {
                     addr: addr.into(),
@@ -427,13 +440,13 @@ impl<I: Ip> EventContext<netstack3_core::IpDeviceEvent<DeviceId, I>> for Binding
     }
 }
 
-impl<I: Ip> EventContext<netstack3_core::IpLayerEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, event: netstack3_core::IpLayerEvent<DeviceId, I>) {
+impl<I: Ip> EventContext<netstack3_core::ip::IpLayerEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
+    fn on_event(&mut self, event: netstack3_core::ip::IpLayerEvent<DeviceId, I>) {
         let (device, subnet, has_default_route) = match event {
-            netstack3_core::IpLayerEvent::DeviceRouteAdded { device, subnet } => {
+            netstack3_core::ip::IpLayerEvent::DeviceRouteAdded { device, subnet } => {
                 (device, subnet, true)
             }
-            netstack3_core::IpLayerEvent::DeviceRouteRemoved { device, subnet } => {
+            netstack3_core::ip::IpLayerEvent::DeviceRouteRemoved { device, subnet } => {
                 (device, subnet, false)
             }
         };
@@ -448,22 +461,28 @@ impl<I: Ip> EventContext<netstack3_core::IpLayerEvent<DeviceId, I>> for Bindings
     }
 }
 
-impl EventContext<netstack3_core::DadEvent<DeviceId>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, event: netstack3_core::DadEvent<DeviceId>) {
+impl EventContext<netstack3_core::ip::device::dad::DadEvent<DeviceId>> for BindingsNonSyncCtxImpl {
+    fn on_event(&mut self, event: netstack3_core::ip::device::dad::DadEvent<DeviceId>) {
         match event {
-            netstack3_core::DadEvent::AddressAssigned { device, addr } => {
-                self.on_event(netstack3_core::IpDeviceEvent::<_, Ipv6>::AddressStateChanged {
-                    device,
-                    addr: *addr,
-                    state: netstack3_core::IpAddressState::Assigned,
-                })
-            }
+            netstack3_core::ip::device::dad::DadEvent::AddressAssigned { device, addr } => self
+                .on_event(
+                    netstack3_core::ip::device::IpDeviceEvent::<_, Ipv6>::AddressStateChanged {
+                        device,
+                        addr: *addr,
+                        state: netstack3_core::ip::device::IpAddressState::Assigned,
+                    },
+                ),
         }
     }
 }
 
-impl EventContext<netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, _event: netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>) {
+impl EventContext<netstack3_core::ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>>
+    for BindingsNonSyncCtxImpl
+{
+    fn on_event(
+        &mut self,
+        _event: netstack3_core::ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>,
+    ) {
         // TODO(https://fxbug.dev/97203): Update forwarding table in response to
         // the event.
     }

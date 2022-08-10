@@ -7,20 +7,15 @@
 #[macro_use]
 pub(crate) mod path_mtu;
 
-pub(crate) mod device;
-pub(crate) mod forwarding;
+pub mod device;
+pub mod forwarding;
 pub(crate) mod gmp;
 pub mod icmp;
 mod integration;
 mod ipv6;
 pub(crate) mod reassembly;
-pub(crate) mod socket;
-mod types;
-
-// It's ok to `pub use` rather `pub(crate) use` here because the items in
-// `types` which are themselves `pub(crate)` will still not be allowed to be
-// re-exported from the root.
-pub use self::types::*;
+pub mod socket;
+pub mod types;
 
 use alloc::vec::Vec;
 use core::{
@@ -2135,7 +2130,7 @@ pub(crate) fn del_route<
 ) -> Result<(), NotFoundError> {
     with_ip_layer_state_inner_mut(sync_ctx, |state| {
         state.table.write().del_route(subnet).map(|removed| {
-            removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
+            removed.into_iter().for_each(|types::Entry { subnet, device, gateway }| match gateway {
                 None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
                 Some(SpecifiedAddr { .. }) => (),
             })
@@ -2153,7 +2148,10 @@ pub(crate) fn del_device_routes<
     to_delete: &SC::DeviceId,
 ) {
     with_ip_layer_state_inner_mut(sync_ctx, |state| {
-        state.table.write().retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
+        state
+            .table
+            .write()
+            .retain(|types::Entry { subnet: _, device, gateway: _ }| device != to_delete)
     })
 }
 
@@ -2175,7 +2173,7 @@ fn with_ipv4_and_ipv6_routing_tables<
 /// Get all the routes.
 pub fn get_all_routes<NonSyncCtx: NonSyncContext>(
     sync_ctx: &SyncCtx<NonSyncCtx>,
-) -> Vec<EntryEither<DeviceId>> {
+) -> Vec<types::EntryEither<DeviceId>> {
     with_ipv4_and_ipv6_routing_tables(sync_ctx, |ipv4, ipv6| {
         ipv4.iter_table()
             .cloned()

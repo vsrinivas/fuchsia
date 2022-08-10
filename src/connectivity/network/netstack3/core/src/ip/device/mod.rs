@@ -4,13 +4,13 @@
 
 //! An IP device.
 
-pub(crate) mod dad;
+pub mod dad;
 mod integration;
 pub(crate) mod nud;
-pub(crate) mod route_discovery;
+pub mod route_discovery;
 pub(crate) mod router_solicitation;
-pub(crate) mod slaac;
-pub(crate) mod state;
+pub mod slaac;
+pub mod state;
 
 use alloc::{boxed::Box, vec::Vec};
 use core::num::NonZeroU8;

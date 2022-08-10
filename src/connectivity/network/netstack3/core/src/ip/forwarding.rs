@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! IP forwarding definitions.
+
+use alloc::vec::Vec;
 use core::{fmt::Debug, slice::Iter};
 
+use log::debug;
 use net_types::{
     ip::{Ip, IpAddress, Subnet},
     SpecifiedAddr,
 };
 use thiserror::Error;
 
-use crate::ip::*;
+use crate::ip;
 
 // TODO(joshlf):
 // - How do we detect circular routes? Do we attempt to detect at rule
@@ -42,8 +46,8 @@ pub enum AddRouteError {
     GatewayNotNeighbor,
 }
 
-impl From<ExistsError> for AddRouteError {
-    fn from(ExistsError: ExistsError) -> AddRouteError {
+impl From<crate::error::ExistsError> for AddRouteError {
+    fn from(crate::error::ExistsError: crate::error::ExistsError) -> AddRouteError {
         AddRouteError::AlreadyExists
     }
 }
@@ -62,7 +66,7 @@ pub struct ForwardingTable<I: Ip, D> {
     /// The entries are sorted based on the subnet's prefix length and
     /// local-ness; when there's a tie in prefix length, on-linkness breaks the
     /// tie (with the on-link routes appearing before off-link ones).
-    table: Vec<Entry<I::Addr, D>>,
+    table: Vec<ip::types::Entry<I::Addr, D>>,
 }
 
 impl<I: Ip, D> Default for ForwardingTable<I, D> {
@@ -73,21 +77,24 @@ impl<I: Ip, D> Default for ForwardingTable<I, D> {
 
 impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     /// Adds `entry` to the forwarding table if it does not already exist.
-    fn add_entry(&mut self, entry: Entry<I::Addr, D>) -> Result<(), ExistsError> {
+    fn add_entry(
+        &mut self,
+        entry: ip::types::Entry<I::Addr, D>,
+    ) -> Result<(), crate::error::ExistsError> {
         let Self { table } = self;
 
         if table.contains(&entry) {
             // If we already have this exact route, don't add it again.
-            return Err(ExistsError);
+            return Err(crate::error::ExistsError);
         }
 
         // Insert the new entry after the last route to a more specific and/or
         // local subnet to maintain the invariant that the table is sorted by
         // subnet prefix length and local-ness.
-        let Entry { subnet, device: _, gateway: _ } = entry;
+        let ip::types::Entry { subnet, device: _, gateway: _ } = entry;
         let prefix = subnet.prefix();
         table.insert(
-            table.partition_point(|Entry { subnet, device: _, gateway }| {
+            table.partition_point(|ip::types::Entry { subnet, device: _, gateway }| {
                 let subnet_prefix = subnet.prefix();
                 subnet_prefix > prefix
                     || (subnet_prefix == prefix
@@ -131,7 +138,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
             },
         )?;
 
-        self.add_entry(Entry { subnet, device, gateway: Some(gateway) }).map_err(From::from)
+        self.add_entry(ip::types::Entry { subnet, device, gateway: Some(gateway) })
+            .map_err(From::from)
     }
 
     /// Add a route to a destination subnet that lives on a link an interface is
@@ -140,9 +148,9 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         &mut self,
         subnet: Subnet<I::Addr>,
         device: D,
-    ) -> Result<(), ExistsError> {
+    ) -> Result<(), crate::error::ExistsError> {
         debug!("adding device route: {} -> {:?}", subnet, device);
-        self.add_entry(Entry { subnet, device, gateway: None })
+        self.add_entry(ip::types::Entry { subnet, device, gateway: None })
     }
 
     /// Delete all routes to a subnet, returning `Err` if no route was found to
@@ -157,7 +165,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     pub(crate) fn del_route(
         &mut self,
         subnet: Subnet<I::Addr>,
-    ) -> Result<Vec<Entry<I::Addr, D>>, NotFoundError> {
+    ) -> Result<Vec<ip::types::Entry<I::Addr, D>>, crate::error::NotFoundError> {
         debug!("deleting route: {}", subnet);
 
         // Delete all routes to a subnet.
@@ -172,7 +180,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         if removed.is_empty() {
             // If a path to `subnet` was not in our installed table, then it
             // definitely won't be in our active routes cache.
-            return Err(NotFoundError);
+            return Err(crate::error::NotFoundError);
         }
 
         Ok(removed)
@@ -180,7 +188,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
     /// Get an iterator over all of the forwarding entries ([`Entry`]) this
     /// `ForwardingTable` knows about.
-    pub(crate) fn iter_table(&self) -> Iter<'_, Entry<I::Addr, D>> {
+    pub(crate) fn iter_table(&self) -> Iter<'_, ip::types::Entry<I::Addr, D>> {
         self.table.iter()
     }
 
@@ -211,7 +219,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         let Self { table } = self;
 
         // Get all potential routes we could take to reach `address`.
-        table.iter().find_map(|Entry { subnet, device, gateway }| {
+        table.iter().find_map(|ip::types::Entry { subnet, device, gateway }| {
             (subnet.contains(&address) && local_device.as_ref().map_or(true, |d| d == device)).then(
                 || {
                     let next_hop =
@@ -224,7 +232,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     }
 
     /// Retains only the entries that pass the predicate.
-    pub(crate) fn retain<F: FnMut(&Entry<I::Addr, D>) -> bool>(&mut self, pred: F) {
+    pub(crate) fn retain<F: FnMut(&ip::types::Entry<I::Addr, D>) -> bool>(&mut self, pred: F) {
         self.table.retain(pred)
     }
 }
@@ -232,6 +240,8 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 #[cfg(test)]
 mod tests {
     use fakealloc::collections::HashSet;
+    use log::trace;
+    use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use specialize_ip_macro::ip_test;
 
     use super::*;
@@ -247,7 +257,7 @@ mod tests {
                 return;
             }
 
-            for Entry { subnet, device, gateway } in self.iter_table() {
+            for ip::types::Entry { subnet, device, gateway } in self.iter_table() {
                 trace!("    {} -> via {:?} on device {:?}", subnet, gateway, device);
             }
         }
@@ -321,14 +331,14 @@ mod tests {
         table.add_device_route(subnet, device).unwrap();
         assert_eq!(
             table.iter_table().collect::<Vec<_>>(),
-            &[&Entry { subnet, device, gateway: None }]
+            &[&ip::types::Entry { subnet, device, gateway: None }]
         );
 
         // Attempting to add the route again should fail.
-        assert_eq!(table.add_device_route(subnet, device).unwrap_err(), ExistsError);
+        assert_eq!(table.add_device_route(subnet, device).unwrap_err(), crate::error::ExistsError);
         assert_eq!(
             table.iter_table().collect::<Vec<_>>(),
-            &[&Entry { subnet, device, gateway: None }]
+            &[&ip::types::Entry { subnet, device, gateway: None }]
         );
 
         // Add the route but as a next hop route.
@@ -337,9 +347,9 @@ mod tests {
         assert_eq!(
             table.iter_table().collect::<HashSet<_>>(),
             HashSet::from([
-                &Entry { subnet, device, gateway: None },
-                &Entry { subnet: next_hop_subnet, device, gateway: None },
-                &Entry { subnet, device, gateway: Some(next_hop) },
+                &ip::types::Entry { subnet, device, gateway: None },
+                &ip::types::Entry { subnet: next_hop_subnet, device, gateway: None },
+                &ip::types::Entry { subnet, device, gateway: Some(next_hop) },
             ])
         );
 
@@ -348,9 +358,9 @@ mod tests {
         assert_eq!(
             table.iter_table().collect::<HashSet<_>>(),
             HashSet::from([
-                &Entry { subnet, device, gateway: None },
-                &Entry { subnet: next_hop_subnet, device, gateway: None },
-                &Entry { subnet, device, gateway: Some(next_hop) },
+                &ip::types::Entry { subnet, device, gateway: None },
+                &ip::types::Entry { subnet: next_hop_subnet, device, gateway: None },
+                &ip::types::Entry { subnet, device, gateway: Some(next_hop) },
             ])
         );
 
@@ -366,14 +376,14 @@ mod tests {
         assert_eq!(
             table.del_route(config.subnet).unwrap().into_iter().collect::<HashSet<_>>(),
             HashSet::from([
-                Entry { subnet: config.subnet, device, gateway: None },
-                Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
+                ip::types::Entry { subnet: config.subnet, device, gateway: None },
+                ip::types::Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
             ])
         );
 
         assert_eq!(
             table.iter_table().collect::<Vec<_>>(),
-            &[&Entry { subnet: next_hop_subnet, device, gateway: None }]
+            &[&ip::types::Entry { subnet: next_hop_subnet, device, gateway: None }]
         );
     }
 
@@ -399,8 +409,8 @@ mod tests {
         assert_eq!(
             table.del_route(config.subnet).unwrap().into_iter().collect::<HashSet<_>>(),
             HashSet::from([
-                Entry { subnet: config.subnet, device, gateway: None },
-                Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
+                ip::types::Entry { subnet: config.subnet, device, gateway: None },
+                ip::types::Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
             ])
         );
         assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));

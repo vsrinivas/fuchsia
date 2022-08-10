@@ -21,8 +21,8 @@ use net_types::{
 };
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
-    Ctx, IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
-    UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
+    Ctx, UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
 };
 
 use crate::bindings::{
@@ -432,11 +432,11 @@ impl IntoErrno for IpSockSendError {
     }
 }
 
-impl IntoErrno for netstack3_core::icmp::IcmpSockCreationError {
+impl IntoErrno for netstack3_core::ip::icmp::IcmpSockCreationError {
     fn into_errno(self) -> Errno {
         match self {
-            netstack3_core::icmp::IcmpSockCreationError::Ip(e) => e.into_errno(),
-            netstack3_core::icmp::IcmpSockCreationError::SockAddrConflict => Errno::Eaddrinuse,
+            netstack3_core::ip::icmp::IcmpSockCreationError::Ip(e) => e.into_errno(),
+            netstack3_core::ip::icmp::IcmpSockCreationError::SockAddrConflict => Errno::Eaddrinuse,
         }
     }
 }

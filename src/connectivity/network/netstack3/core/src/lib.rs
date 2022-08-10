@@ -38,7 +38,7 @@ pub mod device;
 pub mod error;
 #[cfg(fuzz)]
 mod fuzz;
-mod ip;
+pub mod ip;
 mod socket;
 mod sync;
 #[cfg(test)]
@@ -47,43 +47,23 @@ pub mod transport;
 
 use log::trace;
 
-pub use crate::{
-    ip::{
-        device::{
-            dad::DadEvent,
-            route_discovery::Ipv6RouteDiscoveryEvent,
-            slaac::SlaacConfiguration,
-            state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
-            IpAddressState, IpDeviceEvent,
-        },
-        forwarding::AddRouteError,
-        get_all_routes, icmp,
-        socket::{
-            BufferIpSocketHandler, IpSockCreationError, IpSockRouteError, IpSockSendError,
-            IpSockUnroutableError,
-        },
-        AddableEntry, AddableEntryEither, EntryEither, IpDeviceIdContext, IpExt, IpLayerEvent,
-        Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
+pub use crate::transport::{
+    tcp::{
+        buffer::{ReceiveBuffer, RingBuffer, SendBuffer},
+        socket::TcpNonSyncContext,
     },
-    transport::{
-        tcp::{
-            buffer::{ReceiveBuffer, RingBuffer, SendBuffer},
-            socket::TcpNonSyncContext,
-        },
-        udp::{
-            connect_udp, connect_udp_listener, create_udp_unbound, disconnect_udp_connected,
-            get_udp_bound_device, get_udp_conn_info, get_udp_listener_info,
-            get_udp_posix_reuse_port, listen_udp, reconnect_udp, remove_udp_conn,
-            remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
-            set_bound_udp_device, set_udp_multicast_membership, set_udp_posix_reuse_port,
-            set_unbound_udp_device, BufferUdpContext, BufferUdpStateContext,
-            BufferUdpStateNonSyncContext, UdpBoundId, UdpConnId, UdpConnInfo,
-            UdpConnectListenerError, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
-            UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpStateContext,
-            UdpStateNonSyncContext, UdpUnboundId,
-        },
-        TransportStateBuilder,
+    udp::{
+        connect_udp, connect_udp_listener, create_udp_unbound, disconnect_udp_connected,
+        get_udp_bound_device, get_udp_conn_info, get_udp_listener_info, get_udp_posix_reuse_port,
+        listen_udp, reconnect_udp, remove_udp_conn, remove_udp_listener, remove_udp_unbound,
+        send_udp, send_udp_conn, send_udp_listener, set_bound_udp_device,
+        set_udp_multicast_membership, set_udp_posix_reuse_port, set_unbound_udp_device,
+        BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext, UdpBoundId,
+        UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext, UdpListenerId,
+        UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpSocketId,
+        UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
     },
+    TransportStateBuilder,
 };
 
 use alloc::vec::Vec;
@@ -178,8 +158,8 @@ macro_rules! map_addr_version {
 #[derive(Default, Clone)]
 pub struct StackStateBuilder {
     transport: TransportStateBuilder,
-    ipv4: Ipv4StateBuilder,
-    ipv6: Ipv6StateBuilder,
+    ipv4: ip::Ipv4StateBuilder,
+    ipv6: ip::Ipv6StateBuilder,
 }
 
 impl StackStateBuilder {
@@ -189,12 +169,12 @@ impl StackStateBuilder {
     }
 
     /// Get the builder for the IPv4 state.
-    pub fn ipv4_builder(&mut self) -> &mut Ipv4StateBuilder {
+    pub fn ipv4_builder(&mut self) -> &mut ip::Ipv4StateBuilder {
         &mut self.ipv4
     }
 
     /// Get the builder for the IPv6 state.
-    pub fn ipv6_builder(&mut self) -> &mut Ipv6StateBuilder {
+    pub fn ipv6_builder(&mut self) -> &mut ip::Ipv6StateBuilder {
         &mut self.ipv6
     }
 
@@ -257,12 +237,12 @@ pub trait NonSyncContext:
     + BufferNonSyncContextInner<EmptyBuf>
     + RngContext
     + TimerContext<TimerId>
-    + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
-    + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
-    + EventContext<IpLayerEvent<DeviceId, Ipv4>>
-    + EventContext<IpLayerEvent<DeviceId, Ipv6>>
-    + EventContext<DadEvent<DeviceId>>
-    + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
+    + EventContext<ip::device::IpDeviceEvent<DeviceId, Ipv4>>
+    + EventContext<ip::device::IpDeviceEvent<DeviceId, Ipv6>>
+    + EventContext<ip::IpLayerEvent<DeviceId, Ipv4>>
+    + EventContext<ip::IpLayerEvent<DeviceId, Ipv6>>
+    + EventContext<ip::device::dad::DadEvent<DeviceId>>
+    + EventContext<ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>>
     + UdpContext<Ipv4>
     + UdpContext<Ipv6>
     + IcmpContext<Ipv4>
@@ -277,12 +257,12 @@ impl<
             + BufferNonSyncContextInner<EmptyBuf>
             + RngContext
             + TimerContext<TimerId>
-            + EventContext<IpDeviceEvent<DeviceId, Ipv4>>
-            + EventContext<IpDeviceEvent<DeviceId, Ipv6>>
-            + EventContext<IpLayerEvent<DeviceId, Ipv4>>
-            + EventContext<IpLayerEvent<DeviceId, Ipv6>>
-            + EventContext<DadEvent<DeviceId>>
-            + EventContext<Ipv6RouteDiscoveryEvent<DeviceId>>
+            + EventContext<ip::device::IpDeviceEvent<DeviceId, Ipv4>>
+            + EventContext<ip::device::IpDeviceEvent<DeviceId, Ipv6>>
+            + EventContext<ip::IpLayerEvent<DeviceId, Ipv4>>
+            + EventContext<ip::IpLayerEvent<DeviceId, Ipv6>>
+            + EventContext<ip::device::dad::DadEvent<DeviceId>>
+            + EventContext<ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>>
             + UdpContext<Ipv4>
             + UdpContext<Ipv6>
             + IcmpContext<Ipv4>
@@ -500,8 +480,8 @@ pub fn del_ip_addr<NonSyncCtx: NonSyncContext>(
 pub fn add_route<NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
-    entry: AddableEntryEither<DeviceId>,
-) -> Result<(), AddRouteError> {
+    entry: ip::types::AddableEntryEither<DeviceId>,
+) -> Result<(), ip::forwarding::AddRouteError> {
     let (subnet, device, gateway) = entry.into_subnet_device_gateway();
     match (device, gateway) {
         (Some(device), None) => map_addr_version!(
