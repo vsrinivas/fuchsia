@@ -4,9 +4,10 @@
 
 use {
     anyhow::{anyhow, Result},
-    scrutiny_utils::artifact::ArtifactReader,
+    scrutiny_utils::{artifact::ArtifactReader, io::ReadSeek},
     std::{
         collections::{HashMap, HashSet},
+        io::Cursor,
         path::{Path, PathBuf},
     },
 };
@@ -50,6 +51,14 @@ impl MockArtifactReader {
 }
 
 impl ArtifactReader for MockArtifactReader {
+    fn open(&mut self, path: &Path) -> Result<Box<dyn ReadSeek>> {
+        let path_buf = path.to_path_buf();
+        let artifact = self.artifacts.get(&path_buf).ok_or_else(|| {
+            anyhow!("Mock artifact reader contains no artifact definition for {:?}", path)
+        })?;
+        Ok(Box::new(Cursor::new(artifact.clone())))
+    }
+
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
         let path_buf = path.to_path_buf();
         self.artifacts.get(&path_buf).map(|artifact| artifact.clone()).ok_or_else(|| {

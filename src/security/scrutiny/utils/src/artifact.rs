@@ -6,7 +6,7 @@ use {
     crate::{
         blobfs::{BlobFsReader, BlobFsReaderBuilder},
         fs::tempdir,
-        io::{TryClonableBufReaderFile, TryClone},
+        io::{ReadSeek, TryClonableBufReaderFile, TryClone},
     },
     anyhow::{anyhow, Context, Result},
     log::warn,
@@ -22,6 +22,9 @@ use {
 
 /// Interface for fetching raw bytes by file path.
 pub trait ArtifactReader: Send + Sync {
+    /// Open the file located at `path`.
+    fn open(&mut self, path: &Path) -> Result<Box<dyn ReadSeek>>;
+
     /// Read the raw bytes stored in filesystem location `path`.
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>>;
 
@@ -132,6 +135,10 @@ impl<TCRS: TryClone + Read + Seek> TryClone for BlobFsArtifactReader<TCRS> {
 impl<TCRS: 'static + TryClone + Read + Seek + Send + Sync> ArtifactReader
     for BlobFsArtifactReader<TCRS>
 {
+    fn open(&mut self, path: &Path) -> Result<Box<dyn ReadSeek>> {
+        self.blobfs_reader.open(path)
+    }
+
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
         const CTX: &str = "<BlobFsArtifactReader as ArtifactReader>::read_bytes";
         let mut blob = self.blobfs_reader.open(path).context(CTX)?;
@@ -160,6 +167,24 @@ impl CompoundArtifactReader {
 }
 
 impl ArtifactReader for CompoundArtifactReader {
+    fn open(&mut self, path: &Path) -> Result<Box<dyn ReadSeek>> {
+        let mut errs = vec![];
+        for delegate in self.delegates.iter_mut() {
+            match delegate.open(path) {
+                Ok(rs) => return Ok(rs),
+                Err(err) => errs.push(err),
+            }
+        }
+        let mut compound_err = anyhow!("Compound artifact read failed");
+        for err in errs.into_iter() {
+            compound_err = compound_err.context("Read failure");
+            for ctx in err.chain() {
+                compound_err = compound_err.context(ctx.to_string());
+            }
+        }
+        Err(compound_err)
+    }
+
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
         let mut errs = vec![];
         for delegate in self.delegates.iter_mut() {
@@ -241,6 +266,16 @@ impl FileArtifactReader {
 }
 
 impl ArtifactReader for FileArtifactReader {
+    fn open(&mut self, path: &Path) -> Result<Box<dyn ReadSeek>> {
+        let absolute_path_string =
+            absolute_from_absolute_or_artifact_relative(&self.artifact_path, path)
+                .context("Absolute path conversion failure during read")?;
+        let dep_path_string = dep_from_absolute(&self.build_path, &absolute_path_string)
+            .context("Dep path conversion failed during read")?;
+        self.deps.insert(dep_path_string);
+        Ok(Box::new(fs::File::open(path).context("<FileArtifactReader as ArtifactReader>::open")?))
+    }
+
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
         let absolute_path_string =
             absolute_from_absolute_or_artifact_relative(&self.artifact_path, path)
