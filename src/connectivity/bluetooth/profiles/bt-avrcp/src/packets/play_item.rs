@@ -25,12 +25,26 @@ impl PlayItemCommand {
     /// 1 byte for scope, 8 for uid, 2 for uid_counter.
     pub const PACKET_SIZE: usize = 11;
 
-    #[allow(unused)]
     pub fn new(scope: Scope, uid: u64, uid_counter: u16) -> Result<PlayItemCommand, Error> {
         if scope == Scope::MediaPlayerList {
             return Err(Error::InvalidMessage);
         }
         Ok(Self { scope, uid, uid_counter })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn scope(&self) -> Scope {
+        self.scope
+    }
+
+    #[cfg(test)]
+    pub(crate) fn uid(&self) -> u64 {
+        self.uid
+    }
+
+    #[cfg(test)]
+    pub fn uid_counter(&self) -> u16 {
+        self.uid_counter
     }
 }
 
@@ -107,6 +121,10 @@ impl PlayItemResponse {
     #[allow(unused)]
     pub fn new(status: StatusCode) -> PlayItemResponse {
         Self { status }
+    }
+
+    pub fn status(&self) -> StatusCode {
+        self.status
     }
 }
 

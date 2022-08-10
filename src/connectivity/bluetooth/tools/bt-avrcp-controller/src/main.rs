@@ -333,6 +333,28 @@ async fn change_path<'a>(
     }
 }
 
+async fn play_item<'a>(
+    cmd: Cmd,
+    args: &'a [&'a str],
+    controller: &'a BrowseControllerProxy,
+) -> Result<String, Error> {
+    if args.len() != 1 {
+        return Ok(format!("usage: {}", cmd.cmd_help()));
+    }
+
+    let uid = args[0].parse::<u64>()?;
+
+    let command = match cmd {
+        Cmd::PlayVirtualFileSystem => controller.play_file_system_item(uid),
+        Cmd::PlayNowPlaying => controller.play_now_playing_item(uid),
+        _ => panic!("play_item should not have been called with {:?}", cmd),
+    };
+    Ok(command
+        .await
+        .map(|_| "Successfully played item".to_string())
+        .map_err(|e| format_err!("Error playing item: {:?}", e))?)
+}
+
 async fn set_browsed_player<'a>(
     args: &'a [&'a str],
     controller: &'a BrowseControllerProxy,
@@ -393,6 +415,12 @@ async fn handle_cmd<'a>(
             Ok(Cmd::GetPlayStatus) => get_play_status(args, &controller).await,
             Ok(Cmd::GetPlayerApplicationSettings) => {
                 get_player_application_settings(args, &controller).await
+            }
+            Ok(Cmd::PlayVirtualFileSystem) => {
+                play_item(Cmd::PlayVirtualFileSystem, args, &browse_controller).await
+            }
+            Ok(Cmd::PlayNowPlaying) => {
+                play_item(Cmd::PlayNowPlaying, args, &browse_controller).await
             }
             Ok(Cmd::SetPlayerApplicationSettings) => {
                 set_player_application_settings(args, &controller).await

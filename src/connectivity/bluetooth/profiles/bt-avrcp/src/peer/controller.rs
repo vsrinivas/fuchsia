@@ -406,6 +406,33 @@ impl Controller {
         }
     }
 
+    pub async fn play_item(
+        &self,
+        uid: u64,
+        scope: Scope,
+    ) -> Result<(), fidl_avrcp::BrowseControllerError> {
+        let _ = self.check_browsed_player()?;
+
+        let cmd = {
+            let player = self.browsable_player.lock();
+            let p = player.as_ref().unwrap();
+            PlayItemCommand::new(scope, uid, p.uid_counter())
+        }?;
+
+        let buf = self
+            .peer
+            .send_vendor_dependent_command(&cmd)
+            .await
+            .map_err(Into::<fidl_avrcp::BrowseControllerError>::into)?;
+        let response = PlayItemResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        trace!("play_item received response {:?}", response);
+
+        match response.status() {
+            StatusCode::Success => Ok(()),
+            e => Err(e.into()),
+        }
+    }
+
     async fn send_browse_command(
         &self,
         pdu_id: PduId,

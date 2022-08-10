@@ -174,6 +174,15 @@ fn send_avctp_response(
     let _ = command.send_response(&response_buf[..]).expect("should have succeeded");
 }
 
+#[track_caller]
+fn decode_avc_vendor_command(command: &AvcCommand) -> (PduId, &[u8]) {
+    let packet_body = command.body();
+    let preamble = VendorDependentPreamble::decode(packet_body).expect("unable to decode packet");
+    let body = &packet_body[preamble.encoded_len()..];
+    let pdu_id = PduId::try_from(preamble.pdu_id).expect("unknown PDU_ID");
+    (pdu_id, body)
+}
+
 #[test]
 fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
     let mut exec = fasync::TestExecutor::new().expect("executor should create");
@@ -407,14 +416,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
 
     let mut handle_remote_command = |avc_command: AvcCommand| {
         if avc_command.is_vendor_dependent() {
-            let packet_body = avc_command.body();
-
-            let preamble =
-                VendorDependentPreamble::decode(packet_body).expect("unable to decode packet");
-
-            let body = &packet_body[preamble.encoded_len()..];
-
-            let pdu_id = PduId::try_from(preamble.pdu_id).expect("unknown PDU_ID");
+            let (pdu_id, body) = decode_avc_vendor_command(&avc_command);
 
             match pdu_id {
                 PduId::GetElementAttributes => {
@@ -789,8 +791,9 @@ fn peer_manager_with_browse_controller_client() {
         mut peer_controller_request_receiver,
     ) = spawn_peer_manager();
 
-    let (local_avc, _remote_avc) = Channel::create();
+    let (local_avc, remote_avc) = Channel::create();
     let (local_avctp, remote_avctp) = Channel::create();
+    let remote_avc_peer = AvcPeer::new(remote_avc);
     let remote_avctp_peer = AvctpPeer::new(remote_avctp);
 
     peer_manager.services_found(
@@ -802,8 +805,24 @@ fn peer_manager_with_browse_controller_client() {
         }],
     );
 
+    let mut avc_cmd_stream = remote_avc_peer.take_command_stream();
+    let mut avctp_cmd_stream = remote_avctp_peer.take_command_stream();
+
+    assert!(exec.run_until_stalled(&mut avc_cmd_stream.try_next()).is_pending());
+    assert!(exec.run_until_stalled(&mut avctp_cmd_stream.try_next()).is_pending());
+
     peer_manager.new_control_connection(&fake_peer_id, local_avc);
     peer_manager.new_browse_connection(&fake_peer_id, local_avctp);
+
+    // When the control channel is first connected we get this.
+    match exec.run_until_stalled(&mut avc_cmd_stream.try_next()) {
+        Poll::Ready(Ok(Some(command))) => {
+            assert!(command.is_vendor_dependent());
+            let (pdu_id, _) = decode_avc_vendor_command(&command);
+            assert_eq!(pdu_id, PduId::GetCapabilities);
+        }
+        x => panic!("Expected request to be ready, got {:?} instead.", x),
+    };
 
     // Get browse controller client.
     let (browse_controller_proxy, browse_controller_server) =
@@ -843,7 +862,6 @@ fn peer_manager_with_browse_controller_client() {
     );
 
     // Start testing actual commands.
-    let mut avctp_cmd_stream = remote_avctp_peer.take_command_stream();
 
     // Test IsConnected.
     let mut is_browse_connected_fut = browse_controller_ext_proxy.is_connected();
@@ -955,4 +973,52 @@ fn peer_manager_with_browse_controller_client() {
     Poll::Ready(Ok(Ok(num_of_items))) => {
         assert_eq!(num_of_items, 10);
     });
+
+    // Test PlayFileSystemItem.
+    let play_file_fut = browse_controller_proxy.play_file_system_item(1);
+    pin_mut!(play_file_fut);
+    assert!(exec.run_until_stalled(&mut play_file_fut).is_pending());
+    let command = exec
+        .run_until_stalled(&mut avc_cmd_stream.try_next())
+        .expect("should be ready")
+        .unwrap()
+        .expect("has valid command");
+    // Ensure command params are correct.
+    assert!(command.is_vendor_dependent());
+    let (pdu_id, body) = decode_avc_vendor_command(&command);
+    assert_eq!(pdu_id, PduId::PlayItem);
+    let cmd = PlayItemCommand::decode(body).expect("can decode");
+    assert_eq!(cmd.uid(), 1);
+    assert_eq!(cmd.scope(), Scope::MediaPlayerVirtualFilesystem);
+    assert_eq!(cmd.uid_counter(), UID_COUNTER);
+    // Create mock response.
+    let resp = PlayItemResponse::new(StatusCode::Success);
+    let packet = resp.encode_packet().expect("unable to encode packets for event");
+    let _ = command
+        .send_response(AvcResponseType::Accepted, &packet[..])
+        .expect("should have succeeded");
+
+    // Test PlayNowPlayingItem failure.
+    let play_file_fut = browse_controller_proxy.play_now_playing_item(1);
+    pin_mut!(play_file_fut);
+    assert!(exec.run_until_stalled(&mut play_file_fut).is_pending());
+    let command = exec
+        .run_until_stalled(&mut avc_cmd_stream.try_next())
+        .expect("should be ready")
+        .unwrap()
+        .expect("has valid command");
+    // Ensure command params are correct.
+    assert!(command.is_vendor_dependent());
+    let (pdu_id, body) = decode_avc_vendor_command(&command);
+    assert_eq!(pdu_id, PduId::PlayItem);
+    let cmd = PlayItemCommand::decode(body).expect("can decode");
+    assert_eq!(cmd.scope(), Scope::NowPlaying);
+    // Create mock response that results in failure.
+    let resp = PlayItemResponse::new(StatusCode::InternalError);
+    let packet = resp.encode_packet().expect("unable to encode packets for event");
+    let _ = command
+        .send_response(AvcResponseType::Rejected, &packet[..])
+        .expect("should have succeeded");
+
+    assert_matches!(exec.run_until_stalled(&mut play_file_fut), Poll::Ready(Ok(Err(_))));
 }

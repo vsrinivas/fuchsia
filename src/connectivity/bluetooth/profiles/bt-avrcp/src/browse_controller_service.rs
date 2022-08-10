@@ -15,6 +15,7 @@ use {
     tracing::warn,
 };
 
+use crate::packets::Scope;
 use crate::peer::Controller;
 
 /// FIDL wrapper for a internal PeerController for browse-related tasks.
@@ -37,9 +38,7 @@ impl BrowseControllerService {
                 let folder_uid = match path {
                     Path::Parent(_) => None,
                     Path::ChildFolderUid(folder_uid) => Some(folder_uid),
-                    _ => {
-                        return Ok(responder.send(&mut Err(BrowseControllerError::ProtocolError))?);
-                    }
+                    _ => return Ok(responder.send(&mut Err(BrowseControllerError::ProtocolError))?),
                 };
                 responder.send(&mut self.controller.change_directory(folder_uid).await)?
             }
@@ -70,14 +69,14 @@ impl BrowseControllerService {
                     .get_now_playing_items(start_index, end_index, attribute_option)
                     .await,
             )?,
+            BrowseControllerRequest::PlayFileSystemItem { uid, responder } => responder.send(
+                &mut self.controller.play_item(uid, Scope::MediaPlayerVirtualFilesystem).await,
+            )?,
+            BrowseControllerRequest::PlayNowPlayingItem { uid, responder } => {
+                responder.send(&mut self.controller.play_item(uid, Scope::NowPlaying).await)?
+            }
             BrowseControllerRequest::SetBrowsedPlayer { player_id, responder } => responder
                 .send(&mut self.controller.set_browsed_player(player_id).await.map(Into::into))?,
-            BrowseControllerRequest::PlayFileSystemItem { responder, .. } => {
-                responder.send(&mut Err(BrowseControllerError::CommandNotImplemented))?
-            }
-            BrowseControllerRequest::PlayNowPlayingItem { responder, .. } => {
-                responder.send(&mut Err(BrowseControllerError::CommandNotImplemented))?
-            }
         };
         Ok(())
     }
