@@ -10,7 +10,12 @@
 #   * cannot use <(...) redirection
 
 script="$0"
+script_basename="$(basename "$script")"
 script_dir="$(dirname "$script")"
+
+function msg() {
+  echo "[$script_basename]: $@"
+}
 
 remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
 
@@ -259,6 +264,8 @@ comma_remote_outputs=
 # Compute a rustc command suitable for local and remote execution.
 # Prefix command with `env` in case it starts with local environment variables.
 original_rustc_command=("$env")
+# The remote command may be different from the local command when host != linux.
+remote_rustc_command=("$env")
 
 # arch-vendor-os
 target_triple=
@@ -280,6 +287,8 @@ for opt in "$@"
 do
   # Copy most command tokens.
   dep_only_token="$opt"
+  # In most cases, the remote command tokens are the same.
+  remote_only_token="$opt"
   # handle --option arg
   if test -n "$prev_opt"
   then
@@ -295,10 +304,12 @@ do
         test -z "$extern_path" || extern_paths+=("$build_subdir/$extern_path")
         dep_only_command+=( "$dep_only_token" )
         original_rustc_command+=( "$opt" )
+        remote_rustc_command+=( "$remote_only_token" )
         ;;
       # Copy all others.
       *) dep_only_command+=( "$dep_only_token" )
         original_rustc_command+=( "$opt" )
+        remote_rustc_command+=( "$remote_only_token" )
         ;;
     esac
     prev_opt=
@@ -333,6 +344,7 @@ EOF
       # remote executable is for running on RBE worker,
       # which could be the same as the local one.
       remote_rustc="$project_root_rel"/"$remote_rustc_subdir"/bin/rustc
+      remote_only_token="$remote_rustc"
       ;;
 
     # This is equivalent to --local, but passed as a rustc flag,
@@ -439,10 +451,12 @@ EOF
     # Detect custom linker, preserve symlinks: clang++ -> clang -> clang-XX
     -Clinker=*)
         linker_local_arg="$optarg"
+        _remote_linker_arg=("${linker_local_arg/clang\/*\/bin/clang/linux-x64/bin}")
         local_linker_rel=( "$(relpath "$project_root" "$linker_local_arg")" )
         remote_linker=("${local_linker_rel[0]/clang\/*\/bin/clang/linux-x64/bin}")
         debug_var "[from -Clinker (local)]" "${local_linker_rel[@]}"
         debug_var "[from -Clinker (remote)]" "${remote_linker[@]}"
+        remote_only_token="-Clinker=$_remote_linker_arg"
         ;;
 
     -Clink-arg=* )
@@ -462,6 +476,9 @@ EOF
             link_arg_files+=("$link_arg")
           ;;
         esac
+        _remote_optarg=("${optarg/clang\/*\/bin\/../clang/linux-x64/bin/..}")
+        _remote_optarg=("${_remote_optarg/clang\/*\/lib\/clang/clang/linux-x64/lib/clang}")
+        remote_only_token="-Clink-arg=$_remote_optarg"
         ;;
 
     # Linker can produce a .map output file.
@@ -542,10 +559,21 @@ EOF
   dep_only_command+=( "$dep_only_token" )
   # Copy tokens to craft a command for local and remote execution.
   original_rustc_command+=("$opt")
+  remote_rustc_command+=("$remote_only_token")
   shift
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
+# safety check: remote command should probably not reference anything Mac
+for tok in "${remote_rustc_command[@]}"
+do
+  case "$tok" in
+    *mac-x64* | *mac-arm64)
+      msg "Remote rustc command references Mac files (and probbably will not work): $tok"
+      exit 1
+      ;;
+  esac
+done
 
 local_trace_prefix=()
 test "$trace" = 0 || {
@@ -745,8 +773,8 @@ test "$llvm_time_trace" = 0 || {
 # When using the linker, also grab the necessary libraries.
 clang_dir_remote=()
 lld_remote=()
-libcxx=()
-rt_libdir=()
+libcxx_remote=()
+rt_libdir_remote=()
 test "${#remote_linker[@]}" = 0 || {
   # Assuming the linker is found in $clang_dir/bin/
   clang_dir_remote=("$(dirname "$(dirname "${remote_linker[0]}")")")
@@ -772,19 +800,21 @@ test "${#remote_linker[@]}" = 0 || {
       clang_lib_triple="x86_64-unknown-fuchsia" ;;
     x86_64-linux-gnu | x86_64-*-linux-gnu)
       clang_lib_triple="x86_64-unknown-linux-gnu" ;;
-    *) echo "[$script]: unhandled case for clang lib dir: $target_triple"
+    *) msg "unhandled case for clang lib dir: $target_triple"
       exit 1
       ;;
   esac
 
   # Linking with clang++ generally requires libc++.
-  libcxx=( "${clang_dir_remote[0]}"/lib/"$clang_lib_triple"/libc++.a )
+  libcxx_remote=( "${clang_dir_remote[0]}"/lib/"$clang_lib_triple"/libc++.a )
 
   # Location of clang_rt.crt{begin,end}.o and libclang_rt.builtins.a
   # * is a version number like 14.0.0.
   # For now, we upload the entire rt lib dir.
-  rt_libdir_local=( "$clang_dir_local"/lib/clang/*/lib/"$clang_lib_triple" )
-  rt_libdir=( "$(relpath "$project_root" "${rt_libdir_local[@]}" )" )
+  # From non-linux environments, point to the linux binaries, and the appropriate
+  # target triple dir underneath it.
+  _rt_libdir_remote=( "$project_root_rel/$clang_dir_remote"/lib/clang/*/lib/"$clang_lib_triple" )
+  rt_libdir_remote=( "$(relpath "$project_root" "${_rt_libdir_remote[@]}" )" )
 }
 
 extra_inputs_rel_project_root=()
@@ -798,7 +828,7 @@ case "$target_triple" in
   x86_64-*-linux*) sysroot_triple=x86_64-linux-gnu ;;
   *-fuchsia) sysroot_triple="" ;;
   wasm32-*) sysroot_triple="" ;;
-  *) echo "[$script]: unhandled case for sysroot target subdir: $target_triple"
+  *) msg "unhandled case for sysroot target subdir: $target_triple"
     exit 1
     ;;
 esac
@@ -865,10 +895,10 @@ test "${#link_sysroot[@]}" = 0 || {
 #   * objects and libraries used as linker arguments [$link_arg_files]
 #   * system rust libraries [$depfile.nolink]
 #   * clang++ linker driver [$remote_linker]
-#     * libc++ [$libcxx]
+#     * libc++ [$libcxx_remote]
 #   * linker binary (called by the driver) [$lld_remote]
 #       For example: -Clinker=.../lld
-#   * run-time libraries [$rt_libdir]
+#   * run-time libraries [$rt_libdir_remote]
 #   * sysroot libraries [$sysroot_files]
 #   * additional data dependencies [$extra_inputs_rel_project_root]
 
@@ -883,8 +913,8 @@ remote_inputs=(
   "${envvar_files[@]}"
   "${remote_linker[@]}"
   "${lld_remote[@]}"
-  "${libcxx[@]}"
-  "${rt_libdir[@]}"
+  "${libcxx_remote[@]}"
+  "${rt_libdir_remote[@]}"
   "${link_arg_files[@]}"
   "${sysroot_files[@]}"
   "${extra_inputs_rel_project_root[@]}"
@@ -921,8 +951,8 @@ dump_vars() {
   debug_var "source root" "$top_source"
   debug_var "linker (remote)" "${remote_linker[@]}"
   debug_var "lld (remote)" "${lld_remote[@]}"
-  debug_var "libc++" "$libcxx"
-  debug_var "rt libdir" "${rt_libdir[@]}"
+  debug_var "libc++ (remote)" "$libcxx_remote"
+  debug_var "rt libdir (remote)" "${rt_libdir_remote[@]}"
   debug_var "link args" "${link_arg_files[@]}"
   debug_var "link sysroot" "${link_sysroot[@]}"
   debug_var "sysroot triple" "$sysroot_triple"
@@ -1002,7 +1032,7 @@ exec_root_flag=()
 #   that its outputs do not leak the remote output dir.
 #   Ensuring that the results reproduce consistently across different
 #   build directories helps with caching.
-remote_rustc_command=(
+wrapped_remote_rustc_command=(
   "$remote_action_wrapper"
   --labels="type=tool,shallow=true"
   "${exec_root_flag[@]}"
@@ -1012,26 +1042,19 @@ remote_rustc_command=(
   --output_files="$remote_outputs_joined"
   "${rewrapper_options[@]}"
   --
+  "${remote_rustc_command[@]}"
 )
-for tok in "${original_rustc_command[@]}"
-do
-  case "$tok" in
-    # When cross building from Mac, swap in the linux binary.
-    "$local_rustc") remote_rustc_command+=( "$remote_rustc" ) ;;
-    *) remote_rustc_command+=( "$tok" ) ;;
-  esac
-done
 
 if test "$dry_run" = 1
 then
-  echo "[$script: skipped]:" "${remote_rustc_command[@]}"
+  msg "skipped:" "${wrapped_remote_rustc_command[@]}"
   dump_vars
   exit
 fi
 
 # Execute the rust command remotely.
-debug_var "[$script: remote]" "${remote_rustc_command[@]}"
-"${remote_rustc_command[@]}"
+debug_var "[$script: remote]" "${wrapped_remote_rustc_command[@]}"
+"${wrapped_remote_rustc_command[@]}"
 status="$?"
 
 # Scan remote-generated depfile for absolute paths, and reject them.
@@ -1103,7 +1126,7 @@ including output from the verbose re-run.
 
 EOF
   # Identify which target failed by its command, useful in parallel build.
-  debug_var "[$script: FAIL]" "${remote_rustc_command[@]}"
+  debug_var "[$script: FAIL]" "${wrapped_remote_rustc_command[@]}"
   dump_vars
 
   # Reject absolute paths in depfiles.
