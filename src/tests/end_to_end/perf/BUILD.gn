@@ -152,6 +152,7 @@ if (is_host) {
     "fuchsia.dart_inspect.txt",
     "fuchsia.diagnostics.txt",
     "fuchsia.fidlc_microbenchmarks.txt",
+    "fuchsia.flatland_latency.txt",
     "fuchsia.input_latency.simplest_app.txt",
     "fuchsia.kernel.boot.txt",
     "fuchsia.microbenchmarks.tracing.txt",

@@ -81,7 +81,8 @@ void _addTest(String testName, String appUrl) {
 
     expect(
         await helper.performance.processTrace(metricsSpecSet, jsonTraceFile,
-            converterPath: _catapultConverterPath),
+            converterPath: _catapultConverterPath,
+            expectedMetricNamesFile: 'fuchsia.flatland_latency.txt'),
         isNotNull);
 
     // Clean up by killing the processes.  The reason for this is that we want

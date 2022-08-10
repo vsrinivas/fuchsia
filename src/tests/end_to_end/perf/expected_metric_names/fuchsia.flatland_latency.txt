@@ -1,0 +1,2 @@
+fuchsia.flatland_latency.view-provider-example: CPU Load
+fuchsia.flatland_latency.view-provider-example: flatland_vsync_latency
