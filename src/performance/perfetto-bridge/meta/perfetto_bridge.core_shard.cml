@@ -6,7 +6,7 @@
         {
             name: "perfetto_bridge",
             url: "fuchsia-pkg://fuchsia.com/perfetto-bridge#meta/perfetto-bridge.cm",
-            environment: "#full-resolver-env",
+            environment: "#core-env",
         },
     ],
     offer: [

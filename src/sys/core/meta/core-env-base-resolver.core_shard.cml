@@ -10,12 +10,6 @@
             name: "core-env",
             extends: "realm",
         },
-
-        // TODO(fxbug.dev/105528) Migrate clients to "core-env", then delete.
-        {
-            name: "full-resolver-env",
-            extends: "realm",
-        },
         {
             name: "session-env",
             extends: "realm",
