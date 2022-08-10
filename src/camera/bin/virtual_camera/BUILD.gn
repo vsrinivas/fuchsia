@@ -77,7 +77,7 @@ executable("virtual_camera_bin") {
 fuchsia_component("virtual_camera_component") {
   deps = [ ":virtual_camera_bin" ]
   component_name = "virtual_camera"
-  manifest = "meta/virtual_camera.cmx"
+  manifest = "meta/virtual_camera.cml"
 }
 
 fuchsia_package("virtual_camera_pkg") {

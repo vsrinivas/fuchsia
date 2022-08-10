@@ -97,7 +97,6 @@ group("cmx_allowlist") {
     "//src/camera/bin/camera-gym:camera_gym_manual_manifest_compile",
     "//src/camera/bin/camera-gym/controller_client:camera-gym-ctl_component_manifest_compile",
     "//src/camera/bin/device:camera_device_component_manifest_compile",
-    "//src/camera/bin/virtual_camera:virtual_camera_component_manifest_compile",
     "//src/chromium/web_runner_tests:web_runner_integration_tests_manifest_compile",
     "//src/chromium/web_runner_tests:web_runner_pixel_tests_manifest_compile",
     "//src/cobalt/bin/app/fuzzer:logger_factory_fuzzer_component_manifest_compile",
