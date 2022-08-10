@@ -23,6 +23,8 @@ TEST_F(RequestLaunchTest, LaunchInTerminal) {
   // Shell command to run the program. It is a list of args with first one being the command.
   launch_req.launchCommand = "fx run test";
 
+  SetUpConnectedContext();
+
   // Register client handler for RunInTerminal which will be called by server during Launch request.
   bool run_in_terminal_received = false;
   client().registerHandler([&](const dap::RunInTerminalRequest& req) {

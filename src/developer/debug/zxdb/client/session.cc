@@ -500,6 +500,7 @@ bool Session::ClearConnectionData() {
   stream_ = nullptr;
   connected_info_.host.clear();
   connected_info_.port = 0;
+  last_connection_error_ = Err();
   arch_info_ = std::make_unique<ArchInfo>();  // Reset to default one (always keep non-null).
   connection_storage_.reset();
   arch_ = debug::Arch::kUnknown;
@@ -743,6 +744,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   pending_connection_ = nullptr;
 
   if (err.has_error()) {
+    last_connection_error_ = err;
     // Other error connecting.
     if (callback)
       callback(err);
@@ -751,13 +753,14 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
 
   // Version check.
   if (reply.version != debug_ipc::kProtocolVersion) {
+    last_connection_error_ =
+        Err("The IPC version of the debug_agent on the system (v%u) doesn't match\n"
+            "the zxdb frontend's IPC version (v%u).\n"
+            "Try to reload debug_agent by `ffx component stop /core/debug_agent`\n"
+            "if zxdb is recently updated.",
+            reply.version, debug_ipc::kProtocolVersion);
     if (callback) {
-      callback(
-          Err("The IPC version of the debug_agent on the system (v%u) doesn't match\n"
-              "the zxdb frontend's IPC version (v%u).\n"
-              "Try to reload debug_agent by `ffx component stop /core/debug_agent`\n"
-              "if zxdb is recently updated.",
-              reply.version, debug_ipc::kProtocolVersion));
+      callback(last_connection_error_);
     }
     return;
   }
@@ -765,6 +768,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   // Initialize arch-specific stuff.
   Err arch_err = SetArch(reply.arch);
   if (arch_err.has_error()) {
+    last_connection_error_ = arch_err;
     if (callback)
       callback(arch_err);
     return;
@@ -783,6 +787,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
 
   // Issue success callbacks.
   system_.DidConnect(is_local_connection);
+  last_connection_error_ = Err();
   if (callback)
     callback(Err());
 

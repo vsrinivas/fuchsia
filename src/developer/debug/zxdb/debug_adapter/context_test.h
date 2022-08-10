@@ -92,6 +92,9 @@ class DebugAdapterContextTest : public RemoteAPITest {
   void SetUp() override;
   void TearDown() override;
 
+  // Sets up the context to appear to be connected to the debug target.
+  void SetUpConnectedContext();
+
  private:
   std::unique_ptr<DebugAdapterContext> context_;
   std::unique_ptr<dap::Session> client_;

@@ -70,6 +70,7 @@ source_set("tests") {
     ":debug_adapter",
     "//src/developer/debug/zxdb/client:test_support",
     "//src/developer/debug/zxdb/common:test_support",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 

@@ -32,20 +32,31 @@ DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* 
   reader_ = std::make_shared<DebugAdapterReader>(stream);
   writer_ = std::make_shared<DebugAdapterWriter>(stream);
 
-  dap_->registerHandler([this](const dap::InitializeRequest& req) {
-    DEBUG_LOG(DebugAdapter) << "InitializeRequest received";
-    dap::InitializeResponse response;
-    response.supportsFunctionBreakpoints = false;
-    response.supportsConfigurationDoneRequest = true;
-    response.supportsEvaluateForHovers = false;
-    if (req.supportsInvalidatedEvent) {
-      this->supports_invalidate_event_ = req.supportsInvalidatedEvent.value();
-    }
-    if (req.supportsRunInTerminalRequest) {
-      this->supports_run_in_terminal_ = req.supportsRunInTerminalRequest.value();
-    }
-    return response;
-  });
+  dap_->registerHandler(
+      [this](const dap::InitializeRequest& req) -> dap::ResponseOrError<dap::InitializeResponse> {
+        DEBUG_LOG(DebugAdapter) << "InitializeRequest received";
+
+        // If not connected to a device, attempt to connect, if unsuccessful, return error to
+        // the initialization request.
+        if (!this->session()->IsConnected()) {
+          Err err = this->session()->last_connection_error();
+          dap::Error error_message(err.has_error() ? err.msg()
+                                                   : "Debugger not connected to device");
+          return error_message;
+        } else {
+          dap::InitializeResponse response;
+          response.supportsFunctionBreakpoints = false;
+          response.supportsConfigurationDoneRequest = true;
+          response.supportsEvaluateForHovers = false;
+          if (req.supportsInvalidatedEvent) {
+            this->supports_invalidate_event_ = req.supportsInvalidatedEvent.value();
+          }
+          if (req.supportsRunInTerminalRequest) {
+            this->supports_run_in_terminal_ = req.supportsRunInTerminalRequest.value();
+          }
+          return response;
+        }
+      });
 
   dap_->registerSentHandler([this](const dap::ResponseOrError<dap::InitializeResponse>& response) {
     DEBUG_LOG(DebugAdapter) << "InitializeResponse sent";

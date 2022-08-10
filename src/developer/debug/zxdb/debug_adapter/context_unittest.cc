@@ -12,6 +12,8 @@
 namespace zxdb {
 
 TEST_F(DebugAdapterContextTest, InitializeRequest) {
+  SetUpConnectedContext();
+
   // Send initialize request from the client.
   auto response = client().send(dap::InitializeRequest{});
 
@@ -24,6 +26,19 @@ TEST_F(DebugAdapterContextTest, InitializeRequest) {
   EXPECT_EQ(got.error, false);
   EXPECT_EQ(bool(got.response.supportsFunctionBreakpoints), true);
   EXPECT_EQ(bool(got.response.supportsConfigurationDoneRequest), true);
+}
+
+TEST_F(DebugAdapterContextTest, InitializeRequestNotConnected) {
+  // Send initialize request from the client.
+  auto response = client().send(dap::InitializeRequest{});
+
+  // Read request and process it.
+  context().OnStreamReadable();
+
+  // Run client to receive response.
+  RunClient();
+  auto got = response.get();
+  EXPECT_EQ(got.error, true);
 }
 
 TEST_F(DebugAdapterContextTest, InitializedEvent) {

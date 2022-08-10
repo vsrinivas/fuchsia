@@ -109,6 +109,9 @@ class Session : public SettingStoreObserver {
   // If there is no previous destination, this will be issue an error.
   void Connect(const SessionConnectionInfo& info, fit::callback<void(const Err&)> cb);
 
+  // Returns the result of the last call to Connect().
+  const Err& last_connection_error() { return last_connection_error_; }
+
   // Synchronously disconnects from the remote system. Calling when there is no connection will
   // return an error.
   //
@@ -264,6 +267,9 @@ class Session : public SettingStoreObserver {
   // The last connection that was made by the session. Will have an empty host and a 0 port
   // if there has never been a connection.
   SessionConnectionInfo last_connection_;
+
+  // The error result from the last connection attempt.
+  Err last_connection_error_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 };

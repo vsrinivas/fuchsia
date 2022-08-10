@@ -4,10 +4,17 @@
 
 #include "src/developer/debug/zxdb/debug_adapter/context_test.h"
 
+#include <gmock/gmock.h>
+
 namespace zxdb {
 
 constexpr uint64_t DebugAdapterContextTest::kProcessKoid;
 constexpr uint64_t DebugAdapterContextTest::kThreadKoid;
+
+class MockWriter : public debug::StreamBuffer::Writer {
+ public:
+  MOCK_METHOD(size_t, ConsumeStreamBufferData, (const char* data, size_t len));
+};
 
 void DebugAdapterContextTest::SetUp() {
   RemoteAPITest::SetUp();
@@ -24,6 +31,15 @@ void DebugAdapterContextTest::TearDown() {
   context_.reset();
   client_.reset();
   RemoteAPITest::TearDown();
+}
+
+void DebugAdapterContextTest::SetUpConnectedContext() {
+  debug::StreamBuffer stream;
+  MockWriter writer;
+
+  stream.set_writer(&writer);
+
+  session().set_stream(&stream);
 }
 
 void DebugAdapterContextTest::InitializeDebugging() {
