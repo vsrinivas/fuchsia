@@ -55,7 +55,8 @@ template("verify_sdk_compatibility") {
     forward_variables_from(invoker, "*")
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
-    updated_golden = "$target_gen_dir/sdk_directory_layout_${idk_name}.golden"
+    updated_golden =
+        "$target_gen_dir/${target_cpu}/sdk_directory_layout_${idk_name}.golden"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     current = sdk_archive

@@ -311,6 +311,7 @@ pkg/stdcompat/include/lib/stdcompat/internal/storage.h
 pkg/stdcompat/include/lib/stdcompat/internal/tuple.h
 pkg/stdcompat/include/lib/stdcompat/internal/type_traits.h
 pkg/stdcompat/include/lib/stdcompat/internal/utility.h
+pkg/stdcompat/include/lib/stdcompat/internal/variant.h
 pkg/stdcompat/include/lib/stdcompat/iterator.h
 pkg/stdcompat/include/lib/stdcompat/memory.h
 pkg/stdcompat/include/lib/stdcompat/optional.h

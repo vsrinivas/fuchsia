@@ -58,12 +58,14 @@ class NotifyOnAdditions(Exception):
     """Exception raised to notify developers of non-breaking changes.
 
     Args:
+        idk: SDK archive tarball dependency target name.
         additions: Paths found in the archive but not in the golden file.
         path: Path to create a temporary golden file for the archive.
         golden: Path to the golden file.
     """
 
-    def __init__(self, additions, path, golden):
+    def __init__(self, idk, additions, path, golden):
+        self.idk = idk
         self.additions = additions
         self.path = path
         self.golden = golden
@@ -71,7 +73,7 @@ class NotifyOnAdditions(Exception):
     def __str__(self):
         cmd = update_golden(self.path, self.golden)
         return (
-            f"Detected additions to the SDK directory layout.\n"
+            f"Detected additions to the {self.idk} SDK's directory layout.\n"
             f"The current archive tarball contains these additional "
             f"paths not found in the golden file.\n{self.additions}\n"
             f"If this is an intentional change, run: {cmd}\n")
@@ -151,12 +153,12 @@ def main():
         except FileNotFoundError:
             err = str(MissingInputError(missing=args.stamp, stamp=True))
 
-    if not err:
-        if notify:
-            print("NOTICE: ", notify)
+    if not (err or notify):
         return 0
-
-    print("ERROR: ", err)
+    elif notify:
+        print("NOTICE: ", notify)
+    else:
+        print("ERROR: ", err)
     return 0 if args.warn_only else 1
 
 
@@ -186,6 +188,7 @@ def fail_on_breaking_changes(current_archive, golden_file, update_golden):
     # Notify developer of any additions to the SDK directory layout.
     if len(gold_set) != len(curr_set):
         raise NotifyOnAdditions(
+            idk=Path(current_archive).with_suffix('').stem,
             additions=curr_set.difference(gold_set),
             path=update_golden,
             golden=golden_file)
