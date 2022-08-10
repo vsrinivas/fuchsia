@@ -13,13 +13,85 @@
 
 namespace fuzzing {
 
-using UnionSmallArray = ::test::arrays::UnionSmallArray;
-using UnionLargeArray = ::test::arrays::UnionLargeArray;
-using TableSmallArray = ::test::arrays::TableSmallArray;
-using TableLargeArray = ::test::arrays::TableLargeArray;
 using StructSmallArray = ::test::arrays::StructSmallArray;
 using StructLargeArray = ::test::arrays::StructLargeArray;
+using TableSmallArray = ::test::arrays::TableSmallArray;
+using TableLargeArray = ::test::arrays::TableLargeArray;
+using UnionSmallArray = ::test::arrays::UnionSmallArray;
+using UnionLargeArray = ::test::arrays::UnionLargeArray;
 
+template <>
+struct MinSize<StructSmallArray> {
+  operator size_t() {
+    return MinSize<::std::array<uint32_t, 2>>();
+  }
+};
+template <>
+struct Allocate<StructSmallArray> {
+  StructSmallArray operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<StructSmallArray>());
+    StructSmallArray out;
+    const size_t slack_per_member = (*size - MinSize<StructSmallArray>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::array<uint32_t, 2>>() + slack_per_member;
+    out.a = Allocate<::std::array<uint32_t, 2>>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<StructLargeArray> {
+  operator size_t() {
+    return MinSize<::std::array<uint32_t, 100>>();
+  }
+};
+template <>
+struct Allocate<StructLargeArray> {
+  StructLargeArray operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<StructLargeArray>());
+    StructLargeArray out;
+    const size_t slack_per_member = (*size - MinSize<StructLargeArray>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::array<uint32_t, 100>>() + slack_per_member;
+    out.a = Allocate<::std::array<uint32_t, 100>>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<TableSmallArray> {
+  operator size_t() {
+    return MinSize<::std::array<uint32_t, 2>>();
+  }
+};
+template <>
+struct Allocate<TableSmallArray> {
+  TableSmallArray operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TableSmallArray>());
+    TableSmallArray out;
+    const size_t slack_per_member = (*size - MinSize<TableSmallArray>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::array<uint32_t, 2>>() + slack_per_member;
+    out.set_a(Allocate<::std::array<uint32_t, 2>>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<TableLargeArray> {
+  operator size_t() {
+    return MinSize<::std::array<uint32_t, 100>>();
+  }
+};
+template <>
+struct Allocate<TableLargeArray> {
+  TableLargeArray operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TableLargeArray>());
+    TableLargeArray out;
+    const size_t slack_per_member = (*size - MinSize<TableLargeArray>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::array<uint32_t, 100>>() + slack_per_member;
+    out.set_a(Allocate<::std::array<uint32_t, 100>>{}(src, &out_size));
+    return out;
+  }
+};
 template <>
 struct MinSize<UnionSmallArray> {
   operator size_t() {
@@ -75,78 +147,6 @@ struct Allocate<UnionLargeArray> {
       }
     }
 
-    return out;
-  }
-};
-template <>
-struct MinSize<TableSmallArray> {
-  operator size_t() {
-    return MinSize<::std::array<uint32_t, 2>>();
-  }
-};
-template <>
-struct Allocate<TableSmallArray> {
-  TableSmallArray operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TableSmallArray>());
-    TableSmallArray out;
-    const size_t slack_per_member = (*size - MinSize<TableSmallArray>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::std::array<uint32_t, 2>>() + slack_per_member;
-    out.set_a(Allocate<::std::array<uint32_t, 2>>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<TableLargeArray> {
-  operator size_t() {
-    return MinSize<::std::array<uint32_t, 100>>();
-  }
-};
-template <>
-struct Allocate<TableLargeArray> {
-  TableLargeArray operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TableLargeArray>());
-    TableLargeArray out;
-    const size_t slack_per_member = (*size - MinSize<TableLargeArray>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::std::array<uint32_t, 100>>() + slack_per_member;
-    out.set_a(Allocate<::std::array<uint32_t, 100>>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<StructSmallArray> {
-  operator size_t() {
-    return MinSize<::std::array<uint32_t, 2>>();
-  }
-};
-template <>
-struct Allocate<StructSmallArray> {
-  StructSmallArray operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<StructSmallArray>());
-    StructSmallArray out;
-    const size_t slack_per_member = (*size - MinSize<StructSmallArray>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::std::array<uint32_t, 2>>() + slack_per_member;
-    out.a = Allocate<::std::array<uint32_t, 2>>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<StructLargeArray> {
-  operator size_t() {
-    return MinSize<::std::array<uint32_t, 100>>();
-  }
-};
-template <>
-struct Allocate<StructLargeArray> {
-  StructLargeArray operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<StructLargeArray>());
-    StructLargeArray out;
-    const size_t slack_per_member = (*size - MinSize<StructLargeArray>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::std::array<uint32_t, 100>>() + slack_per_member;
-    out.a = Allocate<::std::array<uint32_t, 100>>{}(src, &out_size);
     return out;
   }
 };

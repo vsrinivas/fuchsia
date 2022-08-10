@@ -31,64 +31,6 @@ class FlexibleUnion;
 /// const comment #3
 constexpr int32_t kC = 4u;
 
-extern "C" const fidl_type_t test_doccomments_TableTable;
-
-/// table comment #1
-///
-/// table comment #3
-class Table {
- private:
-  struct Storage_;
-
- public:
-  Table(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Table() noexcept = default;
-  Table(Table&&) noexcept = default;
-  Table& operator=(Table&&) noexcept = default;
-  Table(const Table& other) noexcept : Table(other.CloneStorage_()) {}
-  Table& operator=(const Table& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const Table& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table>::Equal(this, &other);
-  }
-  bool operator!=(const Table& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return !(storage_.field.has_value());
-  }
-
-  /// table field comment #1
-  ///
-  /// table field comment #3
-  const std::optional<int32_t>& field() const { return storage_.field; }
-  /// table field comment #1
-  ///
-  /// table field comment #3
-  ::std::optional<int32_t>& field() { return storage_.field; }
-
-  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    /// table field comment #1
-    ///
-    /// table field comment #3
-    ::std::optional<int32_t> field{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table>;
-  friend struct ::fidl::internal::MemberVisitor<::test_doccomments::Table>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-      1, &Storage_::field});
-};
-
 extern "C" const fidl_type_t test_doccomments_StructTable;
 
 /// struct comment #1
@@ -344,6 +286,64 @@ class FlexibleUnion {
         return ::test_doccomments::FlexibleUnion::Tag::kUnknown;
     }
   }
+};
+
+extern "C" const fidl_type_t test_doccomments_TableTable;
+
+/// table comment #1
+///
+/// table comment #3
+class Table {
+ private:
+  struct Storage_;
+
+ public:
+  Table(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Table() noexcept = default;
+  Table(Table&&) noexcept = default;
+  Table& operator=(Table&&) noexcept = default;
+  Table(const Table& other) noexcept : Table(other.CloneStorage_()) {}
+  Table& operator=(const Table& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const Table& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table>::Equal(this, &other);
+  }
+  bool operator!=(const Table& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.field.has_value());
+  }
+
+  /// table field comment #1
+  ///
+  /// table field comment #3
+  const std::optional<int32_t>& field() const { return storage_.field; }
+  /// table field comment #1
+  ///
+  /// table field comment #3
+  ::std::optional<int32_t>& field() { return storage_.field; }
+
+  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    /// table field comment #1
+    ///
+    /// table field comment #3
+    ::std::optional<int32_t> field{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table>;
+  friend struct ::fidl::internal::MemberVisitor<::test_doccomments::Table>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::field});
 };
 
 }  // namespace test_doccomments

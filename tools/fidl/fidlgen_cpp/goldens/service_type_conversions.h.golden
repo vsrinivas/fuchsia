@@ -17,21 +17,6 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>> {
-  static ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> ToNatural(::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond> src);
-  static ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>> {
-  using type = ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>> {
-  using type = ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>, ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst>> {
   static ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> ToNatural(::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> src);
   static ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> src);
@@ -44,6 +29,21 @@ struct NaturalTypeForWireType<::fidl::WireRequest<::test_service::FirstProtocol:
 template <>
 struct WireTypeForNaturalType<::fidl::Request<::test_service::FirstProtocol::MethodOnFirst>> {
   using type = ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>;
+};
+
+template <>
+struct WireNaturalConversionTraits<::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>> {
+  static ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> ToNatural(::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond> src);
+  static ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> src);
+};
+
+template <>
+struct NaturalTypeForWireType<::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>> {
+  using type = ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>> {
+  using type = ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

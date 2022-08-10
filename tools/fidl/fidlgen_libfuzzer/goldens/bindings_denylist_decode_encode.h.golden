@@ -13,55 +13,9 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 24>
     test_bindingsdenylist_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary",
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary>,
-        },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse",
@@ -74,9 +28,19 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 24>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest",
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest",
@@ -84,14 +48,29 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 24>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest",
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest",
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
@@ -133,6 +112,27 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 24>
             .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary>,
+        },
+
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>,
         },
 };
 

@@ -2,12 +2,17 @@
 
 #include <fidl/test.unknowninteractions/cpp/natural_types.h>
 
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
   return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
+      ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -22,42 +27,12 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -72,26 +47,6 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
 ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
@@ -102,12 +57,12 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse::CloneStorage_() const {
   return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
+      ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -122,12 +77,72 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -142,237 +157,27 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -387,22 +192,27 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -417,22 +227,27 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -447,37 +262,192 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -492,27 +462,57 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.__reserved)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.__reserved)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.result)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
 ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -527,22 +527,77 @@
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
-::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
 ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
+::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
 ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -562,67 +617,7 @@
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.some_field)};
-}
-
-::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -632,9 +627,58 @@
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.some_field)};
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
 }
 
 std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
@@ -681,7 +725,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwo
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -697,7 +741,187 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwo
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -757,7 +981,19 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEve
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -773,7 +1009,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEve
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -784,174 +1020,6 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEve
       return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
     default:
       return std::make_shared<Storage_>();
   }
@@ -1001,7 +1069,19 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleE
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1017,7 +1097,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleE
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1028,562 +1108,6 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleE
       return std::make_shared<Storage_>(
           std::in_place_index<2>,
           ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    case 3:
-      return std::make_shared<Storage_>(
-          std::in_place_index<3>,
-          ::fidl::internal::NaturalClone(std::get<3>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    case 2:
-      return std::make_shared<Storage_>(
-          std::in_place_index<2>,
-          ::fidl::internal::NaturalClone(std::get<2>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
-}
-
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
       return std::make_shared<Storage_>();
   }
@@ -1633,7 +1157,19 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStric
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1649,7 +1185,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStric
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1709,7 +1245,19 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStric
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1725,7 +1273,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStric
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1785,7 +1333,19 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexi
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1801,7 +1361,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexi
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1817,7 +1377,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexi
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1829,7 +1389,39 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStric
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1841,13 +1433,377 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolStric
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Storage_> test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
       return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    case 3:
+      return std::make_shared<Storage_>(
+          std::in_place_index<3>,
+          ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
       return std::make_shared<Storage_>();
   }
@@ -1897,7 +1853,19 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtoco
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1913,7 +1881,7 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtoco
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::Storage_> test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -1929,13 +1897,45 @@ std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtoco
   }
 }
 
-std::shared_ptr<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Storage_> test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::CloneStorage_() const {
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
       return std::make_shared<Storage_>(
           std::in_place_index<1>,
           ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::Storage_> test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    case 2:
+      return std::make_shared<Storage_>(
+          std::in_place_index<2>,
+          ::fidl::internal::NaturalClone(std::get<2>(storage)));
     default:
       return std::make_shared<Storage_>();
   }

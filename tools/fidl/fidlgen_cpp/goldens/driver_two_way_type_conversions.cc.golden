@@ -5,15 +5,6 @@
 namespace fidl {
 namespace internal {
 
-::test_drivertwoway::TwoWayAddTopResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse>::ToNatural(::test_drivertwoway::wire::TwoWayAddTopResponse src) {
-  return ::test_drivertwoway::TwoWayAddTopResponse(WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.sum)));
-}
-::test_drivertwoway::wire::TwoWayAddTopResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse>::ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddTopResponse src) {
-  return ::test_drivertwoway::wire::TwoWayAddTopResponse{
-      .sum = WireNaturalConversionTraits<uint16_t, uint16_t>::ToWire(arena, std::move(src.sum())),
-  };
-}
-
 ::test_drivertwoway::TwoWayAddRequest WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::test_drivertwoway::TwoWayAddRequest>::ToNatural(::test_drivertwoway::wire::TwoWayAddRequest src) {
   return ::test_drivertwoway::TwoWayAddRequest{{
       .addend1 = WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.addend1)),
@@ -24,6 +15,15 @@ namespace internal {
   return ::test_drivertwoway::wire::TwoWayAddRequest{
       .addend1 = WireNaturalConversionTraits<uint16_t, uint16_t>::ToWire(arena, std::move(src.addend1())),
       .addend2 = WireNaturalConversionTraits<uint16_t, uint16_t>::ToWire(arena, std::move(src.addend2())),
+  };
+}
+
+::test_drivertwoway::TwoWayAddTopResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse>::ToNatural(::test_drivertwoway::wire::TwoWayAddTopResponse src) {
+  return ::test_drivertwoway::TwoWayAddTopResponse(WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.sum)));
+}
+::test_drivertwoway::wire::TwoWayAddTopResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse>::ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddTopResponse src) {
+  return ::test_drivertwoway::wire::TwoWayAddTopResponse{
+      .sum = WireNaturalConversionTraits<uint16_t, uint16_t>::ToWire(arena, std::move(src.sum())),
   };
 }
 

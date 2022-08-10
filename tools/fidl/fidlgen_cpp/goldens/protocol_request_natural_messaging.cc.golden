@@ -3,6 +3,46 @@
 #include <fidl/test.protocolrequest/cpp/natural_messaging.h>
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::SyncEventHandler<::test_protocolrequest::Child>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::entries_end_ =
+    &entries_[0];
+
+void fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::Dispatch(::fidl::Server<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
+}
+void fidl::Server<::test_protocolrequest::Child>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
 namespace test_protocolrequest {
 [[maybe_unused]] constexpr inline uint64_t kParent_GetChild_Ordinal = 881818649151440699lu;
 
@@ -235,45 +275,5 @@ void fidl::Server<::test_protocolrequest::Parent>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent>::Dispatch(this, std::move(msg), storage_view, txn);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::Status fidl::SyncEventHandler<::test_protocolrequest::Child>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> event_storage;
-  fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
-  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::entries_[] = {};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::entries_end_ =
-    &entries_[0];
-
-void fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::Dispatch(::fidl::Server<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
-}
-void fidl::Server<::test_protocolrequest::Child>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

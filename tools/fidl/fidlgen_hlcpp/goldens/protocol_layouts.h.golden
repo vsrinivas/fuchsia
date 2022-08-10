@@ -12,9 +12,33 @@ namespace protocollayouts {
 // Domain objects declarations
 //
 
+class LocalTablePayload;
+
+class LocalUnionPayload;
+
 class MainProtocol_TwoWayImportWithError_Result;
 
 class MainProtocolTwoWayImportWithErrorTopResponse;
+
+class MainProtocol_OnImportWithError_Result;
+
+class MainProtocolOnImportWithErrorRequest;
+
+class MainProtocol_TwoWayLocalWithError_Result;
+
+class MainProtocolTwoWayLocalWithErrorTopResponse;
+
+class MainProtocol_OnLocalWithError_Result;
+
+class MainProtocolOnLocalWithErrorRequest;
+
+class MainProtocolOneWayAnonRequest;
+
+class MainProtocolTwoWayAnonRequest;
+
+class MainProtocolTwoWayAnonResponse;
+
+class MainProtocolTwoWayAnonWithErrorRequest;
 
 class MainProtocol_TwoWayAnonWithError_Response;
 
@@ -22,9 +46,7 @@ class MainProtocol_TwoWayAnonWithError_Result;
 
 class MainProtocolTwoWayAnonWithErrorTopResponse;
 
-class MainProtocol_OnImportWithError_Result;
-
-class MainProtocolOnImportWithErrorRequest;
+class MainProtocolOnAnonRequest;
 
 class MainProtocol_OnAnonWithError_Response;
 
@@ -32,33 +54,183 @@ class MainProtocol_OnAnonWithError_Result;
 
 class MainProtocolOnAnonWithErrorRequest;
 
-class MainProtocolTwoWayAnonWithErrorRequest;
-
-class MainProtocolTwoWayAnonResponse;
-
-class MainProtocolTwoWayAnonRequest;
-
-class MainProtocolOneWayAnonRequest;
-
-class MainProtocolOnAnonRequest;
-
-class LocalUnionPayload;
-
-class MainProtocol_TwoWayLocalWithError_Result;
-
-class MainProtocolTwoWayLocalWithErrorTopResponse;
-
-class LocalTablePayload;
-
-class MainProtocol_OnLocalWithError_Result;
-
-class MainProtocolOnLocalWithErrorRequest;
-
 #ifdef __Fuchsia__
 
 class MainProtocol;
 using MainProtocolHandle = ::fidl::InterfaceHandle<MainProtocol>;
 #endif  // __Fuchsia__
+
+class LocalTablePayload final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const uint16_t& a() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return a_value_.value;
+  }
+  bool has_a() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  uint16_t* mutable_a() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value);
+    }
+    return &a_value_.value;
+  }
+  LocalTablePayload& set_a(uint16_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(_value));
+    } else {
+      a_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_a() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+
+  LocalTablePayload();
+  LocalTablePayload(LocalTablePayload&& other);
+  ~LocalTablePayload();
+  LocalTablePayload& operator=(LocalTablePayload&& other);
+
+  static inline ::std::unique_ptr<LocalTablePayload> New() { return ::std::make_unique<LocalTablePayload>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, LocalTablePayload* _value, size_t _offset);
+  zx_status_t Clone(LocalTablePayload* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_a {
+    ValueUnion_a() {}
+    ~ValueUnion_a() {}
+
+    uint16_t value;
+  };
+  ValueUnion_a a_value_;
+};
+
+using LocalTablePayloadPtr = ::std::unique_ptr<LocalTablePayload>;
+
+class LocalUnionPayload final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  LocalUnionPayload();
+  ~LocalUnionPayload();
+
+  LocalUnionPayload(LocalUnionPayload&&);
+  LocalUnionPayload& operator=(LocalUnionPayload&&);
+
+  static LocalUnionPayload WithB(bool&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+
+    kB = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<LocalUnionPayload> New() { return ::std::make_unique<LocalUnionPayload>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, LocalUnionPayload* value, size_t offset);
+  zx_status_t Clone(LocalUnionPayload* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_b() const { return tag_ == ::test::protocollayouts::LocalUnionPayload::Tag::kB; }
+
+  bool& b() {
+    EnsureStorageInitialized(::test::protocollayouts::LocalUnionPayload::Tag::kB);
+    return b_;
+  }
+
+  const bool& b() const {
+    ZX_ASSERT(is_b());
+    return b_;
+  }
+  LocalUnionPayload& set_b(bool value);
+  LocalUnionPayload& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+
+  ::test::protocollayouts::LocalUnionPayload::Tag Which() const {
+    switch (tag_) {
+      case ::test::protocollayouts::LocalUnionPayload::Tag::Invalid:
+      case ::test::protocollayouts::LocalUnionPayload::Tag::kB:
+        return ::test::protocollayouts::LocalUnionPayload::Tag(tag_);
+      default:
+        return ::test::protocollayouts::LocalUnionPayload::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::test::protocollayouts::LocalUnionPayload::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::protocollayouts::LocalUnionPayload>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::LocalUnionPayload::Tag::Invalid);
+  union {
+    bool b_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::LocalUnionPayload& value,
+                         ::test::protocollayouts::LocalUnionPayload* result) {
+  return value.Clone(result);
+}
+
+using LocalUnionPayloadPtr = ::std::unique_ptr<LocalUnionPayload>;
 
 class MainProtocol_TwoWayImportWithError_Result final {
  public:
@@ -167,6 +339,714 @@ inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayImport
 }
 
 using MainProtocolTwoWayImportWithErrorTopResponsePtr = ::std::unique_ptr<MainProtocolTwoWayImportWithErrorTopResponse>;
+
+class MainProtocol_OnImportWithError_Result final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  MainProtocol_OnImportWithError_Result();
+  ~MainProtocol_OnImportWithError_Result();
+
+  MainProtocol_OnImportWithError_Result(MainProtocol_OnImportWithError_Result&&);
+  MainProtocol_OnImportWithError_Result& operator=(MainProtocol_OnImportWithError_Result&&);
+
+  static MainProtocol_OnImportWithError_Result WithResponse(::test::protocollayouts::imported::ImportTablePayload&&);
+  static MainProtocol_OnImportWithError_Result WithErr(uint32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<MainProtocol_OnImportWithError_Result> New() { return ::std::make_unique<MainProtocol_OnImportWithError_Result>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocol_OnImportWithError_Result* value, size_t offset);
+  zx_status_t Clone(MainProtocol_OnImportWithError_Result* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_response() const { return tag_ == ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kResponse; }
+
+  ::test::protocollayouts::imported::ImportTablePayload& response() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kResponse);
+    return response_;
+  }
+
+  const ::test::protocollayouts::imported::ImportTablePayload& response() const {
+    ZX_ASSERT(is_response());
+    return response_;
+  }
+  MainProtocol_OnImportWithError_Result& set_response(::test::protocollayouts::imported::ImportTablePayload value);
+
+  bool is_err() const { return tag_ == ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kErr; }
+
+  uint32_t& err() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kErr);
+    return err_;
+  }
+
+  const uint32_t& err() const {
+    ZX_ASSERT(is_err());
+    return err_;
+  }
+  MainProtocol_OnImportWithError_Result& set_err(uint32_t value);
+
+  ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag Which() const {
+    return ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag(tag_);
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  friend ::fidl::Equality<::test::protocollayouts::MainProtocol_OnImportWithError_Result>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::Invalid);
+  union {
+    ::test::protocollayouts::imported::ImportTablePayload response_;
+    uint32_t err_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& value,
+                         ::test::protocollayouts::MainProtocol_OnImportWithError_Result* result) {
+  return value.Clone(result);
+}
+
+using MainProtocol_OnImportWithError_ResultPtr = ::std::unique_ptr<MainProtocol_OnImportWithError_Result>;
+
+class MainProtocolOnImportWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocollayouts::MainProtocol_OnImportWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolOnImportWithErrorRequest> New() { return ::std::make_unique<MainProtocolOnImportWithErrorRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolOnImportWithErrorRequest* value, size_t _offset);
+  zx_status_t Clone(MainProtocolOnImportWithErrorRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& _value,
+                         ::test::protocollayouts::MainProtocolOnImportWithErrorRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOnImportWithErrorRequestPtr = ::std::unique_ptr<MainProtocolOnImportWithErrorRequest>;
+
+class MainProtocol_TwoWayLocalWithError_Result final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  MainProtocol_TwoWayLocalWithError_Result();
+  ~MainProtocol_TwoWayLocalWithError_Result();
+
+  MainProtocol_TwoWayLocalWithError_Result(MainProtocol_TwoWayLocalWithError_Result&&);
+  MainProtocol_TwoWayLocalWithError_Result& operator=(MainProtocol_TwoWayLocalWithError_Result&&);
+
+  static MainProtocol_TwoWayLocalWithError_Result WithResponse(::test::protocollayouts::LocalUnionPayload&&);
+  static MainProtocol_TwoWayLocalWithError_Result WithErr(uint32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<MainProtocol_TwoWayLocalWithError_Result> New() { return ::std::make_unique<MainProtocol_TwoWayLocalWithError_Result>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocol_TwoWayLocalWithError_Result* value, size_t offset);
+  zx_status_t Clone(MainProtocol_TwoWayLocalWithError_Result* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_response() const { return tag_ == ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse; }
+
+  ::test::protocollayouts::LocalUnionPayload& response() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse);
+    return response_;
+  }
+
+  const ::test::protocollayouts::LocalUnionPayload& response() const {
+    ZX_ASSERT(is_response());
+    return response_;
+  }
+  MainProtocol_TwoWayLocalWithError_Result& set_response(::test::protocollayouts::LocalUnionPayload value);
+
+  bool is_err() const { return tag_ == ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kErr; }
+
+  uint32_t& err() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kErr);
+    return err_;
+  }
+
+  const uint32_t& err() const {
+    ZX_ASSERT(is_err());
+    return err_;
+  }
+  MainProtocol_TwoWayLocalWithError_Result& set_err(uint32_t value);
+
+  ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag Which() const {
+    return ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag(tag_);
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  friend ::fidl::Equality<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>;
+
+  MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>&& result) {
+    ZX_ASSERT(!result.is_pending());
+    if (result.is_ok()) {
+      set_response(::test::protocollayouts::LocalUnionPayload{result.take_value()});
+    } else {
+      set_err(result.take_error());
+    }
+  }
+  MainProtocol_TwoWayLocalWithError_Result(fpromise::ok_result<::test::protocollayouts::LocalUnionPayload>&& result)
+      : MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>(std::move(result))) {}
+  MainProtocol_TwoWayLocalWithError_Result(fpromise::error_result<uint32_t>&& result)
+      : MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>(std::move(result))) {}
+  operator fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>() && {
+    if (is_err()) {
+      return fpromise::error(err());
+    }
+    ::std::tuple<::test::protocollayouts::LocalUnionPayload> value_tuple = std::move(response());
+    return fpromise::ok(std::move(std::get<0>(value_tuple)));
+  }
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::Invalid);
+  union {
+    ::test::protocollayouts::LocalUnionPayload response_;
+    uint32_t err_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& value,
+                         ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result* result) {
+  return value.Clone(result);
+}
+
+using MainProtocol_TwoWayLocalWithError_ResultPtr = ::std::unique_ptr<MainProtocol_TwoWayLocalWithError_Result>;
+
+class MainProtocolTwoWayLocalWithErrorTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayLocalWithErrorTopResponse> New() { return ::std::make_unique<MainProtocolTwoWayLocalWithErrorTopResponse>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayLocalWithErrorTopResponse* value, size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayLocalWithErrorTopResponse* result) const;
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& _value,
+                         ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayLocalWithErrorTopResponsePtr = ::std::unique_ptr<MainProtocolTwoWayLocalWithErrorTopResponse>;
+
+class MainProtocol_OnLocalWithError_Result final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  MainProtocol_OnLocalWithError_Result();
+  ~MainProtocol_OnLocalWithError_Result();
+
+  MainProtocol_OnLocalWithError_Result(MainProtocol_OnLocalWithError_Result&&);
+  MainProtocol_OnLocalWithError_Result& operator=(MainProtocol_OnLocalWithError_Result&&);
+
+  static MainProtocol_OnLocalWithError_Result WithResponse(::test::protocollayouts::LocalTablePayload&&);
+  static MainProtocol_OnLocalWithError_Result WithErr(uint32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kResponse = 1,  // 0x1
+    kErr = 2,       // 0x2
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<MainProtocol_OnLocalWithError_Result> New() { return ::std::make_unique<MainProtocol_OnLocalWithError_Result>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocol_OnLocalWithError_Result* value, size_t offset);
+  zx_status_t Clone(MainProtocol_OnLocalWithError_Result* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_response() const { return tag_ == ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kResponse; }
+
+  ::test::protocollayouts::LocalTablePayload& response() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kResponse);
+    return response_;
+  }
+
+  const ::test::protocollayouts::LocalTablePayload& response() const {
+    ZX_ASSERT(is_response());
+    return response_;
+  }
+  MainProtocol_OnLocalWithError_Result& set_response(::test::protocollayouts::LocalTablePayload value);
+
+  bool is_err() const { return tag_ == ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kErr; }
+
+  uint32_t& err() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kErr);
+    return err_;
+  }
+
+  const uint32_t& err() const {
+    ZX_ASSERT(is_err());
+    return err_;
+  }
+  MainProtocol_OnLocalWithError_Result& set_err(uint32_t value);
+
+  ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag Which() const {
+    return ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag(tag_);
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  friend ::fidl::Equality<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>;
+
+  MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>&& result) {
+    ZX_ASSERT(!result.is_pending());
+    if (result.is_ok()) {
+      set_response(::test::protocollayouts::LocalTablePayload{result.take_value()});
+    } else {
+      set_err(result.take_error());
+    }
+  }
+  MainProtocol_OnLocalWithError_Result(fpromise::ok_result<::test::protocollayouts::LocalTablePayload>&& result)
+      : MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>(std::move(result))) {}
+  MainProtocol_OnLocalWithError_Result(fpromise::error_result<uint32_t>&& result)
+      : MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>(std::move(result))) {}
+  operator fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>() && {
+    if (is_err()) {
+      return fpromise::error(err());
+    }
+    ::std::tuple<::test::protocollayouts::LocalTablePayload> value_tuple = std::move(response());
+    return fpromise::ok(std::move(std::get<0>(value_tuple)));
+  }
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::Invalid);
+  union {
+    ::test::protocollayouts::LocalTablePayload response_;
+    uint32_t err_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& value,
+                         ::test::protocollayouts::MainProtocol_OnLocalWithError_Result* result) {
+  return value.Clone(result);
+}
+
+using MainProtocol_OnLocalWithError_ResultPtr = ::std::unique_ptr<MainProtocol_OnLocalWithError_Result>;
+
+class MainProtocolOnLocalWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocollayouts::MainProtocol_OnLocalWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolOnLocalWithErrorRequest> New() { return ::std::make_unique<MainProtocolOnLocalWithErrorRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolOnLocalWithErrorRequest* value, size_t _offset);
+  zx_status_t Clone(MainProtocolOnLocalWithErrorRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& _value,
+                         ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOnLocalWithErrorRequestPtr = ::std::unique_ptr<MainProtocolOnLocalWithErrorRequest>;
+
+class MainProtocolOneWayAnonRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const uint16_t& a() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return a_value_.value;
+  }
+  bool has_a() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  uint16_t* mutable_a() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value);
+    }
+    return &a_value_.value;
+  }
+  MainProtocolOneWayAnonRequest& set_a(uint16_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(_value));
+    } else {
+      a_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_a() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+
+  MainProtocolOneWayAnonRequest();
+  MainProtocolOneWayAnonRequest(MainProtocolOneWayAnonRequest&& other);
+  ~MainProtocolOneWayAnonRequest();
+  MainProtocolOneWayAnonRequest& operator=(MainProtocolOneWayAnonRequest&& other);
+
+  static inline ::std::unique_ptr<MainProtocolOneWayAnonRequest> New() { return ::std::make_unique<MainProtocolOneWayAnonRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolOneWayAnonRequest* _value, size_t _offset);
+  zx_status_t Clone(MainProtocolOneWayAnonRequest* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_a {
+    ValueUnion_a() {}
+    ~ValueUnion_a() {}
+
+    uint16_t value;
+  };
+  ValueUnion_a a_value_;
+};
+
+using MainProtocolOneWayAnonRequestPtr = ::std::unique_ptr<MainProtocolOneWayAnonRequest>;
+
+class MainProtocolTwoWayAnonRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  MainProtocolTwoWayAnonRequest();
+  ~MainProtocolTwoWayAnonRequest();
+
+  MainProtocolTwoWayAnonRequest(MainProtocolTwoWayAnonRequest&&);
+  MainProtocolTwoWayAnonRequest& operator=(MainProtocolTwoWayAnonRequest&&);
+
+  static MainProtocolTwoWayAnonRequest WithB(bool&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+
+    kB = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonRequest> New() { return ::std::make_unique<MainProtocolTwoWayAnonRequest>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayAnonRequest* value, size_t offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonRequest* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_b() const { return tag_ == ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB; }
+
+  bool& b() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB);
+    return b_;
+  }
+
+  const bool& b() const {
+    ZX_ASSERT(is_b());
+    return b_;
+  }
+  MainProtocolTwoWayAnonRequest& set_b(bool value);
+  MainProtocolTwoWayAnonRequest& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+
+  ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag Which() const {
+    switch (tag_) {
+      case ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::Invalid:
+      case ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
+        return ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag(tag_);
+      default:
+        return ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::protocollayouts::MainProtocolTwoWayAnonRequest>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::Invalid);
+  union {
+    bool b_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& value,
+                         ::test::protocollayouts::MainProtocolTwoWayAnonRequest* result) {
+  return value.Clone(result);
+}
+
+using MainProtocolTwoWayAnonRequestPtr = ::std::unique_ptr<MainProtocolTwoWayAnonRequest>;
+
+class MainProtocolTwoWayAnonResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const uint16_t& a() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return a_value_.value;
+  }
+  bool has_a() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  uint16_t* mutable_a() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value);
+    }
+    return &a_value_.value;
+  }
+  MainProtocolTwoWayAnonResponse& set_a(uint16_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(_value));
+    } else {
+      a_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_a() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+
+  MainProtocolTwoWayAnonResponse();
+  MainProtocolTwoWayAnonResponse(MainProtocolTwoWayAnonResponse&& other);
+  ~MainProtocolTwoWayAnonResponse();
+  MainProtocolTwoWayAnonResponse& operator=(MainProtocolTwoWayAnonResponse&& other);
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonResponse> New() { return ::std::make_unique<MainProtocolTwoWayAnonResponse>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayAnonResponse* _value, size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonResponse* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_a {
+    ValueUnion_a() {}
+    ~ValueUnion_a() {}
+
+    uint16_t value;
+  };
+  ValueUnion_a a_value_;
+};
+
+using MainProtocolTwoWayAnonResponsePtr = ::std::unique_ptr<MainProtocolTwoWayAnonResponse>;
+
+class MainProtocolTwoWayAnonWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const uint16_t& a() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return a_value_.value;
+  }
+  bool has_a() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  uint16_t* mutable_a() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value);
+    }
+    return &a_value_.value;
+  }
+  MainProtocolTwoWayAnonWithErrorRequest& set_a(uint16_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(_value));
+    } else {
+      a_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_a() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+
+  MainProtocolTwoWayAnonWithErrorRequest();
+  MainProtocolTwoWayAnonWithErrorRequest(MainProtocolTwoWayAnonWithErrorRequest&& other);
+  ~MainProtocolTwoWayAnonWithErrorRequest();
+  MainProtocolTwoWayAnonWithErrorRequest& operator=(MainProtocolTwoWayAnonWithErrorRequest&& other);
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest> New() { return ::std::make_unique<MainProtocolTwoWayAnonWithErrorRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayAnonWithErrorRequest* _value, size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonWithErrorRequest* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_a {
+    ValueUnion_a() {}
+    ~ValueUnion_a() {}
+
+    uint16_t value;
+  };
+  ValueUnion_a a_value_;
+};
+
+using MainProtocolTwoWayAnonWithErrorRequestPtr = ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest>;
 
 class MainProtocol_TwoWayAnonWithError_Response final {
  public:
@@ -382,65 +1262,58 @@ inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonWi
 
 using MainProtocolTwoWayAnonWithErrorTopResponsePtr = ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorTopResponse>;
 
-class MainProtocol_OnImportWithError_Result final {
+class MainProtocolOnAnonRequest final {
  public:
   static const fidl_type_t* FidlType;
 
-  MainProtocol_OnImportWithError_Result();
-  ~MainProtocol_OnImportWithError_Result();
+  MainProtocolOnAnonRequest();
+  ~MainProtocolOnAnonRequest();
 
-  MainProtocol_OnImportWithError_Result(MainProtocol_OnImportWithError_Result&&);
-  MainProtocol_OnImportWithError_Result& operator=(MainProtocol_OnImportWithError_Result&&);
+  MainProtocolOnAnonRequest(MainProtocolOnAnonRequest&&);
+  MainProtocolOnAnonRequest& operator=(MainProtocolOnAnonRequest&&);
 
-  static MainProtocol_OnImportWithError_Result WithResponse(::test::protocollayouts::imported::ImportTablePayload&&);
-  static MainProtocol_OnImportWithError_Result WithErr(uint32_t&&);
+  static MainProtocolOnAnonRequest WithB(bool&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
 
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
+    kB = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  static inline ::std::unique_ptr<MainProtocol_OnImportWithError_Result> New() { return ::std::make_unique<MainProtocol_OnImportWithError_Result>(); }
+  static inline ::std::unique_ptr<MainProtocolOnAnonRequest> New() { return ::std::make_unique<MainProtocolOnAnonRequest>(); }
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocol_OnImportWithError_Result* value, size_t offset);
-  zx_status_t Clone(MainProtocol_OnImportWithError_Result* result) const;
+  static void Decode(::fidl::Decoder* _decoder, MainProtocolOnAnonRequest* value, size_t offset);
+  zx_status_t Clone(MainProtocolOnAnonRequest* result) const;
 
   bool has_invalid_tag() const {
     return tag_ == Invalid;
   }
 
-  bool is_response() const { return tag_ == ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kResponse; }
+  bool is_b() const { return tag_ == ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB; }
 
-  ::test::protocollayouts::imported::ImportTablePayload& response() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kResponse);
-    return response_;
+  bool& b() {
+    EnsureStorageInitialized(::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB);
+    return b_;
   }
 
-  const ::test::protocollayouts::imported::ImportTablePayload& response() const {
-    ZX_ASSERT(is_response());
-    return response_;
+  const bool& b() const {
+    ZX_ASSERT(is_b());
+    return b_;
   }
-  MainProtocol_OnImportWithError_Result& set_response(::test::protocollayouts::imported::ImportTablePayload value);
+  MainProtocolOnAnonRequest& set_b(bool value);
+  MainProtocolOnAnonRequest& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
-  bool is_err() const { return tag_ == ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kErr; }
-
-  uint32_t& err() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kErr);
-    return err_;
-  }
-
-  const uint32_t& err() const {
-    ZX_ASSERT(is_err());
-    return err_;
-  }
-  MainProtocol_OnImportWithError_Result& set_err(uint32_t value);
-
-  ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag Which() const {
-    return ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag(tag_);
+  ::test::protocollayouts::MainProtocolOnAnonRequest::Tag Which() const {
+    switch (tag_) {
+      case ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::Invalid:
+      case ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
+        return ::test::protocollayouts::MainProtocolOnAnonRequest::Tag(tag_);
+      default:
+        return ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown;
+    }
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
@@ -448,47 +1321,32 @@ class MainProtocol_OnImportWithError_Result final {
   fidl_xunion_tag_t Ordinal() const {
     return tag_;
   }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
 
-  friend ::fidl::Equality<::test::protocollayouts::MainProtocol_OnImportWithError_Result>;
+  friend ::fidl::Equality<::test::protocollayouts::MainProtocolOnAnonRequest>;
 
  private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolOnAnonRequest::Tag::Invalid);
   union {
-    ::test::protocollayouts::imported::ImportTablePayload response_;
-    uint32_t err_;
+    bool b_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& value,
-                         ::test::protocollayouts::MainProtocol_OnImportWithError_Result* result) {
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnAnonRequest& value,
+                         ::test::protocollayouts::MainProtocolOnAnonRequest* result) {
   return value.Clone(result);
 }
 
-using MainProtocol_OnImportWithError_ResultPtr = ::std::unique_ptr<MainProtocol_OnImportWithError_Result>;
-
-class MainProtocolOnImportWithErrorRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  ::test::protocollayouts::MainProtocol_OnImportWithError_Result result{};
-
-  static inline ::std::unique_ptr<MainProtocolOnImportWithErrorRequest> New() { return ::std::make_unique<MainProtocolOnImportWithErrorRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolOnImportWithErrorRequest* value, size_t _offset);
-  zx_status_t Clone(MainProtocolOnImportWithErrorRequest* result) const;
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& _value,
-                         ::test::protocollayouts::MainProtocolOnImportWithErrorRequest* _result) {
-  return _value.Clone(_result);
-}
-
-using MainProtocolOnImportWithErrorRequestPtr = ::std::unique_ptr<MainProtocolOnImportWithErrorRequest>;
+using MainProtocolOnAnonRequestPtr = ::std::unique_ptr<MainProtocolOnAnonRequest>;
 
 class MainProtocol_OnAnonWithError_Response final {
  public:
@@ -703,864 +1561,6 @@ inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnAnonWithEr
 }
 
 using MainProtocolOnAnonWithErrorRequestPtr = ::std::unique_ptr<MainProtocolOnAnonWithErrorRequest>;
-
-class MainProtocolTwoWayAnonWithErrorRequest final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const uint16_t& a() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return a_value_.value;
-  }
-  bool has_a() const {
-    return field_presence_.IsSet<0>();
-  }
-
-  uint16_t* mutable_a() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value);
-    }
-    return &a_value_.value;
-  }
-  MainProtocolTwoWayAnonWithErrorRequest& set_a(uint16_t _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value, std::move(_value));
-    } else {
-      a_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_a() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&a_value_.value);
-  }
-
-  MainProtocolTwoWayAnonWithErrorRequest();
-  MainProtocolTwoWayAnonWithErrorRequest(MainProtocolTwoWayAnonWithErrorRequest&& other);
-  ~MainProtocolTwoWayAnonWithErrorRequest();
-  MainProtocolTwoWayAnonWithErrorRequest& operator=(MainProtocolTwoWayAnonWithErrorRequest&& other);
-
-  static inline ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest> New() { return ::std::make_unique<MainProtocolTwoWayAnonWithErrorRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayAnonWithErrorRequest* _value, size_t _offset);
-  zx_status_t Clone(MainProtocolTwoWayAnonWithErrorRequest* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 1:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<1> field_presence_;
-  union ValueUnion_a {
-    ValueUnion_a() {}
-    ~ValueUnion_a() {}
-
-    uint16_t value;
-  };
-  ValueUnion_a a_value_;
-};
-
-using MainProtocolTwoWayAnonWithErrorRequestPtr = ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest>;
-
-class MainProtocolTwoWayAnonResponse final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const uint16_t& a() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return a_value_.value;
-  }
-  bool has_a() const {
-    return field_presence_.IsSet<0>();
-  }
-
-  uint16_t* mutable_a() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value);
-    }
-    return &a_value_.value;
-  }
-  MainProtocolTwoWayAnonResponse& set_a(uint16_t _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value, std::move(_value));
-    } else {
-      a_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_a() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&a_value_.value);
-  }
-
-  MainProtocolTwoWayAnonResponse();
-  MainProtocolTwoWayAnonResponse(MainProtocolTwoWayAnonResponse&& other);
-  ~MainProtocolTwoWayAnonResponse();
-  MainProtocolTwoWayAnonResponse& operator=(MainProtocolTwoWayAnonResponse&& other);
-
-  static inline ::std::unique_ptr<MainProtocolTwoWayAnonResponse> New() { return ::std::make_unique<MainProtocolTwoWayAnonResponse>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayAnonResponse* _value, size_t _offset);
-  zx_status_t Clone(MainProtocolTwoWayAnonResponse* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 1:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<1> field_presence_;
-  union ValueUnion_a {
-    ValueUnion_a() {}
-    ~ValueUnion_a() {}
-
-    uint16_t value;
-  };
-  ValueUnion_a a_value_;
-};
-
-using MainProtocolTwoWayAnonResponsePtr = ::std::unique_ptr<MainProtocolTwoWayAnonResponse>;
-
-class MainProtocolTwoWayAnonRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  MainProtocolTwoWayAnonRequest();
-  ~MainProtocolTwoWayAnonRequest();
-
-  MainProtocolTwoWayAnonRequest(MainProtocolTwoWayAnonRequest&&);
-  MainProtocolTwoWayAnonRequest& operator=(MainProtocolTwoWayAnonRequest&&);
-
-  static MainProtocolTwoWayAnonRequest WithB(bool&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
-
-    kB = 1,  // 0x1
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<MainProtocolTwoWayAnonRequest> New() { return ::std::make_unique<MainProtocolTwoWayAnonRequest>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayAnonRequest* value, size_t offset);
-  zx_status_t Clone(MainProtocolTwoWayAnonRequest* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_b() const { return tag_ == ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB; }
-
-  bool& b() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB);
-    return b_;
-  }
-
-  const bool& b() const {
-    ZX_ASSERT(is_b());
-    return b_;
-  }
-  MainProtocolTwoWayAnonRequest& set_b(bool value);
-  MainProtocolTwoWayAnonRequest& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
-
-  ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag Which() const {
-    switch (tag_) {
-      case ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::Invalid:
-      case ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
-        return ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag(tag_);
-      default:
-        return ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown;
-    }
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-  const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown) {
-      return nullptr;
-    }
-    return &unknown_data_;
-  }
-
-  friend ::fidl::Equality<::test::protocollayouts::MainProtocolTwoWayAnonRequest>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::Invalid);
-  union {
-    bool b_;
-    std::vector<uint8_t> unknown_data_;
-  };
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& value,
-                         ::test::protocollayouts::MainProtocolTwoWayAnonRequest* result) {
-  return value.Clone(result);
-}
-
-using MainProtocolTwoWayAnonRequestPtr = ::std::unique_ptr<MainProtocolTwoWayAnonRequest>;
-
-class MainProtocolOneWayAnonRequest final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const uint16_t& a() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return a_value_.value;
-  }
-  bool has_a() const {
-    return field_presence_.IsSet<0>();
-  }
-
-  uint16_t* mutable_a() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value);
-    }
-    return &a_value_.value;
-  }
-  MainProtocolOneWayAnonRequest& set_a(uint16_t _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value, std::move(_value));
-    } else {
-      a_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_a() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&a_value_.value);
-  }
-
-  MainProtocolOneWayAnonRequest();
-  MainProtocolOneWayAnonRequest(MainProtocolOneWayAnonRequest&& other);
-  ~MainProtocolOneWayAnonRequest();
-  MainProtocolOneWayAnonRequest& operator=(MainProtocolOneWayAnonRequest&& other);
-
-  static inline ::std::unique_ptr<MainProtocolOneWayAnonRequest> New() { return ::std::make_unique<MainProtocolOneWayAnonRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolOneWayAnonRequest* _value, size_t _offset);
-  zx_status_t Clone(MainProtocolOneWayAnonRequest* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 1:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<1> field_presence_;
-  union ValueUnion_a {
-    ValueUnion_a() {}
-    ~ValueUnion_a() {}
-
-    uint16_t value;
-  };
-  ValueUnion_a a_value_;
-};
-
-using MainProtocolOneWayAnonRequestPtr = ::std::unique_ptr<MainProtocolOneWayAnonRequest>;
-
-class MainProtocolOnAnonRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  MainProtocolOnAnonRequest();
-  ~MainProtocolOnAnonRequest();
-
-  MainProtocolOnAnonRequest(MainProtocolOnAnonRequest&&);
-  MainProtocolOnAnonRequest& operator=(MainProtocolOnAnonRequest&&);
-
-  static MainProtocolOnAnonRequest WithB(bool&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
-
-    kB = 1,  // 0x1
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<MainProtocolOnAnonRequest> New() { return ::std::make_unique<MainProtocolOnAnonRequest>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolOnAnonRequest* value, size_t offset);
-  zx_status_t Clone(MainProtocolOnAnonRequest* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_b() const { return tag_ == ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB; }
-
-  bool& b() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB);
-    return b_;
-  }
-
-  const bool& b() const {
-    ZX_ASSERT(is_b());
-    return b_;
-  }
-  MainProtocolOnAnonRequest& set_b(bool value);
-  MainProtocolOnAnonRequest& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
-
-  ::test::protocollayouts::MainProtocolOnAnonRequest::Tag Which() const {
-    switch (tag_) {
-      case ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::Invalid:
-      case ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
-        return ::test::protocollayouts::MainProtocolOnAnonRequest::Tag(tag_);
-      default:
-        return ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown;
-    }
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-  const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown) {
-      return nullptr;
-    }
-    return &unknown_data_;
-  }
-
-  friend ::fidl::Equality<::test::protocollayouts::MainProtocolOnAnonRequest>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolOnAnonRequest::Tag::Invalid);
-  union {
-    bool b_;
-    std::vector<uint8_t> unknown_data_;
-  };
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnAnonRequest& value,
-                         ::test::protocollayouts::MainProtocolOnAnonRequest* result) {
-  return value.Clone(result);
-}
-
-using MainProtocolOnAnonRequestPtr = ::std::unique_ptr<MainProtocolOnAnonRequest>;
-
-class LocalUnionPayload final {
- public:
-  static const fidl_type_t* FidlType;
-
-  LocalUnionPayload();
-  ~LocalUnionPayload();
-
-  LocalUnionPayload(LocalUnionPayload&&);
-  LocalUnionPayload& operator=(LocalUnionPayload&&);
-
-  static LocalUnionPayload WithB(bool&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
-
-    kB = 1,  // 0x1
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<LocalUnionPayload> New() { return ::std::make_unique<LocalUnionPayload>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, LocalUnionPayload* value, size_t offset);
-  zx_status_t Clone(LocalUnionPayload* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_b() const { return tag_ == ::test::protocollayouts::LocalUnionPayload::Tag::kB; }
-
-  bool& b() {
-    EnsureStorageInitialized(::test::protocollayouts::LocalUnionPayload::Tag::kB);
-    return b_;
-  }
-
-  const bool& b() const {
-    ZX_ASSERT(is_b());
-    return b_;
-  }
-  LocalUnionPayload& set_b(bool value);
-  LocalUnionPayload& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
-
-  ::test::protocollayouts::LocalUnionPayload::Tag Which() const {
-    switch (tag_) {
-      case ::test::protocollayouts::LocalUnionPayload::Tag::Invalid:
-      case ::test::protocollayouts::LocalUnionPayload::Tag::kB:
-        return ::test::protocollayouts::LocalUnionPayload::Tag(tag_);
-      default:
-        return ::test::protocollayouts::LocalUnionPayload::Tag::kUnknown;
-    }
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-  const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != ::test::protocollayouts::LocalUnionPayload::Tag::kUnknown) {
-      return nullptr;
-    }
-    return &unknown_data_;
-  }
-
-  friend ::fidl::Equality<::test::protocollayouts::LocalUnionPayload>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::LocalUnionPayload::Tag::Invalid);
-  union {
-    bool b_;
-    std::vector<uint8_t> unknown_data_;
-  };
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::LocalUnionPayload& value,
-                         ::test::protocollayouts::LocalUnionPayload* result) {
-  return value.Clone(result);
-}
-
-using LocalUnionPayloadPtr = ::std::unique_ptr<LocalUnionPayload>;
-
-class MainProtocol_TwoWayLocalWithError_Result final {
- public:
-  static const fidl_type_t* FidlType;
-
-  MainProtocol_TwoWayLocalWithError_Result();
-  ~MainProtocol_TwoWayLocalWithError_Result();
-
-  MainProtocol_TwoWayLocalWithError_Result(MainProtocol_TwoWayLocalWithError_Result&&);
-  MainProtocol_TwoWayLocalWithError_Result& operator=(MainProtocol_TwoWayLocalWithError_Result&&);
-
-  static MainProtocol_TwoWayLocalWithError_Result WithResponse(::test::protocollayouts::LocalUnionPayload&&);
-  static MainProtocol_TwoWayLocalWithError_Result WithErr(uint32_t&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<MainProtocol_TwoWayLocalWithError_Result> New() { return ::std::make_unique<MainProtocol_TwoWayLocalWithError_Result>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocol_TwoWayLocalWithError_Result* value, size_t offset);
-  zx_status_t Clone(MainProtocol_TwoWayLocalWithError_Result* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_response() const { return tag_ == ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse; }
-
-  ::test::protocollayouts::LocalUnionPayload& response() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse);
-    return response_;
-  }
-
-  const ::test::protocollayouts::LocalUnionPayload& response() const {
-    ZX_ASSERT(is_response());
-    return response_;
-  }
-  MainProtocol_TwoWayLocalWithError_Result& set_response(::test::protocollayouts::LocalUnionPayload value);
-
-  bool is_err() const { return tag_ == ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kErr; }
-
-  uint32_t& err() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kErr);
-    return err_;
-  }
-
-  const uint32_t& err() const {
-    ZX_ASSERT(is_err());
-    return err_;
-  }
-  MainProtocol_TwoWayLocalWithError_Result& set_err(uint32_t value);
-
-  ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag Which() const {
-    return ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag(tag_);
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-
-  friend ::fidl::Equality<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>;
-
-  MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>&& result) {
-    ZX_ASSERT(!result.is_pending());
-    if (result.is_ok()) {
-      set_response(::test::protocollayouts::LocalUnionPayload{result.take_value()});
-    } else {
-      set_err(result.take_error());
-    }
-  }
-  MainProtocol_TwoWayLocalWithError_Result(fpromise::ok_result<::test::protocollayouts::LocalUnionPayload>&& result)
-      : MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>(std::move(result))) {}
-  MainProtocol_TwoWayLocalWithError_Result(fpromise::error_result<uint32_t>&& result)
-      : MainProtocol_TwoWayLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>(std::move(result))) {}
-  operator fpromise::result<::test::protocollayouts::LocalUnionPayload, uint32_t>() && {
-    if (is_err()) {
-      return fpromise::error(err());
-    }
-    ::std::tuple<::test::protocollayouts::LocalUnionPayload> value_tuple = std::move(response());
-    return fpromise::ok(std::move(std::get<0>(value_tuple)));
-  }
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::Invalid);
-  union {
-    ::test::protocollayouts::LocalUnionPayload response_;
-    uint32_t err_;
-  };
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& value,
-                         ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result* result) {
-  return value.Clone(result);
-}
-
-using MainProtocol_TwoWayLocalWithError_ResultPtr = ::std::unique_ptr<MainProtocol_TwoWayLocalWithError_Result>;
-
-class MainProtocolTwoWayLocalWithErrorTopResponse final {
- public:
-  static const fidl_type_t* FidlType;
-
-  ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result result{};
-
-  static inline ::std::unique_ptr<MainProtocolTwoWayLocalWithErrorTopResponse> New() { return ::std::make_unique<MainProtocolTwoWayLocalWithErrorTopResponse>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolTwoWayLocalWithErrorTopResponse* value, size_t _offset);
-  zx_status_t Clone(MainProtocolTwoWayLocalWithErrorTopResponse* result) const;
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& _value,
-                         ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse* _result) {
-  return _value.Clone(_result);
-}
-
-using MainProtocolTwoWayLocalWithErrorTopResponsePtr = ::std::unique_ptr<MainProtocolTwoWayLocalWithErrorTopResponse>;
-
-class LocalTablePayload final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const uint16_t& a() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return a_value_.value;
-  }
-  bool has_a() const {
-    return field_presence_.IsSet<0>();
-  }
-
-  uint16_t* mutable_a() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value);
-    }
-    return &a_value_.value;
-  }
-  LocalTablePayload& set_a(uint16_t _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value, std::move(_value));
-    } else {
-      a_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_a() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&a_value_.value);
-  }
-
-  LocalTablePayload();
-  LocalTablePayload(LocalTablePayload&& other);
-  ~LocalTablePayload();
-  LocalTablePayload& operator=(LocalTablePayload&& other);
-
-  static inline ::std::unique_ptr<LocalTablePayload> New() { return ::std::make_unique<LocalTablePayload>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, LocalTablePayload* _value, size_t _offset);
-  zx_status_t Clone(LocalTablePayload* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 1:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<1> field_presence_;
-  union ValueUnion_a {
-    ValueUnion_a() {}
-    ~ValueUnion_a() {}
-
-    uint16_t value;
-  };
-  ValueUnion_a a_value_;
-};
-
-using LocalTablePayloadPtr = ::std::unique_ptr<LocalTablePayload>;
-
-class MainProtocol_OnLocalWithError_Result final {
- public:
-  static const fidl_type_t* FidlType;
-
-  MainProtocol_OnLocalWithError_Result();
-  ~MainProtocol_OnLocalWithError_Result();
-
-  MainProtocol_OnLocalWithError_Result(MainProtocol_OnLocalWithError_Result&&);
-  MainProtocol_OnLocalWithError_Result& operator=(MainProtocol_OnLocalWithError_Result&&);
-
-  static MainProtocol_OnLocalWithError_Result WithResponse(::test::protocollayouts::LocalTablePayload&&);
-  static MainProtocol_OnLocalWithError_Result WithErr(uint32_t&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-
-    kResponse = 1,  // 0x1
-    kErr = 2,       // 0x2
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<MainProtocol_OnLocalWithError_Result> New() { return ::std::make_unique<MainProtocol_OnLocalWithError_Result>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocol_OnLocalWithError_Result* value, size_t offset);
-  zx_status_t Clone(MainProtocol_OnLocalWithError_Result* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_response() const { return tag_ == ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kResponse; }
-
-  ::test::protocollayouts::LocalTablePayload& response() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kResponse);
-    return response_;
-  }
-
-  const ::test::protocollayouts::LocalTablePayload& response() const {
-    ZX_ASSERT(is_response());
-    return response_;
-  }
-  MainProtocol_OnLocalWithError_Result& set_response(::test::protocollayouts::LocalTablePayload value);
-
-  bool is_err() const { return tag_ == ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kErr; }
-
-  uint32_t& err() {
-    EnsureStorageInitialized(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kErr);
-    return err_;
-  }
-
-  const uint32_t& err() const {
-    ZX_ASSERT(is_err());
-    return err_;
-  }
-  MainProtocol_OnLocalWithError_Result& set_err(uint32_t value);
-
-  ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag Which() const {
-    return ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag(tag_);
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-
-  friend ::fidl::Equality<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>;
-
-  MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>&& result) {
-    ZX_ASSERT(!result.is_pending());
-    if (result.is_ok()) {
-      set_response(::test::protocollayouts::LocalTablePayload{result.take_value()});
-    } else {
-      set_err(result.take_error());
-    }
-  }
-  MainProtocol_OnLocalWithError_Result(fpromise::ok_result<::test::protocollayouts::LocalTablePayload>&& result)
-      : MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>(std::move(result))) {}
-  MainProtocol_OnLocalWithError_Result(fpromise::error_result<uint32_t>&& result)
-      : MainProtocol_OnLocalWithError_Result(fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>(std::move(result))) {}
-  operator fpromise::result<::test::protocollayouts::LocalTablePayload, uint32_t>() && {
-    if (is_err()) {
-      return fpromise::error(err());
-    }
-    ::std::tuple<::test::protocollayouts::LocalTablePayload> value_tuple = std::move(response());
-    return fpromise::ok(std::move(std::get<0>(value_tuple)));
-  }
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::Invalid);
-  union {
-    ::test::protocollayouts::LocalTablePayload response_;
-    uint32_t err_;
-  };
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& value,
-                         ::test::protocollayouts::MainProtocol_OnLocalWithError_Result* result) {
-  return value.Clone(result);
-}
-
-using MainProtocol_OnLocalWithError_ResultPtr = ::std::unique_ptr<MainProtocol_OnLocalWithError_Result>;
-
-class MainProtocolOnLocalWithErrorRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  ::test::protocollayouts::MainProtocol_OnLocalWithError_Result result{};
-
-  static inline ::std::unique_ptr<MainProtocolOnLocalWithErrorRequest> New() { return ::std::make_unique<MainProtocolOnLocalWithErrorRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MainProtocolOnLocalWithErrorRequest* value, size_t _offset);
-  zx_status_t Clone(MainProtocolOnLocalWithErrorRequest* result) const;
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& _value,
-                         ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest* _result) {
-  return _value.Clone(_result);
-}
-
-using MainProtocolOnLocalWithErrorRequestPtr = ::std::unique_ptr<MainProtocolOnLocalWithErrorRequest>;
 
 #ifdef __Fuchsia__
 
@@ -1952,6 +1952,84 @@ class MainProtocol_ResponseEncoder {
 }  // namespace test
 namespace fidl {
 template <>
+struct CodingTraits<::test::protocollayouts::LocalTablePayload>
+    : public EncodableCodingTraits<::test::protocollayouts::LocalTablePayload, 16> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::LocalTablePayload& _value,
+                         ::test::protocollayouts::LocalTablePayload* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::protocollayouts::LocalTablePayload> {
+  bool operator()(const ::test::protocollayouts::LocalTablePayload& _lhs, const ::test::protocollayouts::LocalTablePayload& _rhs) const {
+    if (_lhs.has_a()) {
+      if (!_rhs.has_a()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
+        return false;
+      }
+    } else if (_rhs.has_a()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::protocollayouts::LocalUnionPayload> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocollayouts::LocalUnionPayload>
+    : public EncodableCodingTraits<::test::protocollayouts::LocalUnionPayload, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::protocollayouts::LocalUnionPayload>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::LocalUnionPayload>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::LocalUnionPayload>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::protocollayouts::LocalUnionPayload);
+
+    ::test::protocollayouts::LocalUnionPayload::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::LocalUnionPayload& value,
+                         ::test::protocollayouts::LocalUnionPayload* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::LocalUnionPayload> {
+  bool operator()(const ::test::protocollayouts::LocalUnionPayload& _lhs, const ::test::protocollayouts::LocalUnionPayload& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::LocalUnionPayload::Tag::Invalid):
+        return true;
+      case ::test::protocollayouts::LocalUnionPayload::Tag::kB:
+        return ::fidl::Equals(_lhs.b_, _rhs.b_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
+template <>
 struct IsFidlXUnion<::test::protocollayouts::MainProtocol_TwoWayImportWithError_Result> : public std::true_type {};
 
 template <>
@@ -2028,6 +2106,378 @@ template <>
 struct Equality<::test::protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> {
   bool operator()(const ::test::protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse& _lhs, const ::test::protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::protocollayouts::MainProtocol_OnImportWithError_Result> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocol_OnImportWithError_Result>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocol_OnImportWithError_Result, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_OnImportWithError_Result>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnImportWithError_Result>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnImportWithError_Result>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::protocollayouts::MainProtocol_OnImportWithError_Result);
+
+    ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& value,
+                         ::test::protocollayouts::MainProtocol_OnImportWithError_Result* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocol_OnImportWithError_Result> {
+  bool operator()(const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& _lhs, const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::Invalid):
+        return true;
+      case ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kResponse:
+        return ::fidl::Equals(_lhs.response_, _rhs.response_);
+      case ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kErr:
+        return ::fidl::Equals(_lhs.err_, _rhs.err_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolOnImportWithErrorRequest>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOnImportWithErrorRequest, 16> {};
+
+template <>
+struct HasPadding<::test::protocollayouts::MainProtocolOnImportWithErrorRequest> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::protocollayouts::MainProtocolOnImportWithErrorRequest> : public internal::BoolConstant<
+                                                                                               !HasPadding<::test::protocollayouts::MainProtocolOnImportWithErrorRequest>::value && IsMemcpyCompatible<::test::protocollayouts::MainProtocol_OnImportWithError_Result>::value> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& value,
+                         ::test::protocollayouts::MainProtocolOnImportWithErrorRequest* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocolOnImportWithErrorRequest> {
+  bool operator()(const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result);
+
+    ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& value,
+                         ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result> {
+  bool operator()(const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& _lhs, const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::Invalid):
+        return true;
+      case ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse:
+        return ::fidl::Equals(_lhs.response_, _rhs.response_);
+      case ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kErr:
+        return ::fidl::Equals(_lhs.err_, _rhs.err_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 16> {};
+
+template <>
+struct HasPadding<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> : public internal::BoolConstant<
+                                                                                                      !HasPadding<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>::value && IsMemcpyCompatible<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>::value> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& value,
+                         ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
+  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& _lhs, const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::protocollayouts::MainProtocol_OnLocalWithError_Result> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocol_OnLocalWithError_Result, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::protocollayouts::MainProtocol_OnLocalWithError_Result);
+
+    ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& value,
+                         ::test::protocollayouts::MainProtocol_OnLocalWithError_Result* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocol_OnLocalWithError_Result> {
+  bool operator()(const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& _lhs, const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::Invalid):
+        return true;
+      case ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kResponse:
+        return ::fidl::Equals(_lhs.response_, _rhs.response_);
+      case ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kErr:
+        return ::fidl::Equals(_lhs.err_, _rhs.err_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest, 16> {};
+
+template <>
+struct HasPadding<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest> : public internal::BoolConstant<
+                                                                                              !HasPadding<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest>::value && IsMemcpyCompatible<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>::value> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& value,
+                         ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest> {
+  bool operator()(const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolOneWayAnonRequest>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOneWayAnonRequest, 16> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOneWayAnonRequest& _value,
+                         ::test::protocollayouts::MainProtocolOneWayAnonRequest* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::protocollayouts::MainProtocolOneWayAnonRequest> {
+  bool operator()(const ::test::protocollayouts::MainProtocolOneWayAnonRequest& _lhs, const ::test::protocollayouts::MainProtocolOneWayAnonRequest& _rhs) const {
+    if (_lhs.has_a()) {
+      if (!_rhs.has_a()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
+        return false;
+      }
+    } else if (_rhs.has_a()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::protocollayouts::MainProtocolTwoWayAnonRequest> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonRequest>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonRequest, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocolTwoWayAnonRequest>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocolTwoWayAnonRequest>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocolTwoWayAnonRequest>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::protocollayouts::MainProtocolTwoWayAnonRequest);
+
+    ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& value,
+                         ::test::protocollayouts::MainProtocolTwoWayAnonRequest* result) {
+  return ::test::protocollayouts::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonRequest> {
+  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& _lhs, const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::Invalid):
+        return true;
+      case ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
+        return ::fidl::Equals(_lhs.b_, _rhs.b_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonResponse>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonResponse, 16> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _value,
+                         ::test::protocollayouts::MainProtocolTwoWayAnonResponse* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonResponse> {
+  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _lhs, const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _rhs) const {
+    if (_lhs.has_a()) {
+      if (!_rhs.has_a()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
+        return false;
+      }
+    } else if (_rhs.has_a()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest, 16> {};
+
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& _value,
+                         ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
+  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& _rhs) const {
+    if (_lhs.has_a()) {
+      if (!_rhs.has_a()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
+        return false;
+      }
+    } else if (_rhs.has_a()) {
       return false;
     }
     return true;
@@ -2170,17 +2620,17 @@ struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorTopRespo
   }
 };
 template <>
-struct IsFidlXUnion<::test::protocollayouts::MainProtocol_OnImportWithError_Result> : public std::true_type {};
+struct IsFidlXUnion<::test::protocollayouts::MainProtocolOnAnonRequest> : public std::true_type {};
 
 template <>
-struct CodingTraits<::test::protocollayouts::MainProtocol_OnImportWithError_Result>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocol_OnImportWithError_Result, 16> {};
+struct CodingTraits<::test::protocollayouts::MainProtocolOnAnonRequest>
+    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOnAnonRequest, 16> {};
 
 template <>
-struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_OnImportWithError_Result>> {
+struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocolOnAnonRequest>> {
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnImportWithError_Result>* value, size_t offset,
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocolOnAnonRequest>* value, size_t offset,
                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
@@ -2188,67 +2638,39 @@ struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_OnImpo
     }
   }
 
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnImportWithError_Result>* value, size_t offset) {
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocolOnAnonRequest>* value, size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
     }
 
-    value->reset(new ::test::protocollayouts::MainProtocol_OnImportWithError_Result);
+    value->reset(new ::test::protocollayouts::MainProtocolOnAnonRequest);
 
-    ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Decode(_decoder, value->get(), offset);
+    ::test::protocollayouts::MainProtocolOnAnonRequest::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& value,
-                         ::test::protocollayouts::MainProtocol_OnImportWithError_Result* result) {
+inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnAnonRequest& value,
+                         ::test::protocollayouts::MainProtocolOnAnonRequest* result) {
   return ::test::protocollayouts::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::protocollayouts::MainProtocol_OnImportWithError_Result> {
-  bool operator()(const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& _lhs, const ::test::protocollayouts::MainProtocol_OnImportWithError_Result& _rhs) const {
+struct Equality<::test::protocollayouts::MainProtocolOnAnonRequest> {
+  bool operator()(const ::test::protocollayouts::MainProtocolOnAnonRequest& _lhs, const ::test::protocollayouts::MainProtocolOnAnonRequest& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::Invalid):
+      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolOnAnonRequest::Tag::Invalid):
         return true;
-      case ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kResponse:
-        return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::test::protocollayouts::MainProtocol_OnImportWithError_Result::Tag::kErr:
-        return ::fidl::Equals(_lhs.err_, _rhs.err_);
-
+      case ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
+        return ::fidl::Equals(_lhs.b_, _rhs.b_);
       default:
-        return false;
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolOnImportWithErrorRequest>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOnImportWithErrorRequest, 16> {};
-
-template <>
-struct HasPadding<::test::protocollayouts::MainProtocolOnImportWithErrorRequest> : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::test::protocollayouts::MainProtocolOnImportWithErrorRequest> : public internal::BoolConstant<
-                                                                                               !HasPadding<::test::protocollayouts::MainProtocolOnImportWithErrorRequest>::value && IsMemcpyCompatible<::test::protocollayouts::MainProtocol_OnImportWithError_Result>::value> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& value,
-                         ::test::protocollayouts::MainProtocolOnImportWithErrorRequest* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocolOnImportWithErrorRequest> {
-  bool operator()(const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolOnImportWithErrorRequest& _rhs) const {
-    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
-      return false;
-    }
-    return true;
   }
 };
 template <>
@@ -2351,428 +2773,6 @@ inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnAnonWithEr
 template <>
 struct Equality<::test::protocollayouts::MainProtocolOnAnonWithErrorRequest> {
   bool operator()(const ::test::protocollayouts::MainProtocolOnAnonWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolOnAnonWithErrorRequest& _rhs) const {
-    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest, 16> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& _value,
-                         ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
-  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest& _rhs) const {
-    if (_lhs.has_a()) {
-      if (!_rhs.has_a()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
-        return false;
-      }
-    } else if (_rhs.has_a()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonResponse>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonResponse, 16> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _value,
-                         ::test::protocollayouts::MainProtocolTwoWayAnonResponse* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonResponse> {
-  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _lhs, const ::test::protocollayouts::MainProtocolTwoWayAnonResponse& _rhs) const {
-    if (_lhs.has_a()) {
-      if (!_rhs.has_a()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
-        return false;
-      }
-    } else if (_rhs.has_a()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct IsFidlXUnion<::test::protocollayouts::MainProtocolTwoWayAnonRequest> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonRequest>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayAnonRequest, 16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocolTwoWayAnonRequest>> {
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocolTwoWayAnonRequest>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocolTwoWayAnonRequest>* value, size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::protocollayouts::MainProtocolTwoWayAnonRequest);
-
-    ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Decode(_decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& value,
-                         ::test::protocollayouts::MainProtocolTwoWayAnonRequest* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocolTwoWayAnonRequest> {
-  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& _lhs, const ::test::protocollayouts::MainProtocolTwoWayAnonRequest& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::Invalid):
-        return true;
-      case ::test::protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
-        return ::fidl::Equals(_lhs.b_, _rhs.b_);
-      default:
-        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
-    }
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolOneWayAnonRequest>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOneWayAnonRequest, 16> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOneWayAnonRequest& _value,
-                         ::test::protocollayouts::MainProtocolOneWayAnonRequest* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::protocollayouts::MainProtocolOneWayAnonRequest> {
-  bool operator()(const ::test::protocollayouts::MainProtocolOneWayAnonRequest& _lhs, const ::test::protocollayouts::MainProtocolOneWayAnonRequest& _rhs) const {
-    if (_lhs.has_a()) {
-      if (!_rhs.has_a()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
-        return false;
-      }
-    } else if (_rhs.has_a()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct IsFidlXUnion<::test::protocollayouts::MainProtocolOnAnonRequest> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolOnAnonRequest>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOnAnonRequest, 16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocolOnAnonRequest>> {
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocolOnAnonRequest>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocolOnAnonRequest>* value, size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::protocollayouts::MainProtocolOnAnonRequest);
-
-    ::test::protocollayouts::MainProtocolOnAnonRequest::Decode(_decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnAnonRequest& value,
-                         ::test::protocollayouts::MainProtocolOnAnonRequest* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocolOnAnonRequest> {
-  bool operator()(const ::test::protocollayouts::MainProtocolOnAnonRequest& _lhs, const ::test::protocollayouts::MainProtocolOnAnonRequest& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocolOnAnonRequest::Tag::Invalid):
-        return true;
-      case ::test::protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
-        return ::fidl::Equals(_lhs.b_, _rhs.b_);
-      default:
-        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
-    }
-  }
-};
-template <>
-struct IsFidlXUnion<::test::protocollayouts::LocalUnionPayload> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::protocollayouts::LocalUnionPayload>
-    : public EncodableCodingTraits<::test::protocollayouts::LocalUnionPayload, 16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::protocollayouts::LocalUnionPayload>> {
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::LocalUnionPayload>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::LocalUnionPayload>* value, size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::protocollayouts::LocalUnionPayload);
-
-    ::test::protocollayouts::LocalUnionPayload::Decode(_decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::LocalUnionPayload& value,
-                         ::test::protocollayouts::LocalUnionPayload* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::LocalUnionPayload> {
-  bool operator()(const ::test::protocollayouts::LocalUnionPayload& _lhs, const ::test::protocollayouts::LocalUnionPayload& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::LocalUnionPayload::Tag::Invalid):
-        return true;
-      case ::test::protocollayouts::LocalUnionPayload::Tag::kB:
-        return ::fidl::Equals(_lhs.b_, _rhs.b_);
-      default:
-        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
-    }
-  }
-};
-template <>
-struct IsFidlXUnion<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result, 16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>> {
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>* value, size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result);
-
-    ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Decode(_decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& value,
-                         ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result> {
-  bool operator()(const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& _lhs, const ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::Invalid):
-        return true;
-      case ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kResponse:
-        return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result::Tag::kErr:
-        return ::fidl::Equals(_lhs.err_, _rhs.err_);
-
-      default:
-        return false;
-    }
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 16> {};
-
-template <>
-struct HasPadding<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> : public internal::BoolConstant<
-                                                                                                      !HasPadding<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>::value && IsMemcpyCompatible<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>::value> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& value,
-                         ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
-  bool operator()(const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& _lhs, const ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse& _rhs) const {
-    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::LocalTablePayload>
-    : public EncodableCodingTraits<::test::protocollayouts::LocalTablePayload, 16> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::LocalTablePayload& _value,
-                         ::test::protocollayouts::LocalTablePayload* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::protocollayouts::LocalTablePayload> {
-  bool operator()(const ::test::protocollayouts::LocalTablePayload& _lhs, const ::test::protocollayouts::LocalTablePayload& _rhs) const {
-    if (_lhs.has_a()) {
-      if (!_rhs.has_a()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
-        return false;
-      }
-    } else if (_rhs.has_a()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct IsFidlXUnion<::test::protocollayouts::MainProtocol_OnLocalWithError_Result> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocol_OnLocalWithError_Result, 16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>> {
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>* value, size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::protocollayouts::MainProtocol_OnLocalWithError_Result);
-
-    ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Decode(_decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& value,
-                         ::test::protocollayouts::MainProtocol_OnLocalWithError_Result* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocol_OnLocalWithError_Result> {
-  bool operator()(const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& _lhs, const ::test::protocollayouts::MainProtocol_OnLocalWithError_Result& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::Invalid):
-        return true;
-      case ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kResponse:
-        return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::test::protocollayouts::MainProtocol_OnLocalWithError_Result::Tag::kErr:
-        return ::fidl::Equals(_lhs.err_, _rhs.err_);
-
-      default:
-        return false;
-    }
-  }
-};
-template <>
-struct CodingTraits<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest>
-    : public EncodableCodingTraits<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest, 16> {};
-
-template <>
-struct HasPadding<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest> : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest> : public internal::BoolConstant<
-                                                                                              !HasPadding<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest>::value && IsMemcpyCompatible<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>::value> {};
-
-inline zx_status_t Clone(const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& value,
-                         ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest* result) {
-  return ::test::protocollayouts::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::protocollayouts::MainProtocolOnLocalWithErrorRequest> {
-  bool operator()(const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& _lhs, const ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.result, _rhs.result)) {
       return false;
     }

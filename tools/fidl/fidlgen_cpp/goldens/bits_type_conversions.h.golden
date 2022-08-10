@@ -15,20 +15,20 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalTypeForWireType<::test_bits::wire::StrictBits> {
-  using type = ::test_bits::StrictBits;
-};
-template <>
-struct WireTypeForNaturalType<::test_bits::StrictBits> {
-  using type = ::test_bits::wire::StrictBits;
-};
-template <>
 struct NaturalTypeForWireType<::test_bits::wire::MyBits> {
   using type = ::test_bits::MyBits;
 };
 template <>
 struct WireTypeForNaturalType<::test_bits::MyBits> {
   using type = ::test_bits::wire::MyBits;
+};
+template <>
+struct NaturalTypeForWireType<::test_bits::wire::StrictBits> {
+  using type = ::test_bits::StrictBits;
+};
+template <>
+struct WireTypeForNaturalType<::test_bits::StrictBits> {
+  using type = ::test_bits::wire::StrictBits;
 };
 template <>
 struct NaturalTypeForWireType<::test_bits::wire::FlexibleBits> {

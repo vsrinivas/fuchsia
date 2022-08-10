@@ -14,25 +14,6 @@
 namespace fidl {
 namespace internal {
 
-#ifdef __Fuchsia__
-
-template <>
-struct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct> {
-  static ::test_encapsulatedstructs::NonInlineStructTestStruct ToNatural(::test_encapsulatedstructs::wire::NonInlineStructTestStruct src);
-  static ::test_encapsulatedstructs::wire::NonInlineStructTestStruct ToWire(fidl::AnyArena& arena, ::test_encapsulatedstructs::NonInlineStructTestStruct src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_encapsulatedstructs::wire::NonInlineStructTestStruct> {
-  using type = ::test_encapsulatedstructs::NonInlineStructTestStruct;
-};
-template <>
-struct WireTypeForNaturalType<::test_encapsulatedstructs::NonInlineStructTestStruct> {
-  using type = ::test_encapsulatedstructs::wire::NonInlineStructTestStruct;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 struct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::Int8Int32, ::test_encapsulatedstructs::Int8Int32> {
   static ::test_encapsulatedstructs::Int8Int32 ToNatural(::test_encapsulatedstructs::wire::Int8Int32 src);
@@ -92,6 +73,25 @@ template <>
 struct WireTypeForNaturalType<::test_encapsulatedstructs::StructPaddingTestStruct> {
   using type = ::test_encapsulatedstructs::wire::StructPaddingTestStruct;
 };
+
+#ifdef __Fuchsia__
+
+template <>
+struct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct> {
+  static ::test_encapsulatedstructs::NonInlineStructTestStruct ToNatural(::test_encapsulatedstructs::wire::NonInlineStructTestStruct src);
+  static ::test_encapsulatedstructs::wire::NonInlineStructTestStruct ToWire(fidl::AnyArena& arena, ::test_encapsulatedstructs::NonInlineStructTestStruct src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_encapsulatedstructs::wire::NonInlineStructTestStruct> {
+  using type = ::test_encapsulatedstructs::NonInlineStructTestStruct;
+};
+template <>
+struct WireTypeForNaturalType<::test_encapsulatedstructs::NonInlineStructTestStruct> {
+  using type = ::test_encapsulatedstructs::wire::NonInlineStructTestStruct;
+};
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

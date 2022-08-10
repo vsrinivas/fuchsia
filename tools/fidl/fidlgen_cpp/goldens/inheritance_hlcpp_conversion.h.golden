@@ -74,16 +74,6 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::inheritance::sub>> {
 };
 
 template <>
-struct NaturalToHLCPPTraits<::test_inheritance::SuperFooTopResponse> {
-  using HLCPPType = ::test::inheritance::SuperFooTopResponse;
-  static inline ::test::inheritance::SuperFooTopResponse Convert(::test_inheritance::SuperFooTopResponse&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::inheritance::SuperFooTopResponse> {
-  using NaturalType = ::test_inheritance::SuperFooTopResponse;
-  static inline ::test_inheritance::SuperFooTopResponse Convert(::test::inheritance::SuperFooTopResponse&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_inheritance::SuperFooRequest> {
   using HLCPPType = ::test::inheritance::SuperFooRequest;
   static inline ::test::inheritance::SuperFooRequest Convert(::test_inheritance::SuperFooRequest&&);
@@ -93,18 +83,17 @@ struct HLCPPToNaturalTraits<::test::inheritance::SuperFooRequest> {
   using NaturalType = ::test_inheritance::SuperFooRequest;
   static inline ::test_inheritance::SuperFooRequest Convert(::test::inheritance::SuperFooRequest&&);
 };
+template <>
+struct NaturalToHLCPPTraits<::test_inheritance::SuperFooTopResponse> {
+  using HLCPPType = ::test::inheritance::SuperFooTopResponse;
+  static inline ::test::inheritance::SuperFooTopResponse Convert(::test_inheritance::SuperFooTopResponse&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::inheritance::SuperFooTopResponse> {
+  using NaturalType = ::test_inheritance::SuperFooTopResponse;
+  static inline ::test_inheritance::SuperFooTopResponse Convert(::test::inheritance::SuperFooTopResponse&&);
+};
 
-::test::inheritance::SuperFooTopResponse NaturalToHLCPPTraits<::test_inheritance::SuperFooTopResponse>::Convert(::test_inheritance::SuperFooTopResponse&& value) {
-  ::test::inheritance::SuperFooTopResponse hlcpp;
-  hlcpp.y = ::fidl::NaturalToHLCPP(std::move(value.y()));
-  return hlcpp;
-}
-
-::test_inheritance::SuperFooTopResponse HLCPPToNaturalTraits<::test::inheritance::SuperFooTopResponse>::Convert(::test::inheritance::SuperFooTopResponse&& value) {
-  return ::test_inheritance::SuperFooTopResponse{{
-      .y = ::fidl::HLCPPToNatural(std::move(value.y)),
-  }};
-}
 ::test::inheritance::SuperFooRequest NaturalToHLCPPTraits<::test_inheritance::SuperFooRequest>::Convert(::test_inheritance::SuperFooRequest&& value) {
   ::test::inheritance::SuperFooRequest hlcpp;
   hlcpp.s = ::fidl::NaturalToHLCPP(std::move(value.s()));
@@ -114,6 +103,17 @@ struct HLCPPToNaturalTraits<::test::inheritance::SuperFooRequest> {
 ::test_inheritance::SuperFooRequest HLCPPToNaturalTraits<::test::inheritance::SuperFooRequest>::Convert(::test::inheritance::SuperFooRequest&& value) {
   return ::test_inheritance::SuperFooRequest{{
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
+  }};
+}
+::test::inheritance::SuperFooTopResponse NaturalToHLCPPTraits<::test_inheritance::SuperFooTopResponse>::Convert(::test_inheritance::SuperFooTopResponse&& value) {
+  ::test::inheritance::SuperFooTopResponse hlcpp;
+  hlcpp.y = ::fidl::NaturalToHLCPP(std::move(value.y()));
+  return hlcpp;
+}
+
+::test_inheritance::SuperFooTopResponse HLCPPToNaturalTraits<::test::inheritance::SuperFooTopResponse>::Convert(::test::inheritance::SuperFooTopResponse&& value) {
+  return ::test_inheritance::SuperFooTopResponse{{
+      .y = ::fidl::HLCPPToNatural(std::move(value.y)),
   }};
 }
 

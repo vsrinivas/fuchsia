@@ -11,54 +11,6 @@ namespace anonymous {
 // Domain objects declarations
 //
 
-class UnionMember;
-
-class TableData;
-
-class TableMember;
-
-class SomeProtocolSomeMethodRequest;
-
-class SomeProtocol_SomeMethod_Error final {
- public:
-  constexpr SomeProtocol_SomeMethod_Error() : value_(0) {}
-  constexpr explicit SomeProtocol_SomeMethod_Error(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
-
-  constexpr bool IsUnknown() const {
-    switch (value_) {
-      case 1u:
-
-      case 2u:
-
-        return false;
-    }
-    return true;
-  }
-
-  constexpr static SomeProtocol_SomeMethod_Error Unknown() {
-    return SomeProtocol_SomeMethod_Error(0xffffffff);
-  }
-
-  static const SomeProtocol_SomeMethod_Error ERROR_ONE;
-
-  static const SomeProtocol_SomeMethod_Error ERROR_TWO;
-
- private:
-  uint32_t value_;
-};
-
-#if !(__cplusplus < 201703)
-constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_ONE = ::test::anonymous::SomeProtocol_SomeMethod_Error(1u);
-constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_TWO = ::test::anonymous::SomeProtocol_SomeMethod_Error(2u);
-#endif  // !(__cplusplus < 201703)
-
-inline zx_status_t Clone(::test::anonymous::SomeProtocol_SomeMethod_Error value,
-                         ::test::anonymous::SomeProtocol_SomeMethod_Error* result) {
-  *result = value;
-  return ZX_OK;
-}
-
 class Op final {
  public:
   constexpr Op() : value_(0) {}
@@ -204,6 +156,14 @@ class FunctionApplication;
 
 class Expression;
 
+class UnionMember;
+
+class TableData;
+
+class TableMember;
+
+class SomeProtocolSomeMethodRequest;
+
 // |BitsMember| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class BitsMember final {
@@ -302,6 +262,46 @@ inline zx_status_t Clone(::test::anonymous::BitsMember value,
 
 class SomeProtocol_SomeMethod_Response;
 
+class SomeProtocol_SomeMethod_Error final {
+ public:
+  constexpr SomeProtocol_SomeMethod_Error() : value_(0) {}
+  constexpr explicit SomeProtocol_SomeMethod_Error(uint32_t value) : value_(value) {}
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+      case 2u:
+
+        return false;
+    }
+    return true;
+  }
+
+  constexpr static SomeProtocol_SomeMethod_Error Unknown() {
+    return SomeProtocol_SomeMethod_Error(0xffffffff);
+  }
+
+  static const SomeProtocol_SomeMethod_Error ERROR_ONE;
+
+  static const SomeProtocol_SomeMethod_Error ERROR_TWO;
+
+ private:
+  uint32_t value_;
+};
+
+#if !(__cplusplus < 201703)
+constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_ONE = ::test::anonymous::SomeProtocol_SomeMethod_Error(1u);
+constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_TWO = ::test::anonymous::SomeProtocol_SomeMethod_Error(2u);
+#endif  // !(__cplusplus < 201703)
+
+inline zx_status_t Clone(::test::anonymous::SomeProtocol_SomeMethod_Error value,
+                         ::test::anonymous::SomeProtocol_SomeMethod_Error* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 class SomeProtocol_SomeMethod_Result;
 
 class SomeProtocolSomeMethodTopResponse;
@@ -311,222 +311,6 @@ class SomeProtocolSomeMethodTopResponse;
 class SomeProtocol;
 using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
 #endif  // __Fuchsia__
-
-class UnionMember final {
- public:
-  static const fidl_type_t* FidlType;
-
-  UnionMember();
-  ~UnionMember();
-
-  UnionMember(UnionMember&&);
-  UnionMember& operator=(UnionMember&&);
-
-  static UnionMember WithUnionData(uint8_t&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
-
-    kUnionData = 2,  // 0x2
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<UnionMember> New() { return ::std::make_unique<UnionMember>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnionMember* value, size_t offset);
-  zx_status_t Clone(UnionMember* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_union_data() const { return tag_ == ::test::anonymous::UnionMember::Tag::kUnionData; }
-
-  uint8_t& union_data() {
-    EnsureStorageInitialized(::test::anonymous::UnionMember::Tag::kUnionData);
-    return union_data_;
-  }
-
-  const uint8_t& union_data() const {
-    ZX_ASSERT(is_union_data());
-    return union_data_;
-  }
-  UnionMember& set_union_data(uint8_t value);
-  UnionMember& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
-
-  ::test::anonymous::UnionMember::Tag Which() const {
-    switch (tag_) {
-      case ::test::anonymous::UnionMember::Tag::Invalid:
-      case ::test::anonymous::UnionMember::Tag::kUnionData:
-        return ::test::anonymous::UnionMember::Tag(tag_);
-      default:
-        return ::test::anonymous::UnionMember::Tag::kUnknown;
-    }
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-  const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != ::test::anonymous::UnionMember::Tag::kUnknown) {
-      return nullptr;
-    }
-    return &unknown_data_;
-  }
-
-  friend ::fidl::Equality<::test::anonymous::UnionMember>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid);
-  union {
-    uint8_t union_data_;
-    std::vector<uint8_t> unknown_data_;
-  };
-};
-
-inline zx_status_t Clone(const ::test::anonymous::UnionMember& value,
-                         ::test::anonymous::UnionMember* result) {
-  return value.Clone(result);
-}
-
-using UnionMemberPtr = ::std::unique_ptr<UnionMember>;
-
-class TableData final {
- public:
-  static const fidl_type_t* FidlType;
-
-  uint8_t data{};
-
-  static inline ::std::unique_ptr<TableData> New() { return ::std::make_unique<TableData>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableData* value, size_t _offset);
-  zx_status_t Clone(TableData* result) const;
-};
-
-inline zx_status_t Clone(const ::test::anonymous::TableData& _value,
-                         ::test::anonymous::TableData* _result) {
-  return _value.Clone(_result);
-}
-
-using TableDataPtr = ::std::unique_ptr<TableData>;
-
-class TableMember final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const ::std::vector<::test::anonymous::TableData>& table_data() const {
-    ZX_ASSERT(field_presence_.IsSet<1>());
-    return table_data_value_.value;
-  }
-  bool has_table_data() const {
-    return field_presence_.IsSet<1>();
-  }
-
-  ::std::vector<::test::anonymous::TableData>* mutable_table_data() {
-    if (!field_presence_.IsSet<1>()) {
-      field_presence_.Set<1>();
-      Construct(&table_data_value_.value);
-    }
-    return &table_data_value_.value;
-  }
-  TableMember& set_table_data(::std::vector<::test::anonymous::TableData> _value) {
-    if (!field_presence_.IsSet<1>()) {
-      field_presence_.Set<1>();
-      Construct(&table_data_value_.value, std::move(_value));
-    } else {
-      table_data_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_table_data() {
-    if (!field_presence_.IsSet<1>()) {
-      return;
-    }
-    field_presence_.Clear<1>();
-    Destruct(&table_data_value_.value);
-  }
-
-  TableMember();
-  TableMember(TableMember&& other);
-  ~TableMember();
-  TableMember& operator=(TableMember&& other);
-
-  static inline ::std::unique_ptr<TableMember> New() { return ::std::make_unique<TableMember>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableMember* _value, size_t _offset);
-  zx_status_t Clone(TableMember* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 2:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<2> field_presence_;
-  union ValueUnion_table_data {
-    ValueUnion_table_data() {}
-    ~ValueUnion_table_data() {}
-
-    ::std::vector<::test::anonymous::TableData> value;
-  };
-  ValueUnion_table_data table_data_value_;
-};
-
-using TableMemberPtr = ::std::unique_ptr<TableMember>;
-
-class SomeProtocolSomeMethodRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  ::test::anonymous::UnionMember union_member{};
-
-  ::test::anonymous::TableMember table_member{};
-
-  static inline ::std::unique_ptr<SomeProtocolSomeMethodRequest> New() { return ::std::make_unique<SomeProtocolSomeMethodRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, SomeProtocolSomeMethodRequest* value, size_t _offset);
-  zx_status_t Clone(SomeProtocolSomeMethodRequest* result) const;
-};
-
-inline zx_status_t Clone(const ::test::anonymous::SomeProtocolSomeMethodRequest& _value,
-                         ::test::anonymous::SomeProtocolSomeMethodRequest* _result) {
-  return _value.Clone(_result);
-}
-
-using SomeProtocolSomeMethodRequestPtr = ::std::unique_ptr<SomeProtocolSomeMethodRequest>;
 
 class OverrideTest final {
  public:
@@ -839,6 +623,222 @@ inline zx_status_t Clone(const ::test::anonymous::Expression& value,
 
 using ExpressionPtr = ::std::unique_ptr<Expression>;
 
+class UnionMember final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  UnionMember();
+  ~UnionMember();
+
+  UnionMember(UnionMember&&);
+  UnionMember& operator=(UnionMember&&);
+
+  static UnionMember WithUnionData(uint8_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+
+    kUnionData = 2,  // 0x2
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<UnionMember> New() { return ::std::make_unique<UnionMember>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, UnionMember* value, size_t offset);
+  zx_status_t Clone(UnionMember* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_union_data() const { return tag_ == ::test::anonymous::UnionMember::Tag::kUnionData; }
+
+  uint8_t& union_data() {
+    EnsureStorageInitialized(::test::anonymous::UnionMember::Tag::kUnionData);
+    return union_data_;
+  }
+
+  const uint8_t& union_data() const {
+    ZX_ASSERT(is_union_data());
+    return union_data_;
+  }
+  UnionMember& set_union_data(uint8_t value);
+  UnionMember& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+
+  ::test::anonymous::UnionMember::Tag Which() const {
+    switch (tag_) {
+      case ::test::anonymous::UnionMember::Tag::Invalid:
+      case ::test::anonymous::UnionMember::Tag::kUnionData:
+        return ::test::anonymous::UnionMember::Tag(tag_);
+      default:
+        return ::test::anonymous::UnionMember::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::test::anonymous::UnionMember::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::test::anonymous::UnionMember>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid);
+  union {
+    uint8_t union_data_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::test::anonymous::UnionMember& value,
+                         ::test::anonymous::UnionMember* result) {
+  return value.Clone(result);
+}
+
+using UnionMemberPtr = ::std::unique_ptr<UnionMember>;
+
+class TableData final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint8_t data{};
+
+  static inline ::std::unique_ptr<TableData> New() { return ::std::make_unique<TableData>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableData* value, size_t _offset);
+  zx_status_t Clone(TableData* result) const;
+};
+
+inline zx_status_t Clone(const ::test::anonymous::TableData& _value,
+                         ::test::anonymous::TableData* _result) {
+  return _value.Clone(_result);
+}
+
+using TableDataPtr = ::std::unique_ptr<TableData>;
+
+class TableMember final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const ::std::vector<::test::anonymous::TableData>& table_data() const {
+    ZX_ASSERT(field_presence_.IsSet<1>());
+    return table_data_value_.value;
+  }
+  bool has_table_data() const {
+    return field_presence_.IsSet<1>();
+  }
+
+  ::std::vector<::test::anonymous::TableData>* mutable_table_data() {
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
+      Construct(&table_data_value_.value);
+    }
+    return &table_data_value_.value;
+  }
+  TableMember& set_table_data(::std::vector<::test::anonymous::TableData> _value) {
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
+      Construct(&table_data_value_.value, std::move(_value));
+    } else {
+      table_data_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_table_data() {
+    if (!field_presence_.IsSet<1>()) {
+      return;
+    }
+    field_presence_.Clear<1>();
+    Destruct(&table_data_value_.value);
+  }
+
+  TableMember();
+  TableMember(TableMember&& other);
+  ~TableMember();
+  TableMember& operator=(TableMember&& other);
+
+  static inline ::std::unique_ptr<TableMember> New() { return ::std::make_unique<TableMember>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableMember* _value, size_t _offset);
+  zx_status_t Clone(TableMember* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 2:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<2> field_presence_;
+  union ValueUnion_table_data {
+    ValueUnion_table_data() {}
+    ~ValueUnion_table_data() {}
+
+    ::std::vector<::test::anonymous::TableData> value;
+  };
+  ValueUnion_table_data table_data_value_;
+};
+
+using TableMemberPtr = ::std::unique_ptr<TableMember>;
+
+class SomeProtocolSomeMethodRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::anonymous::UnionMember union_member{};
+
+  ::test::anonymous::TableMember table_member{};
+
+  static inline ::std::unique_ptr<SomeProtocolSomeMethodRequest> New() { return ::std::make_unique<SomeProtocolSomeMethodRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, SomeProtocolSomeMethodRequest* value, size_t _offset);
+  zx_status_t Clone(SomeProtocolSomeMethodRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::anonymous::SomeProtocolSomeMethodRequest& _value,
+                         ::test::anonymous::SomeProtocolSomeMethodRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using SomeProtocolSomeMethodRequestPtr = ::std::unique_ptr<SomeProtocolSomeMethodRequest>;
+
 class SomeProtocol_SomeMethod_Response final {
  public:
   static const fidl_type_t* FidlType;
@@ -1040,161 +1040,6 @@ class SomeProtocol_ResponseEncoder {
 }  // namespace test
 namespace fidl {
 template <>
-struct IsFidlXUnion<::test::anonymous::UnionMember> : public std::true_type {};
-
-template <>
-struct CodingTraits<::test::anonymous::UnionMember>
-    : public EncodableCodingTraits<::test::anonymous::UnionMember, 16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<::test::anonymous::UnionMember>> {
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(Encoder* encoder, std::unique_ptr<::test::anonymous::UnionMember>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(Decoder* _decoder, std::unique_ptr<::test::anonymous::UnionMember>* value, size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(new ::test::anonymous::UnionMember);
-
-    ::test::anonymous::UnionMember::Decode(_decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(const ::test::anonymous::UnionMember& value,
-                         ::test::anonymous::UnionMember* result) {
-  return ::test::anonymous::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::anonymous::UnionMember> {
-  bool operator()(const ::test::anonymous::UnionMember& _lhs, const ::test::anonymous::UnionMember& _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
-        return true;
-      case ::test::anonymous::UnionMember::Tag::kUnionData:
-        return ::fidl::Equals(_lhs.union_data_, _rhs.union_data_);
-      default:
-        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
-    }
-  }
-};
-template <>
-struct CodingTraits<::test::anonymous::TableData>
-    : public EncodableCodingTraits<::test::anonymous::TableData, 1> {};
-
-template <>
-struct IsMemcpyCompatible<::test::anonymous::TableData> : public internal::BoolConstant<
-                                                              !HasPadding<::test::anonymous::TableData>::value && IsMemcpyCompatible<uint8_t>::value> {};
-
-inline zx_status_t Clone(const ::test::anonymous::TableData& value,
-                         ::test::anonymous::TableData* result) {
-  return ::test::anonymous::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::anonymous::TableData> {
-  bool operator()(const ::test::anonymous::TableData& _lhs, const ::test::anonymous::TableData& _rhs) const {
-    if (!::fidl::Equals(_lhs.data, _rhs.data)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::anonymous::TableMember>
-    : public EncodableCodingTraits<::test::anonymous::TableMember, 16> {};
-
-inline zx_status_t Clone(const ::test::anonymous::TableMember& _value,
-                         ::test::anonymous::TableMember* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::anonymous::TableMember> {
-  bool operator()(const ::test::anonymous::TableMember& _lhs, const ::test::anonymous::TableMember& _rhs) const {
-    if (_lhs.has_table_data()) {
-      if (!_rhs.has_table_data()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.table_data(), _rhs.table_data())) {
-        return false;
-      }
-    } else if (_rhs.has_table_data()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::anonymous::SomeProtocolSomeMethodRequest>
-    : public EncodableCodingTraits<::test::anonymous::SomeProtocolSomeMethodRequest, 32> {};
-
-template <>
-struct HasPadding<::test::anonymous::SomeProtocolSomeMethodRequest> : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::test::anonymous::SomeProtocolSomeMethodRequest> : public internal::BoolConstant<
-                                                                                  !HasPadding<::test::anonymous::SomeProtocolSomeMethodRequest>::value && IsMemcpyCompatible<::test::anonymous::UnionMember>::value && IsMemcpyCompatible<::test::anonymous::TableMember>::value> {};
-
-inline zx_status_t Clone(const ::test::anonymous::SomeProtocolSomeMethodRequest& value,
-                         ::test::anonymous::SomeProtocolSomeMethodRequest* result) {
-  return ::test::anonymous::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::anonymous::SomeProtocolSomeMethodRequest> {
-  bool operator()(const ::test::anonymous::SomeProtocolSomeMethodRequest& _lhs, const ::test::anonymous::SomeProtocolSomeMethodRequest& _rhs) const {
-    if (!::fidl::Equals(_lhs.union_member, _rhs.union_member)) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.table_member, _rhs.table_member)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::anonymous::SomeProtocol_SomeMethod_Error> {
-  static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::SomeProtocol_SomeMethod_Error);
-  static void Encode(Encoder* encoder, ::test::anonymous::SomeProtocol_SomeMethod_Error* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-    ZX_DEBUG_ASSERT(!maybe_handle_info);
-    uint32_t underlying = static_cast<uint32_t>(*value);
-    ::fidl::Encode(encoder, &underlying, offset);
-  }
-  static void Decode(Decoder* decoder, ::test::anonymous::SomeProtocol_SomeMethod_Error* value, size_t offset) {
-    uint32_t underlying = {};
-    ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::test::anonymous::SomeProtocol_SomeMethod_Error>(underlying);
-  }
-};
-
-inline zx_status_t Clone(::test::anonymous::SomeProtocol_SomeMethod_Error value,
-                         ::test::anonymous::SomeProtocol_SomeMethod_Error* result) {
-  return ::test::anonymous::Clone(value, result);
-}
-template <>
-struct Equality<::test::anonymous::SomeProtocol_SomeMethod_Error> {
-  bool operator()(const ::test::anonymous::SomeProtocol_SomeMethod_Error& _lhs, const ::test::anonymous::SomeProtocol_SomeMethod_Error& _rhs) const {
-    return _lhs == _rhs;
-  }
-};
-
-template <>
 struct CodingTraits<::test::anonymous::Op> {
   static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::Op);
   static void Encode(Encoder* encoder, ::test::anonymous::Op* value, size_t offset,
@@ -1384,6 +1229,134 @@ struct Equality<::test::anonymous::Expression> {
   }
 };
 template <>
+struct IsFidlXUnion<::test::anonymous::UnionMember> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::anonymous::UnionMember>
+    : public EncodableCodingTraits<::test::anonymous::UnionMember, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::anonymous::UnionMember>> {
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::anonymous::UnionMember>* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder, std::unique_ptr<::test::anonymous::UnionMember>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::anonymous::UnionMember);
+
+    ::test::anonymous::UnionMember::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::test::anonymous::UnionMember& value,
+                         ::test::anonymous::UnionMember* result) {
+  return ::test::anonymous::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::anonymous::UnionMember> {
+  bool operator()(const ::test::anonymous::UnionMember& _lhs, const ::test::anonymous::UnionMember& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
+        return true;
+      case ::test::anonymous::UnionMember::Tag::kUnionData:
+        return ::fidl::Equals(_lhs.union_data_, _rhs.union_data_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::anonymous::TableData>
+    : public EncodableCodingTraits<::test::anonymous::TableData, 1> {};
+
+template <>
+struct IsMemcpyCompatible<::test::anonymous::TableData> : public internal::BoolConstant<
+                                                              !HasPadding<::test::anonymous::TableData>::value && IsMemcpyCompatible<uint8_t>::value> {};
+
+inline zx_status_t Clone(const ::test::anonymous::TableData& value,
+                         ::test::anonymous::TableData* result) {
+  return ::test::anonymous::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::anonymous::TableData> {
+  bool operator()(const ::test::anonymous::TableData& _lhs, const ::test::anonymous::TableData& _rhs) const {
+    if (!::fidl::Equals(_lhs.data, _rhs.data)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::anonymous::TableMember>
+    : public EncodableCodingTraits<::test::anonymous::TableMember, 16> {};
+
+inline zx_status_t Clone(const ::test::anonymous::TableMember& _value,
+                         ::test::anonymous::TableMember* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::anonymous::TableMember> {
+  bool operator()(const ::test::anonymous::TableMember& _lhs, const ::test::anonymous::TableMember& _rhs) const {
+    if (_lhs.has_table_data()) {
+      if (!_rhs.has_table_data()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.table_data(), _rhs.table_data())) {
+        return false;
+      }
+    } else if (_rhs.has_table_data()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::anonymous::SomeProtocolSomeMethodRequest>
+    : public EncodableCodingTraits<::test::anonymous::SomeProtocolSomeMethodRequest, 32> {};
+
+template <>
+struct HasPadding<::test::anonymous::SomeProtocolSomeMethodRequest> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::anonymous::SomeProtocolSomeMethodRequest> : public internal::BoolConstant<
+                                                                                  !HasPadding<::test::anonymous::SomeProtocolSomeMethodRequest>::value && IsMemcpyCompatible<::test::anonymous::UnionMember>::value && IsMemcpyCompatible<::test::anonymous::TableMember>::value> {};
+
+inline zx_status_t Clone(const ::test::anonymous::SomeProtocolSomeMethodRequest& value,
+                         ::test::anonymous::SomeProtocolSomeMethodRequest* result) {
+  return ::test::anonymous::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::anonymous::SomeProtocolSomeMethodRequest> {
+  bool operator()(const ::test::anonymous::SomeProtocolSomeMethodRequest& _lhs, const ::test::anonymous::SomeProtocolSomeMethodRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.union_member, _rhs.union_member)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.table_member, _rhs.table_member)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
 struct CodingTraits<::test::anonymous::BitsMember> {
   static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::BitsMember);
   static void Encode(Encoder* encoder, ::test::anonymous::BitsMember* value, size_t offset,
@@ -1434,6 +1407,33 @@ struct Equality<::test::anonymous::SomeProtocol_SomeMethod_Response> {
     return true;
   }
 };
+template <>
+struct CodingTraits<::test::anonymous::SomeProtocol_SomeMethod_Error> {
+  static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::SomeProtocol_SomeMethod_Error);
+  static void Encode(Encoder* encoder, ::test::anonymous::SomeProtocol_SomeMethod_Error* value, size_t offset,
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::anonymous::SomeProtocol_SomeMethod_Error* value, size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::anonymous::SomeProtocol_SomeMethod_Error>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::anonymous::SomeProtocol_SomeMethod_Error value,
+                         ::test::anonymous::SomeProtocol_SomeMethod_Error* result) {
+  return ::test::anonymous::Clone(value, result);
+}
+template <>
+struct Equality<::test::anonymous::SomeProtocol_SomeMethod_Error> {
+  bool operator()(const ::test::anonymous::SomeProtocol_SomeMethod_Error& _lhs, const ::test::anonymous::SomeProtocol_SomeMethod_Error& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
+
 template <>
 struct IsFidlXUnion<::test::anonymous::SomeProtocol_SomeMethod_Result> : public std::true_type {};
 

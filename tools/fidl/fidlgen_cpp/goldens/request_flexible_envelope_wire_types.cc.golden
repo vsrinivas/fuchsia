@@ -2,12 +2,6 @@
 
 #include <fidl/test.requestflexibleenvelope/cpp/wire_types.h>
 
-void ::test_requestflexibleenvelope::wire::StrictFoo::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(StrictFoo, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(StrictFoo, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
 auto ::test_requestflexibleenvelope::wire::FlexibleFoo::Which() const -> ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -23,4 +17,10 @@ void ::test_requestflexibleenvelope::wire::FlexibleFoo::SizeAndOffsetAssertionHe
   static_assert(sizeof(FlexibleFoo) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(FlexibleFoo, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(FlexibleFoo, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
+void ::test_requestflexibleenvelope::wire::StrictFoo::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(StrictFoo, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(StrictFoo, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }

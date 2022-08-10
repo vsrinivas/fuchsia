@@ -11,37 +11,6 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocolrequest::Parent>> {
-  using HLCPPType = fidl::InterfaceHandle<::test::protocolrequest::Parent>;
-  static inline fidl::InterfaceHandle<::test::protocolrequest::Parent> Convert(fidl::ClientEnd<::test_protocolrequest::Parent>&& c) {
-    return fidl::InterfaceHandle<::test::protocolrequest::Parent>(c.TakeChannel());
-  }
-};
-
-template <>
-struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_protocolrequest::Parent>> {
-  using HLCPPType = fidl::InterfaceRequest<::test::protocolrequest::Parent>;
-  static inline fidl::InterfaceRequest<::test::protocolrequest::Parent> Convert(fidl::ServerEnd<::test_protocolrequest::Parent>&& c) {
-    return fidl::InterfaceRequest<::test::protocolrequest::Parent>(c.TakeChannel());
-  }
-};
-
-template <>
-struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::protocolrequest::Parent>> {
-  using NaturalType = fidl::ClientEnd<::test_protocolrequest::Parent>;
-  static inline fidl::ClientEnd<::test_protocolrequest::Parent> Convert(fidl::InterfaceHandle<::test::protocolrequest::Parent>&& c) {
-    return fidl::ClientEnd<::test_protocolrequest::Parent>(c.TakeChannel());
-  }
-};
-
-template <>
-struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocolrequest::Parent>> {
-  using NaturalType = fidl::ServerEnd<::test_protocolrequest::Parent>;
-  static inline fidl::ServerEnd<::test_protocolrequest::Parent> Convert(fidl::InterfaceRequest<::test::protocolrequest::Parent>&& c) {
-    return fidl::ServerEnd<::test_protocolrequest::Parent>(c.TakeChannel());
-  }
-};
-template <>
 struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocolrequest::Child>> {
   using HLCPPType = fidl::InterfaceHandle<::test::protocolrequest::Child>;
   static inline fidl::InterfaceHandle<::test::protocolrequest::Child> Convert(fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
@@ -72,27 +41,38 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocolrequest::Chil
     return fidl::ServerEnd<::test_protocolrequest::Child>(c.TakeChannel());
   }
 };
+template <>
+struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_protocolrequest::Parent>> {
+  using HLCPPType = fidl::InterfaceHandle<::test::protocolrequest::Parent>;
+  static inline fidl::InterfaceHandle<::test::protocolrequest::Parent> Convert(fidl::ClientEnd<::test_protocolrequest::Parent>&& c) {
+    return fidl::InterfaceHandle<::test::protocolrequest::Parent>(c.TakeChannel());
+  }
+};
 
 template <>
-struct NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequestRequest> {
-  using HLCPPType = ::test::protocolrequest::ParentTakeChildRequestRequest;
-  static inline ::test::protocolrequest::ParentTakeChildRequestRequest Convert(::test_protocolrequest::ParentTakeChildRequestRequest&&);
+struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_protocolrequest::Parent>> {
+  using HLCPPType = fidl::InterfaceRequest<::test::protocolrequest::Parent>;
+  static inline fidl::InterfaceRequest<::test::protocolrequest::Parent> Convert(fidl::ServerEnd<::test_protocolrequest::Parent>&& c) {
+    return fidl::InterfaceRequest<::test::protocolrequest::Parent>(c.TakeChannel());
+  }
 };
+
 template <>
-struct HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequestRequest> {
-  using NaturalType = ::test_protocolrequest::ParentTakeChildRequestRequest;
-  static inline ::test_protocolrequest::ParentTakeChildRequestRequest Convert(::test::protocolrequest::ParentTakeChildRequestRequest&&);
+struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::protocolrequest::Parent>> {
+  using NaturalType = fidl::ClientEnd<::test_protocolrequest::Parent>;
+  static inline fidl::ClientEnd<::test_protocolrequest::Parent> Convert(fidl::InterfaceHandle<::test::protocolrequest::Parent>&& c) {
+    return fidl::ClientEnd<::test_protocolrequest::Parent>(c.TakeChannel());
+  }
 };
+
 template <>
-struct NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequest> {
-  using HLCPPType = ::test::protocolrequest::ParentTakeChildRequest;
-  static inline ::test::protocolrequest::ParentTakeChildRequest Convert(::test_protocolrequest::ParentTakeChildRequest&&);
+struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocolrequest::Parent>> {
+  using NaturalType = fidl::ServerEnd<::test_protocolrequest::Parent>;
+  static inline fidl::ServerEnd<::test_protocolrequest::Parent> Convert(fidl::InterfaceRequest<::test::protocolrequest::Parent>&& c) {
+    return fidl::ServerEnd<::test_protocolrequest::Parent>(c.TakeChannel());
+  }
 };
-template <>
-struct HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequest> {
-  using NaturalType = ::test_protocolrequest::ParentTakeChildRequest;
-  static inline ::test_protocolrequest::ParentTakeChildRequest Convert(::test::protocolrequest::ParentTakeChildRequest&&);
-};
+
 template <>
 struct NaturalToHLCPPTraits<::test_protocolrequest::ParentGetChildTopResponse> {
   using HLCPPType = ::test::protocolrequest::ParentGetChildTopResponse;
@@ -113,29 +93,27 @@ struct HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopRes
   using NaturalType = ::test_protocolrequest::ParentGetChildRequestTopResponse;
   static inline ::test_protocolrequest::ParentGetChildRequestTopResponse Convert(::test::protocolrequest::ParentGetChildRequestTopResponse&&);
 };
+template <>
+struct NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequest> {
+  using HLCPPType = ::test::protocolrequest::ParentTakeChildRequest;
+  static inline ::test::protocolrequest::ParentTakeChildRequest Convert(::test_protocolrequest::ParentTakeChildRequest&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequest> {
+  using NaturalType = ::test_protocolrequest::ParentTakeChildRequest;
+  static inline ::test_protocolrequest::ParentTakeChildRequest Convert(::test::protocolrequest::ParentTakeChildRequest&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequestRequest> {
+  using HLCPPType = ::test::protocolrequest::ParentTakeChildRequestRequest;
+  static inline ::test::protocolrequest::ParentTakeChildRequestRequest Convert(::test_protocolrequest::ParentTakeChildRequestRequest&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequestRequest> {
+  using NaturalType = ::test_protocolrequest::ParentTakeChildRequestRequest;
+  static inline ::test_protocolrequest::ParentTakeChildRequestRequest Convert(::test::protocolrequest::ParentTakeChildRequestRequest&&);
+};
 
-::test::protocolrequest::ParentTakeChildRequestRequest NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequestRequest>::Convert(::test_protocolrequest::ParentTakeChildRequestRequest&& value) {
-  ::test::protocolrequest::ParentTakeChildRequestRequest hlcpp;
-  hlcpp.r = ::fidl::NaturalToHLCPP(std::move(value.r()));
-  return hlcpp;
-}
-
-::test_protocolrequest::ParentTakeChildRequestRequest HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequestRequest>::Convert(::test::protocolrequest::ParentTakeChildRequestRequest&& value) {
-  return ::test_protocolrequest::ParentTakeChildRequestRequest{{
-      .r = ::fidl::HLCPPToNatural(std::move(value.r)),
-  }};
-}
-::test::protocolrequest::ParentTakeChildRequest NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequest>::Convert(::test_protocolrequest::ParentTakeChildRequest&& value) {
-  ::test::protocolrequest::ParentTakeChildRequest hlcpp;
-  hlcpp.c = ::fidl::NaturalToHLCPP(std::move(value.c()));
-  return hlcpp;
-}
-
-::test_protocolrequest::ParentTakeChildRequest HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequest>::Convert(::test::protocolrequest::ParentTakeChildRequest&& value) {
-  return ::test_protocolrequest::ParentTakeChildRequest{{
-      .c = ::fidl::HLCPPToNatural(std::move(value.c)),
-  }};
-}
 ::test::protocolrequest::ParentGetChildTopResponse NaturalToHLCPPTraits<::test_protocolrequest::ParentGetChildTopResponse>::Convert(::test_protocolrequest::ParentGetChildTopResponse&& value) {
   ::test::protocolrequest::ParentGetChildTopResponse hlcpp;
   hlcpp.c = ::fidl::NaturalToHLCPP(std::move(value.c()));
@@ -155,6 +133,28 @@ struct HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopRes
 
 ::test_protocolrequest::ParentGetChildRequestTopResponse HLCPPToNaturalTraits<::test::protocolrequest::ParentGetChildRequestTopResponse>::Convert(::test::protocolrequest::ParentGetChildRequestTopResponse&& value) {
   return ::test_protocolrequest::ParentGetChildRequestTopResponse{{
+      .r = ::fidl::HLCPPToNatural(std::move(value.r)),
+  }};
+}
+::test::protocolrequest::ParentTakeChildRequest NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequest>::Convert(::test_protocolrequest::ParentTakeChildRequest&& value) {
+  ::test::protocolrequest::ParentTakeChildRequest hlcpp;
+  hlcpp.c = ::fidl::NaturalToHLCPP(std::move(value.c()));
+  return hlcpp;
+}
+
+::test_protocolrequest::ParentTakeChildRequest HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequest>::Convert(::test::protocolrequest::ParentTakeChildRequest&& value) {
+  return ::test_protocolrequest::ParentTakeChildRequest{{
+      .c = ::fidl::HLCPPToNatural(std::move(value.c)),
+  }};
+}
+::test::protocolrequest::ParentTakeChildRequestRequest NaturalToHLCPPTraits<::test_protocolrequest::ParentTakeChildRequestRequest>::Convert(::test_protocolrequest::ParentTakeChildRequestRequest&& value) {
+  ::test::protocolrequest::ParentTakeChildRequestRequest hlcpp;
+  hlcpp.r = ::fidl::NaturalToHLCPP(std::move(value.r()));
+  return hlcpp;
+}
+
+::test_protocolrequest::ParentTakeChildRequestRequest HLCPPToNaturalTraits<::test::protocolrequest::ParentTakeChildRequestRequest>::Convert(::test::protocolrequest::ParentTakeChildRequestRequest&& value) {
+  return ::test_protocolrequest::ParentTakeChildRequestRequest{{
       .r = ::fidl::HLCPPToNatural(std::move(value.r)),
   }};
 }

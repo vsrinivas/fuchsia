@@ -2,6 +2,11 @@
 
 #include <fidl/test.error/cpp/natural_types.h>
 
+::test_error::ExampleFooRequest::Storage_ test_error::ExampleFooRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.s)};
+}
+
 ::test_error::ExampleFooResponse::Storage_ test_error::ExampleFooResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.y)};
@@ -10,11 +15,6 @@
 ::test_error::ExampleFooTopResponse::Storage_ test_error::ExampleFooTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_error::ExampleFooRequest::Storage_ test_error::ExampleFooRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.s)};
 }
 
 std::shared_ptr<::test_error::ExampleFooResult::Storage_> test_error::ExampleFooResult::CloneStorage_() const {

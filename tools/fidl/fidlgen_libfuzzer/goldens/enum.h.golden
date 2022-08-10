@@ -14,8 +14,8 @@
 namespace fuzzing {
 
 using MyStrictEnum = ::test::enum_::MyStrictEnum;
-using MyFlexibleEnumWithCustomUnknown = ::test::enum_::MyFlexibleEnumWithCustomUnknown;
 using MyFlexibleEnum = ::test::enum_::MyFlexibleEnum;
+using MyFlexibleEnumWithCustomUnknown = ::test::enum_::MyFlexibleEnumWithCustomUnknown;
 using MyEmptyFlexibleEnum = ::test::enum_::MyEmptyFlexibleEnum;
 
 template <>
@@ -44,6 +44,31 @@ struct Allocate<MyStrictEnum> {
   }
 };
 template <>
+struct MinSize<MyFlexibleEnum> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<MyFlexibleEnum> {
+  MyFlexibleEnum operator()(FuzzInput* src, size_t* size) {
+    MyFlexibleEnum out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = MyFlexibleEnum::FOO;
+        break;
+      case 1:
+        out = MyFlexibleEnum::BAR;
+        break;
+    }
+
+    return out;
+  }
+};
+template <>
 struct MinSize<MyFlexibleEnumWithCustomUnknown> {
   operator size_t() { return sizeof(uint64_t); }
 };
@@ -65,31 +90,6 @@ struct Allocate<MyFlexibleEnumWithCustomUnknown> {
         break;
       case 2:
         out = MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN;
-        break;
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MyFlexibleEnum> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<MyFlexibleEnum> {
-  MyFlexibleEnum operator()(FuzzInput* src, size_t* size) {
-    MyFlexibleEnum out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
-
-    switch (selector % 2) {
-      case 0:
-        out = MyFlexibleEnum::FOO;
-        break;
-      case 1:
-        out = MyFlexibleEnum::BAR;
         break;
     }
 

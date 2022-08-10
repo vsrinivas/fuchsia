@@ -27,15 +27,90 @@ namespace test_requestflexibleenvelope {
 namespace wire {
 struct ProtocolRequestStrictResponseFlexibleRequest;
 
-struct ProtocolRequestFlexibleResponseStrictTopResponse;
-
 struct ProtocolRequestStrictResponseFlexibleTopResponse;
 
 struct ProtocolRequestFlexibleResponseStrictRequest;
 
-class StrictFoo;
+struct ProtocolRequestFlexibleResponseStrictTopResponse;
 
 class FlexibleFoo;
+
+class StrictFoo;
+
+extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
+
+class FlexibleFoo {
+ public:
+  FlexibleFoo() : ordinal_(::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::Invalid), envelope_{} {}
+
+  FlexibleFoo(const FlexibleFoo&) = default;
+  FlexibleFoo& operator=(const FlexibleFoo&) = default;
+  FlexibleFoo(FlexibleFoo&&) = default;
+  FlexibleFoo& operator=(FlexibleFoo&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kS = 1,  // 0x1
+    kI = 2,  // 0x2
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::Invalid; }
+
+  bool is_s() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS; }
+
+  static FlexibleFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
+    FlexibleFoo result;
+    result.ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
+    result.envelope_.As<::fidl::StringView>().set_data(std::move(val));
+    return result;
+  }
+
+  template <typename... Args>
+  static FlexibleFoo WithS(::fidl::AnyArena& allocator, Args&&... args) {
+    return WithS(::fidl::ObjectView<::fidl::StringView>(allocator,
+                                                        std::forward<Args>(args)...));
+  }
+
+  ::fidl::StringView& s() {
+    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
+    return envelope_.As<::fidl::StringView>().get_data();
+  }
+  const ::fidl::StringView& s() const {
+    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
+    return envelope_.As<::fidl::StringView>().get_data();
+  }
+
+  bool is_i() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI; }
+
+  static FlexibleFoo WithI(int32_t val) {
+    FlexibleFoo result;
+    result.ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
+    result.envelope_.As<int32_t>().set_data(std::move(val));
+    return result;
+  }
+
+  int32_t& i() {
+    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
+    return envelope_.As<int32_t>().get_data();
+  }
+  const int32_t& i() const {
+    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
+    return envelope_.As<int32_t>().get_data();
+  }
+  ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag Which() const;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kS = 1,  // 0x1
+    kI = 2,  // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
@@ -114,91 +189,10 @@ class StrictFoo {
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
-
-class FlexibleFoo {
- public:
-  FlexibleFoo() : ordinal_(::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::Invalid), envelope_{} {}
-
-  FlexibleFoo(const FlexibleFoo&) = default;
-  FlexibleFoo& operator=(const FlexibleFoo&) = default;
-  FlexibleFoo(FlexibleFoo&&) = default;
-  FlexibleFoo& operator=(FlexibleFoo&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kS = 1,  // 0x1
-    kI = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::Invalid; }
-
-  bool is_s() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS; }
-
-  static FlexibleFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
-    FlexibleFoo result;
-    result.ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
-    result.envelope_.As<::fidl::StringView>().set_data(std::move(val));
-    return result;
-  }
-
-  template <typename... Args>
-  static FlexibleFoo WithS(::fidl::AnyArena& allocator, Args&&... args) {
-    return WithS(::fidl::ObjectView<::fidl::StringView>(allocator,
-                                                        std::forward<Args>(args)...));
-  }
-
-  ::fidl::StringView& s() {
-    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
-    return envelope_.As<::fidl::StringView>().get_data();
-  }
-  const ::fidl::StringView& s() const {
-    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
-    return envelope_.As<::fidl::StringView>().get_data();
-  }
-
-  bool is_i() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI; }
-
-  static FlexibleFoo WithI(int32_t val) {
-    FlexibleFoo result;
-    result.ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
-    return result;
-  }
-
-  int32_t& i() {
-    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
-    return envelope_.As<int32_t>().get_data();
-  }
-  const int32_t& i() const {
-    ZX_ASSERT(ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
-    return envelope_.As<int32_t>().get_data();
-  }
-  ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag Which() const;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kS = 1,  // 0x1
-    kI = 2,  // 0x2
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
-};
-
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
 struct ProtocolRequestStrictResponseFlexibleRequest {
   ::test_requestflexibleenvelope::wire::StrictFoo s = {};
-};
-
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-
-struct ProtocolRequestFlexibleResponseStrictTopResponse {
-  ::test_requestflexibleenvelope::wire::StrictFoo f = {};
 };
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
@@ -211,6 +205,12 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibl
 
 struct ProtocolRequestFlexibleResponseStrictRequest {
   ::test_requestflexibleenvelope::wire::FlexibleFoo s = {};
+};
+
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+
+struct ProtocolRequestFlexibleResponseStrictTopResponse {
+  ::test_requestflexibleenvelope::wire::StrictFoo f = {};
 };
 
 }  // namespace wire
@@ -257,57 +257,6 @@ struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::
       memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest));
     } else {
       internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->s, position + 0, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-    }
-  }
-};
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
-struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_requestflexibleenvelope::wire::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-};
-
-template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 2;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
-template <>
-struct IsStruct<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse>);
-static_assert(offsetof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, f) == 0);
-static_assert(sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse) == TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
-  static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse));
-    } else {
-      internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->f, position + 0, recursion_depth);
     }
   }
   static void Decode(
@@ -421,8 +370,14 @@ struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::
   }
 };
 
+// TODO(fxbug.dev/95833) Remove this.
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::StrictFoo> {
+struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
+  static constexpr const fidl_type_t* kType = &::test_requestflexibleenvelope::wire::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -434,113 +389,37 @@ struct TypeTraits<::test_requestflexibleenvelope::wire::StrictFoo> {
 };
 
 template <>
-struct IsFidlType<::test_requestflexibleenvelope::wire::StrictFoo> : public std::true_type {};
+struct IsFidlType<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
 template <>
-struct IsUnion<::test_requestflexibleenvelope::wire::StrictFoo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::StrictFoo>);
+struct IsStruct<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, f) == 0);
+static_assert(sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse) == TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse>::kPrimarySize);
 
-template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, Constraint, IsRecursive> {
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
-  static constexpr bool is_memcpy_compatible = false;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
-  static void Encode(internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::StrictFoo* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
-
-    if (unlikely(u->tag == 0)) {
-      if constexpr (Constraint::is_optional) {
-        *position.As<fidl_xunion_v2_t>() = {};
-        return;
-      }
-      encoder->SetError(kCodingErrorInvalidUnionTag);
-      return;
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse));
+    } else {
+      internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->f, position + 0, recursion_depth);
     }
-
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    *position.As<fidl_xunion_tag_t>() = u->tag;
-
-    size_t inline_size;
-    switch (u->tag) {
-      case 1:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS
-        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
-        break;
-      case 2:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-        break;
-      default:
-        inline_size = 0;
-        break;
-    }
-    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
-    switch (u->tag) {
-      case 1:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS
-        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
-        break;
-      case 2:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI
-        encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-        break;
-      default:
-        encode_fn = nullptr;
-        break;
-    }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
-
-  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_requestflexibleenvelope::wire::StrictFoo::Tag tag = *position.As<::test_requestflexibleenvelope::wire::StrictFoo::Tag>();
-    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
-      if constexpr (!Constraint::is_optional) {
-        decoder->SetError(kCodingErrorInvalidUnionTag);
-        return;
-      }
-      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
-      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
-        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
-      }
-      return;
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
     }
-
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    size_t inline_size;
-    switch (tag) {
-      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS:
-        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
-        break;
-      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI:
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-        break;
-      default:
-        inline_size = 0;
-        break;
-    }
-    DecodeFn<IsRecursive> decode_fn;
-    switch (tag) {
-      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS:
-        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
-        break;
-      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI:
-        decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-        break;
-      default:
-        decode_fn = nullptr;
-        break;
-    }
-    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
-
-// Top-level union.
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_requestflexibleenvelope::wire::FlexibleFoo> {
@@ -662,5 +541,126 @@ struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : public ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::StrictFoo> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_requestflexibleenvelope::wire::StrictFoo> : public std::true_type {};
+template <>
+struct IsUnion<::test_requestflexibleenvelope::wire::StrictFoo> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::StrictFoo>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::StrictFoo* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
+        break;
+      case 2:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI
+        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
+        break;
+      case 2:  // ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI
+        encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_requestflexibleenvelope::wire::StrictFoo::Tag tag = *position.As<::test_requestflexibleenvelope::wire::StrictFoo::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS:
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::inline_size;
+        break;
+      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI:
+        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS:
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>();
+        break;
+      case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI:
+        decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeStrictEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

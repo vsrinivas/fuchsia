@@ -14,8 +14,8 @@
 namespace fuzzing {
 
 using obj_type = ::test::handlesintypes::obj_type;
-using UnionWithHandle = ::test::handlesintypes::UnionWithHandle;
 using TableWithHandle = ::test::handlesintypes::TableWithHandle;
+using UnionWithHandle = ::test::handlesintypes::UnionWithHandle;
 using HandlesInTypes = ::test::handlesintypes::HandlesInTypes;
 
 template <>
@@ -40,6 +40,24 @@ struct Allocate<obj_type> {
         break;
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<TableWithHandle> {
+  operator size_t() {
+    return MinSize<::zx::vmo>();
+  }
+};
+template <>
+struct Allocate<TableWithHandle> {
+  TableWithHandle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TableWithHandle>());
+    TableWithHandle out;
+    const size_t slack_per_member = (*size - MinSize<TableWithHandle>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::vmo>() + slack_per_member;
+    out.set_h(Allocate<::zx::vmo>{}(src, &out_size));
     return out;
   }
 };
@@ -69,24 +87,6 @@ struct Allocate<UnionWithHandle> {
       }
     }
 
-    return out;
-  }
-};
-template <>
-struct MinSize<TableWithHandle> {
-  operator size_t() {
-    return MinSize<::zx::vmo>();
-  }
-};
-template <>
-struct Allocate<TableWithHandle> {
-  TableWithHandle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TableWithHandle>());
-    TableWithHandle out;
-    const size_t slack_per_member = (*size - MinSize<TableWithHandle>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::zx::vmo>() + slack_per_member;
-    out.set_h(Allocate<::zx::vmo>{}(src, &out_size));
     return out;
   }
 };

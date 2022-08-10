@@ -7,12 +7,12 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_driverhandle::HandlesInProtocolSendHandlesRequest WireNaturalConversionTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::test_driverhandle::HandlesInProtocolSendHandlesRequest>::ToNatural(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest src) {
-  return ::test_driverhandle::HandlesInProtocolSendHandlesRequest(WireNaturalConversionTraits<::test_driverhandle::wire::T, ::test_driverhandle::T>::ToNatural(std::move(src.t)));
+::test_driverhandle::ClientEndWrapper WireNaturalConversionTraits<::test_driverhandle::wire::ClientEndWrapper, ::test_driverhandle::ClientEndWrapper>::ToNatural(::test_driverhandle::wire::ClientEndWrapper src) {
+  return ::test_driverhandle::ClientEndWrapper(WireNaturalConversionTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::ToNatural(std::move(src.value)));
 }
-::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest WireNaturalConversionTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::test_driverhandle::HandlesInProtocolSendHandlesRequest>::ToWire(fidl::AnyArena& arena, ::test_driverhandle::HandlesInProtocolSendHandlesRequest src) {
-  return ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest{
-      .t = WireNaturalConversionTraits<::test_driverhandle::wire::T, ::test_driverhandle::T>::ToWire(arena, std::move(src.t())),
+::test_driverhandle::wire::ClientEndWrapper WireNaturalConversionTraits<::test_driverhandle::wire::ClientEndWrapper, ::test_driverhandle::ClientEndWrapper>::ToWire(fidl::AnyArena& arena, ::test_driverhandle::ClientEndWrapper src) {
+  return ::test_driverhandle::wire::ClientEndWrapper{
+      .value = WireNaturalConversionTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::ToWire(arena, std::move(src.value())),
   };
 }
 
@@ -33,12 +33,12 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_driverhandle::ClientEndWrapper WireNaturalConversionTraits<::test_driverhandle::wire::ClientEndWrapper, ::test_driverhandle::ClientEndWrapper>::ToNatural(::test_driverhandle::wire::ClientEndWrapper src) {
-  return ::test_driverhandle::ClientEndWrapper(WireNaturalConversionTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::ToNatural(std::move(src.value)));
+::test_driverhandle::HandlesInProtocolSendHandlesRequest WireNaturalConversionTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::test_driverhandle::HandlesInProtocolSendHandlesRequest>::ToNatural(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest src) {
+  return ::test_driverhandle::HandlesInProtocolSendHandlesRequest(WireNaturalConversionTraits<::test_driverhandle::wire::T, ::test_driverhandle::T>::ToNatural(std::move(src.t)));
 }
-::test_driverhandle::wire::ClientEndWrapper WireNaturalConversionTraits<::test_driverhandle::wire::ClientEndWrapper, ::test_driverhandle::ClientEndWrapper>::ToWire(fidl::AnyArena& arena, ::test_driverhandle::ClientEndWrapper src) {
-  return ::test_driverhandle::wire::ClientEndWrapper{
-      .value = WireNaturalConversionTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::ToWire(arena, std::move(src.value())),
+::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest WireNaturalConversionTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::test_driverhandle::HandlesInProtocolSendHandlesRequest>::ToWire(fidl::AnyArena& arena, ::test_driverhandle::HandlesInProtocolSendHandlesRequest src) {
+  return ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest{
+      .t = WireNaturalConversionTraits<::test_driverhandle::wire::T, ::test_driverhandle::T>::ToWire(arena, std::move(src.t())),
   };
 }
 

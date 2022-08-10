@@ -2,22 +2,14 @@
 
 #include <fidl/test.table/cpp/natural_types.h>
 
-::test_table::TableWithAttributes::Storage_ test_table::TableWithAttributes::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.x)};
+::test_table::EmptyTable::Storage_ test_table::EmptyTable::CloneStorage_() const {
+  return Storage_{};
 }
 
 ::test_table::SimpleTable::Storage_ test_table::SimpleTable::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.x),
       ::fidl::internal::NaturalClone(storage_.y)};
-}
-
-::test_table::ReverseOrdinalTable::Storage_ test_table::ReverseOrdinalTable::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.z),
-      ::fidl::internal::NaturalClone(storage_.y),
-      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
 ::test_table::OlderSimpleTable::Storage_ test_table::OlderSimpleTable::CloneStorage_() const {
@@ -30,6 +22,18 @@
       ::fidl::internal::NaturalClone(storage_.x),
       ::fidl::internal::NaturalClone(storage_.y),
       ::fidl::internal::NaturalClone(storage_.z)};
+}
+
+::test_table::ReverseOrdinalTable::Storage_ test_table::ReverseOrdinalTable::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.z),
+      ::fidl::internal::NaturalClone(storage_.y),
+      ::fidl::internal::NaturalClone(storage_.x)};
+}
+
+::test_table::TableWithAttributes::Storage_ test_table::TableWithAttributes::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.x)};
 }
 
 ::test_table::ExtensionTable::Storage_ test_table::ExtensionTable::CloneStorage_() const {
@@ -102,8 +106,4 @@
       ::fidl::internal::NaturalClone(storage_.v62),
       ::fidl::internal::NaturalClone(storage_.v63),
       ::fidl::internal::NaturalClone(storage_.v64)};
-}
-
-::test_table::EmptyTable::Storage_ test_table::EmptyTable::CloneStorage_() const {
-  return Storage_{};
 }

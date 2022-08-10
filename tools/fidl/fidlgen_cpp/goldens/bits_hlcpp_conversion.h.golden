@@ -10,13 +10,13 @@
 namespace fidl {
 namespace internal {
 template <>
-struct NaturalToHLCPPTraits<::test_bits::StrictBits> : public NaturalToHLCPPTraitsBits<::test_bits::StrictBits, ::test::bits::StrictBits, uint64_t> {};
-template <>
-struct HLCPPToNaturalTraits<::test::bits::StrictBits> : public HLCPPToNaturalTraitsBits<::test::bits::StrictBits, ::test_bits::StrictBits, uint64_t> {};
-template <>
 struct NaturalToHLCPPTraits<::test_bits::MyBits> : public NaturalToHLCPPTraitsBits<::test_bits::MyBits, ::test::bits::MyBits, uint32_t> {};
 template <>
 struct HLCPPToNaturalTraits<::test::bits::MyBits> : public HLCPPToNaturalTraitsBits<::test::bits::MyBits, ::test_bits::MyBits, uint32_t> {};
+template <>
+struct NaturalToHLCPPTraits<::test_bits::StrictBits> : public NaturalToHLCPPTraitsBits<::test_bits::StrictBits, ::test::bits::StrictBits, uint64_t> {};
+template <>
+struct HLCPPToNaturalTraits<::test::bits::StrictBits> : public HLCPPToNaturalTraitsBits<::test::bits::StrictBits, ::test_bits::StrictBits, uint64_t> {};
 template <>
 struct NaturalToHLCPPTraits<::test_bits::FlexibleBits> : public NaturalToHLCPPTraitsBits<::test_bits::FlexibleBits, ::test::bits::FlexibleBits, uint64_t> {};
 template <>

@@ -18,25 +18,293 @@
 
 namespace test_anonymous {
 
+class OverrideTest;
+
 class TableData;
 
 class SomeProtocolSomeMethodRequest;
-
-class OverrideTest;
 
 class SomeProtocolSomeMethodResponse;
 
 class SomeProtocolSomeMethodTopResponse;
 
-class TableMember;
-
 class FunctionApplication;
 
-class UnionMember;
+class TableMember;
 
 class Expression;
 
+class UnionMember;
+
 class SomeProtocolSomeMethodResult;
+
+extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
+
+class OverrideTest {
+ private:
+  struct Storage_;
+
+ public:
+  OverrideTest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  OverrideTest(::test_anonymous::Op op, ::std::unique_ptr<::test_anonymous::Expression> left, ::std::unique_ptr<::test_anonymous::Expression> right) noexcept
+      : storage_({.op = std::move(op),
+                  .left = std::move(left),
+                  .right = std::move(right)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |OverrideTest| only if all of its members are default constructible.
+  OverrideTest() = default;
+#pragma clang diagnostic pop
+
+  OverrideTest(OverrideTest&&) noexcept = default;
+  OverrideTest& operator=(OverrideTest&&) noexcept = default;
+  OverrideTest(const OverrideTest& other) noexcept : OverrideTest(other.CloneStorage_()) {}
+  OverrideTest& operator=(const OverrideTest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const OverrideTest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40>::Equal(this, &other);
+  }
+  bool operator!=(const OverrideTest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40>::Equal(this, &other);
+  }
+
+  ::test_anonymous::Op
+  op() const {
+    return storage_.op;
+  }
+
+  ::test_anonymous::Op& op() {
+    return storage_.op;
+  }
+
+  const ::std::unique_ptr<::test_anonymous::Expression>&
+  left() const {
+    return storage_.left;
+  }
+
+  ::std::unique_ptr<::test_anonymous::Expression>& left() {
+    return storage_.left;
+  }
+
+  const ::std::unique_ptr<::test_anonymous::Expression>&
+  right() const {
+    return storage_.right;
+  }
+
+  ::std::unique_ptr<::test_anonymous::Expression>& right() {
+    return storage_.right;
+  }
+
+  OverrideTest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : OverrideTest(Storage_{
+                                                                                 .op = {},
+                                                                                 .left = {},
+                                                                                 .right = {},
+                                                                             }) {}
+
+ private:
+  struct Storage_ final {
+    ::test_anonymous::Op op = {};
+    ::std::unique_ptr<::test_anonymous::Expression> left;
+    ::std::unique_ptr<::test_anonymous::Expression> right;
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40>;
+  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::OverrideTest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_anonymous::Op, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::op, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::left, 8}, ::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::right, 24});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 0,
+      .mask = 0xffffffff00000000ull,
+  });
+};
+
+extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
+
+class FunctionApplication {
+ private:
+  struct Storage_;
+
+ public:
+  FunctionApplication(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  FunctionApplication() noexcept = default;
+  FunctionApplication(FunctionApplication&&) noexcept = default;
+  FunctionApplication& operator=(FunctionApplication&&) noexcept = default;
+  FunctionApplication(const FunctionApplication& other) noexcept : FunctionApplication(other.CloneStorage_()) {}
+  FunctionApplication& operator=(const FunctionApplication& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const FunctionApplication& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication>::Equal(this, &other);
+  }
+  bool operator!=(const FunctionApplication& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.func.has_value() || storage_.args.has_value() || storage_.flags.has_value());
+  }
+
+  const std::optional<::std::string>& func() const { return storage_.func; }
+  ::std::optional<::std::string>& func() { return storage_.func; }
+
+  const std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() const { return storage_.args; }
+  ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() { return storage_.args; }
+
+  const std::optional<::test_anonymous::Flags>& flags() const { return storage_.flags; }
+  ::std::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
+
+  FunctionApplication(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : FunctionApplication(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<::std::string> func{};
+    ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>> args{};
+    ::std::optional<::test_anonymous::Flags> flags{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication>;
+  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::FunctionApplication>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<100>>{
+                                                       1, &Storage_::func},
+                                                   ::fidl::internal::NaturalTableMember<Storage_, ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>, fidl::internal::NaturalCodingConstraintVector<fidl::internal::NaturalCodingConstraintEmpty, 5>>{3, &Storage_::args}, ::fidl::internal::NaturalTableMember<Storage_, ::test_anonymous::Flags, fidl::internal::NaturalCodingConstraintEmpty>{4, &Storage_::flags});
+};
+
+extern "C" const fidl_type_t test_anonymous_ExpressionTable;
+
+class Expression {
+ private:
+  using Storage_ =
+      std::variant<
+          std::monostate, uint64_t, ::test_anonymous::OverrideTest, ::test_anonymous::FunctionApplication>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kValue = 1,                // 0x1
+    kBinOp = 2,                // 0x2
+    kFunctionApplication = 3,  // 0x3
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Expression(Expression&& other) noexcept
+      : Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  Expression& operator=(Expression&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
+  Expression(const Expression& other) noexcept : Expression(other.CloneStorage_()) {}
+  Expression& operator=(const Expression& other) noexcept {
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
+    return *this;
+  }
+
+  bool operator==(const Expression& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const Expression& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
+  constexpr ::test_anonymous::Expression::Tag Which() const {
+    return Expression::IndexToTag(storage_->index()).value();
+  }
+  static Expression WithValue(uint64_t val) {
+    return Expression(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> value() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> value() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static Expression WithBinOp(::test_anonymous::OverrideTest val) {
+    return Expression(std::make_shared<Storage_>(
+        std::in_place_index_t<2>{},
+        std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> bin_op() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> bin_op() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  static Expression WithFunctionApplication(::test_anonymous::FunctionApplication val) {
+    return Expression(std::make_shared<Storage_>(
+        std::in_place_index_t<3>{},
+        std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<3, Storage_> function_application() const {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<3, Storage_> function_application() {
+    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
+  Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_anonymous::Expression>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
+
+  explicit Expression(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_anonymous::Expression::Tag tag) {
+    switch (tag) {
+      case ::test_anonymous::Expression::Tag::kValue:
+        return 1;
+      case ::test_anonymous::Expression::Tag::kBinOp:
+        return 2;
+      case ::test_anonymous::Expression::Tag::kFunctionApplication:
+        return 3;
+      case ::test_anonymous::Expression::Tag::kUnknown:
+        return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
+    }
+  }
+
+  static constexpr std::optional<::test_anonymous::Expression::Tag> IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_anonymous::Expression::Tag::kValue;
+      case 2:
+        return ::test_anonymous::Expression::Tag::kBinOp;
+      case 3:
+        return ::test_anonymous::Expression::Tag::kFunctionApplication;
+      default:
+        return ::test_anonymous::Expression::Tag::kUnknown;
+    }
+  }
+};
 
 extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
@@ -308,274 +576,6 @@ class SomeProtocolSomeMethodRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
-
-class OverrideTest {
- private:
-  struct Storage_;
-
- public:
-  OverrideTest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  OverrideTest(::test_anonymous::Op op, ::std::unique_ptr<::test_anonymous::Expression> left, ::std::unique_ptr<::test_anonymous::Expression> right) noexcept
-      : storage_({.op = std::move(op),
-                  .left = std::move(left),
-                  .right = std::move(right)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |OverrideTest| only if all of its members are default constructible.
-  OverrideTest() = default;
-#pragma clang diagnostic pop
-
-  OverrideTest(OverrideTest&&) noexcept = default;
-  OverrideTest& operator=(OverrideTest&&) noexcept = default;
-  OverrideTest(const OverrideTest& other) noexcept : OverrideTest(other.CloneStorage_()) {}
-  OverrideTest& operator=(const OverrideTest& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const OverrideTest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40>::Equal(this, &other);
-  }
-  bool operator!=(const OverrideTest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40>::Equal(this, &other);
-  }
-
-  ::test_anonymous::Op
-  op() const {
-    return storage_.op;
-  }
-
-  ::test_anonymous::Op& op() {
-    return storage_.op;
-  }
-
-  const ::std::unique_ptr<::test_anonymous::Expression>&
-  left() const {
-    return storage_.left;
-  }
-
-  ::std::unique_ptr<::test_anonymous::Expression>& left() {
-    return storage_.left;
-  }
-
-  const ::std::unique_ptr<::test_anonymous::Expression>&
-  right() const {
-    return storage_.right;
-  }
-
-  ::std::unique_ptr<::test_anonymous::Expression>& right() {
-    return storage_.right;
-  }
-
-  OverrideTest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : OverrideTest(Storage_{
-                                                                                 .op = {},
-                                                                                 .left = {},
-                                                                                 .right = {},
-                                                                             }) {}
-
- private:
-  struct Storage_ final {
-    ::test_anonymous::Op op = {};
-    ::std::unique_ptr<::test_anonymous::Expression> left;
-    ::std::unique_ptr<::test_anonymous::Expression> right;
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40>;
-  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::OverrideTest>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_anonymous::Op, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::op, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::left, 8}, ::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_anonymous::Expression>, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::right, 24});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 0,
-      .mask = 0xffffffff00000000ull,
-  });
-};
-
-extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
-
-class FunctionApplication {
- private:
-  struct Storage_;
-
- public:
-  FunctionApplication(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  FunctionApplication() noexcept = default;
-  FunctionApplication(FunctionApplication&&) noexcept = default;
-  FunctionApplication& operator=(FunctionApplication&&) noexcept = default;
-  FunctionApplication(const FunctionApplication& other) noexcept : FunctionApplication(other.CloneStorage_()) {}
-  FunctionApplication& operator=(const FunctionApplication& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const FunctionApplication& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication>::Equal(this, &other);
-  }
-  bool operator!=(const FunctionApplication& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return !(storage_.func.has_value() || storage_.args.has_value() || storage_.flags.has_value());
-  }
-
-  const std::optional<::std::string>& func() const { return storage_.func; }
-  ::std::optional<::std::string>& func() { return storage_.func; }
-
-  const std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() const { return storage_.args; }
-  ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() { return storage_.args; }
-
-  const std::optional<::test_anonymous::Flags>& flags() const { return storage_.flags; }
-  ::std::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
-
-  FunctionApplication(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : FunctionApplication(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    ::std::optional<::std::string> func{};
-    ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>> args{};
-    ::std::optional<::test_anonymous::Flags> flags{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication>;
-  friend struct ::fidl::internal::MemberVisitor<::test_anonymous::FunctionApplication>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<100>>{
-                                                       1, &Storage_::func},
-                                                   ::fidl::internal::NaturalTableMember<Storage_, ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>, fidl::internal::NaturalCodingConstraintVector<fidl::internal::NaturalCodingConstraintEmpty, 5>>{3, &Storage_::args}, ::fidl::internal::NaturalTableMember<Storage_, ::test_anonymous::Flags, fidl::internal::NaturalCodingConstraintEmpty>{4, &Storage_::flags});
-};
-
-extern "C" const fidl_type_t test_anonymous_ExpressionTable;
-
-class Expression {
- private:
-  using Storage_ =
-      std::variant<
-          std::monostate, uint64_t, ::test_anonymous::OverrideTest, ::test_anonymous::FunctionApplication>;
-
- public:
-  // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
-    kValue = 1,                // 0x1
-    kBinOp = 2,                // 0x2
-    kFunctionApplication = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  Expression(Expression&& other) noexcept
-      : Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
-    *storage_ = std::move(*other.storage_);
-  }
-  Expression& operator=(Expression&& other) noexcept {
-    if (this != &other) {
-      *storage_ = std::move(*other.storage_);
-    }
-    return *this;
-  }
-  Expression(const Expression& other) noexcept : Expression(other.CloneStorage_()) {}
-  Expression& operator=(const Expression& other) noexcept {
-    if (this != &other) {
-      storage_ = other.CloneStorage_();
-    }
-    return *this;
-  }
-
-  bool operator==(const Expression& other) const noexcept {
-    return *storage_ == *other.storage_;
-  }
-  bool operator!=(const Expression& other) const noexcept {
-    return *storage_ != *other.storage_;
-  }
-
-  constexpr ::test_anonymous::Expression::Tag Which() const {
-    return Expression::IndexToTag(storage_->index()).value();
-  }
-  static Expression WithValue(uint64_t val) {
-    return Expression(std::make_shared<Storage_>(
-        std::in_place_index_t<1>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage_> value() const {
-    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage_> value() {
-    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-  }
-  static Expression WithBinOp(::test_anonymous::OverrideTest val) {
-    return Expression(std::make_shared<Storage_>(
-        std::in_place_index_t<2>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage_> bin_op() const {
-    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage_> bin_op() {
-    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-  }
-  static Expression WithFunctionApplication(::test_anonymous::FunctionApplication val) {
-    return Expression(std::make_shared<Storage_>(
-        std::in_place_index_t<3>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<3, Storage_> function_application() const {
-    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<3, Storage_> function_application() {
-    return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
-  }
-
-  Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
-
- private:
-  std::shared_ptr<Storage_> storage_;
-  std::shared_ptr<Storage_> CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_anonymous::Expression>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
-
-  explicit Expression(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
-
-  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_anonymous::Expression::Tag tag) {
-    switch (tag) {
-      case ::test_anonymous::Expression::Tag::kValue:
-        return 1;
-      case ::test_anonymous::Expression::Tag::kBinOp:
-        return 2;
-      case ::test_anonymous::Expression::Tag::kFunctionApplication:
-        return 3;
-      case ::test_anonymous::Expression::Tag::kUnknown:
-        return 0;
-      default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
-        return 0;
-      }
-    }
-  }
-
-  static constexpr std::optional<::test_anonymous::Expression::Tag> IndexToTag(size_t index) {
-    switch (index) {
-      case 1:
-        return ::test_anonymous::Expression::Tag::kValue;
-      case 2:
-        return ::test_anonymous::Expression::Tag::kBinOp;
-      case 3:
-        return ::test_anonymous::Expression::Tag::kFunctionApplication;
-      default:
-        return ::test_anonymous::Expression::Tag::kUnknown;
-    }
-  }
-};
-
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
 class SomeProtocolSomeMethodResponse {
@@ -804,6 +804,15 @@ class SomeProtocolSomeMethodTopResponse {
 }  // namespace test_anonymous
 namespace fidl {
 
+extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
+
+template <>
+struct IsFidlType<::test_anonymous::OverrideTest> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_anonymous::OverrideTest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40> {};
+
 extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 template <>
@@ -821,15 +830,6 @@ struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodRequest> : public std:
 template <>
 struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest, 32> {};
-
-extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
-
-template <>
-struct IsFidlType<::test_anonymous::OverrideTest> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_anonymous::OverrideTest, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40> {};
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
@@ -849,14 +849,6 @@ template <>
 struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse, 16> {};
 
-extern "C" const fidl_type_t test_anonymous_TableMemberTable;
-
-template <>
-struct IsFidlType<::test_anonymous::TableMember> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_anonymous::TableMember, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::TableMember> {};
-
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
 template <>
@@ -865,16 +857,13 @@ struct IsFidlType<::test_anonymous::FunctionApplication> : public std::true_type
 template <>
 struct internal::NaturalCodingTraits<::test_anonymous::FunctionApplication, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication> {};
 
-extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
+extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
 template <>
-struct IsFidlType<::test_anonymous::UnionMember> : public std::true_type {};
-template <>
-struct IsUnion<::test_anonymous::UnionMember> : public std::true_type {};
+struct IsFidlType<::test_anonymous::TableMember> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::UnionMember, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<::test_anonymous::UnionMember> {};
+struct internal::NaturalCodingTraits<::test_anonymous::TableMember, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::TableMember> {};
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
@@ -886,6 +875,17 @@ struct IsUnion<::test_anonymous::Expression> : public std::true_type {};
 template <>
 struct internal::NaturalCodingTraits<::test_anonymous::Expression, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<::test_anonymous::Expression> {};
+
+extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
+
+template <>
+struct IsFidlType<::test_anonymous::UnionMember> : public std::true_type {};
+template <>
+struct IsUnion<::test_anonymous::UnionMember> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_anonymous::UnionMember, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_anonymous::UnionMember> {};
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
@@ -924,18 +924,6 @@ struct internal::NaturalCodingTraits<::test_anonymous::BitsMember, ::fidl::inter
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodError, ::fidl::internal::NaturalCodingConstraintEmpty> {
-  static constexpr size_t inline_size_v2 = sizeof(uint32_t);
-  static constexpr bool is_memcpy_compatible = true;
-
-  static void Encode(internal::NaturalEncoder* encoder, ::test_anonymous::SomeProtocolSomeMethodError* value, size_t offset, size_t recursion_depth) {
-    *encoder->template GetPtr<::test_anonymous::SomeProtocolSomeMethodError>(offset) = *value;
-  }
-  static void Decode(internal::NaturalDecoder* decoder, ::test_anonymous::SomeProtocolSomeMethodError* value, size_t offset, size_t recursion_depth) {
-    *value = *decoder->template GetPtr<::test_anonymous::SomeProtocolSomeMethodError>(offset);
-  }
-};
-template <>
 struct internal::NaturalCodingTraits<::test_anonymous::Op, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
@@ -945,6 +933,18 @@ struct internal::NaturalCodingTraits<::test_anonymous::Op, ::fidl::internal::Nat
   }
   static void Decode(internal::NaturalDecoder* decoder, ::test_anonymous::Op* value, size_t offset, size_t recursion_depth) {
     *value = *decoder->template GetPtr<::test_anonymous::Op>(offset);
+  }
+};
+template <>
+struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodError, ::fidl::internal::NaturalCodingConstraintEmpty> {
+  static constexpr size_t inline_size_v2 = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = true;
+
+  static void Encode(internal::NaturalEncoder* encoder, ::test_anonymous::SomeProtocolSomeMethodError* value, size_t offset, size_t recursion_depth) {
+    *encoder->template GetPtr<::test_anonymous::SomeProtocolSomeMethodError>(offset) = *value;
+  }
+  static void Decode(internal::NaturalDecoder* decoder, ::test_anonymous::SomeProtocolSomeMethodError* value, size_t offset, size_t recursion_depth) {
+    *value = *decoder->template GetPtr<::test_anonymous::SomeProtocolSomeMethodError>(offset);
   }
 };
 

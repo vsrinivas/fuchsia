@@ -9,91 +9,6 @@
 #include <cinttypes>
 
 namespace test_bits {
-// |StrictBits| is strict, hence is guaranteed to only contain
-// members defined in the FIDL schema when receiving it in a message.
-// Sending unknown members will fail at runtime.
-class StrictBits final {
- public:
-  constexpr StrictBits() = default;
-
-  // Constructs an instance of |StrictBits| from an underlying primitive value,
-  // preserving any bit member not defined in the FIDL schema.
-  explicit constexpr StrictBits(uint64_t value) : value_(value) {}
-  const static StrictBits kSmallest;
-  const static StrictBits kBiggest;
-  const static StrictBits kMask;
-
-  explicit constexpr inline operator uint64_t() const { return value_; }
-  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
-  constexpr inline bool operator==(const StrictBits& other) const { return value_ == other.value_; }
-  constexpr inline bool operator!=(const StrictBits& other) const { return value_ != other.value_; }
-  constexpr inline StrictBits operator~() const;
-  constexpr inline StrictBits operator|(const StrictBits& other) const;
-  constexpr inline StrictBits operator&(const StrictBits& other) const;
-  constexpr inline StrictBits operator^(const StrictBits& other) const;
-  constexpr inline void operator|=(const StrictBits& other);
-  constexpr inline void operator&=(const StrictBits& other);
-  constexpr inline void operator^=(const StrictBits& other);
-
-  // Constructs an instance of |StrictBits| from an underlying primitive value
-  // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |std::nullopt|.
-  constexpr inline static std::optional<StrictBits> TryFrom(uint64_t value) {
-    if (value & ~kMask.value_) {
-      return std::nullopt;
-    }
-    return StrictBits(value & StrictBits::kMask.value_);
-  }
-
-  // Constructs an instance of |StrictBits| from an underlying primitive value,
-  // clearing any bit member not defined in the FIDL schema.
-  constexpr inline static StrictBits TruncatingUnknown(uint64_t value) {
-    return StrictBits(value & StrictBits::kMask.value_);
-  }
-
- private:
-  uint64_t value_ = 0;
-};
-constexpr const ::test_bits::StrictBits StrictBits::kSmallest =
-    ::test_bits::StrictBits(1u);
-constexpr const ::test_bits::StrictBits StrictBits::kBiggest =
-    ::test_bits::StrictBits(9223372036854775808u);
-constexpr const ::test_bits::StrictBits StrictBits::kMask = ::test_bits::StrictBits(9223372036854775809u);
-
-constexpr inline ::test_bits::StrictBits StrictBits::operator~() const {
-  return ::test_bits::StrictBits(static_cast<uint64_t>(~this->value_ & kMask.value_));
-}
-
-constexpr inline ::test_bits::StrictBits StrictBits::operator|(
-    const ::test_bits::StrictBits& other) const {
-  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ | other.value_));
-}
-
-constexpr inline ::test_bits::StrictBits StrictBits::operator&(
-    const ::test_bits::StrictBits& other) const {
-  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ & other.value_));
-}
-
-constexpr inline ::test_bits::StrictBits StrictBits::operator^(
-    const ::test_bits::StrictBits& other) const {
-  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ ^ other.value_));
-}
-
-constexpr inline void StrictBits::operator|=(
-    const ::test_bits::StrictBits& other) {
-  this->value_ |= other.value_;
-}
-
-constexpr inline void StrictBits::operator&=(
-    const ::test_bits::StrictBits& other) {
-  this->value_ &= other.value_;
-}
-
-constexpr inline void StrictBits::operator^=(
-    const ::test_bits::StrictBits& other) {
-  this->value_ ^= other.value_;
-}
-
 // |MyBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -179,6 +94,91 @@ constexpr inline void MyBits::operator&=(
 
 constexpr inline void MyBits::operator^=(
     const ::test_bits::MyBits& other) {
+  this->value_ ^= other.value_;
+}
+
+// |StrictBits| is strict, hence is guaranteed to only contain
+// members defined in the FIDL schema when receiving it in a message.
+// Sending unknown members will fail at runtime.
+class StrictBits final {
+ public:
+  constexpr StrictBits() = default;
+
+  // Constructs an instance of |StrictBits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  explicit constexpr StrictBits(uint64_t value) : value_(value) {}
+  const static StrictBits kSmallest;
+  const static StrictBits kBiggest;
+  const static StrictBits kMask;
+
+  explicit constexpr inline operator uint64_t() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const StrictBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const StrictBits& other) const { return value_ != other.value_; }
+  constexpr inline StrictBits operator~() const;
+  constexpr inline StrictBits operator|(const StrictBits& other) const;
+  constexpr inline StrictBits operator&(const StrictBits& other) const;
+  constexpr inline StrictBits operator^(const StrictBits& other) const;
+  constexpr inline void operator|=(const StrictBits& other);
+  constexpr inline void operator&=(const StrictBits& other);
+  constexpr inline void operator^=(const StrictBits& other);
+
+  // Constructs an instance of |StrictBits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |std::nullopt|.
+  constexpr inline static std::optional<StrictBits> TryFrom(uint64_t value) {
+    if (value & ~kMask.value_) {
+      return std::nullopt;
+    }
+    return StrictBits(value & StrictBits::kMask.value_);
+  }
+
+  // Constructs an instance of |StrictBits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static StrictBits TruncatingUnknown(uint64_t value) {
+    return StrictBits(value & StrictBits::kMask.value_);
+  }
+
+ private:
+  uint64_t value_ = 0;
+};
+constexpr const ::test_bits::StrictBits StrictBits::kSmallest =
+    ::test_bits::StrictBits(1u);
+constexpr const ::test_bits::StrictBits StrictBits::kBiggest =
+    ::test_bits::StrictBits(9223372036854775808u);
+constexpr const ::test_bits::StrictBits StrictBits::kMask = ::test_bits::StrictBits(9223372036854775809u);
+
+constexpr inline ::test_bits::StrictBits StrictBits::operator~() const {
+  return ::test_bits::StrictBits(static_cast<uint64_t>(~this->value_ & kMask.value_));
+}
+
+constexpr inline ::test_bits::StrictBits StrictBits::operator|(
+    const ::test_bits::StrictBits& other) const {
+  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::test_bits::StrictBits StrictBits::operator&(
+    const ::test_bits::StrictBits& other) const {
+  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::test_bits::StrictBits StrictBits::operator^(
+    const ::test_bits::StrictBits& other) const {
+  return ::test_bits::StrictBits(static_cast<uint64_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void StrictBits::operator|=(
+    const ::test_bits::StrictBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void StrictBits::operator&=(
+    const ::test_bits::StrictBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void StrictBits::operator^=(
+    const ::test_bits::StrictBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -356,18 +356,18 @@ constexpr inline void EmptyBits::operator^=(
 namespace fidl {
 
 template <>
-struct IsFidlType<::test_bits::StrictBits> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_bits::StrictBits> : public std::false_type {};
-static_assert(std::is_standard_layout_v<::test_bits::StrictBits>);
-static_assert(sizeof(::test_bits::StrictBits) == sizeof(uint64_t));
-
-template <>
 struct IsFidlType<::test_bits::MyBits> : public std::true_type {};
 template <>
 struct ContainsHandle<::test_bits::MyBits> : public std::false_type {};
 static_assert(std::is_standard_layout_v<::test_bits::MyBits>);
 static_assert(sizeof(::test_bits::MyBits) == sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::test_bits::StrictBits> : public std::true_type {};
+template <>
+struct ContainsHandle<::test_bits::StrictBits> : public std::false_type {};
+static_assert(std::is_standard_layout_v<::test_bits::StrictBits>);
+static_assert(sizeof(::test_bits::StrictBits) == sizeof(uint64_t));
 
 template <>
 struct IsFidlType<::test_bits::FlexibleBits> : public std::true_type {};

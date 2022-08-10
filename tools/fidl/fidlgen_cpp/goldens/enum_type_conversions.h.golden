@@ -23,20 +23,20 @@ struct WireTypeForNaturalType<::test_enum::MyStrictEnum> {
   using type = ::test_enum::wire::MyStrictEnum;
 };
 template <>
-struct NaturalTypeForWireType<::test_enum::wire::MyFlexibleEnumWithCustomUnknown> {
-  using type = ::test_enum::MyFlexibleEnumWithCustomUnknown;
-};
-template <>
-struct WireTypeForNaturalType<::test_enum::MyFlexibleEnumWithCustomUnknown> {
-  using type = ::test_enum::wire::MyFlexibleEnumWithCustomUnknown;
-};
-template <>
 struct NaturalTypeForWireType<::test_enum::wire::MyFlexibleEnum> {
   using type = ::test_enum::MyFlexibleEnum;
 };
 template <>
 struct WireTypeForNaturalType<::test_enum::MyFlexibleEnum> {
   using type = ::test_enum::wire::MyFlexibleEnum;
+};
+template <>
+struct NaturalTypeForWireType<::test_enum::wire::MyFlexibleEnumWithCustomUnknown> {
+  using type = ::test_enum::MyFlexibleEnumWithCustomUnknown;
+};
+template <>
+struct WireTypeForNaturalType<::test_enum::MyFlexibleEnumWithCustomUnknown> {
+  using type = ::test_enum::wire::MyFlexibleEnumWithCustomUnknown;
 };
 template <>
 struct NaturalTypeForWireType<::test_enum::wire::MyEmptyFlexibleEnum> {

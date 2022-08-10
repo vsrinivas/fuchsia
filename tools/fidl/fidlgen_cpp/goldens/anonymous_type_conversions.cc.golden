@@ -5,6 +5,21 @@
 namespace fidl {
 namespace internal {
 
+::test_anonymous::OverrideTest WireNaturalConversionTraits<::test_anonymous::wire::OverrideTest, ::test_anonymous::OverrideTest>::ToNatural(::test_anonymous::wire::OverrideTest src) {
+  return ::test_anonymous::OverrideTest{{
+      .op = WireNaturalConversionTraits<::test_anonymous::wire::Op, ::test_anonymous::Op>::ToNatural(std::move(src.op)),
+      .left = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToNatural(std::move(src.left)),
+      .right = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToNatural(std::move(src.right)),
+  }};
+}
+::test_anonymous::wire::OverrideTest WireNaturalConversionTraits<::test_anonymous::wire::OverrideTest, ::test_anonymous::OverrideTest>::ToWire(fidl::AnyArena& arena, ::test_anonymous::OverrideTest src) {
+  return ::test_anonymous::wire::OverrideTest{
+      .op = WireNaturalConversionTraits<::test_anonymous::wire::Op, ::test_anonymous::Op>::ToWire(arena, std::move(src.op())),
+      .left = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToWire(arena, std::move(src.left())),
+      .right = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToWire(arena, std::move(src.right())),
+  };
+}
+
 ::test_anonymous::TableData WireNaturalConversionTraits<::test_anonymous::wire::TableData, ::test_anonymous::TableData>::ToNatural(::test_anonymous::wire::TableData src) {
   return ::test_anonymous::TableData(WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.data)));
 }
@@ -27,21 +42,6 @@ namespace internal {
   };
 }
 
-::test_anonymous::OverrideTest WireNaturalConversionTraits<::test_anonymous::wire::OverrideTest, ::test_anonymous::OverrideTest>::ToNatural(::test_anonymous::wire::OverrideTest src) {
-  return ::test_anonymous::OverrideTest{{
-      .op = WireNaturalConversionTraits<::test_anonymous::wire::Op, ::test_anonymous::Op>::ToNatural(std::move(src.op)),
-      .left = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToNatural(std::move(src.left)),
-      .right = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToNatural(std::move(src.right)),
-  }};
-}
-::test_anonymous::wire::OverrideTest WireNaturalConversionTraits<::test_anonymous::wire::OverrideTest, ::test_anonymous::OverrideTest>::ToWire(fidl::AnyArena& arena, ::test_anonymous::OverrideTest src) {
-  return ::test_anonymous::wire::OverrideTest{
-      .op = WireNaturalConversionTraits<::test_anonymous::wire::Op, ::test_anonymous::Op>::ToWire(arena, std::move(src.op())),
-      .left = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToWire(arena, std::move(src.left())),
-      .right = WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::std::unique_ptr<::test_anonymous::Expression>>::ToWire(arena, std::move(src.right())),
-  };
-}
-
 ::test_anonymous::SomeProtocolSomeMethodResponse WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodResponse, ::test_anonymous::SomeProtocolSomeMethodResponse>::ToNatural(::test_anonymous::wire::SomeProtocolSomeMethodResponse src) {
   return ::test_anonymous::SomeProtocolSomeMethodResponse(WireNaturalConversionTraits<::test_anonymous::wire::BitsMember, ::test_anonymous::BitsMember>::ToNatural(std::move(src.bits_member)));
 }
@@ -58,24 +58,6 @@ namespace internal {
   return ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse{
       .result = WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult, ::test_anonymous::SomeProtocolSomeMethodResult>::ToWire(arena, std::move(src.result())),
   };
-}
-
-::test_anonymous::TableMember WireNaturalConversionTraits<::test_anonymous::wire::TableMember, ::test_anonymous::TableMember>::ToNatural(::test_anonymous::wire::TableMember src) {
-  ::test_anonymous::TableMember dst;
-  if (src.has_table_data()) {
-    dst.table_data() =
-        WireNaturalConversionTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, ::std::vector<::test_anonymous::TableData>>::ToNatural(std::move(src.table_data()));
-  }
-
-  return dst;
-}
-::test_anonymous::wire::TableMember WireNaturalConversionTraits<::test_anonymous::wire::TableMember, ::test_anonymous::TableMember>::ToWire(fidl::AnyArena& arena, ::test_anonymous::TableMember src) {
-  auto builder = ::test_anonymous::wire::TableMember::Builder(arena);
-  if (src.table_data().has_value()) {
-    builder.table_data(
-        WireNaturalConversionTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, ::std::vector<::test_anonymous::TableData>>::ToWire(arena, std::move(src.table_data().value())));
-  }
-  return builder.Build();
 }
 
 ::test_anonymous::FunctionApplication WireNaturalConversionTraits<::test_anonymous::wire::FunctionApplication, ::test_anonymous::FunctionApplication>::ToNatural(::test_anonymous::wire::FunctionApplication src) {
@@ -112,36 +94,22 @@ namespace internal {
   return builder.Build();
 }
 
-::test_anonymous::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToNatural(::test_anonymous::wire::UnionMember src) {
-  switch (src.Which()) {
-    case ::test_anonymous::wire::UnionMember::Tag::kUnionData:
-      return ::test_anonymous::UnionMember::WithUnionData(
-          WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.union_data())));
-    default:
-      return ::test_anonymous::UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+::test_anonymous::TableMember WireNaturalConversionTraits<::test_anonymous::wire::TableMember, ::test_anonymous::TableMember>::ToNatural(::test_anonymous::wire::TableMember src) {
+  ::test_anonymous::TableMember dst;
+  if (src.has_table_data()) {
+    dst.table_data() =
+        WireNaturalConversionTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, ::std::vector<::test_anonymous::TableData>>::ToNatural(std::move(src.table_data()));
   }
-}
-::test_anonymous::wire::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToWire(fidl::AnyArena& arena, ::test_anonymous::UnionMember src) {
-  switch (src.Which()) {
-    case ::test_anonymous::UnionMember::Tag::kUnionData:
-      return ::test_anonymous::wire::UnionMember::WithUnionData(
-          WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(arena, std::move(src.union_data().value())));
-    default:
-      return ::test_anonymous::wire::UnionMember();
-  }
-}
 
-std::unique_ptr<::test_anonymous::UnionMember> WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, std::unique_ptr<::test_anonymous::UnionMember>>::ToNatural(::test_anonymous::wire::UnionMember src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_anonymous::UnionMember>(WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToNatural(std::move(src)));
+  return dst;
 }
-::test_anonymous::wire::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, std::unique_ptr<::test_anonymous::UnionMember>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::UnionMember> src) {
-  if (!src) {
-    return ::test_anonymous::wire::UnionMember();
+::test_anonymous::wire::TableMember WireNaturalConversionTraits<::test_anonymous::wire::TableMember, ::test_anonymous::TableMember>::ToWire(fidl::AnyArena& arena, ::test_anonymous::TableMember src) {
+  auto builder = ::test_anonymous::wire::TableMember::Builder(arena);
+  if (src.table_data().has_value()) {
+    builder.table_data(
+        WireNaturalConversionTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, ::std::vector<::test_anonymous::TableData>>::ToWire(arena, std::move(src.table_data().value())));
   }
-  return WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToWire(arena, std::move(*src));
+  return builder.Build();
 }
 
 ::test_anonymous::Expression WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::test_anonymous::Expression>::ToNatural(::test_anonymous::wire::Expression src) {
@@ -186,6 +154,38 @@ std::unique_ptr<::test_anonymous::Expression> WireNaturalConversionTraits<::test
     return ::test_anonymous::wire::Expression();
   }
   return WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::test_anonymous::Expression>::ToWire(arena, std::move(*src));
+}
+
+::test_anonymous::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToNatural(::test_anonymous::wire::UnionMember src) {
+  switch (src.Which()) {
+    case ::test_anonymous::wire::UnionMember::Tag::kUnionData:
+      return ::test_anonymous::UnionMember::WithUnionData(
+          WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.union_data())));
+    default:
+      return ::test_anonymous::UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+  }
+}
+::test_anonymous::wire::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToWire(fidl::AnyArena& arena, ::test_anonymous::UnionMember src) {
+  switch (src.Which()) {
+    case ::test_anonymous::UnionMember::Tag::kUnionData:
+      return ::test_anonymous::wire::UnionMember::WithUnionData(
+          WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(arena, std::move(src.union_data().value())));
+    default:
+      return ::test_anonymous::wire::UnionMember();
+  }
+}
+
+std::unique_ptr<::test_anonymous::UnionMember> WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, std::unique_ptr<::test_anonymous::UnionMember>>::ToNatural(::test_anonymous::wire::UnionMember src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_anonymous::UnionMember>(WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToNatural(std::move(src)));
+}
+::test_anonymous::wire::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, std::unique_ptr<::test_anonymous::UnionMember>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::UnionMember> src) {
+  if (!src) {
+    return ::test_anonymous::wire::UnionMember();
+  }
+  return WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToWire(arena, std::move(*src));
 }
 
 ::test_anonymous::SomeProtocolSomeMethodResult WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult, ::test_anonymous::SomeProtocolSomeMethodResult>::ToNatural(::test_anonymous::wire::SomeProtocolSomeMethodResult src) {

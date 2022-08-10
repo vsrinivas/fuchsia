@@ -18,8 +18,6 @@
 
 namespace test_encapsulatedstructs {
 
-class NonInlineStructTestStruct;
-
 class Int8Int32;
 
 class Int16Int8;
@@ -28,74 +26,9 @@ class ArrayInt16Int8;
 
 class StructPaddingTestStruct;
 
+class NonInlineStructTestStruct;
+
 class TopLevelStruct;
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
-
-class NonInlineStructTestStruct {
- private:
-  struct Storage_;
-
- public:
-  NonInlineStructTestStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  NonInlineStructTestStruct(::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element, ::zx::handle h) noexcept
-      : storage_({.element = std::move(element),
-                  .h = std::move(h)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |NonInlineStructTestStruct| only if all of its members are default constructible.
-  NonInlineStructTestStruct() = default;
-#pragma clang diagnostic pop
-
-  NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
-  NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept = default;
-
-  const ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>&
-  element() const {
-    return storage_.element;
-  }
-
-  ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>& element() {
-    return storage_.element;
-  }
-
-  const ::zx::handle&
-  h() const {
-    return storage_.h;
-  }
-
-  ::zx::handle& h() {
-    return storage_.h;
-  }
-
-  NonInlineStructTestStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : NonInlineStructTestStruct(Storage_{
-                                                                                              .element = {},
-                                                                                              .h = {},
-                                                                                          }) {}
-
- private:
-  struct Storage_ final {
-    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element;
-    ::zx::handle h;
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::NonInlineStructTestStruct>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::element, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE, 0x80000000, false>>{&Storage_::h, 8});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 8,
-      .mask = 0xffffffff00000000ull,
-  });
-};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
@@ -396,6 +329,73 @@ class StructPaddingTestStruct {
 
 #ifdef __Fuchsia__
 
+extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
+
+class NonInlineStructTestStruct {
+ private:
+  struct Storage_;
+
+ public:
+  NonInlineStructTestStruct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  NonInlineStructTestStruct(::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element, ::zx::handle h) noexcept
+      : storage_({.element = std::move(element),
+                  .h = std::move(h)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |NonInlineStructTestStruct| only if all of its members are default constructible.
+  NonInlineStructTestStruct() = default;
+#pragma clang diagnostic pop
+
+  NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
+  NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept = default;
+
+  const ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>&
+  element() const {
+    return storage_.element;
+  }
+
+  ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>& element() {
+    return storage_.element;
+  }
+
+  const ::zx::handle&
+  h() const {
+    return storage_.h;
+  }
+
+  ::zx::handle& h() {
+    return storage_.h;
+  }
+
+  NonInlineStructTestStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : NonInlineStructTestStruct(Storage_{
+                                                                                              .element = {},
+                                                                                              .h = {},
+                                                                                          }) {}
+
+ private:
+  struct Storage_ final {
+    ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> element;
+    ::zx::handle h;
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_encapsulatedstructs::NonInlineStructTestStruct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::element, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE, 0x80000000, false>>{&Storage_::h, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 8,
+      .mask = 0xffffffff00000000ull,
+  });
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 
 class TopLevelStruct {
@@ -461,21 +461,6 @@ class TopLevelStruct {
 }  // namespace test_encapsulatedstructs
 namespace fidl {
 
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
-
-template <>
-struct IsResource<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
-template <>
-struct IsFidlType<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16> {};
-
-#endif  // __Fuchsia__
-
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
 template <>
@@ -511,6 +496,21 @@ struct IsFidlType<::test_encapsulatedstructs::StructPaddingTestStruct> : public 
 template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, 24> {};
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
+
+template <>
+struct IsResource<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
+template <>
+struct IsFidlType<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16> {};
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

@@ -15,21 +15,6 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse> {
-  static ::test_drivertwoway::TwoWayAddTopResponse ToNatural(::test_drivertwoway::wire::TwoWayAddTopResponse src);
-  static ::test_drivertwoway::wire::TwoWayAddTopResponse ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddTopResponse src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_drivertwoway::wire::TwoWayAddTopResponse> {
-  using type = ::test_drivertwoway::TwoWayAddTopResponse;
-};
-template <>
-struct WireTypeForNaturalType<::test_drivertwoway::TwoWayAddTopResponse> {
-  using type = ::test_drivertwoway::wire::TwoWayAddTopResponse;
-};
-
-template <>
 struct WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::test_drivertwoway::TwoWayAddRequest> {
   static ::test_drivertwoway::TwoWayAddRequest ToNatural(::test_drivertwoway::wire::TwoWayAddRequest src);
   static ::test_drivertwoway::wire::TwoWayAddRequest ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddRequest src);
@@ -42,6 +27,21 @@ struct NaturalTypeForWireType<::test_drivertwoway::wire::TwoWayAddRequest> {
 template <>
 struct WireTypeForNaturalType<::test_drivertwoway::TwoWayAddRequest> {
   using type = ::test_drivertwoway::wire::TwoWayAddRequest;
+};
+
+template <>
+struct WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse> {
+  static ::test_drivertwoway::TwoWayAddTopResponse ToNatural(::test_drivertwoway::wire::TwoWayAddTopResponse src);
+  static ::test_drivertwoway::wire::TwoWayAddTopResponse ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddTopResponse src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_drivertwoway::wire::TwoWayAddTopResponse> {
+  using type = ::test_drivertwoway::TwoWayAddTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<::test_drivertwoway::TwoWayAddTopResponse> {
+  using type = ::test_drivertwoway::wire::TwoWayAddTopResponse;
 };
 
 #ifdef __Fuchsia__

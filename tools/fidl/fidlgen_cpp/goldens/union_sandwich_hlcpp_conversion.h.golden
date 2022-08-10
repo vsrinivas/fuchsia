@@ -21,16 +21,6 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize8Alignment4>
   static inline ::test_unionsandwich::SandwichUnionSize8Alignment4 Convert(::test::unionsandwich::SandwichUnionSize8Alignment4&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_unionsandwich::SandwichUnionSize36Alignment4> {
-  using HLCPPType = ::test::unionsandwich::SandwichUnionSize36Alignment4;
-  static inline ::test::unionsandwich::SandwichUnionSize36Alignment4 Convert(::test_unionsandwich::SandwichUnionSize36Alignment4&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize36Alignment4> {
-  using NaturalType = ::test_unionsandwich::SandwichUnionSize36Alignment4;
-  static inline ::test_unionsandwich::SandwichUnionSize36Alignment4 Convert(::test::unionsandwich::SandwichUnionSize36Alignment4&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_unionsandwich::SandwichUnionSize12Alignment4> {
   using HLCPPType = ::test::unionsandwich::SandwichUnionSize12Alignment4;
   static inline ::test::unionsandwich::SandwichUnionSize12Alignment4 Convert(::test_unionsandwich::SandwichUnionSize12Alignment4&&);
@@ -61,6 +51,16 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize24Alignment8
   static inline ::test_unionsandwich::SandwichUnionSize24Alignment8 Convert(::test::unionsandwich::SandwichUnionSize24Alignment8&&);
 };
 template <>
+struct NaturalToHLCPPTraits<::test_unionsandwich::SandwichUnionSize36Alignment4> {
+  using HLCPPType = ::test::unionsandwich::SandwichUnionSize36Alignment4;
+  static inline ::test::unionsandwich::SandwichUnionSize36Alignment4 Convert(::test_unionsandwich::SandwichUnionSize36Alignment4&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize36Alignment4> {
+  using NaturalType = ::test_unionsandwich::SandwichUnionSize36Alignment4;
+  static inline ::test_unionsandwich::SandwichUnionSize36Alignment4 Convert(::test::unionsandwich::SandwichUnionSize36Alignment4&&);
+};
+template <>
 struct NaturalToHLCPPTraits<::test_unionsandwich::UnionSize8Alignment4> {
   using HLCPPType = ::test::unionsandwich::UnionSize8Alignment4;
   static inline ::test::unionsandwich::UnionSize8Alignment4 Convert(::test_unionsandwich::UnionSize8Alignment4&&);
@@ -69,16 +69,6 @@ template <>
 struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize8Alignment4> {
   using NaturalType = ::test_unionsandwich::UnionSize8Alignment4;
   static inline ::test_unionsandwich::UnionSize8Alignment4 Convert(::test::unionsandwich::UnionSize8Alignment4&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_unionsandwich::UnionSize36Alignment4> {
-  using HLCPPType = ::test::unionsandwich::UnionSize36Alignment4;
-  static inline ::test::unionsandwich::UnionSize36Alignment4 Convert(::test_unionsandwich::UnionSize36Alignment4&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize36Alignment4> {
-  using NaturalType = ::test_unionsandwich::UnionSize36Alignment4;
-  static inline ::test_unionsandwich::UnionSize36Alignment4 Convert(::test::unionsandwich::UnionSize36Alignment4&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_unionsandwich::UnionSize12Alignment4> {
@@ -100,6 +90,16 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize24Alignment8> {
   using NaturalType = ::test_unionsandwich::UnionSize24Alignment8;
   static inline ::test_unionsandwich::UnionSize24Alignment8 Convert(::test::unionsandwich::UnionSize24Alignment8&&);
 };
+template <>
+struct NaturalToHLCPPTraits<::test_unionsandwich::UnionSize36Alignment4> {
+  using HLCPPType = ::test::unionsandwich::UnionSize36Alignment4;
+  static inline ::test::unionsandwich::UnionSize36Alignment4 Convert(::test_unionsandwich::UnionSize36Alignment4&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize36Alignment4> {
+  using NaturalType = ::test_unionsandwich::UnionSize36Alignment4;
+  static inline ::test_unionsandwich::UnionSize36Alignment4 Convert(::test::unionsandwich::UnionSize36Alignment4&&);
+};
 
 ::test::unionsandwich::SandwichUnionSize8Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::SandwichUnionSize8Alignment4>::Convert(::test_unionsandwich::SandwichUnionSize8Alignment4&& value) {
   ::test::unionsandwich::SandwichUnionSize8Alignment4 hlcpp;
@@ -111,21 +111,6 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize24Alignment8> {
 
 ::test_unionsandwich::SandwichUnionSize8Alignment4 HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize8Alignment4>::Convert(::test::unionsandwich::SandwichUnionSize8Alignment4&& value) {
   return ::test_unionsandwich::SandwichUnionSize8Alignment4{{
-      .before = ::fidl::HLCPPToNatural(std::move(value.before)),
-      .union_ = ::fidl::HLCPPToNatural(std::move(value.union_)),
-      .after = ::fidl::HLCPPToNatural(std::move(value.after)),
-  }};
-}
-::test::unionsandwich::SandwichUnionSize36Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::SandwichUnionSize36Alignment4>::Convert(::test_unionsandwich::SandwichUnionSize36Alignment4&& value) {
-  ::test::unionsandwich::SandwichUnionSize36Alignment4 hlcpp;
-  hlcpp.before = ::fidl::NaturalToHLCPP(std::move(value.before()));
-  hlcpp.union_ = ::fidl::NaturalToHLCPP(std::move(value.union_()));
-  hlcpp.after = ::fidl::NaturalToHLCPP(std::move(value.after()));
-  return hlcpp;
-}
-
-::test_unionsandwich::SandwichUnionSize36Alignment4 HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize36Alignment4>::Convert(::test::unionsandwich::SandwichUnionSize36Alignment4&& value) {
-  return ::test_unionsandwich::SandwichUnionSize36Alignment4{{
       .before = ::fidl::HLCPPToNatural(std::move(value.before)),
       .union_ = ::fidl::HLCPPToNatural(std::move(value.union_)),
       .after = ::fidl::HLCPPToNatural(std::move(value.after)),
@@ -174,6 +159,21 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize24Alignment8> {
       .after = ::fidl::HLCPPToNatural(std::move(value.after)),
   }};
 }
+::test::unionsandwich::SandwichUnionSize36Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::SandwichUnionSize36Alignment4>::Convert(::test_unionsandwich::SandwichUnionSize36Alignment4&& value) {
+  ::test::unionsandwich::SandwichUnionSize36Alignment4 hlcpp;
+  hlcpp.before = ::fidl::NaturalToHLCPP(std::move(value.before()));
+  hlcpp.union_ = ::fidl::NaturalToHLCPP(std::move(value.union_()));
+  hlcpp.after = ::fidl::NaturalToHLCPP(std::move(value.after()));
+  return hlcpp;
+}
+
+::test_unionsandwich::SandwichUnionSize36Alignment4 HLCPPToNaturalTraits<::test::unionsandwich::SandwichUnionSize36Alignment4>::Convert(::test::unionsandwich::SandwichUnionSize36Alignment4&& value) {
+  return ::test_unionsandwich::SandwichUnionSize36Alignment4{{
+      .before = ::fidl::HLCPPToNatural(std::move(value.before)),
+      .union_ = ::fidl::HLCPPToNatural(std::move(value.union_)),
+      .after = ::fidl::HLCPPToNatural(std::move(value.after)),
+  }};
+}
 
 ::test::unionsandwich::UnionSize8Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::UnionSize8Alignment4>::Convert(::test_unionsandwich::UnionSize8Alignment4&& value) {
   ::test::unionsandwich::UnionSize8Alignment4 hlcpp;
@@ -195,28 +195,6 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize24Alignment8> {
           ::fidl::HLCPPToNatural(std::move(value.variant())));
     default:
       ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::unionsandwich::UnionSize8Alignment4");
-  }
-}
-::test::unionsandwich::UnionSize36Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::UnionSize36Alignment4>::Convert(::test_unionsandwich::UnionSize36Alignment4&& value) {
-  ::test::unionsandwich::UnionSize36Alignment4 hlcpp;
-  switch (value.Which()) {
-    case ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-      hlcpp.set_variant(::fidl::NaturalToHLCPP(std::move(value.variant().value())));
-      break;
-    default:
-      break;
-  }
-  return hlcpp;
-}
-
-::test_unionsandwich::UnionSize36Alignment4 HLCPPToNaturalTraits<::test::unionsandwich::UnionSize36Alignment4>::Convert(::test::unionsandwich::UnionSize36Alignment4&& value) {
-  using _NaturalUnion = ::test_unionsandwich::UnionSize36Alignment4;
-  switch (value.Which()) {
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-      return _NaturalUnion::WithVariant(
-          ::fidl::HLCPPToNatural(std::move(value.variant())));
-    default:
-      ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::unionsandwich::UnionSize36Alignment4");
   }
 }
 ::test::unionsandwich::UnionSize12Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::UnionSize12Alignment4>::Convert(::test_unionsandwich::UnionSize12Alignment4&& value) {
@@ -261,6 +239,28 @@ struct HLCPPToNaturalTraits<::test::unionsandwich::UnionSize24Alignment8> {
           ::fidl::HLCPPToNatural(std::move(value.variant())));
     default:
       ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::unionsandwich::UnionSize24Alignment8");
+  }
+}
+::test::unionsandwich::UnionSize36Alignment4 NaturalToHLCPPTraits<::test_unionsandwich::UnionSize36Alignment4>::Convert(::test_unionsandwich::UnionSize36Alignment4&& value) {
+  ::test::unionsandwich::UnionSize36Alignment4 hlcpp;
+  switch (value.Which()) {
+    case ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+      hlcpp.set_variant(::fidl::NaturalToHLCPP(std::move(value.variant().value())));
+      break;
+    default:
+      break;
+  }
+  return hlcpp;
+}
+
+::test_unionsandwich::UnionSize36Alignment4 HLCPPToNaturalTraits<::test::unionsandwich::UnionSize36Alignment4>::Convert(::test::unionsandwich::UnionSize36Alignment4&& value) {
+  using _NaturalUnion = ::test_unionsandwich::UnionSize36Alignment4;
+  switch (value.Which()) {
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+      return _NaturalUnion::WithVariant(
+          ::fidl::HLCPPToNatural(std::move(value.variant())));
+    default:
+      ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::unionsandwich::UnionSize36Alignment4");
   }
 }
 

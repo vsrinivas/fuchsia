@@ -13,33 +13,13 @@
 
 namespace fuzzing {
 
-using NonInlineStructTestStruct = ::test::encapsulatedstructs::NonInlineStructTestStruct;
 using Int8Int32 = ::test::encapsulatedstructs::Int8Int32;
 using Int16Int8 = ::test::encapsulatedstructs::Int16Int8;
 using ArrayInt16Int8 = ::test::encapsulatedstructs::ArrayInt16Int8;
 using StructPaddingTestStruct = ::test::encapsulatedstructs::StructPaddingTestStruct;
+using NonInlineStructTestStruct = ::test::encapsulatedstructs::NonInlineStructTestStruct;
 using TopLevelStruct = ::test::encapsulatedstructs::TopLevelStruct;
 
-template <>
-struct MinSize<NonInlineStructTestStruct> {
-  operator size_t() {
-    return MinSize<::std::unique_ptr<::test::encapsulatedstructs::Int16Int8>>() + MinSize<::zx::handle>();
-  }
-};
-template <>
-struct Allocate<NonInlineStructTestStruct> {
-  NonInlineStructTestStruct operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<NonInlineStructTestStruct>());
-    NonInlineStructTestStruct out;
-    const size_t slack_per_member = (*size - MinSize<NonInlineStructTestStruct>()) / 2;
-    size_t out_size;
-    out_size = MinSize<::std::unique_ptr<::test::encapsulatedstructs::Int16Int8>>() + slack_per_member;
-    out.element = Allocate<::std::unique_ptr<::test::encapsulatedstructs::Int16Int8>>{}(src, &out_size);
-    out_size = MinSize<::zx::handle>() + slack_per_member;
-    out.h = Allocate<::zx::handle>{}(src, &out_size);
-    return out;
-  }
-};
 template <>
 struct MinSize<Int8Int32> {
   operator size_t() {
@@ -117,6 +97,26 @@ struct Allocate<StructPaddingTestStruct> {
     out.inner = Allocate<::test::encapsulatedstructs::Int8Int32>{}(src, &out_size);
     out_size = MinSize<::test::encapsulatedstructs::ArrayInt16Int8>() + slack_per_member;
     out.array = Allocate<::test::encapsulatedstructs::ArrayInt16Int8>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<NonInlineStructTestStruct> {
+  operator size_t() {
+    return MinSize<::std::unique_ptr<::test::encapsulatedstructs::Int16Int8>>() + MinSize<::zx::handle>();
+  }
+};
+template <>
+struct Allocate<NonInlineStructTestStruct> {
+  NonInlineStructTestStruct operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<NonInlineStructTestStruct>());
+    NonInlineStructTestStruct out;
+    const size_t slack_per_member = (*size - MinSize<NonInlineStructTestStruct>()) / 2;
+    size_t out_size;
+    out_size = MinSize<::std::unique_ptr<::test::encapsulatedstructs::Int16Int8>>() + slack_per_member;
+    out.element = Allocate<::std::unique_ptr<::test::encapsulatedstructs::Int16Int8>>{}(src, &out_size);
+    out_size = MinSize<::zx::handle>() + slack_per_member;
+    out.h = Allocate<::zx::handle>{}(src, &out_size);
     return out;
   }
 };

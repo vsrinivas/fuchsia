@@ -112,183 +112,6 @@ class WithAndWithoutRequestResponse final {
   };
 };
 
-class Transitional final {
-  Transitional() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class Request final {
-    Request() = delete;
-
-   public:
-    using Protocol = ::test_protocols::Transitional;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class OneWay final {
-    OneWay() = delete;
-
-   public:
-    using Protocol = ::test_protocols::Transitional;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class Event final {
-    Event() = delete;
-
-   public:
-    using Protocol = ::test_protocols::Transitional;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
-class WithProtocolEnds final {
-  WithProtocolEnds() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class ClientEnds final {
-    ClientEnds() = delete;
-
-   public:
-    using Protocol = ::test_protocols::WithProtocolEnds;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class ServerEnds final {
-    ServerEnds() = delete;
-
-   public:
-    using Protocol = ::test_protocols::WithProtocolEnds;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StructContainingEnds final {
-    StructContainingEnds() = delete;
-
-   public:
-    using Protocol = ::test_protocols::WithProtocolEnds;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
-class MethodWithUnion final {
-  MethodWithUnion() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class UnionMethod final {
-    UnionMethod() = delete;
-
-   public:
-    using Protocol = ::test_protocols::MethodWithUnion;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
-class ManyParameters final {
-  ManyParameters() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class Fifteen final {
-    Fifteen() = delete;
-
-   public:
-    using Protocol = ::test_protocols::ManyParameters;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
-class HandleRightsProtocol final {
-  HandleRightsProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class NoResponseMethod final {
-    NoResponseMethod() = delete;
-
-   public:
-    using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class ResponseMethod final {
-    ResponseMethod() = delete;
-
-   public:
-    using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class AnEvent final {
-    AnEvent() = delete;
-
-   public:
-    using Protocol = ::test_protocols::HandleRightsProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
 class WithErrorSyntax final {
   WithErrorSyntax() = delete;
 
@@ -342,27 +165,6 @@ class WithErrorSyntax final {
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
-class DiscoverableProtocol final {
-  DiscoverableProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class Method final {
-    Method() = delete;
-
-   public:
-    using Protocol = ::test_protocols::DiscoverableProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
     static constexpr bool kHasTransportError = false;
   };
 };
@@ -436,6 +238,72 @@ class ChannelProtocol final {
   };
 };
 
+class Transitional final {
+  Transitional() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class Request final {
+    Request() = delete;
+
+   public:
+    using Protocol = ::test_protocols::Transitional;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class OneWay final {
+    OneWay() = delete;
+
+   public:
+    using Protocol = ::test_protocols::Transitional;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class Event final {
+    Event() = delete;
+
+   public:
+    using Protocol = ::test_protocols::Transitional;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class DiscoverableProtocol final {
+  DiscoverableProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class Method final {
+    Method() = delete;
+
+   public:
+    using Protocol = ::test_protocols::DiscoverableProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
 class AnotherDiscoverableProtocol final {
   AnotherDiscoverableProtocol() = delete;
 
@@ -443,5 +311,137 @@ class AnotherDiscoverableProtocol final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+};
+
+class HandleRightsProtocol final {
+  HandleRightsProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class NoResponseMethod final {
+    NoResponseMethod() = delete;
+
+   public:
+    using Protocol = ::test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class ResponseMethod final {
+    ResponseMethod() = delete;
+
+   public:
+    using Protocol = ::test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class AnEvent final {
+    AnEvent() = delete;
+
+   public:
+    using Protocol = ::test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class WithProtocolEnds final {
+  WithProtocolEnds() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class ClientEnds final {
+    ClientEnds() = delete;
+
+   public:
+    using Protocol = ::test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class ServerEnds final {
+    ServerEnds() = delete;
+
+   public:
+    using Protocol = ::test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StructContainingEnds final {
+    StructContainingEnds() = delete;
+
+   public:
+    using Protocol = ::test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class ManyParameters final {
+  ManyParameters() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class Fifteen final {
+    Fifteen() = delete;
+
+   public:
+    using Protocol = ::test_protocols::ManyParameters;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class MethodWithUnion final {
+  MethodWithUnion() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class UnionMethod final {
+    UnionMethod() = delete;
+
+   public:
+    using Protocol = ::test_protocols::MethodWithUnion;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
 };
 }  // namespace test_protocols

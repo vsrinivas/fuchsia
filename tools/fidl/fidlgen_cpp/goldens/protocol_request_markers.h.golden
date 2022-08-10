@@ -7,6 +7,15 @@
 
 namespace test_protocolrequest {
 
+class Child final {
+  Child() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+};
+
 class Parent final {
   Parent() = delete;
 
@@ -62,14 +71,5 @@ class Parent final {
     static constexpr bool kHasApplicationError = false;
     static constexpr bool kHasTransportError = false;
   };
-};
-
-class Child final {
-  Child() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
 };
 }  // namespace test_protocolrequest

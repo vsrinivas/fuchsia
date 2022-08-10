@@ -12,12 +12,23 @@ namespace handles {
 // Domain objects declarations
 //
 
-class Handles;
-
 #ifdef __Fuchsia__
 
 class SomeProtocol;
 using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
+#endif  // __Fuchsia__
+
+class Handles;
+
+#ifdef __Fuchsia__
+
+class SomeProtocol_RequestEncoder {
+ public:
+};
+
+class SomeProtocol_ResponseEncoder {
+ public:
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -108,17 +119,6 @@ inline zx_status_t Clone(const ::test::handles::Handles& _value,
 }
 
 using HandlesPtr = ::std::unique_ptr<Handles>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-class SomeProtocol_RequestEncoder {
- public:
-};
-
-class SomeProtocol_ResponseEncoder {
- public:
-};
 #endif  // __Fuchsia__
 
 }  // namespace handles

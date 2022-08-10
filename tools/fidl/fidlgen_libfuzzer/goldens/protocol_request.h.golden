@@ -13,47 +13,11 @@
 
 namespace fuzzing {
 
-using ParentTakeChildRequestRequest = ::test::protocolrequest::ParentTakeChildRequestRequest;
-using ParentTakeChildRequest = ::test::protocolrequest::ParentTakeChildRequest;
 using ParentGetChildTopResponse = ::test::protocolrequest::ParentGetChildTopResponse;
 using ParentGetChildRequestTopResponse = ::test::protocolrequest::ParentGetChildRequestTopResponse;
+using ParentTakeChildRequest = ::test::protocolrequest::ParentTakeChildRequest;
+using ParentTakeChildRequestRequest = ::test::protocolrequest::ParentTakeChildRequestRequest;
 
-template <>
-struct MinSize<ParentTakeChildRequestRequest> {
-  operator size_t() {
-    return MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>();
-  }
-};
-template <>
-struct Allocate<ParentTakeChildRequestRequest> {
-  ParentTakeChildRequestRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ParentTakeChildRequestRequest>());
-    ParentTakeChildRequestRequest out;
-    const size_t slack_per_member = (*size - MinSize<ParentTakeChildRequestRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() + slack_per_member;
-    out.r = Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ParentTakeChildRequest> {
-  operator size_t() {
-    return MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>();
-  }
-};
-template <>
-struct Allocate<ParentTakeChildRequest> {
-  ParentTakeChildRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ParentTakeChildRequest>());
-    ParentTakeChildRequest out;
-    const size_t slack_per_member = (*size - MinSize<ParentTakeChildRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>() + slack_per_member;
-    out.c = Allocate<::fidl::InterfaceHandle<::test::protocolrequest::Child>>{}(src, &out_size);
-    return out;
-  }
-};
 template <>
 struct MinSize<ParentGetChildTopResponse> {
   operator size_t() {
@@ -84,6 +48,42 @@ struct Allocate<ParentGetChildRequestTopResponse> {
     ZX_ASSERT(*size >= MinSize<ParentGetChildRequestTopResponse>());
     ParentGetChildRequestTopResponse out;
     const size_t slack_per_member = (*size - MinSize<ParentGetChildRequestTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() + slack_per_member;
+    out.r = Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ParentTakeChildRequest> {
+  operator size_t() {
+    return MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>();
+  }
+};
+template <>
+struct Allocate<ParentTakeChildRequest> {
+  ParentTakeChildRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ParentTakeChildRequest>());
+    ParentTakeChildRequest out;
+    const size_t slack_per_member = (*size - MinSize<ParentTakeChildRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::fidl::InterfaceHandle<::test::protocolrequest::Child>>() + slack_per_member;
+    out.c = Allocate<::fidl::InterfaceHandle<::test::protocolrequest::Child>>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ParentTakeChildRequestRequest> {
+  operator size_t() {
+    return MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>();
+  }
+};
+template <>
+struct Allocate<ParentTakeChildRequestRequest> {
+  ParentTakeChildRequestRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ParentTakeChildRequestRequest>());
+    ParentTakeChildRequestRequest out;
+    const size_t slack_per_member = (*size - MinSize<ParentTakeChildRequestRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<::fidl::InterfaceRequest<::test::protocolrequest::Child>>() + slack_per_member;
     out.r = Allocate<::fidl::InterfaceRequest<::test::protocolrequest::Child>>{}(src, &out_size);

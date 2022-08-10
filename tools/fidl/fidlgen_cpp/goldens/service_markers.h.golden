@@ -7,27 +7,6 @@
 
 namespace test_service {
 
-class SecondProtocol final {
-  SecondProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class MethodOnSecond final {
-    MethodOnSecond() = delete;
-
-   public:
-    using Protocol = ::test_service::SecondProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
 class FirstProtocol final {
   FirstProtocol() = delete;
 
@@ -40,6 +19,27 @@ class FirstProtocol final {
 
    public:
     using Protocol = ::test_service::FirstProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class SecondProtocol final {
+  SecondProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class MethodOnSecond final {
+    MethodOnSecond() = delete;
+
+   public:
+    using Protocol = ::test_service::SecondProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
 

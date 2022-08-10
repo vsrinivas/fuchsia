@@ -12,14 +12,14 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_doccomments_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_doccomments::wire::Table",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_doccomments::wire::Table>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_doccomments::wire::Struct",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_doccomments::wire::Struct>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_doccomments::wire::Table",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_doccomments::wire::Table>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

@@ -19,13 +19,73 @@
 #include <fidl/test.errorsyntax.parent/cpp/natural_types.h>
 namespace test_errorsyntax {
 
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+
 class ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
-
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult;
+
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
+ private:
+  struct Storage_;
+
+ public:
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::std::string s) noexcept
+      : storage_({.s = std::move(s)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleUseOfErrorSyntaxCallWhichMayFailRequest| only if all of its members are default constructible.
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
+#pragma clang diagnostic pop
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(other.CloneStorage_()) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16>::Equal(this, &other);
+  }
+
+  const ::std::string&
+  s() const {
+    return storage_.s;
+  }
+
+  ::std::string& s() {
+    return storage_.s;
+  }
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_{
+                                                                                                                   .s = {},
+                                                                                                               }) {}
+
+ private:
+  struct Storage_ final {
+    ::std::string s;
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
+      &Storage_::s, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
 
 extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
@@ -252,68 +312,17 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-
-class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
- private:
-  struct Storage_;
-
- public:
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::std::string s) noexcept
-      : storage_({.s = std::move(s)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleUseOfErrorSyntaxCallWhichMayFailRequest| only if all of its members are default constructible.
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
-#pragma clang diagnostic pop
-
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(other.CloneStorage_()) {}
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16>::Equal(this, &other);
-  }
-  bool operator!=(const ExampleUseOfErrorSyntaxCallWhichMayFailRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16>::Equal(this, &other);
-  }
-
-  const ::std::string&
-  s() const {
-    return storage_.s;
-  }
-
-  ::std::string& s() {
-    return storage_.s;
-  }
-
-  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_{
-                                                                                                                   .s = {},
-                                                                                                               }) {}
-
- private:
-  struct Storage_ final {
-    ::std::string s;
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
-      &Storage_::s, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
-
 }  // namespace test_errorsyntax
 namespace fidl {
+
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
+template <>
+struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16> {};
 
 extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
@@ -332,15 +341,6 @@ struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTop
 template <>
 struct internal::NaturalCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, 16> {};
-
-extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-
-template <>
-struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16> {};
 
 extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
 

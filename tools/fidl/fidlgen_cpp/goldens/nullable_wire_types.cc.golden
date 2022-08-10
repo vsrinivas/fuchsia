@@ -3,7 +3,7 @@
 #include <fidl/test.nullable/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
-void ::test_nullable::wire::StructWithNullableRequest::_CloseHandles() {
+void ::test_nullable::wire::StructWithNullableHandle::_CloseHandles() {
   val.reset();
 }
 #endif  // __Fuchsia__
@@ -15,7 +15,7 @@ void ::test_nullable::wire::StructWithNullableProtocol::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_nullable::wire::StructWithNullableHandle::_CloseHandles() {
+void ::test_nullable::wire::StructWithNullableRequest::_CloseHandles() {
   val.reset();
 }
 #endif  // __Fuchsia__

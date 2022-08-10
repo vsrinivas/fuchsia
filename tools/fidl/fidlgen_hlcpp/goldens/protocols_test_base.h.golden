@@ -30,63 +30,6 @@ class WithAndWithoutRequestResponse_TestBase : public ::test::protocols::WithAnd
   }
 };
 
-class Transitional_TestBase : public ::test::protocols::Transitional {
- public:
-  virtual ~Transitional_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void Request(int64_t x, RequestCallback callback) override {
-    NotImplemented_("Request");
-  }
-  void OneWay(int64_t x) override {
-    NotImplemented_("OneWay");
-  }
-};
-
-class WithProtocolEnds_TestBase : public ::test::protocols::WithProtocolEnds {
- public:
-  virtual ~WithProtocolEnds_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void ClientEnds(::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in, ClientEndsCallback callback) override {
-    NotImplemented_("ClientEnds");
-  }
-  void ServerEnds(::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in, ServerEndsCallback callback) override {
-    NotImplemented_("ServerEnds");
-  }
-  void StructContainingEnds(::test::protocols::ProtocolEnds in, StructContainingEndsCallback callback) override {
-    NotImplemented_("StructContainingEnds");
-  }
-};
-
-class MethodWithUnion_TestBase : public ::test::protocols::MethodWithUnion {
- public:
-  virtual ~MethodWithUnion_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) override {
-    NotImplemented_("UnionMethod");
-  }
-};
-
-class ManyParameters_TestBase : public ::test::protocols::ManyParameters {
- public:
-  virtual ~ManyParameters_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) override {
-    NotImplemented_("Fifteen");
-  }
-};
-
-class HandleRightsProtocol_TestBase : public ::test::protocols::HandleRightsProtocol {
- public:
-  virtual ~HandleRightsProtocol_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void NoResponseMethod(::zx::socket h) override {
-    NotImplemented_("NoResponseMethod");
-  }
-  void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) override {
-    NotImplemented_("ResponseMethod");
-  }
-};
-
 class WithErrorSyntax_TestBase : public ::test::protocols::WithErrorSyntax {
  public:
   virtual ~WithErrorSyntax_TestBase() {}
@@ -102,15 +45,6 @@ class WithErrorSyntax_TestBase : public ::test::protocols::WithErrorSyntax {
   }
   void HandleInResult(HandleInResultCallback callback) override {
     NotImplemented_("HandleInResult");
-  }
-};
-
-class DiscoverableProtocol_TestBase : public ::test::protocols::DiscoverableProtocol {
- public:
-  virtual ~DiscoverableProtocol_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void Method() override {
-    NotImplemented_("Method");
   }
 };
 
@@ -132,10 +66,76 @@ class ChannelProtocol_TestBase : public ::test::protocols::ChannelProtocol {
   }
 };
 
+class Transitional_TestBase : public ::test::protocols::Transitional {
+ public:
+  virtual ~Transitional_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Request(int64_t x, RequestCallback callback) override {
+    NotImplemented_("Request");
+  }
+  void OneWay(int64_t x) override {
+    NotImplemented_("OneWay");
+  }
+};
+
+class DiscoverableProtocol_TestBase : public ::test::protocols::DiscoverableProtocol {
+ public:
+  virtual ~DiscoverableProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Method() override {
+    NotImplemented_("Method");
+  }
+};
+
 class AnotherDiscoverableProtocol_TestBase : public ::test::protocols::AnotherDiscoverableProtocol {
  public:
   virtual ~AnotherDiscoverableProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+class HandleRightsProtocol_TestBase : public ::test::protocols::HandleRightsProtocol {
+ public:
+  virtual ~HandleRightsProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void NoResponseMethod(::zx::socket h) override {
+    NotImplemented_("NoResponseMethod");
+  }
+  void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) override {
+    NotImplemented_("ResponseMethod");
+  }
+};
+
+class WithProtocolEnds_TestBase : public ::test::protocols::WithProtocolEnds {
+ public:
+  virtual ~WithProtocolEnds_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void ClientEnds(::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in, ClientEndsCallback callback) override {
+    NotImplemented_("ClientEnds");
+  }
+  void ServerEnds(::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in, ServerEndsCallback callback) override {
+    NotImplemented_("ServerEnds");
+  }
+  void StructContainingEnds(::test::protocols::ProtocolEnds in, StructContainingEndsCallback callback) override {
+    NotImplemented_("StructContainingEnds");
+  }
+};
+
+class ManyParameters_TestBase : public ::test::protocols::ManyParameters {
+ public:
+  virtual ~ManyParameters_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) override {
+    NotImplemented_("Fifteen");
+  }
+};
+
+class MethodWithUnion_TestBase : public ::test::protocols::MethodWithUnion {
+ public:
+  virtual ~MethodWithUnion_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) override {
+    NotImplemented_("UnionMethod");
+  }
 };
 }  // namespace testing
 }  // namespace protocols

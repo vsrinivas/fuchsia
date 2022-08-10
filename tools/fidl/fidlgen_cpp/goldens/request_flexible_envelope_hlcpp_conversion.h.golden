@@ -53,16 +53,6 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestStri
   static inline ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest Convert(::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  using HLCPPType = ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
-  static inline ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse Convert(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  using NaturalType = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
-  static inline ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
   using HLCPPType = ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse;
   static inline ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse Convert(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse&&);
@@ -83,14 +73,14 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlex
   static inline ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_requestflexibleenvelope::StrictFoo> {
-  using HLCPPType = ::test::requestflexibleenvelope::StrictFoo;
-  static inline ::test::requestflexibleenvelope::StrictFoo Convert(::test_requestflexibleenvelope::StrictFoo&&);
+struct NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
+  using HLCPPType = ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
+  static inline ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse Convert(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::StrictFoo> {
-  using NaturalType = ::test_requestflexibleenvelope::StrictFoo;
-  static inline ::test_requestflexibleenvelope::StrictFoo Convert(::test::requestflexibleenvelope::StrictFoo&&);
+struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
+  using NaturalType = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
+  static inline ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_requestflexibleenvelope::FlexibleFoo> {
@@ -102,6 +92,16 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
   using NaturalType = ::test_requestflexibleenvelope::FlexibleFoo;
   static inline ::test_requestflexibleenvelope::FlexibleFoo Convert(::test::requestflexibleenvelope::FlexibleFoo&&);
 };
+template <>
+struct NaturalToHLCPPTraits<::test_requestflexibleenvelope::StrictFoo> {
+  using HLCPPType = ::test::requestflexibleenvelope::StrictFoo;
+  static inline ::test::requestflexibleenvelope::StrictFoo Convert(::test_requestflexibleenvelope::StrictFoo&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::StrictFoo> {
+  using NaturalType = ::test_requestflexibleenvelope::StrictFoo;
+  static inline ::test_requestflexibleenvelope::StrictFoo Convert(::test::requestflexibleenvelope::StrictFoo&&);
+};
 
 ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest>::Convert(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest&& value) {
   ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest hlcpp;
@@ -112,17 +112,6 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest>::Convert(::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest&& value) {
   return ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest{{
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
-  }};
-}
-::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Convert(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&& value) {
-  ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse hlcpp;
-  hlcpp.f = ::fidl::NaturalToHLCPP(std::move(value.f()));
-  return hlcpp;
-}
-
-::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&& value) {
-  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse{{
-      .f = ::fidl::HLCPPToNatural(std::move(value.f)),
   }};
 }
 ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::Convert(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse&& value) {
@@ -147,35 +136,18 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
       .s = ::fidl::HLCPPToNatural(std::move(value.s)),
   }};
 }
-
-::test::requestflexibleenvelope::StrictFoo NaturalToHLCPPTraits<::test_requestflexibleenvelope::StrictFoo>::Convert(::test_requestflexibleenvelope::StrictFoo&& value) {
-  ::test::requestflexibleenvelope::StrictFoo hlcpp;
-  switch (value.Which()) {
-    case ::test_requestflexibleenvelope::StrictFoo::Tag::kS:
-      hlcpp.set_s(::fidl::NaturalToHLCPP(std::move(value.s().value())));
-      break;
-    case ::test_requestflexibleenvelope::StrictFoo::Tag::kI:
-      hlcpp.set_i(::fidl::NaturalToHLCPP(std::move(value.i().value())));
-      break;
-    default:
-      break;
-  }
+::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse NaturalToHLCPPTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Convert(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&& value) {
+  ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse hlcpp;
+  hlcpp.f = ::fidl::NaturalToHLCPP(std::move(value.f()));
   return hlcpp;
 }
 
-::test_requestflexibleenvelope::StrictFoo HLCPPToNaturalTraits<::test::requestflexibleenvelope::StrictFoo>::Convert(::test::requestflexibleenvelope::StrictFoo&& value) {
-  using _NaturalUnion = ::test_requestflexibleenvelope::StrictFoo;
-  switch (value.Which()) {
-    case ::test::requestflexibleenvelope::StrictFoo::Tag::kS:
-      return _NaturalUnion::WithS(
-          ::fidl::HLCPPToNatural(std::move(value.s())));
-    case ::test::requestflexibleenvelope::StrictFoo::Tag::kI:
-      return _NaturalUnion::WithI(
-          ::fidl::HLCPPToNatural(std::move(value.i())));
-    default:
-      ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::requestflexibleenvelope::StrictFoo");
-  }
+::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse HLCPPToNaturalTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Convert(::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse&& value) {
+  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse{{
+      .f = ::fidl::HLCPPToNatural(std::move(value.f)),
+  }};
 }
+
 ::test::requestflexibleenvelope::FlexibleFoo NaturalToHLCPPTraits<::test_requestflexibleenvelope::FlexibleFoo>::Convert(::test_requestflexibleenvelope::FlexibleFoo&& value) {
   ::test::requestflexibleenvelope::FlexibleFoo hlcpp;
   switch (value.Which()) {
@@ -202,6 +174,34 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
           ::fidl::HLCPPToNatural(std::move(value.i())));
     default:
       return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+  }
+}
+::test::requestflexibleenvelope::StrictFoo NaturalToHLCPPTraits<::test_requestflexibleenvelope::StrictFoo>::Convert(::test_requestflexibleenvelope::StrictFoo&& value) {
+  ::test::requestflexibleenvelope::StrictFoo hlcpp;
+  switch (value.Which()) {
+    case ::test_requestflexibleenvelope::StrictFoo::Tag::kS:
+      hlcpp.set_s(::fidl::NaturalToHLCPP(std::move(value.s().value())));
+      break;
+    case ::test_requestflexibleenvelope::StrictFoo::Tag::kI:
+      hlcpp.set_i(::fidl::NaturalToHLCPP(std::move(value.i().value())));
+      break;
+    default:
+      break;
+  }
+  return hlcpp;
+}
+
+::test_requestflexibleenvelope::StrictFoo HLCPPToNaturalTraits<::test::requestflexibleenvelope::StrictFoo>::Convert(::test::requestflexibleenvelope::StrictFoo&& value) {
+  using _NaturalUnion = ::test_requestflexibleenvelope::StrictFoo;
+  switch (value.Which()) {
+    case ::test::requestflexibleenvelope::StrictFoo::Tag::kS:
+      return _NaturalUnion::WithS(
+          ::fidl::HLCPPToNatural(std::move(value.s())));
+    case ::test::requestflexibleenvelope::StrictFoo::Tag::kI:
+      return _NaturalUnion::WithI(
+          ::fidl::HLCPPToNatural(std::move(value.i())));
+    default:
+      ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::requestflexibleenvelope::StrictFoo");
   }
 }
 

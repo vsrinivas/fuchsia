@@ -13,15 +13,15 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_service_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>>,
-        },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>>,
+        },
+
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>>,
         },
 };
 

@@ -2,6 +2,11 @@
 
 #include <fidl/test.errorsyntax/cpp/natural_types.h>
 
+::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Storage_ test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.s)};
+}
+
 ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse::Storage_ test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.value)};
@@ -10,11 +15,6 @@
 ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Storage_ test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
-}
-
-::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Storage_ test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.s)};
 }
 
 std::shared_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Storage_> test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::CloneStorage_() const {

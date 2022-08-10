@@ -9,6 +9,33 @@
 //
 namespace test {
 namespace error {
+extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+const fidl_type_t* ExampleFooRequest::FidlType = &test_error_ExampleFooRequestTable;
+
+void ExampleFooRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                               cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
+    memcpy(_encoder->template GetPtr<ExampleFooRequest>(_offset), this, sizeof(ExampleFooRequest));
+  } else {
+    ::fidl::Encode(_encoder, &s, _offset + 0);
+  }
+}
+
+void ExampleFooRequest::Decode(::fidl::Decoder* _decoder, ExampleFooRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleFooRequest>(_offset), sizeof(ExampleFooRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
+  }
+}
+
+zx_status_t ExampleFooRequest::Clone(ExampleFooRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(s, &_result->s);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 const fidl_type_t* Example_foo_Response::FidlType = &test_error_Example_foo_ResponseTable;
 
@@ -259,33 +286,6 @@ void ExampleFooTopResponse::Decode(::fidl::Decoder* _decoder, ExampleFooTopRespo
 
 zx_status_t ExampleFooTopResponse::Clone(ExampleFooTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(result, &_result->result);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
-const fidl_type_t* ExampleFooRequest::FidlType = &test_error_ExampleFooRequestTable;
-
-void ExampleFooRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                               cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
-    memcpy(_encoder->template GetPtr<ExampleFooRequest>(_offset), this, sizeof(ExampleFooRequest));
-  } else {
-    ::fidl::Encode(_encoder, &s, _offset + 0);
-  }
-}
-
-void ExampleFooRequest::Decode(::fidl::Decoder* _decoder, ExampleFooRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleFooRequest>(_offset), sizeof(ExampleFooRequest));
-  } else {
-    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
-  }
-}
-
-zx_status_t ExampleFooRequest::Clone(ExampleFooRequest* _result) const {
-  zx_status_t _status = ::fidl::Clone(s, &_result->s);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;

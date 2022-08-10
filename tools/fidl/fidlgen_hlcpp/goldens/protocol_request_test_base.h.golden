@@ -6,6 +6,12 @@
 namespace test {
 namespace protocolrequest {
 namespace testing {
+class Child_TestBase : public ::test::protocolrequest::Child {
+ public:
+  virtual ~Child_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
 class Parent_TestBase : public ::test::protocolrequest::Parent {
  public:
   virtual ~Parent_TestBase() {}
@@ -22,12 +28,6 @@ class Parent_TestBase : public ::test::protocolrequest::Parent {
   void TakeChildRequest(::fidl::InterfaceRequest<::test::protocolrequest::Child> r) override {
     NotImplemented_("TakeChildRequest");
   }
-};
-
-class Child_TestBase : public ::test::protocolrequest::Child {
- public:
-  virtual ~Child_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace protocolrequest

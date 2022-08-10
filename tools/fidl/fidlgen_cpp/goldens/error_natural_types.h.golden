@@ -18,13 +18,73 @@
 
 namespace test_error {
 
+class ExampleFooRequest;
+
 class ExampleFooResponse;
 
 class ExampleFooTopResponse;
 
-class ExampleFooRequest;
-
 class ExampleFooResult;
+
+extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+
+class ExampleFooRequest {
+ private:
+  struct Storage_;
+
+ public:
+  ExampleFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ExampleFooRequest(::std::string s) noexcept
+      : storage_({.s = std::move(s)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ExampleFooRequest| only if all of its members are default constructible.
+  ExampleFooRequest() = default;
+#pragma clang diagnostic pop
+
+  ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
+  ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
+  ExampleFooRequest(const ExampleFooRequest& other) noexcept : ExampleFooRequest(other.CloneStorage_()) {}
+  ExampleFooRequest& operator=(const ExampleFooRequest& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const ExampleFooRequest& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ExampleFooRequest& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>::Equal(this, &other);
+  }
+
+  const ::std::string&
+  s() const {
+    return storage_.s;
+  }
+
+  ::std::string& s() {
+    return storage_.s;
+  }
+
+  ExampleFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooRequest(Storage_{
+                                                                                      .s = {},
+                                                                                  }) {}
+
+ private:
+  struct Storage_ final {
+    ::std::string s;
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_error::ExampleFooRequest>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
+      &Storage_::s, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
 
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
@@ -251,68 +311,17 @@ class ExampleFooTopResponse {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
-
-class ExampleFooRequest {
- private:
-  struct Storage_;
-
- public:
-  ExampleFooRequest(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ExampleFooRequest(::std::string s) noexcept
-      : storage_({.s = std::move(s)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ExampleFooRequest| only if all of its members are default constructible.
-  ExampleFooRequest() = default;
-#pragma clang diagnostic pop
-
-  ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
-  ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
-  ExampleFooRequest(const ExampleFooRequest& other) noexcept : ExampleFooRequest(other.CloneStorage_()) {}
-  ExampleFooRequest& operator=(const ExampleFooRequest& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const ExampleFooRequest& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>::Equal(this, &other);
-  }
-  bool operator!=(const ExampleFooRequest& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>::Equal(this, &other);
-  }
-
-  const ::std::string&
-  s() const {
-    return storage_.s;
-  }
-
-  ::std::string& s() {
-    return storage_.s;
-  }
-
-  ExampleFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooRequest(Storage_{
-                                                                                      .s = {},
-                                                                                  }) {}
-
- private:
-  struct Storage_ final {
-    ::std::string s;
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_error::ExampleFooRequest>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
-      &Storage_::s, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
-
 }  // namespace test_error
 namespace fidl {
+
+extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+
+template <>
+struct IsFidlType<::test_error::ExampleFooRequest> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16> {};
 
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
@@ -331,15 +340,6 @@ struct IsFidlType<::test_error::ExampleFooTopResponse> : public std::true_type {
 template <>
 struct internal::NaturalCodingTraits<::test_error::ExampleFooTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooTopResponse, 16> {};
-
-extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
-
-template <>
-struct IsFidlType<::test_error::ExampleFooRequest> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16> {};
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 

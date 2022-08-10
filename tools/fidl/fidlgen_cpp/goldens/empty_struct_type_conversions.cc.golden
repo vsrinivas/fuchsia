@@ -23,11 +23,11 @@ namespace internal {
   };
 }
 
-::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::ToNatural(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse src) {
-  return ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse(WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty>::ToNatural(std::move(src.e)));
+::test_emptystruct::EmptyProtocolReceiveRequest WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::test_emptystruct::EmptyProtocolReceiveRequest>::ToNatural(::test_emptystruct::wire::EmptyProtocolReceiveRequest src) {
+  return ::test_emptystruct::EmptyProtocolReceiveRequest(WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty>::ToNatural(std::move(src.e)));
 }
-::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse src) {
-  return ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse{
+::test_emptystruct::wire::EmptyProtocolReceiveRequest WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::test_emptystruct::EmptyProtocolReceiveRequest>::ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolReceiveRequest src) {
+  return ::test_emptystruct::wire::EmptyProtocolReceiveRequest{
       .e = WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty>::ToWire(arena, std::move(src.e())),
   };
 }
@@ -41,11 +41,11 @@ namespace internal {
   };
 }
 
-::test_emptystruct::EmptyProtocolReceiveRequest WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::test_emptystruct::EmptyProtocolReceiveRequest>::ToNatural(::test_emptystruct::wire::EmptyProtocolReceiveRequest src) {
-  return ::test_emptystruct::EmptyProtocolReceiveRequest(WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty>::ToNatural(std::move(src.e)));
+::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::ToNatural(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse src) {
+  return ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse(WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty>::ToNatural(std::move(src.e)));
 }
-::test_emptystruct::wire::EmptyProtocolReceiveRequest WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::test_emptystruct::EmptyProtocolReceiveRequest>::ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolReceiveRequest src) {
-  return ::test_emptystruct::wire::EmptyProtocolReceiveRequest{
+::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse src) {
+  return ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse{
       .e = WireNaturalConversionTraits<::test_emptystruct::wire::Empty, ::test_emptystruct::Empty>::ToWire(arena, std::move(src.e())),
   };
 }

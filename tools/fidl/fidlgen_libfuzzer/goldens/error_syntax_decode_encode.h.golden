@@ -12,6 +12,11 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
     test_errorsyntax_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>,
@@ -20,11 +25,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
             .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

@@ -5,21 +5,13 @@
 namespace fidl {
 namespace internal {
 
-::test_table::TableWithAttributes WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes>::ToNatural(::test_table::wire::TableWithAttributes src) {
-  ::test_table::TableWithAttributes dst;
-  if (src.has_x()) {
-    dst.x() =
-        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
-  }
+::test_table::EmptyTable WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable>::ToNatural(::test_table::wire::EmptyTable src) {
+  ::test_table::EmptyTable dst;
 
   return dst;
 }
-::test_table::wire::TableWithAttributes WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes>::ToWire(fidl::AnyArena& arena, ::test_table::TableWithAttributes src) {
-  auto builder = ::test_table::wire::TableWithAttributes::Builder(arena);
-  if (src.x().has_value()) {
-    builder.x(
-        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
-  }
+::test_table::wire::EmptyTable WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable>::ToWire(fidl::AnyArena& arena, ::test_table::EmptyTable src) {
+  auto builder = ::test_table::wire::EmptyTable::Builder(arena);
   return builder.Build();
 }
 
@@ -45,40 +37,6 @@ namespace internal {
   if (src.y().has_value()) {
     builder.y(
         WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y().value())));
-  }
-  return builder.Build();
-}
-
-::test_table::ReverseOrdinalTable WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable>::ToNatural(::test_table::wire::ReverseOrdinalTable src) {
-  ::test_table::ReverseOrdinalTable dst;
-  if (src.has_z()) {
-    dst.z() =
-        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.z()));
-  }
-  if (src.has_y()) {
-    dst.y() =
-        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y()));
-  }
-  if (src.has_x()) {
-    dst.x() =
-        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
-  }
-
-  return dst;
-}
-::test_table::wire::ReverseOrdinalTable WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable>::ToWire(fidl::AnyArena& arena, ::test_table::ReverseOrdinalTable src) {
-  auto builder = ::test_table::wire::ReverseOrdinalTable::Builder(arena);
-  if (src.z().has_value()) {
-    builder.z(
-        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.z().value())));
-  }
-  if (src.y().has_value()) {
-    builder.y(
-        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y().value())));
-  }
-  if (src.x().has_value()) {
-    builder.x(
-        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   return builder.Build();
 }
@@ -131,6 +89,58 @@ namespace internal {
   if (src.z().has_value()) {
     builder.z(
         WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.z().value())));
+  }
+  return builder.Build();
+}
+
+::test_table::ReverseOrdinalTable WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable>::ToNatural(::test_table::wire::ReverseOrdinalTable src) {
+  ::test_table::ReverseOrdinalTable dst;
+  if (src.has_z()) {
+    dst.z() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.z()));
+  }
+  if (src.has_y()) {
+    dst.y() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y()));
+  }
+  if (src.has_x()) {
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
+  }
+
+  return dst;
+}
+::test_table::wire::ReverseOrdinalTable WireNaturalConversionTraits<::test_table::wire::ReverseOrdinalTable, ::test_table::ReverseOrdinalTable>::ToWire(fidl::AnyArena& arena, ::test_table::ReverseOrdinalTable src) {
+  auto builder = ::test_table::wire::ReverseOrdinalTable::Builder(arena);
+  if (src.z().has_value()) {
+    builder.z(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.z().value())));
+  }
+  if (src.y().has_value()) {
+    builder.y(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y().value())));
+  }
+  if (src.x().has_value()) {
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
+  }
+  return builder.Build();
+}
+
+::test_table::TableWithAttributes WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes>::ToNatural(::test_table::wire::TableWithAttributes src) {
+  ::test_table::TableWithAttributes dst;
+  if (src.has_x()) {
+    dst.x() =
+        WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x()));
+  }
+
+  return dst;
+}
+::test_table::wire::TableWithAttributes WireNaturalConversionTraits<::test_table::wire::TableWithAttributes, ::test_table::TableWithAttributes>::ToWire(fidl::AnyArena& arena, ::test_table::TableWithAttributes src) {
+  auto builder = ::test_table::wire::TableWithAttributes::Builder(arena);
+  if (src.x().has_value()) {
+    builder.x(
+        WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.x().value())));
   }
   return builder.Build();
 }
@@ -664,16 +674,6 @@ namespace internal {
     builder.v64(
         WireNaturalConversionTraits<::test_table::wire::ExtensionTable, ::test_table::ExtensionTable>::ToWire(arena, std::move(src.v64().value())));
   }
-  return builder.Build();
-}
-
-::test_table::EmptyTable WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable>::ToNatural(::test_table::wire::EmptyTable src) {
-  ::test_table::EmptyTable dst;
-
-  return dst;
-}
-::test_table::wire::EmptyTable WireNaturalConversionTraits<::test_table::wire::EmptyTable, ::test_table::EmptyTable>::ToWire(fidl::AnyArena& arena, ::test_table::EmptyTable src) {
-  auto builder = ::test_table::wire::EmptyTable::Builder(arena);
   return builder.Build();
 }
 

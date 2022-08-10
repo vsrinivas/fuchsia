@@ -5,21 +5,21 @@
 namespace fidl {
 namespace internal {
 
-::test_inheritance::SuperFooTopResponse WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse>::ToNatural(::test_inheritance::wire::SuperFooTopResponse src) {
-  return ::test_inheritance::SuperFooTopResponse(WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y)));
-}
-::test_inheritance::wire::SuperFooTopResponse WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse>::ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src) {
-  return ::test_inheritance::wire::SuperFooTopResponse{
-      .y = WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y())),
-  };
-}
-
 ::test_inheritance::SuperFooRequest WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest, ::test_inheritance::SuperFooRequest>::ToNatural(::test_inheritance::wire::SuperFooRequest src) {
   return ::test_inheritance::SuperFooRequest(WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s)));
 }
 ::test_inheritance::wire::SuperFooRequest WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest, ::test_inheritance::SuperFooRequest>::ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooRequest src) {
   return ::test_inheritance::wire::SuperFooRequest{
       .s = WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s())),
+  };
+}
+
+::test_inheritance::SuperFooTopResponse WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse>::ToNatural(::test_inheritance::wire::SuperFooTopResponse src) {
+  return ::test_inheritance::SuperFooTopResponse(WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.y)));
+}
+::test_inheritance::wire::SuperFooTopResponse WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse>::ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src) {
+  return ::test_inheritance::wire::SuperFooTopResponse{
+      .y = WireNaturalConversionTraits<int64_t, int64_t>::ToWire(arena, std::move(src.y())),
   };
 }
 

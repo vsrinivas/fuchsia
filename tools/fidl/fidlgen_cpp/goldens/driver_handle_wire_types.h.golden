@@ -27,24 +27,13 @@
 namespace test_driverhandle {
 
 namespace wire {
-struct HandlesInProtocolSendHandlesRequest;
+struct ClientEndWrapper;
 
 struct ServerEndWrapper;
 
-struct ClientEndWrapper;
+struct HandlesInProtocolSendHandlesRequest;
 
 class T;
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
-
-struct ServerEndWrapper {
-  ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -52,6 +41,17 @@ extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
 
 struct ClientEndWrapper {
   ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
+
+struct ServerEndWrapper {
+  ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value = {};
 
   void _CloseHandles();
 };
@@ -286,54 +286,54 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
+struct IsResource<::test_driverhandle::wire::ClientEndWrapper> : public std::true_type {};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
-  static constexpr const fidl_type_t* kType = &::test_driverhandle::wire::test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+struct DeprecatedCTypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
+  static constexpr const fidl_type_t* kType = &::test_driverhandle::wire::test_driverhandle_ClientEndWrapperTable;
 };
 
 template <>
-struct TypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
-  static constexpr uint32_t kMaxNumHandles = 2;
-  static constexpr uint32_t kMaxDepth = 2;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
-  static constexpr uint32_t kMaxOutOfLineV1 = 48;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
+struct TypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
 };
 
 template <>
-struct IsFidlType<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
+struct IsFidlType<::test_driverhandle::wire::ClientEndWrapper> : public std::true_type {};
 template <>
-struct IsStruct<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>);
-static_assert(offsetof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, t) == 0);
-static_assert(sizeof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest) == TypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>::kPrimarySize);
+struct IsStruct<::test_driverhandle::wire::ClientEndWrapper> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_driverhandle::wire::ClientEndWrapper>);
+static_assert(offsetof(::test_driverhandle::wire::ClientEndWrapper, value) == 0);
+static_assert(sizeof(::test_driverhandle::wire::ClientEndWrapper) == TypeTraits<::test_driverhandle::wire::ClientEndWrapper>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_driverhandle::wire::T, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::ClientEndWrapper, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_driverhandle::wire::ClientEndWrapper, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_driverhandle::wire::ClientEndWrapper* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest));
+      memcpy(position.As<void>(), value, sizeof(::test_driverhandle::wire::ClientEndWrapper));
     } else {
-      internal::WireCodingTraits<::test_driverhandle::wire::T, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->t, position + 0, recursion_depth);
+      internal::WireCodingTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->value, position + 0, recursion_depth);
     }
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::test_driverhandle::wire::T, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+      internal::WireCodingTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
     }
   }
@@ -398,54 +398,54 @@ struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::ServerEndWr
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::test_driverhandle::wire::ClientEndWrapper> : public std::true_type {};
+struct IsResource<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
-  static constexpr const fidl_type_t* kType = &::test_driverhandle::wire::test_driverhandle_ClientEndWrapperTable;
+struct DeprecatedCTypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
+  static constexpr const fidl_type_t* kType = &::test_driverhandle::wire::test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 };
 
 template <>
-struct TypeTraits<::test_driverhandle::wire::ClientEndWrapper> {
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
+struct TypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
+  static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 48;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
 };
 
 template <>
-struct IsFidlType<::test_driverhandle::wire::ClientEndWrapper> : public std::true_type {};
+struct IsFidlType<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
 template <>
-struct IsStruct<::test_driverhandle::wire::ClientEndWrapper> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_driverhandle::wire::ClientEndWrapper>);
-static_assert(offsetof(::test_driverhandle::wire::ClientEndWrapper, value) == 0);
-static_assert(sizeof(::test_driverhandle::wire::ClientEndWrapper) == TypeTraits<::test_driverhandle::wire::ClientEndWrapper>::kPrimarySize);
+struct IsStruct<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>);
+static_assert(offsetof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, t) == 0);
+static_assert(sizeof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest) == TypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::ClientEndWrapper, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
+struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_driverhandle::wire::T, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_driverhandle::wire::ClientEndWrapper, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_driverhandle::wire::ClientEndWrapper* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_driverhandle::wire::ClientEndWrapper));
+      memcpy(position.As<void>(), value, sizeof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest));
     } else {
-      internal::WireCodingTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->value, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_driverhandle::wire::T, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->t, position + 0, recursion_depth);
     }
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Decode(
+      internal::WireCodingTraits<::test_driverhandle::wire::T, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
     }
   }

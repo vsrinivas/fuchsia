@@ -28,47 +28,47 @@ using BitsType = ::test_consts::BitsType;
 
 using EnumType = ::test_consts::EnumType;
 
-constexpr zx_rights_t kZxRightsVal = ZX_RIGHT_READ;
-
-constexpr zx_obj_type_t kZxObjVal = ZX_OBJ_TYPE_CHANNEL;
-
-constexpr uint64_t kZxConst = ZX_CHANNEL_MAX_MSG_BYTES;
-
-extern const char* kUsername;
-
-constexpr uint32_t kPopulationUsa2018 = 330000000u;
+constexpr bool kEnabledFlag = true;
 
 constexpr int8_t kOffset = -33;
 
-constexpr float kMinTemp = -273.15f;
-
-constexpr uint64_t kFuchsia = 4054509061583223046u;
-
-constexpr ::test_consts::wire::EnumType kEnumVal = ::test_consts::wire::EnumType::kValue;
-
-constexpr ::test_consts::wire::EnumType kEnumTrue = ::test_consts::wire::EnumType::kTrue;
-
-constexpr int32_t kEnumPrimitiveVal = ::test_consts::wire::EnumType::kValue;
-
-constexpr int32_t kEnumPrimitiveTrue = ::test_consts::wire::EnumType::kTrue;
-
-constexpr bool kEnabledFlag = true;
-
-constexpr uint64_t kDiamond = 1746410393481133080u;
-
-constexpr double kConversionFactor = 1.41421;
-
-constexpr ::test_consts::wire::BitsType kBitsVal = ::test_consts::wire::BitsType::kValue;
-
-constexpr ::test_consts::wire::BitsType kBitsTrue = ::test_consts::wire::BitsType::kTrue;
-
-constexpr uint32_t kBitsPrimitiveVal = ::test_consts::wire::BitsType::kValue;
-
-constexpr uint32_t kBitsPrimitiveTrue = ::test_consts::wire::BitsType::kTrue;
+constexpr uint16_t kAnswer = 42u;
 
 constexpr uint16_t kAnswerInBinary = 42u;
 
-constexpr uint16_t kAnswer = 42u;
+constexpr uint32_t kPopulationUsa2018 = 330000000u;
+
+constexpr uint64_t kDiamond = 1746410393481133080u;
+
+constexpr uint64_t kFuchsia = 4054509061583223046u;
+
+extern const char* kUsername;
+
+constexpr float kMinTemp = -273.15f;
+
+constexpr double kConversionFactor = 1.41421;
+
+constexpr zx_obj_type_t kZxObjVal = ZX_OBJ_TYPE_CHANNEL;
+
+constexpr zx_rights_t kZxRightsVal = ZX_RIGHT_READ;
+
+constexpr uint64_t kZxConst = ZX_CHANNEL_MAX_MSG_BYTES;
+
+constexpr ::test_consts::wire::EnumType kEnumVal = ::test_consts::wire::EnumType::kValue;
+
+constexpr int32_t kEnumPrimitiveVal = ::test_consts::wire::EnumType::kValue;
+
+constexpr ::test_consts::wire::EnumType kEnumTrue = ::test_consts::wire::EnumType::kTrue;
+
+constexpr int32_t kEnumPrimitiveTrue = ::test_consts::wire::EnumType::kTrue;
+
+constexpr ::test_consts::wire::BitsType kBitsVal = ::test_consts::wire::BitsType::kValue;
+
+constexpr uint32_t kBitsPrimitiveVal = ::test_consts::wire::BitsType::kValue;
+
+constexpr ::test_consts::wire::BitsType kBitsTrue = ::test_consts::wire::BitsType::kTrue;
+
+constexpr uint32_t kBitsPrimitiveTrue = ::test_consts::wire::BitsType::kTrue;
 
 }  // namespace wire
 }  // namespace test_consts

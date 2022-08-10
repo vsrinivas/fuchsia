@@ -15,9 +15,9 @@ namespace fuzzing {
 
 using Empty = ::test::emptystruct::Empty;
 using EmptyProtocolSendRequest = ::test::emptystruct::EmptyProtocolSendRequest;
-using EmptyProtocolSendAndReceiveTopResponse = ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse;
-using EmptyProtocolSendAndReceiveRequest = ::test::emptystruct::EmptyProtocolSendAndReceiveRequest;
 using EmptyProtocolReceiveRequest = ::test::emptystruct::EmptyProtocolReceiveRequest;
+using EmptyProtocolSendAndReceiveRequest = ::test::emptystruct::EmptyProtocolSendAndReceiveRequest;
+using EmptyProtocolSendAndReceiveTopResponse = ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse;
 
 template <>
 struct MinSize<Empty> {
@@ -56,17 +56,17 @@ struct Allocate<EmptyProtocolSendRequest> {
   }
 };
 template <>
-struct MinSize<EmptyProtocolSendAndReceiveTopResponse> {
+struct MinSize<EmptyProtocolReceiveRequest> {
   operator size_t() {
     return MinSize<::test::emptystruct::Empty>();
   }
 };
 template <>
-struct Allocate<EmptyProtocolSendAndReceiveTopResponse> {
-  EmptyProtocolSendAndReceiveTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<EmptyProtocolSendAndReceiveTopResponse>());
-    EmptyProtocolSendAndReceiveTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<EmptyProtocolSendAndReceiveTopResponse>()) / 1;
+struct Allocate<EmptyProtocolReceiveRequest> {
+  EmptyProtocolReceiveRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<EmptyProtocolReceiveRequest>());
+    EmptyProtocolReceiveRequest out;
+    const size_t slack_per_member = (*size - MinSize<EmptyProtocolReceiveRequest>()) / 1;
     size_t out_size;
     out_size = MinSize<::test::emptystruct::Empty>() + slack_per_member;
     out.e = Allocate<::test::emptystruct::Empty>{}(src, &out_size);
@@ -92,17 +92,17 @@ struct Allocate<EmptyProtocolSendAndReceiveRequest> {
   }
 };
 template <>
-struct MinSize<EmptyProtocolReceiveRequest> {
+struct MinSize<EmptyProtocolSendAndReceiveTopResponse> {
   operator size_t() {
     return MinSize<::test::emptystruct::Empty>();
   }
 };
 template <>
-struct Allocate<EmptyProtocolReceiveRequest> {
-  EmptyProtocolReceiveRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<EmptyProtocolReceiveRequest>());
-    EmptyProtocolReceiveRequest out;
-    const size_t slack_per_member = (*size - MinSize<EmptyProtocolReceiveRequest>()) / 1;
+struct Allocate<EmptyProtocolSendAndReceiveTopResponse> {
+  EmptyProtocolSendAndReceiveTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<EmptyProtocolSendAndReceiveTopResponse>());
+    EmptyProtocolSendAndReceiveTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<EmptyProtocolSendAndReceiveTopResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<::test::emptystruct::Empty>() + slack_per_member;
     out.e = Allocate<::test::emptystruct::Empty>{}(src, &out_size);

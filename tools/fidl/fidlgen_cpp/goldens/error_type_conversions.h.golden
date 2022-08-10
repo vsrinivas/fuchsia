@@ -15,6 +15,21 @@ namespace fidl {
 namespace internal {
 
 template <>
+struct WireNaturalConversionTraits<::test_error::wire::ExampleFooRequest, ::test_error::ExampleFooRequest> {
+  static ::test_error::ExampleFooRequest ToNatural(::test_error::wire::ExampleFooRequest src);
+  static ::test_error::wire::ExampleFooRequest ToWire(fidl::AnyArena& arena, ::test_error::ExampleFooRequest src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_error::wire::ExampleFooRequest> {
+  using type = ::test_error::ExampleFooRequest;
+};
+template <>
+struct WireTypeForNaturalType<::test_error::ExampleFooRequest> {
+  using type = ::test_error::wire::ExampleFooRequest;
+};
+
+template <>
 struct WireNaturalConversionTraits<::test_error::wire::ExampleFooResponse, ::test_error::ExampleFooResponse> {
   static ::test_error::ExampleFooResponse ToNatural(::test_error::wire::ExampleFooResponse src);
   static ::test_error::wire::ExampleFooResponse ToWire(fidl::AnyArena& arena, ::test_error::ExampleFooResponse src);
@@ -42,21 +57,6 @@ struct NaturalTypeForWireType<::test_error::wire::ExampleFooTopResponse> {
 template <>
 struct WireTypeForNaturalType<::test_error::ExampleFooTopResponse> {
   using type = ::test_error::wire::ExampleFooTopResponse;
-};
-
-template <>
-struct WireNaturalConversionTraits<::test_error::wire::ExampleFooRequest, ::test_error::ExampleFooRequest> {
-  static ::test_error::ExampleFooRequest ToNatural(::test_error::wire::ExampleFooRequest src);
-  static ::test_error::wire::ExampleFooRequest ToWire(fidl::AnyArena& arena, ::test_error::ExampleFooRequest src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_error::wire::ExampleFooRequest> {
-  using type = ::test_error::ExampleFooRequest;
-};
-template <>
-struct WireTypeForNaturalType<::test_error::ExampleFooRequest> {
-  using type = ::test_error::wire::ExampleFooRequest;
 };
 
 template <>

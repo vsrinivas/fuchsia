@@ -1,5 +1,31 @@
 #include <fidl/test.driverhandle/cpp/driver/natural_messaging.h>
 #include <lib/fidl_driver/cpp/unknown_interactions.h>
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::entries_end_ =
+    &entries_[0];
+
+void fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(::fdf::Server<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
+}
+void fdf::Server<::test_driverhandle::DriverProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
 namespace test_driverhandle {
 [[maybe_unused]] constexpr inline uint64_t kHandlesInProtocol_SendHandles_Ordinal = 8904504160365833729lu;
 
@@ -66,31 +92,5 @@ void fdf::Server<::test_driverhandle::HandlesInProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::entries_[] = {};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::entries_end_ =
-    &entries_[0];
-
-void fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(::fdf::Server<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
-}
-void fdf::Server<::test_driverhandle::DriverProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

@@ -9,13 +9,6 @@
       ::fidl::internal::NaturalClone(storage_.after)};
 }
 
-::test_unionsandwich::SandwichUnionSize36Alignment4::Storage_ test_unionsandwich::SandwichUnionSize36Alignment4::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.before),
-      ::fidl::internal::NaturalClone(storage_.union_),
-      ::fidl::internal::NaturalClone(storage_.after)};
-}
-
 ::test_unionsandwich::SandwichUnionSize12Alignment4::Storage_ test_unionsandwich::SandwichUnionSize12Alignment4::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.before),
@@ -36,19 +29,14 @@
       ::fidl::internal::NaturalClone(storage_.after)};
 }
 
-std::shared_ptr<::test_unionsandwich::UnionSize8Alignment4::Storage_> test_unionsandwich::UnionSize8Alignment4::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
+::test_unionsandwich::SandwichUnionSize36Alignment4::Storage_ test_unionsandwich::SandwichUnionSize36Alignment4::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.before),
+      ::fidl::internal::NaturalClone(storage_.union_),
+      ::fidl::internal::NaturalClone(storage_.after)};
 }
 
-std::shared_ptr<::test_unionsandwich::UnionSize36Alignment4::Storage_> test_unionsandwich::UnionSize36Alignment4::CloneStorage_() const {
+std::shared_ptr<::test_unionsandwich::UnionSize8Alignment4::Storage_> test_unionsandwich::UnionSize8Alignment4::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -73,6 +61,18 @@ std::shared_ptr<::test_unionsandwich::UnionSize12Alignment4::Storage_> test_unio
 }
 
 std::shared_ptr<::test_unionsandwich::UnionSize24Alignment8::Storage_> test_unionsandwich::UnionSize24Alignment8::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_unionsandwich::UnionSize36Alignment4::Storage_> test_unionsandwich::UnionSize36Alignment4::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

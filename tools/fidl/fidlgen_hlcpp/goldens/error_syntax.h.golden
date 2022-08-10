@@ -12,19 +12,40 @@ namespace errorsyntax {
 // Domain objects declarations
 //
 
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
 
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
-
 #ifdef __Fuchsia__
 
 class ExampleUseOfErrorSyntax;
 using ExampleUseOfErrorSyntaxHandle = ::fidl::InterfaceHandle<ExampleUseOfErrorSyntax>;
 #endif  // __Fuchsia__
+
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::std::string s{};
+
+  static inline ::std::unique_ptr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest> New() { return ::std::make_unique<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value, size_t _offset);
+  zx_status_t Clone(ExampleUseOfErrorSyntaxCallWhichMayFailRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& _value,
+                         ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using ExampleUseOfErrorSyntaxCallWhichMayFailRequestPtr = ::std::unique_ptr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
 
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final {
  public:
@@ -184,27 +205,6 @@ inline zx_status_t Clone(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallW
 
 using ExampleUseOfErrorSyntaxCallWhichMayFailTopResponsePtr = ::std::unique_ptr<ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
 
-class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  ::std::string s{};
-
-  static inline ::std::unique_ptr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest> New() { return ::std::make_unique<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value, size_t _offset);
-  zx_status_t Clone(ExampleUseOfErrorSyntaxCallWhichMayFailRequest* result) const;
-};
-
-inline zx_status_t Clone(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& _value,
-                         ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* _result) {
-  return _value.Clone(_result);
-}
-
-using ExampleUseOfErrorSyntaxCallWhichMayFailRequestPtr = ::std::unique_ptr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
-
 #ifdef __Fuchsia__
 
 namespace _internal {
@@ -266,6 +266,31 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
 }  // namespace errorsyntax
 }  // namespace test
 namespace fidl {
+template <>
+struct CodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    : public EncodableCodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16> {};
+
+template <>
+struct HasPadding<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public internal::BoolConstant<
+                                                                                                     !HasPadding<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value && IsMemcpyCompatible<::std::string>::value> {};
+
+inline zx_status_t Clone(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& value,
+                         ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* result) {
+  return ::test::errorsyntax::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  bool operator()(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& _lhs, const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.s, _rhs.s)) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     : public EncodableCodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response, 8> {};
@@ -365,31 +390,6 @@ template <>
 struct Equality<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
   bool operator()(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& _lhs, const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.result, _rhs.result)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    : public EncodableCodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16> {};
-
-template <>
-struct HasPadding<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public internal::BoolConstant<
-                                                                                                     !HasPadding<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value && IsMemcpyCompatible<::std::string>::value> {};
-
-inline zx_status_t Clone(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& value,
-                         ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* result) {
-  return ::test::errorsyntax::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  bool operator()(const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& _lhs, const ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest& _rhs) const {
-    if (!::fidl::Equals(_lhs.s, _rhs.s)) {
       return false;
     }
     return true;

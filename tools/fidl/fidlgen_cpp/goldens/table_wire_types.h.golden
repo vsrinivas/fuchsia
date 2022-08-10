@@ -24,31 +24,31 @@
 namespace test_table {
 
 namespace wire {
-class TableWithAttributes;
+class EmptyTable;
 
 class SimpleTable;
-
-class ReverseOrdinalTable;
 
 class OlderSimpleTable;
 
 class NewerSimpleTable;
 
+class ReverseOrdinalTable;
+
+class TableWithAttributes;
+
 class ExtensionTable;
 
 class SixtyFourOrdinalTable;
 
-class EmptyTable;
-
 }  // namespace wire
 }  // namespace test_table
 template <>
-class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>;
+class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>;
 template <>
-class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>;
+class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>;
 
 template <>
-struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
+struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
  public:
   WireTableFrame() = default;
   // In its intended usage, WireTableFrame will be referenced by an ObjectView.
@@ -63,26 +63,25 @@ struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
-  ::fidl::Envelope<int64_t> x_;
 
-  friend class ::test_table::wire::TableWithAttributes;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>>;
+  friend class ::test_table::wire::EmptyTable;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
 };
 
 namespace test_table {
 namespace wire {
-extern "C" const fidl_type_t test_table_TableWithAttributesTable;
+extern "C" const fidl_type_t test_table_EmptyTableTable;
 
-class TableWithAttributes {
+class EmptyTable {
  public:
-  TableWithAttributes() = default;
-  TableWithAttributes(const TableWithAttributes& other) noexcept = default;
-  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept = default;
-  TableWithAttributes(TableWithAttributes&& other) noexcept = default;
-  TableWithAttributes& operator=(TableWithAttributes&& other) noexcept = default;
+  EmptyTable() = default;
+  EmptyTable(const EmptyTable& other) noexcept = default;
+  EmptyTable& operator=(const EmptyTable& other) noexcept = default;
+  EmptyTable(EmptyTable&& other) noexcept = default;
+  EmptyTable& operator=(EmptyTable&& other) noexcept = default;
 
-  ~TableWithAttributes() = default;
+  ~EmptyTable() = default;
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -91,146 +90,93 @@ class TableWithAttributes {
   bool HasUnknownData() const;
 
   // Return a builder that by defaults allocates of an arena.
-  static ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> Builder(::fidl::AnyArena& arena);
+  static ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> Builder(::fidl::AnyArena& arena);
 
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
-  static ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame);
-
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
-  }
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>> frame);
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
  public:
 #else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
  private:
 #endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
 
-  TableWithAttributes& set_x(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-  TableWithAttributes& set_x(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.set_data(nullptr);
-    return *this;
-  }
-  template <typename... Args>
-  TableWithAttributes& set_x(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.set_data(
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-
-  TableWithAttributes& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
-  explicit TableWithAttributes(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(allocator)) {}
+  explicit EmptyTable(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or for another table.
-  explicit TableWithAttributes(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&& frame)
+  explicit EmptyTable(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame)
       : frame_ptr_(std::move(frame)) {}
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(allocator);
   }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
 
  private:
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
 
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame_ptr_;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>> frame_ptr_;
 };
 }  // namespace wire
 }  // namespace test_table
 template <typename BuilderImpl>
-class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, BuilderImpl> {
+class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, BuilderImpl> {
  public:
   // Build and return the table. The builder should not be used after this.
-  ::test_table::wire::TableWithAttributes Build() {
+  ::test_table::wire::EmptyTable Build() {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    ::test_table::wire::TableWithAttributes t = std::move(table_);
+    ::test_table::wire::EmptyTable t = std::move(table_);
     // Poison this builder to prevent accidental reuse.
     table_.frame_ptr_ = nullptr;
     return t;
   }
 
-  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->x_.set_data(elem);
-    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
-    return *static_cast<BuilderImpl*>(this);
-  }
-
  protected:
-  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&& frame)
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame)
       : table_(std::move(frame)) {}
 
  private:
-  ::test_table::wire::TableWithAttributes table_;
+  ::test_table::wire::EmptyTable table_;
 };
 
 template <>
-class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
 
  public:
-  using Base::x;
-
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>& x(Args&&... args_) {
-    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
-    return *this;
-  }
-
  private:
-  friend class ::test_table::wire::TableWithAttributes;
+  friend class ::test_table::wire::EmptyTable;
   WireTableBuilder(::fidl::AnyArena& arena)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(arena)),
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(arena)),
         arena_(arena) {}
 
   [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
 };
 
 template <>
-class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>>;
+class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
 
  private:
-  friend class ::test_table::wire::TableWithAttributes;
+  friend class ::test_table::wire::EmptyTable;
   using Base::Base;
-  WireTableExternalBuilder(::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>* frame)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>::FromExternal(frame)) {}
+  WireTableExternalBuilder(::fidl::WireTableFrame<::test_table::wire::EmptyTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>::FromExternal(frame)) {}
 };
 namespace test_table {
 namespace wire {
-inline ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> TableWithAttributes::Builder(::fidl::AnyArena& arena) {
-  return ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>(arena);
+inline ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> EmptyTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>(arena);
 }
-inline ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> TableWithAttributes::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame) {
-  return ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>(std::move(frame));
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> EmptyTable::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>> frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>(std::move(frame));
 }
 
 }  // namespace wire
@@ -479,303 +425,6 @@ inline ::fidl::WireTableBuilder<::test_table::wire::SimpleTable> SimpleTable::Bu
 }
 inline ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable> SimpleTable::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::SimpleTable>> frame) {
   return ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable>(std::move(frame));
-}
-
-}  // namespace wire
-}  // namespace test_table
-template <>
-class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>;
-template <>
-class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>;
-
-template <>
-struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
- public:
-  WireTableFrame() = default;
-  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
-  // If the ObjectView is assigned before a move or copy, then it will reference
-  // the old invalid object. Because this is unsafe, copies are disallowed and
-  // moves are only allowed by friend classes that operate safely.
-  WireTableFrame(const WireTableFrame&) = delete;
-  WireTableFrame& operator=(const WireTableFrame&) = delete;
-
- private:
-  WireTableFrame(WireTableFrame&&) noexcept = default;
-  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
-
-  bool HasUnknownData() const;
-  ::fidl::Envelope<int64_t> z_;
-  ::fidl::Envelope<int64_t> y_;
-  ::fidl::Envelope<int64_t> x_;
-
-  friend class ::test_table::wire::ReverseOrdinalTable;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>>;
-};
-
-namespace test_table {
-namespace wire {
-extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
-
-class ReverseOrdinalTable {
- public:
-  ReverseOrdinalTable() = default;
-  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept = default;
-  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept = default;
-  ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
-  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept = default;
-
-  ~ReverseOrdinalTable() = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  // Returns whether the table references unknown fields.
-  bool HasUnknownData() const;
-
-  // Return a builder that by defaults allocates of an arena.
-  static ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> Builder(::fidl::AnyArena& arena);
-
-  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
-  static ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame);
-
-  const int64_t& z() const {
-    ZX_ASSERT(has_z());
-    return frame_ptr_->z_.get_data();
-  }
-  int64_t& z() {
-    ZX_ASSERT(has_z());
-    return frame_ptr_->z_.get_data();
-  }
-  bool has_z() const {
-    return max_ordinal_ >= 1 && frame_ptr_->z_.has_data();
-  }
-
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const {
-    return max_ordinal_ >= 2 && frame_ptr_->y_.has_data();
-  }
-
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
-    return max_ordinal_ >= 3 && frame_ptr_->x_.has_data();
-  }
-#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
- public:
-#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
- private:
-#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
-
-  ReverseOrdinalTable& set_z(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-  ReverseOrdinalTable& set_z(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.set_data(nullptr);
-    return *this;
-  }
-  template <typename... Args>
-  ReverseOrdinalTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.set_data(
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-
-  ReverseOrdinalTable& clear_z() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->z_.clear_data();
-    return *this;
-  }
-  ReverseOrdinalTable& set_y(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
-    return *this;
-  }
-  ReverseOrdinalTable& set_y(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.set_data(nullptr);
-    return *this;
-  }
-  template <typename... Args>
-  ReverseOrdinalTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.set_data(
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
-    return *this;
-  }
-
-  ReverseOrdinalTable& clear_y() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->y_.clear_data();
-    return *this;
-  }
-  ReverseOrdinalTable& set_x(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
-    return *this;
-  }
-  ReverseOrdinalTable& set_x(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.set_data(nullptr);
-    return *this;
-  }
-  template <typename... Args>
-  ReverseOrdinalTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.set_data(
-        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
-    return *this;
-  }
-
-  ReverseOrdinalTable& clear_x() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->x_.clear_data();
-    return *this;
-  }
-
-  explicit ReverseOrdinalTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a Arena).
-  // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or for another table.
-  explicit ReverseOrdinalTable(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&& frame)
-      : frame_ptr_(std::move(frame)) {}
-
-  void Allocate(::fidl::AnyArena& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(allocator);
-  }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&& frame_ptr) {
-    max_ordinal_ = 0;
-    frame_ptr_ = std::move(frame_ptr);
-  }
-
- private:
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>>;
-
-  uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame_ptr_;
-};
-}  // namespace wire
-}  // namespace test_table
-template <typename BuilderImpl>
-class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, BuilderImpl> {
- public:
-  // Build and return the table. The builder should not be used after this.
-  ::test_table::wire::ReverseOrdinalTable Build() {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    ::test_table::wire::ReverseOrdinalTable t = std::move(table_);
-    // Poison this builder to prevent accidental reuse.
-    table_.frame_ptr_ = nullptr;
-    return t;
-  }
-
-  BuilderImpl& z(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->z_.set_data(elem);
-    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
-    return *static_cast<BuilderImpl*>(this);
-  }
-
-  BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->y_.set_data(elem);
-    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
-    return *static_cast<BuilderImpl*>(this);
-  }
-
-  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->x_.set_data(elem);
-    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
-    return *static_cast<BuilderImpl*>(this);
-  }
-
- protected:
-  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&& frame)
-      : table_(std::move(frame)) {}
-
- private:
-  ::test_table::wire::ReverseOrdinalTable table_;
-};
-
-template <>
-class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
-
- public:
-  using Base::z;
-
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& z(Args&&... args_) {
-    z(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
-    return *this;
-  }
-  using Base::y;
-
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& y(Args&&... args_) {
-    y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
-    return *this;
-  }
-  using Base::x;
-
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& x(Args&&... args_) {
-    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
-    return *this;
-  }
-
- private:
-  friend class ::test_table::wire::ReverseOrdinalTable;
-  WireTableBuilder(::fidl::AnyArena& arena)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(arena)),
-        arena_(arena) {}
-
-  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
-};
-
-template <>
-class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>>;
-
- private:
-  friend class ::test_table::wire::ReverseOrdinalTable;
-  using Base::Base;
-  WireTableExternalBuilder(::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>* frame)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>::FromExternal(frame)) {}
-};
-namespace test_table {
-namespace wire {
-inline ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> ReverseOrdinalTable::Builder(::fidl::AnyArena& arena) {
-  return ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>(arena);
-}
-inline ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> ReverseOrdinalTable::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame) {
-  return ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>(std::move(frame));
 }
 
 }  // namespace wire
@@ -1269,6 +918,496 @@ inline ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable> NewerSimpl
 }
 inline ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable> NewerSimpleTable::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>> frame) {
   return ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable>(std::move(frame));
+}
+
+}  // namespace wire
+}  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>;
+
+template <>
+struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
+  ::fidl::Envelope<int64_t> z_;
+  ::fidl::Envelope<int64_t> y_;
+  ::fidl::Envelope<int64_t> x_;
+
+  friend class ::test_table::wire::ReverseOrdinalTable;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>>;
+};
+
+namespace test_table {
+namespace wire {
+extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
+
+class ReverseOrdinalTable {
+ public:
+  ReverseOrdinalTable() = default;
+  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept = default;
+  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept = default;
+  ReverseOrdinalTable(ReverseOrdinalTable&& other) noexcept = default;
+  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other) noexcept = default;
+
+  ~ReverseOrdinalTable() = default;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame);
+
+  const int64_t& z() const {
+    ZX_ASSERT(has_z());
+    return frame_ptr_->z_.get_data();
+  }
+  int64_t& z() {
+    ZX_ASSERT(has_z());
+    return frame_ptr_->z_.get_data();
+  }
+  bool has_z() const {
+    return max_ordinal_ >= 1 && frame_ptr_->z_.has_data();
+  }
+
+  const int64_t& y() const {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  int64_t& y() {
+    ZX_ASSERT(has_y());
+    return frame_ptr_->y_.get_data();
+  }
+  bool has_y() const {
+    return max_ordinal_ >= 2 && frame_ptr_->y_.has_data();
+  }
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return frame_ptr_->x_.get_data();
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return frame_ptr_->x_.get_data();
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 3 && frame_ptr_->x_.has_data();
+  }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
+  ReverseOrdinalTable& set_z(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+  ReverseOrdinalTable& set_z(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  ReverseOrdinalTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  ReverseOrdinalTable& clear_z() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->z_.clear_data();
+    return *this;
+  }
+  ReverseOrdinalTable& set_y(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+  ReverseOrdinalTable& set_y(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  ReverseOrdinalTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  ReverseOrdinalTable& clear_y() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->y_.clear_data();
+    return *this;
+  }
+  ReverseOrdinalTable& set_x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+  ReverseOrdinalTable& set_x(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  ReverseOrdinalTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
+    return *this;
+  }
+
+  ReverseOrdinalTable& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
+  explicit ReverseOrdinalTable(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or for another table.
+  explicit ReverseOrdinalTable(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&& frame)
+      : frame_ptr_(std::move(frame)) {}
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(allocator);
+  }
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+ private:
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>>;
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame_ptr_;
+};
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::ReverseOrdinalTable Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::ReverseOrdinalTable t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& z(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->z_.set_data(elem);
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->y_.set_data(elem);
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::ReverseOrdinalTable table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>>;
+
+ public:
+  using Base::z;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& z(Args&&... args_) {
+    z(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::y;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& y(Args&&... args_) {
+    y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& x(Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::ReverseOrdinalTable;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>>;
+
+ private:
+  friend class ::test_table::wire::ReverseOrdinalTable;
+  using Base::Base;
+  WireTableExternalBuilder(::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> ReverseOrdinalTable::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> ReverseOrdinalTable::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>(std::move(frame));
+}
+
+}  // namespace wire
+}  // namespace test_table
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>;
+
+template <>
+struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
+  ::fidl::Envelope<int64_t> x_;
+
+  friend class ::test_table::wire::TableWithAttributes;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>>;
+};
+
+namespace test_table {
+namespace wire {
+extern "C" const fidl_type_t test_table_TableWithAttributesTable;
+
+class TableWithAttributes {
+ public:
+  TableWithAttributes() = default;
+  TableWithAttributes(const TableWithAttributes& other) noexcept = default;
+  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept = default;
+  TableWithAttributes(TableWithAttributes&& other) noexcept = default;
+  TableWithAttributes& operator=(TableWithAttributes&& other) noexcept = default;
+
+  ~TableWithAttributes() = default;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame);
+
+  const int64_t& x() const {
+    ZX_ASSERT(has_x());
+    return frame_ptr_->x_.get_data();
+  }
+  int64_t& x() {
+    ZX_ASSERT(has_x());
+    return frame_ptr_->x_.get_data();
+  }
+  bool has_x() const {
+    return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
+  }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
+  TableWithAttributes& set_x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+  TableWithAttributes& set_x(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  TableWithAttributes& set_x(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.set_data(
+        ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  TableWithAttributes& clear_x() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->x_.clear_data();
+    return *this;
+  }
+
+  explicit TableWithAttributes(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or for another table.
+  explicit TableWithAttributes(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&& frame)
+      : frame_ptr_(std::move(frame)) {}
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(allocator);
+  }
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+ private:
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>>;
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame_ptr_;
+};
+}  // namespace wire
+}  // namespace test_table
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_table::wire::TableWithAttributes Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_table::wire::TableWithAttributes t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->x_.set_data(elem);
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_table::wire::TableWithAttributes table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>>;
+
+ public:
+  using Base::x;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>& x(Args&&... args_) {
+    x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_table::wire::TableWithAttributes;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>>;
+
+ private:
+  friend class ::test_table::wire::TableWithAttributes;
+  using Base::Base;
+  WireTableExternalBuilder(::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>>::FromExternal(frame)) {}
+};
+namespace test_table {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> TableWithAttributes::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> TableWithAttributes::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame) {
+  return ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>(std::move(frame));
 }
 
 }  // namespace wire
@@ -4881,173 +5020,34 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::SixtyFourOrdinalTabl
 
 }  // namespace wire
 }  // namespace test_table
-template <>
-class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>;
-template <>
-class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>;
-
-template <>
-struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
- public:
-  WireTableFrame() = default;
-  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
-  // If the ObjectView is assigned before a move or copy, then it will reference
-  // the old invalid object. Because this is unsafe, copies are disallowed and
-  // moves are only allowed by friend classes that operate safely.
-  WireTableFrame(const WireTableFrame&) = delete;
-  WireTableFrame& operator=(const WireTableFrame&) = delete;
-
- private:
-  WireTableFrame(WireTableFrame&&) noexcept = default;
-  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
-
-  bool HasUnknownData() const;
-
-  friend class ::test_table::wire::EmptyTable;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
-};
-
-namespace test_table {
-namespace wire {
-extern "C" const fidl_type_t test_table_EmptyTableTable;
-
-class EmptyTable {
- public:
-  EmptyTable() = default;
-  EmptyTable(const EmptyTable& other) noexcept = default;
-  EmptyTable& operator=(const EmptyTable& other) noexcept = default;
-  EmptyTable(EmptyTable&& other) noexcept = default;
-  EmptyTable& operator=(EmptyTable&& other) noexcept = default;
-
-  ~EmptyTable() = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  // Returns whether the table references unknown fields.
-  bool HasUnknownData() const;
-
-  // Return a builder that by defaults allocates of an arena.
-  static ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> Builder(::fidl::AnyArena& arena);
-
-  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
-  static ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>> frame);
-#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
- public:
-#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
- private:
-#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
-
-  explicit EmptyTable(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a Arena).
-  // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or for another table.
-  explicit EmptyTable(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame)
-      : frame_ptr_(std::move(frame)) {}
-
-  void Allocate(::fidl::AnyArena& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(allocator);
-  }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame_ptr) {
-    max_ordinal_ = 0;
-    frame_ptr_ = std::move(frame_ptr);
-  }
-
- private:
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
-
-  uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>> frame_ptr_;
-};
-}  // namespace wire
-}  // namespace test_table
-template <typename BuilderImpl>
-class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, BuilderImpl> {
- public:
-  // Build and return the table. The builder should not be used after this.
-  ::test_table::wire::EmptyTable Build() {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    ::test_table::wire::EmptyTable t = std::move(table_);
-    // Poison this builder to prevent accidental reuse.
-    table_.frame_ptr_ = nullptr;
-    return t;
-  }
-
- protected:
-  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>&& frame)
-      : table_(std::move(frame)) {}
-
- private:
-  ::test_table::wire::EmptyTable table_;
-};
-
-template <>
-class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
-
- public:
- private:
-  friend class ::test_table::wire::EmptyTable;
-  WireTableBuilder(::fidl::AnyArena& arena)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>(arena)),
-        arena_(arena) {}
-
-  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
-};
-
-template <>
-class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> final : public ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>>;
-
- private:
-  friend class ::test_table::wire::EmptyTable;
-  using Base::Base;
-  WireTableExternalBuilder(::fidl::WireTableFrame<::test_table::wire::EmptyTable>* frame)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>>::FromExternal(frame)) {}
-};
-namespace test_table {
-namespace wire {
-inline ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> EmptyTable::Builder(::fidl::AnyArena& arena) {
-  return ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>(arena);
-}
-inline ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> EmptyTable::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::EmptyTable>> frame) {
-  return ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable>(std::move(frame));
-}
-
-}  // namespace wire
-}  // namespace test_table
 namespace fidl {
 
 template <>
-struct TypeTraits<::test_table::wire::TableWithAttributes> {
+struct TypeTraits<::test_table::wire::EmptyTable> {
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
   static constexpr uint32_t kPrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
-  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
 template <>
-struct IsFidlType<::test_table::wire::TableWithAttributes> : public std::true_type {};
+struct IsFidlType<::test_table::wire::EmptyTable> : public std::true_type {};
 template <>
-struct IsTable<::test_table::wire::TableWithAttributes> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_table::wire::TableWithAttributes>);
+struct IsTable<::test_table::wire::EmptyTable> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_table::wire::EmptyTable>);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_table::wire::TableWithAttributes, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_table::wire::EmptyTable, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
   using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder, ::test_table::wire::TableWithAttributes* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  static void Encode(internal::WireEncoder* encoder, ::test_table::wire::EmptyTable* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
     if (!inner_depth.IsValid()) {
       return;
@@ -5064,15 +5064,9 @@ struct ::fidl::internal::WireCodingTraits<::test_table::wire::TableWithAttribute
     for (size_t i = 0; i < vec->count; i++) {
       size_t inline_size = 0;
       switch (i) {
-        case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
       }
       ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
       switch (i) {
-        case 0:
-          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
       }
       WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
       WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
@@ -5093,15 +5087,9 @@ struct ::fidl::internal::WireCodingTraits<::test_table::wire::TableWithAttribute
     for (size_t i = 0; i < vec->count; i++) {
       size_t inline_size = 0;
       switch (i) {
-        case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
       }
       DecodeFn<IsRecursive> decode_fn = nullptr;
       switch (i) {
-        case 0:
-          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
       }
       ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
     }
@@ -5198,116 +5186,6 @@ struct ::fidl::internal::WireCodingTraits<::test_table::wire::SimpleTable, ::fid
           decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
         case 4:
-          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
-      }
-      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
-    }
-  }
-};
-
-template <>
-struct TypeTraits<::test_table::wire::ReverseOrdinalTable> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 2;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
-  static constexpr uint32_t kMaxOutOfLineV1 = 72;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_table::wire::ReverseOrdinalTable> : public std::true_type {};
-template <>
-struct IsTable<::test_table::wire::ReverseOrdinalTable> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_table::wire::ReverseOrdinalTable>);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_table::wire::ReverseOrdinalTable, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
-  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
-  static constexpr size_t inline_size = 16;
-  static constexpr bool is_memcpy_compatible = false;
-
-  static void Encode(internal::WireEncoder* encoder, ::test_table::wire::ReverseOrdinalTable* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit ==
-        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
-      return;
-    }
-
-    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
-    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
-    for (size_t i = 0; i < vec->count; i++) {
-      size_t inline_size = 0;
-      switch (i) {
-        case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
-        case 1:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
-        case 2:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
-      }
-      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
-      switch (i) {
-        case 0:
-          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
-        case 1:
-          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
-        case 2:
-          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
-      }
-      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
-      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
-    }
-  }
-  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
-      return;
-    }
-
-    fidl_vector_t* vec = position.As<fidl_vector_t>();
-    for (size_t i = 0; i < vec->count; i++) {
-      size_t inline_size = 0;
-      switch (i) {
-        case 0:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
-        case 1:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
-        case 2:
-          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-          break;
-      }
-      DecodeFn<IsRecursive> decode_fn = nullptr;
-      switch (i) {
-        case 0:
-          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
-        case 1:
-          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-          break;
-        case 2:
           decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
       }
@@ -5504,6 +5382,202 @@ struct ::fidl::internal::WireCodingTraits<::test_table::wire::NewerSimpleTable, 
           decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
         case 5:
+          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+    }
+  }
+};
+
+template <>
+struct TypeTraits<::test_table::wire::ReverseOrdinalTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr uint32_t kMaxOutOfLineV1 = 72;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_table::wire::ReverseOrdinalTable> : public std::true_type {};
+template <>
+struct IsTable<::test_table::wire::ReverseOrdinalTable> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_table::wire::ReverseOrdinalTable>);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_table::wire::ReverseOrdinalTable, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
+  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_table::wire::ReverseOrdinalTable* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
+    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+        case 1:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+        case 2:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+      }
+      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
+      switch (i) {
+        case 0:
+          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+        case 1:
+          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+        case 2:
+          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = position.As<fidl_vector_t>();
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+        case 1:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+        case 2:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+      }
+      DecodeFn<IsRecursive> decode_fn = nullptr;
+      switch (i) {
+        case 0:
+          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+        case 1:
+          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+        case 2:
+          decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
+    }
+  }
+};
+
+template <>
+struct TypeTraits<::test_table::wire::TableWithAttributes> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_table::wire::TableWithAttributes> : public std::true_type {};
+template <>
+struct IsTable<::test_table::wire::TableWithAttributes> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_table::wire::TableWithAttributes>);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_table::wire::TableWithAttributes, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
+  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_table::wire::TableWithAttributes* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
+    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+      }
+      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
+      switch (i) {
+        case 0:
+          encode_fn = ::fidl::internal::MakeEncodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+          break;
+      }
+      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
+    }
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
+      return;
+    }
+
+    fidl_vector_t* vec = position.As<fidl_vector_t>();
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 0:
+          inline_size = ::fidl::internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+          break;
+      }
+      DecodeFn<IsRecursive> decode_fn = nullptr;
+      switch (i) {
+        case 0:
           decode_fn = ::fidl::internal::MakeDecodeFn<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
       }
@@ -6422,80 +6496,6 @@ struct ::fidl::internal::WireCodingTraits<::test_table::wire::SixtyFourOrdinalTa
         case 63:
           decode_fn = ::fidl::internal::MakeDecodeFn<::test_table::wire::ExtensionTable, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
           break;
-      }
-      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
-    }
-  }
-};
-
-template <>
-struct TypeTraits<::test_table::wire::EmptyTable> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_table::wire::EmptyTable> : public std::true_type {};
-template <>
-struct IsTable<::test_table::wire::EmptyTable> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_table::wire::EmptyTable>);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_table::wire::EmptyTable, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
-  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
-  static constexpr size_t inline_size = 16;
-  static constexpr bool is_memcpy_compatible = false;
-
-  static void Encode(internal::WireEncoder* encoder, ::test_table::wire::EmptyTable* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit ==
-        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
-      return;
-    }
-
-    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
-    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
-    for (size_t i = 0; i < vec->count; i++) {
-      size_t inline_size = 0;
-      switch (i) {
-      }
-      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
-      switch (i) {
-      }
-      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
-      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
-    }
-  }
-  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
-      return;
-    }
-
-    fidl_vector_t* vec = position.As<fidl_vector_t>();
-    for (size_t i = 0; i < vec->count; i++) {
-      size_t inline_size = 0;
-      switch (i) {
-      }
-      DecodeFn<IsRecursive> decode_fn = nullptr;
-      switch (i) {
       }
       ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
     }

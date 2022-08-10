@@ -7,6 +7,20 @@ namespace fidl {
 namespace testing {
 
 template <>
+class WireTestBase<::test_protocolrequest::Child> : public ::fidl::WireServer<::test_protocolrequest::Child> {
+ public:
+  virtual ~WireTestBase<::test_protocolrequest::Child>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocolrequest::Child> : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Child> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Child>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_protocolrequest::Parent> : public ::fidl::WireServer<::test_protocolrequest::Parent> {
  public:
   virtual ~WireTestBase<::test_protocolrequest::Parent>() = default;
@@ -33,20 +47,6 @@ template <>
 class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocolrequest::Parent> : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Parent> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Parent>() = default;
-  virtual void NotImplemented_(const std::string& name) = 0;
-};
-
-template <>
-class WireTestBase<::test_protocolrequest::Child> : public ::fidl::WireServer<::test_protocolrequest::Child> {
- public:
-  virtual ~WireTestBase<::test_protocolrequest::Child>() = default;
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-};
-
-template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_protocolrequest::Child> : public ::fidl::WireSyncEventHandler<::test_protocolrequest::Child> {
- public:
-  virtual ~WireSyncEventHandlerTestBase<::test_protocolrequest::Child>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

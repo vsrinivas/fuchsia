@@ -9,6 +9,155 @@
 //
 namespace test {
 namespace versions {
+#if (__cplusplus < 201703)
+constexpr const ::test::versions::Bits Bits::A = ::test::versions::Bits(1u);
+constexpr const ::test::versions::Bits Bits::kMask = ::test::versions::Bits(1u);
+
+#endif  // (__cplusplus < 201703)
+
+#if (__cplusplus < 201703)
+constexpr const ::test::versions::Enum Enum::A = ::test::versions::Enum(1u);
+#endif  // (__cplusplus < 201703)
+
+extern "C" const fidl_type_t test_versions_StructTable;
+const fidl_type_t* Struct::FidlType = &test_versions_StructTable;
+
+void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<Struct>::value) {
+    memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
+  } else {
+    ::fidl::Encode(_encoder, &x, _offset + 0);
+  }
+}
+
+void Struct::Decode(::fidl::Decoder* _decoder, Struct* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Struct>::value) {
+    memcpy(_value, _decoder->template GetPtr<Struct>(_offset), sizeof(Struct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->x, _offset + 0);
+  }
+}
+
+zx_status_t Struct::Clone(Struct* _result) const {
+  zx_status_t _status = ::fidl::Clone(x, &_result->x);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_versions_TableTable;
+const fidl_type_t* Table::FidlType = &test_versions_TableTable;
+
+Table::Table() {}
+
+Table::Table(Table&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&x_value_.value, std::move(other.x_value_.value));
+  }
+}
+
+Table::~Table() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&x_value_.value);
+  }
+}
+
+Table& Table::operator=(Table&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      x_value_.value = std::move(other.x_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value, std::move(other.x_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&x_value_.value);
+  }
+  return *this;
+}
+
+bool Table::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &x_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_x();
+    }
+  } else {
+    goto done_1;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_x();
+  return;
+}
+
+zx_status_t Table::Clone(Table* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_x();
+  }
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_versions_UnionTable;
 const fidl_type_t* Union::FidlType = &test_versions_UnionTable;
 
@@ -180,155 +329,6 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-
-extern "C" const fidl_type_t test_versions_TableTable;
-const fidl_type_t* Table::FidlType = &test_versions_TableTable;
-
-Table::Table() {}
-
-Table::Table(Table&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&x_value_.value, std::move(other.x_value_.value));
-  }
-}
-
-Table::~Table() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&x_value_.value);
-  }
-}
-
-Table& Table::operator=(Table&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      x_value_.value = std::move(other.x_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&x_value_.value, std::move(other.x_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&x_value_.value);
-  }
-  return *this;
-}
-
-bool Table::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_x();
-    }
-  } else {
-    goto done_1;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_x();
-  return;
-}
-
-zx_status_t Table::Clone(Table* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_x();
-  }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_versions_StructTable;
-const fidl_type_t* Struct::FidlType = &test_versions_StructTable;
-
-void Struct::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<Struct>::value) {
-    memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
-  } else {
-    ::fidl::Encode(_encoder, &x, _offset + 0);
-  }
-}
-
-void Struct::Decode(::fidl::Decoder* _decoder, Struct* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<Struct>::value) {
-    memcpy(_value, _decoder->template GetPtr<Struct>(_offset), sizeof(Struct));
-  } else {
-    ::fidl::Decode(_decoder, &_value->x, _offset + 0);
-  }
-}
-
-zx_status_t Struct::Clone(Struct* _result) const {
-  zx_status_t _status = ::fidl::Clone(x, &_result->x);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-#if (__cplusplus < 201703)
-constexpr const ::test::versions::Enum Enum::A = ::test::versions::Enum(1u);
-#endif  // (__cplusplus < 201703)
-
-#if (__cplusplus < 201703)
-constexpr const ::test::versions::Bits Bits::A = ::test::versions::Bits(1u);
-constexpr const ::test::versions::Bits Bits::kMask = ::test::versions::Bits(1u);
-
-#endif  // (__cplusplus < 201703)
 
 //
 // Proxies and stubs definitions

@@ -4,6 +4,50 @@
 
 #include <memory>
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::WireSyncEventHandler<::test_protocolrequest::Child>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> event_storage;
+  fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::entries_end_ =
+    &entries_[0];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::TryDispatch(
+    ::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
+                             &unknown_interaction_handler_entry_);
+}
+void fidl::WireServer<::test_protocolrequest::Child>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 namespace test_protocolrequest {
 [[maybe_unused]] constexpr uint64_t kParent_GetChild_Ordinal = 881818649151440699lu;
 
@@ -507,50 +551,6 @@ void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::Take
 
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::Status fidl::WireSyncEventHandler<::test_protocolrequest::Child>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> event_storage;
-  fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
-  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::entries_[] = {};
-
-const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::entries_end_ =
-    &entries_[0];
-
-::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::TryDispatch(
-    ::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(
-      impl, msg, storage_view, txn, entries_, entries_end_);
-}
-
-void fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
-}
-void fidl::WireServer<::test_protocolrequest::Child>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__
 

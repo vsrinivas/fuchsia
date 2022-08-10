@@ -9,354 +9,6 @@
 //
 namespace test {
 namespace anonymous {
-extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
-const fidl_type_t* UnionMember::FidlType = &test_anonymous_UnionMemberTable;
-
-UnionMember::UnionMember() {}
-
-UnionMember::~UnionMember() {
-  Destroy();
-}
-
-UnionMember::UnionMember(UnionMember&& other) : tag_(other.tag_) {
-  switch (tag_) {
-    case ::test::anonymous::UnionMember::Tag::kUnionData:
-      union_data_ = std::move(other.union_data_);
-      break;
-    case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
-      break;
-    default:
-      new (&unknown_data_) decltype(unknown_data_);
-      unknown_data_ = std::move(other.unknown_data_);
-      break;
-  }
-}
-
-UnionMember& UnionMember::operator=(UnionMember&& other) {
-  if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-      case ::test::anonymous::UnionMember::Tag::kUnionData:
-        union_data_ = std::move(other.union_data_);
-        break;
-      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
-        break;
-      default:
-        new (&unknown_data_) decltype(unknown_data_);
-        unknown_data_ = std::move(other.unknown_data_);
-        break;
-    }
-  }
-  return *this;
-}
-
-UnionMember UnionMember::WithUnionData(uint8_t&& val) {
-  UnionMember result;
-  result.set_union_data(std::move(val));
-  return result;
-}
-
-void UnionMember::Encode(::fidl::Encoder* encoder, size_t offset,
-                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  const size_t length_before = encoder->CurrentLength();
-  const size_t handles_before = encoder->CurrentHandleCount();
-
-  switch (Which()) {
-    case ::test::anonymous::UnionMember::Tag::kUnionData: {
-      if (::fidl::EncodingInlineSize<uint8_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &union_data_, offset + offsetof(fidl_xunion_v2_t, envelope));
-
-        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-        xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        break;
-      }
-
-      ::fidl::Encode(
-          encoder,
-          &union_data_,
-          encoder->Alloc(::fidl::EncodingInlineSize<uint8_t, ::fidl::Encoder>(encoder)));
-
-      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-      xunion->tag = tag_;
-      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-      xunion->envelope.flags = 0;
-      break;
-    }
-    case ::test::anonymous::UnionMember::Tag::kUnknown: {
-      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
-      *encoder->GetPtr<uint64_t>(offset) = tag_;
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-void UnionMember::Decode(::fidl::Decoder* _decoder, UnionMember* value, size_t offset) {
-  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
-
-  if (xunion->envelope.num_bytes == 0 &&
-      xunion->envelope.num_handles == 0 &&
-      xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid));
-    return;
-  }
-
-  value->EnsureStorageInitialized(xunion->tag);
-
-  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
-
-  switch (value->tag_) {
-    case ::test::anonymous::UnionMember::Tag::kUnionData: {
-      ::fidl::Decode(_decoder, &value->union_data_, value_offset);
-      break;
-    }
-    default: {
-      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
-      value->unknown_data_.resize(unknown_info.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
-      break;
-    }
-  }
-}
-
-zx_status_t UnionMember::Clone(UnionMember* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
-    case ::test::anonymous::UnionMember::Tag::Invalid:
-      return ZX_OK;
-    case ::test::anonymous::UnionMember::Tag::kUnionData:
-      return ::fidl::Clone(union_data_, &result->union_data_);
-    default:
-      new (&result->unknown_data_) decltype(unknown_data_);
-      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
-      return ZX_OK;
-  }
-}
-
-UnionMember& UnionMember::set_union_data(uint8_t value) {
-  EnsureStorageInitialized(::test::anonymous::UnionMember::Tag::kUnionData);
-  union_data_ = std::move(value);
-  return *this;
-}
-UnionMember& UnionMember::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
-  EnsureStorageInitialized(ordinal);
-  unknown_data_ = std::move(bytes);
-  return *this;
-}
-
-void UnionMember::Destroy() {
-  switch (tag_) {
-    case ::test::anonymous::UnionMember::Tag::kUnionData:
-      break;
-
-    case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
-      break;
-    default:
-      unknown_data_.~decltype(unknown_data_)();
-      break;
-  }
-  tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid);
-}
-
-void UnionMember::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
-        break;
-      case ::test::anonymous::UnionMember::Tag::kUnionData:
-        new (&union_data_) uint8_t();
-        break;
-      default:
-        new (&unknown_data_) decltype(unknown_data_);
-        break;
-    }
-  }
-}
-
-extern "C" const fidl_type_t test_anonymous_TableDataTable;
-const fidl_type_t* TableData::FidlType = &test_anonymous_TableDataTable;
-
-void TableData::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<TableData>::value) {
-    memcpy(_encoder->template GetPtr<TableData>(_offset), this, sizeof(TableData));
-  } else {
-    ::fidl::Encode(_encoder, &data, _offset + 0);
-  }
-}
-
-void TableData::Decode(::fidl::Decoder* _decoder, TableData* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<TableData>::value) {
-    memcpy(_value, _decoder->template GetPtr<TableData>(_offset), sizeof(TableData));
-  } else {
-    ::fidl::Decode(_decoder, &_value->data, _offset + 0);
-  }
-}
-
-zx_status_t TableData::Clone(TableData* _result) const {
-  zx_status_t _status = ::fidl::Clone(data, &_result->data);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_anonymous_TableMemberTable;
-const fidl_type_t* TableMember::FidlType = &test_anonymous_TableMemberTable;
-
-TableMember::TableMember() {}
-
-TableMember::TableMember(TableMember&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<1>()) {
-    Construct(&table_data_value_.value, std::move(other.table_data_value_.value));
-  }
-}
-
-TableMember::~TableMember() {
-  if (field_presence_.IsSet<1>()) {
-    Destruct(&table_data_value_.value);
-  }
-}
-
-TableMember& TableMember::operator=(TableMember&& other) {
-  if (other.field_presence_.IsSet<1>()) {
-    if (field_presence_.IsSet<1>()) {
-      table_data_value_.value = std::move(other.table_data_value_.value);
-    } else {
-      field_presence_.Set<1>();
-      Construct(&table_data_value_.value, std::move(other.table_data_value_.value));
-    }
-  } else if (field_presence_.IsSet<1>()) {
-    field_presence_.Clear<1>();
-    Destruct(&table_data_value_.value);
-  }
-  return *this;
-}
-
-bool TableMember::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void TableMember::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<1>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &table_data_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &table_data_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void TableMember::Decode(::fidl::Decoder* _decoder, TableMember* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 2) {
-    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_table_data(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_table_data();
-    }
-  } else {
-    goto done_2;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_2:
-  _value->clear_table_data();
-  return;
-}
-
-zx_status_t TableMember::Clone(TableMember* result) const {
-  if (field_presence_.IsSet<1>()) {
-    zx_status_t _status = ::fidl::Clone(table_data_value_.value, result->mutable_table_data());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_table_data();
-  }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
-const fidl_type_t* SomeProtocolSomeMethodRequest::FidlType = &test_anonymous_SomeProtocolSomeMethodRequestTable;
-
-void SomeProtocolSomeMethodRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodRequest>::value) {
-    memcpy(_encoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset), this, sizeof(SomeProtocolSomeMethodRequest));
-  } else {
-    ::fidl::Encode(_encoder, &union_member, _offset + 0);
-    ::fidl::Encode(_encoder, &table_member, _offset + 16);
-  }
-}
-
-void SomeProtocolSomeMethodRequest::Decode(::fidl::Decoder* _decoder, SomeProtocolSomeMethodRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset), sizeof(SomeProtocolSomeMethodRequest));
-  } else {
-    ::fidl::Decode(_decoder, &_value->union_member, _offset + 0);
-    ::fidl::Decode(_decoder, &_value->table_member, _offset + 16);
-  }
-}
-
-zx_status_t SomeProtocolSomeMethodRequest::Clone(SomeProtocolSomeMethodRequest* _result) const {
-  zx_status_t _status = ::fidl::Clone(union_member, &_result->union_member);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(table_member, &_result->table_member);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-#if (__cplusplus < 201703)
-constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_ONE = ::test::anonymous::SomeProtocol_SomeMethod_Error(1u);
-constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_TWO = ::test::anonymous::SomeProtocol_SomeMethod_Error(2u);
-#endif  // (__cplusplus < 201703)
-
 #if (__cplusplus < 201703)
 constexpr const ::test::anonymous::Op Op::ADD = ::test::anonymous::Op(1u);
 constexpr const ::test::anonymous::Op Op::MUL = ::test::anonymous::Op(2u);
@@ -926,6 +578,349 @@ void Expression::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
+extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
+const fidl_type_t* UnionMember::FidlType = &test_anonymous_UnionMemberTable;
+
+UnionMember::UnionMember() {}
+
+UnionMember::~UnionMember() {
+  Destroy();
+}
+
+UnionMember::UnionMember(UnionMember&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::anonymous::UnionMember::Tag::kUnionData:
+      union_data_ = std::move(other.union_data_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+UnionMember& UnionMember::operator=(UnionMember&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::anonymous::UnionMember::Tag::kUnionData:
+        union_data_ = std::move(other.union_data_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+UnionMember UnionMember::WithUnionData(uint8_t&& val) {
+  UnionMember result;
+  result.set_union_data(std::move(val));
+  return result;
+}
+
+void UnionMember::Encode(::fidl::Encoder* encoder, size_t offset,
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::anonymous::UnionMember::Tag::kUnionData: {
+      if (::fidl::EncodingInlineSize<uint8_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &union_data_, offset + offsetof(fidl_xunion_v2_t, envelope));
+
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
+      }
+
+      ::fidl::Encode(
+          encoder,
+          &union_data_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint8_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
+      break;
+    }
+    case ::test::anonymous::UnionMember::Tag::kUnknown: {
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void UnionMember::Decode(::fidl::Decoder* _decoder, UnionMember* value, size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::anonymous::UnionMember::Tag::kUnionData: {
+      ::fidl::Decode(_decoder, &value->union_data_, value_offset);
+      break;
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, unknown_info.value_offset);
+      break;
+    }
+  }
+}
+
+zx_status_t UnionMember::Clone(UnionMember* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::anonymous::UnionMember::Tag::Invalid:
+      return ZX_OK;
+    case ::test::anonymous::UnionMember::Tag::kUnionData:
+      return ::fidl::Clone(union_data_, &result->union_data_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+UnionMember& UnionMember::set_union_data(uint8_t value) {
+  EnsureStorageInitialized(::test::anonymous::UnionMember::Tag::kUnionData);
+  union_data_ = std::move(value);
+  return *this;
+}
+UnionMember& UnionMember::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void UnionMember::Destroy() {
+  switch (tag_) {
+    case ::test::anonymous::UnionMember::Tag::kUnionData:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid);
+}
+
+void UnionMember::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(::test::anonymous::UnionMember::Tag::Invalid):
+        break;
+      case ::test::anonymous::UnionMember::Tag::kUnionData:
+        new (&union_data_) uint8_t();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t test_anonymous_TableDataTable;
+const fidl_type_t* TableData::FidlType = &test_anonymous_TableDataTable;
+
+void TableData::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<TableData>::value) {
+    memcpy(_encoder->template GetPtr<TableData>(_offset), this, sizeof(TableData));
+  } else {
+    ::fidl::Encode(_encoder, &data, _offset + 0);
+  }
+}
+
+void TableData::Decode(::fidl::Decoder* _decoder, TableData* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<TableData>::value) {
+    memcpy(_value, _decoder->template GetPtr<TableData>(_offset), sizeof(TableData));
+  } else {
+    ::fidl::Decode(_decoder, &_value->data, _offset + 0);
+  }
+}
+
+zx_status_t TableData::Clone(TableData* _result) const {
+  zx_status_t _status = ::fidl::Clone(data, &_result->data);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_anonymous_TableMemberTable;
+const fidl_type_t* TableMember::FidlType = &test_anonymous_TableMemberTable;
+
+TableMember::TableMember() {}
+
+TableMember::TableMember(TableMember&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<1>()) {
+    Construct(&table_data_value_.value, std::move(other.table_data_value_.value));
+  }
+}
+
+TableMember::~TableMember() {
+  if (field_presence_.IsSet<1>()) {
+    Destruct(&table_data_value_.value);
+  }
+}
+
+TableMember& TableMember::operator=(TableMember&& other) {
+  if (other.field_presence_.IsSet<1>()) {
+    if (field_presence_.IsSet<1>()) {
+      table_data_value_.value = std::move(other.table_data_value_.value);
+    } else {
+      field_presence_.Set<1>();
+      Construct(&table_data_value_.value, std::move(other.table_data_value_.value));
+    }
+  } else if (field_presence_.IsSet<1>()) {
+    field_presence_.Clear<1>();
+    Destruct(&table_data_value_.value);
+  }
+  return *this;
+}
+
+bool TableMember::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void TableMember::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<1>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &table_data_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &table_data_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::test::anonymous::TableData>, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void TableMember::Decode(::fidl::Decoder* _decoder, TableMember* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 2) {
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_table_data(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_table_data();
+    }
+  } else {
+    goto done_2;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_2:
+  _value->clear_table_data();
+  return;
+}
+
+zx_status_t TableMember::Clone(TableMember* result) const {
+  if (field_presence_.IsSet<1>()) {
+    zx_status_t _status = ::fidl::Clone(table_data_value_.value, result->mutable_table_data());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_table_data();
+  }
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
+const fidl_type_t* SomeProtocolSomeMethodRequest::FidlType = &test_anonymous_SomeProtocolSomeMethodRequestTable;
+
+void SomeProtocolSomeMethodRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodRequest>::value) {
+    memcpy(_encoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset), this, sizeof(SomeProtocolSomeMethodRequest));
+  } else {
+    ::fidl::Encode(_encoder, &union_member, _offset + 0);
+    ::fidl::Encode(_encoder, &table_member, _offset + 16);
+  }
+}
+
+void SomeProtocolSomeMethodRequest::Decode(::fidl::Decoder* _decoder, SomeProtocolSomeMethodRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SomeProtocolSomeMethodRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<SomeProtocolSomeMethodRequest>(_offset), sizeof(SomeProtocolSomeMethodRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->union_member, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->table_member, _offset + 16);
+  }
+}
+
+zx_status_t SomeProtocolSomeMethodRequest::Clone(SomeProtocolSomeMethodRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(union_member, &_result->union_member);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(table_member, &_result->table_member);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
 #if (__cplusplus < 201703)
 constexpr const ::test::anonymous::BitsMember BitsMember::BIT_ONE = ::test::anonymous::BitsMember(1u);
 constexpr const ::test::anonymous::BitsMember BitsMember::BIT_TWO = ::test::anonymous::BitsMember(2u);
@@ -959,6 +954,11 @@ zx_status_t SomeProtocol_SomeMethod_Response::Clone(SomeProtocol_SomeMethod_Resp
     return _status;
   return ZX_OK;
 }
+
+#if (__cplusplus < 201703)
+constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_ONE = ::test::anonymous::SomeProtocol_SomeMethod_Error(1u);
+constexpr const ::test::anonymous::SomeProtocol_SomeMethod_Error SomeProtocol_SomeMethod_Error::ERROR_TWO = ::test::anonymous::SomeProtocol_SomeMethod_Error(2u);
+#endif  // (__cplusplus < 201703)
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 const fidl_type_t* SomeProtocol_SomeMethod_Result::FidlType = &test_anonymous_SomeProtocol_SomeMethod_ResultTable;

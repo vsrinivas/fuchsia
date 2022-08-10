@@ -28,6 +28,218 @@ class UnionSmallArray;
 
 class UnionLargeArray;
 
+extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
+
+class StructSmallArray {
+ private:
+  struct Storage_;
+
+ public:
+  StructSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  StructSmallArray(::std::array<uint32_t, 2> a) noexcept
+      : storage_({.a = std::move(a)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructSmallArray| only if all of its members are default constructible.
+  StructSmallArray() = default;
+#pragma clang diagnostic pop
+
+  StructSmallArray(StructSmallArray&&) noexcept = default;
+  StructSmallArray& operator=(StructSmallArray&&) noexcept = default;
+  StructSmallArray(const StructSmallArray& other) noexcept : StructSmallArray(other.CloneStorage_()) {}
+  StructSmallArray& operator=(const StructSmallArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const StructSmallArray& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8>::Equal(this, &other);
+  }
+  bool operator!=(const StructSmallArray& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8>::Equal(this, &other);
+  }
+
+  const ::std::array<uint32_t, 2>&
+  a() const {
+    return storage_.a;
+  }
+
+  ::std::array<uint32_t, 2>& a() {
+    return storage_.a;
+  }
+
+  StructSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructSmallArray(Storage_{
+                                                                                     .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<uint32_t, 2>>::Make(),
+                                                                                 }) {}
+
+ private:
+  struct Storage_ final {
+    ::std::array<uint32_t, 2> a = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_arrays::StructSmallArray>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::array<uint32_t, 2>, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
+extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
+
+class StructLargeArray {
+ private:
+  struct Storage_;
+
+ public:
+  StructLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  StructLargeArray(::std::array<uint32_t, 100> a) noexcept
+      : storage_({.a = std::move(a)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |StructLargeArray| only if all of its members are default constructible.
+  StructLargeArray() = default;
+#pragma clang diagnostic pop
+
+  StructLargeArray(StructLargeArray&&) noexcept = default;
+  StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
+  StructLargeArray(const StructLargeArray& other) noexcept : StructLargeArray(other.CloneStorage_()) {}
+  StructLargeArray& operator=(const StructLargeArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const StructLargeArray& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructLargeArray, 400>::Equal(this, &other);
+  }
+  bool operator!=(const StructLargeArray& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructLargeArray, 400>::Equal(this, &other);
+  }
+
+  const ::std::array<uint32_t, 100>&
+  a() const {
+    return storage_.a;
+  }
+
+  ::std::array<uint32_t, 100>& a() {
+    return storage_.a;
+  }
+
+  StructLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructLargeArray(Storage_{
+                                                                                     .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<uint32_t, 100>>::Make(),
+                                                                                 }) {}
+
+ private:
+  struct Storage_ final {
+    ::std::array<uint32_t, 100> a = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructLargeArray, 400>;
+  friend struct ::fidl::internal::MemberVisitor<::test_arrays::StructLargeArray>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::array<uint32_t, 100>, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::a, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
+extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
+
+class TableSmallArray {
+ private:
+  struct Storage_;
+
+ public:
+  TableSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  TableSmallArray() noexcept = default;
+  TableSmallArray(TableSmallArray&&) noexcept = default;
+  TableSmallArray& operator=(TableSmallArray&&) noexcept = default;
+  TableSmallArray(const TableSmallArray& other) noexcept : TableSmallArray(other.CloneStorage_()) {}
+  TableSmallArray& operator=(const TableSmallArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const TableSmallArray& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray>::Equal(this, &other);
+  }
+  bool operator!=(const TableSmallArray& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.a.has_value());
+  }
+
+  const std::optional<::std::array<uint32_t, 2>>& a() const { return storage_.a; }
+  ::std::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
+
+  TableSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableSmallArray(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<::std::array<uint32_t, 2>> a{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray>;
+  friend struct ::fidl::internal::MemberVisitor<::test_arrays::TableSmallArray>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::array<uint32_t, 2>, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::a});
+};
+
+extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
+
+class TableLargeArray {
+ private:
+  struct Storage_;
+
+ public:
+  TableLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  TableLargeArray() noexcept = default;
+  TableLargeArray(TableLargeArray&&) noexcept = default;
+  TableLargeArray& operator=(TableLargeArray&&) noexcept = default;
+  TableLargeArray(const TableLargeArray& other) noexcept : TableLargeArray(other.CloneStorage_()) {}
+  TableLargeArray& operator=(const TableLargeArray& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const TableLargeArray& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray>::Equal(this, &other);
+  }
+  bool operator!=(const TableLargeArray& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.a.has_value());
+  }
+
+  const std::optional<::std::array<uint32_t, 100>>& a() const { return storage_.a; }
+  ::std::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
+
+  TableLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableLargeArray(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<::std::array<uint32_t, 100>> a{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray>;
+  friend struct ::fidl::internal::MemberVisitor<::test_arrays::TableLargeArray>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::array<uint32_t, 100>, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::a});
+};
+
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
@@ -202,218 +414,6 @@ class UnionLargeArray {
         return std::nullopt;
     }
   }
-};
-
-extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
-
-class TableSmallArray {
- private:
-  struct Storage_;
-
- public:
-  TableSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  TableSmallArray() noexcept = default;
-  TableSmallArray(TableSmallArray&&) noexcept = default;
-  TableSmallArray& operator=(TableSmallArray&&) noexcept = default;
-  TableSmallArray(const TableSmallArray& other) noexcept : TableSmallArray(other.CloneStorage_()) {}
-  TableSmallArray& operator=(const TableSmallArray& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const TableSmallArray& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray>::Equal(this, &other);
-  }
-  bool operator!=(const TableSmallArray& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return !(storage_.a.has_value());
-  }
-
-  const std::optional<::std::array<uint32_t, 2>>& a() const { return storage_.a; }
-  ::std::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
-
-  TableSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableSmallArray(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    ::std::optional<::std::array<uint32_t, 2>> a{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray>;
-  friend struct ::fidl::internal::MemberVisitor<::test_arrays::TableSmallArray>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::array<uint32_t, 2>, fidl::internal::NaturalCodingConstraintEmpty>{
-      1, &Storage_::a});
-};
-
-extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
-
-class TableLargeArray {
- private:
-  struct Storage_;
-
- public:
-  TableLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  TableLargeArray() noexcept = default;
-  TableLargeArray(TableLargeArray&&) noexcept = default;
-  TableLargeArray& operator=(TableLargeArray&&) noexcept = default;
-  TableLargeArray(const TableLargeArray& other) noexcept : TableLargeArray(other.CloneStorage_()) {}
-  TableLargeArray& operator=(const TableLargeArray& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const TableLargeArray& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray>::Equal(this, &other);
-  }
-  bool operator!=(const TableLargeArray& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return !(storage_.a.has_value());
-  }
-
-  const std::optional<::std::array<uint32_t, 100>>& a() const { return storage_.a; }
-  ::std::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
-
-  TableLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableLargeArray(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    ::std::optional<::std::array<uint32_t, 100>> a{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray>;
-  friend struct ::fidl::internal::MemberVisitor<::test_arrays::TableLargeArray>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::std::array<uint32_t, 100>, fidl::internal::NaturalCodingConstraintEmpty>{
-      1, &Storage_::a});
-};
-
-extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
-
-class StructSmallArray {
- private:
-  struct Storage_;
-
- public:
-  StructSmallArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  StructSmallArray(::std::array<uint32_t, 2> a) noexcept
-      : storage_({.a = std::move(a)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |StructSmallArray| only if all of its members are default constructible.
-  StructSmallArray() = default;
-#pragma clang diagnostic pop
-
-  StructSmallArray(StructSmallArray&&) noexcept = default;
-  StructSmallArray& operator=(StructSmallArray&&) noexcept = default;
-  StructSmallArray(const StructSmallArray& other) noexcept : StructSmallArray(other.CloneStorage_()) {}
-  StructSmallArray& operator=(const StructSmallArray& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const StructSmallArray& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8>::Equal(this, &other);
-  }
-  bool operator!=(const StructSmallArray& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8>::Equal(this, &other);
-  }
-
-  const ::std::array<uint32_t, 2>&
-  a() const {
-    return storage_.a;
-  }
-
-  ::std::array<uint32_t, 2>& a() {
-    return storage_.a;
-  }
-
-  StructSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructSmallArray(Storage_{
-                                                                                     .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<uint32_t, 2>>::Make(),
-                                                                                 }) {}
-
- private:
-  struct Storage_ final {
-    ::std::array<uint32_t, 2> a = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_arrays::StructSmallArray>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::array<uint32_t, 2>, fidl::internal::NaturalCodingConstraintEmpty>{
-      &Storage_::a, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
-
-extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
-
-class StructLargeArray {
- private:
-  struct Storage_;
-
- public:
-  StructLargeArray(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  StructLargeArray(::std::array<uint32_t, 100> a) noexcept
-      : storage_({.a = std::move(a)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |StructLargeArray| only if all of its members are default constructible.
-  StructLargeArray() = default;
-#pragma clang diagnostic pop
-
-  StructLargeArray(StructLargeArray&&) noexcept = default;
-  StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
-  StructLargeArray(const StructLargeArray& other) noexcept : StructLargeArray(other.CloneStorage_()) {}
-  StructLargeArray& operator=(const StructLargeArray& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const StructLargeArray& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructLargeArray, 400>::Equal(this, &other);
-  }
-  bool operator!=(const StructLargeArray& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructLargeArray, 400>::Equal(this, &other);
-  }
-
-  const ::std::array<uint32_t, 100>&
-  a() const {
-    return storage_.a;
-  }
-
-  ::std::array<uint32_t, 100>& a() {
-    return storage_.a;
-  }
-
-  StructLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructLargeArray(Storage_{
-                                                                                     .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<uint32_t, 100>>::Make(),
-                                                                                 }) {}
-
- private:
-  struct Storage_ final {
-    ::std::array<uint32_t, 100> a = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructLargeArray, 400>;
-  friend struct ::fidl::internal::MemberVisitor<::test_arrays::StructLargeArray>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::array<uint32_t, 100>, fidl::internal::NaturalCodingConstraintEmpty>{
-      &Storage_::a, 0});
-  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_arrays

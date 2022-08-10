@@ -14,40 +14,101 @@
 
 namespace fuzzing {
 
-using ExampleXUnion = ::test::placementofattributes::ExampleXUnion;
-using ExampleUnion = ::test::placementofattributes::ExampleUnion;
-using ExampleTable = ::test::placementofattributes::ExampleTable;
-using ExampleStruct = ::test::placementofattributes::ExampleStruct;
-using ExampleProtocolMethodRequest = ::test::placementofattributes::ExampleProtocolMethodRequest;
-using ExampleEnum = ::test::placementofattributes::ExampleEnum;
 using ExampleBits = ::test::placementofattributes::ExampleBits;
+using ExampleEnum = ::test::placementofattributes::ExampleEnum;
+using ExampleProtocolMethodRequest = ::test::placementofattributes::ExampleProtocolMethodRequest;
+using ExampleStruct = ::test::placementofattributes::ExampleStruct;
+using ExampleTable = ::test::placementofattributes::ExampleTable;
+using ExampleUnion = ::test::placementofattributes::ExampleUnion;
+using ExampleXUnion = ::test::placementofattributes::ExampleXUnion;
 
 template <>
-struct MinSize<ExampleXUnion> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<uint32_t>()};
-    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+struct MinSize<ExampleBits> {
+  operator size_t() { return sizeof(ExampleBits); }
+};
+template <>
+struct Allocate<ExampleBits> {
+  ExampleBits operator()(FuzzInput* src, size_t* size) {
+    ExampleBits out;
+    ZX_ASSERT(*size >= sizeof(ExampleBits));
+    ZX_ASSERT(src->CopyObject(&out));
+    *size = sizeof(ExampleBits);
+    return out;
   }
 };
 template <>
-struct Allocate<ExampleXUnion> {
-  static_assert(1 > 0, "xunion must have at least one member");
+struct MinSize<ExampleEnum> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<ExampleEnum> {
+  ExampleEnum operator()(FuzzInput* src, size_t* size) {
+    ExampleEnum out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
 
-  ExampleXUnion operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ExampleXUnion>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    ExampleXUnion out;
     switch (selector % 1) {
-      case 0: {
-        out.set_variant(Allocate<uint32_t>{}(src, size));
+      case 0:
+        out = ExampleEnum::MEMBER;
         break;
-      }
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<ExampleProtocolMethodRequest> {
+  operator size_t() {
+    return MinSize<::test::exampleusing::Empty>();
+  }
+};
+template <>
+struct Allocate<ExampleProtocolMethodRequest> {
+  ExampleProtocolMethodRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleProtocolMethodRequest>());
+    ExampleProtocolMethodRequest out;
+    const size_t slack_per_member = (*size - MinSize<ExampleProtocolMethodRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::exampleusing::Empty>() + slack_per_member;
+    out.arg = Allocate<::test::exampleusing::Empty>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ExampleStruct> {
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<ExampleStruct> {
+  ExampleStruct operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleStruct>());
+    ExampleStruct out;
+    const size_t slack_per_member = (*size - MinSize<ExampleStruct>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.member = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ExampleTable> {
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<ExampleTable> {
+  ExampleTable operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleTable>());
+    ExampleTable out;
+    const size_t slack_per_member = (*size - MinSize<ExampleTable>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.set_member(Allocate<uint32_t>{}(src, &out_size));
     return out;
   }
 };
@@ -81,92 +142,31 @@ struct Allocate<ExampleUnion> {
   }
 };
 template <>
-struct MinSize<ExampleTable> {
+struct MinSize<ExampleXUnion> {
   operator size_t() {
-    return MinSize<uint32_t>();
+    size_t sizes[] = {0, MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
   }
 };
 template <>
-struct Allocate<ExampleTable> {
-  ExampleTable operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ExampleTable>());
-    ExampleTable out;
-    const size_t slack_per_member = (*size - MinSize<ExampleTable>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.set_member(Allocate<uint32_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<ExampleStruct> {
-  operator size_t() {
-    return MinSize<uint32_t>();
-  }
-};
-template <>
-struct Allocate<ExampleStruct> {
-  ExampleStruct operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ExampleStruct>());
-    ExampleStruct out;
-    const size_t slack_per_member = (*size - MinSize<ExampleStruct>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.member = Allocate<uint32_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ExampleProtocolMethodRequest> {
-  operator size_t() {
-    return MinSize<::test::exampleusing::Empty>();
-  }
-};
-template <>
-struct Allocate<ExampleProtocolMethodRequest> {
-  ExampleProtocolMethodRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ExampleProtocolMethodRequest>());
-    ExampleProtocolMethodRequest out;
-    const size_t slack_per_member = (*size - MinSize<ExampleProtocolMethodRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::test::exampleusing::Empty>() + slack_per_member;
-    out.arg = Allocate<::test::exampleusing::Empty>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ExampleEnum> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<ExampleEnum> {
-  ExampleEnum operator()(FuzzInput* src, size_t* size) {
-    ExampleEnum out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
+struct Allocate<ExampleXUnion> {
+  static_assert(1 > 0, "xunion must have at least one member");
 
+  ExampleXUnion operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleXUnion>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    ExampleXUnion out;
     switch (selector % 1) {
-      case 0:
-        out = ExampleEnum::MEMBER;
+      case 0: {
+        out.set_variant(Allocate<uint32_t>{}(src, size));
         break;
+      }
     }
 
-    return out;
-  }
-};
-template <>
-struct MinSize<ExampleBits> {
-  operator size_t() { return sizeof(ExampleBits); }
-};
-template <>
-struct Allocate<ExampleBits> {
-  ExampleBits operator()(FuzzInput* src, size_t* size) {
-    ExampleBits out;
-    ZX_ASSERT(*size >= sizeof(ExampleBits));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(ExampleBits);
     return out;
   }
 };

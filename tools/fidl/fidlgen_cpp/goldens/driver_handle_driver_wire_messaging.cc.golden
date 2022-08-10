@@ -5,6 +5,40 @@
 
 #include <memory>
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::entries_end_ =
+    &entries_[0];
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::TryDispatch(
+    ::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+      impl, msg, storage_view, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
+                             &unknown_interaction_handler_entry_);
+}
+void fdf::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
 namespace test_driverhandle {
 [[maybe_unused]] constexpr uint64_t kHandlesInProtocol_SendHandles_Ordinal = 8904504160365833729lu;
 
@@ -118,39 +152,5 @@ void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
 
 void ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal, ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::entries_[] = {};
-
-const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::entries_end_ =
-    &entries_[0];
-
-::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::TryDispatch(
-    ::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage& msg,
-    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(
-      impl, msg, storage_view, txn, entries_, entries_end_);
-}
-
-void fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
-}
-void fdf::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

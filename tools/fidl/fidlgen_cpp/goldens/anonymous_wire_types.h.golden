@@ -28,26 +28,26 @@ namespace wire {
 using Flags = ::test_anonymous::Flags;
 using BitsMember = ::test_anonymous::BitsMember;
 
-using SomeProtocolSomeMethodError = ::test_anonymous::SomeProtocolSomeMethodError;
 using Op = ::test_anonymous::Op;
+using SomeProtocolSomeMethodError = ::test_anonymous::SomeProtocolSomeMethodError;
+
+struct OverrideTest;
 
 struct TableData;
 
 struct SomeProtocolSomeMethodRequest;
 
-struct OverrideTest;
-
 struct SomeProtocolSomeMethodResponse;
 
 struct SomeProtocolSomeMethodTopResponse;
 
-class TableMember;
-
 class FunctionApplication;
 
-class UnionMember;
+class TableMember;
 
 class Expression;
+
+class UnionMember;
 
 class SomeProtocolSomeMethodResult;
 
@@ -64,201 +64,6 @@ struct SomeProtocolSomeMethodResponse {
 
   ::test_anonymous::wire::BitsMember bits_member = {};
 };
-
-}  // namespace wire
-}  // namespace test_anonymous
-template <>
-class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>;
-template <>
-class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>;
-
-template <>
-struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
- public:
-  WireTableFrame() = default;
-  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
-  // If the ObjectView is assigned before a move or copy, then it will reference
-  // the old invalid object. Because this is unsafe, copies are disallowed and
-  // moves are only allowed by friend classes that operate safely.
-  WireTableFrame(const WireTableFrame&) = delete;
-  WireTableFrame& operator=(const WireTableFrame&) = delete;
-
- private:
-  WireTableFrame(WireTableFrame&&) noexcept = default;
-  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
-
-  bool HasUnknownData() const;
-  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
-  ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::TableData>> table_data_;
-
-  friend class ::test_anonymous::wire::TableMember;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
-};
-
-namespace test_anonymous {
-namespace wire {
-extern "C" const fidl_type_t test_anonymous_TableMemberTable;
-
-class TableMember {
- public:
-  using TableData = test_anonymous::wire::TableData;
-  TableMember() = default;
-  TableMember(const TableMember& other) noexcept = default;
-  TableMember& operator=(const TableMember& other) noexcept = default;
-  TableMember(TableMember&& other) noexcept = default;
-  TableMember& operator=(TableMember&& other) noexcept = default;
-
-  ~TableMember() = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  // Returns whether the table references unknown fields.
-  bool HasUnknownData() const;
-
-  // Return a builder that by defaults allocates of an arena.
-  static ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> Builder(::fidl::AnyArena& arena);
-
-  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
-  static ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame);
-
-  const ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() const {
-    ZX_ASSERT(has_table_data());
-    return frame_ptr_->table_data_.get_data();
-  }
-  ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() {
-    ZX_ASSERT(has_table_data());
-    return frame_ptr_->table_data_.get_data();
-  }
-  bool has_table_data() const {
-    return max_ordinal_ >= 2 && frame_ptr_->table_data_.has_data();
-  }
-#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
- public:
-#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
- private:
-#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
-
-  TableMember& set_table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.set_data(elem);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
-    return *this;
-  }
-  TableMember& set_table_data(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.set_data(nullptr);
-    return *this;
-  }
-  template <typename... Args>
-  TableMember& set_table_data(::fidl::AnyArena& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.set_data(
-        ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>(allocator, std::forward<Args>(args)...));
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
-    return *this;
-  }
-
-  TableMember& clear_table_data() {
-    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
-    frame_ptr_->table_data_.clear_data();
-    return *this;
-  }
-
-  explicit TableMember(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a Arena).
-  // It should only be used when performance is key.
-  // As soon as the frame is given to the table, it must not be used directly or for another table.
-  explicit TableMember(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
-      : frame_ptr_(std::move(frame)) {}
-
-  void Allocate(::fidl::AnyArena& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(allocator);
-  }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame_ptr) {
-    max_ordinal_ = 0;
-    frame_ptr_ = std::move(frame_ptr);
-  }
-
- private:
-  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
-  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
-
-  uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame_ptr_;
-};
-}  // namespace wire
-}  // namespace test_anonymous
-template <typename BuilderImpl>
-class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, BuilderImpl> {
- public:
-  // Build and return the table. The builder should not be used after this.
-  ::test_anonymous::wire::TableMember Build() {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    ::test_anonymous::wire::TableMember t = std::move(table_);
-    // Poison this builder to prevent accidental reuse.
-    table_.frame_ptr_ = nullptr;
-    return t;
-  }
-
-  BuilderImpl& table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>> elem) {
-    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->table_data_.set_data(elem);
-    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
-    return *static_cast<BuilderImpl*>(this);
-  }
-
- protected:
-  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
-      : table_(std::move(frame)) {}
-
- private:
-  ::test_anonymous::wire::TableMember table_;
-};
-
-template <>
-class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> final : public ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
-
- public:
-  using Base::table_data;
-
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>& table_data(Args&&... args_) {
-    table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>(arena_.get(), std::forward<Args>(args_)...));
-    return *this;
-  }
-
- private:
-  friend class ::test_anonymous::wire::TableMember;
-  WireTableBuilder(::fidl::AnyArena& arena)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(arena)),
-        arena_(arena) {}
-
-  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
-};
-
-template <>
-class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> final : public ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>> {
-  using Base = ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
-
- private:
-  friend class ::test_anonymous::wire::TableMember;
-  using Base::Base;
-  WireTableExternalBuilder(::fidl::WireTableFrame<::test_anonymous::wire::TableMember>* frame)
-      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>::FromExternal(frame)) {}
-};
-namespace test_anonymous {
-namespace wire {
-inline ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> TableMember::Builder(::fidl::AnyArena& arena) {
-  return ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>(arena);
-}
-inline ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> TableMember::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame) {
-  return ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>(std::move(frame));
-}
 
 }  // namespace wire
 }  // namespace test_anonymous
@@ -539,54 +344,200 @@ inline ::fidl::WireTableExternalBuilder<::test_anonymous::wire::FunctionApplicat
   return ::fidl::WireTableExternalBuilder<::test_anonymous::wire::FunctionApplication>(std::move(frame));
 }
 
-extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
+}  // namespace wire
+}  // namespace test_anonymous
+template <>
+class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>;
 
-class UnionMember {
+template <>
+struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
  public:
-  UnionMember() : ordinal_(::test_anonymous::wire::UnionMember::Ordinal::Invalid), envelope_{} {}
-
-  UnionMember(const UnionMember&) = default;
-  UnionMember& operator=(const UnionMember&) = default;
-  UnionMember(UnionMember&&) = default;
-  UnionMember& operator=(UnionMember&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kUnionData = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::Invalid; }
-
-  bool is_union_data() const { return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData; }
-
-  static UnionMember WithUnionData(uint8_t val) {
-    UnionMember result;
-    result.ordinal_ = ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-    result.envelope_.As<uint8_t>().set_data(std::move(val));
-    return result;
-  }
-
-  uint8_t& union_data() {
-    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
-    return envelope_.As<uint8_t>().get_data();
-  }
-  const uint8_t& union_data() const {
-    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
-    return envelope_.As<uint8_t>().get_data();
-  }
-  ::test_anonymous::wire::UnionMember::Tag Which() const;
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
 
  private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kUnionData = 2,  // 0x2
-  };
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
-  static void SizeAndOffsetAssertionHelper();
-  ::test_anonymous::wire::UnionMember::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
+  bool HasUnknownData() const;
+  [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
+  ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::TableData>> table_data_;
+
+  friend class ::test_anonymous::wire::TableMember;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
 };
+
+namespace test_anonymous {
+namespace wire {
+extern "C" const fidl_type_t test_anonymous_TableMemberTable;
+
+class TableMember {
+ public:
+  using TableData = test_anonymous::wire::TableData;
+  TableMember() = default;
+  TableMember(const TableMember& other) noexcept = default;
+  TableMember& operator=(const TableMember& other) noexcept = default;
+  TableMember(TableMember&& other) noexcept = default;
+  TableMember& operator=(TableMember&& other) noexcept = default;
+
+  ~TableMember() = default;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> Builder(::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame);
+
+  const ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() const {
+    ZX_ASSERT(has_table_data());
+    return frame_ptr_->table_data_.get_data();
+  }
+  ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() {
+    ZX_ASSERT(has_table_data());
+    return frame_ptr_->table_data_.get_data();
+  }
+  bool has_table_data() const {
+    return max_ordinal_ >= 2 && frame_ptr_->table_data_.has_data();
+  }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
+  TableMember& set_table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.set_data(elem);
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+  TableMember& set_table_data(std::nullptr_t) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.set_data(nullptr);
+    return *this;
+  }
+  template <typename... Args>
+  TableMember& set_table_data(::fidl::AnyArena& allocator, Args&&... args) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.set_data(
+        ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>(allocator, std::forward<Args>(args)...));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  TableMember& clear_table_data() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->table_data_.clear_data();
+    return *this;
+  }
+
+  explicit TableMember(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or for another table.
+  explicit TableMember(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
+      : frame_ptr_(std::move(frame)) {}
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(allocator);
+  }
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+ private:
+  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
+  friend ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame_ptr_;
+};
+}  // namespace wire
+}  // namespace test_anonymous
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_anonymous::wire::TableMember Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_anonymous::wire::TableMember t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->table_data_.set_data(elem);
+    table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_anonymous::wire::TableMember table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> final : public ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>>;
+
+ public:
+  using Base::table_data;
+
+  template <typename... Args>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>& table_data(Args&&... args_) {
+    table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>(arena_.get(), std::forward<Args>(args_)...));
+    return *this;
+  }
+
+ private:
+  friend class ::test_anonymous::wire::TableMember;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> final : public ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>>;
+
+ private:
+  friend class ::test_anonymous::wire::TableMember;
+  using Base::Base;
+  WireTableExternalBuilder(::fidl::WireTableFrame<::test_anonymous::wire::TableMember>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>::FromExternal(frame)) {}
+};
+namespace test_anonymous {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> TableMember::Builder(::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> TableMember::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame) {
+  return ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember>(std::move(frame));
+}
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
@@ -698,6 +649,55 @@ class Expression {
   ::fidl::UntypedEnvelope envelope_;
 };
 
+extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
+
+class UnionMember {
+ public:
+  UnionMember() : ordinal_(::test_anonymous::wire::UnionMember::Ordinal::Invalid), envelope_{} {}
+
+  UnionMember(const UnionMember&) = default;
+  UnionMember& operator=(const UnionMember&) = default;
+  UnionMember(UnionMember&&) = default;
+  UnionMember& operator=(UnionMember&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kUnionData = 2,  // 0x2
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::Invalid; }
+
+  bool is_union_data() const { return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData; }
+
+  static UnionMember WithUnionData(uint8_t val) {
+    UnionMember result;
+    result.ordinal_ = ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    result.envelope_.As<uint8_t>().set_data(std::move(val));
+    return result;
+  }
+
+  uint8_t& union_data() {
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
+    return envelope_.As<uint8_t>().get_data();
+  }
+  const uint8_t& union_data() const {
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
+    return envelope_.As<uint8_t>().get_data();
+  }
+  ::test_anonymous::wire::UnionMember::Tag Which() const;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kUnionData = 2,  // 0x2
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_anonymous::wire::UnionMember::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 class SomeProtocolSomeMethodResult {
@@ -772,17 +772,6 @@ class SomeProtocolSomeMethodResult {
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
-
-struct SomeProtocolSomeMethodRequest {
-  using UnionMember = test_anonymous::wire::UnionMember;
-  using TableMember = test_anonymous::wire::TableMember;
-
-  ::test_anonymous::wire::UnionMember union_member = {};
-
-  ::test_anonymous::wire::TableMember table_member = {};
-};
-
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 struct OverrideTest {
@@ -793,6 +782,17 @@ struct OverrideTest {
   ::test_anonymous::wire::Expression left = {};
 
   ::test_anonymous::wire::Expression right = {};
+};
+
+extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
+
+struct SomeProtocolSomeMethodRequest {
+  using UnionMember = test_anonymous::wire::UnionMember;
+  using TableMember = test_anonymous::wire::TableMember;
+
+  ::test_anonymous::wire::UnionMember union_member = {};
+
+  ::test_anonymous::wire::TableMember table_member = {};
 };
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTable;
@@ -832,6 +832,18 @@ struct internal::WireCodingTraits<::test_anonymous::wire::BitsMember, ::fidl::in
 };
 
 template <bool IsRecursive>
+struct internal::WireCodingTraits<::test_anonymous::wire::Op, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = sizeof(uint32_t);
+  static constexpr bool is_memcpy_compatible = true;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_anonymous::wire::Op* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    *position.As<::test_anonymous::wire::Op>() = *value;
+  }
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  }
+};
+
+template <bool IsRecursive>
 struct internal::WireCodingTraits<::test_anonymous::wire::SomeProtocolSomeMethodError, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = sizeof(uint32_t);
   static constexpr bool is_memcpy_compatible = true;
@@ -843,15 +855,64 @@ struct internal::WireCodingTraits<::test_anonymous::wire::SomeProtocolSomeMethod
   }
 };
 
-template <bool IsRecursive>
-struct internal::WireCodingTraits<::test_anonymous::wire::Op, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = sizeof(uint32_t);
-  static constexpr bool is_memcpy_compatible = true;
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_anonymous::wire::OverrideTest> {
+  static constexpr const fidl_type_t* kType = &::test_anonymous::wire::test_anonymous_OverrideTestTable;
+};
 
-  static void Encode(internal::WireEncoder* encoder, ::test_anonymous::wire::Op* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    *position.As<::test_anonymous::wire::Op>() = *value;
+template <>
+struct TypeTraits<::test_anonymous::wire::OverrideTest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 6;
+  static constexpr uint32_t kPrimarySize = 40;
+  static constexpr uint32_t kPrimarySizeV1 = 56;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_anonymous::wire::OverrideTest> : public std::true_type {};
+template <>
+struct IsStruct<::test_anonymous::wire::OverrideTest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::OverrideTest>);
+static_assert(offsetof(::test_anonymous::wire::OverrideTest, op) == 0);
+static_assert(offsetof(::test_anonymous::wire::OverrideTest, left) == 8);
+static_assert(offsetof(::test_anonymous::wire::OverrideTest, right) == 24);
+static_assert(sizeof(::test_anonymous::wire::OverrideTest) == TypeTraits<::test_anonymous::wire::OverrideTest>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::OverrideTest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 40;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>());
+  static constexpr bool kHasPadding = true;
+  using Base = WireStructCodingTraitsBase<::test_anonymous::wire::OverrideTest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_anonymous::wire::OverrideTest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_anonymous::wire::OverrideTest));
+    } else {
+      internal::WireZeroPadding<uint64_t>(encoder, position + 0);
+      internal::WireCodingTraits<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->op, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->left, position + 8, recursion_depth);
+      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->right, position + 24, recursion_depth);
+    }
   }
-  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
+          decoder, position + 8, recursion_depth);
+      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
+          decoder, position + 24, recursion_depth);
+    }
+    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
   }
 };
 
@@ -963,67 +1024,6 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::SomeProtocolSo
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_anonymous::wire::OverrideTest> {
-  static constexpr const fidl_type_t* kType = &::test_anonymous::wire::test_anonymous_OverrideTestTable;
-};
-
-template <>
-struct TypeTraits<::test_anonymous::wire::OverrideTest> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 6;
-  static constexpr uint32_t kPrimarySize = 40;
-  static constexpr uint32_t kPrimarySizeV1 = 56;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_anonymous::wire::OverrideTest> : public std::true_type {};
-template <>
-struct IsStruct<::test_anonymous::wire::OverrideTest> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_anonymous::wire::OverrideTest>);
-static_assert(offsetof(::test_anonymous::wire::OverrideTest, op) == 0);
-static_assert(offsetof(::test_anonymous::wire::OverrideTest, left) == 8);
-static_assert(offsetof(::test_anonymous::wire::OverrideTest, right) == 24);
-static_assert(sizeof(::test_anonymous::wire::OverrideTest) == TypeTraits<::test_anonymous::wire::OverrideTest>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::OverrideTest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 40;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>());
-  static constexpr bool kHasPadding = true;
-  using Base = WireStructCodingTraitsBase<::test_anonymous::wire::OverrideTest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_anonymous::wire::OverrideTest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_anonymous::wire::OverrideTest));
-    } else {
-      internal::WireZeroPadding<uint64_t>(encoder, position + 0);
-      internal::WireCodingTraits<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->op, position + 0, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->left, position + 8, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->right, position + 24, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
-          decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
-          decoder, position + 24, recursion_depth);
-    }
-    internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
-  }
-};
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
 struct DeprecatedCTypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResponse> {
   static constexpr const fidl_type_t* kType = &::test_anonymous::wire::test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 };
@@ -1120,92 +1120,6 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::SomeProtocolSo
     if constexpr (!Base::are_members_memcpy_compatible) {
       internal::WireCodingTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
-    }
-  }
-};
-
-template <>
-struct TypeTraits<::test_anonymous::wire::TableMember> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 3;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
-  static constexpr uint32_t kMaxOutOfLineV1 = 64;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_anonymous::wire::TableMember> : public std::true_type {};
-template <>
-struct IsTable<::test_anonymous::wire::TableMember> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableMember>);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::TableMember, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
-  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
-  static constexpr size_t inline_size = 16;
-  static constexpr bool is_memcpy_compatible = false;
-
-  static void Encode(internal::WireEncoder* encoder, ::test_anonymous::wire::TableMember* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit ==
-        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
-      return;
-    }
-
-    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
-    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
-    for (size_t i = 0; i < vec->count; i++) {
-      size_t inline_size = 0;
-      switch (i) {
-        case 1:
-          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>::inline_size;
-          break;
-      }
-      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
-      switch (i) {
-        case 1:
-          encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>();
-          break;
-      }
-      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
-      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
-    }
-  }
-  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    ::fidl::internal::WirePosition vector_position;
-    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
-      return;
-    }
-
-    fidl_vector_t* vec = position.As<fidl_vector_t>();
-    for (size_t i = 0; i < vec->count; i++) {
-      size_t inline_size = 0;
-      switch (i) {
-        case 1:
-          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>::inline_size;
-          break;
-      }
-      DecodeFn<IsRecursive> decode_fn = nullptr;
-      switch (i) {
-        case 1:
-          decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>();
-          break;
-      }
-      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
     }
   }
 };
@@ -1321,113 +1235,90 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::FunctionApplic
 };
 
 template <>
-struct TypeTraits<::test_anonymous::wire::UnionMember> {
+struct TypeTraits<::test_anonymous::wire::TableMember> {
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kMaxDepth = 3;
   static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr uint32_t kMaxOutOfLineV1 = 64;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
 
 template <>
-struct IsFidlType<::test_anonymous::wire::UnionMember> : public std::true_type {};
+struct IsFidlType<::test_anonymous::wire::TableMember> : public std::true_type {};
 template <>
-struct IsUnion<::test_anonymous::wire::UnionMember> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_anonymous::wire::UnionMember>);
+struct IsTable<::test_anonymous::wire::TableMember> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableMember>);
 
-template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::UnionMember, Constraint, IsRecursive> {
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::TableMember, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : ::fidl::internal::WireTableCodingTraitsBase<IsRecursive> {
+  using Base = ::fidl::internal::WireTableCodingTraitsBase<IsRecursive>;
   static constexpr size_t inline_size = 16;
   static constexpr bool is_memcpy_compatible = false;
 
-  static void Encode(internal::WireEncoder* encoder, ::test_anonymous::wire::UnionMember* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
-
-    if (unlikely(u->tag == 0)) {
-      if constexpr (Constraint::is_optional) {
-        *position.As<fidl_xunion_v2_t>() = {};
-        return;
-      }
-      encoder->SetError(kCodingErrorInvalidUnionTag);
-      return;
-    }
-
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+  static void Encode(internal::WireEncoder* encoder, ::test_anonymous::wire::TableMember* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 2);
     if (!inner_depth.IsValid()) {
       return;
     }
 
-    *position.As<fidl_xunion_tag_t>() = u->tag;
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit ==
+        Base::PrepareForBodyEncode(encoder, value, position, &vector_position)) {
+      return;
+    }
 
-    size_t inline_size;
-    switch (u->tag) {
-      case 2:  // ::test_anonymous::wire::UnionMember::Tag::kUnionData
-        inline_size = ::fidl::internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-        break;
-      default:
-        inline_size = 0;
-        break;
+    fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
+    fidl_envelope_v2_t* envelopes = static_cast<fidl_envelope_v2_t*>(vec->data);
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 1:
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>::inline_size;
+          break;
+      }
+      ::fidl::internal::EncodeFn<IsRecursive> encode_fn = nullptr;
+      switch (i) {
+        case 1:
+          encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>();
+          break;
+      }
+      WirePosition envelope_position = vector_position + i * sizeof(fidl_envelope_v2_t);
+      WireEncodeEnvelope(inline_size, encode_fn, encoder, &envelopes[i], envelope_position, inner_depth);
     }
-    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
-    switch (u->tag) {
-      case 2:  // ::test_anonymous::wire::UnionMember::Tag::kUnionData
-        encode_fn = ::fidl::internal::MakeEncodeFn<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-        break;
-      default:
-        encode_fn = nullptr;
-        break;
-    }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
-
   static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_anonymous::wire::UnionMember::Tag tag = *position.As<::test_anonymous::wire::UnionMember::Tag>();
-    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
-      if constexpr (!Constraint::is_optional) {
-        decoder->SetError(kCodingErrorInvalidUnionTag);
-        return;
-      }
-      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
-      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
-        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
-      }
-      return;
-    }
-
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 2);
     if (!inner_depth.IsValid()) {
       return;
     }
 
-    size_t inline_size;
-    switch (tag) {
-      case ::test_anonymous::wire::UnionMember::Tag::kUnionData:
-        inline_size = ::fidl::internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-        break;
-      default:
-        inline_size = 0;
-        break;
+    ::fidl::internal::WirePosition vector_position;
+    if (Base::PreworkResult::kEarlyExit == Base::DecodePrework(decoder, position, &vector_position)) {
+      return;
     }
-    DecodeFn<IsRecursive> decode_fn;
-    switch (tag) {
-      case ::test_anonymous::wire::UnionMember::Tag::kUnionData:
-        decode_fn = ::fidl::internal::MakeDecodeFn<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-        break;
-      default:
-        decode_fn = nullptr;
-        break;
+
+    fidl_vector_t* vec = position.As<fidl_vector_t>();
+    for (size_t i = 0; i < vec->count; i++) {
+      size_t inline_size = 0;
+      switch (i) {
+        case 1:
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>::inline_size;
+          break;
+      }
+      DecodeFn<IsRecursive> decode_fn = nullptr;
+      switch (i) {
+        case 1:
+          decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::VectorView<::test_anonymous::wire::TableData>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintEmpty, false, 10>, IsRecursive>();
+          break;
+      }
+      ::fidl::internal::WireDecodeOptionalEnvelope(inline_size, decode_fn, decoder, vector_position + i * sizeof(fidl_envelope_v2_t), inner_depth);
     }
-    ::fidl::internal::WireDecodeFlexibleEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
   }
 };
-
-// Top-level union.
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::UnionMember, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<::test_anonymous::wire::UnionMember, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_anonymous::wire::Expression> {
@@ -1561,6 +1452,115 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::Expression, Co
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::Expression, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : public ::fidl::internal::WireCodingTraits<::test_anonymous::wire::Expression, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
+template <>
+struct TypeTraits<::test_anonymous::wire::UnionMember> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_anonymous::wire::UnionMember> : public std::true_type {};
+template <>
+struct IsUnion<::test_anonymous::wire::UnionMember> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::UnionMember>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::UnionMember, Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_anonymous::wire::UnionMember* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 2:  // ::test_anonymous::wire::UnionMember::Tag::kUnionData
+        inline_size = ::fidl::internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 2:  // ::test_anonymous::wire::UnionMember::Tag::kUnionData
+        encode_fn = ::fidl::internal::MakeEncodeFn<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_anonymous::wire::UnionMember::Tag tag = *position.As<::test_anonymous::wire::UnionMember::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_anonymous::wire::UnionMember::Tag::kUnionData:
+        inline_size = ::fidl::internal::WireCodingTraits<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_anonymous::wire::UnionMember::Tag::kUnionData:
+        decode_fn = ::fidl::internal::MakeDecodeFn<uint8_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeFlexibleEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::UnionMember, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_anonymous::wire::UnionMember, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult> {

@@ -424,561 +424,6 @@ class UnknownInteractionsProtocol final {
   };
 };
 
-class UnknownInteractionsDriverProtocol final {
-  UnknownInteractionsDriverProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::DriverTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kOpen;
-  class StrictOneWay final {
-    StrictOneWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class FlexibleOneWay final {
-    FlexibleOneWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWay final {
-    StrictTwoWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayFields final {
-    StrictTwoWayFields() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayUnion final {
-    StrictTwoWayUnion() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayTable final {
-    StrictTwoWayTable() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayErr final {
-    StrictTwoWayErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayFieldsErr final {
-    StrictTwoWayFieldsErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayUnionErr final {
-    StrictTwoWayUnionErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayTableErr final {
-    StrictTwoWayTableErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class FlexibleTwoWay final {
-    FlexibleTwoWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayFields final {
-    FlexibleTwoWayFields() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayUnion final {
-    FlexibleTwoWayUnion() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayTable final {
-    FlexibleTwoWayTable() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayErr final {
-    FlexibleTwoWayErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayFieldsErr final {
-    FlexibleTwoWayFieldsErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayUnionErr final {
-    FlexibleTwoWayUnionErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
-  };
-  class FlexibleTwoWayTableErr final {
-    FlexibleTwoWayTableErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
-  };
-};
-
-class UnknownInteractionsClosedProtocol final {
-  UnknownInteractionsClosedProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class StrictOneWay final {
-    StrictOneWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWay final {
-    StrictTwoWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayFields final {
-    StrictTwoWayFields() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayUnion final {
-    StrictTwoWayUnion() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayTable final {
-    StrictTwoWayTable() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayErr final {
-    StrictTwoWayErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayFieldsErr final {
-    StrictTwoWayFieldsErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayUnionErr final {
-    StrictTwoWayUnionErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayTableErr final {
-    StrictTwoWayTableErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEvent final {
-    StrictEvent() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventFields final {
-    StrictEventFields() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventUnion final {
-    StrictEventUnion() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventTable final {
-    StrictEventTable() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventErr final {
-    StrictEventErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventFieldsErr final {
-    StrictEventFieldsErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventUnionErr final {
-    StrictEventUnionErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictEventTableErr final {
-    StrictEventTableErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
-    static constexpr bool kHasRequest = false;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
-class UnknownInteractionsClosedDriverProtocol final {
-  UnknownInteractionsClosedDriverProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::DriverTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class StrictOneWay final {
-    StrictOneWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWay final {
-    StrictTwoWay() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayFields final {
-    StrictTwoWayFields() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayUnion final {
-    StrictTwoWayUnion() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayTable final {
-    StrictTwoWayTable() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayErr final {
-    StrictTwoWayErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayFieldsErr final {
-    StrictTwoWayFieldsErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayUnionErr final {
-    StrictTwoWayUnionErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-  class StrictTwoWayTableErr final {
-    StrictTwoWayTableErr() = delete;
-
-   public:
-    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = true;
-
-    static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
-  };
-};
-
 class UnknownInteractionsAjarProtocol final {
   UnknownInteractionsAjarProtocol() = delete;
 
@@ -1300,6 +745,444 @@ class UnknownInteractionsAjarProtocol final {
   };
 };
 
+class UnknownInteractionsClosedProtocol final {
+  UnknownInteractionsClosedProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEvent final {
+    StrictEvent() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventFields final {
+    StrictEventFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventUnion final {
+    StrictEventUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventTable final {
+    StrictEventTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventErr final {
+    StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventFieldsErr final {
+    StrictEventFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventUnionErr final {
+    StrictEventUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictEventTableErr final {
+    StrictEventTableErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class UnknownInteractionsDriverProtocol final {
+  UnknownInteractionsDriverProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kOpen;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class FlexibleOneWay final {
+    FlexibleOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class FlexibleTwoWay final {
+    FlexibleTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayFields final {
+    FlexibleTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayUnion final {
+    FlexibleTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayTable final {
+    FlexibleTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayErr final {
+    FlexibleTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayFieldsErr final {
+    FlexibleTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayUnionErr final {
+    FlexibleTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = true;
+  };
+  class FlexibleTwoWayTableErr final {
+    FlexibleTwoWayTableErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = true;
+  };
+};
+
 class UnknownInteractionsAjarDriverProtocol final {
   UnknownInteractionsAjarDriverProtocol() = delete;
 
@@ -1420,6 +1303,123 @@ class UnknownInteractionsAjarDriverProtocol final {
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class UnknownInteractionsClosedDriverProtocol final {
+  UnknownInteractionsClosedDriverProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class StrictOneWay final {
+    StrictOneWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWay final {
+    StrictTwoWay() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayErr final {
+    StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
 

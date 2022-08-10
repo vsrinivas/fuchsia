@@ -14,13 +14,13 @@ struct NaturalToHLCPPTraits<::test_enum::MyStrictEnum> : public NaturalToHLCPPTr
 template <>
 struct HLCPPToNaturalTraits<::test::enum_::MyStrictEnum> : public HLCPPToNaturalTraitsEnum<::test::enum_::MyStrictEnum, ::test_enum::MyStrictEnum> {};
 template <>
-struct NaturalToHLCPPTraits<::test_enum::MyFlexibleEnumWithCustomUnknown> : public NaturalToHLCPPTraitsEnum<::test_enum::MyFlexibleEnumWithCustomUnknown, ::test::enum_::MyFlexibleEnumWithCustomUnknown> {};
-template <>
-struct HLCPPToNaturalTraits<::test::enum_::MyFlexibleEnumWithCustomUnknown> : public HLCPPToNaturalTraitsEnum<::test::enum_::MyFlexibleEnumWithCustomUnknown, ::test_enum::MyFlexibleEnumWithCustomUnknown> {};
-template <>
 struct NaturalToHLCPPTraits<::test_enum::MyFlexibleEnum> : public NaturalToHLCPPTraitsEnum<::test_enum::MyFlexibleEnum, ::test::enum_::MyFlexibleEnum> {};
 template <>
 struct HLCPPToNaturalTraits<::test::enum_::MyFlexibleEnum> : public HLCPPToNaturalTraitsEnum<::test::enum_::MyFlexibleEnum, ::test_enum::MyFlexibleEnum> {};
+template <>
+struct NaturalToHLCPPTraits<::test_enum::MyFlexibleEnumWithCustomUnknown> : public NaturalToHLCPPTraitsEnum<::test_enum::MyFlexibleEnumWithCustomUnknown, ::test::enum_::MyFlexibleEnumWithCustomUnknown> {};
+template <>
+struct HLCPPToNaturalTraits<::test::enum_::MyFlexibleEnumWithCustomUnknown> : public HLCPPToNaturalTraitsEnum<::test::enum_::MyFlexibleEnumWithCustomUnknown, ::test_enum::MyFlexibleEnumWithCustomUnknown> {};
 template <>
 struct NaturalToHLCPPTraits<::test_enum::MyEmptyFlexibleEnum> : public NaturalToHLCPPTraitsEnum<::test_enum::MyEmptyFlexibleEnum, ::test::enum_::MyEmptyFlexibleEnum> {};
 template <>

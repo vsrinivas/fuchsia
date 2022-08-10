@@ -10,13 +10,13 @@
 namespace fidl {
 namespace internal {
 template <>
-struct NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodError> : public NaturalToHLCPPTraitsEnum<::test_anonymous::SomeProtocolSomeMethodError, ::test::anonymous::SomeProtocol_SomeMethod_Error> {};
-template <>
-struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Error> : public HLCPPToNaturalTraitsEnum<::test::anonymous::SomeProtocol_SomeMethod_Error, ::test_anonymous::SomeProtocolSomeMethodError> {};
-template <>
 struct NaturalToHLCPPTraits<::test_anonymous::Op> : public NaturalToHLCPPTraitsEnum<::test_anonymous::Op, ::test::anonymous::Op> {};
 template <>
 struct HLCPPToNaturalTraits<::test::anonymous::Op> : public HLCPPToNaturalTraitsEnum<::test::anonymous::Op, ::test_anonymous::Op> {};
+template <>
+struct NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodError> : public NaturalToHLCPPTraitsEnum<::test_anonymous::SomeProtocolSomeMethodError, ::test::anonymous::SomeProtocol_SomeMethod_Error> {};
+template <>
+struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Error> : public HLCPPToNaturalTraitsEnum<::test::anonymous::SomeProtocol_SomeMethod_Error, ::test_anonymous::SomeProtocolSomeMethodError> {};
 template <>
 struct NaturalToHLCPPTraits<::test_anonymous::Flags> : public NaturalToHLCPPTraitsBits<::test_anonymous::Flags, ::test::anonymous::Flags, uint16_t> {};
 template <>
@@ -59,6 +59,16 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::anonymous::SomeProtoc
 };
 
 template <>
+struct NaturalToHLCPPTraits<::test_anonymous::OverrideTest> {
+  using HLCPPType = ::test::anonymous::OverrideTest;
+  static inline ::test::anonymous::OverrideTest Convert(::test_anonymous::OverrideTest&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::anonymous::OverrideTest> {
+  using NaturalType = ::test_anonymous::OverrideTest;
+  static inline ::test_anonymous::OverrideTest Convert(::test::anonymous::OverrideTest&&);
+};
+template <>
 struct NaturalToHLCPPTraits<::test_anonymous::TableData> {
   using HLCPPType = ::test::anonymous::TableData;
   static inline ::test::anonymous::TableData Convert(::test_anonymous::TableData&&);
@@ -77,16 +87,6 @@ template <>
 struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocolSomeMethodRequest> {
   using NaturalType = ::test_anonymous::SomeProtocolSomeMethodRequest;
   static inline ::test_anonymous::SomeProtocolSomeMethodRequest Convert(::test::anonymous::SomeProtocolSomeMethodRequest&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_anonymous::OverrideTest> {
-  using HLCPPType = ::test::anonymous::OverrideTest;
-  static inline ::test::anonymous::OverrideTest Convert(::test_anonymous::OverrideTest&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::anonymous::OverrideTest> {
-  using NaturalType = ::test_anonymous::OverrideTest;
-  static inline ::test_anonymous::OverrideTest Convert(::test::anonymous::OverrideTest&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodResponse> {
@@ -109,16 +109,6 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocolSomeMethodTopResponse
   static inline ::test_anonymous::SomeProtocolSomeMethodTopResponse Convert(::test::anonymous::SomeProtocolSomeMethodTopResponse&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_anonymous::TableMember> {
-  using HLCPPType = ::test::anonymous::TableMember;
-  static inline ::test::anonymous::TableMember Convert(::test_anonymous::TableMember&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::anonymous::TableMember> {
-  using NaturalType = ::test_anonymous::TableMember;
-  static inline ::test_anonymous::TableMember Convert(::test::anonymous::TableMember&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_anonymous::FunctionApplication> {
   using HLCPPType = ::test::anonymous::FunctionApplication;
   static inline ::test::anonymous::FunctionApplication Convert(::test_anonymous::FunctionApplication&&);
@@ -129,14 +119,14 @@ struct HLCPPToNaturalTraits<::test::anonymous::FunctionApplication> {
   static inline ::test_anonymous::FunctionApplication Convert(::test::anonymous::FunctionApplication&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_anonymous::UnionMember> {
-  using HLCPPType = ::test::anonymous::UnionMember;
-  static inline ::test::anonymous::UnionMember Convert(::test_anonymous::UnionMember&&);
+struct NaturalToHLCPPTraits<::test_anonymous::TableMember> {
+  using HLCPPType = ::test::anonymous::TableMember;
+  static inline ::test::anonymous::TableMember Convert(::test_anonymous::TableMember&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::anonymous::UnionMember> {
-  using NaturalType = ::test_anonymous::UnionMember;
-  static inline ::test_anonymous::UnionMember Convert(::test::anonymous::UnionMember&&);
+struct HLCPPToNaturalTraits<::test::anonymous::TableMember> {
+  using NaturalType = ::test_anonymous::TableMember;
+  static inline ::test_anonymous::TableMember Convert(::test::anonymous::TableMember&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_anonymous::Expression> {
@@ -149,6 +139,16 @@ struct HLCPPToNaturalTraits<::test::anonymous::Expression> {
   static inline ::test_anonymous::Expression Convert(::test::anonymous::Expression&&);
 };
 template <>
+struct NaturalToHLCPPTraits<::test_anonymous::UnionMember> {
+  using HLCPPType = ::test::anonymous::UnionMember;
+  static inline ::test::anonymous::UnionMember Convert(::test_anonymous::UnionMember&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::anonymous::UnionMember> {
+  using NaturalType = ::test_anonymous::UnionMember;
+  static inline ::test_anonymous::UnionMember Convert(::test::anonymous::UnionMember&&);
+};
+template <>
 struct NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodResult> {
   using HLCPPType = ::test::anonymous::SomeProtocol_SomeMethod_Result;
   static inline ::test::anonymous::SomeProtocol_SomeMethod_Result Convert(::test_anonymous::SomeProtocolSomeMethodResult&&);
@@ -159,6 +159,21 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
   static inline ::test_anonymous::SomeProtocolSomeMethodResult Convert(::test::anonymous::SomeProtocol_SomeMethod_Result&&);
 };
 
+::test::anonymous::OverrideTest NaturalToHLCPPTraits<::test_anonymous::OverrideTest>::Convert(::test_anonymous::OverrideTest&& value) {
+  ::test::anonymous::OverrideTest hlcpp;
+  hlcpp.op = ::fidl::NaturalToHLCPP(std::move(value.op()));
+  hlcpp.left = ::fidl::NaturalToHLCPP(std::move(value.left()));
+  hlcpp.right = ::fidl::NaturalToHLCPP(std::move(value.right()));
+  return hlcpp;
+}
+
+::test_anonymous::OverrideTest HLCPPToNaturalTraits<::test::anonymous::OverrideTest>::Convert(::test::anonymous::OverrideTest&& value) {
+  return ::test_anonymous::OverrideTest{{
+      .op = ::fidl::HLCPPToNatural(std::move(value.op)),
+      .left = ::fidl::HLCPPToNatural(std::move(value.left)),
+      .right = ::fidl::HLCPPToNatural(std::move(value.right)),
+  }};
+}
 ::test::anonymous::TableData NaturalToHLCPPTraits<::test_anonymous::TableData>::Convert(::test_anonymous::TableData&& value) {
   ::test::anonymous::TableData hlcpp;
   hlcpp.data = ::fidl::NaturalToHLCPP(std::move(value.data()));
@@ -183,21 +198,6 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
       .table_member = ::fidl::HLCPPToNatural(std::move(value.table_member)),
   }};
 }
-::test::anonymous::OverrideTest NaturalToHLCPPTraits<::test_anonymous::OverrideTest>::Convert(::test_anonymous::OverrideTest&& value) {
-  ::test::anonymous::OverrideTest hlcpp;
-  hlcpp.op = ::fidl::NaturalToHLCPP(std::move(value.op()));
-  hlcpp.left = ::fidl::NaturalToHLCPP(std::move(value.left()));
-  hlcpp.right = ::fidl::NaturalToHLCPP(std::move(value.right()));
-  return hlcpp;
-}
-
-::test_anonymous::OverrideTest HLCPPToNaturalTraits<::test::anonymous::OverrideTest>::Convert(::test::anonymous::OverrideTest&& value) {
-  return ::test_anonymous::OverrideTest{{
-      .op = ::fidl::HLCPPToNatural(std::move(value.op)),
-      .left = ::fidl::HLCPPToNatural(std::move(value.left)),
-      .right = ::fidl::HLCPPToNatural(std::move(value.right)),
-  }};
-}
 ::test::anonymous::SomeProtocol_SomeMethod_Response NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodResponse>::Convert(::test_anonymous::SomeProtocolSomeMethodResponse&& value) {
   ::test::anonymous::SomeProtocol_SomeMethod_Response hlcpp;
   hlcpp.bits_member = ::fidl::NaturalToHLCPP(std::move(value.bits_member()));
@@ -219,21 +219,6 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
   return ::test_anonymous::SomeProtocolSomeMethodTopResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
   }};
-}
-::test::anonymous::TableMember NaturalToHLCPPTraits<::test_anonymous::TableMember>::Convert(::test_anonymous::TableMember&& value) {
-  ::test::anonymous::TableMember hlcpp;
-  if (value.table_data().has_value()) {
-    hlcpp.set_table_data(::fidl::NaturalToHLCPP(std::move(value.table_data().value())));
-  }
-  return hlcpp;
-}
-
-::test_anonymous::TableMember HLCPPToNaturalTraits<::test::anonymous::TableMember>::Convert(::test::anonymous::TableMember&& value) {
-  ::test_anonymous::TableMember natural;
-  if (value.has_table_data()) {
-    natural.table_data() = ::fidl::HLCPPToNatural(std::move(*value.mutable_table_data()));
-  }
-  return natural;
 }
 ::test::anonymous::FunctionApplication NaturalToHLCPPTraits<::test_anonymous::FunctionApplication>::Convert(::test_anonymous::FunctionApplication&& value) {
   ::test::anonymous::FunctionApplication hlcpp;
@@ -262,29 +247,22 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
   }
   return natural;
 }
-
-::test::anonymous::UnionMember NaturalToHLCPPTraits<::test_anonymous::UnionMember>::Convert(::test_anonymous::UnionMember&& value) {
-  ::test::anonymous::UnionMember hlcpp;
-  switch (value.Which()) {
-    case ::test_anonymous::UnionMember::Tag::kUnionData:
-      hlcpp.set_union_data(::fidl::NaturalToHLCPP(std::move(value.union_data().value())));
-      break;
-    default:
-      break;
+::test::anonymous::TableMember NaturalToHLCPPTraits<::test_anonymous::TableMember>::Convert(::test_anonymous::TableMember&& value) {
+  ::test::anonymous::TableMember hlcpp;
+  if (value.table_data().has_value()) {
+    hlcpp.set_table_data(::fidl::NaturalToHLCPP(std::move(value.table_data().value())));
   }
   return hlcpp;
 }
 
-::test_anonymous::UnionMember HLCPPToNaturalTraits<::test::anonymous::UnionMember>::Convert(::test::anonymous::UnionMember&& value) {
-  using _NaturalUnion = ::test_anonymous::UnionMember;
-  switch (value.Which()) {
-    case ::test::anonymous::UnionMember::Tag::kUnionData:
-      return _NaturalUnion::WithUnionData(
-          ::fidl::HLCPPToNatural(std::move(value.union_data())));
-    default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+::test_anonymous::TableMember HLCPPToNaturalTraits<::test::anonymous::TableMember>::Convert(::test::anonymous::TableMember&& value) {
+  ::test_anonymous::TableMember natural;
+  if (value.has_table_data()) {
+    natural.table_data() = ::fidl::HLCPPToNatural(std::move(*value.mutable_table_data()));
   }
+  return natural;
 }
+
 ::test::anonymous::Expression NaturalToHLCPPTraits<::test_anonymous::Expression>::Convert(::test_anonymous::Expression&& value) {
   ::test::anonymous::Expression hlcpp;
   switch (value.Which()) {
@@ -315,6 +293,28 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
     case ::test::anonymous::Expression::Tag::kFunctionApplication:
       return _NaturalUnion::WithFunctionApplication(
           ::fidl::HLCPPToNatural(std::move(value.function_application())));
+    default:
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+  }
+}
+::test::anonymous::UnionMember NaturalToHLCPPTraits<::test_anonymous::UnionMember>::Convert(::test_anonymous::UnionMember&& value) {
+  ::test::anonymous::UnionMember hlcpp;
+  switch (value.Which()) {
+    case ::test_anonymous::UnionMember::Tag::kUnionData:
+      hlcpp.set_union_data(::fidl::NaturalToHLCPP(std::move(value.union_data().value())));
+      break;
+    default:
+      break;
+  }
+  return hlcpp;
+}
+
+::test_anonymous::UnionMember HLCPPToNaturalTraits<::test::anonymous::UnionMember>::Convert(::test::anonymous::UnionMember&& value) {
+  using _NaturalUnion = ::test_anonymous::UnionMember;
+  switch (value.Which()) {
+    case ::test::anonymous::UnionMember::Tag::kUnionData:
+      return _NaturalUnion::WithUnionData(
+          ::fidl::HLCPPToNatural(std::move(value.union_data())));
     default:
       return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }

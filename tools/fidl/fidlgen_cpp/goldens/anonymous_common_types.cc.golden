@@ -3,25 +3,6 @@
 #include <fidl/test.anonymous/cpp/common_types.h>
 
 namespace test_anonymous {
-extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ErrorTable;
-}  // namespace test_anonymous
-size_t fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError>::Format(
-    const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity) {
-  const char* name = [&]() -> const char* {
-    switch (static_cast<uint32_t>(value)) {
-      case 1u:
-        return "ERROR_ONE";
-      case 2u:
-        return "ERROR_TWO";
-      default:
-        return nullptr;
-    }
-  }();
-  return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name, &::test_anonymous::test_anonymous_SomeProtocol_SomeMethod_ErrorTable, destination, capacity);
-}
-
-namespace test_anonymous {
 extern "C" const fidl_type_t test_anonymous_OpTable;
 }  // namespace test_anonymous
 size_t fidl::internal::DisplayError<::test_anonymous::Op>::Format(
@@ -40,4 +21,23 @@ size_t fidl::internal::DisplayError<::test_anonymous::Op>::Format(
   }();
   return ::fidl::internal::FormatApplicationError(
       static_cast<uint32_t>(value), name, &::test_anonymous::test_anonymous_OpTable, destination, capacity);
+}
+
+namespace test_anonymous {
+extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ErrorTable;
+}  // namespace test_anonymous
+size_t fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError>::Format(
+    const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity) {
+  const char* name = [&]() -> const char* {
+    switch (static_cast<uint32_t>(value)) {
+      case 1u:
+        return "ERROR_ONE";
+      case 2u:
+        return "ERROR_TWO";
+      default:
+        return nullptr;
+    }
+  }();
+  return ::fidl::internal::FormatApplicationError(
+      static_cast<uint32_t>(value), name, &::test_anonymous::test_anonymous_SomeProtocol_SomeMethod_ErrorTable, destination, capacity);
 }

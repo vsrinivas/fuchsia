@@ -191,193 +191,6 @@ zx_status_t SandwichUnionSize8Alignment4::Clone(SandwichUnionSize8Alignment4* _r
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
-const fidl_type_t* UnionSize36Alignment4::FidlType = &test_unionsandwich_UnionSize36Alignment4Table;
-
-UnionSize36Alignment4::UnionSize36Alignment4() {}
-
-UnionSize36Alignment4::~UnionSize36Alignment4() {
-  Destroy();
-}
-
-UnionSize36Alignment4::UnionSize36Alignment4(UnionSize36Alignment4&& other) : tag_(other.tag_) {
-  switch (tag_) {
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-      new (&variant_)::std::array<uint8_t, 32>();
-      variant_ = std::move(other.variant_);
-      break;
-    case static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
-      break;
-  }
-}
-
-UnionSize36Alignment4& UnionSize36Alignment4::operator=(UnionSize36Alignment4&& other) {
-  if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-      case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-        new (&variant_)::std::array<uint8_t, 32>();
-        variant_ = std::move(other.variant_);
-        break;
-      case static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
-        break;
-    }
-  }
-  return *this;
-}
-
-UnionSize36Alignment4 UnionSize36Alignment4::WithVariant(::std::array<uint8_t, 32>&& val) {
-  UnionSize36Alignment4 result;
-  result.set_variant(std::move(val));
-  return result;
-}
-
-void UnionSize36Alignment4::Encode(::fidl::Encoder* encoder, size_t offset,
-                                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  const size_t length_before = encoder->CurrentLength();
-  const size_t handles_before = encoder->CurrentHandleCount();
-
-  switch (Which()) {
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
-      if (::fidl::EncodingInlineSize<::std::array<uint8_t, 32>>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &variant_, offset + offsetof(fidl_xunion_v2_t, envelope));
-
-        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-        xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        break;
-      }
-
-      ::fidl::Encode(
-          encoder,
-          &variant_,
-          encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint8_t, 32>, ::fidl::Encoder>(encoder)));
-
-      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-      xunion->tag = tag_;
-      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-      xunion->envelope.flags = 0;
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-void UnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize36Alignment4* value, size_t offset) {
-  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
-
-  if (xunion->envelope.num_bytes == 0 &&
-      xunion->envelope.num_handles == 0 &&
-      xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid));
-    return;
-  }
-
-  value->EnsureStorageInitialized(xunion->tag);
-
-  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
-
-  switch (value->tag_) {
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
-      new (&value->variant_)::std::array<uint8_t, 32>();
-      ::fidl::Decode(_decoder, &value->variant_, value_offset);
-      break;
-    }
-    default: {
-      break;
-    }
-  }
-}
-
-zx_status_t UnionSize36Alignment4::Clone(UnionSize36Alignment4* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid:
-      return ZX_OK;
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-      new (&result->variant_)::std::array<uint8_t, 32>();
-      return ::fidl::Clone(variant_, &result->variant_);
-    default:
-      return ZX_OK;
-  }
-}
-
-UnionSize36Alignment4& UnionSize36Alignment4::set_variant(::std::array<uint8_t, 32> value) {
-  EnsureStorageInitialized(::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant);
-  variant_ = std::move(value);
-  return *this;
-}
-
-void UnionSize36Alignment4::Destroy() {
-  switch (tag_) {
-    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-      variant_.~decltype(variant_)();
-      break;
-
-    default:
-      break;
-  }
-  tag_ = static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid);
-}
-
-void UnionSize36Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
-        break;
-      case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
-        new (&variant_)::std::array<uint8_t, 32>();
-        break;
-      default:
-        break;
-    }
-  }
-}
-
-extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize36Alignment4Table;
-const fidl_type_t* SandwichUnionSize36Alignment4::FidlType = &test_unionsandwich_SandwichUnionSize36Alignment4Table;
-
-void SandwichUnionSize36Alignment4::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<SandwichUnionSize36Alignment4>::value) {
-    memcpy(_encoder->template GetPtr<SandwichUnionSize36Alignment4>(_offset), this, sizeof(SandwichUnionSize36Alignment4));
-  } else {
-    ::fidl::Encode(_encoder, &before, _offset + 0);
-    ::fidl::Encode(_encoder, &union_, _offset + 8);
-    ::fidl::Encode(_encoder, &after, _offset + 24);
-  }
-}
-
-void SandwichUnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize36Alignment4* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<SandwichUnionSize36Alignment4>::value) {
-    memcpy(_value, _decoder->template GetPtr<SandwichUnionSize36Alignment4>(_offset), sizeof(SandwichUnionSize36Alignment4));
-  } else {
-    ::fidl::Decode(_decoder, &_value->before, _offset + 0);
-    ::fidl::Decode(_decoder, &_value->union_, _offset + 8);
-    ::fidl::Decode(_decoder, &_value->after, _offset + 24);
-  }
-}
-
-zx_status_t SandwichUnionSize36Alignment4::Clone(SandwichUnionSize36Alignment4* _result) const {
-  zx_status_t _status = ::fidl::Clone(before, &_result->before);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(union_, &_result->union_);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(after, &_result->after);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
 extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 const fidl_type_t* UnionSize12Alignment4::FidlType = &test_unionsandwich_UnionSize12Alignment4Table;
 
@@ -772,6 +585,193 @@ void SandwichUnionSize24Alignment8::Decode(::fidl::Decoder* _decoder, SandwichUn
 }
 
 zx_status_t SandwichUnionSize24Alignment8::Clone(SandwichUnionSize24Alignment8* _result) const {
+  zx_status_t _status = ::fidl::Clone(before, &_result->before);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(union_, &_result->union_);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(after, &_result->after);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
+const fidl_type_t* UnionSize36Alignment4::FidlType = &test_unionsandwich_UnionSize36Alignment4Table;
+
+UnionSize36Alignment4::UnionSize36Alignment4() {}
+
+UnionSize36Alignment4::~UnionSize36Alignment4() {
+  Destroy();
+}
+
+UnionSize36Alignment4::UnionSize36Alignment4(UnionSize36Alignment4&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+      new (&variant_)::std::array<uint8_t, 32>();
+      variant_ = std::move(other.variant_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
+      break;
+  }
+}
+
+UnionSize36Alignment4& UnionSize36Alignment4::operator=(UnionSize36Alignment4&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+        new (&variant_)::std::array<uint8_t, 32>();
+        variant_ = std::move(other.variant_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+UnionSize36Alignment4 UnionSize36Alignment4::WithVariant(::std::array<uint8_t, 32>&& val) {
+  UnionSize36Alignment4 result;
+  result.set_variant(std::move(val));
+  return result;
+}
+
+void UnionSize36Alignment4::Encode(::fidl::Encoder* encoder, size_t offset,
+                                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
+      if (::fidl::EncodingInlineSize<::std::array<uint8_t, 32>>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &variant_, offset + offsetof(fidl_xunion_v2_t, envelope));
+
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
+      }
+
+      ::fidl::Encode(
+          encoder,
+          &variant_,
+          encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint8_t, 32>, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void UnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize36Alignment4* value, size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
+      new (&value->variant_)::std::array<uint8_t, 32>();
+      ::fidl::Decode(_decoder, &value->variant_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t UnionSize36Alignment4::Clone(UnionSize36Alignment4* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid:
+      return ZX_OK;
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+      new (&result->variant_)::std::array<uint8_t, 32>();
+      return ::fidl::Clone(variant_, &result->variant_);
+    default:
+      return ZX_OK;
+  }
+}
+
+UnionSize36Alignment4& UnionSize36Alignment4::set_variant(::std::array<uint8_t, 32> value) {
+  EnsureStorageInitialized(::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant);
+  variant_ = std::move(value);
+  return *this;
+}
+
+void UnionSize36Alignment4::Destroy() {
+  switch (tag_) {
+    case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+      variant_.~decltype(variant_)();
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid);
+}
+
+void UnionSize36Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(::test::unionsandwich::UnionSize36Alignment4::Tag::Invalid):
+        break;
+      case ::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant:
+        new (&variant_)::std::array<uint8_t, 32>();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize36Alignment4Table;
+const fidl_type_t* SandwichUnionSize36Alignment4::FidlType = &test_unionsandwich_SandwichUnionSize36Alignment4Table;
+
+void SandwichUnionSize36Alignment4::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SandwichUnionSize36Alignment4>::value) {
+    memcpy(_encoder->template GetPtr<SandwichUnionSize36Alignment4>(_offset), this, sizeof(SandwichUnionSize36Alignment4));
+  } else {
+    ::fidl::Encode(_encoder, &before, _offset + 0);
+    ::fidl::Encode(_encoder, &union_, _offset + 8);
+    ::fidl::Encode(_encoder, &after, _offset + 24);
+  }
+}
+
+void SandwichUnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, SandwichUnionSize36Alignment4* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SandwichUnionSize36Alignment4>::value) {
+    memcpy(_value, _decoder->template GetPtr<SandwichUnionSize36Alignment4>(_offset), sizeof(SandwichUnionSize36Alignment4));
+  } else {
+    ::fidl::Decode(_decoder, &_value->before, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->union_, _offset + 8);
+    ::fidl::Decode(_decoder, &_value->after, _offset + 24);
+  }
+}
+
+zx_status_t SandwichUnionSize36Alignment4::Clone(SandwichUnionSize36Alignment4* _result) const {
   zx_status_t _status = ::fidl::Clone(before, &_result->before);
   if (_status != ZX_OK)
     return _status;

@@ -11,14 +11,14 @@ namespace test {
 namespace enum_ {
 
 #if (__cplusplus < 201703)
-constexpr const ::test::enum_::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::FOO = ::test::enum_::MyFlexibleEnumWithCustomUnknown(1u);
-constexpr const ::test::enum_::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::BAR = ::test::enum_::MyFlexibleEnumWithCustomUnknown(2u);
-constexpr const ::test::enum_::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN = ::test::enum_::MyFlexibleEnumWithCustomUnknown(3u);
+constexpr const ::test::enum_::MyFlexibleEnum MyFlexibleEnum::FOO = ::test::enum_::MyFlexibleEnum(1u);
+constexpr const ::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR = ::test::enum_::MyFlexibleEnum(2u);
 #endif  // (__cplusplus < 201703)
 
 #if (__cplusplus < 201703)
-constexpr const ::test::enum_::MyFlexibleEnum MyFlexibleEnum::FOO = ::test::enum_::MyFlexibleEnum(1u);
-constexpr const ::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR = ::test::enum_::MyFlexibleEnum(2u);
+constexpr const ::test::enum_::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::FOO = ::test::enum_::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::test::enum_::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::BAR = ::test::enum_::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::test::enum_::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN = ::test::enum_::MyFlexibleEnumWithCustomUnknown(3u);
 #endif  // (__cplusplus < 201703)
 
 #if (__cplusplus < 201703)

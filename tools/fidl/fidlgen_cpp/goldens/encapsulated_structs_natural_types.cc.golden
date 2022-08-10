@@ -2,10 +2,6 @@
 
 #include <fidl/test.encapsulatedstructs/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_encapsulatedstructs::Int8Int32::Storage_ test_encapsulatedstructs::Int8Int32::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
@@ -29,6 +25,10 @@
       ::fidl::internal::NaturalClone(storage_.inner),
       ::fidl::internal::NaturalClone(storage_.array)};
 }
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

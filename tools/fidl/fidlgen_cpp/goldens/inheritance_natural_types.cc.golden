@@ -2,12 +2,12 @@
 
 #include <fidl/test.inheritance/cpp/natural_types.h>
 
-::test_inheritance::SuperFooTopResponse::Storage_ test_inheritance::SuperFooTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.y)};
-}
-
 ::test_inheritance::SuperFooRequest::Storage_ test_inheritance::SuperFooRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.s)};
+}
+
+::test_inheritance::SuperFooTopResponse::Storage_ test_inheritance::SuperFooTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.y)};
 }

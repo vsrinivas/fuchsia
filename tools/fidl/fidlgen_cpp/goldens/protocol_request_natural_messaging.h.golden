@@ -14,7 +14,115 @@
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 }  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+}  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocolrequest::Child>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocolrequest::Child>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_protocolrequest::Child> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocolrequest::Child;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetChild> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>>;
@@ -308,113 +416,6 @@ template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent> final {
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_protocolrequest::Parent>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child>> {
- public:
- private:
-  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocolrequest::Child>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocolrequest::Child>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::Server<::test_protocolrequest::Child> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocolrequest::Child;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

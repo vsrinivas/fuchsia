@@ -13,31 +13,88 @@
 
 namespace fuzzing {
 
-using Table = ::test::doccomments::Table;
+using MyStrictBits = ::test::doccomments::MyStrictBits;
+using MyFlexibleBits = ::test::doccomments::MyFlexibleBits;
+using MyStrictEnum = ::test::doccomments::MyStrictEnum;
+using MyFlexibleEnum = ::test::doccomments::MyFlexibleEnum;
 using Struct = ::test::doccomments::Struct;
 using StrictUnion = ::test::doccomments::StrictUnion;
-using Service = ::test::doccomments::Service;
-using MyStrictEnum = ::test::doccomments::MyStrictEnum;
-using MyStrictBits = ::test::doccomments::MyStrictBits;
-using MyFlexibleEnum = ::test::doccomments::MyFlexibleEnum;
-using MyFlexibleBits = ::test::doccomments::MyFlexibleBits;
 using FlexibleUnion = ::test::doccomments::FlexibleUnion;
+using Table = ::test::doccomments::Table;
+using Service = ::test::doccomments::Service;
 
 template <>
-struct MinSize<Table> {
-  operator size_t() {
-    return MinSize<int32_t>();
+struct MinSize<MyStrictBits> {
+  operator size_t() { return sizeof(MyStrictBits); }
+};
+template <>
+struct Allocate<MyStrictBits> {
+  MyStrictBits operator()(FuzzInput* src, size_t* size) {
+    MyStrictBits out;
+    ZX_ASSERT(*size >= sizeof(MyStrictBits));
+    ZX_ASSERT(src->CopyObject(&out));
+    *size = sizeof(MyStrictBits);
+    return out;
   }
 };
 template <>
-struct Allocate<Table> {
-  Table operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Table>());
-    Table out;
-    const size_t slack_per_member = (*size - MinSize<Table>()) / 1;
-    size_t out_size;
-    out_size = MinSize<int32_t>() + slack_per_member;
-    out.set_Field(Allocate<int32_t>{}(src, &out_size));
+struct MinSize<MyFlexibleBits> {
+  operator size_t() { return sizeof(uint32_t); }
+};
+template <>
+struct Allocate<MyFlexibleBits> {
+  MyFlexibleBits operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= sizeof(uint32_t));
+    return MyFlexibleBits(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
+  }
+};
+template <>
+struct MinSize<MyStrictEnum> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<MyStrictEnum> {
+  MyStrictEnum operator()(FuzzInput* src, size_t* size) {
+    MyStrictEnum out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = MyStrictEnum::FOO;
+        break;
+      case 1:
+        out = MyStrictEnum::BAR;
+        break;
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<MyFlexibleEnum> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<MyFlexibleEnum> {
+  MyFlexibleEnum operator()(FuzzInput* src, size_t* size) {
+    MyFlexibleEnum out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = MyFlexibleEnum::FOO;
+        break;
+      case 1:
+        out = MyFlexibleEnum::BAR;
+        break;
+    }
+
     return out;
   }
 };
@@ -89,81 +146,6 @@ struct Allocate<StrictUnion> {
   }
 };
 template <>
-struct MinSize<MyStrictEnum> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<MyStrictEnum> {
-  MyStrictEnum operator()(FuzzInput* src, size_t* size) {
-    MyStrictEnum out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
-
-    switch (selector % 2) {
-      case 0:
-        out = MyStrictEnum::FOO;
-        break;
-      case 1:
-        out = MyStrictEnum::BAR;
-        break;
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MyStrictBits> {
-  operator size_t() { return sizeof(MyStrictBits); }
-};
-template <>
-struct Allocate<MyStrictBits> {
-  MyStrictBits operator()(FuzzInput* src, size_t* size) {
-    MyStrictBits out;
-    ZX_ASSERT(*size >= sizeof(MyStrictBits));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(MyStrictBits);
-    return out;
-  }
-};
-template <>
-struct MinSize<MyFlexibleEnum> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<MyFlexibleEnum> {
-  MyFlexibleEnum operator()(FuzzInput* src, size_t* size) {
-    MyFlexibleEnum out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
-
-    switch (selector % 2) {
-      case 0:
-        out = MyFlexibleEnum::FOO;
-        break;
-      case 1:
-        out = MyFlexibleEnum::BAR;
-        break;
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MyFlexibleBits> {
-  operator size_t() { return sizeof(uint32_t); }
-};
-template <>
-struct Allocate<MyFlexibleBits> {
-  MyFlexibleBits operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= sizeof(uint32_t));
-    return MyFlexibleBits(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
-  }
-};
-template <>
 struct MinSize<FlexibleUnion> {
   operator size_t() {
     size_t sizes[] = {0, MinSize<int32_t>()};
@@ -189,6 +171,24 @@ struct Allocate<FlexibleUnion> {
       }
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<Table> {
+  operator size_t() {
+    return MinSize<int32_t>();
+  }
+};
+template <>
+struct Allocate<Table> {
+  Table operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Table>());
+    Table out;
+    const size_t slack_per_member = (*size - MinSize<Table>()) / 1;
+    size_t out_size;
+    out_size = MinSize<int32_t>() + slack_per_member;
+    out.set_Field(Allocate<int32_t>{}(src, &out_size));
     return out;
   }
 };

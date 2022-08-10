@@ -2,6 +2,13 @@
 
 #include <fidl/test.anonymous/cpp/natural_types.h>
 
+::test_anonymous::OverrideTest::Storage_ test_anonymous::OverrideTest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.op),
+      ::fidl::internal::NaturalClone(storage_.left),
+      ::fidl::internal::NaturalClone(storage_.right)};
+}
+
 ::test_anonymous::TableData::Storage_ test_anonymous::TableData::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.data)};
@@ -11,13 +18,6 @@
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.union_member),
       ::fidl::internal::NaturalClone(storage_.table_member)};
-}
-
-::test_anonymous::OverrideTest::Storage_ test_anonymous::OverrideTest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.op),
-      ::fidl::internal::NaturalClone(storage_.left),
-      ::fidl::internal::NaturalClone(storage_.right)};
 }
 
 ::test_anonymous::SomeProtocolSomeMethodResponse::Storage_ test_anonymous::SomeProtocolSomeMethodResponse::CloneStorage_() const {
@@ -30,11 +30,6 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_anonymous::TableMember::Storage_ test_anonymous::TableMember::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.table_data)};
-}
-
 ::test_anonymous::FunctionApplication::Storage_ test_anonymous::FunctionApplication::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.func),
@@ -42,16 +37,9 @@
       ::fidl::internal::NaturalClone(storage_.flags)};
 }
 
-std::shared_ptr<::test_anonymous::UnionMember::Storage_> test_anonymous::UnionMember::CloneStorage_() const {
-  const Storage_& storage = *storage_;
-  switch (storage_->index()) {
-    case 1:
-      return std::make_shared<Storage_>(
-          std::in_place_index<1>,
-          ::fidl::internal::NaturalClone(std::get<1>(storage)));
-    default:
-      return std::make_shared<Storage_>();
-  }
+::test_anonymous::TableMember::Storage_ test_anonymous::TableMember::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.table_data)};
 }
 
 std::shared_ptr<::test_anonymous::Expression::Storage_> test_anonymous::Expression::CloneStorage_() const {
@@ -69,6 +57,18 @@ std::shared_ptr<::test_anonymous::Expression::Storage_> test_anonymous::Expressi
       return std::make_shared<Storage_>(
           std::in_place_index<3>,
           ::fidl::internal::NaturalClone(std::get<3>(storage)));
+    default:
+      return std::make_shared<Storage_>();
+  }
+}
+
+std::shared_ptr<::test_anonymous::UnionMember::Storage_> test_anonymous::UnionMember::CloneStorage_() const {
+  const Storage_& storage = *storage_;
+  switch (storage_->index()) {
+    case 1:
+      return std::make_shared<Storage_>(
+          std::in_place_index<1>,
+          ::fidl::internal::NaturalClone(std::get<1>(storage)));
     default:
       return std::make_shared<Storage_>();
   }

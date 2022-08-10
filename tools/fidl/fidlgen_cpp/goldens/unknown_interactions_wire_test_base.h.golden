@@ -147,80 +147,6 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
 };
 
 template <>
-class WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
- public:
-  virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-  virtual void StrictOneWay(
-      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
-    NotImplemented_("StrictOneWay", completer);
-  }
-  virtual void StrictTwoWay(
-      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWay", completer);
-  }
-  virtual void StrictTwoWayFields(
-      StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayFields", completer);
-  }
-  virtual void StrictTwoWayUnion(
-      StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayUnion", completer);
-  }
-  virtual void StrictTwoWayTable(
-      StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayTable", completer);
-  }
-  virtual void StrictTwoWayErr(
-      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayErr", completer);
-  }
-  virtual void StrictTwoWayFieldsErr(
-      StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayFieldsErr", completer);
-  }
-  virtual void StrictTwoWayUnionErr(
-      StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayUnionErr", completer);
-  }
-  virtual void StrictTwoWayTableErr(
-      StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer) override {
-    NotImplemented_("StrictTwoWayTableErr", completer);
-  }
-};
-
-template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
- public:
-  virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name) = 0;
-  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>* event) override {
-    NotImplemented_("StrictEvent");
-  }
-  virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>* event) override {
-    NotImplemented_("StrictEventFields");
-  }
-  virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>* event) override {
-    NotImplemented_("StrictEventUnion");
-  }
-  virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>* event) override {
-    NotImplemented_("StrictEventTable");
-  }
-  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>* event) override {
-    NotImplemented_("StrictEventErr");
-  }
-  virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>* event) override {
-    NotImplemented_("StrictEventFieldsErr");
-  }
-  virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>* event) override {
-    NotImplemented_("StrictEventUnionErr");
-  }
-  virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>* event) override {
-    NotImplemented_("StrictEventTableErr");
-  }
-};
-
-template <>
 class WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
  public:
   virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol>() = default;
@@ -325,6 +251,80 @@ class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::
   }
   virtual void handle_unknown_event(::fidl::UnknownEventMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata) override {
     NotImplemented_("handle_unknown_event");
+  }
+};
+
+template <>
+class WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
+ public:
+  virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void StrictOneWay(
+      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
+    NotImplemented_("StrictOneWay", completer);
+  }
+  virtual void StrictTwoWay(
+      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWay", completer);
+  }
+  virtual void StrictTwoWayFields(
+      StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayFields", completer);
+  }
+  virtual void StrictTwoWayUnion(
+      StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayUnion", completer);
+  }
+  virtual void StrictTwoWayTable(
+      StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayTable", completer);
+  }
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayErr", completer);
+  }
+  virtual void StrictTwoWayFieldsErr(
+      StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayFieldsErr", completer);
+  }
+  virtual void StrictTwoWayUnionErr(
+      StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayUnionErr", completer);
+  }
+  virtual void StrictTwoWayTableErr(
+      StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer) override {
+    NotImplemented_("StrictTwoWayTableErr", completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::WireSyncEventHandler<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void StrictEvent(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>* event) override {
+    NotImplemented_("StrictEvent");
+  }
+  virtual void StrictEventFields(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>* event) override {
+    NotImplemented_("StrictEventFields");
+  }
+  virtual void StrictEventUnion(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>* event) override {
+    NotImplemented_("StrictEventUnion");
+  }
+  virtual void StrictEventTable(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>* event) override {
+    NotImplemented_("StrictEventTable");
+  }
+  virtual void StrictEventErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>* event) override {
+    NotImplemented_("StrictEventErr");
+  }
+  virtual void StrictEventFieldsErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>* event) override {
+    NotImplemented_("StrictEventFieldsErr");
+  }
+  virtual void StrictEventUnionErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>* event) override {
+    NotImplemented_("StrictEventUnionErr");
+  }
+  virtual void StrictEventTableErr(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>* event) override {
+    NotImplemented_("StrictEventTableErr");
   }
 };
 }  // namespace testing

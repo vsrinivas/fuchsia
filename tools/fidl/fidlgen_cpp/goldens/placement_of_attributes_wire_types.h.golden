@@ -30,26 +30,26 @@ using ExampleBits = ::test_placementofattributes::ExampleBits;
 
 using ExampleEnum = ::test_placementofattributes::ExampleEnum;
 
-struct ExampleStruct;
-
 struct ExampleProtocolMethodRequest;
+
+struct ExampleStruct;
 
 class ExampleTable;
 
-class ExampleXUnion;
-
 class ExampleUnion;
 
-extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
-
-struct ExampleStruct {
-  uint32_t member = {};
-};
+class ExampleXUnion;
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 struct ExampleProtocolMethodRequest {
   ::test_exampleusing::wire::Empty arg = {};
+};
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
+
+struct ExampleStruct {
+  uint32_t member = {};
 };
 
 }  // namespace wire
@@ -224,55 +224,6 @@ inline ::fidl::WireTableExternalBuilder<::test_placementofattributes::wire::Exam
   return ::fidl::WireTableExternalBuilder<::test_placementofattributes::wire::ExampleTable>(std::move(frame));
 }
 
-extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
-
-class ExampleXUnion {
- public:
-  ExampleXUnion() : ordinal_(::test_placementofattributes::wire::ExampleXUnion::Ordinal::Invalid), envelope_{} {}
-
-  ExampleXUnion(const ExampleXUnion&) = default;
-  ExampleXUnion& operator=(const ExampleXUnion&) = default;
-  ExampleXUnion(ExampleXUnion&&) = default;
-  ExampleXUnion& operator=(ExampleXUnion&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kVariant = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const { return ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::Invalid; }
-
-  bool is_variant() const { return ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant; }
-
-  static ExampleXUnion WithVariant(uint32_t val) {
-    ExampleXUnion result;
-    result.ordinal_ = ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant;
-    result.envelope_.As<uint32_t>().set_data(std::move(val));
-    return result;
-  }
-
-  uint32_t& variant() {
-    ZX_ASSERT(ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  const uint32_t& variant() const {
-    ZX_ASSERT(ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  ::test_placementofattributes::wire::ExampleXUnion::Tag Which() const;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kVariant = 1,  // 0x1
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::test_placementofattributes::wire::ExampleXUnion::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
-};
-
 extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion {
@@ -320,6 +271,55 @@ class ExampleUnion {
 
   static void SizeAndOffsetAssertionHelper();
   ::test_placementofattributes::wire::ExampleUnion::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
+
+class ExampleXUnion {
+ public:
+  ExampleXUnion() : ordinal_(::test_placementofattributes::wire::ExampleXUnion::Ordinal::Invalid), envelope_{} {}
+
+  ExampleXUnion(const ExampleXUnion&) = default;
+  ExampleXUnion& operator=(const ExampleXUnion&) = default;
+  ExampleXUnion(ExampleXUnion&&) = default;
+  ExampleXUnion& operator=(ExampleXUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kVariant = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const { return ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::Invalid; }
+
+  bool is_variant() const { return ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant; }
+
+  static ExampleXUnion WithVariant(uint32_t val) {
+    ExampleXUnion result;
+    result.ordinal_ = ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant;
+    result.envelope_.As<uint32_t>().set_data(std::move(val));
+    return result;
+  }
+
+  uint32_t& variant() {
+    ZX_ASSERT(ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& variant() const {
+    ZX_ASSERT(ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::test_placementofattributes::wire::ExampleXUnion::Tag Which() const;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kVariant = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::test_placementofattributes::wire::ExampleXUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
@@ -378,57 +378,6 @@ struct internal::WireCodingTraits<::test_placementofattributes::wire::ExampleEnu
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_placementofattributes::wire::ExampleStruct> {
-  static constexpr const fidl_type_t* kType = &::test_placementofattributes::wire::test_placementofattributes_ExampleStructTable;
-};
-
-template <>
-struct TypeTraits<::test_placementofattributes::wire::ExampleStruct> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_placementofattributes::wire::ExampleStruct> : public std::true_type {};
-template <>
-struct IsStruct<::test_placementofattributes::wire::ExampleStruct> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_placementofattributes::wire::ExampleStruct>);
-static_assert(offsetof(::test_placementofattributes::wire::ExampleStruct, member) == 0);
-static_assert(sizeof(::test_placementofattributes::wire::ExampleStruct) == TypeTraits<::test_placementofattributes::wire::ExampleStruct>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleStruct, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
-  static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_placementofattributes::wire::ExampleStruct, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_placementofattributes::wire::ExampleStruct* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_placementofattributes::wire::ExampleStruct));
-    } else {
-      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->member, position + 0, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-    }
-  }
-};
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
 struct DeprecatedCTypeTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest> {
   static constexpr const fidl_type_t* kType = &::test_placementofattributes::wire::test_placementofattributes_ExampleProtocolMethodRequestTable;
 };
@@ -473,6 +422,57 @@ struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::Ex
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
       internal::WireCodingTraits<::test_exampleusing::wire::Empty, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_placementofattributes::wire::ExampleStruct> {
+  static constexpr const fidl_type_t* kType = &::test_placementofattributes::wire::test_placementofattributes_ExampleStructTable;
+};
+
+template <>
+struct TypeTraits<::test_placementofattributes::wire::ExampleStruct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_placementofattributes::wire::ExampleStruct> : public std::true_type {};
+template <>
+struct IsStruct<::test_placementofattributes::wire::ExampleStruct> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_placementofattributes::wire::ExampleStruct>);
+static_assert(offsetof(::test_placementofattributes::wire::ExampleStruct, member) == 0);
+static_assert(sizeof(::test_placementofattributes::wire::ExampleStruct) == TypeTraits<::test_placementofattributes::wire::ExampleStruct>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleStruct, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_placementofattributes::wire::ExampleStruct, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_placementofattributes::wire::ExampleStruct* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_placementofattributes::wire::ExampleStruct));
+    } else {
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->member, position + 0, recursion_depth);
+    }
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
     }
   }
@@ -563,115 +563,6 @@ struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::Ex
     }
   }
 };
-
-template <>
-struct TypeTraits<::test_placementofattributes::wire::ExampleXUnion> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_placementofattributes::wire::ExampleXUnion> : public std::true_type {};
-template <>
-struct IsUnion<::test_placementofattributes::wire::ExampleXUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_placementofattributes::wire::ExampleXUnion>);
-
-template <typename Constraint, bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleXUnion, Constraint, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-  static constexpr bool is_memcpy_compatible = false;
-
-  static void Encode(internal::WireEncoder* encoder, ::test_placementofattributes::wire::ExampleXUnion* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
-
-    if (unlikely(u->tag == 0)) {
-      if constexpr (Constraint::is_optional) {
-        *position.As<fidl_xunion_v2_t>() = {};
-        return;
-      }
-      encoder->SetError(kCodingErrorInvalidUnionTag);
-      return;
-    }
-
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    *position.As<fidl_xunion_tag_t>() = u->tag;
-
-    size_t inline_size;
-    switch (u->tag) {
-      case 1:  // ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant
-        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-        break;
-      default:
-        inline_size = 0;
-        break;
-    }
-    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
-    switch (u->tag) {
-      case 1:  // ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant
-        encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-        break;
-      default:
-        encode_fn = nullptr;
-        break;
-    }
-    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
-  }
-
-  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    ::test_placementofattributes::wire::ExampleXUnion::Tag tag = *position.As<::test_placementofattributes::wire::ExampleXUnion::Tag>();
-    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
-      if constexpr (!Constraint::is_optional) {
-        decoder->SetError(kCodingErrorInvalidUnionTag);
-        return;
-      }
-      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
-      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
-        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
-      }
-      return;
-    }
-
-    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
-    if (!inner_depth.IsValid()) {
-      return;
-    }
-
-    size_t inline_size;
-    switch (tag) {
-      case ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant:
-        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
-        break;
-      default:
-        inline_size = 0;
-        break;
-    }
-    DecodeFn<IsRecursive> decode_fn;
-    switch (tag) {
-      case ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant:
-        decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
-        break;
-      default:
-        decode_fn = nullptr;
-        break;
-    }
-    ::fidl::internal::WireDecodeFlexibleEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
-  }
-};
-
-// Top-level union.
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleXUnion, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleXUnion, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 template <>
 struct TypeTraits<::test_placementofattributes::wire::ExampleUnion> {
@@ -781,5 +672,114 @@ struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::Ex
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleUnion, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : public ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleUnion, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
+template <>
+struct TypeTraits<::test_placementofattributes::wire::ExampleXUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_placementofattributes::wire::ExampleXUnion> : public std::true_type {};
+template <>
+struct IsUnion<::test_placementofattributes::wire::ExampleXUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_placementofattributes::wire::ExampleXUnion>);
+
+template <typename Constraint, bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleXUnion, Constraint, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr bool is_memcpy_compatible = false;
+
+  static void Encode(internal::WireEncoder* encoder, ::test_placementofattributes::wire::ExampleXUnion* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    fidl_xunion_v2_t* u = reinterpret_cast<fidl_xunion_v2_t*>(value);
+
+    if (unlikely(u->tag == 0)) {
+      if constexpr (Constraint::is_optional) {
+        *position.As<fidl_xunion_v2_t>() = {};
+        return;
+      }
+      encoder->SetError(kCodingErrorInvalidUnionTag);
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(encoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    *position.As<fidl_xunion_tag_t>() = u->tag;
+
+    size_t inline_size;
+    switch (u->tag) {
+      case 1:  // ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    ::fidl::internal::EncodeFn<IsRecursive> encode_fn;
+    switch (u->tag) {
+      case 1:  // ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant
+        encode_fn = ::fidl::internal::MakeEncodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        encode_fn = nullptr;
+        break;
+    }
+    WireEncodeEnvelope(inline_size, encode_fn, encoder, &u->envelope, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    ::test_placementofattributes::wire::ExampleXUnion::Tag tag = *position.As<::test_placementofattributes::wire::ExampleXUnion::Tag>();
+    if (unlikely(static_cast<uint64_t>(tag) == 0)) {
+      if constexpr (!Constraint::is_optional) {
+        decoder->SetError(kCodingErrorInvalidUnionTag);
+        return;
+      }
+      static_assert(sizeof(fidl_envelope_v2_t) == sizeof(uint64_t));
+      if (*(position + sizeof(fidl_xunion_tag_t)).As<uint64_t>() != 0) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
+
+    RecursionDepth<IsRecursive> inner_depth = recursion_depth.Add(decoder, 1);
+    if (!inner_depth.IsValid()) {
+      return;
+    }
+
+    size_t inline_size;
+    switch (tag) {
+      case ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant:
+        inline_size = ::fidl::internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        break;
+      default:
+        inline_size = 0;
+        break;
+    }
+    DecodeFn<IsRecursive> decode_fn;
+    switch (tag) {
+      case ::test_placementofattributes::wire::ExampleXUnion::Tag::kVariant:
+        decode_fn = ::fidl::internal::MakeDecodeFn<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        break;
+      default:
+        decode_fn = nullptr;
+        break;
+    }
+    ::fidl::internal::WireDecodeFlexibleEnvelope(inline_size, decode_fn, decoder, position + sizeof(fidl_xunion_tag_t), inner_depth);
+  }
+};
+
+// Top-level union.
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleXUnion, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
+    : public ::fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleXUnion, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
 
 }  // namespace fidl

@@ -35,9 +35,9 @@ inline zx_status_t Clone(const ::test::importedconstvalues::MyStruct& _value,
 
 using MyStructPtr = ::std::unique_ptr<MyStruct>;
 
-constexpr ::test::dependent::MyEnum ENUM_MEMBER = ::test::dependent::MyEnum::MEMBER;
-
 constexpr ::test::dependent::MyBits BITS_MEMBER = ::test::dependent::MyBits::MEMBER;
+
+constexpr ::test::dependent::MyEnum ENUM_MEMBER = ::test::dependent::MyEnum::MEMBER;
 
 }  // namespace importedconstvalues
 }  // namespace test

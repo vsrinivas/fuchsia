@@ -20,13 +20,115 @@
 
 namespace test_driverhandle {
 
-class HandlesInProtocolSendHandlesRequest;
+class ClientEndWrapper;
 
 class ServerEndWrapper;
 
-class ClientEndWrapper;
+class HandlesInProtocolSendHandlesRequest;
 
 class T;
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
+
+class ClientEndWrapper {
+ private:
+  struct Storage_;
+
+ public:
+  ClientEndWrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ClientEndWrapper(::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value) noexcept
+      : storage_({.value = std::move(value)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ClientEndWrapper| only if all of its members are default constructible.
+  ClientEndWrapper() = default;
+#pragma clang diagnostic pop
+
+  ClientEndWrapper(ClientEndWrapper&&) noexcept = default;
+  ClientEndWrapper& operator=(ClientEndWrapper&&) noexcept = default;
+
+  const ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>&
+  value() const {
+    return storage_.value;
+  }
+
+  ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& value() {
+    return storage_.value;
+  }
+
+  ClientEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ClientEndWrapper(Storage_{
+                                                                                     .value = {},
+                                                                                 }) {}
+
+ private:
+  struct Storage_ final {
+    ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value;
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ClientEndWrapper, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_driverhandle::ClientEndWrapper>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+      &Storage_::value, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
+
+class ServerEndWrapper {
+ private:
+  struct Storage_;
+
+ public:
+  ServerEndWrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ServerEndWrapper(::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value) noexcept
+      : storage_({.value = std::move(value)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ServerEndWrapper| only if all of its members are default constructible.
+  ServerEndWrapper() = default;
+#pragma clang diagnostic pop
+
+  ServerEndWrapper(ServerEndWrapper&&) noexcept = default;
+  ServerEndWrapper& operator=(ServerEndWrapper&&) noexcept = default;
+
+  const ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>&
+  value() const {
+    return storage_.value;
+  }
+
+  ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>& value() {
+    return storage_.value;
+  }
+
+  ServerEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ServerEndWrapper(Storage_{
+                                                                                     .value = {},
+                                                                                 }) {}
+
+ private:
+  struct Storage_ final {
+    ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value;
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ServerEndWrapper, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_driverhandle::ServerEndWrapper>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+      &Storage_::value, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -125,123 +227,21 @@ class HandlesInProtocolSendHandlesRequest {
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
-
-class ServerEndWrapper {
- private:
-  struct Storage_;
-
- public:
-  ServerEndWrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ServerEndWrapper(::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value) noexcept
-      : storage_({.value = std::move(value)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ServerEndWrapper| only if all of its members are default constructible.
-  ServerEndWrapper() = default;
-#pragma clang diagnostic pop
-
-  ServerEndWrapper(ServerEndWrapper&&) noexcept = default;
-  ServerEndWrapper& operator=(ServerEndWrapper&&) noexcept = default;
-
-  const ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>&
-  value() const {
-    return storage_.value;
-  }
-
-  ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>& value() {
-    return storage_.value;
-  }
-
-  ServerEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ServerEndWrapper(Storage_{
-                                                                                     .value = {},
-                                                                                 }) {}
-
- private:
-  struct Storage_ final {
-    ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value;
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ServerEndWrapper, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_driverhandle::ServerEndWrapper>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-      &Storage_::value, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
-
-class ClientEndWrapper {
- private:
-  struct Storage_;
-
- public:
-  ClientEndWrapper(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ClientEndWrapper(::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value) noexcept
-      : storage_({.value = std::move(value)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ClientEndWrapper| only if all of its members are default constructible.
-  ClientEndWrapper() = default;
-#pragma clang diagnostic pop
-
-  ClientEndWrapper(ClientEndWrapper&&) noexcept = default;
-  ClientEndWrapper& operator=(ClientEndWrapper&&) noexcept = default;
-
-  const ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>&
-  value() const {
-    return storage_.value;
-  }
-
-  ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& value() {
-    return storage_.value;
-  }
-
-  ClientEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ClientEndWrapper(Storage_{
-                                                                                     .value = {},
-                                                                                 }) {}
-
- private:
-  struct Storage_ final {
-    ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value;
-  };
-
-  Storage_ storage_;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ClientEndWrapper, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_driverhandle::ClientEndWrapper>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
-      &Storage_::value, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
-
-#endif  // __Fuchsia__
-
 }  // namespace test_driverhandle
 namespace fidl {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
 
 template <>
-struct IsResource<::test_driverhandle::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
+struct IsResource<::test_driverhandle::ClientEndWrapper> : public std::true_type {};
 template <>
-struct IsFidlType<::test_driverhandle::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
+struct IsFidlType<::test_driverhandle::ClientEndWrapper> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16> {};
+struct internal::NaturalCodingTraits<::test_driverhandle::ClientEndWrapper, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ClientEndWrapper, 4> {};
 
 #endif  // __Fuchsia__
 
@@ -262,16 +262,16 @@ struct internal::NaturalCodingTraits<::test_driverhandle::ServerEndWrapper, ::fi
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
+extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 
 template <>
-struct IsResource<::test_driverhandle::ClientEndWrapper> : public std::true_type {};
+struct IsResource<::test_driverhandle::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
 template <>
-struct IsFidlType<::test_driverhandle::ClientEndWrapper> : public std::true_type {};
+struct IsFidlType<::test_driverhandle::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_driverhandle::ClientEndWrapper, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ClientEndWrapper, 4> {};
+struct internal::NaturalCodingTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16> {};
 
 #endif  // __Fuchsia__
 

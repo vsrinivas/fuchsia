@@ -8,22 +8,10 @@ void ::test_bindingsdenylist::wire::OnlyLlcpp::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(OnlyLlcpp, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(DenyEachBindingOnlyDenySyzkallerResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(DenyEachBindingOnlyDenySyzkallerResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(DenyEachBindingOnlyDenySyzkallerResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
-void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(DenyEachBindingOnlyDenyRustResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(DenyEachBindingOnlyDenyRustResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(DenyEachBindingOnlyDenyRustResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
-void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(DenyEachBindingOnlyDenyLibfuzzerResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(DenyEachBindingOnlyDenyLibfuzzerResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(DenyEachBindingOnlyDenyLibfuzzerResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(DenyEachBindingOnlyDenyDartResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(DenyEachBindingOnlyDenyDartResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(DenyEachBindingOnlyDenyDartResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
 void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::SizeAndOffsetAssertionHelper() {
@@ -32,8 +20,20 @@ void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::SizeAndOffs
   static_assert(offsetof(DenyEachBindingOnlyDenyGoResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
-void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(DenyEachBindingOnlyDenyDartResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(DenyEachBindingOnlyDenyDartResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(DenyEachBindingOnlyDenyDartResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(DenyEachBindingOnlyDenyLibfuzzerResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(DenyEachBindingOnlyDenyLibfuzzerResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(DenyEachBindingOnlyDenyLibfuzzerResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
+void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(DenyEachBindingOnlyDenyRustResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(DenyEachBindingOnlyDenyRustResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(DenyEachBindingOnlyDenyRustResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
+void ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(DenyEachBindingOnlyDenySyzkallerResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(DenyEachBindingOnlyDenySyzkallerResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(DenyEachBindingOnlyDenySyzkallerResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }

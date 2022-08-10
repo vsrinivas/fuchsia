@@ -12,64 +12,9 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 16>
     test_padding_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding7ByteMiddle",
+            .fidl_type_name = "::test_padding::wire::Padding1ByteEnd",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding7ByteMiddle>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding7ByteEnd",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding7ByteEnd>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding6ByteMiddle",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding6ByteMiddle>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding6ByteEnd",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding6ByteEnd>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding5ByteMiddle",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding5ByteMiddle>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding5ByteEnd",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding5ByteEnd>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding4ByteMiddle",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding4ByteMiddle>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding4ByteEnd",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding4ByteEnd>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding4ByteAlignmentLength12",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding4ByteAlignmentLength12>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding3ByteMiddle",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding3ByteMiddle>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding3ByteEnd",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding3ByteEnd>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding2ByteMiddle",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding2ByteMiddle>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding1ByteEnd>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_padding::wire::Padding2ByteEnd",
@@ -77,9 +22,29 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 16>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding2ByteEnd>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding2ByteAlignmentLength6",
+            .fidl_type_name = "::test_padding::wire::Padding3ByteEnd",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding2ByteAlignmentLength6>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding3ByteEnd>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding4ByteEnd",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding4ByteEnd>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding5ByteEnd",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding5ByteEnd>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding6ByteEnd",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding6ByteEnd>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding7ByteEnd",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding7ByteEnd>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_padding::wire::Padding1ByteMiddle",
@@ -87,9 +52,44 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 16>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding1ByteMiddle>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_padding::wire::Padding1ByteEnd",
+            .fidl_type_name = "::test_padding::wire::Padding2ByteMiddle",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding1ByteEnd>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding2ByteMiddle>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding3ByteMiddle",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding3ByteMiddle>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding4ByteMiddle",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding4ByteMiddle>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding5ByteMiddle",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding5ByteMiddle>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding6ByteMiddle",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding6ByteMiddle>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding7ByteMiddle",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding7ByteMiddle>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding4ByteAlignmentLength12",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding4ByteAlignmentLength12>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_padding::wire::Padding2ByteAlignmentLength6",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_padding::wire::Padding2ByteAlignmentLength6>,
         },
 };
 

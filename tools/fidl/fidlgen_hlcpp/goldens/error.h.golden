@@ -11,19 +11,40 @@ namespace error {
 // Domain objects declarations
 //
 
+class ExampleFooRequest;
+
 class Example_foo_Response;
 
 class Example_foo_Result;
 
 class ExampleFooTopResponse;
 
-class ExampleFooRequest;
-
 #ifdef __Fuchsia__
 
 class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 #endif  // __Fuchsia__
+
+class ExampleFooRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::std::string s{};
+
+  static inline ::std::unique_ptr<ExampleFooRequest> New() { return ::std::make_unique<ExampleFooRequest>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleFooRequest* value, size_t _offset);
+  zx_status_t Clone(ExampleFooRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::error::ExampleFooRequest& _value,
+                         ::test::error::ExampleFooRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using ExampleFooRequestPtr = ::std::unique_ptr<ExampleFooRequest>;
 
 class Example_foo_Response final {
  public:
@@ -183,27 +204,6 @@ inline zx_status_t Clone(const ::test::error::ExampleFooTopResponse& _value,
 
 using ExampleFooTopResponsePtr = ::std::unique_ptr<ExampleFooTopResponse>;
 
-class ExampleFooRequest final {
- public:
-  static const fidl_type_t* FidlType;
-
-  ::std::string s{};
-
-  static inline ::std::unique_ptr<ExampleFooRequest> New() { return ::std::make_unique<ExampleFooRequest>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ExampleFooRequest* value, size_t _offset);
-  zx_status_t Clone(ExampleFooRequest* result) const;
-};
-
-inline zx_status_t Clone(const ::test::error::ExampleFooRequest& _value,
-                         ::test::error::ExampleFooRequest* _result) {
-  return _value.Clone(_result);
-}
-
-using ExampleFooRequestPtr = ::std::unique_ptr<ExampleFooRequest>;
-
 #ifdef __Fuchsia__
 
 namespace _internal {
@@ -244,6 +244,31 @@ class Example_ResponseEncoder {
 }  // namespace error
 }  // namespace test
 namespace fidl {
+template <>
+struct CodingTraits<::test::error::ExampleFooRequest>
+    : public EncodableCodingTraits<::test::error::ExampleFooRequest, 16> {};
+
+template <>
+struct HasPadding<::test::error::ExampleFooRequest> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::error::ExampleFooRequest> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::error::ExampleFooRequest>::value && IsMemcpyCompatible<::std::string>::value> {};
+
+inline zx_status_t Clone(const ::test::error::ExampleFooRequest& value,
+                         ::test::error::ExampleFooRequest* result) {
+  return ::test::error::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::error::ExampleFooRequest> {
+  bool operator()(const ::test::error::ExampleFooRequest& _lhs, const ::test::error::ExampleFooRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.s, _rhs.s)) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::error::Example_foo_Response>
     : public EncodableCodingTraits<::test::error::Example_foo_Response, 8> {};
@@ -343,31 +368,6 @@ template <>
 struct Equality<::test::error::ExampleFooTopResponse> {
   bool operator()(const ::test::error::ExampleFooTopResponse& _lhs, const ::test::error::ExampleFooTopResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.result, _rhs.result)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::error::ExampleFooRequest>
-    : public EncodableCodingTraits<::test::error::ExampleFooRequest, 16> {};
-
-template <>
-struct HasPadding<::test::error::ExampleFooRequest> : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::test::error::ExampleFooRequest> : public internal::BoolConstant<
-                                                                  !HasPadding<::test::error::ExampleFooRequest>::value && IsMemcpyCompatible<::std::string>::value> {};
-
-inline zx_status_t Clone(const ::test::error::ExampleFooRequest& value,
-                         ::test::error::ExampleFooRequest* result) {
-  return ::test::error::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::error::ExampleFooRequest> {
-  bool operator()(const ::test::error::ExampleFooRequest& _lhs, const ::test::error::ExampleFooRequest& _rhs) const {
-    if (!::fidl::Equals(_lhs.s, _rhs.s)) {
       return false;
     }
     return true;

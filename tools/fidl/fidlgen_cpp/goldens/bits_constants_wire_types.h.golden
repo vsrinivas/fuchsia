@@ -26,11 +26,11 @@ namespace test_bitsconstants {
 namespace wire {
 using BitsType = ::test_bitsconstants::BitsType;
 
-constexpr ::test_bitsconstants::wire::BitsType kConst3 = static_cast<::test_bitsconstants::wire::BitsType>(131);
+constexpr ::test_bitsconstants::wire::BitsType kConst1 = ::test_bitsconstants::wire::BitsType::kA;
 
 constexpr ::test_bitsconstants::wire::BitsType kConst2 = static_cast<::test_bitsconstants::wire::BitsType>(129);
 
-constexpr ::test_bitsconstants::wire::BitsType kConst1 = ::test_bitsconstants::wire::BitsType::kA;
+constexpr ::test_bitsconstants::wire::BitsType kConst3 = static_cast<::test_bitsconstants::wire::BitsType>(131);
 
 }  // namespace wire
 }  // namespace test_bitsconstants

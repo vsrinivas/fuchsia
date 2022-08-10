@@ -2,7 +2,38 @@
 
 #include <fidl/test.padding/cpp/natural_types.h>
 
-::test_padding::Padding7ByteMiddle::Storage_ test_padding::Padding7ByteMiddle::CloneStorage_() const {
+::test_padding::Padding1ByteEnd::Storage_ test_padding::Padding1ByteEnd::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_padding::Padding2ByteEnd::Storage_ test_padding::Padding2ByteEnd::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_padding::Padding3ByteEnd::Storage_ test_padding::Padding3ByteEnd::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_padding::Padding4ByteEnd::Storage_ test_padding::Padding4ByteEnd::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_padding::Padding5ByteEnd::Storage_ test_padding::Padding5ByteEnd::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b),
+      ::fidl::internal::NaturalClone(storage_.c)};
+}
+
+::test_padding::Padding6ByteEnd::Storage_ test_padding::Padding6ByteEnd::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b)};
@@ -14,13 +45,25 @@
       ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_padding::Padding6ByteMiddle::Storage_ test_padding::Padding6ByteMiddle::CloneStorage_() const {
+::test_padding::Padding1ByteMiddle::Storage_ test_padding::Padding1ByteMiddle::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_padding::Padding6ByteEnd::Storage_ test_padding::Padding6ByteEnd::CloneStorage_() const {
+::test_padding::Padding2ByteMiddle::Storage_ test_padding::Padding2ByteMiddle::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_padding::Padding3ByteMiddle::Storage_ test_padding::Padding3ByteMiddle::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_padding::Padding4ByteMiddle::Storage_ test_padding::Padding4ByteMiddle::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b)};
@@ -33,20 +76,13 @@
       ::fidl::internal::NaturalClone(storage_.c)};
 }
 
-::test_padding::Padding5ByteEnd::Storage_ test_padding::Padding5ByteEnd::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b),
-      ::fidl::internal::NaturalClone(storage_.c)};
-}
-
-::test_padding::Padding4ByteMiddle::Storage_ test_padding::Padding4ByteMiddle::CloneStorage_() const {
+::test_padding::Padding6ByteMiddle::Storage_ test_padding::Padding6ByteMiddle::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_padding::Padding4ByteEnd::Storage_ test_padding::Padding4ByteEnd::CloneStorage_() const {
+::test_padding::Padding7ByteMiddle::Storage_ test_padding::Padding7ByteMiddle::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b)};
@@ -60,45 +96,9 @@
       ::fidl::internal::NaturalClone(storage_.d)};
 }
 
-::test_padding::Padding3ByteMiddle::Storage_ test_padding::Padding3ByteMiddle::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
-}
-
-::test_padding::Padding3ByteEnd::Storage_ test_padding::Padding3ByteEnd::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
-}
-
-::test_padding::Padding2ByteMiddle::Storage_ test_padding::Padding2ByteMiddle::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
-}
-
-::test_padding::Padding2ByteEnd::Storage_ test_padding::Padding2ByteEnd::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
-}
-
 ::test_padding::Padding2ByteAlignmentLength6::Storage_ test_padding::Padding2ByteAlignmentLength6::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b),
       ::fidl::internal::NaturalClone(storage_.c)};
-}
-
-::test_padding::Padding1ByteMiddle::Storage_ test_padding::Padding1ByteMiddle::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
-}
-
-::test_padding::Padding1ByteEnd::Storage_ test_padding::Padding1ByteEnd::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
 }

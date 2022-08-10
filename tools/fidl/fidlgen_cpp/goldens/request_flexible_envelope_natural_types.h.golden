@@ -20,15 +20,123 @@ namespace test_requestflexibleenvelope {
 
 class ProtocolRequestStrictResponseFlexibleRequest;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse;
-
 class ProtocolRequestStrictResponseFlexibleTopResponse;
 
 class ProtocolRequestFlexibleResponseStrictRequest;
 
-class StrictFoo;
+class ProtocolRequestFlexibleResponseStrictTopResponse;
 
 class FlexibleFoo;
+
+class StrictFoo;
+
+extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
+
+class FlexibleFoo {
+ private:
+  using Storage_ =
+      std::variant<
+          std::monostate, ::std::string, int32_t>;
+
+ public:
+  // TODO: share union tag types between wire & natural.
+  enum class Tag : fidl_union_tag_t {
+    kS = 1,  // 0x1
+    kI = 2,  // 0x2
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  FlexibleFoo(FlexibleFoo&& other) noexcept
+      : FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
+    *storage_ = std::move(*other.storage_);
+  }
+  FlexibleFoo& operator=(FlexibleFoo&& other) noexcept {
+    if (this != &other) {
+      *storage_ = std::move(*other.storage_);
+    }
+    return *this;
+  }
+  FlexibleFoo(const FlexibleFoo& other) noexcept : FlexibleFoo(other.CloneStorage_()) {}
+  FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
+    if (this != &other) {
+      storage_ = other.CloneStorage_();
+    }
+    return *this;
+  }
+
+  bool operator==(const FlexibleFoo& other) const noexcept {
+    return *storage_ == *other.storage_;
+  }
+  bool operator!=(const FlexibleFoo& other) const noexcept {
+    return *storage_ != *other.storage_;
+  }
+
+  constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag Which() const {
+    return FlexibleFoo::IndexToTag(storage_->index()).value();
+  }
+  static FlexibleFoo WithS(::std::string val) {
+    return FlexibleFoo(std::make_shared<Storage_>(
+        std::in_place_index_t<1>{},
+        std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<1, Storage_> s() {
+    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+  static FlexibleFoo WithI(int32_t val) {
+    return FlexibleFoo(std::make_shared<Storage_>(
+        std::in_place_index_t<2>{},
+        std::move(val)));
+  }
+
+  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+  ::fidl::internal::UnionMemberView<2, Storage_> i() {
+    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
+
+ private:
+  std::shared_ptr<Storage_> storage_;
+  std::shared_ptr<Storage_> CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_requestflexibleenvelope::FlexibleFoo>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintString<>>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
+
+  explicit FlexibleFoo(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
+
+  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_requestflexibleenvelope::FlexibleFoo::Tag tag) {
+    switch (tag) {
+      case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS:
+        return 1;
+      case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kI:
+        return 2;
+      case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kUnknown:
+        return 0;
+      default: {
+        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        return 0;
+      }
+    }
+  }
+
+  static constexpr std::optional<::test_requestflexibleenvelope::FlexibleFoo::Tag> IndexToTag(size_t index) {
+    switch (index) {
+      case 1:
+        return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS;
+      case 2:
+        return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kI;
+      default:
+        return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kUnknown;
+    }
+  }
+};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
@@ -195,174 +303,6 @@ class ProtocolRequestStrictResponseFlexibleRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-
-class ProtocolRequestFlexibleResponseStrictTopResponse {
- private:
-  struct Storage_;
-
- public:
-  ProtocolRequestFlexibleResponseStrictTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse(::test_requestflexibleenvelope::StrictFoo f) noexcept
-      : storage_({.f = std::move(f)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ProtocolRequestFlexibleResponseStrictTopResponse| only if all of its members are default constructible.
-  ProtocolRequestFlexibleResponseStrictTopResponse() = default;
-#pragma clang diagnostic pop
-
-  ProtocolRequestFlexibleResponseStrictTopResponse(ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictTopResponse(const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept : ProtocolRequestFlexibleResponseStrictTopResponse(other.CloneStorage_()) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const ProtocolRequestFlexibleResponseStrictTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>::Equal(this, &other);
-  }
-  bool operator!=(const ProtocolRequestFlexibleResponseStrictTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>::Equal(this, &other);
-  }
-
-  const ::test_requestflexibleenvelope::StrictFoo&
-  f() const {
-    return storage_.f;
-  }
-
-  ::test_requestflexibleenvelope::StrictFoo& f() {
-    return storage_.f;
-  }
-
-  ProtocolRequestFlexibleResponseStrictTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestFlexibleResponseStrictTopResponse(Storage_{
-                                                                                                                     .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-                                                                                                                 }) {}
-
- private:
-  struct Storage_ final {
-    ::test_requestflexibleenvelope::StrictFoo f;
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_requestflexibleenvelope::StrictFoo, fidl::internal::NaturalCodingConstraintEmpty>{
-      &Storage_::f, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
-
-extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
-
-class FlexibleFoo {
- private:
-  using Storage_ =
-      std::variant<
-          std::monostate, ::std::string, int32_t>;
-
- public:
-  // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
-    kS = 1,  // 0x1
-    kI = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  FlexibleFoo(FlexibleFoo&& other) noexcept
-      : FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
-    *storage_ = std::move(*other.storage_);
-  }
-  FlexibleFoo& operator=(FlexibleFoo&& other) noexcept {
-    if (this != &other) {
-      *storage_ = std::move(*other.storage_);
-    }
-    return *this;
-  }
-  FlexibleFoo(const FlexibleFoo& other) noexcept : FlexibleFoo(other.CloneStorage_()) {}
-  FlexibleFoo& operator=(const FlexibleFoo& other) noexcept {
-    if (this != &other) {
-      storage_ = other.CloneStorage_();
-    }
-    return *this;
-  }
-
-  bool operator==(const FlexibleFoo& other) const noexcept {
-    return *storage_ == *other.storage_;
-  }
-  bool operator!=(const FlexibleFoo& other) const noexcept {
-    return *storage_ != *other.storage_;
-  }
-
-  constexpr ::test_requestflexibleenvelope::FlexibleFoo::Tag Which() const {
-    return FlexibleFoo::IndexToTag(storage_->index()).value();
-  }
-  static FlexibleFoo WithS(::std::string val) {
-    return FlexibleFoo(std::make_shared<Storage_>(
-        std::in_place_index_t<1>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
-    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<1, Storage_> s() {
-    return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
-  }
-  static FlexibleFoo WithI(int32_t val) {
-    return FlexibleFoo(std::make_shared<Storage_>(
-        std::in_place_index_t<2>{},
-        std::move(val)));
-  }
-
-  const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
-    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-  }
-  ::fidl::internal::UnionMemberView<2, Storage_> i() {
-    return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
-  }
-
-  FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
-
- private:
-  std::shared_ptr<Storage_> storage_;
-  std::shared_ptr<Storage_> CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_requestflexibleenvelope::FlexibleFoo>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintString<>>(), ::fidl::internal::NaturalUnionMember<fidl::internal::NaturalCodingConstraintEmpty>());
-
-  explicit FlexibleFoo(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
-
-  static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_requestflexibleenvelope::FlexibleFoo::Tag tag) {
-    switch (tag) {
-      case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS:
-        return 1;
-      case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kI:
-        return 2;
-      case ::test_requestflexibleenvelope::FlexibleFoo::Tag::kUnknown:
-        return 0;
-      default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
-        return 0;
-      }
-    }
-  }
-
-  static constexpr std::optional<::test_requestflexibleenvelope::FlexibleFoo::Tag> IndexToTag(size_t index) {
-    switch (index) {
-      case 1:
-        return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kS;
-      case 2:
-        return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kI;
-      default:
-        return ::test_requestflexibleenvelope::FlexibleFoo::Tag::kUnknown;
-    }
-  }
-};
-
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
 class ProtocolRequestStrictResponseFlexibleTopResponse {
@@ -483,6 +423,66 @@ class ProtocolRequestFlexibleResponseStrictRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+
+class ProtocolRequestFlexibleResponseStrictTopResponse {
+ private:
+  struct Storage_;
+
+ public:
+  ProtocolRequestFlexibleResponseStrictTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ProtocolRequestFlexibleResponseStrictTopResponse(::test_requestflexibleenvelope::StrictFoo f) noexcept
+      : storage_({.f = std::move(f)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |ProtocolRequestFlexibleResponseStrictTopResponse| only if all of its members are default constructible.
+  ProtocolRequestFlexibleResponseStrictTopResponse() = default;
+#pragma clang diagnostic pop
+
+  ProtocolRequestFlexibleResponseStrictTopResponse(ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse(const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept : ProtocolRequestFlexibleResponseStrictTopResponse(other.CloneStorage_()) {}
+  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const ProtocolRequestFlexibleResponseStrictTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>::Equal(this, &other);
+  }
+  bool operator!=(const ProtocolRequestFlexibleResponseStrictTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>::Equal(this, &other);
+  }
+
+  const ::test_requestflexibleenvelope::StrictFoo&
+  f() const {
+    return storage_.f;
+  }
+
+  ::test_requestflexibleenvelope::StrictFoo& f() {
+    return storage_.f;
+  }
+
+  ProtocolRequestFlexibleResponseStrictTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestFlexibleResponseStrictTopResponse(Storage_{
+                                                                                                                     .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                                                 }) {}
+
+ private:
+  struct Storage_ final {
+    ::test_requestflexibleenvelope::StrictFoo f;
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_requestflexibleenvelope::StrictFoo, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::f, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
 }  // namespace test_requestflexibleenvelope
 namespace fidl {
 
@@ -494,15 +494,6 @@ struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseF
 template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest, 16> {};
-
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-
-template <>
-struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16> {};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
@@ -522,16 +513,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest, 16> {};
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 template <>
-struct IsFidlType<::test_requestflexibleenvelope::StrictFoo> : public std::true_type {};
-template <>
-struct IsUnion<::test_requestflexibleenvelope::StrictFoo> : public std::true_type {};
+struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::StrictFoo, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<::test_requestflexibleenvelope::StrictFoo> {};
+struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16> {};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
@@ -543,5 +532,16 @@ struct IsUnion<::test_requestflexibleenvelope::FlexibleFoo> : public std::true_t
 template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::FlexibleFoo, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<::test_requestflexibleenvelope::FlexibleFoo> {};
+
+extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
+
+template <>
+struct IsFidlType<::test_requestflexibleenvelope::StrictFoo> : public std::true_type {};
+template <>
+struct IsUnion<::test_requestflexibleenvelope::StrictFoo> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::StrictFoo, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalUnionCodingTraits<::test_requestflexibleenvelope::StrictFoo> {};
 
 }  // namespace fidl

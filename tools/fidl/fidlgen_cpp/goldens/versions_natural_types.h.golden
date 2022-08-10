@@ -28,6 +28,112 @@ constexpr uint32_t kConst = 0u;
 
 constexpr bool kAddedAtHead = true;
 
+extern "C" const fidl_type_t test_versions_StructTable;
+
+class Struct {
+ private:
+  struct Storage_;
+
+ public:
+  Struct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Struct(uint32_t x) noexcept
+      : storage_({.x = std::move(x)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Struct| only if all of its members are default constructible.
+  Struct() = default;
+#pragma clang diagnostic pop
+
+  Struct(Struct&&) noexcept = default;
+  Struct& operator=(Struct&&) noexcept = default;
+  Struct(const Struct& other) noexcept : Struct(other.CloneStorage_()) {}
+  Struct& operator=(const Struct& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Struct& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Struct& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>::Equal(this, &other);
+  }
+
+  uint32_t
+  x() const {
+    return storage_.x;
+  }
+
+  uint32_t& x() {
+    return storage_.x;
+  }
+
+  Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Struct(Storage_{
+                                                                           .x = {},
+                                                                       }) {}
+
+ private:
+  struct Storage_ final {
+    uint32_t x = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_versions::Struct>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::x, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
+extern "C" const fidl_type_t test_versions_TableTable;
+
+class Table {
+ private:
+  struct Storage_;
+
+ public:
+  Table(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Table() noexcept = default;
+  Table(Table&&) noexcept = default;
+  Table& operator=(Table&&) noexcept = default;
+  Table(const Table& other) noexcept : Table(other.CloneStorage_()) {}
+  Table& operator=(const Table& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const Table& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>::Equal(this, &other);
+  }
+  bool operator!=(const Table& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.x.has_value());
+  }
+
+  const std::optional<uint32_t>& x() const { return storage_.x; }
+  ::std::optional<uint32_t>& x() { return storage_.x; }
+
+  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<uint32_t> x{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>;
+  friend struct ::fidl::internal::MemberVisitor<::test_versions::Table>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::x});
+};
+
 extern "C" const fidl_type_t test_versions_UnionTable;
 
 class Union {
@@ -117,112 +223,6 @@ class Union {
         return ::test_versions::Union::Tag::kUnknown;
     }
   }
-};
-
-extern "C" const fidl_type_t test_versions_TableTable;
-
-class Table {
- private:
-  struct Storage_;
-
- public:
-  Table(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Table() noexcept = default;
-  Table(Table&&) noexcept = default;
-  Table& operator=(Table&&) noexcept = default;
-  Table(const Table& other) noexcept : Table(other.CloneStorage_()) {}
-  Table& operator=(const Table& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const Table& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>::Equal(this, &other);
-  }
-  bool operator!=(const Table& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return !(storage_.x.has_value());
-  }
-
-  const std::optional<uint32_t>& x() const { return storage_.x; }
-  ::std::optional<uint32_t>& x() { return storage_.x; }
-
-  Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    ::std::optional<uint32_t> x{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table>;
-  friend struct ::fidl::internal::MemberVisitor<::test_versions::Table>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-      1, &Storage_::x});
-};
-
-extern "C" const fidl_type_t test_versions_StructTable;
-
-class Struct {
- private:
-  struct Storage_;
-
- public:
-  Struct(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Struct(uint32_t x) noexcept
-      : storage_({.x = std::move(x)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Struct| only if all of its members are default constructible.
-  Struct() = default;
-#pragma clang diagnostic pop
-
-  Struct(Struct&&) noexcept = default;
-  Struct& operator=(Struct&&) noexcept = default;
-  Struct(const Struct& other) noexcept : Struct(other.CloneStorage_()) {}
-  Struct& operator=(const Struct& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Struct& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>::Equal(this, &other);
-  }
-  bool operator!=(const Struct& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>::Equal(this, &other);
-  }
-
-  uint32_t
-  x() const {
-    return storage_.x;
-  }
-
-  uint32_t& x() {
-    return storage_.x;
-  }
-
-  Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Struct(Storage_{
-                                                                           .x = {},
-                                                                       }) {}
-
- private:
-  struct Storage_ final {
-    uint32_t x = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_versions::Struct>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-      &Storage_::x, 0});
-  static constexpr auto kPadding = std::make_tuple();
 };
 
 }  // namespace test_versions

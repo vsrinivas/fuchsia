@@ -26,6 +26,44 @@ class UnionWithHandle;
 
 #ifdef __Fuchsia__
 
+extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
+
+class TableWithHandle {
+ private:
+  struct Storage_;
+
+ public:
+  TableWithHandle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  TableWithHandle() noexcept = default;
+  TableWithHandle(TableWithHandle&&) noexcept = default;
+  TableWithHandle& operator=(TableWithHandle&&) noexcept = default;
+
+  bool IsEmpty() const {
+    return !(storage_.h.has_value());
+  }
+
+  const std::optional<::zx::vmo>& h() const { return storage_.h; }
+  ::std::optional<::zx::vmo>& h() { return storage_.h; }
+
+  TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithHandle(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<::zx::vmo> h{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_handlesintypes::TableWithHandle>;
+  friend struct ::fidl::internal::MemberVisitor<::test_handlesintypes::TableWithHandle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{
+      1, &Storage_::h});
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
@@ -100,44 +138,6 @@ class UnionWithHandle {
         return ::test_handlesintypes::UnionWithHandle::Tag::kUnknown;
     }
   }
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
-
-class TableWithHandle {
- private:
-  struct Storage_;
-
- public:
-  TableWithHandle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  TableWithHandle() noexcept = default;
-  TableWithHandle(TableWithHandle&&) noexcept = default;
-  TableWithHandle& operator=(TableWithHandle&&) noexcept = default;
-
-  bool IsEmpty() const {
-    return !(storage_.h.has_value());
-  }
-
-  const std::optional<::zx::vmo>& h() const { return storage_.h; }
-  ::std::optional<::zx::vmo>& h() { return storage_.h; }
-
-  TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithHandle(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    ::std::optional<::zx::vmo> h{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_handlesintypes::TableWithHandle>;
-  friend struct ::fidl::internal::MemberVisitor<::test_handlesintypes::TableWithHandle>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, ::zx::vmo, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_VMO, 0x80000000, false>>{
-      1, &Storage_::h});
 };
 
 #endif  // __Fuchsia__

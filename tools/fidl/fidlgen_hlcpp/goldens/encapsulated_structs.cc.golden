@@ -9,45 +9,6 @@
 //
 namespace test {
 namespace encapsulatedstructs {
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
-const fidl_type_t* NonInlineStructTestStruct::FidlType = &test_encapsulatedstructs_NonInlineStructTestStructTable;
-
-void NonInlineStructTestStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<NonInlineStructTestStruct>::value) {
-    memcpy(_encoder->template GetPtr<NonInlineStructTestStruct>(_offset), this, sizeof(NonInlineStructTestStruct));
-  } else {
-    ::fidl::Encode(_encoder, &element, _offset + 0);
-
-    ::fidl::Encode(_encoder, &h, _offset + 8, ::fidl::HandleInformation{
-                                                  .object_type = ZX_OBJ_TYPE_NONE,
-                                                  .rights = 0x80000000,
-                                              });
-  }
-}
-
-void NonInlineStructTestStruct::Decode(::fidl::Decoder* _decoder, NonInlineStructTestStruct* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<NonInlineStructTestStruct>::value) {
-    memcpy(_value, _decoder->template GetPtr<NonInlineStructTestStruct>(_offset), sizeof(NonInlineStructTestStruct));
-  } else {
-    ::fidl::Decode(_decoder, &_value->element, _offset + 0);
-    ::fidl::Decode(_decoder, &_value->h, _offset + 8);
-  }
-}
-
-zx_status_t NonInlineStructTestStruct::Clone(NonInlineStructTestStruct* _result) const {
-  zx_status_t _status = ::fidl::Clone(element, &_result->element);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(h, &_result->h);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-#endif  // __Fuchsia__
-
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 const fidl_type_t* Int8Int32::FidlType = &test_encapsulatedstructs_Int8Int32Table;
 
@@ -175,6 +136,45 @@ zx_status_t StructPaddingTestStruct::Clone(StructPaddingTestStruct* _result) con
     return _status;
   return ZX_OK;
 }
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_encapsulatedstructs_NonInlineStructTestStructTable;
+const fidl_type_t* NonInlineStructTestStruct::FidlType = &test_encapsulatedstructs_NonInlineStructTestStructTable;
+
+void NonInlineStructTestStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<NonInlineStructTestStruct>::value) {
+    memcpy(_encoder->template GetPtr<NonInlineStructTestStruct>(_offset), this, sizeof(NonInlineStructTestStruct));
+  } else {
+    ::fidl::Encode(_encoder, &element, _offset + 0);
+
+    ::fidl::Encode(_encoder, &h, _offset + 8, ::fidl::HandleInformation{
+                                                  .object_type = ZX_OBJ_TYPE_NONE,
+                                                  .rights = 0x80000000,
+                                              });
+  }
+}
+
+void NonInlineStructTestStruct::Decode(::fidl::Decoder* _decoder, NonInlineStructTestStruct* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<NonInlineStructTestStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<NonInlineStructTestStruct>(_offset), sizeof(NonInlineStructTestStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->element, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->h, _offset + 8);
+  }
+}
+
+zx_status_t NonInlineStructTestStruct::Clone(NonInlineStructTestStruct* _result) const {
+  zx_status_t _status = ::fidl::Clone(element, &_result->element);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(h, &_result->h);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

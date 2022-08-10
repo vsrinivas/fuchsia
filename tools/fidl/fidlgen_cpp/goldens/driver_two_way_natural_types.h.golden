@@ -18,69 +18,9 @@
 
 namespace test_drivertwoway {
 
-class TwoWayAddTopResponse;
-
 class TwoWayAddRequest;
 
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
-
-class TwoWayAddTopResponse {
- private:
-  struct Storage_;
-
- public:
-  TwoWayAddTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  TwoWayAddTopResponse(uint16_t sum) noexcept
-      : storage_({.sum = std::move(sum)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |TwoWayAddTopResponse| only if all of its members are default constructible.
-  TwoWayAddTopResponse() = default;
-#pragma clang diagnostic pop
-
-  TwoWayAddTopResponse(TwoWayAddTopResponse&&) noexcept = default;
-  TwoWayAddTopResponse& operator=(TwoWayAddTopResponse&&) noexcept = default;
-  TwoWayAddTopResponse(const TwoWayAddTopResponse& other) noexcept : TwoWayAddTopResponse(other.CloneStorage_()) {}
-  TwoWayAddTopResponse& operator=(const TwoWayAddTopResponse& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const TwoWayAddTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2>::Equal(this, &other);
-  }
-  bool operator!=(const TwoWayAddTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2>::Equal(this, &other);
-  }
-
-  uint16_t
-  sum() const {
-    return storage_.sum;
-  }
-
-  uint16_t& sum() {
-    return storage_.sum;
-  }
-
-  TwoWayAddTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TwoWayAddTopResponse(Storage_{
-                                                                                         .sum = {},
-                                                                                     }) {}
-
- private:
-  struct Storage_ final {
-    uint16_t sum = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2>;
-  friend struct ::fidl::internal::MemberVisitor<::test_drivertwoway::TwoWayAddTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-      &Storage_::sum, 0});
-  static constexpr auto kPadding = std::make_tuple();
-};
+class TwoWayAddTopResponse;
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
@@ -155,17 +95,68 @@ class TwoWayAddRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-}  // namespace test_drivertwoway
-namespace fidl {
-
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 
-template <>
-struct IsFidlType<::test_drivertwoway::TwoWayAddTopResponse> : public std::true_type {};
+class TwoWayAddTopResponse {
+ private:
+  struct Storage_;
 
-template <>
-struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2> {};
+ public:
+  TwoWayAddTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  TwoWayAddTopResponse(uint16_t sum) noexcept
+      : storage_({.sum = std::move(sum)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |TwoWayAddTopResponse| only if all of its members are default constructible.
+  TwoWayAddTopResponse() = default;
+#pragma clang diagnostic pop
+
+  TwoWayAddTopResponse(TwoWayAddTopResponse&&) noexcept = default;
+  TwoWayAddTopResponse& operator=(TwoWayAddTopResponse&&) noexcept = default;
+  TwoWayAddTopResponse(const TwoWayAddTopResponse& other) noexcept : TwoWayAddTopResponse(other.CloneStorage_()) {}
+  TwoWayAddTopResponse& operator=(const TwoWayAddTopResponse& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const TwoWayAddTopResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2>::Equal(this, &other);
+  }
+  bool operator!=(const TwoWayAddTopResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2>::Equal(this, &other);
+  }
+
+  uint16_t
+  sum() const {
+    return storage_.sum;
+  }
+
+  uint16_t& sum() {
+    return storage_.sum;
+  }
+
+  TwoWayAddTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TwoWayAddTopResponse(Storage_{
+                                                                                         .sum = {},
+                                                                                     }) {}
+
+ private:
+  struct Storage_ final {
+    uint16_t sum = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2>;
+  friend struct ::fidl::internal::MemberVisitor<::test_drivertwoway::TwoWayAddTopResponse>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      &Storage_::sum, 0});
+  static constexpr auto kPadding = std::make_tuple();
+};
+
+}  // namespace test_drivertwoway
+namespace fidl {
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
@@ -175,5 +166,14 @@ struct IsFidlType<::test_drivertwoway::TwoWayAddRequest> : public std::true_type
 template <>
 struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddRequest, 4> {};
+
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+
+template <>
+struct IsFidlType<::test_drivertwoway::TwoWayAddTopResponse> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, 2> {};
 
 }  // namespace fidl

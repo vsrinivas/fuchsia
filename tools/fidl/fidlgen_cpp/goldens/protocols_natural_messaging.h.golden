@@ -496,1127 +496,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithou
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Request> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Request>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = false;
-};
-namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
-
-__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::Transitional::Event> final : public ::test_protocols::TransitionalEventRequest {
- public:
-  using ::test_protocols::TransitionalEventRequest::TransitionalEventRequest;
-  Event(::test_protocols::TransitionalEventRequest v) : TransitionalEventRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::Transitional::Event>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalEventRequest;
-};
-namespace test_protocols {}  // namespace test_protocols
-
-template <>
-class ::fidl::Response<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestTopResponse {
- public:
-  using ::test_protocols::TransitionalRequestTopResponse::TransitionalRequestTopResponse;
-  Response(::test_protocols::TransitionalRequestTopResponse v) : TransitionalRequestTopResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::Transitional::Request>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalRequestTopResponse;
-};
-namespace test_protocols {}  // namespace test_protocols
-template <>
-class ::fidl::Result<::test_protocols::Transitional::Request> final : public ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestTopResponse> {
- public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestTopResponse>::result;
-
- protected:
-  Result() = default;
-};
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::Transitional> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request) const;
-
-  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const;
-};
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>> {
- public:
-  ::fidl::Result<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request);
-
-  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request);
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::Transitional> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::Transitional>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-  virtual void Event(::fidl::Event<::test_protocols::Transitional::Event>&) = 0;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::Transitional>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override {}
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::Transitional>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override { OnTransitionalEvent_(); }
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-  ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-
-  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::Transitional>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-
-  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestRequest {
- public:
-  using ::test_protocols::TransitionalRequestRequest::TransitionalRequestRequest;
-  Request(::test_protocols::TransitionalRequestRequest v) : ::test_protocols::TransitionalRequestRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transitional::Request>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalRequestRequest;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::Transitional::OneWay> final : public ::test_protocols::TransitionalOneWayRequest {
- public:
-  using ::test_protocols::TransitionalOneWayRequest::TransitionalOneWayRequest;
-  Request(::test_protocols::TransitionalOneWayRequest v) : ::test_protocols::TransitionalOneWayRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transitional::OneWay>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalOneWayRequest;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request> : public ::fidl::CompleterBase {
- public:
-  void Reply(const ::fidl::Response<::test_protocols::Transitional::Request>& response);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-class ::fidl::Server<::test_protocols::Transitional> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::Transitional;
-
-  using RequestRequest = ::fidl::Request<::test_protocols::Transitional::Request>;
-  using RequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::Request>;
-
-  virtual void Request(RequestRequest& request, RequestCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  using OneWayRequest = ::fidl::Request<::test_protocols::Transitional::OneWay>;
-  using OneWayCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::OneWay>;
-
-  virtual void OneWay(OneWayRequest& request, OneWayCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ClientEnds> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = false;
-};
-
-template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ServerEnds> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = false;
-};
-
-template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::StructContainingEnds> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = false;
-};
-namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsTopResponse {
- public:
-  using ::test_protocols::WithProtocolEndsClientEndsTopResponse::WithProtocolEndsClientEndsTopResponse;
-  Response(::test_protocols::WithProtocolEndsClientEndsTopResponse v) : WithProtocolEndsClientEndsTopResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsClientEndsTopResponse;
-};
-namespace test_protocols {}  // namespace test_protocols
-template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsTopResponse> {
- public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsTopResponse>::result;
-
- protected:
-  Result() = default;
-};
-
-template <>
-class ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsTopResponse {
- public:
-  using ::test_protocols::WithProtocolEndsServerEndsTopResponse::WithProtocolEndsServerEndsTopResponse;
-  Response(::test_protocols::WithProtocolEndsServerEndsTopResponse v) : WithProtocolEndsServerEndsTopResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsServerEndsTopResponse;
-};
-template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsTopResponse> {
- public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsTopResponse>::result;
-
- protected:
-  Result() = default;
-};
-
-template <>
-class ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse {
- public:
-  using ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse::WithProtocolEndsStructContainingEndsTopResponse;
-  Response(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse v) : WithProtocolEndsStructContainingEndsTopResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
-};
-template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
- public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::result;
-
- protected:
-  Result() = default;
-};
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ClientEnds> ClientEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request) const;
-
-  ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ServerEnds> ServerEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request) const;
-
-  ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::StructContainingEnds> StructContainingEnds(::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request) const;
-};
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>> {
- public:
-  ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> ClientEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request);
-
-  ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> ServerEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request);
-
-  ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> StructContainingEnds(::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request);
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::WithProtocolEnds>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::WithProtocolEnds> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsRequest {
- public:
-  using ::test_protocols::WithProtocolEndsClientEndsRequest::WithProtocolEndsClientEndsRequest;
-  Request(::test_protocols::WithProtocolEndsClientEndsRequest v) : ::test_protocols::WithProtocolEndsClientEndsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsClientEndsRequest;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsRequest {
- public:
-  using ::test_protocols::WithProtocolEndsServerEndsRequest::WithProtocolEndsServerEndsRequest;
-  Request(::test_protocols::WithProtocolEndsServerEndsRequest v) : ::test_protocols::WithProtocolEndsServerEndsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsServerEndsRequest;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsRequest {
- public:
-  using ::test_protocols::WithProtocolEndsStructContainingEndsRequest::WithProtocolEndsStructContainingEndsRequest;
-  Request(::test_protocols::WithProtocolEndsStructContainingEndsRequest v) : ::test_protocols::WithProtocolEndsStructContainingEndsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsRequest;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds> : public ::fidl::CompleterBase {
- public:
-  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> response);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds> : public ::fidl::CompleterBase {
- public:
-  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> response);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds> : public ::fidl::CompleterBase {
- public:
-  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> response);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-class ::fidl::Server<::test_protocols::WithProtocolEnds> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::WithProtocolEnds;
-
-  using ClientEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>;
-  using ClientEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ClientEnds>;
-
-  virtual void ClientEnds(ClientEndsRequest& request, ClientEndsCompleter::Sync& completer) = 0;
-
-  using ServerEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>;
-  using ServerEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ServerEnds>;
-
-  virtual void ServerEnds(ServerEndsRequest& request, ServerEndsCompleter::Sync& completer) = 0;
-
-  using StructContainingEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>;
-  using StructContainingEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>;
-
-  virtual void StructContainingEnds(StructContainingEndsRequest& request, StructContainingEndsCompleter::Sync& completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::UnionMethod> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = false;
-};
-namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodTopResponse {
- public:
-  using ::test_protocols::MethodWithUnionUnionMethodTopResponse::MethodWithUnionUnionMethodTopResponse;
-  Response(::test_protocols::MethodWithUnionUnionMethodTopResponse v) : MethodWithUnionUnionMethodTopResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
-};
-namespace test_protocols {}  // namespace test_protocols
-template <>
-class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse> {
- public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::result;
-
- protected:
-  Result() = default;
-};
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request) const;
-};
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>> {
- public:
-  ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request);
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::MethodWithUnion>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::MethodWithUnion> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodRequest {
- public:
-  using ::test_protocols::MethodWithUnionUnionMethodRequest::MethodWithUnionUnionMethodRequest;
-  Request(::test_protocols::MethodWithUnionUnionMethodRequest v) : ::test_protocols::MethodWithUnionUnionMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::MethodWithUnionUnionMethodRequest;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod> : public ::fidl::CompleterBase {
- public:
-  void Reply(const ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>& response);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::MethodWithUnion;
-
-  using UnionMethodRequest = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
-  using UnionMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
-
-  virtual void UnionMethod(UnionMethodRequest& request, UnionMethodCompleter::Sync& completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const;
-};
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>> {
- public:
-  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request);
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::ManyParameters>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::ManyParameters>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::ManyParameters> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::ManyParameters::Fifteen> final : public ::test_protocols::ManyParametersFifteenRequest {
- public:
-  using ::test_protocols::ManyParametersFifteenRequest::ManyParametersFifteenRequest;
-  Request(::test_protocols::ManyParametersFifteenRequest v) : ::test_protocols::ManyParametersFifteenRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ManyParameters::Fifteen>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ManyParametersFifteenRequest;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::Server<::test_protocols::ManyParameters> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::ManyParameters;
-
-  using FifteenRequest = ::fidl::Request<::test_protocols::ManyParameters::Fifteen>;
-  using FifteenCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ManyParameters::Fifteen>;
-
-  virtual void Fifteen(FifteenRequest& request, FifteenCompleter::Sync& completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtocol::ResponseMethod> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod>>;
-
-  using ResultCallback =
-      ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>&)>;
-
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
-
-  static constexpr bool IsAbsentBody = false;
-};
-namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-
-__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
-
-__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
-
-#ifdef __Fuchsia__
-}  // namespace test_protocols
-
-template <>
-class ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> final : public ::test_protocols::HandleRightsProtocolAnEventRequest {
- public:
-  using ::test_protocols::HandleRightsProtocolAnEventRequest::HandleRightsProtocolAnEventRequest;
-  Event(::test_protocols::HandleRightsProtocolAnEventRequest v) : HandleRightsProtocolAnEventRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolAnEventRequest;
-};
-namespace test_protocols {}  // namespace test_protocols
-
-template <>
-class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodTopResponse {
- public:
-  using ::test_protocols::HandleRightsProtocolResponseMethodTopResponse::HandleRightsProtocolResponseMethodTopResponse;
-  Response(::test_protocols::HandleRightsProtocolResponseMethodTopResponse v) : HandleRightsProtocolResponseMethodTopResponse(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodTopResponse;
-};
-namespace test_protocols {}  // namespace test_protocols
-template <>
-class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
- public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::result;
-
- protected:
-  Result() = default;
-};
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fidl::internal::NaturalThenable<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request) const;
-
-  ::fitx::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) const;
-};
-namespace test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace test_protocols
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>> {
- public:
-  ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request);
-
-  ::fitx::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request);
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-  virtual void AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) = 0;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-  void AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) override {}
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::HandleRightsProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-  ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::MessageStorageViewBase* storage_view) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-
-  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtocol>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtocol>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-
-  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::test_protocols::HandleRightsProtocolNoResponseMethodRequest {
- public:
-  using ::test_protocols::HandleRightsProtocolNoResponseMethodRequest::HandleRightsProtocolNoResponseMethodRequest;
-  Request(::test_protocols::HandleRightsProtocolNoResponseMethodRequest v) : ::test_protocols::HandleRightsProtocolNoResponseMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolNoResponseMethodRequest;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodRequest {
- public:
-  using ::test_protocols::HandleRightsProtocolResponseMethodRequest::HandleRightsProtocolResponseMethodRequest;
-  Request(::test_protocols::HandleRightsProtocolResponseMethodRequest v) : ::test_protocols::HandleRightsProtocolResponseMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodRequest;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod> : public ::fidl::CompleterBase {
- public:
-  void Reply(::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> response);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-class ::fidl::Server<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::HandleRightsProtocol;
-
-  using NoResponseMethodRequest = ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
-  using NoResponseMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
-
-  virtual void NoResponseMethod(NoResponseMethodRequest& request, NoResponseMethodCompleter::Sync& completer) = 0;
-
-  using ResponseMethodRequest = ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>;
-  using ResponseMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>;
-
-  virtual void ResponseMethod(ResponseMethodRequest& request, ResponseMethodCompleter::Sync& completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
 
@@ -2103,135 +982,6 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSynt
 };
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Method() const;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol>> {
- public:
-  ::fitx::result<::fidl::Error> Method();
-
- private:
-  ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::SyncEventHandler<::test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::SyncEventHandler {
- public:
-  SyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end);
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::NaturalWeakEventSender<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::NaturalEventSender<::test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::DiscoverableProtocol>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fidl::Server<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocols::DiscoverableProtocol;
-
-  using MethodRequest = ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>;
-  using MethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::DiscoverableProtocol::Method>;
-
-  virtual void Method(MethodRequest& request, MethodCompleter::Sync& completer) = 0;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::MethodB> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB>>;
@@ -2609,6 +1359,372 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtoc
 };
 #endif  // __Fuchsia__
 
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Request> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Request>&)>;
+
+  static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
+
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+
+template <>
+class ::fidl::Event<::test_protocols::Transitional::Event> final : public ::test_protocols::TransitionalEventRequest {
+ public:
+  using ::test_protocols::TransitionalEventRequest::TransitionalEventRequest;
+  Event(::test_protocols::TransitionalEventRequest v) : TransitionalEventRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::Transitional::Event>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::TransitionalEventRequest;
+};
+namespace test_protocols {}  // namespace test_protocols
+
+template <>
+class ::fidl::Response<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestTopResponse {
+ public:
+  using ::test_protocols::TransitionalRequestTopResponse::TransitionalRequestTopResponse;
+  Response(::test_protocols::TransitionalRequestTopResponse v) : TransitionalRequestTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::Transitional::Request>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::TransitionalRequestTopResponse;
+};
+namespace test_protocols {}  // namespace test_protocols
+template <>
+class ::fidl::Result<::test_protocols::Transitional::Request> final : public ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::Transitional> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request) const;
+
+  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const;
+};
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>> {
+ public:
+  ::fidl::Result<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request);
+
+  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::Transitional> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::Transitional>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  virtual void Event(::fidl::Event<::test_protocols::Transitional::Event>&) = 0;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::Transitional>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override {}
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::Transitional>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override { OnTransitionalEvent_(); }
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+  ::fidl::Status DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::MessageStorageViewBase* storage_view) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::Transitional>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestRequest {
+ public:
+  using ::test_protocols::TransitionalRequestRequest::TransitionalRequestRequest;
+  Request(::test_protocols::TransitionalRequestRequest v) : ::test_protocols::TransitionalRequestRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transitional::Request>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::TransitionalRequestRequest;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::Transitional::OneWay> final : public ::test_protocols::TransitionalOneWayRequest {
+ public:
+  using ::test_protocols::TransitionalOneWayRequest::TransitionalOneWayRequest;
+  Request(::test_protocols::TransitionalOneWayRequest v) : ::test_protocols::TransitionalOneWayRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transitional::OneWay>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::TransitionalOneWayRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request> : public ::fidl::CompleterBase {
+ public:
+  void Reply(const ::fidl::Response<::test_protocols::Transitional::Request>& response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::Server<::test_protocols::Transitional> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::Transitional;
+
+  using RequestRequest = ::fidl::Request<::test_protocols::Transitional::Request>;
+  using RequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::Request>;
+
+  virtual void Request(RequestRequest& request, RequestCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+  using OneWayRequest = ::fidl::Request<::test_protocols::Transitional::OneWay>;
+  using OneWayCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::OneWay>;
+
+  virtual void OneWay(OneWayRequest& request, OneWayCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> Method() const;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol>> {
+ public:
+  ::fitx::result<::fidl::Error> Method();
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::DiscoverableProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::DiscoverableProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> final {
+ public:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::DiscoverableProtocol;
+
+  using MethodRequest = ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>;
+  using MethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::DiscoverableProtocol::Method>;
+
+  virtual void Method(MethodRequest& request, MethodCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 template <>
@@ -2705,6 +1821,890 @@ template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscoverableProtocol> final {
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fidl::Server<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtocol::ResponseMethod> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>&)>;
+
+  static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+
+template <>
+class ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> final : public ::test_protocols::HandleRightsProtocolAnEventRequest {
+ public:
+  using ::test_protocols::HandleRightsProtocolAnEventRequest::HandleRightsProtocolAnEventRequest;
+  Event(::test_protocols::HandleRightsProtocolAnEventRequest v) : HandleRightsProtocolAnEventRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::HandleRightsProtocolAnEventRequest;
+};
+namespace test_protocols {}  // namespace test_protocols
+
+template <>
+class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodTopResponse {
+ public:
+  using ::test_protocols::HandleRightsProtocolResponseMethodTopResponse::HandleRightsProtocolResponseMethodTopResponse;
+  Response(::test_protocols::HandleRightsProtocolResponseMethodTopResponse v) : HandleRightsProtocolResponseMethodTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodTopResponse;
+};
+namespace test_protocols {}  // namespace test_protocols
+template <>
+class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fidl::internal::NaturalThenable<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request) const;
+
+  ::fitx::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) const;
+};
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>> {
+ public:
+  ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request);
+
+  ::fitx::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  virtual void AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) = 0;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+  void AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) override {}
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+  ::fidl::Status DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::MessageStorageViewBase* storage_view) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+
+  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtocol>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+
+  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::test_protocols::HandleRightsProtocolNoResponseMethodRequest {
+ public:
+  using ::test_protocols::HandleRightsProtocolNoResponseMethodRequest::HandleRightsProtocolNoResponseMethodRequest;
+  Request(::test_protocols::HandleRightsProtocolNoResponseMethodRequest v) : ::test_protocols::HandleRightsProtocolNoResponseMethodRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::HandleRightsProtocolNoResponseMethodRequest;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodRequest {
+ public:
+  using ::test_protocols::HandleRightsProtocolResponseMethodRequest::HandleRightsProtocolResponseMethodRequest;
+  Request(::test_protocols::HandleRightsProtocolResponseMethodRequest v) : ::test_protocols::HandleRightsProtocolResponseMethodRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod> : public ::fidl::CompleterBase {
+ public:
+  void Reply(::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::Server<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::HandleRightsProtocol;
+
+  using NoResponseMethodRequest = ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
+  using NoResponseMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
+
+  virtual void NoResponseMethod(NoResponseMethodRequest& request, NoResponseMethodCompleter::Sync& completer) = 0;
+
+  using ResponseMethodRequest = ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>;
+  using ResponseMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>;
+
+  virtual void ResponseMethod(ResponseMethodRequest& request, ResponseMethodCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ClientEnds> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds>&)>;
+
+  static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ServerEnds> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds>&)>;
+
+  static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::StructContainingEnds> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>&)>;
+
+  static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+
+template <>
+class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsTopResponse {
+ public:
+  using ::test_protocols::WithProtocolEndsClientEndsTopResponse::WithProtocolEndsClientEndsTopResponse;
+  Response(::test_protocols::WithProtocolEndsClientEndsTopResponse v) : WithProtocolEndsClientEndsTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::WithProtocolEndsClientEndsTopResponse;
+};
+namespace test_protocols {}  // namespace test_protocols
+template <>
+class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsTopResponse {
+ public:
+  using ::test_protocols::WithProtocolEndsServerEndsTopResponse::WithProtocolEndsServerEndsTopResponse;
+  Response(::test_protocols::WithProtocolEndsServerEndsTopResponse v) : WithProtocolEndsServerEndsTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::WithProtocolEndsServerEndsTopResponse;
+};
+template <>
+class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse {
+ public:
+  using ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse::WithProtocolEndsStructContainingEndsTopResponse;
+  Response(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse v) : WithProtocolEndsStructContainingEndsTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
+};
+template <>
+class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ClientEnds> ClientEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request) const;
+
+  ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ServerEnds> ServerEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request) const;
+
+  ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::StructContainingEnds> StructContainingEnds(::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request) const;
+};
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>> {
+ public:
+  ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> ClientEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request);
+
+  ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> ServerEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request);
+
+  ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> StructContainingEnds(::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithProtocolEnds> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithProtocolEnds>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::WithProtocolEnds> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsRequest {
+ public:
+  using ::test_protocols::WithProtocolEndsClientEndsRequest::WithProtocolEndsClientEndsRequest;
+  Request(::test_protocols::WithProtocolEndsClientEndsRequest v) : ::test_protocols::WithProtocolEndsClientEndsRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::WithProtocolEndsClientEndsRequest;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsRequest {
+ public:
+  using ::test_protocols::WithProtocolEndsServerEndsRequest::WithProtocolEndsServerEndsRequest;
+  Request(::test_protocols::WithProtocolEndsServerEndsRequest v) : ::test_protocols::WithProtocolEndsServerEndsRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::WithProtocolEndsServerEndsRequest;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsRequest {
+ public:
+  using ::test_protocols::WithProtocolEndsStructContainingEndsRequest::WithProtocolEndsStructContainingEndsRequest;
+  Request(::test_protocols::WithProtocolEndsStructContainingEndsRequest v) : ::test_protocols::WithProtocolEndsStructContainingEndsRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds> : public ::fidl::CompleterBase {
+ public:
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds> : public ::fidl::CompleterBase {
+ public:
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds> : public ::fidl::CompleterBase {
+ public:
+  void Reply(::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::Server<::test_protocols::WithProtocolEnds> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::WithProtocolEnds;
+
+  using ClientEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>;
+  using ClientEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ClientEnds>;
+
+  virtual void ClientEnds(ClientEndsRequest& request, ClientEndsCompleter::Sync& completer) = 0;
+
+  using ServerEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>;
+  using ServerEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ServerEnds>;
+
+  virtual void ServerEnds(ServerEndsRequest& request, ServerEndsCompleter::Sync& completer) = 0;
+
+  using StructContainingEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>;
+  using StructContainingEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>;
+
+  virtual void StructContainingEnds(StructContainingEndsRequest& request, StructContainingEndsCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const;
+};
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>> {
+ public:
+  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::ManyParameters>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::ManyParameters>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ManyParameters>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::ManyParameters> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::ManyParameters::Fifteen> final : public ::test_protocols::ManyParametersFifteenRequest {
+ public:
+  using ::test_protocols::ManyParametersFifteenRequest::ManyParametersFifteenRequest;
+  Request(::test_protocols::ManyParametersFifteenRequest v) : ::test_protocols::ManyParametersFifteenRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ManyParameters::Fifteen>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::ManyParametersFifteenRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::Server<::test_protocols::ManyParameters> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::ManyParameters;
+
+  using FifteenRequest = ::fidl::Request<::test_protocols::ManyParameters::Fifteen>;
+  using FifteenCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ManyParameters::Fifteen>;
+
+  virtual void Fifteen(FifteenRequest& request, FifteenCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::UnionMethod> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>&)>;
+
+  static constexpr bool HasApplicationError = false;
+  static constexpr bool HasTransportError = false;
+
+  static constexpr bool IsAbsentBody = false;
+};
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+
+#ifdef __Fuchsia__
+}  // namespace test_protocols
+
+template <>
+class ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodTopResponse {
+ public:
+  using ::test_protocols::MethodWithUnionUnionMethodTopResponse::MethodWithUnionUnionMethodTopResponse;
+  Response(::test_protocols::MethodWithUnionUnionMethodTopResponse v) : MethodWithUnionUnionMethodTopResponse(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
+};
+namespace test_protocols {}  // namespace test_protocols
+template <>
+class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+ public:
+  using ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::result;
+
+ protected:
+  Result() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request) const;
+};
+namespace test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>> {
+ public:
+  ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request);
+
+ private:
+  ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::SyncEventHandler<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>, public ::fidl::internal::SyncEventHandler {
+ public:
+  SyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::MethodWithUnion> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::NaturalWeakEventSender<::test_protocols::MethodWithUnion> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodRequest {
+ public:
+  using ::test_protocols::MethodWithUnionUnionMethodRequest::MethodWithUnionUnionMethodRequest;
+  Request(::test_protocols::MethodWithUnionUnionMethodRequest v) : ::test_protocols::MethodWithUnionUnionMethodRequest(std::move(v)) {}
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::MethodWithUnionUnionMethodRequest;
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod> : public ::fidl::CompleterBase {
+ public:
+  void Reply(const ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>& response);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocols::MethodWithUnion;
+
+  using UnionMethodRequest = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
+  using UnionMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
+
+  virtual void UnionMethod(UnionMethodRequest& request, UnionMethodCompleter::Sync& completer) = 0;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

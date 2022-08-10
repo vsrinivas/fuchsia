@@ -17,44 +17,6 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest> {
-  static ::test_protocolrequest::ParentTakeChildRequestRequest ToNatural(::test_protocolrequest::wire::ParentTakeChildRequestRequest src);
-  static ::test_protocolrequest::wire::ParentTakeChildRequestRequest ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequestRequest src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
-  using type = ::test_protocolrequest::ParentTakeChildRequestRequest;
-};
-template <>
-struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequestRequest> {
-  using type = ::test_protocolrequest::wire::ParentTakeChildRequestRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest> {
-  static ::test_protocolrequest::ParentTakeChildRequest ToNatural(::test_protocolrequest::wire::ParentTakeChildRequest src);
-  static ::test_protocolrequest::wire::ParentTakeChildRequest ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequest src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentTakeChildRequest> {
-  using type = ::test_protocolrequest::ParentTakeChildRequest;
-};
-template <>
-struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequest> {
-  using type = ::test_protocolrequest::wire::ParentTakeChildRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
 struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse> {
   static ::test_protocolrequest::ParentGetChildTopResponse ToNatural(::test_protocolrequest::wire::ParentGetChildTopResponse src);
   static ::test_protocolrequest::wire::ParentGetChildTopResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildTopResponse src);
@@ -86,6 +48,44 @@ struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildReques
 template <>
 struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildRequestTopResponse> {
   using type = ::test_protocolrequest::wire::ParentGetChildRequestTopResponse;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::test_protocolrequest::ParentTakeChildRequest> {
+  static ::test_protocolrequest::ParentTakeChildRequest ToNatural(::test_protocolrequest::wire::ParentTakeChildRequest src);
+  static ::test_protocolrequest::wire::ParentTakeChildRequest ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequest src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentTakeChildRequest> {
+  using type = ::test_protocolrequest::ParentTakeChildRequest;
+};
+template <>
+struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequest> {
+  using type = ::test_protocolrequest::wire::ParentTakeChildRequest;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::test_protocolrequest::ParentTakeChildRequestRequest> {
+  static ::test_protocolrequest::ParentTakeChildRequestRequest ToNatural(::test_protocolrequest::wire::ParentTakeChildRequestRequest src);
+  static ::test_protocolrequest::wire::ParentTakeChildRequestRequest ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentTakeChildRequestRequest src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
+  using type = ::test_protocolrequest::ParentTakeChildRequestRequest;
+};
+template <>
+struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequestRequest> {
+  using type = ::test_protocolrequest::wire::ParentTakeChildRequestRequest;
 };
 
 #endif  // __Fuchsia__

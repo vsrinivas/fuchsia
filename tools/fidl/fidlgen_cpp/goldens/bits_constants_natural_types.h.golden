@@ -16,11 +16,11 @@
 
 namespace test_bitsconstants {
 
-constexpr ::test_bitsconstants::BitsType kConst3 = static_cast<::test_bitsconstants::BitsType>(131);
+constexpr ::test_bitsconstants::BitsType kConst1 = ::test_bitsconstants::BitsType::kA;
 
 constexpr ::test_bitsconstants::BitsType kConst2 = static_cast<::test_bitsconstants::BitsType>(129);
 
-constexpr ::test_bitsconstants::BitsType kConst1 = ::test_bitsconstants::BitsType::kA;
+constexpr ::test_bitsconstants::BitsType kConst3 = static_cast<::test_bitsconstants::BitsType>(131);
 
 }  // namespace test_bitsconstants
 namespace fidl {

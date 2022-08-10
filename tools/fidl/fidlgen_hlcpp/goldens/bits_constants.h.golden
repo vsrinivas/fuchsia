@@ -68,11 +68,11 @@ inline zx_status_t Clone(::test::bitsconstants::BitsType value,
   return ZX_OK;
 }
 
-constexpr ::test::bitsconstants::BitsType Const3 = static_cast<::test::bitsconstants::BitsType>(131);
+constexpr ::test::bitsconstants::BitsType Const1 = ::test::bitsconstants::BitsType::A;
 
 constexpr ::test::bitsconstants::BitsType Const2 = static_cast<::test::bitsconstants::BitsType>(129);
 
-constexpr ::test::bitsconstants::BitsType Const1 = ::test::bitsconstants::BitsType::A;
+constexpr ::test::bitsconstants::BitsType Const3 = static_cast<::test::bitsconstants::BitsType>(131);
 
 }  // namespace bitsconstants
 }  // namespace test

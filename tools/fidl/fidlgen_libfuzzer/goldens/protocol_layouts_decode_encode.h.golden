@@ -12,19 +12,49 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 46>
     test_protocollayouts_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::LocalTablePayload",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::LocalTablePayload>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOneWayAnonRequest",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse",
@@ -35,36 +65,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 46>
             .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOneWayAnonRequest",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::LocalTablePayload",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::LocalTablePayload>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

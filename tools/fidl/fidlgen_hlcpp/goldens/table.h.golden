@@ -11,71 +11,39 @@ namespace table {
 // Domain objects declarations
 //
 
-class TableWithAttributes;
+class EmptyTable;
 
 class SimpleTable;
-
-class ReverseOrdinalTable;
 
 class OlderSimpleTable;
 
 class NewerSimpleTable;
 
+class ReverseOrdinalTable;
+
+class TableWithAttributes;
+
 class ExtensionTable;
 
 class SixtyFourOrdinalTable;
 
-class EmptyTable;
-
-class TableWithAttributes final {
+class EmptyTable final {
  public:
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
   bool IsEmpty() const;
 
-  const int64_t& x() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return x_value_.value;
-  }
-  bool has_x() const {
-    return field_presence_.IsSet<0>();
-  }
+  EmptyTable();
+  EmptyTable(EmptyTable&& other);
+  ~EmptyTable();
+  EmptyTable& operator=(EmptyTable&& other);
 
-  int64_t* mutable_x() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&x_value_.value);
-    }
-    return &x_value_.value;
-  }
-  TableWithAttributes& set_x(int64_t _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&x_value_.value, std::move(_value));
-    } else {
-      x_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_x() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&x_value_.value);
-  }
-
-  TableWithAttributes();
-  TableWithAttributes(TableWithAttributes&& other);
-  ~TableWithAttributes();
-  TableWithAttributes& operator=(TableWithAttributes&& other);
-
-  static inline ::std::unique_ptr<TableWithAttributes> New() { return ::std::make_unique<TableWithAttributes>(); }
+  static inline ::std::unique_ptr<EmptyTable> New() { return ::std::make_unique<EmptyTable>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value, size_t _offset);
-  zx_status_t Clone(TableWithAttributes* _result) const;
+  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset);
+  zx_status_t Clone(EmptyTable* _result) const;
 
  private:
   template <class T, class... Args>
@@ -94,24 +62,16 @@ class TableWithAttributes final {
 
   static bool IsOrdinalKnown(uint64_t ordinal) {
     switch (ordinal) {
-      case 1:
-        return true;
+      return true;
       default:
         return false;
     }
   }
 
-  ::fidl::internal::BitSet<1> field_presence_;
-  union ValueUnion_x {
-    ValueUnion_x() {}
-    ~ValueUnion_x() {}
-
-    int64_t value;
-  };
-  ValueUnion_x x_value_;
+  ::fidl::internal::BitSet<0> field_presence_;
 };
 
-using TableWithAttributesPtr = ::std::unique_ptr<TableWithAttributes>;
+using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
 
 class SimpleTable final {
  public:
@@ -238,172 +198,6 @@ class SimpleTable final {
 };
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
-
-class ReverseOrdinalTable final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const int64_t& z() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return z_value_.value;
-  }
-  bool has_z() const {
-    return field_presence_.IsSet<0>();
-  }
-
-  int64_t* mutable_z() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&z_value_.value);
-    }
-    return &z_value_.value;
-  }
-  ReverseOrdinalTable& set_z(int64_t _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&z_value_.value, std::move(_value));
-    } else {
-      z_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_z() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&z_value_.value);
-  }
-
-  const int64_t& y() const {
-    ZX_ASSERT(field_presence_.IsSet<1>());
-    return y_value_.value;
-  }
-  bool has_y() const {
-    return field_presence_.IsSet<1>();
-  }
-
-  int64_t* mutable_y() {
-    if (!field_presence_.IsSet<1>()) {
-      field_presence_.Set<1>();
-      Construct(&y_value_.value);
-    }
-    return &y_value_.value;
-  }
-  ReverseOrdinalTable& set_y(int64_t _value) {
-    if (!field_presence_.IsSet<1>()) {
-      field_presence_.Set<1>();
-      Construct(&y_value_.value, std::move(_value));
-    } else {
-      y_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_y() {
-    if (!field_presence_.IsSet<1>()) {
-      return;
-    }
-    field_presence_.Clear<1>();
-    Destruct(&y_value_.value);
-  }
-
-  const int64_t& x() const {
-    ZX_ASSERT(field_presence_.IsSet<2>());
-    return x_value_.value;
-  }
-  bool has_x() const {
-    return field_presence_.IsSet<2>();
-  }
-
-  int64_t* mutable_x() {
-    if (!field_presence_.IsSet<2>()) {
-      field_presence_.Set<2>();
-      Construct(&x_value_.value);
-    }
-    return &x_value_.value;
-  }
-  ReverseOrdinalTable& set_x(int64_t _value) {
-    if (!field_presence_.IsSet<2>()) {
-      field_presence_.Set<2>();
-      Construct(&x_value_.value, std::move(_value));
-    } else {
-      x_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_x() {
-    if (!field_presence_.IsSet<2>()) {
-      return;
-    }
-    field_presence_.Clear<2>();
-    Destruct(&x_value_.value);
-  }
-
-  ReverseOrdinalTable();
-  ReverseOrdinalTable(ReverseOrdinalTable&& other);
-  ~ReverseOrdinalTable();
-  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other);
-
-  static inline ::std::unique_ptr<ReverseOrdinalTable> New() { return ::std::make_unique<ReverseOrdinalTable>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset);
-  zx_status_t Clone(ReverseOrdinalTable* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 1:
-      case 2:
-      case 3:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<3> field_presence_;
-  union ValueUnion_z {
-    ValueUnion_z() {}
-    ~ValueUnion_z() {}
-
-    int64_t value;
-  };
-  ValueUnion_z z_value_;
-  union ValueUnion_y {
-    ValueUnion_y() {}
-    ~ValueUnion_y() {}
-
-    int64_t value;
-  };
-  ValueUnion_y y_value_;
-  union ValueUnion_x {
-    ValueUnion_x() {}
-    ~ValueUnion_x() {}
-
-    int64_t value;
-  };
-  ValueUnion_x x_value_;
-};
-
-using ReverseOrdinalTablePtr = ::std::unique_ptr<ReverseOrdinalTable>;
 
 class OlderSimpleTable final {
  public:
@@ -656,6 +450,258 @@ class NewerSimpleTable final {
 };
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
+
+class ReverseOrdinalTable final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const int64_t& z() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return z_value_.value;
+  }
+  bool has_z() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  int64_t* mutable_z() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&z_value_.value);
+    }
+    return &z_value_.value;
+  }
+  ReverseOrdinalTable& set_z(int64_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&z_value_.value, std::move(_value));
+    } else {
+      z_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_z() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&z_value_.value);
+  }
+
+  const int64_t& y() const {
+    ZX_ASSERT(field_presence_.IsSet<1>());
+    return y_value_.value;
+  }
+  bool has_y() const {
+    return field_presence_.IsSet<1>();
+  }
+
+  int64_t* mutable_y() {
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
+      Construct(&y_value_.value);
+    }
+    return &y_value_.value;
+  }
+  ReverseOrdinalTable& set_y(int64_t _value) {
+    if (!field_presence_.IsSet<1>()) {
+      field_presence_.Set<1>();
+      Construct(&y_value_.value, std::move(_value));
+    } else {
+      y_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_y() {
+    if (!field_presence_.IsSet<1>()) {
+      return;
+    }
+    field_presence_.Clear<1>();
+    Destruct(&y_value_.value);
+  }
+
+  const int64_t& x() const {
+    ZX_ASSERT(field_presence_.IsSet<2>());
+    return x_value_.value;
+  }
+  bool has_x() const {
+    return field_presence_.IsSet<2>();
+  }
+
+  int64_t* mutable_x() {
+    if (!field_presence_.IsSet<2>()) {
+      field_presence_.Set<2>();
+      Construct(&x_value_.value);
+    }
+    return &x_value_.value;
+  }
+  ReverseOrdinalTable& set_x(int64_t _value) {
+    if (!field_presence_.IsSet<2>()) {
+      field_presence_.Set<2>();
+      Construct(&x_value_.value, std::move(_value));
+    } else {
+      x_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_x() {
+    if (!field_presence_.IsSet<2>()) {
+      return;
+    }
+    field_presence_.Clear<2>();
+    Destruct(&x_value_.value);
+  }
+
+  ReverseOrdinalTable();
+  ReverseOrdinalTable(ReverseOrdinalTable&& other);
+  ~ReverseOrdinalTable();
+  ReverseOrdinalTable& operator=(ReverseOrdinalTable&& other);
+
+  static inline ::std::unique_ptr<ReverseOrdinalTable> New() { return ::std::make_unique<ReverseOrdinalTable>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset);
+  zx_status_t Clone(ReverseOrdinalTable* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<3> field_presence_;
+  union ValueUnion_z {
+    ValueUnion_z() {}
+    ~ValueUnion_z() {}
+
+    int64_t value;
+  };
+  ValueUnion_z z_value_;
+  union ValueUnion_y {
+    ValueUnion_y() {}
+    ~ValueUnion_y() {}
+
+    int64_t value;
+  };
+  ValueUnion_y y_value_;
+  union ValueUnion_x {
+    ValueUnion_x() {}
+    ~ValueUnion_x() {}
+
+    int64_t value;
+  };
+  ValueUnion_x x_value_;
+};
+
+using ReverseOrdinalTablePtr = ::std::unique_ptr<ReverseOrdinalTable>;
+
+class TableWithAttributes final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const int64_t& x() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return x_value_.value;
+  }
+  bool has_x() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  int64_t* mutable_x() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value);
+    }
+    return &x_value_.value;
+  }
+  TableWithAttributes& set_x(int64_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value, std::move(_value));
+    } else {
+      x_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_x() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&x_value_.value);
+  }
+
+  TableWithAttributes();
+  TableWithAttributes(TableWithAttributes&& other);
+  ~TableWithAttributes();
+  TableWithAttributes& operator=(TableWithAttributes&& other);
+
+  static inline ::std::unique_ptr<TableWithAttributes> New() { return ::std::make_unique<TableWithAttributes>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value, size_t _offset);
+  zx_status_t Clone(TableWithAttributes* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_x {
+    ValueUnion_x() {}
+    ~ValueUnion_x() {}
+
+    int64_t value;
+  };
+  ValueUnion_x x_value_;
+};
+
+using TableWithAttributesPtr = ::std::unique_ptr<TableWithAttributes>;
 
 class ExtensionTable final {
  public:
@@ -3309,76 +3355,20 @@ class SixtyFourOrdinalTable final {
 
 using SixtyFourOrdinalTablePtr = ::std::unique_ptr<SixtyFourOrdinalTable>;
 
-class EmptyTable final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  EmptyTable();
-  EmptyTable(EmptyTable&& other);
-  ~EmptyTable();
-  EmptyTable& operator=(EmptyTable&& other);
-
-  static inline ::std::unique_ptr<EmptyTable> New() { return ::std::make_unique<EmptyTable>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset);
-  zx_status_t Clone(EmptyTable* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<0> field_presence_;
-};
-
-using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
-
 }  // namespace table
 }  // namespace test
 namespace fidl {
 template <>
-struct CodingTraits<::test::table::TableWithAttributes>
-    : public EncodableCodingTraits<::test::table::TableWithAttributes, 16> {};
+struct CodingTraits<::test::table::EmptyTable>
+    : public EncodableCodingTraits<::test::table::EmptyTable, 16> {};
 
-inline zx_status_t Clone(const ::test::table::TableWithAttributes& _value,
-                         ::test::table::TableWithAttributes* result) {
+inline zx_status_t Clone(const ::test::table::EmptyTable& _value,
+                         ::test::table::EmptyTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::test::table::TableWithAttributes> {
-  bool operator()(const ::test::table::TableWithAttributes& _lhs, const ::test::table::TableWithAttributes& _rhs) const {
-    if (_lhs.has_x()) {
-      if (!_rhs.has_x()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-        return false;
-      }
-    } else if (_rhs.has_x()) {
-      return false;
-    }
+struct Equality<::test::table::EmptyTable> {
+  bool operator()(const ::test::table::EmptyTable& _lhs, const ::test::table::EmptyTable& _rhs) const {
     return true;
   }
 };
@@ -3411,50 +3401,6 @@ struct Equality<::test::table::SimpleTable> {
         return false;
       }
     } else if (_rhs.has_y()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::table::ReverseOrdinalTable>
-    : public EncodableCodingTraits<::test::table::ReverseOrdinalTable, 16> {};
-
-inline zx_status_t Clone(const ::test::table::ReverseOrdinalTable& _value,
-                         ::test::table::ReverseOrdinalTable* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::table::ReverseOrdinalTable> {
-  bool operator()(const ::test::table::ReverseOrdinalTable& _lhs, const ::test::table::ReverseOrdinalTable& _rhs) const {
-    if (_lhs.has_z()) {
-      if (!_rhs.has_z()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
-        return false;
-      }
-    } else if (_rhs.has_z()) {
-      return false;
-    }
-    if (_lhs.has_y()) {
-      if (!_rhs.has_y()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
-        return false;
-      }
-    } else if (_rhs.has_y()) {
-      return false;
-    }
-    if (_lhs.has_x()) {
-      if (!_rhs.has_x()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
-        return false;
-      }
-    } else if (_rhs.has_x()) {
       return false;
     }
     return true;
@@ -3523,6 +3469,74 @@ struct Equality<::test::table::NewerSimpleTable> {
         return false;
       }
     } else if (_rhs.has_z()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::table::ReverseOrdinalTable>
+    : public EncodableCodingTraits<::test::table::ReverseOrdinalTable, 16> {};
+
+inline zx_status_t Clone(const ::test::table::ReverseOrdinalTable& _value,
+                         ::test::table::ReverseOrdinalTable* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::table::ReverseOrdinalTable> {
+  bool operator()(const ::test::table::ReverseOrdinalTable& _lhs, const ::test::table::ReverseOrdinalTable& _rhs) const {
+    if (_lhs.has_z()) {
+      if (!_rhs.has_z()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
+        return false;
+      }
+    } else if (_rhs.has_z()) {
+      return false;
+    }
+    if (_lhs.has_y()) {
+      if (!_rhs.has_y()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
+        return false;
+      }
+    } else if (_rhs.has_y()) {
+      return false;
+    }
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+        return false;
+      }
+    } else if (_rhs.has_x()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::table::TableWithAttributes>
+    : public EncodableCodingTraits<::test::table::TableWithAttributes, 16> {};
+
+inline zx_status_t Clone(const ::test::table::TableWithAttributes& _value,
+                         ::test::table::TableWithAttributes* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::table::TableWithAttributes> {
+  bool operator()(const ::test::table::TableWithAttributes& _lhs, const ::test::table::TableWithAttributes& _rhs) const {
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+        return false;
+      }
+    } else if (_rhs.has_x()) {
       return false;
     }
     return true;
@@ -4193,20 +4207,6 @@ struct Equality<::test::table::SixtyFourOrdinalTable> {
     } else if (_rhs.has_v64()) {
       return false;
     }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::table::EmptyTable>
-    : public EncodableCodingTraits<::test::table::EmptyTable, 16> {};
-
-inline zx_status_t Clone(const ::test::table::EmptyTable& _value,
-                         ::test::table::EmptyTable* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::table::EmptyTable> {
-  bool operator()(const ::test::table::EmptyTable& _lhs, const ::test::table::EmptyTable& _rhs) const {
     return true;
   }
 };

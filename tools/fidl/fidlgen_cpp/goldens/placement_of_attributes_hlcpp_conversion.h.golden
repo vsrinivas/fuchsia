@@ -51,16 +51,6 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::placementofattributes
 };
 
 template <>
-struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleStruct> {
-  using HLCPPType = ::test::placementofattributes::ExampleStruct;
-  static inline ::test::placementofattributes::ExampleStruct Convert(::test_placementofattributes::ExampleStruct&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleStruct> {
-  using NaturalType = ::test_placementofattributes::ExampleStruct;
-  static inline ::test_placementofattributes::ExampleStruct Convert(::test::placementofattributes::ExampleStruct&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleProtocolMethodRequest> {
   using HLCPPType = ::test::placementofattributes::ExampleProtocolMethodRequest;
   static inline ::test::placementofattributes::ExampleProtocolMethodRequest Convert(::test_placementofattributes::ExampleProtocolMethodRequest&&);
@@ -69,6 +59,16 @@ template <>
 struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleProtocolMethodRequest> {
   using NaturalType = ::test_placementofattributes::ExampleProtocolMethodRequest;
   static inline ::test_placementofattributes::ExampleProtocolMethodRequest Convert(::test::placementofattributes::ExampleProtocolMethodRequest&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleStruct> {
+  using HLCPPType = ::test::placementofattributes::ExampleStruct;
+  static inline ::test::placementofattributes::ExampleStruct Convert(::test_placementofattributes::ExampleStruct&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleStruct> {
+  using NaturalType = ::test_placementofattributes::ExampleStruct;
+  static inline ::test_placementofattributes::ExampleStruct Convert(::test::placementofattributes::ExampleStruct&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleTable> {
@@ -81,16 +81,6 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleTable> {
   static inline ::test_placementofattributes::ExampleTable Convert(::test::placementofattributes::ExampleTable&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleXUnion> {
-  using HLCPPType = ::test::placementofattributes::ExampleXUnion;
-  static inline ::test::placementofattributes::ExampleXUnion Convert(::test_placementofattributes::ExampleXUnion&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleXUnion> {
-  using NaturalType = ::test_placementofattributes::ExampleXUnion;
-  static inline ::test_placementofattributes::ExampleXUnion Convert(::test::placementofattributes::ExampleXUnion&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleUnion> {
   using HLCPPType = ::test::placementofattributes::ExampleUnion;
   static inline ::test::placementofattributes::ExampleUnion Convert(::test_placementofattributes::ExampleUnion&&);
@@ -100,18 +90,17 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleUnion> {
   using NaturalType = ::test_placementofattributes::ExampleUnion;
   static inline ::test_placementofattributes::ExampleUnion Convert(::test::placementofattributes::ExampleUnion&&);
 };
+template <>
+struct NaturalToHLCPPTraits<::test_placementofattributes::ExampleXUnion> {
+  using HLCPPType = ::test::placementofattributes::ExampleXUnion;
+  static inline ::test::placementofattributes::ExampleXUnion Convert(::test_placementofattributes::ExampleXUnion&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleXUnion> {
+  using NaturalType = ::test_placementofattributes::ExampleXUnion;
+  static inline ::test_placementofattributes::ExampleXUnion Convert(::test::placementofattributes::ExampleXUnion&&);
+};
 
-::test::placementofattributes::ExampleStruct NaturalToHLCPPTraits<::test_placementofattributes::ExampleStruct>::Convert(::test_placementofattributes::ExampleStruct&& value) {
-  ::test::placementofattributes::ExampleStruct hlcpp;
-  hlcpp.member = ::fidl::NaturalToHLCPP(std::move(value.member()));
-  return hlcpp;
-}
-
-::test_placementofattributes::ExampleStruct HLCPPToNaturalTraits<::test::placementofattributes::ExampleStruct>::Convert(::test::placementofattributes::ExampleStruct&& value) {
-  return ::test_placementofattributes::ExampleStruct{{
-      .member = ::fidl::HLCPPToNatural(std::move(value.member)),
-  }};
-}
 ::test::placementofattributes::ExampleProtocolMethodRequest NaturalToHLCPPTraits<::test_placementofattributes::ExampleProtocolMethodRequest>::Convert(::test_placementofattributes::ExampleProtocolMethodRequest&& value) {
   ::test::placementofattributes::ExampleProtocolMethodRequest hlcpp;
   hlcpp.arg = ::fidl::NaturalToHLCPP(std::move(value.arg()));
@@ -121,6 +110,17 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleUnion> {
 ::test_placementofattributes::ExampleProtocolMethodRequest HLCPPToNaturalTraits<::test::placementofattributes::ExampleProtocolMethodRequest>::Convert(::test::placementofattributes::ExampleProtocolMethodRequest&& value) {
   return ::test_placementofattributes::ExampleProtocolMethodRequest{{
       .arg = ::fidl::HLCPPToNatural(std::move(value.arg)),
+  }};
+}
+::test::placementofattributes::ExampleStruct NaturalToHLCPPTraits<::test_placementofattributes::ExampleStruct>::Convert(::test_placementofattributes::ExampleStruct&& value) {
+  ::test::placementofattributes::ExampleStruct hlcpp;
+  hlcpp.member = ::fidl::NaturalToHLCPP(std::move(value.member()));
+  return hlcpp;
+}
+
+::test_placementofattributes::ExampleStruct HLCPPToNaturalTraits<::test::placementofattributes::ExampleStruct>::Convert(::test::placementofattributes::ExampleStruct&& value) {
+  return ::test_placementofattributes::ExampleStruct{{
+      .member = ::fidl::HLCPPToNatural(std::move(value.member)),
   }};
 }
 ::test::placementofattributes::ExampleTable NaturalToHLCPPTraits<::test_placementofattributes::ExampleTable>::Convert(::test_placementofattributes::ExampleTable&& value) {
@@ -139,28 +139,6 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleUnion> {
   return natural;
 }
 
-::test::placementofattributes::ExampleXUnion NaturalToHLCPPTraits<::test_placementofattributes::ExampleXUnion>::Convert(::test_placementofattributes::ExampleXUnion&& value) {
-  ::test::placementofattributes::ExampleXUnion hlcpp;
-  switch (value.Which()) {
-    case ::test_placementofattributes::ExampleXUnion::Tag::kVariant:
-      hlcpp.set_variant(::fidl::NaturalToHLCPP(std::move(value.variant().value())));
-      break;
-    default:
-      break;
-  }
-  return hlcpp;
-}
-
-::test_placementofattributes::ExampleXUnion HLCPPToNaturalTraits<::test::placementofattributes::ExampleXUnion>::Convert(::test::placementofattributes::ExampleXUnion&& value) {
-  using _NaturalUnion = ::test_placementofattributes::ExampleXUnion;
-  switch (value.Which()) {
-    case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
-      return _NaturalUnion::WithVariant(
-          ::fidl::HLCPPToNatural(std::move(value.variant())));
-    default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
-  }
-}
 ::test::placementofattributes::ExampleUnion NaturalToHLCPPTraits<::test_placementofattributes::ExampleUnion>::Convert(::test_placementofattributes::ExampleUnion&& value) {
   ::test::placementofattributes::ExampleUnion hlcpp;
   switch (value.Which()) {
@@ -181,6 +159,28 @@ struct HLCPPToNaturalTraits<::test::placementofattributes::ExampleUnion> {
           ::fidl::HLCPPToNatural(std::move(value.variant())));
     default:
       ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "::test::placementofattributes::ExampleUnion");
+  }
+}
+::test::placementofattributes::ExampleXUnion NaturalToHLCPPTraits<::test_placementofattributes::ExampleXUnion>::Convert(::test_placementofattributes::ExampleXUnion&& value) {
+  ::test::placementofattributes::ExampleXUnion hlcpp;
+  switch (value.Which()) {
+    case ::test_placementofattributes::ExampleXUnion::Tag::kVariant:
+      hlcpp.set_variant(::fidl::NaturalToHLCPP(std::move(value.variant().value())));
+      break;
+    default:
+      break;
+  }
+  return hlcpp;
+}
+
+::test_placementofattributes::ExampleXUnion HLCPPToNaturalTraits<::test::placementofattributes::ExampleXUnion>::Convert(::test::placementofattributes::ExampleXUnion&& value) {
+  using _NaturalUnion = ::test_placementofattributes::ExampleXUnion;
+  switch (value.Which()) {
+    case ::test::placementofattributes::ExampleXUnion::Tag::kVariant:
+      return _NaturalUnion::WithVariant(
+          ::fidl::HLCPPToNatural(std::move(value.variant())));
+    default:
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 

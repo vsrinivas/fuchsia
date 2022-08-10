@@ -13,122 +13,100 @@
 
 namespace fuzzing {
 
-using Padding7ByteMiddle = ::test::padding::Padding7ByteMiddle;
-using Padding7ByteEnd = ::test::padding::Padding7ByteEnd;
-using Padding6ByteMiddle = ::test::padding::Padding6ByteMiddle;
-using Padding6ByteEnd = ::test::padding::Padding6ByteEnd;
-using Padding5ByteMiddle = ::test::padding::Padding5ByteMiddle;
-using Padding5ByteEnd = ::test::padding::Padding5ByteEnd;
-using Padding4ByteMiddle = ::test::padding::Padding4ByteMiddle;
-using Padding4ByteEnd = ::test::padding::Padding4ByteEnd;
-using Padding4ByteAlignmentLength12 = ::test::padding::Padding4ByteAlignmentLength12;
-using Padding3ByteMiddle = ::test::padding::Padding3ByteMiddle;
-using Padding3ByteEnd = ::test::padding::Padding3ByteEnd;
-using Padding2ByteMiddle = ::test::padding::Padding2ByteMiddle;
-using Padding2ByteEnd = ::test::padding::Padding2ByteEnd;
-using Padding2ByteAlignmentLength6 = ::test::padding::Padding2ByteAlignmentLength6;
-using Padding1ByteMiddle = ::test::padding::Padding1ByteMiddle;
 using Padding1ByteEnd = ::test::padding::Padding1ByteEnd;
+using Padding2ByteEnd = ::test::padding::Padding2ByteEnd;
+using Padding3ByteEnd = ::test::padding::Padding3ByteEnd;
+using Padding4ByteEnd = ::test::padding::Padding4ByteEnd;
+using Padding5ByteEnd = ::test::padding::Padding5ByteEnd;
+using Padding6ByteEnd = ::test::padding::Padding6ByteEnd;
+using Padding7ByteEnd = ::test::padding::Padding7ByteEnd;
+using Padding1ByteMiddle = ::test::padding::Padding1ByteMiddle;
+using Padding2ByteMiddle = ::test::padding::Padding2ByteMiddle;
+using Padding3ByteMiddle = ::test::padding::Padding3ByteMiddle;
+using Padding4ByteMiddle = ::test::padding::Padding4ByteMiddle;
+using Padding5ByteMiddle = ::test::padding::Padding5ByteMiddle;
+using Padding6ByteMiddle = ::test::padding::Padding6ByteMiddle;
+using Padding7ByteMiddle = ::test::padding::Padding7ByteMiddle;
+using Padding4ByteAlignmentLength12 = ::test::padding::Padding4ByteAlignmentLength12;
+using Padding2ByteAlignmentLength6 = ::test::padding::Padding2ByteAlignmentLength6;
 
 template <>
-struct MinSize<Padding7ByteMiddle> {
+struct MinSize<Padding1ByteEnd> {
   operator size_t() {
-    return MinSize<uint8_t>() + MinSize<uint64_t>();
+    return MinSize<uint16_t>() + MinSize<uint8_t>();
   }
 };
 template <>
-struct Allocate<Padding7ByteMiddle> {
-  Padding7ByteMiddle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding7ByteMiddle>());
-    Padding7ByteMiddle out;
-    const size_t slack_per_member = (*size - MinSize<Padding7ByteMiddle>()) / 2;
+struct Allocate<Padding1ByteEnd> {
+  Padding1ByteEnd operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding1ByteEnd>());
+    Padding1ByteEnd out;
+    const size_t slack_per_member = (*size - MinSize<Padding1ByteEnd>()) / 2;
     size_t out_size;
-    out_size = MinSize<uint8_t>() + slack_per_member;
-    out.a = Allocate<uint8_t>{}(src, &out_size);
-    out_size = MinSize<uint64_t>() + slack_per_member;
-    out.b = Allocate<uint64_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding7ByteEnd> {
-  operator size_t() {
-    return MinSize<uint64_t>() + MinSize<uint8_t>();
-  }
-};
-template <>
-struct Allocate<Padding7ByteEnd> {
-  Padding7ByteEnd operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding7ByteEnd>());
-    Padding7ByteEnd out;
-    const size_t slack_per_member = (*size - MinSize<Padding7ByteEnd>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint64_t>() + slack_per_member;
-    out.a = Allocate<uint64_t>{}(src, &out_size);
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.a = Allocate<uint16_t>{}(src, &out_size);
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.b = Allocate<uint8_t>{}(src, &out_size);
     return out;
   }
 };
 template <>
-struct MinSize<Padding6ByteMiddle> {
+struct MinSize<Padding2ByteEnd> {
   operator size_t() {
-    return MinSize<uint16_t>() + MinSize<uint64_t>();
+    return MinSize<uint32_t>() + MinSize<uint16_t>();
   }
 };
 template <>
-struct Allocate<Padding6ByteMiddle> {
-  Padding6ByteMiddle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding6ByteMiddle>());
-    Padding6ByteMiddle out;
-    const size_t slack_per_member = (*size - MinSize<Padding6ByteMiddle>()) / 2;
+struct Allocate<Padding2ByteEnd> {
+  Padding2ByteEnd operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding2ByteEnd>());
+    Padding2ByteEnd out;
+    const size_t slack_per_member = (*size - MinSize<Padding2ByteEnd>()) / 2;
     size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.a = Allocate<uint16_t>{}(src, &out_size);
-    out_size = MinSize<uint64_t>() + slack_per_member;
-    out.b = Allocate<uint64_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding6ByteEnd> {
-  operator size_t() {
-    return MinSize<uint64_t>() + MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<Padding6ByteEnd> {
-  Padding6ByteEnd operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding6ByteEnd>());
-    Padding6ByteEnd out;
-    const size_t slack_per_member = (*size - MinSize<Padding6ByteEnd>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint64_t>() + slack_per_member;
-    out.a = Allocate<uint64_t>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.a = Allocate<uint32_t>{}(src, &out_size);
     out_size = MinSize<uint16_t>() + slack_per_member;
     out.b = Allocate<uint16_t>{}(src, &out_size);
     return out;
   }
 };
 template <>
-struct MinSize<Padding5ByteMiddle> {
+struct MinSize<Padding3ByteEnd> {
   operator size_t() {
-    return MinSize<uint16_t>() + MinSize<uint8_t>() + MinSize<uint64_t>();
+    return MinSize<uint32_t>() + MinSize<uint8_t>();
   }
 };
 template <>
-struct Allocate<Padding5ByteMiddle> {
-  Padding5ByteMiddle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding5ByteMiddle>());
-    Padding5ByteMiddle out;
-    const size_t slack_per_member = (*size - MinSize<Padding5ByteMiddle>()) / 3;
+struct Allocate<Padding3ByteEnd> {
+  Padding3ByteEnd operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding3ByteEnd>());
+    Padding3ByteEnd out;
+    const size_t slack_per_member = (*size - MinSize<Padding3ByteEnd>()) / 2;
     size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.a = Allocate<uint16_t>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.a = Allocate<uint32_t>{}(src, &out_size);
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.b = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding4ByteEnd> {
+  operator size_t() {
+    return MinSize<uint64_t>() + MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<Padding4ByteEnd> {
+  Padding4ByteEnd operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding4ByteEnd>());
+    Padding4ByteEnd out;
+    const size_t slack_per_member = (*size - MinSize<Padding4ByteEnd>()) / 2;
+    size_t out_size;
     out_size = MinSize<uint64_t>() + slack_per_member;
-    out.c = Allocate<uint64_t>{}(src, &out_size);
+    out.a = Allocate<uint64_t>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.b = Allocate<uint32_t>{}(src, &out_size);
     return out;
   }
 };
@@ -155,6 +133,106 @@ struct Allocate<Padding5ByteEnd> {
   }
 };
 template <>
+struct MinSize<Padding6ByteEnd> {
+  operator size_t() {
+    return MinSize<uint64_t>() + MinSize<uint16_t>();
+  }
+};
+template <>
+struct Allocate<Padding6ByteEnd> {
+  Padding6ByteEnd operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding6ByteEnd>());
+    Padding6ByteEnd out;
+    const size_t slack_per_member = (*size - MinSize<Padding6ByteEnd>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint64_t>() + slack_per_member;
+    out.a = Allocate<uint64_t>{}(src, &out_size);
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.b = Allocate<uint16_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding7ByteEnd> {
+  operator size_t() {
+    return MinSize<uint64_t>() + MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<Padding7ByteEnd> {
+  Padding7ByteEnd operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding7ByteEnd>());
+    Padding7ByteEnd out;
+    const size_t slack_per_member = (*size - MinSize<Padding7ByteEnd>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint64_t>() + slack_per_member;
+    out.a = Allocate<uint64_t>{}(src, &out_size);
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.b = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding1ByteMiddle> {
+  operator size_t() {
+    return MinSize<uint8_t>() + MinSize<uint16_t>();
+  }
+};
+template <>
+struct Allocate<Padding1ByteMiddle> {
+  Padding1ByteMiddle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding1ByteMiddle>());
+    Padding1ByteMiddle out;
+    const size_t slack_per_member = (*size - MinSize<Padding1ByteMiddle>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.a = Allocate<uint8_t>{}(src, &out_size);
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.b = Allocate<uint16_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding2ByteMiddle> {
+  operator size_t() {
+    return MinSize<uint16_t>() + MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<Padding2ByteMiddle> {
+  Padding2ByteMiddle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding2ByteMiddle>());
+    Padding2ByteMiddle out;
+    const size_t slack_per_member = (*size - MinSize<Padding2ByteMiddle>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.a = Allocate<uint16_t>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.b = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding3ByteMiddle> {
+  operator size_t() {
+    return MinSize<uint8_t>() + MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<Padding3ByteMiddle> {
+  Padding3ByteMiddle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding3ByteMiddle>());
+    Padding3ByteMiddle out;
+    const size_t slack_per_member = (*size - MinSize<Padding3ByteMiddle>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.a = Allocate<uint8_t>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.b = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
 struct MinSize<Padding4ByteMiddle> {
   operator size_t() {
     return MinSize<uint32_t>() + MinSize<uint64_t>();
@@ -175,22 +253,64 @@ struct Allocate<Padding4ByteMiddle> {
   }
 };
 template <>
-struct MinSize<Padding4ByteEnd> {
+struct MinSize<Padding5ByteMiddle> {
   operator size_t() {
-    return MinSize<uint64_t>() + MinSize<uint32_t>();
+    return MinSize<uint16_t>() + MinSize<uint8_t>() + MinSize<uint64_t>();
   }
 };
 template <>
-struct Allocate<Padding4ByteEnd> {
-  Padding4ByteEnd operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding4ByteEnd>());
-    Padding4ByteEnd out;
-    const size_t slack_per_member = (*size - MinSize<Padding4ByteEnd>()) / 2;
+struct Allocate<Padding5ByteMiddle> {
+  Padding5ByteMiddle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding5ByteMiddle>());
+    Padding5ByteMiddle out;
+    const size_t slack_per_member = (*size - MinSize<Padding5ByteMiddle>()) / 3;
     size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.a = Allocate<uint16_t>{}(src, &out_size);
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.b = Allocate<uint8_t>{}(src, &out_size);
     out_size = MinSize<uint64_t>() + slack_per_member;
-    out.a = Allocate<uint64_t>{}(src, &out_size);
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.b = Allocate<uint32_t>{}(src, &out_size);
+    out.c = Allocate<uint64_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding6ByteMiddle> {
+  operator size_t() {
+    return MinSize<uint16_t>() + MinSize<uint64_t>();
+  }
+};
+template <>
+struct Allocate<Padding6ByteMiddle> {
+  Padding6ByteMiddle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding6ByteMiddle>());
+    Padding6ByteMiddle out;
+    const size_t slack_per_member = (*size - MinSize<Padding6ByteMiddle>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.a = Allocate<uint16_t>{}(src, &out_size);
+    out_size = MinSize<uint64_t>() + slack_per_member;
+    out.b = Allocate<uint64_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Padding7ByteMiddle> {
+  operator size_t() {
+    return MinSize<uint8_t>() + MinSize<uint64_t>();
+  }
+};
+template <>
+struct Allocate<Padding7ByteMiddle> {
+  Padding7ByteMiddle operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Padding7ByteMiddle>());
+    Padding7ByteMiddle out;
+    const size_t slack_per_member = (*size - MinSize<Padding7ByteMiddle>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.a = Allocate<uint8_t>{}(src, &out_size);
+    out_size = MinSize<uint64_t>() + slack_per_member;
+    out.b = Allocate<uint64_t>{}(src, &out_size);
     return out;
   }
 };
@@ -219,86 +339,6 @@ struct Allocate<Padding4ByteAlignmentLength12> {
   }
 };
 template <>
-struct MinSize<Padding3ByteMiddle> {
-  operator size_t() {
-    return MinSize<uint8_t>() + MinSize<uint32_t>();
-  }
-};
-template <>
-struct Allocate<Padding3ByteMiddle> {
-  Padding3ByteMiddle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding3ByteMiddle>());
-    Padding3ByteMiddle out;
-    const size_t slack_per_member = (*size - MinSize<Padding3ByteMiddle>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint8_t>() + slack_per_member;
-    out.a = Allocate<uint8_t>{}(src, &out_size);
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.b = Allocate<uint32_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding3ByteEnd> {
-  operator size_t() {
-    return MinSize<uint32_t>() + MinSize<uint8_t>();
-  }
-};
-template <>
-struct Allocate<Padding3ByteEnd> {
-  Padding3ByteEnd operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding3ByteEnd>());
-    Padding3ByteEnd out;
-    const size_t slack_per_member = (*size - MinSize<Padding3ByteEnd>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.a = Allocate<uint32_t>{}(src, &out_size);
-    out_size = MinSize<uint8_t>() + slack_per_member;
-    out.b = Allocate<uint8_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding2ByteMiddle> {
-  operator size_t() {
-    return MinSize<uint16_t>() + MinSize<uint32_t>();
-  }
-};
-template <>
-struct Allocate<Padding2ByteMiddle> {
-  Padding2ByteMiddle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding2ByteMiddle>());
-    Padding2ByteMiddle out;
-    const size_t slack_per_member = (*size - MinSize<Padding2ByteMiddle>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.a = Allocate<uint16_t>{}(src, &out_size);
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.b = Allocate<uint32_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding2ByteEnd> {
-  operator size_t() {
-    return MinSize<uint32_t>() + MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<Padding2ByteEnd> {
-  Padding2ByteEnd operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding2ByteEnd>());
-    Padding2ByteEnd out;
-    const size_t slack_per_member = (*size - MinSize<Padding2ByteEnd>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.a = Allocate<uint32_t>{}(src, &out_size);
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.b = Allocate<uint16_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
 struct MinSize<Padding2ByteAlignmentLength6> {
   operator size_t() {
     return MinSize<uint8_t>() + MinSize<uint16_t>() + MinSize<uint8_t>();
@@ -317,46 +357,6 @@ struct Allocate<Padding2ByteAlignmentLength6> {
     out.b = Allocate<uint16_t>{}(src, &out_size);
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.c = Allocate<uint8_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding1ByteMiddle> {
-  operator size_t() {
-    return MinSize<uint8_t>() + MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<Padding1ByteMiddle> {
-  Padding1ByteMiddle operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding1ByteMiddle>());
-    Padding1ByteMiddle out;
-    const size_t slack_per_member = (*size - MinSize<Padding1ByteMiddle>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint8_t>() + slack_per_member;
-    out.a = Allocate<uint8_t>{}(src, &out_size);
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.b = Allocate<uint16_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Padding1ByteEnd> {
-  operator size_t() {
-    return MinSize<uint16_t>() + MinSize<uint8_t>();
-  }
-};
-template <>
-struct Allocate<Padding1ByteEnd> {
-  Padding1ByteEnd operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Padding1ByteEnd>());
-    Padding1ByteEnd out;
-    const size_t slack_per_member = (*size - MinSize<Padding1ByteEnd>()) / 2;
-    size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.a = Allocate<uint16_t>{}(src, &out_size);
-    out_size = MinSize<uint8_t>() + slack_per_member;
-    out.b = Allocate<uint8_t>{}(src, &out_size);
     return out;
   }
 };

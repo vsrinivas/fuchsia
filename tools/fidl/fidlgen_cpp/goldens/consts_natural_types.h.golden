@@ -16,47 +16,47 @@
 
 namespace test_consts {
 
-constexpr zx_rights_t kZxRightsVal = ZX_RIGHT_READ;
-
-constexpr zx_obj_type_t kZxObjVal = ZX_OBJ_TYPE_CHANNEL;
-
-constexpr uint64_t kZxConst = ZX_CHANNEL_MAX_MSG_BYTES;
-
-extern const char* kUsername;
-
-constexpr uint32_t kPopulationUsa2018 = 330000000u;
+constexpr bool kEnabledFlag = true;
 
 constexpr int8_t kOffset = -33;
 
-constexpr float kMinTemp = -273.15f;
-
-constexpr uint64_t kFuchsia = 4054509061583223046u;
-
-constexpr ::test_consts::EnumType kEnumVal = ::test_consts::EnumType::kValue;
-
-constexpr ::test_consts::EnumType kEnumTrue = ::test_consts::EnumType::kTrue;
-
-constexpr int32_t kEnumPrimitiveVal = ::test_consts::EnumType::kValue;
-
-constexpr int32_t kEnumPrimitiveTrue = ::test_consts::EnumType::kTrue;
-
-constexpr bool kEnabledFlag = true;
-
-constexpr uint64_t kDiamond = 1746410393481133080u;
-
-constexpr double kConversionFactor = 1.41421;
-
-constexpr ::test_consts::BitsType kBitsVal = ::test_consts::BitsType::kValue;
-
-constexpr ::test_consts::BitsType kBitsTrue = ::test_consts::BitsType::kTrue;
-
-constexpr uint32_t kBitsPrimitiveVal = ::test_consts::BitsType::kValue;
-
-constexpr uint32_t kBitsPrimitiveTrue = ::test_consts::BitsType::kTrue;
+constexpr uint16_t kAnswer = 42u;
 
 constexpr uint16_t kAnswerInBinary = 42u;
 
-constexpr uint16_t kAnswer = 42u;
+constexpr uint32_t kPopulationUsa2018 = 330000000u;
+
+constexpr uint64_t kDiamond = 1746410393481133080u;
+
+constexpr uint64_t kFuchsia = 4054509061583223046u;
+
+extern const char* kUsername;
+
+constexpr float kMinTemp = -273.15f;
+
+constexpr double kConversionFactor = 1.41421;
+
+constexpr zx_obj_type_t kZxObjVal = ZX_OBJ_TYPE_CHANNEL;
+
+constexpr zx_rights_t kZxRightsVal = ZX_RIGHT_READ;
+
+constexpr uint64_t kZxConst = ZX_CHANNEL_MAX_MSG_BYTES;
+
+constexpr ::test_consts::EnumType kEnumVal = ::test_consts::EnumType::kValue;
+
+constexpr int32_t kEnumPrimitiveVal = ::test_consts::EnumType::kValue;
+
+constexpr ::test_consts::EnumType kEnumTrue = ::test_consts::EnumType::kTrue;
+
+constexpr int32_t kEnumPrimitiveTrue = ::test_consts::EnumType::kTrue;
+
+constexpr ::test_consts::BitsType kBitsVal = ::test_consts::BitsType::kValue;
+
+constexpr uint32_t kBitsPrimitiveVal = ::test_consts::BitsType::kValue;
+
+constexpr ::test_consts::BitsType kBitsTrue = ::test_consts::BitsType::kTrue;
+
+constexpr uint32_t kBitsPrimitiveTrue = ::test_consts::BitsType::kTrue;
 
 }  // namespace test_consts
 namespace fidl {

@@ -9,6 +9,284 @@
 //
 namespace test {
 namespace arrays {
+extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
+const fidl_type_t* StructSmallArray::FidlType = &test_arrays_StructSmallArrayTable;
+
+void StructSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructSmallArray>::value) {
+    memcpy(_encoder->template GetPtr<StructSmallArray>(_offset), this, sizeof(StructSmallArray));
+  } else {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+  }
+}
+
+void StructSmallArray::Decode(::fidl::Decoder* _decoder, StructSmallArray* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructSmallArray>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructSmallArray>(_offset), sizeof(StructSmallArray));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t StructSmallArray::Clone(StructSmallArray* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
+const fidl_type_t* StructLargeArray::FidlType = &test_arrays_StructLargeArrayTable;
+
+void StructLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructLargeArray>::value) {
+    memcpy(_encoder->template GetPtr<StructLargeArray>(_offset), this, sizeof(StructLargeArray));
+  } else {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+  }
+}
+
+void StructLargeArray::Decode(::fidl::Decoder* _decoder, StructLargeArray* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructLargeArray>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructLargeArray>(_offset), sizeof(StructLargeArray));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t StructLargeArray::Clone(StructLargeArray* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
+const fidl_type_t* TableSmallArray::FidlType = &test_arrays_TableSmallArrayTable;
+
+TableSmallArray::TableSmallArray() {}
+
+TableSmallArray::TableSmallArray(TableSmallArray&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&a_value_.value, std::move(other.a_value_.value));
+  }
+}
+
+TableSmallArray::~TableSmallArray() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&a_value_.value);
+  }
+}
+
+TableSmallArray& TableSmallArray::operator=(TableSmallArray&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      a_value_.value = std::move(other.a_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(other.a_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+  return *this;
+}
+
+bool TableSmallArray::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void TableSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<::std::array<uint32_t, 2>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &a_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 2>, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void TableSmallArray::Decode(::fidl::Decoder* _decoder, TableSmallArray* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_a(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_a();
+    }
+  } else {
+    goto done_1;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_a();
+  return;
+}
+
+zx_status_t TableSmallArray::Clone(TableSmallArray* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_a();
+  }
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
+const fidl_type_t* TableLargeArray::FidlType = &test_arrays_TableLargeArrayTable;
+
+TableLargeArray::TableLargeArray() {}
+
+TableLargeArray::TableLargeArray(TableLargeArray&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&a_value_.value, std::move(other.a_value_.value));
+  }
+}
+
+TableLargeArray::~TableLargeArray() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&a_value_.value);
+  }
+}
+
+TableLargeArray& TableLargeArray::operator=(TableLargeArray&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      a_value_.value = std::move(other.a_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&a_value_.value, std::move(other.a_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&a_value_.value);
+  }
+  return *this;
+}
+
+bool TableLargeArray::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void TableLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<::std::array<uint32_t, 100>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &a_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 100>, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void TableLargeArray::Decode(::fidl::Decoder* _decoder, TableLargeArray* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_a(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_a();
+    }
+  } else {
+    goto done_1;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_a();
+  return;
+}
+
+zx_status_t TableLargeArray::Clone(TableLargeArray* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_a();
+  }
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 const fidl_type_t* UnionSmallArray::FidlType = &test_arrays_UnionSmallArrayTable;
 
@@ -307,284 +585,6 @@ void UnionLargeArray::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
     }
   }
-}
-
-extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
-const fidl_type_t* TableSmallArray::FidlType = &test_arrays_TableSmallArrayTable;
-
-TableSmallArray::TableSmallArray() {}
-
-TableSmallArray::TableSmallArray(TableSmallArray&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&a_value_.value, std::move(other.a_value_.value));
-  }
-}
-
-TableSmallArray::~TableSmallArray() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&a_value_.value);
-  }
-}
-
-TableSmallArray& TableSmallArray::operator=(TableSmallArray&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      a_value_.value = std::move(other.a_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value, std::move(other.a_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&a_value_.value);
-  }
-  return *this;
-}
-
-bool TableSmallArray::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void TableSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<::std::array<uint32_t, 2>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &a_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 2>, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void TableSmallArray::Decode(::fidl::Decoder* _decoder, TableSmallArray* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_a(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_a();
-    }
-  } else {
-    goto done_1;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_a();
-  return;
-}
-
-zx_status_t TableSmallArray::Clone(TableSmallArray* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_a();
-  }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
-const fidl_type_t* TableLargeArray::FidlType = &test_arrays_TableLargeArrayTable;
-
-TableLargeArray::TableLargeArray() {}
-
-TableLargeArray::TableLargeArray(TableLargeArray&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&a_value_.value, std::move(other.a_value_.value));
-  }
-}
-
-TableLargeArray::~TableLargeArray() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&a_value_.value);
-  }
-}
-
-TableLargeArray& TableLargeArray::operator=(TableLargeArray&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      a_value_.value = std::move(other.a_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&a_value_.value, std::move(other.a_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&a_value_.value);
-  }
-  return *this;
-}
-
-bool TableLargeArray::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void TableLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<::std::array<uint32_t, 100>>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &a_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 100>, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void TableLargeArray::Decode(::fidl::Decoder* _decoder, TableLargeArray* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_a(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_a();
-    }
-  } else {
-    goto done_1;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_a();
-  return;
-}
-
-zx_status_t TableLargeArray::Clone(TableLargeArray* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(a_value_.value, result->mutable_a());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_a();
-  }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
-const fidl_type_t* StructSmallArray::FidlType = &test_arrays_StructSmallArrayTable;
-
-void StructSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructSmallArray>::value) {
-    memcpy(_encoder->template GetPtr<StructSmallArray>(_offset), this, sizeof(StructSmallArray));
-  } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-  }
-}
-
-void StructSmallArray::Decode(::fidl::Decoder* _decoder, StructSmallArray* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructSmallArray>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructSmallArray>(_offset), sizeof(StructSmallArray));
-  } else {
-    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
-  }
-}
-
-zx_status_t StructSmallArray::Clone(StructSmallArray* _result) const {
-  zx_status_t _status = ::fidl::Clone(a, &_result->a);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
-const fidl_type_t* StructLargeArray::FidlType = &test_arrays_StructLargeArrayTable;
-
-void StructLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructLargeArray>::value) {
-    memcpy(_encoder->template GetPtr<StructLargeArray>(_offset), this, sizeof(StructLargeArray));
-  } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-  }
-}
-
-void StructLargeArray::Decode(::fidl::Decoder* _decoder, StructLargeArray* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructLargeArray>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructLargeArray>(_offset), sizeof(StructLargeArray));
-  } else {
-    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
-  }
-}
-
-zx_status_t StructLargeArray::Clone(StructLargeArray* _result) const {
-  zx_status_t _status = ::fidl::Clone(a, &_result->a);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
 }
 
 //

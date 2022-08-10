@@ -2,14 +2,14 @@
 
 #include <fidl/test.placementofattributes/cpp/natural_types.h>
 
-::test_placementofattributes::ExampleStruct::Storage_ test_placementofattributes::ExampleStruct::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.member)};
-}
-
 ::test_placementofattributes::ExampleProtocolMethodRequest::Storage_ test_placementofattributes::ExampleProtocolMethodRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.arg)};
+}
+
+::test_placementofattributes::ExampleStruct::Storage_ test_placementofattributes::ExampleStruct::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.member)};
 }
 
 ::test_placementofattributes::ExampleTable::Storage_ test_placementofattributes::ExampleTable::CloneStorage_() const {
@@ -17,7 +17,7 @@
       ::fidl::internal::NaturalClone(storage_.member)};
 }
 
-std::shared_ptr<::test_placementofattributes::ExampleXUnion::Storage_> test_placementofattributes::ExampleXUnion::CloneStorage_() const {
+std::shared_ptr<::test_placementofattributes::ExampleUnion::Storage_> test_placementofattributes::ExampleUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:
@@ -29,7 +29,7 @@ std::shared_ptr<::test_placementofattributes::ExampleXUnion::Storage_> test_plac
   }
 }
 
-std::shared_ptr<::test_placementofattributes::ExampleUnion::Storage_> test_placementofattributes::ExampleUnion::CloneStorage_() const {
+std::shared_ptr<::test_placementofattributes::ExampleXUnion::Storage_> test_placementofattributes::ExampleXUnion::CloneStorage_() const {
   const Storage_& storage = *storage_;
   switch (storage_->index()) {
     case 1:

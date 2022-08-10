@@ -9,6 +9,33 @@
 //
 namespace test {
 namespace errorsyntax {
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+const fidl_type_t* ExampleUseOfErrorSyntaxCallWhichMayFailRequest::FidlType = &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
+void ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                            cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value) {
+    memcpy(_encoder->template GetPtr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(_offset), this, sizeof(ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
+  } else {
+    ::fidl::Encode(_encoder, &s, _offset + 0);
+  }
+}
+
+void ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Decode(::fidl::Decoder* _decoder, ExampleUseOfErrorSyntaxCallWhichMayFailRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(_offset), sizeof(ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
+  }
+}
+
+zx_status_t ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Clone(ExampleUseOfErrorSyntaxCallWhichMayFailRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(s, &_result->s);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 const fidl_type_t* ExampleUseOfErrorSyntax_CallWhichMayFail_Response::FidlType = &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
@@ -259,33 +286,6 @@ void ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Decode(::fidl::Decoder*
 
 zx_status_t ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Clone(ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(result, &_result->result);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-const fidl_type_t* ExampleUseOfErrorSyntaxCallWhichMayFailRequest::FidlType = &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-
-void ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                                            cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value) {
-    memcpy(_encoder->template GetPtr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(_offset), this, sizeof(ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
-  } else {
-    ::fidl::Encode(_encoder, &s, _offset + 0);
-  }
-}
-
-void ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Decode(::fidl::Decoder* _decoder, ExampleUseOfErrorSyntaxCallWhichMayFailRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(_offset), sizeof(ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
-  } else {
-    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
-  }
-}
-
-zx_status_t ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Clone(ExampleUseOfErrorSyntaxCallWhichMayFailRequest* _result) const {
-  zx_status_t _status = ::fidl::Clone(s, &_result->s);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;

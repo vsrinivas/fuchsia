@@ -5,93 +5,12 @@
 namespace fidl {
 namespace internal {
 
-::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToNatural(::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary src) {
-  return ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
 }
-::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary src) {
-  return ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary{
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest{
       .a = WireNaturalConversionTraits<bool, bool>::ToWire(arena, std::move(src.a())),
-  };
-}
-
-::test_bindingsdenylist::OnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary, ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::ToNatural(::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary src) {
-  return ::test_bindingsdenylist::OnlyAppearsInImportingLibrary(WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToNatural(std::move(src.member_only_appears_in_importing_library)));
-}
-::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary, ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::OnlyAppearsInImportingLibrary src) {
-  return ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary{
-      .member_only_appears_in_importing_library = WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToWire(arena, std::move(src.member_only_appears_in_importing_library())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse{
-      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToNatural(std::move(src.result)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse{
-      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToWire(arena, std::move(src.result())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse{
-      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToNatural(std::move(src.result)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse{
-      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToWire(arena, std::move(src.result())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse{
-      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToNatural(std::move(src.result)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse{
-      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToWire(arena, std::move(src.result())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse{
-      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
-  };
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToNatural(std::move(src.result)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse{
-      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToWire(arena, std::move(src.result())),
   };
 }
 
@@ -113,21 +32,30 @@ namespace internal {
   };
 }
 
-::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
 }
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest{
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest{
       .a = WireNaturalConversionTraits<bool, bool>::ToWire(arena, std::move(src.a())),
   };
 }
 
-::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
 }
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest{
-      .a = WireNaturalConversionTraits<bool, bool>::ToWire(arena, std::move(src.a())),
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse{
+      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToNatural(std::move(src.result)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse{
+      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToWire(arena, std::move(src.result())),
   };
 }
 
@@ -140,21 +68,93 @@ namespace internal {
   };
 }
 
-::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
 }
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest{
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse{
+      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToNatural(std::move(src.result)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse{
+      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToWire(arena, std::move(src.result())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest{
       .a = WireNaturalConversionTraits<bool, bool>::ToWire(arena, std::move(src.a())),
   };
 }
 
-::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest src) {
-  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
 }
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest src) {
-  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest{
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse{
+      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToNatural(std::move(src.result)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse{
+      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToWire(arena, std::move(src.result())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest{
       .a = WireNaturalConversionTraits<bool, bool>::ToWire(arena, std::move(src.a())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse{
+      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
+  };
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse src) {
+  return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToNatural(std::move(src.result)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse src) {
+  return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse{
+      .result = WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToWire(arena, std::move(src.result())),
+  };
+}
+
+::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToNatural(::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary src) {
+  return ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary(WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.a)));
+}
+::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary src) {
+  return ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary{
+      .a = WireNaturalConversionTraits<bool, bool>::ToWire(arena, std::move(src.a())),
+  };
+}
+
+::test_bindingsdenylist::OnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary, ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::ToNatural(::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary src) {
+  return ::test_bindingsdenylist::OnlyAppearsInImportingLibrary(WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToNatural(std::move(src.member_only_appears_in_importing_library)));
+}
+::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary WireNaturalConversionTraits<::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary, ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::OnlyAppearsInImportingLibrary src) {
+  return ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary{
+      .member_only_appears_in_importing_library = WireNaturalConversionTraits<::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary, ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>::ToWire(arena, std::move(src.member_only_appears_in_importing_library())),
   };
 }
 
@@ -186,150 +186,6 @@ std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp> WireNaturalConversionTraits<
     return ::test_bindingsdenylist::wire::OnlyLlcpp();
   }
   return WireNaturalConversionTraits<::test_bindingsdenylist::wire::OnlyLlcpp, ::test_bindingsdenylist::OnlyLlcpp>::ToWire(arena, std::move(*src));
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToNatural(std::move(src.response())));
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
-    default:
-      ZX_PANIC("unknown union tag in strict union");
-  }
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToWire(arena, std::move(src.response().value())));
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
-  }
-}
-
-std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToNatural(std::move(src)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> src) {
-  if (!src) {
-    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult();
-  }
-  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToWire(arena, std::move(*src));
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kResponse:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToNatural(std::move(src.response())));
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kErr:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
-    default:
-      ZX_PANIC("unknown union tag in strict union");
-  }
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::Tag::kResponse:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToWire(arena, std::move(src.response().value())));
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::Tag::kErr:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
-  }
-}
-
-std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToNatural(std::move(src)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> src) {
-  if (!src) {
-    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult();
-  }
-  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToWire(arena, std::move(*src));
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToNatural(std::move(src.response())));
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
-    default:
-      ZX_PANIC("unknown union tag in strict union");
-  }
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToWire(arena, std::move(src.response().value())));
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
-  }
-}
-
-std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToNatural(std::move(src)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> src) {
-  if (!src) {
-    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult();
-  }
-  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToWire(arena, std::move(*src));
-}
-
-::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kResponse:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToNatural(std::move(src.response())));
-    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kErr:
-      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
-    default:
-      ZX_PANIC("unknown union tag in strict union");
-  }
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult src) {
-  switch (src.Which()) {
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::Tag::kResponse:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::WithResponse(
-          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToWire(arena, std::move(src.response().value())));
-    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::Tag::kErr:
-      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::WithErr(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
-  }
-}
-
-std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToNatural(std::move(src)));
-}
-::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> src) {
-  if (!src) {
-    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult();
-  }
-  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToWire(arena, std::move(*src));
 }
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult src) {
@@ -368,21 +224,151 @@ std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> Wire
   return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>::ToWire(arena, std::move(*src));
 }
 
+::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kResponse:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToNatural(std::move(src.response())));
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::Tag::kErr:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::Tag::kResponse:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::ToWire(arena, std::move(src.response().value())));
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult::Tag::kErr:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
+  }
+}
+
+std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToNatural(std::move(src)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> src) {
+  if (!src) {
+    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult();
+  }
+  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>::ToWire(arena, std::move(*src));
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToNatural(std::move(src.response())));
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kResponse:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::ToWire(arena, std::move(src.response().value())));
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult::Tag::kErr:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
+  }
+}
+
+std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToNatural(std::move(src)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> src) {
+  if (!src) {
+    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult();
+  }
+  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>::ToWire(arena, std::move(*src));
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kResponse:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToNatural(std::move(src.response())));
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::Tag::kErr:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::Tag::kResponse:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::ToWire(arena, std::move(src.response().value())));
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult::Tag::kErr:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
+  }
+}
+
+std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToNatural(std::move(src)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> src) {
+  if (!src) {
+    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult();
+  }
+  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>::ToWire(arena, std::move(*src));
+}
+
+::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToNatural(std::move(src.response())));
+    case ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr:
+      return ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.err())));
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToWire(fidl::AnyArena& arena, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult src) {
+  switch (src.Which()) {
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::Tag::kResponse:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::WithResponse(
+          WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::ToWire(arena, std::move(src.response().value())));
+    case ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult::Tag::kErr:
+      return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::WithErr(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.err().value())));
+  }
+}
+
+std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>>::ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>(WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToNatural(std::move(src)));
+}
+::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> src) {
+  if (!src) {
+    return ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult();
+  }
+  return WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>::ToWire(arena, std::move(*src));
+}
+
 #ifdef __Fuchsia__
-
-::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src) {
-  return ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
-}
-::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src) {
-  return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
-}
-
-::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
-  return ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
-}
-::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
-  return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
-}
 
 ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> src) {
   return ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(
@@ -472,6 +458,20 @@ std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> Wire
 ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> WireNaturalConversionTraits<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> src) {
   return ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(
       WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse, ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>>::ToWire(arena, std::move(src)));
+}
+
+::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src) {
+  return ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
+}
+::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src) {
+  return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
+}
+
+::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
+  return ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
+}
+::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
+  return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
 }
 #endif  // __Fuchsia__
 }  // namespace internal

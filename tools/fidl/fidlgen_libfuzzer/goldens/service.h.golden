@@ -13,9 +13,9 @@
 
 namespace fuzzing {
 
-using SingleMemberService = ::test::service::SingleMemberService;
-using MultiHomogeneousMemberService = ::test::service::MultiHomogeneousMemberService;
-using MultiHeterogeneousMemberService = ::test::service::MultiHeterogeneousMemberService;
 using EmptyService = ::test::service::EmptyService;
+using SingleMemberService = ::test::service::SingleMemberService;
+using MultiHeterogeneousMemberService = ::test::service::MultiHeterogeneousMemberService;
+using MultiHomogeneousMemberService = ::test::service::MultiHomogeneousMemberService;
 
 }  // namespace fuzzing

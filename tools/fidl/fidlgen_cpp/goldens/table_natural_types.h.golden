@@ -16,66 +16,61 @@
 
 namespace test_table {
 
-class TableWithAttributes;
+class EmptyTable;
 
 class SimpleTable;
-
-class ReverseOrdinalTable;
 
 class OlderSimpleTable;
 
 class NewerSimpleTable;
 
+class ReverseOrdinalTable;
+
+class TableWithAttributes;
+
 class ExtensionTable;
 
 class SixtyFourOrdinalTable;
 
-class EmptyTable;
+extern "C" const fidl_type_t test_table_EmptyTableTable;
 
-extern "C" const fidl_type_t test_table_TableWithAttributesTable;
-
-class TableWithAttributes {
+class EmptyTable {
  private:
   struct Storage_;
 
  public:
-  TableWithAttributes(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  TableWithAttributes() noexcept = default;
-  TableWithAttributes(TableWithAttributes&&) noexcept = default;
-  TableWithAttributes& operator=(TableWithAttributes&&) noexcept = default;
-  TableWithAttributes(const TableWithAttributes& other) noexcept : TableWithAttributes(other.CloneStorage_()) {}
-  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept {
+  EmptyTable(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  EmptyTable() noexcept = default;
+  EmptyTable(EmptyTable&&) noexcept = default;
+  EmptyTable& operator=(EmptyTable&&) noexcept = default;
+  EmptyTable(const EmptyTable& other) noexcept : EmptyTable(other.CloneStorage_()) {}
+  EmptyTable& operator=(const EmptyTable& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
-  bool operator==(const TableWithAttributes& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes>::Equal(this, &other);
+  bool operator==(const EmptyTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable>::Equal(this, &other);
   }
-  bool operator!=(const TableWithAttributes& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes>::Equal(this, &other);
+  bool operator!=(const EmptyTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable>::Equal(this, &other);
   }
 
   bool IsEmpty() const {
-    return !(storage_.x.has_value());
+    return true;
   }
 
-  const std::optional<int64_t>& x() const { return storage_.x; }
-  ::std::optional<int64_t>& x() { return storage_.x; }
-
-  TableWithAttributes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithAttributes(Storage_{}) {}
+  EmptyTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::std::optional<int64_t> x{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
   Storage_ storage_;
   Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes>;
-  friend struct ::fidl::internal::MemberVisitor<::test_table::TableWithAttributes>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-      1, &Storage_::x});
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::EmptyTable>;
+  static constexpr auto kMembers = std::make_tuple();
 };
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
@@ -127,61 +122,6 @@ class SimpleTable {
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        1, &Storage_::x},
                                                    ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{5, &Storage_::y});
-};
-
-extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
-
-class ReverseOrdinalTable {
- private:
-  struct Storage_;
-
- public:
-  ReverseOrdinalTable(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ReverseOrdinalTable() noexcept = default;
-  ReverseOrdinalTable(ReverseOrdinalTable&&) noexcept = default;
-  ReverseOrdinalTable& operator=(ReverseOrdinalTable&&) noexcept = default;
-  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept : ReverseOrdinalTable(other.CloneStorage_()) {}
-  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const ReverseOrdinalTable& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable>::Equal(this, &other);
-  }
-  bool operator!=(const ReverseOrdinalTable& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return !(storage_.z.has_value() || storage_.y.has_value() || storage_.x.has_value());
-  }
-
-  const std::optional<int64_t>& z() const { return storage_.z; }
-  ::std::optional<int64_t>& z() { return storage_.z; }
-
-  const std::optional<int64_t>& y() const { return storage_.y; }
-  ::std::optional<int64_t>& y() { return storage_.y; }
-
-  const std::optional<int64_t>& x() const { return storage_.x; }
-  ::std::optional<int64_t>& x() { return storage_.x; }
-
-  ReverseOrdinalTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ReverseOrdinalTable(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-    ::std::optional<int64_t> z{};
-    ::std::optional<int64_t> y{};
-    ::std::optional<int64_t> x{};
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable>;
-  friend struct ::fidl::internal::MemberVisitor<::test_table::ReverseOrdinalTable>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       1, &Storage_::z},
-                                                   ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{2, &Storage_::y}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{3, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
@@ -283,6 +223,107 @@ class NewerSimpleTable {
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        1, &Storage_::x},
                                                    ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{5, &Storage_::y}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{6, &Storage_::z});
+};
+
+extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
+
+class ReverseOrdinalTable {
+ private:
+  struct Storage_;
+
+ public:
+  ReverseOrdinalTable(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ReverseOrdinalTable() noexcept = default;
+  ReverseOrdinalTable(ReverseOrdinalTable&&) noexcept = default;
+  ReverseOrdinalTable& operator=(ReverseOrdinalTable&&) noexcept = default;
+  ReverseOrdinalTable(const ReverseOrdinalTable& other) noexcept : ReverseOrdinalTable(other.CloneStorage_()) {}
+  ReverseOrdinalTable& operator=(const ReverseOrdinalTable& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const ReverseOrdinalTable& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable>::Equal(this, &other);
+  }
+  bool operator!=(const ReverseOrdinalTable& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.z.has_value() || storage_.y.has_value() || storage_.x.has_value());
+  }
+
+  const std::optional<int64_t>& z() const { return storage_.z; }
+  ::std::optional<int64_t>& z() { return storage_.z; }
+
+  const std::optional<int64_t>& y() const { return storage_.y; }
+  ::std::optional<int64_t>& y() { return storage_.y; }
+
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
+
+  ReverseOrdinalTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ReverseOrdinalTable(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<int64_t> z{};
+    ::std::optional<int64_t> y{};
+    ::std::optional<int64_t> x{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::ReverseOrdinalTable>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       1, &Storage_::z},
+                                                   ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{2, &Storage_::y}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{3, &Storage_::x});
+};
+
+extern "C" const fidl_type_t test_table_TableWithAttributesTable;
+
+class TableWithAttributes {
+ private:
+  struct Storage_;
+
+ public:
+  TableWithAttributes(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  TableWithAttributes() noexcept = default;
+  TableWithAttributes(TableWithAttributes&&) noexcept = default;
+  TableWithAttributes& operator=(TableWithAttributes&&) noexcept = default;
+  TableWithAttributes(const TableWithAttributes& other) noexcept : TableWithAttributes(other.CloneStorage_()) {}
+  TableWithAttributes& operator=(const TableWithAttributes& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+  bool operator==(const TableWithAttributes& other) const noexcept {
+    return ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes>::Equal(this, &other);
+  }
+  bool operator!=(const TableWithAttributes& other) const noexcept {
+    return !::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes>::Equal(this, &other);
+  }
+
+  bool IsEmpty() const {
+    return !(storage_.x.has_value());
+  }
+
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
+
+  TableWithAttributes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithAttributes(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::std::optional<int64_t> x{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes>;
+  friend struct ::fidl::internal::MemberVisitor<::test_table::TableWithAttributes>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+      1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
@@ -625,57 +666,16 @@ class SixtyFourOrdinalTable {
                                                    ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{2, &Storage_::v2}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{3, &Storage_::v3}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{4, &Storage_::v4}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{5, &Storage_::v5}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{6, &Storage_::v6}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{7, &Storage_::v7}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{8, &Storage_::v8}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{9, &Storage_::v9}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{10, &Storage_::v10}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{11, &Storage_::v11}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{12, &Storage_::v12}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{13, &Storage_::v13}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{14, &Storage_::v14}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{15, &Storage_::v15}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{16, &Storage_::v16}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{17, &Storage_::v17}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{18, &Storage_::v18}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{19, &Storage_::v19}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{20, &Storage_::v20}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{21, &Storage_::v21}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{22, &Storage_::v22}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{23, &Storage_::v23}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{24, &Storage_::v24}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{25, &Storage_::v25}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{26, &Storage_::v26}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{27, &Storage_::v27}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{28, &Storage_::v28}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{29, &Storage_::v29}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{30, &Storage_::v30}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{31, &Storage_::v31}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{32, &Storage_::v32}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{33, &Storage_::v33}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{34, &Storage_::v34}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{35, &Storage_::v35}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{36, &Storage_::v36}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{37, &Storage_::v37}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{38, &Storage_::v38}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{39, &Storage_::v39}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{40, &Storage_::v40}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{41, &Storage_::v41}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{42, &Storage_::v42}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{43, &Storage_::v43}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{44, &Storage_::v44}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{45, &Storage_::v45}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{46, &Storage_::v46}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{47, &Storage_::v47}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{48, &Storage_::v48}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{49, &Storage_::v49}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{50, &Storage_::v50}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{51, &Storage_::v51}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{52, &Storage_::v52}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{53, &Storage_::v53}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{54, &Storage_::v54}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{55, &Storage_::v55}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{56, &Storage_::v56}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{57, &Storage_::v57}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{58, &Storage_::v58}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{59, &Storage_::v59}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{60, &Storage_::v60}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{61, &Storage_::v61}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{62, &Storage_::v62}, ::fidl::internal::NaturalTableMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{63, &Storage_::v63}, ::fidl::internal::NaturalTableMember<Storage_, ::test_table::ExtensionTable, fidl::internal::NaturalCodingConstraintEmpty>{64, &Storage_::v64});
 };
 
-extern "C" const fidl_type_t test_table_EmptyTableTable;
-
-class EmptyTable {
- private:
-  struct Storage_;
-
- public:
-  EmptyTable(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  EmptyTable() noexcept = default;
-  EmptyTable(EmptyTable&&) noexcept = default;
-  EmptyTable& operator=(EmptyTable&&) noexcept = default;
-  EmptyTable(const EmptyTable& other) noexcept : EmptyTable(other.CloneStorage_()) {}
-  EmptyTable& operator=(const EmptyTable& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-  bool operator==(const EmptyTable& other) const noexcept {
-    return ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable>::Equal(this, &other);
-  }
-  bool operator!=(const EmptyTable& other) const noexcept {
-    return !::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable>::Equal(this, &other);
-  }
-
-  bool IsEmpty() const {
-    return true;
-  }
-
-  EmptyTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyTable(Storage_{}) {}
-
- private:
-  struct Storage_ final {
-  };
-
-  // TODO(https://fxbug.dev/91252): Box the storage.
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-  friend struct ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable>;
-  friend struct ::fidl::internal::MemberVisitor<::test_table::EmptyTable>;
-  static constexpr auto kMembers = std::make_tuple();
-};
-
 }  // namespace test_table
 namespace fidl {
 
-extern "C" const fidl_type_t test_table_TableWithAttributesTable;
+extern "C" const fidl_type_t test_table_EmptyTableTable;
 
 template <>
-struct IsFidlType<::test_table::TableWithAttributes> : public std::true_type {};
+struct IsFidlType<::test_table::EmptyTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::TableWithAttributes, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes> {};
+struct internal::NaturalCodingTraits<::test_table::EmptyTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable> {};
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
 
@@ -684,14 +684,6 @@ struct IsFidlType<::test_table::SimpleTable> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_table::SimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::SimpleTable> {};
-
-extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
-
-template <>
-struct IsFidlType<::test_table::ReverseOrdinalTable> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_table::ReverseOrdinalTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable> {};
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
 
@@ -709,6 +701,22 @@ struct IsFidlType<::test_table::NewerSimpleTable> : public std::true_type {};
 template <>
 struct internal::NaturalCodingTraits<::test_table::NewerSimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::NewerSimpleTable> {};
 
+extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
+
+template <>
+struct IsFidlType<::test_table::ReverseOrdinalTable> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_table::ReverseOrdinalTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable> {};
+
+extern "C" const fidl_type_t test_table_TableWithAttributesTable;
+
+template <>
+struct IsFidlType<::test_table::TableWithAttributes> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_table::TableWithAttributes, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes> {};
+
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
 
 template <>
@@ -724,13 +732,5 @@ struct IsFidlType<::test_table::SixtyFourOrdinalTable> : public std::true_type {
 
 template <>
 struct internal::NaturalCodingTraits<::test_table::SixtyFourOrdinalTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::SixtyFourOrdinalTable> {};
-
-extern "C" const fidl_type_t test_table_EmptyTableTable;
-
-template <>
-struct IsFidlType<::test_table::EmptyTable> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_table::EmptyTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable> {};
 
 }  // namespace fidl

@@ -63,27 +63,27 @@ zx_status_t EmptyProtocolSendRequest::Clone(EmptyProtocolSendRequest* _result) c
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
-const fidl_type_t* EmptyProtocolSendAndReceiveTopResponse::FidlType = &test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+const fidl_type_t* EmptyProtocolReceiveRequest::FidlType = &test_emptystruct_EmptyProtocolReceiveRequestTable;
 
-void EmptyProtocolSendAndReceiveTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(_offset), this, sizeof(EmptyProtocolSendAndReceiveTopResponse));
+void EmptyProtocolReceiveRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolReceiveRequest>::value) {
+    memcpy(_encoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset), this, sizeof(EmptyProtocolReceiveRequest));
   } else {
     ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 
-void EmptyProtocolSendAndReceiveTopResponse::Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(_offset), sizeof(EmptyProtocolSendAndReceiveTopResponse));
+void EmptyProtocolReceiveRequest::Decode(::fidl::Decoder* _decoder, EmptyProtocolReceiveRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolReceiveRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset), sizeof(EmptyProtocolReceiveRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->e, _offset + 0);
   }
 }
 
-zx_status_t EmptyProtocolSendAndReceiveTopResponse::Clone(EmptyProtocolSendAndReceiveTopResponse* _result) const {
+zx_status_t EmptyProtocolReceiveRequest::Clone(EmptyProtocolReceiveRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(e, &_result->e);
   if (_status != ZX_OK)
     return _status;
@@ -117,27 +117,27 @@ zx_status_t EmptyProtocolSendAndReceiveRequest::Clone(EmptyProtocolSendAndReceiv
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
-const fidl_type_t* EmptyProtocolReceiveRequest::FidlType = &test_emptystruct_EmptyProtocolReceiveRequestTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+const fidl_type_t* EmptyProtocolSendAndReceiveTopResponse::FidlType = &test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
-void EmptyProtocolReceiveRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<EmptyProtocolReceiveRequest>::value) {
-    memcpy(_encoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset), this, sizeof(EmptyProtocolReceiveRequest));
+void EmptyProtocolSendAndReceiveTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(_offset), this, sizeof(EmptyProtocolSendAndReceiveTopResponse));
   } else {
     ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 
-void EmptyProtocolReceiveRequest::Decode(::fidl::Decoder* _decoder, EmptyProtocolReceiveRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<EmptyProtocolReceiveRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset), sizeof(EmptyProtocolReceiveRequest));
+void EmptyProtocolSendAndReceiveTopResponse::Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(_offset), sizeof(EmptyProtocolSendAndReceiveTopResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->e, _offset + 0);
   }
 }
 
-zx_status_t EmptyProtocolReceiveRequest::Clone(EmptyProtocolReceiveRequest* _result) const {
+zx_status_t EmptyProtocolSendAndReceiveTopResponse::Clone(EmptyProtocolSendAndReceiveTopResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(e, &_result->e);
   if (_status != ZX_OK)
     return _status;

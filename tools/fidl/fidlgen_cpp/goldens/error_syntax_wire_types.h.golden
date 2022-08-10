@@ -26,11 +26,11 @@
 namespace test_errorsyntax {
 
 namespace wire {
+struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
-
-struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult;
 
@@ -113,6 +113,12 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
   ::fidl::UntypedEnvelope envelope_;
 };
 
+extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
+struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
+  ::fidl::StringView s = {};
+};
+
 extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
@@ -127,15 +133,60 @@ struct ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result = {};
 };
 
-extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-
-struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
-  ::fidl::StringView s = {};
-};
-
 }  // namespace wire
 }  // namespace test_errorsyntax
 namespace fidl {
+
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static constexpr const fidl_type_t* kType = &::test_errorsyntax::wire::test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
+template <>
+struct IsStruct<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>);
+static_assert(offsetof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, s) == 0);
+static_assert(sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest) == TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 16;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
+    } else {
+      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Encode(encoder, &value->s, position + 0, recursion_depth);
+    }
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+    }
+  }
+};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
@@ -234,57 +285,6 @@ struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOf
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
       internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-    }
-  }
-};
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
-struct DeprecatedCTypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  static constexpr const fidl_type_t* kType = &::test_errorsyntax::wire::test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
-};
-
-template <>
-struct TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-};
-
-template <>
-struct IsFidlType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
-template <>
-struct IsStruct<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>);
-static_assert(offsetof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, s) == 0);
-static_assert(sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest) == TypeTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>());
-  static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest));
-    } else {
-      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Encode(encoder, &value->s, position + 0, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
     }
   }

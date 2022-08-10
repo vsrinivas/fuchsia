@@ -9,6 +9,318 @@
 //
 namespace test {
 namespace placementofattributes {
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
+const fidl_type_t* ExampleProtocolMethodRequest::FidlType = &test_placementofattributes_ExampleProtocolMethodRequestTable;
+
+void ExampleProtocolMethodRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
+    memcpy(_encoder->template GetPtr<ExampleProtocolMethodRequest>(_offset), this, sizeof(ExampleProtocolMethodRequest));
+  } else {
+    ::fidl::Encode(_encoder, &arg, _offset + 0);
+  }
+}
+
+void ExampleProtocolMethodRequest::Decode(::fidl::Decoder* _decoder, ExampleProtocolMethodRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleProtocolMethodRequest>(_offset), sizeof(ExampleProtocolMethodRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->arg, _offset + 0);
+  }
+}
+
+zx_status_t ExampleProtocolMethodRequest::Clone(ExampleProtocolMethodRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(arg, &_result->arg);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
+const fidl_type_t* ExampleStruct::FidlType = &test_placementofattributes_ExampleStructTable;
+
+void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
+    memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this, sizeof(ExampleStruct));
+  } else {
+    ::fidl::Encode(_encoder, &member, _offset + 0);
+  }
+}
+
+void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleStruct>(_offset), sizeof(ExampleStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->member, _offset + 0);
+  }
+}
+
+zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
+  zx_status_t _status = ::fidl::Clone(member, &_result->member);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
+const fidl_type_t* ExampleTable::FidlType = &test_placementofattributes_ExampleTableTable;
+
+ExampleTable::ExampleTable() {}
+
+ExampleTable::ExampleTable(ExampleTable&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&member_value_.value, std::move(other.member_value_.value));
+  }
+}
+
+ExampleTable::~ExampleTable() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&member_value_.value);
+  }
+}
+
+ExampleTable& ExampleTable::operator=(ExampleTable&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      member_value_.value = std::move(other.member_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&member_value_.value, std::move(other.member_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&member_value_.value);
+  }
+  return *this;
+}
+
+bool ExampleTable::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void ExampleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &member_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &member_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void ExampleTable::Decode(::fidl::Decoder* _decoder, ExampleTable* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_member(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_member();
+    }
+  } else {
+    goto done_1;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_member();
+  return;
+}
+
+zx_status_t ExampleTable::Clone(ExampleTable* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(member_value_.value, result->mutable_member());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_member();
+  }
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
+const fidl_type_t* ExampleUnion::FidlType = &test_placementofattributes_ExampleUnionTable;
+
+ExampleUnion::ExampleUnion() {}
+
+ExampleUnion::~ExampleUnion() {
+  Destroy();
+}
+
+ExampleUnion::ExampleUnion(ExampleUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
+      variant_ = std::move(other.variant_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
+      break;
+  }
+}
+
+ExampleUnion& ExampleUnion::operator=(ExampleUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
+        variant_ = std::move(other.variant_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
+        break;
+    }
+  }
+  return *this;
+}
+
+ExampleUnion ExampleUnion::WithVariant(uint32_t&& val) {
+  ExampleUnion result;
+  result.set_variant(std::move(val));
+  return result;
+}
+
+void ExampleUnion::Encode(::fidl::Encoder* encoder, size_t offset,
+                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::test::placementofattributes::ExampleUnion::Tag::kVariant: {
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &variant_, offset + offsetof(fidl_xunion_v2_t, envelope));
+
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
+      }
+
+      ::fidl::Encode(
+          encoder,
+          &variant_,
+          encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ExampleUnion::Decode(::fidl::Decoder* _decoder, ExampleUnion* value, size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 &&
+      xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::test::placementofattributes::ExampleUnion::Tag::kVariant: {
+      ::fidl::Decode(_decoder, &value->variant_, value_offset);
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+}
+
+zx_status_t ExampleUnion::Clone(ExampleUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::test::placementofattributes::ExampleUnion::Tag::Invalid:
+      return ZX_OK;
+    case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
+      return ::fidl::Clone(variant_, &result->variant_);
+    default:
+      return ZX_OK;
+  }
+}
+
+ExampleUnion& ExampleUnion::set_variant(uint32_t value) {
+  EnsureStorageInitialized(::test::placementofattributes::ExampleUnion::Tag::kVariant);
+  variant_ = std::move(value);
+  return *this;
+}
+
+void ExampleUnion::Destroy() {
+  switch (tag_) {
+    case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
+      break;
+
+    default:
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid);
+}
+
+void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
+        break;
+      case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
+        new (&variant_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
 extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 const fidl_type_t* ExampleXUnion::FidlType = &test_placementofattributes_ExampleXUnionTable;
 
@@ -179,317 +491,6 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
     }
   }
-}
-
-extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
-const fidl_type_t* ExampleUnion::FidlType = &test_placementofattributes_ExampleUnionTable;
-
-ExampleUnion::ExampleUnion() {}
-
-ExampleUnion::~ExampleUnion() {
-  Destroy();
-}
-
-ExampleUnion::ExampleUnion(ExampleUnion&& other) : tag_(other.tag_) {
-  switch (tag_) {
-    case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
-      variant_ = std::move(other.variant_);
-      break;
-    case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
-      break;
-  }
-}
-
-ExampleUnion& ExampleUnion::operator=(ExampleUnion&& other) {
-  if (this != &other) {
-    Destroy();
-    tag_ = other.tag_;
-    switch (tag_) {
-      case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
-        variant_ = std::move(other.variant_);
-        break;
-      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
-        break;
-    }
-  }
-  return *this;
-}
-
-ExampleUnion ExampleUnion::WithVariant(uint32_t&& val) {
-  ExampleUnion result;
-  result.set_variant(std::move(val));
-  return result;
-}
-
-void ExampleUnion::Encode(::fidl::Encoder* encoder, size_t offset,
-                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  const size_t length_before = encoder->CurrentLength();
-  const size_t handles_before = encoder->CurrentHandleCount();
-
-  switch (Which()) {
-    case ::test::placementofattributes::ExampleUnion::Tag::kVariant: {
-      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        ::fidl::Encode(encoder, &variant_, offset + offsetof(fidl_xunion_v2_t, envelope));
-
-        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-        xunion->tag = tag_;
-        xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        break;
-      }
-
-      ::fidl::Encode(
-          encoder,
-          &variant_,
-          encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
-
-      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-      xunion->tag = tag_;
-      xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-      xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
-      xunion->envelope.flags = 0;
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-void ExampleUnion::Decode(::fidl::Decoder* _decoder, ExampleUnion* value, size_t offset) {
-  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
-
-  if (xunion->envelope.num_bytes == 0 &&
-      xunion->envelope.num_handles == 0 &&
-      xunion->envelope.flags == 0) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid));
-    return;
-  }
-
-  value->EnsureStorageInitialized(xunion->tag);
-
-  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
-
-  switch (value->tag_) {
-    case ::test::placementofattributes::ExampleUnion::Tag::kVariant: {
-      ::fidl::Decode(_decoder, &value->variant_, value_offset);
-      break;
-    }
-    default: {
-      break;
-    }
-  }
-}
-
-zx_status_t ExampleUnion::Clone(ExampleUnion* result) const {
-  result->Destroy();
-  result->tag_ = tag_;
-  switch (tag_) {
-    case ::test::placementofattributes::ExampleUnion::Tag::Invalid:
-      return ZX_OK;
-    case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
-      return ::fidl::Clone(variant_, &result->variant_);
-    default:
-      return ZX_OK;
-  }
-}
-
-ExampleUnion& ExampleUnion::set_variant(uint32_t value) {
-  EnsureStorageInitialized(::test::placementofattributes::ExampleUnion::Tag::kVariant);
-  variant_ = std::move(value);
-  return *this;
-}
-
-void ExampleUnion::Destroy() {
-  switch (tag_) {
-    case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
-      break;
-
-    default:
-      break;
-  }
-  tag_ = static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid);
-}
-
-void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  if (tag_ != tag) {
-    Destroy();
-    tag_ = tag;
-    switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(::test::placementofattributes::ExampleUnion::Tag::Invalid):
-        break;
-      case ::test::placementofattributes::ExampleUnion::Tag::kVariant:
-        new (&variant_) uint32_t();
-        break;
-      default:
-        break;
-    }
-  }
-}
-
-extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
-const fidl_type_t* ExampleTable::FidlType = &test_placementofattributes_ExampleTableTable;
-
-ExampleTable::ExampleTable() {}
-
-ExampleTable::ExampleTable(ExampleTable&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&member_value_.value, std::move(other.member_value_.value));
-  }
-}
-
-ExampleTable::~ExampleTable() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&member_value_.value);
-  }
-}
-
-ExampleTable& ExampleTable::operator=(ExampleTable&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      member_value_.value = std::move(other.member_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&member_value_.value, std::move(other.member_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&member_value_.value);
-  }
-  return *this;
-}
-
-bool ExampleTable::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void ExampleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &member_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &member_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void ExampleTable::Decode(::fidl::Decoder* _decoder, ExampleTable* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_member(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_member();
-    }
-  } else {
-    goto done_1;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_member();
-  return;
-}
-
-zx_status_t ExampleTable::Clone(ExampleTable* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(member_value_.value, result->mutable_member());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_member();
-  }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
-const fidl_type_t* ExampleStruct::FidlType = &test_placementofattributes_ExampleStructTable;
-
-void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
-    memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this, sizeof(ExampleStruct));
-  } else {
-    ::fidl::Encode(_encoder, &member, _offset + 0);
-  }
-}
-
-void ExampleStruct::Decode(::fidl::Decoder* _decoder, ExampleStruct* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleStruct>(_offset), sizeof(ExampleStruct));
-  } else {
-    ::fidl::Decode(_decoder, &_value->member, _offset + 0);
-  }
-}
-
-zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
-  zx_status_t _status = ::fidl::Clone(member, &_result->member);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
-const fidl_type_t* ExampleProtocolMethodRequest::FidlType = &test_placementofattributes_ExampleProtocolMethodRequestTable;
-
-void ExampleProtocolMethodRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
-    memcpy(_encoder->template GetPtr<ExampleProtocolMethodRequest>(_offset), this, sizeof(ExampleProtocolMethodRequest));
-  } else {
-    ::fidl::Encode(_encoder, &arg, _offset + 0);
-  }
-}
-
-void ExampleProtocolMethodRequest::Decode(::fidl::Decoder* _decoder, ExampleProtocolMethodRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<ExampleProtocolMethodRequest>(_offset), sizeof(ExampleProtocolMethodRequest));
-  } else {
-    ::fidl::Decode(_decoder, &_value->arg, _offset + 0);
-  }
-}
-
-zx_status_t ExampleProtocolMethodRequest::Clone(ExampleProtocolMethodRequest* _result) const {
-  zx_status_t _status = ::fidl::Clone(arg, &_result->arg);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
 }
 
 //

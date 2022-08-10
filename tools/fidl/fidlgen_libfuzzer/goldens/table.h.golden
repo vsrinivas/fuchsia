@@ -13,30 +13,26 @@
 
 namespace fuzzing {
 
-using TableWithAttributes = ::test::table::TableWithAttributes;
+using EmptyTable = ::test::table::EmptyTable;
 using SimpleTable = ::test::table::SimpleTable;
-using ReverseOrdinalTable = ::test::table::ReverseOrdinalTable;
 using OlderSimpleTable = ::test::table::OlderSimpleTable;
 using NewerSimpleTable = ::test::table::NewerSimpleTable;
+using ReverseOrdinalTable = ::test::table::ReverseOrdinalTable;
+using TableWithAttributes = ::test::table::TableWithAttributes;
 using ExtensionTable = ::test::table::ExtensionTable;
 using SixtyFourOrdinalTable = ::test::table::SixtyFourOrdinalTable;
-using EmptyTable = ::test::table::EmptyTable;
 
 template <>
-struct MinSize<TableWithAttributes> {
+struct MinSize<EmptyTable> {
   operator size_t() {
-    return MinSize<int64_t>();
+    return 0;
   }
 };
 template <>
-struct Allocate<TableWithAttributes> {
-  TableWithAttributes operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TableWithAttributes>());
-    TableWithAttributes out;
-    const size_t slack_per_member = (*size - MinSize<TableWithAttributes>()) / 1;
-    size_t out_size;
-    out_size = MinSize<int64_t>() + slack_per_member;
-    out.set_x(Allocate<int64_t>{}(src, &out_size));
+struct Allocate<EmptyTable> {
+  EmptyTable operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<EmptyTable>());
+    EmptyTable out;
     return out;
   }
 };
@@ -57,28 +53,6 @@ struct Allocate<SimpleTable> {
     out.set_x(Allocate<int64_t>{}(src, &out_size));
     out_size = MinSize<int64_t>() + slack_per_member;
     out.set_y(Allocate<int64_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<ReverseOrdinalTable> {
-  operator size_t() {
-    return MinSize<int64_t>() + MinSize<int64_t>() + MinSize<int64_t>();
-  }
-};
-template <>
-struct Allocate<ReverseOrdinalTable> {
-  ReverseOrdinalTable operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ReverseOrdinalTable>());
-    ReverseOrdinalTable out;
-    const size_t slack_per_member = (*size - MinSize<ReverseOrdinalTable>()) / 3;
-    size_t out_size;
-    out_size = MinSize<int64_t>() + slack_per_member;
-    out.set_z(Allocate<int64_t>{}(src, &out_size));
-    out_size = MinSize<int64_t>() + slack_per_member;
-    out.set_y(Allocate<int64_t>{}(src, &out_size));
-    out_size = MinSize<int64_t>() + slack_per_member;
-    out.set_x(Allocate<int64_t>{}(src, &out_size));
     return out;
   }
 };
@@ -119,6 +93,46 @@ struct Allocate<NewerSimpleTable> {
     out.set_y(Allocate<int64_t>{}(src, &out_size));
     out_size = MinSize<int64_t>() + slack_per_member;
     out.set_z(Allocate<int64_t>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<ReverseOrdinalTable> {
+  operator size_t() {
+    return MinSize<int64_t>() + MinSize<int64_t>() + MinSize<int64_t>();
+  }
+};
+template <>
+struct Allocate<ReverseOrdinalTable> {
+  ReverseOrdinalTable operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ReverseOrdinalTable>());
+    ReverseOrdinalTable out;
+    const size_t slack_per_member = (*size - MinSize<ReverseOrdinalTable>()) / 3;
+    size_t out_size;
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.set_z(Allocate<int64_t>{}(src, &out_size));
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.set_y(Allocate<int64_t>{}(src, &out_size));
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.set_x(Allocate<int64_t>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<TableWithAttributes> {
+  operator size_t() {
+    return MinSize<int64_t>();
+  }
+};
+template <>
+struct Allocate<TableWithAttributes> {
+  TableWithAttributes operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TableWithAttributes>());
+    TableWithAttributes out;
+    const size_t slack_per_member = (*size - MinSize<TableWithAttributes>()) / 1;
+    size_t out_size;
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.set_x(Allocate<int64_t>{}(src, &out_size));
     return out;
   }
 };
@@ -277,20 +291,6 @@ struct Allocate<SixtyFourOrdinalTable> {
     out.set_v63(Allocate<int64_t>{}(src, &out_size));
     out_size = MinSize<::test::table::ExtensionTable>() + slack_per_member;
     out.set_v64(Allocate<::test::table::ExtensionTable>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<EmptyTable> {
-  operator size_t() {
-    return 0;
-  }
-};
-template <>
-struct Allocate<EmptyTable> {
-  EmptyTable operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<EmptyTable>());
-    EmptyTable out;
     return out;
   }
 };

@@ -7,24 +7,6 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_service::SecondProtocol> : public ::fidl::WireServer<::test_service::SecondProtocol> {
- public:
-  virtual ~WireTestBase<::test_service::SecondProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-  virtual void MethodOnSecond(
-      MethodOnSecondRequestView request, MethodOnSecondCompleter::Sync& completer) override {
-    NotImplemented_("MethodOnSecond", completer);
-  }
-};
-
-template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_service::SecondProtocol> : public ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> {
- public:
-  virtual ~WireSyncEventHandlerTestBase<::test_service::SecondProtocol>() = default;
-  virtual void NotImplemented_(const std::string& name) = 0;
-};
-
-template <>
 class WireTestBase<::test_service::FirstProtocol> : public ::fidl::WireServer<::test_service::FirstProtocol> {
  public:
   virtual ~WireTestBase<::test_service::FirstProtocol>() = default;
@@ -39,6 +21,24 @@ template <>
 class ::fidl::testing::WireSyncEventHandlerTestBase<::test_service::FirstProtocol> : public ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_service::FirstProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
+class WireTestBase<::test_service::SecondProtocol> : public ::fidl::WireServer<::test_service::SecondProtocol> {
+ public:
+  virtual ~WireTestBase<::test_service::SecondProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void MethodOnSecond(
+      MethodOnSecondRequestView request, MethodOnSecondCompleter::Sync& completer) override {
+    NotImplemented_("MethodOnSecond", completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_service::SecondProtocol> : public ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_service::SecondProtocol>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

@@ -15,13 +15,13 @@ namespace fuzzing {
 
 using UnionSize8Alignment4 = ::test::unionsandwich::UnionSize8Alignment4;
 using SandwichUnionSize8Alignment4 = ::test::unionsandwich::SandwichUnionSize8Alignment4;
-using UnionSize36Alignment4 = ::test::unionsandwich::UnionSize36Alignment4;
-using SandwichUnionSize36Alignment4 = ::test::unionsandwich::SandwichUnionSize36Alignment4;
 using UnionSize12Alignment4 = ::test::unionsandwich::UnionSize12Alignment4;
 using SandwichUnionSize12Alignment4 = ::test::unionsandwich::SandwichUnionSize12Alignment4;
 using StructSize16Alignment8 = ::test::unionsandwich::StructSize16Alignment8;
 using UnionSize24Alignment8 = ::test::unionsandwich::UnionSize24Alignment8;
 using SandwichUnionSize24Alignment8 = ::test::unionsandwich::SandwichUnionSize24Alignment8;
+using UnionSize36Alignment4 = ::test::unionsandwich::UnionSize36Alignment4;
+using SandwichUnionSize36Alignment4 = ::test::unionsandwich::SandwichUnionSize36Alignment4;
 
 template <>
 struct MinSize<UnionSize8Alignment4> {
@@ -69,57 +69,6 @@ struct Allocate<SandwichUnionSize8Alignment4> {
     out.before = Allocate<uint32_t>{}(src, &out_size);
     out_size = MinSize<::test::unionsandwich::UnionSize8Alignment4>() + slack_per_member;
     out.union_ = Allocate<::test::unionsandwich::UnionSize8Alignment4>{}(src, &out_size);
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.after = Allocate<uint32_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<UnionSize36Alignment4> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<::std::array<uint8_t, 32>>()};
-    return 1 + *std::max_element(sizes, sizes + 1 + 1);
-  }
-};
-template <>
-struct Allocate<UnionSize36Alignment4> {
-  static_assert(1 > 0, "xunion must have at least one member");
-
-  UnionSize36Alignment4 operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnionSize36Alignment4>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    UnionSize36Alignment4 out;
-    switch (selector % 1) {
-      case 0: {
-        out.set_variant(Allocate<::std::array<uint8_t, 32>>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<SandwichUnionSize36Alignment4> {
-  operator size_t() {
-    return MinSize<uint32_t>() + MinSize<::test::unionsandwich::UnionSize36Alignment4>() + MinSize<uint32_t>();
-  }
-};
-template <>
-struct Allocate<SandwichUnionSize36Alignment4> {
-  SandwichUnionSize36Alignment4 operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<SandwichUnionSize36Alignment4>());
-    SandwichUnionSize36Alignment4 out;
-    const size_t slack_per_member = (*size - MinSize<SandwichUnionSize36Alignment4>()) / 3;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.before = Allocate<uint32_t>{}(src, &out_size);
-    out_size = MinSize<::test::unionsandwich::UnionSize36Alignment4>() + slack_per_member;
-    out.union_ = Allocate<::test::unionsandwich::UnionSize36Alignment4>{}(src, &out_size);
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.after = Allocate<uint32_t>{}(src, &out_size);
     return out;
@@ -242,6 +191,57 @@ struct Allocate<SandwichUnionSize24Alignment8> {
     out.before = Allocate<uint32_t>{}(src, &out_size);
     out_size = MinSize<::test::unionsandwich::UnionSize24Alignment8>() + slack_per_member;
     out.union_ = Allocate<::test::unionsandwich::UnionSize24Alignment8>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.after = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<UnionSize36Alignment4> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::std::array<uint8_t, 32>>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
+};
+template <>
+struct Allocate<UnionSize36Alignment4> {
+  static_assert(1 > 0, "xunion must have at least one member");
+
+  UnionSize36Alignment4 operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnionSize36Alignment4>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnionSize36Alignment4 out;
+    switch (selector % 1) {
+      case 0: {
+        out.set_variant(Allocate<::std::array<uint8_t, 32>>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<SandwichUnionSize36Alignment4> {
+  operator size_t() {
+    return MinSize<uint32_t>() + MinSize<::test::unionsandwich::UnionSize36Alignment4>() + MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<SandwichUnionSize36Alignment4> {
+  SandwichUnionSize36Alignment4 operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SandwichUnionSize36Alignment4>());
+    SandwichUnionSize36Alignment4 out;
+    const size_t slack_per_member = (*size - MinSize<SandwichUnionSize36Alignment4>()) / 3;
+    size_t out_size;
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.before = Allocate<uint32_t>{}(src, &out_size);
+    out_size = MinSize<::test::unionsandwich::UnionSize36Alignment4>() + slack_per_member;
+    out.union_ = Allocate<::test::unionsandwich::UnionSize36Alignment4>{}(src, &out_size);
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.after = Allocate<uint32_t>{}(src, &out_size);
     return out;

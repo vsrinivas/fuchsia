@@ -5,21 +5,21 @@
 namespace fidl {
 namespace internal {
 
-::test_placementofattributes::ExampleStruct WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleStruct, ::test_placementofattributes::ExampleStruct>::ToNatural(::test_placementofattributes::wire::ExampleStruct src) {
-  return ::test_placementofattributes::ExampleStruct(WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.member)));
-}
-::test_placementofattributes::wire::ExampleStruct WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleStruct, ::test_placementofattributes::ExampleStruct>::ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleStruct src) {
-  return ::test_placementofattributes::wire::ExampleStruct{
-      .member = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.member())),
-  };
-}
-
 ::test_placementofattributes::ExampleProtocolMethodRequest WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::test_placementofattributes::ExampleProtocolMethodRequest>::ToNatural(::test_placementofattributes::wire::ExampleProtocolMethodRequest src) {
   return ::test_placementofattributes::ExampleProtocolMethodRequest(WireNaturalConversionTraits<::test_exampleusing::wire::Empty, ::test_exampleusing::Empty>::ToNatural(std::move(src.arg)));
 }
 ::test_placementofattributes::wire::ExampleProtocolMethodRequest WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::test_placementofattributes::ExampleProtocolMethodRequest>::ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleProtocolMethodRequest src) {
   return ::test_placementofattributes::wire::ExampleProtocolMethodRequest{
       .arg = WireNaturalConversionTraits<::test_exampleusing::wire::Empty, ::test_exampleusing::Empty>::ToWire(arena, std::move(src.arg())),
+  };
+}
+
+::test_placementofattributes::ExampleStruct WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleStruct, ::test_placementofattributes::ExampleStruct>::ToNatural(::test_placementofattributes::wire::ExampleStruct src) {
+  return ::test_placementofattributes::ExampleStruct(WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.member)));
+}
+::test_placementofattributes::wire::ExampleStruct WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleStruct, ::test_placementofattributes::ExampleStruct>::ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleStruct src) {
+  return ::test_placementofattributes::wire::ExampleStruct{
+      .member = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.member())),
   };
 }
 
@@ -39,6 +39,36 @@ namespace internal {
         WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.member().value())));
   }
   return builder.Build();
+}
+
+::test_placementofattributes::ExampleUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToNatural(::test_placementofattributes::wire::ExampleUnion src) {
+  switch (src.Which()) {
+    case ::test_placementofattributes::wire::ExampleUnion::Tag::kVariant:
+      return ::test_placementofattributes::ExampleUnion::WithVariant(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.variant())));
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_placementofattributes::wire::ExampleUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleUnion src) {
+  switch (src.Which()) {
+    case ::test_placementofattributes::ExampleUnion::Tag::kVariant:
+      return ::test_placementofattributes::wire::ExampleUnion::WithVariant(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.variant().value())));
+  }
+}
+
+std::unique_ptr<::test_placementofattributes::ExampleUnion> WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, std::unique_ptr<::test_placementofattributes::ExampleUnion>>::ToNatural(::test_placementofattributes::wire::ExampleUnion src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_placementofattributes::ExampleUnion>(WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToNatural(std::move(src)));
+}
+::test_placementofattributes::wire::ExampleUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, std::unique_ptr<::test_placementofattributes::ExampleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_placementofattributes::ExampleUnion> src) {
+  if (!src) {
+    return ::test_placementofattributes::wire::ExampleUnion();
+  }
+  return WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_placementofattributes::ExampleXUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleXUnion, ::test_placementofattributes::ExampleXUnion>::ToNatural(::test_placementofattributes::wire::ExampleXUnion src) {
@@ -71,36 +101,6 @@ std::unique_ptr<::test_placementofattributes::ExampleXUnion> WireNaturalConversi
     return ::test_placementofattributes::wire::ExampleXUnion();
   }
   return WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleXUnion, ::test_placementofattributes::ExampleXUnion>::ToWire(arena, std::move(*src));
-}
-
-::test_placementofattributes::ExampleUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToNatural(::test_placementofattributes::wire::ExampleUnion src) {
-  switch (src.Which()) {
-    case ::test_placementofattributes::wire::ExampleUnion::Tag::kVariant:
-      return ::test_placementofattributes::ExampleUnion::WithVariant(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.variant())));
-    default:
-      ZX_PANIC("unknown union tag in strict union");
-  }
-}
-::test_placementofattributes::wire::ExampleUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleUnion src) {
-  switch (src.Which()) {
-    case ::test_placementofattributes::ExampleUnion::Tag::kVariant:
-      return ::test_placementofattributes::wire::ExampleUnion::WithVariant(
-          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.variant().value())));
-  }
-}
-
-std::unique_ptr<::test_placementofattributes::ExampleUnion> WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, std::unique_ptr<::test_placementofattributes::ExampleUnion>>::ToNatural(::test_placementofattributes::wire::ExampleUnion src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_placementofattributes::ExampleUnion>(WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToNatural(std::move(src)));
-}
-::test_placementofattributes::wire::ExampleUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, std::unique_ptr<::test_placementofattributes::ExampleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_placementofattributes::ExampleUnion> src) {
-  if (!src) {
-    return ::test_placementofattributes::wire::ExampleUnion();
-  }
-  return WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleUnion, ::test_placementofattributes::ExampleUnion>::ToWire(arena, std::move(*src));
 }
 
 #ifdef __Fuchsia__

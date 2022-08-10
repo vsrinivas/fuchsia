@@ -9,117 +9,18 @@
 //
 namespace test {
 namespace doccomments {
-extern "C" const fidl_type_t test_doccomments_TableTable;
-const fidl_type_t* Table::FidlType = &test_doccomments_TableTable;
 
-Table::Table() {}
+#if (__cplusplus < 201703)
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT = ::test::doccomments::MyFlexibleBits(1u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT = ::test::doccomments::MyFlexibleBits(2u);
+constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::kMask = ::test::doccomments::MyFlexibleBits(3u);
 
-Table::Table(Table&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&Field_value_.value, std::move(other.Field_value_.value));
-  }
-}
+#endif  // (__cplusplus < 201703)
 
-Table::~Table() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&Field_value_.value);
-  }
-}
-
-Table& Table::operator=(Table&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      Field_value_.value = std::move(other.Field_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&Field_value_.value, std::move(other.Field_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&Field_value_.value);
-  }
-  return *this;
-}
-
-bool Table::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<int32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &Field_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &Field_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_Field(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_Field();
-    }
-  } else {
-    goto done_1;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_Field();
-  return;
-}
-
-zx_status_t Table::Clone(Table* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(Field_value_.value, result->mutable_Field());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_Field();
-  }
-  return ZX_OK;
-}
+#if (__cplusplus < 201703)
+constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO = ::test::doccomments::MyFlexibleEnum(1u);
+constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR = ::test::doccomments::MyFlexibleEnum(2u);
+#endif  // (__cplusplus < 201703)
 
 extern "C" const fidl_type_t test_doccomments_StructTable;
 const fidl_type_t* Struct::FidlType = &test_doccomments_StructTable;
@@ -293,18 +194,6 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
-#if (__cplusplus < 201703)
-constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO = ::test::doccomments::MyFlexibleEnum(1u);
-constexpr const ::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR = ::test::doccomments::MyFlexibleEnum(2u);
-#endif  // (__cplusplus < 201703)
-
-#if (__cplusplus < 201703)
-constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_FIRST_BIT = ::test::doccomments::MyFlexibleBits(1u);
-constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::MY_OTHER_BIT = ::test::doccomments::MyFlexibleBits(2u);
-constexpr const ::test::doccomments::MyFlexibleBits MyFlexibleBits::kMask = ::test::doccomments::MyFlexibleBits(3u);
-
-#endif  // (__cplusplus < 201703)
-
 extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
 const fidl_type_t* FlexibleUnion::FidlType = &test_doccomments_FlexibleUnionTable;
 
@@ -475,6 +364,118 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t test_doccomments_TableTable;
+const fidl_type_t* Table::FidlType = &test_doccomments_TableTable;
+
+Table::Table() {}
+
+Table::Table(Table&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&Field_value_.value, std::move(other.Field_value_.value));
+  }
+}
+
+Table::~Table() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&Field_value_.value);
+  }
+}
+
+Table& Table::operator=(Table&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      Field_value_.value = std::move(other.Field_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&Field_value_.value, std::move(other.Field_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&Field_value_.value);
+  }
+  return *this;
+}
+
+bool Table::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void Table::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<int32_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &Field_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &Field_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_Field(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_Field();
+    }
+  } else {
+    goto done_1;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_Field();
+  return;
+}
+
+zx_status_t Table::Clone(Table* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(Field_value_.value, result->mutable_Field());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_Field();
+  }
+  return ZX_OK;
 }
 
 //

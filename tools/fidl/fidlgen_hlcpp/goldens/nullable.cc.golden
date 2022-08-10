@@ -9,87 +9,6 @@
 //
 namespace test {
 namespace nullable {
-extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
-const fidl_type_t* StructWithNullableVector::FidlType = &test_nullable_StructWithNullableVectorTable;
-
-void StructWithNullableVector::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
-    memcpy(_encoder->template GetPtr<StructWithNullableVector>(_offset), this, sizeof(StructWithNullableVector));
-  } else {
-    ::fidl::Encode(_encoder, &val, _offset + 0);
-  }
-}
-
-void StructWithNullableVector::Decode(::fidl::Decoder* _decoder, StructWithNullableVector* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructWithNullableVector>(_offset), sizeof(StructWithNullableVector));
-  } else {
-    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
-  }
-}
-
-zx_status_t StructWithNullableVector::Clone(StructWithNullableVector* _result) const {
-  zx_status_t _status = ::fidl::Clone(val, &_result->val);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
-const fidl_type_t* StructWithNullableUnion::FidlType = &test_nullable_StructWithNullableUnionTable;
-
-void StructWithNullableUnion::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
-    memcpy(_encoder->template GetPtr<StructWithNullableUnion>(_offset), this, sizeof(StructWithNullableUnion));
-  } else {
-    ::fidl::Encode(_encoder, &val, _offset + 0);
-  }
-}
-
-void StructWithNullableUnion::Decode(::fidl::Decoder* _decoder, StructWithNullableUnion* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructWithNullableUnion>(_offset), sizeof(StructWithNullableUnion));
-  } else {
-    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
-  }
-}
-
-zx_status_t StructWithNullableUnion::Clone(StructWithNullableUnion* _result) const {
-  zx_status_t _status = ::fidl::Clone(val, &_result->val);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
-const fidl_type_t* StructWithNullableStruct::FidlType = &test_nullable_StructWithNullableStructTable;
-
-void StructWithNullableStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
-    memcpy(_encoder->template GetPtr<StructWithNullableStruct>(_offset), this, sizeof(StructWithNullableStruct));
-  } else {
-    ::fidl::Encode(_encoder, &val, _offset + 0);
-  }
-}
-
-void StructWithNullableStruct::Decode(::fidl::Decoder* _decoder, StructWithNullableStruct* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructWithNullableStruct>(_offset), sizeof(StructWithNullableStruct));
-  } else {
-    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
-  }
-}
-
-zx_status_t StructWithNullableStruct::Clone(StructWithNullableStruct* _result) const {
-  zx_status_t _status = ::fidl::Clone(val, &_result->val);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 const fidl_type_t* StructWithNullableString::FidlType = &test_nullable_StructWithNullableStringTable;
 
@@ -117,38 +36,124 @@ zx_status_t StructWithNullableString::Clone(StructWithNullableString* _result) c
   return ZX_OK;
 }
 
-#ifdef __Fuchsia__
+extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
+const fidl_type_t* StructWithNullableVector::FidlType = &test_nullable_StructWithNullableVectorTable;
 
-extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
-const fidl_type_t* StructWithNullableRequest::FidlType = &test_nullable_StructWithNullableRequestTable;
-
-void StructWithNullableRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
-    memcpy(_encoder->template GetPtr<StructWithNullableRequest>(_offset), this, sizeof(StructWithNullableRequest));
+void StructWithNullableVector::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableVector>(_offset), this, sizeof(StructWithNullableVector));
   } else {
-    ::fidl::Encode(_encoder, &val, _offset + 0, ::fidl::HandleInformation{
-                                                    .object_type = ZX_OBJ_TYPE_CHANNEL,
-                                                    .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                                                });
+    ::fidl::Encode(_encoder, &val, _offset + 0);
   }
 }
 
-void StructWithNullableRequest::Decode(::fidl::Decoder* _decoder, StructWithNullableRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructWithNullableRequest>(_offset), sizeof(StructWithNullableRequest));
+void StructWithNullableVector::Decode(::fidl::Decoder* _decoder, StructWithNullableVector* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableVector>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableVector>(_offset), sizeof(StructWithNullableVector));
   } else {
     ::fidl::Decode(_decoder, &_value->val, _offset + 0);
   }
 }
 
-zx_status_t StructWithNullableRequest::Clone(StructWithNullableRequest* _result) const {
+zx_status_t StructWithNullableVector::Clone(StructWithNullableVector* _result) const {
+  zx_status_t _status = ::fidl::Clone(val, &_result->val);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
+const fidl_type_t* StructWithNullableHandle::FidlType = &test_nullable_StructWithNullableHandleTable;
+
+void StructWithNullableHandle::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableHandle>(_offset), this, sizeof(StructWithNullableHandle));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0, ::fidl::HandleInformation{
+                                                    .object_type = ZX_OBJ_TYPE_VMO,
+                                                    .rights = 0x80000000,
+                                                });
+  }
+}
+
+void StructWithNullableHandle::Decode(::fidl::Decoder* _decoder, StructWithNullableHandle* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableHandle>(_offset), sizeof(StructWithNullableHandle));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
+}
+
+zx_status_t StructWithNullableHandle::Clone(StructWithNullableHandle* _result) const {
   zx_status_t _status = ::fidl::Clone(val, &_result->val);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;
 }
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
+const fidl_type_t* SimpleProtocolAddRequest::FidlType = &test_nullable_SimpleProtocolAddRequestTable;
+
+void SimpleProtocolAddRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddRequest>::value) {
+    memcpy(_encoder->template GetPtr<SimpleProtocolAddRequest>(_offset), this, sizeof(SimpleProtocolAddRequest));
+  } else {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 4);
+  }
+}
+
+void SimpleProtocolAddRequest::Decode(::fidl::Decoder* _decoder, SimpleProtocolAddRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<SimpleProtocolAddRequest>(_offset), sizeof(SimpleProtocolAddRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t SimpleProtocolAddRequest::Clone(SimpleProtocolAddRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK)
+    return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+const fidl_type_t* SimpleProtocolAddTopResponse::FidlType = &test_nullable_SimpleProtocolAddTopResponseTable;
+
+void SimpleProtocolAddTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<SimpleProtocolAddTopResponse>(_offset), this, sizeof(SimpleProtocolAddTopResponse));
+  } else {
+    ::fidl::Encode(_encoder, &sum, _offset + 0);
+  }
+}
+
+void SimpleProtocolAddTopResponse::Decode(::fidl::Decoder* _decoder, SimpleProtocolAddTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<SimpleProtocolAddTopResponse>(_offset), sizeof(SimpleProtocolAddTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->sum, _offset + 0);
+  }
+}
+
+zx_status_t SimpleProtocolAddTopResponse::Clone(SimpleProtocolAddTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(sum, &_result->sum);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
 
 #ifdef __Fuchsia__
 
@@ -185,36 +190,90 @@ zx_status_t StructWithNullableProtocol::Clone(StructWithNullableProtocol* _resul
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
-const fidl_type_t* StructWithNullableHandle::FidlType = &test_nullable_StructWithNullableHandleTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
+const fidl_type_t* StructWithNullableRequest::FidlType = &test_nullable_StructWithNullableRequestTable;
 
-void StructWithNullableHandle::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
-    memcpy(_encoder->template GetPtr<StructWithNullableHandle>(_offset), this, sizeof(StructWithNullableHandle));
+void StructWithNullableRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableRequest>(_offset), this, sizeof(StructWithNullableRequest));
   } else {
     ::fidl::Encode(_encoder, &val, _offset + 0, ::fidl::HandleInformation{
-                                                    .object_type = ZX_OBJ_TYPE_VMO,
-                                                    .rights = 0x80000000,
+                                                    .object_type = ZX_OBJ_TYPE_CHANNEL,
+                                                    .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                                                 });
   }
 }
 
-void StructWithNullableHandle::Decode(::fidl::Decoder* _decoder, StructWithNullableHandle* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<StructWithNullableHandle>::value) {
-    memcpy(_value, _decoder->template GetPtr<StructWithNullableHandle>(_offset), sizeof(StructWithNullableHandle));
+void StructWithNullableRequest::Decode(::fidl::Decoder* _decoder, StructWithNullableRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableRequest>(_offset), sizeof(StructWithNullableRequest));
   } else {
     ::fidl::Decode(_decoder, &_value->val, _offset + 0);
   }
 }
 
-zx_status_t StructWithNullableHandle::Clone(StructWithNullableHandle* _result) const {
+zx_status_t StructWithNullableRequest::Clone(StructWithNullableRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(val, &_result->val);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;
 }
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
+const fidl_type_t* Int32Wrapper::FidlType = &test_nullable_Int32WrapperTable;
+
+void Int32Wrapper::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
+    memcpy(_encoder->template GetPtr<Int32Wrapper>(_offset), this, sizeof(Int32Wrapper));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
+}
+
+void Int32Wrapper::Decode(::fidl::Decoder* _decoder, Int32Wrapper* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
+    memcpy(_value, _decoder->template GetPtr<Int32Wrapper>(_offset), sizeof(Int32Wrapper));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
+}
+
+zx_status_t Int32Wrapper::Clone(Int32Wrapper* _result) const {
+  zx_status_t _status = ::fidl::Clone(val, &_result->val);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
+const fidl_type_t* StructWithNullableStruct::FidlType = &test_nullable_StructWithNullableStructTable;
+
+void StructWithNullableStruct::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableStruct>(_offset), this, sizeof(StructWithNullableStruct));
+  } else {
+    ::fidl::Encode(_encoder, &val, _offset + 0);
+  }
+}
+
+void StructWithNullableStruct::Decode(::fidl::Decoder* _decoder, StructWithNullableStruct* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableStruct>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableStruct>(_offset), sizeof(StructWithNullableStruct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->val, _offset + 0);
+  }
+}
+
+zx_status_t StructWithNullableStruct::Clone(StructWithNullableStruct* _result) const {
+  zx_status_t _status = ::fidl::Clone(val, &_result->val);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
 
 extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 const fidl_type_t* SimpleUnion::FidlType = &test_nullable_SimpleUnionTable;
@@ -412,86 +471,27 @@ void SimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
-const fidl_type_t* SimpleProtocolAddTopResponse::FidlType = &test_nullable_SimpleProtocolAddTopResponseTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
+const fidl_type_t* StructWithNullableUnion::FidlType = &test_nullable_StructWithNullableUnionTable;
 
-void SimpleProtocolAddTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<SimpleProtocolAddTopResponse>(_offset), this, sizeof(SimpleProtocolAddTopResponse));
-  } else {
-    ::fidl::Encode(_encoder, &sum, _offset + 0);
-  }
-}
-
-void SimpleProtocolAddTopResponse::Decode(::fidl::Decoder* _decoder, SimpleProtocolAddTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<SimpleProtocolAddTopResponse>(_offset), sizeof(SimpleProtocolAddTopResponse));
-  } else {
-    ::fidl::Decode(_decoder, &_value->sum, _offset + 0);
-  }
-}
-
-zx_status_t SimpleProtocolAddTopResponse::Clone(SimpleProtocolAddTopResponse* _result) const {
-  zx_status_t _status = ::fidl::Clone(sum, &_result->sum);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
-const fidl_type_t* SimpleProtocolAddRequest::FidlType = &test_nullable_SimpleProtocolAddRequestTable;
-
-void SimpleProtocolAddRequest::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddRequest>::value) {
-    memcpy(_encoder->template GetPtr<SimpleProtocolAddRequest>(_offset), this, sizeof(SimpleProtocolAddRequest));
-  } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
-  }
-}
-
-void SimpleProtocolAddRequest::Decode(::fidl::Decoder* _decoder, SimpleProtocolAddRequest* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddRequest>::value) {
-    memcpy(_value, _decoder->template GetPtr<SimpleProtocolAddRequest>(_offset), sizeof(SimpleProtocolAddRequest));
-  } else {
-    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
-    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
-  }
-}
-
-zx_status_t SimpleProtocolAddRequest::Clone(SimpleProtocolAddRequest* _result) const {
-  zx_status_t _status = ::fidl::Clone(a, &_result->a);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(b, &_result->b);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
-const fidl_type_t* Int32Wrapper::FidlType = &test_nullable_Int32WrapperTable;
-
-void Int32Wrapper::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
-    memcpy(_encoder->template GetPtr<Int32Wrapper>(_offset), this, sizeof(Int32Wrapper));
+void StructWithNullableUnion::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
+    memcpy(_encoder->template GetPtr<StructWithNullableUnion>(_offset), this, sizeof(StructWithNullableUnion));
   } else {
     ::fidl::Encode(_encoder, &val, _offset + 0);
   }
 }
 
-void Int32Wrapper::Decode(::fidl::Decoder* _decoder, Int32Wrapper* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<Int32Wrapper>::value) {
-    memcpy(_value, _decoder->template GetPtr<Int32Wrapper>(_offset), sizeof(Int32Wrapper));
+void StructWithNullableUnion::Decode(::fidl::Decoder* _decoder, StructWithNullableUnion* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<StructWithNullableUnion>::value) {
+    memcpy(_value, _decoder->template GetPtr<StructWithNullableUnion>(_offset), sizeof(StructWithNullableUnion));
   } else {
     ::fidl::Decode(_decoder, &_value->val, _offset + 0);
   }
 }
 
-zx_status_t Int32Wrapper::Clone(Int32Wrapper* _result) const {
+zx_status_t StructWithNullableUnion::Clone(StructWithNullableUnion* _result) const {
   zx_status_t _status = ::fidl::Clone(val, &_result->val);
   if (_status != ZX_OK)
     return _status;

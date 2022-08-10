@@ -12,6 +12,133 @@ namespace handlesintypes {
 
 #ifdef __Fuchsia__
 
+extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
+const fidl_type_t* TableWithHandle::FidlType = &test_handlesintypes_TableWithHandleTable;
+
+TableWithHandle::TableWithHandle() {}
+
+TableWithHandle::TableWithHandle(TableWithHandle&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&h_value_.value, std::move(other.h_value_.value));
+  }
+}
+
+TableWithHandle::~TableWithHandle() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&h_value_.value);
+  }
+}
+
+TableWithHandle& TableWithHandle::operator=(TableWithHandle&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      h_value_.value = std::move(other.h_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&h_value_.value, std::move(other.h_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&h_value_.value);
+  }
+  return *this;
+}
+
+bool TableWithHandle::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void TableWithHandle::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &h_value_.value, envelope_base, ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &h_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(_encoder)), ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_h(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_h();
+    }
+  } else {
+    goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) {
+        continue;
+      }
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      _decoder->CloseUnknownHandlesInEnvelope(envelope);
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_h();
+  return;
+}
+
+zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(h_value_.value, result->mutable_h());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_h();
+  }
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 const fidl_type_t* UnionWithHandle::FidlType = &test_handlesintypes_UnionWithHandleTable;
 
@@ -189,133 +316,6 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
     }
   }
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
-const fidl_type_t* TableWithHandle::FidlType = &test_handlesintypes_TableWithHandleTable;
-
-TableWithHandle::TableWithHandle() {}
-
-TableWithHandle::TableWithHandle(TableWithHandle&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&h_value_.value, std::move(other.h_value_.value));
-  }
-}
-
-TableWithHandle::~TableWithHandle() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&h_value_.value);
-  }
-}
-
-TableWithHandle& TableWithHandle::operator=(TableWithHandle&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      h_value_.value = std::move(other.h_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&h_value_.value, std::move(other.h_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&h_value_.value);
-  }
-  return *this;
-}
-
-bool TableWithHandle::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void TableWithHandle::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                             cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &h_value_.value, envelope_base, ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &h_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(_encoder)), ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000});
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_h(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_h();
-    }
-  } else {
-    goto done_1;
-  }
-
-  if (count > 1) {
-    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
-      if (IsOrdinalKnown(ordinal)) {
-        continue;
-      }
-
-      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      _decoder->CloseUnknownHandlesInEnvelope(envelope);
-    }
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_h();
-  return;
-}
-
-zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(h_value_.value, result->mutable_h());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_h();
-  }
-  return ZX_OK;
 }
 #endif  // __Fuchsia__
 

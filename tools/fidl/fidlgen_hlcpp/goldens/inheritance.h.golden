@@ -11,9 +11,9 @@ namespace inheritance {
 // Domain objects declarations
 //
 
-class SuperFooTopResponse;
-
 class SuperFooRequest;
+
+class SuperFooTopResponse;
 
 #ifdef __Fuchsia__
 
@@ -26,27 +26,6 @@ using superHandle = ::fidl::InterfaceHandle<super>;
 class sub;
 using subHandle = ::fidl::InterfaceHandle<sub>;
 #endif  // __Fuchsia__
-
-class SuperFooTopResponse final {
- public:
-  static const fidl_type_t* FidlType;
-
-  int64_t y{};
-
-  static inline ::std::unique_ptr<SuperFooTopResponse> New() { return ::std::make_unique<SuperFooTopResponse>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, SuperFooTopResponse* value, size_t _offset);
-  zx_status_t Clone(SuperFooTopResponse* result) const;
-};
-
-inline zx_status_t Clone(const ::test::inheritance::SuperFooTopResponse& _value,
-                         ::test::inheritance::SuperFooTopResponse* _result) {
-  return _value.Clone(_result);
-}
-
-using SuperFooTopResponsePtr = ::std::unique_ptr<SuperFooTopResponse>;
 
 class SuperFooRequest final {
  public:
@@ -68,6 +47,27 @@ inline zx_status_t Clone(const ::test::inheritance::SuperFooRequest& _value,
 }
 
 using SuperFooRequestPtr = ::std::unique_ptr<SuperFooRequest>;
+
+class SuperFooTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  int64_t y{};
+
+  static inline ::std::unique_ptr<SuperFooTopResponse> New() { return ::std::make_unique<SuperFooTopResponse>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, SuperFooTopResponse* value, size_t _offset);
+  zx_status_t Clone(SuperFooTopResponse* result) const;
+};
+
+inline zx_status_t Clone(const ::test::inheritance::SuperFooTopResponse& _value,
+                         ::test::inheritance::SuperFooTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using SuperFooTopResponsePtr = ::std::unique_ptr<SuperFooTopResponse>;
 
 #ifdef __Fuchsia__
 
@@ -140,28 +140,6 @@ class sub_ResponseEncoder {
 }  // namespace test
 namespace fidl {
 template <>
-struct CodingTraits<::test::inheritance::SuperFooTopResponse>
-    : public EncodableCodingTraits<::test::inheritance::SuperFooTopResponse, 8> {};
-
-template <>
-struct IsMemcpyCompatible<::test::inheritance::SuperFooTopResponse> : public internal::BoolConstant<
-                                                                          !HasPadding<::test::inheritance::SuperFooTopResponse>::value && IsMemcpyCompatible<int64_t>::value> {};
-
-inline zx_status_t Clone(const ::test::inheritance::SuperFooTopResponse& value,
-                         ::test::inheritance::SuperFooTopResponse* result) {
-  return ::test::inheritance::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::inheritance::SuperFooTopResponse> {
-  bool operator()(const ::test::inheritance::SuperFooTopResponse& _lhs, const ::test::inheritance::SuperFooTopResponse& _rhs) const {
-    if (!::fidl::Equals(_lhs.y, _rhs.y)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
 struct CodingTraits<::test::inheritance::SuperFooRequest>
     : public EncodableCodingTraits<::test::inheritance::SuperFooRequest, 16> {};
 
@@ -181,6 +159,28 @@ template <>
 struct Equality<::test::inheritance::SuperFooRequest> {
   bool operator()(const ::test::inheritance::SuperFooRequest& _lhs, const ::test::inheritance::SuperFooRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.s, _rhs.s)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::inheritance::SuperFooTopResponse>
+    : public EncodableCodingTraits<::test::inheritance::SuperFooTopResponse, 8> {};
+
+template <>
+struct IsMemcpyCompatible<::test::inheritance::SuperFooTopResponse> : public internal::BoolConstant<
+                                                                          !HasPadding<::test::inheritance::SuperFooTopResponse>::value && IsMemcpyCompatible<int64_t>::value> {};
+
+inline zx_status_t Clone(const ::test::inheritance::SuperFooTopResponse& value,
+                         ::test::inheritance::SuperFooTopResponse* result) {
+  return ::test::inheritance::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::inheritance::SuperFooTopResponse> {
+  bool operator()(const ::test::inheritance::SuperFooTopResponse& _lhs, const ::test::inheritance::SuperFooTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.y, _rhs.y)) {
       return false;
     }
     return true;

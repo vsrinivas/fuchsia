@@ -11,16 +11,6 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddTopResponse> {
-  using HLCPPType = ::test::drivertwoway::TwoWayAddTopResponse;
-  static inline ::test::drivertwoway::TwoWayAddTopResponse Convert(::test_drivertwoway::TwoWayAddTopResponse&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse> {
-  using NaturalType = ::test_drivertwoway::TwoWayAddTopResponse;
-  static inline ::test_drivertwoway::TwoWayAddTopResponse Convert(::test::drivertwoway::TwoWayAddTopResponse&&);
-};
-template <>
 struct NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddRequest> {
   using HLCPPType = ::test::drivertwoway::TwoWayAddRequest;
   static inline ::test::drivertwoway::TwoWayAddRequest Convert(::test_drivertwoway::TwoWayAddRequest&&);
@@ -30,18 +20,17 @@ struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddRequest> {
   using NaturalType = ::test_drivertwoway::TwoWayAddRequest;
   static inline ::test_drivertwoway::TwoWayAddRequest Convert(::test::drivertwoway::TwoWayAddRequest&&);
 };
+template <>
+struct NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddTopResponse> {
+  using HLCPPType = ::test::drivertwoway::TwoWayAddTopResponse;
+  static inline ::test::drivertwoway::TwoWayAddTopResponse Convert(::test_drivertwoway::TwoWayAddTopResponse&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse> {
+  using NaturalType = ::test_drivertwoway::TwoWayAddTopResponse;
+  static inline ::test_drivertwoway::TwoWayAddTopResponse Convert(::test::drivertwoway::TwoWayAddTopResponse&&);
+};
 
-::test::drivertwoway::TwoWayAddTopResponse NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddTopResponse>::Convert(::test_drivertwoway::TwoWayAddTopResponse&& value) {
-  ::test::drivertwoway::TwoWayAddTopResponse hlcpp;
-  hlcpp.sum = ::fidl::NaturalToHLCPP(std::move(value.sum()));
-  return hlcpp;
-}
-
-::test_drivertwoway::TwoWayAddTopResponse HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse>::Convert(::test::drivertwoway::TwoWayAddTopResponse&& value) {
-  return ::test_drivertwoway::TwoWayAddTopResponse{{
-      .sum = ::fidl::HLCPPToNatural(std::move(value.sum)),
-  }};
-}
 ::test::drivertwoway::TwoWayAddRequest NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddRequest>::Convert(::test_drivertwoway::TwoWayAddRequest&& value) {
   ::test::drivertwoway::TwoWayAddRequest hlcpp;
   hlcpp.addend1 = ::fidl::NaturalToHLCPP(std::move(value.addend1()));
@@ -53,6 +42,17 @@ struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddRequest> {
   return ::test_drivertwoway::TwoWayAddRequest{{
       .addend1 = ::fidl::HLCPPToNatural(std::move(value.addend1)),
       .addend2 = ::fidl::HLCPPToNatural(std::move(value.addend2)),
+  }};
+}
+::test::drivertwoway::TwoWayAddTopResponse NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddTopResponse>::Convert(::test_drivertwoway::TwoWayAddTopResponse&& value) {
+  ::test::drivertwoway::TwoWayAddTopResponse hlcpp;
+  hlcpp.sum = ::fidl::NaturalToHLCPP(std::move(value.sum()));
+  return hlcpp;
+}
+
+::test_drivertwoway::TwoWayAddTopResponse HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse>::Convert(::test::drivertwoway::TwoWayAddTopResponse&& value) {
+  return ::test_drivertwoway::TwoWayAddTopResponse{{
+      .sum = ::fidl::HLCPPToNatural(std::move(value.sum)),
   }};
 }
 

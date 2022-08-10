@@ -2,6 +2,12 @@
 
 #include <fidl/test.placementofattributes/cpp/wire_types.h>
 
+void ::test_placementofattributes::wire::ExampleUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(ExampleUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(ExampleUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
 auto ::test_placementofattributes::wire::ExampleXUnion::Which() const -> ::test_placementofattributes::wire::ExampleXUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -16,12 +22,6 @@ void ::test_placementofattributes::wire::ExampleXUnion::SizeAndOffsetAssertionHe
   static_assert(sizeof(ExampleXUnion) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(ExampleXUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(ExampleXUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
-void ::test_placementofattributes::wire::ExampleUnion::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(ExampleUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(ExampleUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
 bool ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>::HasUnknownData() const {

@@ -5,33 +5,6 @@
 namespace fidl {
 namespace internal {
 
-::test_nullable::StructWithNullableVector WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableVector, ::test_nullable::StructWithNullableVector>::ToNatural(::test_nullable::wire::StructWithNullableVector src) {
-  return ::test_nullable::StructWithNullableVector(WireNaturalConversionTraits<::fidl::VectorView<int32_t>, ::std::optional<::std::vector<int32_t>>>::ToNatural(std::move(src.val)));
-}
-::test_nullable::wire::StructWithNullableVector WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableVector, ::test_nullable::StructWithNullableVector>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableVector src) {
-  return ::test_nullable::wire::StructWithNullableVector{
-      .val = WireNaturalConversionTraits<::fidl::VectorView<int32_t>, ::std::optional<::std::vector<int32_t>>>::ToWire(arena, std::move(src.val())),
-  };
-}
-
-::test_nullable::StructWithNullableUnion WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion>::ToNatural(::test_nullable::wire::StructWithNullableUnion src) {
-  return ::test_nullable::StructWithNullableUnion(WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToNatural(std::move(src.val)));
-}
-::test_nullable::wire::StructWithNullableUnion WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableUnion src) {
-  return ::test_nullable::wire::StructWithNullableUnion{
-      .val = WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToWire(arena, std::move(src.val())),
-  };
-}
-
-::test_nullable::StructWithNullableStruct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct>::ToNatural(::test_nullable::wire::StructWithNullableStruct src) {
-  return ::test_nullable::StructWithNullableStruct(WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::std::unique_ptr<::test_nullable::Int32Wrapper>>::ToNatural(std::move(src.val)));
-}
-::test_nullable::wire::StructWithNullableStruct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableStruct src) {
-  return ::test_nullable::wire::StructWithNullableStruct{
-      .val = WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::std::unique_ptr<::test_nullable::Int32Wrapper>>::ToWire(arena, std::move(src.val())),
-  };
-}
-
 ::test_nullable::StructWithNullableString WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableString, ::test_nullable::StructWithNullableString>::ToNatural(::test_nullable::wire::StructWithNullableString src) {
   return ::test_nullable::StructWithNullableString(WireNaturalConversionTraits<::fidl::StringView, ::std::optional<::std::string>>::ToNatural(std::move(src.val)));
 }
@@ -41,18 +14,49 @@ namespace internal {
   };
 }
 
+::test_nullable::StructWithNullableVector WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableVector, ::test_nullable::StructWithNullableVector>::ToNatural(::test_nullable::wire::StructWithNullableVector src) {
+  return ::test_nullable::StructWithNullableVector(WireNaturalConversionTraits<::fidl::VectorView<int32_t>, ::std::optional<::std::vector<int32_t>>>::ToNatural(std::move(src.val)));
+}
+::test_nullable::wire::StructWithNullableVector WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableVector, ::test_nullable::StructWithNullableVector>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableVector src) {
+  return ::test_nullable::wire::StructWithNullableVector{
+      .val = WireNaturalConversionTraits<::fidl::VectorView<int32_t>, ::std::optional<::std::vector<int32_t>>>::ToWire(arena, std::move(src.val())),
+  };
+}
+
 #ifdef __Fuchsia__
 
-::test_nullable::StructWithNullableRequest WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableRequest, ::test_nullable::StructWithNullableRequest>::ToNatural(::test_nullable::wire::StructWithNullableRequest src) {
-  return ::test_nullable::StructWithNullableRequest(WireNaturalConversionTraits<::fidl::ServerEnd<::test_nullable::SimpleProtocol>, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::ToNatural(std::move(src.val)));
+::test_nullable::StructWithNullableHandle WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableHandle, ::test_nullable::StructWithNullableHandle>::ToNatural(::test_nullable::wire::StructWithNullableHandle src) {
+  return ::test_nullable::StructWithNullableHandle(WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.val)));
 }
-::test_nullable::wire::StructWithNullableRequest WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableRequest, ::test_nullable::StructWithNullableRequest>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableRequest src) {
-  return ::test_nullable::wire::StructWithNullableRequest{
-      .val = WireNaturalConversionTraits<::fidl::ServerEnd<::test_nullable::SimpleProtocol>, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::ToWire(arena, std::move(src.val())),
+::test_nullable::wire::StructWithNullableHandle WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableHandle, ::test_nullable::StructWithNullableHandle>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableHandle src) {
+  return ::test_nullable::wire::StructWithNullableHandle{
+      .val = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.val())),
   };
 }
 
 #endif  // __Fuchsia__
+
+::test_nullable::SimpleProtocolAddRequest WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToNatural(::test_nullable::wire::SimpleProtocolAddRequest src) {
+  return ::test_nullable::SimpleProtocolAddRequest{{
+      .a = WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.a)),
+      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)),
+  }};
+}
+::test_nullable::wire::SimpleProtocolAddRequest WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddRequest src) {
+  return ::test_nullable::wire::SimpleProtocolAddRequest{
+      .a = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.a())),
+      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
+  };
+}
+
+::test_nullable::SimpleProtocolAddTopResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToNatural(::test_nullable::wire::SimpleProtocolAddTopResponse src) {
+  return ::test_nullable::SimpleProtocolAddTopResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.sum)));
+}
+::test_nullable::wire::SimpleProtocolAddTopResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddTopResponse src) {
+  return ::test_nullable::wire::SimpleProtocolAddTopResponse{
+      .sum = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.sum())),
+  };
+}
 
 #ifdef __Fuchsia__
 
@@ -69,38 +73,16 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::test_nullable::StructWithNullableHandle WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableHandle, ::test_nullable::StructWithNullableHandle>::ToNatural(::test_nullable::wire::StructWithNullableHandle src) {
-  return ::test_nullable::StructWithNullableHandle(WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.val)));
+::test_nullable::StructWithNullableRequest WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableRequest, ::test_nullable::StructWithNullableRequest>::ToNatural(::test_nullable::wire::StructWithNullableRequest src) {
+  return ::test_nullable::StructWithNullableRequest(WireNaturalConversionTraits<::fidl::ServerEnd<::test_nullable::SimpleProtocol>, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::ToNatural(std::move(src.val)));
 }
-::test_nullable::wire::StructWithNullableHandle WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableHandle, ::test_nullable::StructWithNullableHandle>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableHandle src) {
-  return ::test_nullable::wire::StructWithNullableHandle{
-      .val = WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToWire(arena, std::move(src.val())),
+::test_nullable::wire::StructWithNullableRequest WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableRequest, ::test_nullable::StructWithNullableRequest>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableRequest src) {
+  return ::test_nullable::wire::StructWithNullableRequest{
+      .val = WireNaturalConversionTraits<::fidl::ServerEnd<::test_nullable::SimpleProtocol>, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::ToWire(arena, std::move(src.val())),
   };
 }
 
 #endif  // __Fuchsia__
-
-::test_nullable::SimpleProtocolAddTopResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToNatural(::test_nullable::wire::SimpleProtocolAddTopResponse src) {
-  return ::test_nullable::SimpleProtocolAddTopResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.sum)));
-}
-::test_nullable::wire::SimpleProtocolAddTopResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddTopResponse src) {
-  return ::test_nullable::wire::SimpleProtocolAddTopResponse{
-      .sum = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.sum())),
-  };
-}
-
-::test_nullable::SimpleProtocolAddRequest WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToNatural(::test_nullable::wire::SimpleProtocolAddRequest src) {
-  return ::test_nullable::SimpleProtocolAddRequest{{
-      .a = WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.a)),
-      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.b)),
-  }};
-}
-::test_nullable::wire::SimpleProtocolAddRequest WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddRequest src) {
-  return ::test_nullable::wire::SimpleProtocolAddRequest{
-      .a = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.a())),
-      .b = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.b())),
-  };
-}
 
 ::test_nullable::Int32Wrapper WireNaturalConversionTraits<::test_nullable::wire::Int32Wrapper, ::test_nullable::Int32Wrapper>::ToNatural(::test_nullable::wire::Int32Wrapper src) {
   return ::test_nullable::Int32Wrapper(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.val)));
@@ -108,6 +90,24 @@ namespace internal {
 ::test_nullable::wire::Int32Wrapper WireNaturalConversionTraits<::test_nullable::wire::Int32Wrapper, ::test_nullable::Int32Wrapper>::ToWire(fidl::AnyArena& arena, ::test_nullable::Int32Wrapper src) {
   return ::test_nullable::wire::Int32Wrapper{
       .val = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.val())),
+  };
+}
+
+::test_nullable::StructWithNullableStruct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct>::ToNatural(::test_nullable::wire::StructWithNullableStruct src) {
+  return ::test_nullable::StructWithNullableStruct(WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::std::unique_ptr<::test_nullable::Int32Wrapper>>::ToNatural(std::move(src.val)));
+}
+::test_nullable::wire::StructWithNullableStruct WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableStruct, ::test_nullable::StructWithNullableStruct>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableStruct src) {
+  return ::test_nullable::wire::StructWithNullableStruct{
+      .val = WireNaturalConversionTraits<::fidl::ObjectView<::test_nullable::wire::Int32Wrapper>, ::std::unique_ptr<::test_nullable::Int32Wrapper>>::ToWire(arena, std::move(src.val())),
+  };
+}
+
+::test_nullable::StructWithNullableUnion WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion>::ToNatural(::test_nullable::wire::StructWithNullableUnion src) {
+  return ::test_nullable::StructWithNullableUnion(WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToNatural(std::move(src.val)));
+}
+::test_nullable::wire::StructWithNullableUnion WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableUnion src) {
+  return ::test_nullable::wire::StructWithNullableUnion{
+      .val = WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToWire(arena, std::move(src.val())),
   };
 }
 

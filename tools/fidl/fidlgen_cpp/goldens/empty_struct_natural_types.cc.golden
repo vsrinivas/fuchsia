@@ -12,7 +12,7 @@
       ::fidl::internal::NaturalClone(storage_.e)};
 }
 
-::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage_ test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage_() const {
+::test_emptystruct::EmptyProtocolReceiveRequest::Storage_ test_emptystruct::EmptyProtocolReceiveRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.e)};
 }
@@ -22,7 +22,7 @@
       ::fidl::internal::NaturalClone(storage_.e)};
 }
 
-::test_emptystruct::EmptyProtocolReceiveRequest::Storage_ test_emptystruct::EmptyProtocolReceiveRequest::CloneStorage_() const {
+::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage_ test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.e)};
 }

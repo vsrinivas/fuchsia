@@ -182,47 +182,6 @@ constexpr inline void BitsMember::operator^=(
   this->value_ ^= other.value_;
 }
 
-class SomeProtocolSomeMethodError final {
- public:
-  constexpr SomeProtocolSomeMethodError() : value_(0) {}
-  constexpr explicit SomeProtocolSomeMethodError(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
-
-  constexpr bool IsUnknown() const {
-    switch (value_) {
-      case 1u:
-
-      case 2u:
-
-        return false;
-    }
-    return true;
-  }
-
-  constexpr static SomeProtocolSomeMethodError Unknown() {
-    return SomeProtocolSomeMethodError(0xffffffff);
-  }
-
-  static const SomeProtocolSomeMethodError kErrorOne;
-
-  static const SomeProtocolSomeMethodError kErrorTwo;
-
- private:
-  uint32_t value_;
-};
-constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMethodError::kErrorOne =
-    ::test_anonymous::SomeProtocolSomeMethodError(1u);
-constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMethodError::kErrorTwo =
-    ::test_anonymous::SomeProtocolSomeMethodError(2u);
-
-}  // namespace test_anonymous
-template <>
-struct fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError> {
-  static size_t Format(const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity);
-};
-
-namespace test_anonymous {
-
 class Op final {
  public:
   constexpr Op() : value_(0) {}
@@ -268,6 +227,47 @@ struct fidl::internal::DisplayError<::test_anonymous::Op> {
   static size_t Format(const ::test_anonymous::Op& value, char* destination, size_t capacity);
 };
 
+namespace test_anonymous {
+
+class SomeProtocolSomeMethodError final {
+ public:
+  constexpr SomeProtocolSomeMethodError() : value_(0) {}
+  constexpr explicit SomeProtocolSomeMethodError(uint32_t value) : value_(value) {}
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+      case 2u:
+
+        return false;
+    }
+    return true;
+  }
+
+  constexpr static SomeProtocolSomeMethodError Unknown() {
+    return SomeProtocolSomeMethodError(0xffffffff);
+  }
+
+  static const SomeProtocolSomeMethodError kErrorOne;
+
+  static const SomeProtocolSomeMethodError kErrorTwo;
+
+ private:
+  uint32_t value_;
+};
+constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMethodError::kErrorOne =
+    ::test_anonymous::SomeProtocolSomeMethodError(1u);
+constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMethodError::kErrorTwo =
+    ::test_anonymous::SomeProtocolSomeMethodError(2u);
+
+}  // namespace test_anonymous
+template <>
+struct fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError> {
+  static size_t Format(const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity);
+};
+
 namespace fidl {
 
 template <>
@@ -285,13 +285,13 @@ static_assert(std::is_standard_layout_v<::test_anonymous::BitsMember>);
 static_assert(sizeof(::test_anonymous::BitsMember) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodError> : public std::true_type {};
-template <>
-struct ContainsHandle<::test_anonymous::SomeProtocolSomeMethodError> : public std::false_type {};
-
-template <>
 struct IsFidlType<::test_anonymous::Op> : public std::true_type {};
 template <>
 struct ContainsHandle<::test_anonymous::Op> : public std::false_type {};
+
+template <>
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodError> : public std::true_type {};
+template <>
+struct ContainsHandle<::test_anonymous::SomeProtocolSomeMethodError> : public std::false_type {};
 
 }  // namespace fidl

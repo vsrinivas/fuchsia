@@ -66,12 +66,15 @@ class UnknownInteractionsProtocol_TestBase : public ::test::unknowninteractions:
   }
 };
 
-class UnknownInteractionsClosedProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsClosedProtocol {
+class UnknownInteractionsAjarProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsAjarProtocol {
  public:
-  virtual ~UnknownInteractionsClosedProtocol_TestBase() {}
+  virtual ~UnknownInteractionsAjarProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void StrictOneWay() override {
     NotImplemented_("StrictOneWay");
+  }
+  void FlexibleOneWay() override {
+    NotImplemented_("FlexibleOneWay");
   }
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");
@@ -99,15 +102,12 @@ class UnknownInteractionsClosedProtocol_TestBase : public ::test::unknowninterac
   }
 };
 
-class UnknownInteractionsAjarProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsAjarProtocol {
+class UnknownInteractionsClosedProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsClosedProtocol {
  public:
-  virtual ~UnknownInteractionsAjarProtocol_TestBase() {}
+  virtual ~UnknownInteractionsClosedProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void StrictOneWay() override {
     NotImplemented_("StrictOneWay");
-  }
-  void FlexibleOneWay() override {
-    NotImplemented_("FlexibleOneWay");
   }
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");

@@ -9,76 +9,35 @@
 //
 namespace test {
 namespace table {
-extern "C" const fidl_type_t test_table_TableWithAttributesTable;
-const fidl_type_t* TableWithAttributes::FidlType = &test_table_TableWithAttributesTable;
+extern "C" const fidl_type_t test_table_EmptyTableTable;
+const fidl_type_t* EmptyTable::FidlType = &test_table_EmptyTableTable;
 
-TableWithAttributes::TableWithAttributes() {}
+EmptyTable::EmptyTable() {}
 
-TableWithAttributes::TableWithAttributes(TableWithAttributes&& other) {
+EmptyTable::EmptyTable(EmptyTable&& other) {
   field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&x_value_.value, std::move(other.x_value_.value));
-  }
 }
 
-TableWithAttributes::~TableWithAttributes() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&x_value_.value);
-  }
+EmptyTable::~EmptyTable() {
 }
 
-TableWithAttributes& TableWithAttributes::operator=(TableWithAttributes&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      x_value_.value = std::move(other.x_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&x_value_.value, std::move(other.x_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&x_value_.value);
-  }
+EmptyTable& EmptyTable::operator=(EmptyTable&& other) {
   return *this;
 }
 
-bool TableWithAttributes::IsEmpty() const {
+bool EmptyTable::IsEmpty() const {
   return field_presence_.IsEmpty();
 }
 
-void TableWithAttributes::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                        cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
 }
 
-void TableWithAttributes::Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value, size_t _offset) {
+void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   __attribute__((__unused__)) size_t base;
   __attribute__((__unused__)) size_t count;
@@ -88,36 +47,15 @@ void TableWithAttributes::Decode(::fidl::Decoder* _decoder, TableWithAttributes*
 
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_x();
-    }
-  } else {
-    goto done_1;
-  }
 
   return;
 
   // Clear unset values.
 clear_all:
-done_1:
-  _value->clear_x();
   return;
 }
 
-zx_status_t TableWithAttributes::Clone(TableWithAttributes* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_x();
-  }
+zx_status_t EmptyTable::Clone(EmptyTable* result) const {
   return ZX_OK;
 }
 
@@ -291,242 +229,6 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
       return _status;
   } else {
     result->clear_y();
-  }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
-const fidl_type_t* ReverseOrdinalTable::FidlType = &test_table_ReverseOrdinalTableTable;
-
-ReverseOrdinalTable::ReverseOrdinalTable() {}
-
-ReverseOrdinalTable::ReverseOrdinalTable(ReverseOrdinalTable&& other) {
-  field_presence_ = other.field_presence_;
-  if (field_presence_.IsSet<0>()) {
-    Construct(&z_value_.value, std::move(other.z_value_.value));
-  }
-  if (field_presence_.IsSet<1>()) {
-    Construct(&y_value_.value, std::move(other.y_value_.value));
-  }
-  if (field_presence_.IsSet<2>()) {
-    Construct(&x_value_.value, std::move(other.x_value_.value));
-  }
-}
-
-ReverseOrdinalTable::~ReverseOrdinalTable() {
-  if (field_presence_.IsSet<0>()) {
-    Destruct(&z_value_.value);
-  }
-  if (field_presence_.IsSet<1>()) {
-    Destruct(&y_value_.value);
-  }
-  if (field_presence_.IsSet<2>()) {
-    Destruct(&x_value_.value);
-  }
-}
-
-ReverseOrdinalTable& ReverseOrdinalTable::operator=(ReverseOrdinalTable&& other) {
-  if (other.field_presence_.IsSet<0>()) {
-    if (field_presence_.IsSet<0>()) {
-      z_value_.value = std::move(other.z_value_.value);
-    } else {
-      field_presence_.Set<0>();
-      Construct(&z_value_.value, std::move(other.z_value_.value));
-    }
-  } else if (field_presence_.IsSet<0>()) {
-    field_presence_.Clear<0>();
-    Destruct(&z_value_.value);
-  }
-  if (other.field_presence_.IsSet<1>()) {
-    if (field_presence_.IsSet<1>()) {
-      y_value_.value = std::move(other.y_value_.value);
-    } else {
-      field_presence_.Set<1>();
-      Construct(&y_value_.value, std::move(other.y_value_.value));
-    }
-  } else if (field_presence_.IsSet<1>()) {
-    field_presence_.Clear<1>();
-    Destruct(&y_value_.value);
-  }
-  if (other.field_presence_.IsSet<2>()) {
-    if (field_presence_.IsSet<2>()) {
-      x_value_.value = std::move(other.x_value_.value);
-    } else {
-      field_presence_.Set<2>();
-      Construct(&x_value_.value, std::move(other.x_value_.value));
-    }
-  } else if (field_presence_.IsSet<2>()) {
-    field_presence_.Clear<2>();
-    Destruct(&x_value_.value);
-  }
-  return *this;
-}
-
-bool ReverseOrdinalTable::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-  if (field_presence_.IsSet<0>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &z_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &z_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-  if (field_presence_.IsSet<1>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &y_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &y_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-  if (field_presence_.IsSet<2>()) {
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
-
-    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-      ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-    } else {
-      ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
-
-      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
-      envelope->flags = 0;
-    }
-  }
-}
-
-void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-  if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_z(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_z();
-    }
-  } else {
-    goto done_1;
-  }
-  if (count >= 2) {
-    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_y();
-    }
-  } else {
-    goto done_2;
-  }
-  if (count >= 3) {
-    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_x();
-    }
-  } else {
-    goto done_3;
-  }
-
-  return;
-
-  // Clear unset values.
-clear_all:
-done_1:
-  _value->clear_z();
-done_2:
-  _value->clear_y();
-done_3:
-  _value->clear_x();
-  return;
-}
-
-zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
-  if (field_presence_.IsSet<0>()) {
-    zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_z();
-  }
-  if (field_presence_.IsSet<1>()) {
-    zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_y();
-  }
-  if (field_presence_.IsSet<2>()) {
-    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
-    if (_status != ZX_OK)
-      return _status;
-  } else {
-    result->clear_x();
   }
   return ZX_OK;
 }
@@ -875,6 +577,354 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
       return _status;
   } else {
     result->clear_z();
+  }
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
+const fidl_type_t* ReverseOrdinalTable::FidlType = &test_table_ReverseOrdinalTableTable;
+
+ReverseOrdinalTable::ReverseOrdinalTable() {}
+
+ReverseOrdinalTable::ReverseOrdinalTable(ReverseOrdinalTable&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&z_value_.value, std::move(other.z_value_.value));
+  }
+  if (field_presence_.IsSet<1>()) {
+    Construct(&y_value_.value, std::move(other.y_value_.value));
+  }
+  if (field_presence_.IsSet<2>()) {
+    Construct(&x_value_.value, std::move(other.x_value_.value));
+  }
+}
+
+ReverseOrdinalTable::~ReverseOrdinalTable() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&z_value_.value);
+  }
+  if (field_presence_.IsSet<1>()) {
+    Destruct(&y_value_.value);
+  }
+  if (field_presence_.IsSet<2>()) {
+    Destruct(&x_value_.value);
+  }
+}
+
+ReverseOrdinalTable& ReverseOrdinalTable::operator=(ReverseOrdinalTable&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      z_value_.value = std::move(other.z_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&z_value_.value, std::move(other.z_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&z_value_.value);
+  }
+  if (other.field_presence_.IsSet<1>()) {
+    if (field_presence_.IsSet<1>()) {
+      y_value_.value = std::move(other.y_value_.value);
+    } else {
+      field_presence_.Set<1>();
+      Construct(&y_value_.value, std::move(other.y_value_.value));
+    }
+  } else if (field_presence_.IsSet<1>()) {
+    field_presence_.Clear<1>();
+    Destruct(&y_value_.value);
+  }
+  if (other.field_presence_.IsSet<2>()) {
+    if (field_presence_.IsSet<2>()) {
+      x_value_.value = std::move(other.x_value_.value);
+    } else {
+      field_presence_.Set<2>();
+      Construct(&x_value_.value, std::move(other.x_value_.value));
+    }
+  } else if (field_presence_.IsSet<2>()) {
+    field_presence_.Clear<2>();
+    Destruct(&x_value_.value);
+  }
+  return *this;
+}
+
+bool ReverseOrdinalTable::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &z_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &z_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+  if (field_presence_.IsSet<1>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &y_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &y_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+  if (field_presence_.IsSet<2>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &x_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_z(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_z();
+    }
+  } else {
+    goto done_1;
+  }
+  if (count >= 2) {
+    size_t envelope_base = base + (2 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_y(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_y();
+    }
+  } else {
+    goto done_2;
+  }
+  if (count >= 3) {
+    size_t envelope_base = base + (3 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_x();
+    }
+  } else {
+    goto done_3;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_z();
+done_2:
+  _value->clear_y();
+done_3:
+  _value->clear_x();
+  return;
+}
+
+zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_z();
+  }
+  if (field_presence_.IsSet<1>()) {
+    zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_y();
+  }
+  if (field_presence_.IsSet<2>()) {
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_x();
+  }
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_table_TableWithAttributesTable;
+const fidl_type_t* TableWithAttributes::FidlType = &test_table_TableWithAttributesTable;
+
+TableWithAttributes::TableWithAttributes() {}
+
+TableWithAttributes::TableWithAttributes(TableWithAttributes&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&x_value_.value, std::move(other.x_value_.value));
+  }
+}
+
+TableWithAttributes::~TableWithAttributes() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&x_value_.value);
+  }
+}
+
+TableWithAttributes& TableWithAttributes::operator=(TableWithAttributes&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      x_value_.value = std::move(other.x_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value, std::move(other.x_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&x_value_.value);
+  }
+  return *this;
+}
+
+bool TableWithAttributes::IsEmpty() const {
+  return field_presence_.IsEmpty();
+}
+
+void TableWithAttributes::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
+  if (field_presence_.IsSet<0>()) {
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+
+    if (::fidl::EncodingInlineSize<int64_t>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder,
+          &x_value_.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+
+      fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
+    }
+  }
+}
+
+void TableWithAttributes::Decode(::fidl::Decoder* _decoder, TableWithAttributes* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  __attribute__((__unused__)) size_t base;
+  __attribute__((__unused__)) size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_x();
+    }
+  } else {
+    goto done_1;
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_x();
+  return;
+}
+
+zx_status_t TableWithAttributes::Clone(TableWithAttributes* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
+    if (_status != ZX_OK)
+      return _status;
+  } else {
+    result->clear_x();
   }
   return ZX_OK;
 }
@@ -4944,56 +4994,6 @@ zx_status_t SixtyFourOrdinalTable::Clone(SixtyFourOrdinalTable* result) const {
   } else {
     result->clear_v64();
   }
-  return ZX_OK;
-}
-
-extern "C" const fidl_type_t test_table_EmptyTableTable;
-const fidl_type_t* EmptyTable::FidlType = &test_table_EmptyTableTable;
-
-EmptyTable::EmptyTable() {}
-
-EmptyTable::EmptyTable(EmptyTable&& other) {
-  field_presence_ = other.field_presence_;
-}
-
-EmptyTable::~EmptyTable() {
-}
-
-EmptyTable& EmptyTable::operator=(EmptyTable&& other) {
-  return *this;
-}
-
-bool EmptyTable::IsEmpty() const {
-  return field_presence_.IsEmpty();
-}
-
-void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                        cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  size_t max_ordinal = MaxOrdinal();
-  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
-  if (max_ordinal == 0) return;
-  __attribute__((__unused__)) size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
-}
-
-void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _offset) {
-  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
-  __attribute__((__unused__)) size_t base;
-  __attribute__((__unused__)) size_t count;
-  if (!encoded->data) {
-    goto clear_all;
-  }
-
-  base = _decoder->GetOffset(encoded->data);
-  count = encoded->count;
-
-  return;
-
-  // Clear unset values.
-clear_all:
-  return;
-}
-
-zx_status_t EmptyTable::Clone(EmptyTable* result) const {
   return ZX_OK;
 }
 

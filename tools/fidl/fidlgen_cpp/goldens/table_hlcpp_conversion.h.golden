@@ -11,14 +11,14 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalToHLCPPTraits<::test_table::TableWithAttributes> {
-  using HLCPPType = ::test::table::TableWithAttributes;
-  static inline ::test::table::TableWithAttributes Convert(::test_table::TableWithAttributes&&);
+struct NaturalToHLCPPTraits<::test_table::EmptyTable> {
+  using HLCPPType = ::test::table::EmptyTable;
+  static inline ::test::table::EmptyTable Convert(::test_table::EmptyTable&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::table::TableWithAttributes> {
-  using NaturalType = ::test_table::TableWithAttributes;
-  static inline ::test_table::TableWithAttributes Convert(::test::table::TableWithAttributes&&);
+struct HLCPPToNaturalTraits<::test::table::EmptyTable> {
+  using NaturalType = ::test_table::EmptyTable;
+  static inline ::test_table::EmptyTable Convert(::test::table::EmptyTable&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_table::SimpleTable> {
@@ -29,16 +29,6 @@ template <>
 struct HLCPPToNaturalTraits<::test::table::SimpleTable> {
   using NaturalType = ::test_table::SimpleTable;
   static inline ::test_table::SimpleTable Convert(::test::table::SimpleTable&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_table::ReverseOrdinalTable> {
-  using HLCPPType = ::test::table::ReverseOrdinalTable;
-  static inline ::test::table::ReverseOrdinalTable Convert(::test_table::ReverseOrdinalTable&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::table::ReverseOrdinalTable> {
-  using NaturalType = ::test_table::ReverseOrdinalTable;
-  static inline ::test_table::ReverseOrdinalTable Convert(::test::table::ReverseOrdinalTable&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_table::OlderSimpleTable> {
@@ -61,6 +51,26 @@ struct HLCPPToNaturalTraits<::test::table::NewerSimpleTable> {
   static inline ::test_table::NewerSimpleTable Convert(::test::table::NewerSimpleTable&&);
 };
 template <>
+struct NaturalToHLCPPTraits<::test_table::ReverseOrdinalTable> {
+  using HLCPPType = ::test::table::ReverseOrdinalTable;
+  static inline ::test::table::ReverseOrdinalTable Convert(::test_table::ReverseOrdinalTable&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::table::ReverseOrdinalTable> {
+  using NaturalType = ::test_table::ReverseOrdinalTable;
+  static inline ::test_table::ReverseOrdinalTable Convert(::test::table::ReverseOrdinalTable&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_table::TableWithAttributes> {
+  using HLCPPType = ::test::table::TableWithAttributes;
+  static inline ::test::table::TableWithAttributes Convert(::test_table::TableWithAttributes&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::table::TableWithAttributes> {
+  using NaturalType = ::test_table::TableWithAttributes;
+  static inline ::test_table::TableWithAttributes Convert(::test::table::TableWithAttributes&&);
+};
+template <>
 struct NaturalToHLCPPTraits<::test_table::ExtensionTable> {
   using HLCPPType = ::test::table::ExtensionTable;
   static inline ::test::table::ExtensionTable Convert(::test_table::ExtensionTable&&);
@@ -80,30 +90,14 @@ struct HLCPPToNaturalTraits<::test::table::SixtyFourOrdinalTable> {
   using NaturalType = ::test_table::SixtyFourOrdinalTable;
   static inline ::test_table::SixtyFourOrdinalTable Convert(::test::table::SixtyFourOrdinalTable&&);
 };
-template <>
-struct NaturalToHLCPPTraits<::test_table::EmptyTable> {
-  using HLCPPType = ::test::table::EmptyTable;
-  static inline ::test::table::EmptyTable Convert(::test_table::EmptyTable&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::table::EmptyTable> {
-  using NaturalType = ::test_table::EmptyTable;
-  static inline ::test_table::EmptyTable Convert(::test::table::EmptyTable&&);
-};
 
-::test::table::TableWithAttributes NaturalToHLCPPTraits<::test_table::TableWithAttributes>::Convert(::test_table::TableWithAttributes&& value) {
-  ::test::table::TableWithAttributes hlcpp;
-  if (value.x().has_value()) {
-    hlcpp.set_x(::fidl::NaturalToHLCPP(std::move(value.x().value())));
-  }
+::test::table::EmptyTable NaturalToHLCPPTraits<::test_table::EmptyTable>::Convert(::test_table::EmptyTable&& value) {
+  ::test::table::EmptyTable hlcpp;
   return hlcpp;
 }
 
-::test_table::TableWithAttributes HLCPPToNaturalTraits<::test::table::TableWithAttributes>::Convert(::test::table::TableWithAttributes&& value) {
-  ::test_table::TableWithAttributes natural;
-  if (value.has_x()) {
-    natural.x() = ::fidl::HLCPPToNatural(std::move(*value.mutable_x()));
-  }
+::test_table::EmptyTable HLCPPToNaturalTraits<::test::table::EmptyTable>::Convert(::test::table::EmptyTable&& value) {
+  ::test_table::EmptyTable natural;
   return natural;
 }
 ::test::table::SimpleTable NaturalToHLCPPTraits<::test_table::SimpleTable>::Convert(::test_table::SimpleTable&& value) {
@@ -124,33 +118,6 @@ struct HLCPPToNaturalTraits<::test::table::EmptyTable> {
   }
   if (value.has_y()) {
     natural.y() = ::fidl::HLCPPToNatural(std::move(*value.mutable_y()));
-  }
-  return natural;
-}
-::test::table::ReverseOrdinalTable NaturalToHLCPPTraits<::test_table::ReverseOrdinalTable>::Convert(::test_table::ReverseOrdinalTable&& value) {
-  ::test::table::ReverseOrdinalTable hlcpp;
-  if (value.z().has_value()) {
-    hlcpp.set_z(::fidl::NaturalToHLCPP(std::move(value.z().value())));
-  }
-  if (value.y().has_value()) {
-    hlcpp.set_y(::fidl::NaturalToHLCPP(std::move(value.y().value())));
-  }
-  if (value.x().has_value()) {
-    hlcpp.set_x(::fidl::NaturalToHLCPP(std::move(value.x().value())));
-  }
-  return hlcpp;
-}
-
-::test_table::ReverseOrdinalTable HLCPPToNaturalTraits<::test::table::ReverseOrdinalTable>::Convert(::test::table::ReverseOrdinalTable&& value) {
-  ::test_table::ReverseOrdinalTable natural;
-  if (value.has_z()) {
-    natural.z() = ::fidl::HLCPPToNatural(std::move(*value.mutable_z()));
-  }
-  if (value.has_y()) {
-    natural.y() = ::fidl::HLCPPToNatural(std::move(*value.mutable_y()));
-  }
-  if (value.has_x()) {
-    natural.x() = ::fidl::HLCPPToNatural(std::move(*value.mutable_x()));
   }
   return natural;
 }
@@ -193,6 +160,48 @@ struct HLCPPToNaturalTraits<::test::table::EmptyTable> {
   }
   if (value.has_z()) {
     natural.z() = ::fidl::HLCPPToNatural(std::move(*value.mutable_z()));
+  }
+  return natural;
+}
+::test::table::ReverseOrdinalTable NaturalToHLCPPTraits<::test_table::ReverseOrdinalTable>::Convert(::test_table::ReverseOrdinalTable&& value) {
+  ::test::table::ReverseOrdinalTable hlcpp;
+  if (value.z().has_value()) {
+    hlcpp.set_z(::fidl::NaturalToHLCPP(std::move(value.z().value())));
+  }
+  if (value.y().has_value()) {
+    hlcpp.set_y(::fidl::NaturalToHLCPP(std::move(value.y().value())));
+  }
+  if (value.x().has_value()) {
+    hlcpp.set_x(::fidl::NaturalToHLCPP(std::move(value.x().value())));
+  }
+  return hlcpp;
+}
+
+::test_table::ReverseOrdinalTable HLCPPToNaturalTraits<::test::table::ReverseOrdinalTable>::Convert(::test::table::ReverseOrdinalTable&& value) {
+  ::test_table::ReverseOrdinalTable natural;
+  if (value.has_z()) {
+    natural.z() = ::fidl::HLCPPToNatural(std::move(*value.mutable_z()));
+  }
+  if (value.has_y()) {
+    natural.y() = ::fidl::HLCPPToNatural(std::move(*value.mutable_y()));
+  }
+  if (value.has_x()) {
+    natural.x() = ::fidl::HLCPPToNatural(std::move(*value.mutable_x()));
+  }
+  return natural;
+}
+::test::table::TableWithAttributes NaturalToHLCPPTraits<::test_table::TableWithAttributes>::Convert(::test_table::TableWithAttributes&& value) {
+  ::test::table::TableWithAttributes hlcpp;
+  if (value.x().has_value()) {
+    hlcpp.set_x(::fidl::NaturalToHLCPP(std::move(value.x().value())));
+  }
+  return hlcpp;
+}
+
+::test_table::TableWithAttributes HLCPPToNaturalTraits<::test::table::TableWithAttributes>::Convert(::test::table::TableWithAttributes&& value) {
+  ::test_table::TableWithAttributes natural;
+  if (value.has_x()) {
+    natural.x() = ::fidl::HLCPPToNatural(std::move(*value.mutable_x()));
   }
   return natural;
 }
@@ -596,15 +605,6 @@ struct HLCPPToNaturalTraits<::test::table::EmptyTable> {
   if (value.has_v64()) {
     natural.v64() = ::fidl::HLCPPToNatural(std::move(*value.mutable_v64()));
   }
-  return natural;
-}
-::test::table::EmptyTable NaturalToHLCPPTraits<::test_table::EmptyTable>::Convert(::test_table::EmptyTable&& value) {
-  ::test::table::EmptyTable hlcpp;
-  return hlcpp;
-}
-
-::test_table::EmptyTable HLCPPToNaturalTraits<::test::table::EmptyTable>::Convert(::test::table::EmptyTable&& value) {
-  ::test_table::EmptyTable natural;
   return natural;
 }
 

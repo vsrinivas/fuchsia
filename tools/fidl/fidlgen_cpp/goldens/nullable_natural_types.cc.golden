@@ -2,12 +2,40 @@
 
 #include <fidl/test.nullable/cpp/natural_types.h>
 
+::test_nullable::StructWithNullableString::Storage_ test_nullable::StructWithNullableString::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.val)};
+}
+
 ::test_nullable::StructWithNullableVector::Storage_ test_nullable::StructWithNullableVector::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.val)};
 }
 
-::test_nullable::StructWithNullableUnion::Storage_ test_nullable::StructWithNullableUnion::CloneStorage_() const {
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+::test_nullable::SimpleProtocolAddRequest::Storage_ test_nullable::SimpleProtocolAddRequest::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.a),
+      ::fidl::internal::NaturalClone(storage_.b)};
+}
+
+::test_nullable::SimpleProtocolAddTopResponse::Storage_ test_nullable::SimpleProtocolAddTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.sum)};
+}
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+::test_nullable::Int32Wrapper::Storage_ test_nullable::Int32Wrapper::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.val)};
 }
@@ -17,35 +45,7 @@
       ::fidl::internal::NaturalClone(storage_.val)};
 }
 
-::test_nullable::StructWithNullableString::Storage_ test_nullable::StructWithNullableString::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.val)};
-}
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-::test_nullable::SimpleProtocolAddTopResponse::Storage_ test_nullable::SimpleProtocolAddTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.sum)};
-}
-
-::test_nullable::SimpleProtocolAddRequest::Storage_ test_nullable::SimpleProtocolAddRequest::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.a),
-      ::fidl::internal::NaturalClone(storage_.b)};
-}
-
-::test_nullable::Int32Wrapper::Storage_ test_nullable::Int32Wrapper::CloneStorage_() const {
+::test_nullable::StructWithNullableUnion::Storage_ test_nullable::StructWithNullableUnion::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.val)};
 }

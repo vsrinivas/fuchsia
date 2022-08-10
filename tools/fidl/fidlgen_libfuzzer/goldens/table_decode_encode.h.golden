@@ -12,19 +12,14 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 8>
     test_table_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_table::wire::TableWithAttributes",
+            .fidl_type_name = "::test_table::wire::EmptyTable",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::TableWithAttributes>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::EmptyTable>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_table::wire::SimpleTable",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::SimpleTable>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_table::wire::ReverseOrdinalTable",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::ReverseOrdinalTable>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_table::wire::OlderSimpleTable",
@@ -37,6 +32,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 8>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::NewerSimpleTable>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_table::wire::ReverseOrdinalTable",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::ReverseOrdinalTable>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_table::wire::TableWithAttributes",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::TableWithAttributes>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_table::wire::ExtensionTable",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::ExtensionTable>,
@@ -45,11 +50,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 8>
             .fidl_type_name = "::test_table::wire::SixtyFourOrdinalTable",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::SixtyFourOrdinalTable>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_table::wire::EmptyTable",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_table::wire::EmptyTable>,
         },
 };
 

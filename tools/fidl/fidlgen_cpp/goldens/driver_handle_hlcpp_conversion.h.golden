@@ -11,14 +11,14 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalToHLCPPTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest> {
-  using HLCPPType = ::test::driverhandle::HandlesInProtocolSendHandlesRequest;
-  static inline ::test::driverhandle::HandlesInProtocolSendHandlesRequest Convert(::test_driverhandle::HandlesInProtocolSendHandlesRequest&&);
+struct NaturalToHLCPPTraits<::test_driverhandle::ClientEndWrapper> {
+  using HLCPPType = ::test::driverhandle::ClientEndWrapper;
+  static inline ::test::driverhandle::ClientEndWrapper Convert(::test_driverhandle::ClientEndWrapper&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::driverhandle::HandlesInProtocolSendHandlesRequest> {
-  using NaturalType = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
-  static inline ::test_driverhandle::HandlesInProtocolSendHandlesRequest Convert(::test::driverhandle::HandlesInProtocolSendHandlesRequest&&);
+struct HLCPPToNaturalTraits<::test::driverhandle::ClientEndWrapper> {
+  using NaturalType = ::test_driverhandle::ClientEndWrapper;
+  static inline ::test_driverhandle::ClientEndWrapper Convert(::test::driverhandle::ClientEndWrapper&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_driverhandle::ServerEndWrapper> {
@@ -31,14 +31,14 @@ struct HLCPPToNaturalTraits<::test::driverhandle::ServerEndWrapper> {
   static inline ::test_driverhandle::ServerEndWrapper Convert(::test::driverhandle::ServerEndWrapper&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_driverhandle::ClientEndWrapper> {
-  using HLCPPType = ::test::driverhandle::ClientEndWrapper;
-  static inline ::test::driverhandle::ClientEndWrapper Convert(::test_driverhandle::ClientEndWrapper&&);
+struct NaturalToHLCPPTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest> {
+  using HLCPPType = ::test::driverhandle::HandlesInProtocolSendHandlesRequest;
+  static inline ::test::driverhandle::HandlesInProtocolSendHandlesRequest Convert(::test_driverhandle::HandlesInProtocolSendHandlesRequest&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::driverhandle::ClientEndWrapper> {
-  using NaturalType = ::test_driverhandle::ClientEndWrapper;
-  static inline ::test_driverhandle::ClientEndWrapper Convert(::test::driverhandle::ClientEndWrapper&&);
+struct HLCPPToNaturalTraits<::test::driverhandle::HandlesInProtocolSendHandlesRequest> {
+  using NaturalType = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
+  static inline ::test_driverhandle::HandlesInProtocolSendHandlesRequest Convert(::test::driverhandle::HandlesInProtocolSendHandlesRequest&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_driverhandle::T> {
@@ -51,15 +51,15 @@ struct HLCPPToNaturalTraits<::test::driverhandle::T> {
   static inline ::test_driverhandle::T Convert(::test::driverhandle::T&&);
 };
 
-::test::driverhandle::HandlesInProtocolSendHandlesRequest NaturalToHLCPPTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest>::Convert(::test_driverhandle::HandlesInProtocolSendHandlesRequest&& value) {
-  ::test::driverhandle::HandlesInProtocolSendHandlesRequest hlcpp;
-  hlcpp.t = ::fidl::NaturalToHLCPP(std::move(value.t()));
+::test::driverhandle::ClientEndWrapper NaturalToHLCPPTraits<::test_driverhandle::ClientEndWrapper>::Convert(::test_driverhandle::ClientEndWrapper&& value) {
+  ::test::driverhandle::ClientEndWrapper hlcpp;
+  hlcpp.value = ::fidl::NaturalToHLCPP(std::move(value.value()));
   return hlcpp;
 }
 
-::test_driverhandle::HandlesInProtocolSendHandlesRequest HLCPPToNaturalTraits<::test::driverhandle::HandlesInProtocolSendHandlesRequest>::Convert(::test::driverhandle::HandlesInProtocolSendHandlesRequest&& value) {
-  return ::test_driverhandle::HandlesInProtocolSendHandlesRequest{{
-      .t = ::fidl::HLCPPToNatural(std::move(value.t)),
+::test_driverhandle::ClientEndWrapper HLCPPToNaturalTraits<::test::driverhandle::ClientEndWrapper>::Convert(::test::driverhandle::ClientEndWrapper&& value) {
+  return ::test_driverhandle::ClientEndWrapper{{
+      .value = ::fidl::HLCPPToNatural(std::move(value.value)),
   }};
 }
 ::test::driverhandle::ServerEndWrapper NaturalToHLCPPTraits<::test_driverhandle::ServerEndWrapper>::Convert(::test_driverhandle::ServerEndWrapper&& value) {
@@ -73,15 +73,15 @@ struct HLCPPToNaturalTraits<::test::driverhandle::T> {
       .value = ::fidl::HLCPPToNatural(std::move(value.value)),
   }};
 }
-::test::driverhandle::ClientEndWrapper NaturalToHLCPPTraits<::test_driverhandle::ClientEndWrapper>::Convert(::test_driverhandle::ClientEndWrapper&& value) {
-  ::test::driverhandle::ClientEndWrapper hlcpp;
-  hlcpp.value = ::fidl::NaturalToHLCPP(std::move(value.value()));
+::test::driverhandle::HandlesInProtocolSendHandlesRequest NaturalToHLCPPTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest>::Convert(::test_driverhandle::HandlesInProtocolSendHandlesRequest&& value) {
+  ::test::driverhandle::HandlesInProtocolSendHandlesRequest hlcpp;
+  hlcpp.t = ::fidl::NaturalToHLCPP(std::move(value.t()));
   return hlcpp;
 }
 
-::test_driverhandle::ClientEndWrapper HLCPPToNaturalTraits<::test::driverhandle::ClientEndWrapper>::Convert(::test::driverhandle::ClientEndWrapper&& value) {
-  return ::test_driverhandle::ClientEndWrapper{{
-      .value = ::fidl::HLCPPToNatural(std::move(value.value)),
+::test_driverhandle::HandlesInProtocolSendHandlesRequest HLCPPToNaturalTraits<::test::driverhandle::HandlesInProtocolSendHandlesRequest>::Convert(::test::driverhandle::HandlesInProtocolSendHandlesRequest&& value) {
+  return ::test_driverhandle::HandlesInProtocolSendHandlesRequest{{
+      .t = ::fidl::HLCPPToNatural(std::move(value.t)),
   }};
 }
 ::test::driverhandle::T NaturalToHLCPPTraits<::test_driverhandle::T>::Convert(::test_driverhandle::T&& value) {

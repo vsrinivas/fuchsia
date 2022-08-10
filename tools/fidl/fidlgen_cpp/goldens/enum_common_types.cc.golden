@@ -22,6 +22,25 @@ size_t fidl::internal::DisplayError<::test_enum::MyStrictEnum>::Format(
 }
 
 namespace test_enum {
+extern "C" const fidl_type_t test_enum_MyFlexibleEnumTable;
+}  // namespace test_enum
+size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnum>::Format(
+    const ::test_enum::MyFlexibleEnum& value, char* destination, size_t capacity) {
+  const char* name = [&]() -> const char* {
+    switch (static_cast<uint32_t>(value)) {
+      case 1u:
+        return "FOO";
+      case 2u:
+        return "BAR";
+      default:
+        return nullptr;
+    }
+  }();
+  return ::fidl::internal::FormatApplicationError(
+      static_cast<uint32_t>(value), name, &::test_enum::test_enum_MyFlexibleEnumTable, destination, capacity);
+}
+
+namespace test_enum {
 extern "C" const fidl_type_t test_enum_MyFlexibleEnumWithCustomUnknownTable;
 }  // namespace test_enum
 size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown>::Format(
@@ -40,25 +59,6 @@ size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown
   }();
   return ::fidl::internal::FormatApplicationError(
       static_cast<uint32_t>(value), name, &::test_enum::test_enum_MyFlexibleEnumWithCustomUnknownTable, destination, capacity);
-}
-
-namespace test_enum {
-extern "C" const fidl_type_t test_enum_MyFlexibleEnumTable;
-}  // namespace test_enum
-size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnum>::Format(
-    const ::test_enum::MyFlexibleEnum& value, char* destination, size_t capacity) {
-  const char* name = [&]() -> const char* {
-    switch (static_cast<uint32_t>(value)) {
-      case 1u:
-        return "FOO";
-      case 2u:
-        return "BAR";
-      default:
-        return nullptr;
-    }
-  }();
-  return ::fidl::internal::FormatApplicationError(
-      static_cast<uint32_t>(value), name, &::test_enum::test_enum_MyFlexibleEnumTable, destination, capacity);
 }
 
 namespace test_enum {

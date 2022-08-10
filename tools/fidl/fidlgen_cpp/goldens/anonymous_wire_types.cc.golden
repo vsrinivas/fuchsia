@@ -2,22 +2,6 @@
 
 #include <fidl/test.anonymous/cpp/wire_types.h>
 
-auto ::test_anonymous::wire::UnionMember::Which() const -> ::test_anonymous::wire::UnionMember::Tag {
-  ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal_) {
-    case ::test_anonymous::wire::UnionMember::Ordinal::kUnionData:
-      return static_cast<::test_anonymous::wire::UnionMember::Tag>(ordinal_);
-    default:
-      return ::test_anonymous::wire::UnionMember::Tag::kUnknown;
-  }
-}
-
-void ::test_anonymous::wire::UnionMember::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(UnionMember) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(UnionMember, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(UnionMember, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
 auto ::test_anonymous::wire::Expression::Which() const -> ::test_anonymous::wire::Expression::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -36,27 +20,26 @@ void ::test_anonymous::wire::Expression::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(Expression, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
+auto ::test_anonymous::wire::UnionMember::Which() const -> ::test_anonymous::wire::UnionMember::Tag {
+  ZX_ASSERT(!has_invalid_tag());
+  switch (ordinal_) {
+    case ::test_anonymous::wire::UnionMember::Ordinal::kUnionData:
+      return static_cast<::test_anonymous::wire::UnionMember::Tag>(ordinal_);
+    default:
+      return ::test_anonymous::wire::UnionMember::Tag::kUnknown;
+  }
+}
+
+void ::test_anonymous::wire::UnionMember::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(UnionMember) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(UnionMember, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(UnionMember, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
 void ::test_anonymous::wire::SomeProtocolSomeMethodResult::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(SomeProtocolSomeMethodResult) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(SomeProtocolSomeMethodResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(SomeProtocolSomeMethodResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
-bool ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>::HasUnknownData() const {
-  if (!reserved_0_.IsZeroEnvelope()) {
-    return true;
-  }
-  return false;
-}
-
-bool ::test_anonymous::wire::TableMember::HasUnknownData() const {
-  if (max_ordinal_ > 2) {
-    return true;
-  }
-  if (frame_ptr_ == nullptr) {
-    return false;
-  }
-  return frame_ptr_->HasUnknownData();
 }
 
 bool ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>::HasUnknownData() const {
@@ -68,6 +51,23 @@ bool ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>::HasUnk
 
 bool ::test_anonymous::wire::FunctionApplication::HasUnknownData() const {
   if (max_ordinal_ > 4) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}
+
+bool ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>::HasUnknownData() const {
+  if (!reserved_0_.IsZeroEnvelope()) {
+    return true;
+  }
+  return false;
+}
+
+bool ::test_anonymous::wire::TableMember::HasUnknownData() const {
+  if (max_ordinal_ > 2) {
     return true;
   }
   if (frame_ptr_ == nullptr) {

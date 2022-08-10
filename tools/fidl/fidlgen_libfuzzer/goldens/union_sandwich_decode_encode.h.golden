@@ -17,11 +17,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 5>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_unionsandwich::wire::SandwichUnionSize8Alignment4>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_unionsandwich::wire::SandwichUnionSize36Alignment4",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_unionsandwich::wire::SandwichUnionSize12Alignment4",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_unionsandwich::wire::SandwichUnionSize12Alignment4>,
@@ -35,6 +30,11 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 5>
             .fidl_type_name = "::test_unionsandwich::wire::SandwichUnionSize24Alignment8",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_unionsandwich::wire::SandwichUnionSize24Alignment8>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_unionsandwich::wire::SandwichUnionSize36Alignment4",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_unionsandwich::wire::SandwichUnionSize36Alignment4>,
         },
 };
 

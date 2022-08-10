@@ -13,13 +13,82 @@
 
 namespace fuzzing {
 
-using Union = ::test::versions::Union;
-using Table = ::test::versions::Table;
-using Struct = ::test::versions::Struct;
-using Service = ::test::versions::Service;
-using Enum = ::test::versions::Enum;
 using Bits = ::test::versions::Bits;
+using Enum = ::test::versions::Enum;
+using Struct = ::test::versions::Struct;
+using Table = ::test::versions::Table;
+using Union = ::test::versions::Union;
+using Service = ::test::versions::Service;
 
+template <>
+struct MinSize<Bits> {
+  operator size_t() { return sizeof(uint32_t); }
+};
+template <>
+struct Allocate<Bits> {
+  Bits operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= sizeof(uint32_t));
+    return Bits(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
+  }
+};
+template <>
+struct MinSize<Enum> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<Enum> {
+  Enum operator()(FuzzInput* src, size_t* size) {
+    Enum out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 1) {
+      case 0:
+        out = Enum::A;
+        break;
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<Struct> {
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<Struct> {
+  Struct operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Struct>());
+    Struct out;
+    const size_t slack_per_member = (*size - MinSize<Struct>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.x = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<Table> {
+  operator size_t() {
+    return MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<Table> {
+  Table operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<Table>());
+    Table out;
+    const size_t slack_per_member = (*size - MinSize<Table>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.set_x(Allocate<uint32_t>{}(src, &out_size));
+    return out;
+  }
+};
 template <>
 struct MinSize<Union> {
   operator size_t() {
@@ -47,75 +116,6 @@ struct Allocate<Union> {
     }
 
     return out;
-  }
-};
-template <>
-struct MinSize<Table> {
-  operator size_t() {
-    return MinSize<uint32_t>();
-  }
-};
-template <>
-struct Allocate<Table> {
-  Table operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Table>());
-    Table out;
-    const size_t slack_per_member = (*size - MinSize<Table>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.set_x(Allocate<uint32_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<Struct> {
-  operator size_t() {
-    return MinSize<uint32_t>();
-  }
-};
-template <>
-struct Allocate<Struct> {
-  Struct operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<Struct>());
-    Struct out;
-    const size_t slack_per_member = (*size - MinSize<Struct>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint32_t>() + slack_per_member;
-    out.x = Allocate<uint32_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<Enum> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<Enum> {
-  Enum operator()(FuzzInput* src, size_t* size) {
-    Enum out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
-
-    switch (selector % 1) {
-      case 0:
-        out = Enum::A;
-        break;
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<Bits> {
-  operator size_t() { return sizeof(uint32_t); }
-};
-template <>
-struct Allocate<Bits> {
-  Bits operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= sizeof(uint32_t));
-    return Bits(*reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
   }
 };
 

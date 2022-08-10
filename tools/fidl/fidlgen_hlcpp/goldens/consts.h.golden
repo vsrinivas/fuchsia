@@ -79,47 +79,47 @@ inline zx_status_t Clone(::test::consts::BitsType value,
   return ZX_OK;
 }
 
-constexpr zx_rights_t ZX_RIGHTS_VAL = ZX_RIGHT_READ;
-
-constexpr zx_obj_type_t ZX_OBJ_VAL = ZX_OBJ_TYPE_CHANNEL;
-
-constexpr uint64_t ZX_CONST = ZX_CHANNEL_MAX_MSG_BYTES;
-
-extern const char* USERNAME;
-
-constexpr uint32_t POPULATION_USA_2018 = 330000000u;
+constexpr bool ENABLED_FLAG = true;
 
 constexpr int8_t OFFSET = -33;
 
-constexpr float MIN_TEMP = -273.15f;
-
-constexpr uint64_t FUCHSIA = 4054509061583223046u;
-
-constexpr ::test::consts::EnumType enumVal = ::test::consts::EnumType::VALUE;
-
-constexpr ::test::consts::EnumType enumTrue = ::test::consts::EnumType::true_;
-
-constexpr int32_t enumPrimitiveVal = ::test::consts::EnumType::VALUE;
-
-constexpr int32_t enumPrimitiveTrue = ::test::consts::EnumType::true_;
-
-constexpr bool ENABLED_FLAG = true;
-
-constexpr uint64_t DIAMOND = 1746410393481133080u;
-
-constexpr double CONVERSION_FACTOR = 1.41421;
-
-constexpr ::test::consts::BitsType bitsVal = ::test::consts::BitsType::VALUE;
-
-constexpr ::test::consts::BitsType bitsTrue = ::test::consts::BitsType::true_;
-
-constexpr uint32_t bitsPrimitiveVal = ::test::consts::BitsType::VALUE;
-
-constexpr uint32_t bitsPrimitiveTrue = ::test::consts::BitsType::true_;
+constexpr uint16_t ANSWER = 42u;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
-constexpr uint16_t ANSWER = 42u;
+constexpr uint32_t POPULATION_USA_2018 = 330000000u;
+
+constexpr uint64_t DIAMOND = 1746410393481133080u;
+
+constexpr uint64_t FUCHSIA = 4054509061583223046u;
+
+extern const char* USERNAME;
+
+constexpr float MIN_TEMP = -273.15f;
+
+constexpr double CONVERSION_FACTOR = 1.41421;
+
+constexpr zx_obj_type_t ZX_OBJ_VAL = ZX_OBJ_TYPE_CHANNEL;
+
+constexpr zx_rights_t ZX_RIGHTS_VAL = ZX_RIGHT_READ;
+
+constexpr uint64_t ZX_CONST = ZX_CHANNEL_MAX_MSG_BYTES;
+
+constexpr ::test::consts::EnumType enumVal = ::test::consts::EnumType::VALUE;
+
+constexpr int32_t enumPrimitiveVal = ::test::consts::EnumType::VALUE;
+
+constexpr ::test::consts::EnumType enumTrue = ::test::consts::EnumType::true_;
+
+constexpr int32_t enumPrimitiveTrue = ::test::consts::EnumType::true_;
+
+constexpr ::test::consts::BitsType bitsVal = ::test::consts::BitsType::VALUE;
+
+constexpr uint32_t bitsPrimitiveVal = ::test::consts::BitsType::VALUE;
+
+constexpr ::test::consts::BitsType bitsTrue = ::test::consts::BitsType::true_;
+
+constexpr uint32_t bitsPrimitiveTrue = ::test::consts::BitsType::true_;
 
 }  // namespace consts
 }  // namespace test

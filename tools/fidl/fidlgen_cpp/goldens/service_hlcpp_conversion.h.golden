@@ -11,37 +11,6 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_service::SecondProtocol>> {
-  using HLCPPType = fidl::InterfaceHandle<::test::service::SecondProtocol>;
-  static inline fidl::InterfaceHandle<::test::service::SecondProtocol> Convert(fidl::ClientEnd<::test_service::SecondProtocol>&& c) {
-    return fidl::InterfaceHandle<::test::service::SecondProtocol>(c.TakeChannel());
-  }
-};
-
-template <>
-struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_service::SecondProtocol>> {
-  using HLCPPType = fidl::InterfaceRequest<::test::service::SecondProtocol>;
-  static inline fidl::InterfaceRequest<::test::service::SecondProtocol> Convert(fidl::ServerEnd<::test_service::SecondProtocol>&& c) {
-    return fidl::InterfaceRequest<::test::service::SecondProtocol>(c.TakeChannel());
-  }
-};
-
-template <>
-struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::service::SecondProtocol>> {
-  using NaturalType = fidl::ClientEnd<::test_service::SecondProtocol>;
-  static inline fidl::ClientEnd<::test_service::SecondProtocol> Convert(fidl::InterfaceHandle<::test::service::SecondProtocol>&& c) {
-    return fidl::ClientEnd<::test_service::SecondProtocol>(c.TakeChannel());
-  }
-};
-
-template <>
-struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::service::SecondProtocol>> {
-  using NaturalType = fidl::ServerEnd<::test_service::SecondProtocol>;
-  static inline fidl::ServerEnd<::test_service::SecondProtocol> Convert(fidl::InterfaceRequest<::test::service::SecondProtocol>&& c) {
-    return fidl::ServerEnd<::test_service::SecondProtocol>(c.TakeChannel());
-  }
-};
-template <>
 struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_service::FirstProtocol>> {
   using HLCPPType = fidl::InterfaceHandle<::test::service::FirstProtocol>;
   static inline fidl::InterfaceHandle<::test::service::FirstProtocol> Convert(fidl::ClientEnd<::test_service::FirstProtocol>&& c) {
@@ -70,6 +39,37 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::service::FirstProtoco
   using NaturalType = fidl::ServerEnd<::test_service::FirstProtocol>;
   static inline fidl::ServerEnd<::test_service::FirstProtocol> Convert(fidl::InterfaceRequest<::test::service::FirstProtocol>&& c) {
     return fidl::ServerEnd<::test_service::FirstProtocol>(c.TakeChannel());
+  }
+};
+template <>
+struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_service::SecondProtocol>> {
+  using HLCPPType = fidl::InterfaceHandle<::test::service::SecondProtocol>;
+  static inline fidl::InterfaceHandle<::test::service::SecondProtocol> Convert(fidl::ClientEnd<::test_service::SecondProtocol>&& c) {
+    return fidl::InterfaceHandle<::test::service::SecondProtocol>(c.TakeChannel());
+  }
+};
+
+template <>
+struct NaturalToHLCPPTraits<fidl::ServerEnd<::test_service::SecondProtocol>> {
+  using HLCPPType = fidl::InterfaceRequest<::test::service::SecondProtocol>;
+  static inline fidl::InterfaceRequest<::test::service::SecondProtocol> Convert(fidl::ServerEnd<::test_service::SecondProtocol>&& c) {
+    return fidl::InterfaceRequest<::test::service::SecondProtocol>(c.TakeChannel());
+  }
+};
+
+template <>
+struct HLCPPToNaturalTraits<fidl::InterfaceHandle<::test::service::SecondProtocol>> {
+  using NaturalType = fidl::ClientEnd<::test_service::SecondProtocol>;
+  static inline fidl::ClientEnd<::test_service::SecondProtocol> Convert(fidl::InterfaceHandle<::test::service::SecondProtocol>&& c) {
+    return fidl::ClientEnd<::test_service::SecondProtocol>(c.TakeChannel());
+  }
+};
+
+template <>
+struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::service::SecondProtocol>> {
+  using NaturalType = fidl::ServerEnd<::test_service::SecondProtocol>;
+  static inline fidl::ServerEnd<::test_service::SecondProtocol> Convert(fidl::InterfaceRequest<::test::service::SecondProtocol>&& c) {
+    return fidl::ServerEnd<::test_service::SecondProtocol>(c.TakeChannel());
   }
 };
 

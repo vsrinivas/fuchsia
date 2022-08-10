@@ -9,33 +9,6 @@
 //
 namespace test {
 namespace inheritance {
-extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
-const fidl_type_t* SuperFooTopResponse::FidlType = &test_inheritance_SuperFooTopResponseTable;
-
-void SuperFooTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<SuperFooTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<SuperFooTopResponse>(_offset), this, sizeof(SuperFooTopResponse));
-  } else {
-    ::fidl::Encode(_encoder, &y, _offset + 0);
-  }
-}
-
-void SuperFooTopResponse::Decode(::fidl::Decoder* _decoder, SuperFooTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<SuperFooTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<SuperFooTopResponse>(_offset), sizeof(SuperFooTopResponse));
-  } else {
-    ::fidl::Decode(_decoder, &_value->y, _offset + 0);
-  }
-}
-
-zx_status_t SuperFooTopResponse::Clone(SuperFooTopResponse* _result) const {
-  zx_status_t _status = ::fidl::Clone(y, &_result->y);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 const fidl_type_t* SuperFooRequest::FidlType = &test_inheritance_SuperFooRequestTable;
 
@@ -58,6 +31,33 @@ void SuperFooRequest::Decode(::fidl::Decoder* _decoder, SuperFooRequest* _value,
 
 zx_status_t SuperFooRequest::Clone(SuperFooRequest* _result) const {
   zx_status_t _status = ::fidl::Clone(s, &_result->s);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+const fidl_type_t* SuperFooTopResponse::FidlType = &test_inheritance_SuperFooTopResponseTable;
+
+void SuperFooTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SuperFooTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<SuperFooTopResponse>(_offset), this, sizeof(SuperFooTopResponse));
+  } else {
+    ::fidl::Encode(_encoder, &y, _offset + 0);
+  }
+}
+
+void SuperFooTopResponse::Decode(::fidl::Decoder* _decoder, SuperFooTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SuperFooTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<SuperFooTopResponse>(_offset), sizeof(SuperFooTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->y, _offset + 0);
+  }
+}
+
+zx_status_t SuperFooTopResponse::Clone(SuperFooTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(y, &_result->y);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;

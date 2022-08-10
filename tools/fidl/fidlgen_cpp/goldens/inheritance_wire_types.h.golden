@@ -25,15 +25,9 @@
 namespace test_inheritance {
 
 namespace wire {
-struct SuperFooTopResponse;
-
 struct SuperFooRequest;
 
-extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
-
-struct SuperFooTopResponse {
-  int64_t y = {};
-};
+struct SuperFooTopResponse;
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
@@ -41,60 +35,15 @@ struct SuperFooRequest {
   ::fidl::StringView s = {};
 };
 
+extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+
+struct SuperFooTopResponse {
+  int64_t y = {};
+};
+
 }  // namespace wire
 }  // namespace test_inheritance
 namespace fidl {
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
-struct DeprecatedCTypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_inheritance::wire::test_inheritance_SuperFooTopResponseTable;
-};
-
-template <>
-struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 8;
-  static constexpr uint32_t kPrimarySizeV1 = 8;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_inheritance::wire::SuperFooTopResponse> : public std::true_type {};
-template <>
-struct IsStruct<::test_inheritance::wire::SuperFooTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_inheritance::wire::SuperFooTopResponse>);
-static_assert(offsetof(::test_inheritance::wire::SuperFooTopResponse, y) == 0);
-static_assert(sizeof(::test_inheritance::wire::SuperFooTopResponse) == TypeTraits<::test_inheritance::wire::SuperFooTopResponse>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 8;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
-  static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_inheritance::wire::SuperFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_inheritance::wire::SuperFooTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_inheritance::wire::SuperFooTopResponse));
-    } else {
-      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->y, position + 0, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-    }
-  }
-};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
@@ -142,6 +91,57 @@ struct ::fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooRequ
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (!Base::are_members_memcpy_compatible) {
       internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+    }
+  }
+};
+
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
+  static constexpr const fidl_type_t* kType = &::test_inheritance::wire::test_inheritance_SuperFooTopResponseTable;
+};
+
+template <>
+struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_inheritance::wire::SuperFooTopResponse> : public std::true_type {};
+template <>
+struct IsStruct<::test_inheritance::wire::SuperFooTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_inheritance::wire::SuperFooTopResponse>);
+static_assert(offsetof(::test_inheritance::wire::SuperFooTopResponse, y) == 0);
+static_assert(sizeof(::test_inheritance::wire::SuperFooTopResponse) == TypeTraits<::test_inheritance::wire::SuperFooTopResponse>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 8;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_inheritance::wire::SuperFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_inheritance::wire::SuperFooTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_inheritance::wire::SuperFooTopResponse));
+    } else {
+      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->y, position + 0, recursion_depth);
+    }
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
     }
   }

@@ -2,13 +2,13 @@
 
 #include <fidl/test.drivertwoway/cpp/natural_types.h>
 
-::test_drivertwoway::TwoWayAddTopResponse::Storage_ test_drivertwoway::TwoWayAddTopResponse::CloneStorage_() const {
-  return Storage_{
-      ::fidl::internal::NaturalClone(storage_.sum)};
-}
-
 ::test_drivertwoway::TwoWayAddRequest::Storage_ test_drivertwoway::TwoWayAddRequest::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.addend1),
       ::fidl::internal::NaturalClone(storage_.addend2)};
+}
+
+::test_drivertwoway::TwoWayAddTopResponse::Storage_ test_drivertwoway::TwoWayAddTopResponse::CloneStorage_() const {
+  return Storage_{
+      ::fidl::internal::NaturalClone(storage_.sum)};
 }

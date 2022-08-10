@@ -11,124 +11,14 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding7ByteMiddle> {
-  using HLCPPType = ::test::padding::Padding7ByteMiddle;
-  static inline ::test::padding::Padding7ByteMiddle Convert(::test_padding::Padding7ByteMiddle&&);
+struct NaturalToHLCPPTraits<::test_padding::Padding1ByteEnd> {
+  using HLCPPType = ::test::padding::Padding1ByteEnd;
+  static inline ::test::padding::Padding1ByteEnd Convert(::test_padding::Padding1ByteEnd&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding7ByteMiddle> {
-  using NaturalType = ::test_padding::Padding7ByteMiddle;
-  static inline ::test_padding::Padding7ByteMiddle Convert(::test::padding::Padding7ByteMiddle&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding7ByteEnd> {
-  using HLCPPType = ::test::padding::Padding7ByteEnd;
-  static inline ::test::padding::Padding7ByteEnd Convert(::test_padding::Padding7ByteEnd&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding7ByteEnd> {
-  using NaturalType = ::test_padding::Padding7ByteEnd;
-  static inline ::test_padding::Padding7ByteEnd Convert(::test::padding::Padding7ByteEnd&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding6ByteMiddle> {
-  using HLCPPType = ::test::padding::Padding6ByteMiddle;
-  static inline ::test::padding::Padding6ByteMiddle Convert(::test_padding::Padding6ByteMiddle&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding6ByteMiddle> {
-  using NaturalType = ::test_padding::Padding6ByteMiddle;
-  static inline ::test_padding::Padding6ByteMiddle Convert(::test::padding::Padding6ByteMiddle&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding6ByteEnd> {
-  using HLCPPType = ::test::padding::Padding6ByteEnd;
-  static inline ::test::padding::Padding6ByteEnd Convert(::test_padding::Padding6ByteEnd&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding6ByteEnd> {
-  using NaturalType = ::test_padding::Padding6ByteEnd;
-  static inline ::test_padding::Padding6ByteEnd Convert(::test::padding::Padding6ByteEnd&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding5ByteMiddle> {
-  using HLCPPType = ::test::padding::Padding5ByteMiddle;
-  static inline ::test::padding::Padding5ByteMiddle Convert(::test_padding::Padding5ByteMiddle&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding5ByteMiddle> {
-  using NaturalType = ::test_padding::Padding5ByteMiddle;
-  static inline ::test_padding::Padding5ByteMiddle Convert(::test::padding::Padding5ByteMiddle&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding5ByteEnd> {
-  using HLCPPType = ::test::padding::Padding5ByteEnd;
-  static inline ::test::padding::Padding5ByteEnd Convert(::test_padding::Padding5ByteEnd&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding5ByteEnd> {
-  using NaturalType = ::test_padding::Padding5ByteEnd;
-  static inline ::test_padding::Padding5ByteEnd Convert(::test::padding::Padding5ByteEnd&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding4ByteMiddle> {
-  using HLCPPType = ::test::padding::Padding4ByteMiddle;
-  static inline ::test::padding::Padding4ByteMiddle Convert(::test_padding::Padding4ByteMiddle&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding4ByteMiddle> {
-  using NaturalType = ::test_padding::Padding4ByteMiddle;
-  static inline ::test_padding::Padding4ByteMiddle Convert(::test::padding::Padding4ByteMiddle&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding4ByteEnd> {
-  using HLCPPType = ::test::padding::Padding4ByteEnd;
-  static inline ::test::padding::Padding4ByteEnd Convert(::test_padding::Padding4ByteEnd&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding4ByteEnd> {
-  using NaturalType = ::test_padding::Padding4ByteEnd;
-  static inline ::test_padding::Padding4ByteEnd Convert(::test::padding::Padding4ByteEnd&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding4ByteAlignmentLength12> {
-  using HLCPPType = ::test::padding::Padding4ByteAlignmentLength12;
-  static inline ::test::padding::Padding4ByteAlignmentLength12 Convert(::test_padding::Padding4ByteAlignmentLength12&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding4ByteAlignmentLength12> {
-  using NaturalType = ::test_padding::Padding4ByteAlignmentLength12;
-  static inline ::test_padding::Padding4ByteAlignmentLength12 Convert(::test::padding::Padding4ByteAlignmentLength12&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding3ByteMiddle> {
-  using HLCPPType = ::test::padding::Padding3ByteMiddle;
-  static inline ::test::padding::Padding3ByteMiddle Convert(::test_padding::Padding3ByteMiddle&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding3ByteMiddle> {
-  using NaturalType = ::test_padding::Padding3ByteMiddle;
-  static inline ::test_padding::Padding3ByteMiddle Convert(::test::padding::Padding3ByteMiddle&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding3ByteEnd> {
-  using HLCPPType = ::test::padding::Padding3ByteEnd;
-  static inline ::test::padding::Padding3ByteEnd Convert(::test_padding::Padding3ByteEnd&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding3ByteEnd> {
-  using NaturalType = ::test_padding::Padding3ByteEnd;
-  static inline ::test_padding::Padding3ByteEnd Convert(::test::padding::Padding3ByteEnd&&);
-};
-template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding2ByteMiddle> {
-  using HLCPPType = ::test::padding::Padding2ByteMiddle;
-  static inline ::test::padding::Padding2ByteMiddle Convert(::test_padding::Padding2ByteMiddle&&);
-};
-template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding2ByteMiddle> {
-  using NaturalType = ::test_padding::Padding2ByteMiddle;
-  static inline ::test_padding::Padding2ByteMiddle Convert(::test::padding::Padding2ByteMiddle&&);
+struct HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd> {
+  using NaturalType = ::test_padding::Padding1ByteEnd;
+  static inline ::test_padding::Padding1ByteEnd Convert(::test::padding::Padding1ByteEnd&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_padding::Padding2ByteEnd> {
@@ -141,14 +31,54 @@ struct HLCPPToNaturalTraits<::test::padding::Padding2ByteEnd> {
   static inline ::test_padding::Padding2ByteEnd Convert(::test::padding::Padding2ByteEnd&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding2ByteAlignmentLength6> {
-  using HLCPPType = ::test::padding::Padding2ByteAlignmentLength6;
-  static inline ::test::padding::Padding2ByteAlignmentLength6 Convert(::test_padding::Padding2ByteAlignmentLength6&&);
+struct NaturalToHLCPPTraits<::test_padding::Padding3ByteEnd> {
+  using HLCPPType = ::test::padding::Padding3ByteEnd;
+  static inline ::test::padding::Padding3ByteEnd Convert(::test_padding::Padding3ByteEnd&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding2ByteAlignmentLength6> {
-  using NaturalType = ::test_padding::Padding2ByteAlignmentLength6;
-  static inline ::test_padding::Padding2ByteAlignmentLength6 Convert(::test::padding::Padding2ByteAlignmentLength6&&);
+struct HLCPPToNaturalTraits<::test::padding::Padding3ByteEnd> {
+  using NaturalType = ::test_padding::Padding3ByteEnd;
+  static inline ::test_padding::Padding3ByteEnd Convert(::test::padding::Padding3ByteEnd&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding4ByteEnd> {
+  using HLCPPType = ::test::padding::Padding4ByteEnd;
+  static inline ::test::padding::Padding4ByteEnd Convert(::test_padding::Padding4ByteEnd&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding4ByteEnd> {
+  using NaturalType = ::test_padding::Padding4ByteEnd;
+  static inline ::test_padding::Padding4ByteEnd Convert(::test::padding::Padding4ByteEnd&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding5ByteEnd> {
+  using HLCPPType = ::test::padding::Padding5ByteEnd;
+  static inline ::test::padding::Padding5ByteEnd Convert(::test_padding::Padding5ByteEnd&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding5ByteEnd> {
+  using NaturalType = ::test_padding::Padding5ByteEnd;
+  static inline ::test_padding::Padding5ByteEnd Convert(::test::padding::Padding5ByteEnd&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding6ByteEnd> {
+  using HLCPPType = ::test::padding::Padding6ByteEnd;
+  static inline ::test::padding::Padding6ByteEnd Convert(::test_padding::Padding6ByteEnd&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding6ByteEnd> {
+  using NaturalType = ::test_padding::Padding6ByteEnd;
+  static inline ::test_padding::Padding6ByteEnd Convert(::test::padding::Padding6ByteEnd&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding7ByteEnd> {
+  using HLCPPType = ::test::padding::Padding7ByteEnd;
+  static inline ::test::padding::Padding7ByteEnd Convert(::test_padding::Padding7ByteEnd&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding7ByteEnd> {
+  using NaturalType = ::test_padding::Padding7ByteEnd;
+  static inline ::test_padding::Padding7ByteEnd Convert(::test::padding::Padding7ByteEnd&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_padding::Padding1ByteMiddle> {
@@ -161,25 +91,162 @@ struct HLCPPToNaturalTraits<::test::padding::Padding1ByteMiddle> {
   static inline ::test_padding::Padding1ByteMiddle Convert(::test::padding::Padding1ByteMiddle&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_padding::Padding1ByteEnd> {
-  using HLCPPType = ::test::padding::Padding1ByteEnd;
-  static inline ::test::padding::Padding1ByteEnd Convert(::test_padding::Padding1ByteEnd&&);
+struct NaturalToHLCPPTraits<::test_padding::Padding2ByteMiddle> {
+  using HLCPPType = ::test::padding::Padding2ByteMiddle;
+  static inline ::test::padding::Padding2ByteMiddle Convert(::test_padding::Padding2ByteMiddle&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd> {
-  using NaturalType = ::test_padding::Padding1ByteEnd;
-  static inline ::test_padding::Padding1ByteEnd Convert(::test::padding::Padding1ByteEnd&&);
+struct HLCPPToNaturalTraits<::test::padding::Padding2ByteMiddle> {
+  using NaturalType = ::test_padding::Padding2ByteMiddle;
+  static inline ::test_padding::Padding2ByteMiddle Convert(::test::padding::Padding2ByteMiddle&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding3ByteMiddle> {
+  using HLCPPType = ::test::padding::Padding3ByteMiddle;
+  static inline ::test::padding::Padding3ByteMiddle Convert(::test_padding::Padding3ByteMiddle&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding3ByteMiddle> {
+  using NaturalType = ::test_padding::Padding3ByteMiddle;
+  static inline ::test_padding::Padding3ByteMiddle Convert(::test::padding::Padding3ByteMiddle&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding4ByteMiddle> {
+  using HLCPPType = ::test::padding::Padding4ByteMiddle;
+  static inline ::test::padding::Padding4ByteMiddle Convert(::test_padding::Padding4ByteMiddle&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding4ByteMiddle> {
+  using NaturalType = ::test_padding::Padding4ByteMiddle;
+  static inline ::test_padding::Padding4ByteMiddle Convert(::test::padding::Padding4ByteMiddle&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding5ByteMiddle> {
+  using HLCPPType = ::test::padding::Padding5ByteMiddle;
+  static inline ::test::padding::Padding5ByteMiddle Convert(::test_padding::Padding5ByteMiddle&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding5ByteMiddle> {
+  using NaturalType = ::test_padding::Padding5ByteMiddle;
+  static inline ::test_padding::Padding5ByteMiddle Convert(::test::padding::Padding5ByteMiddle&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding6ByteMiddle> {
+  using HLCPPType = ::test::padding::Padding6ByteMiddle;
+  static inline ::test::padding::Padding6ByteMiddle Convert(::test_padding::Padding6ByteMiddle&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding6ByteMiddle> {
+  using NaturalType = ::test_padding::Padding6ByteMiddle;
+  static inline ::test_padding::Padding6ByteMiddle Convert(::test::padding::Padding6ByteMiddle&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding7ByteMiddle> {
+  using HLCPPType = ::test::padding::Padding7ByteMiddle;
+  static inline ::test::padding::Padding7ByteMiddle Convert(::test_padding::Padding7ByteMiddle&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding7ByteMiddle> {
+  using NaturalType = ::test_padding::Padding7ByteMiddle;
+  static inline ::test_padding::Padding7ByteMiddle Convert(::test::padding::Padding7ByteMiddle&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding4ByteAlignmentLength12> {
+  using HLCPPType = ::test::padding::Padding4ByteAlignmentLength12;
+  static inline ::test::padding::Padding4ByteAlignmentLength12 Convert(::test_padding::Padding4ByteAlignmentLength12&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding4ByteAlignmentLength12> {
+  using NaturalType = ::test_padding::Padding4ByteAlignmentLength12;
+  static inline ::test_padding::Padding4ByteAlignmentLength12 Convert(::test::padding::Padding4ByteAlignmentLength12&&);
+};
+template <>
+struct NaturalToHLCPPTraits<::test_padding::Padding2ByteAlignmentLength6> {
+  using HLCPPType = ::test::padding::Padding2ByteAlignmentLength6;
+  static inline ::test::padding::Padding2ByteAlignmentLength6 Convert(::test_padding::Padding2ByteAlignmentLength6&&);
+};
+template <>
+struct HLCPPToNaturalTraits<::test::padding::Padding2ByteAlignmentLength6> {
+  using NaturalType = ::test_padding::Padding2ByteAlignmentLength6;
+  static inline ::test_padding::Padding2ByteAlignmentLength6 Convert(::test::padding::Padding2ByteAlignmentLength6&&);
 };
 
-::test::padding::Padding7ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding7ByteMiddle>::Convert(::test_padding::Padding7ByteMiddle&& value) {
-  ::test::padding::Padding7ByteMiddle hlcpp;
+::test::padding::Padding1ByteEnd NaturalToHLCPPTraits<::test_padding::Padding1ByteEnd>::Convert(::test_padding::Padding1ByteEnd&& value) {
+  ::test::padding::Padding1ByteEnd hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_padding::Padding7ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding7ByteMiddle>::Convert(::test::padding::Padding7ByteMiddle&& value) {
-  return ::test_padding::Padding7ByteMiddle{{
+::test_padding::Padding1ByteEnd HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd>::Convert(::test::padding::Padding1ByteEnd&& value) {
+  return ::test_padding::Padding1ByteEnd{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+  }};
+}
+::test::padding::Padding2ByteEnd NaturalToHLCPPTraits<::test_padding::Padding2ByteEnd>::Convert(::test_padding::Padding2ByteEnd&& value) {
+  ::test::padding::Padding2ByteEnd hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  return hlcpp;
+}
+
+::test_padding::Padding2ByteEnd HLCPPToNaturalTraits<::test::padding::Padding2ByteEnd>::Convert(::test::padding::Padding2ByteEnd&& value) {
+  return ::test_padding::Padding2ByteEnd{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+  }};
+}
+::test::padding::Padding3ByteEnd NaturalToHLCPPTraits<::test_padding::Padding3ByteEnd>::Convert(::test_padding::Padding3ByteEnd&& value) {
+  ::test::padding::Padding3ByteEnd hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  return hlcpp;
+}
+
+::test_padding::Padding3ByteEnd HLCPPToNaturalTraits<::test::padding::Padding3ByteEnd>::Convert(::test::padding::Padding3ByteEnd&& value) {
+  return ::test_padding::Padding3ByteEnd{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+  }};
+}
+::test::padding::Padding4ByteEnd NaturalToHLCPPTraits<::test_padding::Padding4ByteEnd>::Convert(::test_padding::Padding4ByteEnd&& value) {
+  ::test::padding::Padding4ByteEnd hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  return hlcpp;
+}
+
+::test_padding::Padding4ByteEnd HLCPPToNaturalTraits<::test::padding::Padding4ByteEnd>::Convert(::test::padding::Padding4ByteEnd&& value) {
+  return ::test_padding::Padding4ByteEnd{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+  }};
+}
+::test::padding::Padding5ByteEnd NaturalToHLCPPTraits<::test_padding::Padding5ByteEnd>::Convert(::test_padding::Padding5ByteEnd&& value) {
+  ::test::padding::Padding5ByteEnd hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  hlcpp.c = ::fidl::NaturalToHLCPP(std::move(value.c()));
+  return hlcpp;
+}
+
+::test_padding::Padding5ByteEnd HLCPPToNaturalTraits<::test::padding::Padding5ByteEnd>::Convert(::test::padding::Padding5ByteEnd&& value) {
+  return ::test_padding::Padding5ByteEnd{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+      .c = ::fidl::HLCPPToNatural(std::move(value.c)),
+  }};
+}
+::test::padding::Padding6ByteEnd NaturalToHLCPPTraits<::test_padding::Padding6ByteEnd>::Convert(::test_padding::Padding6ByteEnd&& value) {
+  ::test::padding::Padding6ByteEnd hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  return hlcpp;
+}
+
+::test_padding::Padding6ByteEnd HLCPPToNaturalTraits<::test::padding::Padding6ByteEnd>::Convert(::test::padding::Padding6ByteEnd&& value) {
+  return ::test_padding::Padding6ByteEnd{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
@@ -197,28 +264,54 @@ struct HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd> {
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
-::test::padding::Padding6ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding6ByteMiddle>::Convert(::test_padding::Padding6ByteMiddle&& value) {
-  ::test::padding::Padding6ByteMiddle hlcpp;
+::test::padding::Padding1ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding1ByteMiddle>::Convert(::test_padding::Padding1ByteMiddle&& value) {
+  ::test::padding::Padding1ByteMiddle hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_padding::Padding6ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding6ByteMiddle>::Convert(::test::padding::Padding6ByteMiddle&& value) {
-  return ::test_padding::Padding6ByteMiddle{{
+::test_padding::Padding1ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding1ByteMiddle>::Convert(::test::padding::Padding1ByteMiddle&& value) {
+  return ::test_padding::Padding1ByteMiddle{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
-::test::padding::Padding6ByteEnd NaturalToHLCPPTraits<::test_padding::Padding6ByteEnd>::Convert(::test_padding::Padding6ByteEnd&& value) {
-  ::test::padding::Padding6ByteEnd hlcpp;
+::test::padding::Padding2ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding2ByteMiddle>::Convert(::test_padding::Padding2ByteMiddle&& value) {
+  ::test::padding::Padding2ByteMiddle hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_padding::Padding6ByteEnd HLCPPToNaturalTraits<::test::padding::Padding6ByteEnd>::Convert(::test::padding::Padding6ByteEnd&& value) {
-  return ::test_padding::Padding6ByteEnd{{
+::test_padding::Padding2ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding2ByteMiddle>::Convert(::test::padding::Padding2ByteMiddle&& value) {
+  return ::test_padding::Padding2ByteMiddle{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+  }};
+}
+::test::padding::Padding3ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding3ByteMiddle>::Convert(::test_padding::Padding3ByteMiddle&& value) {
+  ::test::padding::Padding3ByteMiddle hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  return hlcpp;
+}
+
+::test_padding::Padding3ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding3ByteMiddle>::Convert(::test::padding::Padding3ByteMiddle&& value) {
+  return ::test_padding::Padding3ByteMiddle{{
+      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
+      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
+  }};
+}
+::test::padding::Padding4ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding4ByteMiddle>::Convert(::test_padding::Padding4ByteMiddle&& value) {
+  ::test::padding::Padding4ByteMiddle hlcpp;
+  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
+  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
+  return hlcpp;
+}
+
+::test_padding::Padding4ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding4ByteMiddle>::Convert(::test::padding::Padding4ByteMiddle&& value) {
+  return ::test_padding::Padding4ByteMiddle{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
@@ -238,43 +331,28 @@ struct HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd> {
       .c = ::fidl::HLCPPToNatural(std::move(value.c)),
   }};
 }
-::test::padding::Padding5ByteEnd NaturalToHLCPPTraits<::test_padding::Padding5ByteEnd>::Convert(::test_padding::Padding5ByteEnd&& value) {
-  ::test::padding::Padding5ByteEnd hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  hlcpp.c = ::fidl::NaturalToHLCPP(std::move(value.c()));
-  return hlcpp;
-}
-
-::test_padding::Padding5ByteEnd HLCPPToNaturalTraits<::test::padding::Padding5ByteEnd>::Convert(::test::padding::Padding5ByteEnd&& value) {
-  return ::test_padding::Padding5ByteEnd{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-      .c = ::fidl::HLCPPToNatural(std::move(value.c)),
-  }};
-}
-::test::padding::Padding4ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding4ByteMiddle>::Convert(::test_padding::Padding4ByteMiddle&& value) {
-  ::test::padding::Padding4ByteMiddle hlcpp;
+::test::padding::Padding6ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding6ByteMiddle>::Convert(::test_padding::Padding6ByteMiddle&& value) {
+  ::test::padding::Padding6ByteMiddle hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_padding::Padding4ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding4ByteMiddle>::Convert(::test::padding::Padding4ByteMiddle&& value) {
-  return ::test_padding::Padding4ByteMiddle{{
+::test_padding::Padding6ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding6ByteMiddle>::Convert(::test::padding::Padding6ByteMiddle&& value) {
+  return ::test_padding::Padding6ByteMiddle{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
-::test::padding::Padding4ByteEnd NaturalToHLCPPTraits<::test_padding::Padding4ByteEnd>::Convert(::test_padding::Padding4ByteEnd&& value) {
-  ::test::padding::Padding4ByteEnd hlcpp;
+::test::padding::Padding7ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding7ByteMiddle>::Convert(::test_padding::Padding7ByteMiddle&& value) {
+  ::test::padding::Padding7ByteMiddle hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_padding::Padding4ByteEnd HLCPPToNaturalTraits<::test::padding::Padding4ByteEnd>::Convert(::test::padding::Padding4ByteEnd&& value) {
-  return ::test_padding::Padding4ByteEnd{{
+::test_padding::Padding7ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding7ByteMiddle>::Convert(::test::padding::Padding7ByteMiddle&& value) {
+  return ::test_padding::Padding7ByteMiddle{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
@@ -296,58 +374,6 @@ struct HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd> {
       .d = ::fidl::HLCPPToNatural(std::move(value.d)),
   }};
 }
-::test::padding::Padding3ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding3ByteMiddle>::Convert(::test_padding::Padding3ByteMiddle&& value) {
-  ::test::padding::Padding3ByteMiddle hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  return hlcpp;
-}
-
-::test_padding::Padding3ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding3ByteMiddle>::Convert(::test::padding::Padding3ByteMiddle&& value) {
-  return ::test_padding::Padding3ByteMiddle{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }};
-}
-::test::padding::Padding3ByteEnd NaturalToHLCPPTraits<::test_padding::Padding3ByteEnd>::Convert(::test_padding::Padding3ByteEnd&& value) {
-  ::test::padding::Padding3ByteEnd hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  return hlcpp;
-}
-
-::test_padding::Padding3ByteEnd HLCPPToNaturalTraits<::test::padding::Padding3ByteEnd>::Convert(::test::padding::Padding3ByteEnd&& value) {
-  return ::test_padding::Padding3ByteEnd{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }};
-}
-::test::padding::Padding2ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding2ByteMiddle>::Convert(::test_padding::Padding2ByteMiddle&& value) {
-  ::test::padding::Padding2ByteMiddle hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  return hlcpp;
-}
-
-::test_padding::Padding2ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding2ByteMiddle>::Convert(::test::padding::Padding2ByteMiddle&& value) {
-  return ::test_padding::Padding2ByteMiddle{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }};
-}
-::test::padding::Padding2ByteEnd NaturalToHLCPPTraits<::test_padding::Padding2ByteEnd>::Convert(::test_padding::Padding2ByteEnd&& value) {
-  ::test::padding::Padding2ByteEnd hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  return hlcpp;
-}
-
-::test_padding::Padding2ByteEnd HLCPPToNaturalTraits<::test::padding::Padding2ByteEnd>::Convert(::test::padding::Padding2ByteEnd&& value) {
-  return ::test_padding::Padding2ByteEnd{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }};
-}
 ::test::padding::Padding2ByteAlignmentLength6 NaturalToHLCPPTraits<::test_padding::Padding2ByteAlignmentLength6>::Convert(::test_padding::Padding2ByteAlignmentLength6&& value) {
   ::test::padding::Padding2ByteAlignmentLength6 hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
@@ -361,32 +387,6 @@ struct HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd> {
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
       .c = ::fidl::HLCPPToNatural(std::move(value.c)),
-  }};
-}
-::test::padding::Padding1ByteMiddle NaturalToHLCPPTraits<::test_padding::Padding1ByteMiddle>::Convert(::test_padding::Padding1ByteMiddle&& value) {
-  ::test::padding::Padding1ByteMiddle hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  return hlcpp;
-}
-
-::test_padding::Padding1ByteMiddle HLCPPToNaturalTraits<::test::padding::Padding1ByteMiddle>::Convert(::test::padding::Padding1ByteMiddle&& value) {
-  return ::test_padding::Padding1ByteMiddle{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
-  }};
-}
-::test::padding::Padding1ByteEnd NaturalToHLCPPTraits<::test_padding::Padding1ByteEnd>::Convert(::test_padding::Padding1ByteEnd&& value) {
-  ::test::padding::Padding1ByteEnd hlcpp;
-  hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
-  hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
-  return hlcpp;
-}
-
-::test_padding::Padding1ByteEnd HLCPPToNaturalTraits<::test::padding::Padding1ByteEnd>::Convert(::test::padding::Padding1ByteEnd&& value) {
-  return ::test_padding::Padding1ByteEnd{{
-      .a = ::fidl::HLCPPToNatural(std::move(value.a)),
-      .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
 

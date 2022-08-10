@@ -18,10 +18,136 @@
 #endif  // __Fuchsia__
 
 namespace test_protocolrequest {
-class Parent;
-
 class Child;
 
+class Parent;
+
+}  // namespace test_protocolrequest
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::test_protocolrequest::Child> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child> final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+namespace fidl {
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+template <>
+struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child>> {
+ public:
+  static constexpr uint32_t kNumHandles = 0;
+
+  ::std::array<zx_handle_t, kNumHandles> handles_;
+  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+};
+
+template <>
+struct ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child>> {
+ public:
+  ::fidl::internal::InlineMessageBuffer<16> bytes_;
+  ::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child> handles_storage_;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::test_protocolrequest::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::test_protocolrequest::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::SyncEventHandler {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method.
+  ::fidl::Status HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>> {
+ public:
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+
+// Methods to make a sync FIDL call directly on an unowned handle or a
+// const reference to a |fidl::ClientEnd<::test_protocolrequest::Child>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
+        _transport().get<::fidl::internal::ChannelTransport>());
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::test_protocolrequest::Child> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_protocolrequest::Child;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+}  // namespace fidl
+namespace test_protocolrequest {
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
@@ -1190,134 +1316,70 @@ class ::fidl::WireServer<::test_protocolrequest::Parent> : public ::fidl::intern
 namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_protocolrequest {
-}  // namespace test_protocolrequest
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::ProtocolDetails<::test_protocolrequest::Child> {
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child> final {
-  WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage& msg,
-                                            internal::MessageStorageViewBase* storage_view,
-                                            ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-namespace fidl {
-
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child>> {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> : public ::fidl::internal::ClientImplBase {
  public:
-  static constexpr uint32_t kNumHandles = 0;
-
-  ::std::array<zx_handle_t, kNumHandles> handles_;
-  ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
+  using ClientImplBase::ClientImplBase;
 };
 
 template <>
-struct ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> final : public ::fidl::internal::ChannelMessageStorageBase<::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child>> {
+class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> {
  public:
-  ::fidl::internal::InlineMessageBuffer<16> bytes_;
-  ::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child> handles_storage_;
-};
-template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::test_protocolrequest::Child>
-    : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::AsyncEventHandler {
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Child> : public ::fidl::internal::BufferClientImplBase {
  public:
-  WireAsyncEventHandler() = default;
+  using BufferClientImplBase::BufferClientImplBase;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::test_protocolrequest::Child>
-    : public ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>, public ::fidl::internal::SyncEventHandler {
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Child> {
  public:
-  WireSyncEventHandler() = default;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method.
-  ::fidl::Status HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Child> client_end);
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
-
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>> {
+class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> {
  public:
-  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-
-// Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocolrequest::Child>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child>> {
- public:
- private:
-  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child>> {
- public:
- private:
-  ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
-    return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(
-        _transport().get<::fidl::internal::ChannelTransport>());
-  }
-};
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireServer<::test_protocolrequest::Child> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireServer() = default;
-  virtual ~WireServer() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_protocolrequest::Child;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 }  // namespace fidl
+#ifdef __Fuchsia__
+template <>
+class ::fidl::internal::WireWeakEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakEventSenderBase {
+ public:
+  using WeakEventSenderBase::WeakEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakBufferEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakBufferEventSenderBase {
+ public:
+  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
+};
+
+template <>
+class ::fidl::internal::WireEventSender<::test_protocolrequest::Child>
+    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireEventSender<::test_protocolrequest::Child>> {
+ public:
+  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
+};
+
+template <>
+class ::fidl::internal::WireBufferEventSender<::test_protocolrequest::Child>
+    : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireBufferEventSender<::test_protocolrequest::Child>> {
+ public:
+  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Parent> : public ::fidl::internal::ClientImplBase {
  public:
@@ -1374,10 +1436,8 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent> f
   // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> GetChildRequest();
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocolrequest::Parent> : public ::fidl::internal::WeakEventSenderBase {
@@ -1401,66 +1461,6 @@ class ::fidl::internal::WireEventSender<::test_protocolrequest::Parent>
 template <>
 class ::fidl::internal::WireBufferEventSender<::test_protocolrequest::Parent>
     : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireBufferEventSender<::test_protocolrequest::Parent>> {
- public:
-  using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> : public ::fidl::internal::ClientImplBase {
- public:
-  using ClientImplBase::ClientImplBase;
-};
-
-template <>
-class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> {
- public:
-  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Child> : public ::fidl::internal::BufferClientImplBase {
- public:
-  using BufferClientImplBase::BufferClientImplBase;
-};
-
-template <>
-class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Child> {
- public:
-  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-template <>
-class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> {
- public:
-  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-class ::fidl::internal::WireWeakEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakEventSenderBase {
- public:
-  using WeakEventSenderBase::WeakEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::WireWeakBufferEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakBufferEventSenderBase {
- public:
-  using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
-};
-
-template <>
-class ::fidl::internal::WireEventSender<::test_protocolrequest::Child>
-    : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireEventSender<::test_protocolrequest::Child>> {
- public:
-  using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
-};
-
-template <>
-class ::fidl::internal::WireBufferEventSender<::test_protocolrequest::Child>
-    : public ::fidl::internal::SyncEndpointBufferVeneer<::fidl::internal::WireBufferEventSender<::test_protocolrequest::Child>> {
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };

@@ -29,11 +29,11 @@ struct Empty;
 
 struct EmptyProtocolSendRequest;
 
-struct EmptyProtocolSendAndReceiveTopResponse;
+struct EmptyProtocolReceiveRequest;
 
 struct EmptyProtocolSendAndReceiveRequest;
 
-struct EmptyProtocolReceiveRequest;
+struct EmptyProtocolSendAndReceiveTopResponse;
 
 extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
@@ -47,9 +47,9 @@ struct EmptyProtocolSendRequest {
   ::test_emptystruct::wire::Empty e = {};
 };
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
-struct EmptyProtocolSendAndReceiveTopResponse {
+struct EmptyProtocolReceiveRequest {
   ::test_emptystruct::wire::Empty e = {};
 };
 
@@ -59,9 +59,9 @@ struct EmptyProtocolSendAndReceiveRequest {
   ::test_emptystruct::wire::Empty e = {};
 };
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
-struct EmptyProtocolReceiveRequest {
+struct EmptyProtocolSendAndReceiveTopResponse {
   ::test_emptystruct::wire::Empty e = {};
 };
 
@@ -176,12 +176,12 @@ struct ::fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtoco
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_emptystruct::wire::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+struct DeprecatedCTypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
+  static constexpr const fidl_type_t* kType = &::test_emptystruct::wire::test_emptystruct_EmptyProtocolReceiveRequestTable;
 };
 
 template <>
-struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
+struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
@@ -193,25 +193,25 @@ struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopRespon
 };
 
 template <>
-struct IsFidlType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
+struct IsFidlType<::test_emptystruct::wire::EmptyProtocolReceiveRequest> : public std::true_type {};
 template <>
-struct IsStruct<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>);
-static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, e) == 0);
-static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse) == TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>::kPrimarySize);
+struct IsStruct<::test_emptystruct::wire::EmptyProtocolReceiveRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_emptystruct::wire::EmptyProtocolReceiveRequest>);
+static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolReceiveRequest, e) == 0);
+static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolReceiveRequest) == TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 1;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_emptystruct::wire::Empty, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_emptystruct::wire::EmptyProtocolReceiveRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_emptystruct::wire::EmptyProtocolReceiveRequest));
     } else {
       internal::WireCodingTraits<::test_emptystruct::wire::Empty, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->e, position + 0, recursion_depth);
     }
@@ -278,12 +278,12 @@ struct ::fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtoco
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
-  static constexpr const fidl_type_t* kType = &::test_emptystruct::wire::test_emptystruct_EmptyProtocolReceiveRequestTable;
+struct DeprecatedCTypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
+  static constexpr const fidl_type_t* kType = &::test_emptystruct::wire::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
+struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
@@ -295,25 +295,25 @@ struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
 };
 
 template <>
-struct IsFidlType<::test_emptystruct::wire::EmptyProtocolReceiveRequest> : public std::true_type {};
+struct IsFidlType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_emptystruct::wire::EmptyProtocolReceiveRequest> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_emptystruct::wire::EmptyProtocolReceiveRequest>);
-static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolReceiveRequest, e) == 0);
-static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolReceiveRequest) == TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest>::kPrimarySize);
+struct IsStruct<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>);
+static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, e) == 0);
+static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse) == TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 1;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_emptystruct::wire::Empty, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_emptystruct::wire::EmptyProtocolReceiveRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_emptystruct::wire::EmptyProtocolReceiveRequest));
+      memcpy(position.As<void>(), value, sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse));
     } else {
       internal::WireCodingTraits<::test_emptystruct::wire::Empty, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->e, position + 0, recursion_depth);
     }

@@ -7,20 +7,6 @@ namespace fidl {
 namespace testing {
 
 template <>
-class WireTestBase<::test_bindingsdenylist::Allowed> : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
- public:
-  virtual ~WireTestBase<::test_bindingsdenylist::Allowed>() = default;
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-};
-
-template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed> {
- public:
-  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed>() = default;
-  virtual void NotImplemented_(const std::string& name) = 0;
-};
-
-template <>
 class WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
   virtual ~WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>() = default;
@@ -45,28 +31,6 @@ template <>
 class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::OnlyCppAndDeps>() = default;
-  virtual void NotImplemented_(const std::string& name) = 0;
-};
-
-template <>
-class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  virtual ~WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-  virtual void Unattributed(
-      UnattributedRequestView request, UnattributedCompleter::Sync& completer) override {
-    NotImplemented_("Unattributed", completer);
-  }
-  virtual void AlwaysAppearsInImportingLibrary(
-      AlwaysAppearsInImportingLibraryRequestView request, AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
-    NotImplemented_("AlwaysAppearsInImportingLibrary", completer);
-  }
-};
-
-template <>
-class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext> {
- public:
-  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 
@@ -101,6 +65,42 @@ template <>
 class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding> {
  public:
   virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::DenyEachBinding>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
+class WireTestBase<::test_bindingsdenylist::Allowed> : public ::fidl::WireServer<::test_bindingsdenylist::Allowed> {
+ public:
+  virtual ~WireTestBase<::test_bindingsdenylist::Allowed>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::Allowed>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
+class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  virtual ~WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
+  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
+  virtual void Unattributed(
+      UnattributedRequestView request, UnattributedCompleter::Sync& completer) override {
+    NotImplemented_("Unattributed", completer);
+  }
+  virtual void AlwaysAppearsInImportingLibrary(
+      AlwaysAppearsInImportingLibraryRequestView request, AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
+    NotImplemented_("AlwaysAppearsInImportingLibrary", completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::WireSyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
   virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing

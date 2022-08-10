@@ -12,16 +12,6 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 12>
     test_union_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_union::wire::StructWithNullableXUnion",
-            .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::StructWithNullableXUnion>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_union::wire::Pizza",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::Pizza>,
@@ -30,6 +20,21 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 12>
             .fidl_type_name = "::test_union::wire::Pasta",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::Pasta>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_union::wire::NullableUnionStruct",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::NullableUnionStruct>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_union::wire::Empty",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::Empty>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
@@ -58,19 +63,14 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 12>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_union::wire::NullableUnionStruct",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::NullableUnionStruct>,
+            .fidl_type_name = "::test_union::wire::StructWithNullableXUnion",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::StructWithNullableXUnion>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_union::wire::UnionSandwich",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::UnionSandwich>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_union::wire::Empty",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::Empty>,
         },
 };
 

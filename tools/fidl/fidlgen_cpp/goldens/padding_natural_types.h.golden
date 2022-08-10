@@ -16,153 +16,77 @@
 
 namespace test_padding {
 
-class Padding7ByteMiddle;
-
-class Padding7ByteEnd;
-
-class Padding6ByteMiddle;
-
-class Padding6ByteEnd;
-
-class Padding5ByteMiddle;
-
-class Padding5ByteEnd;
-
-class Padding4ByteMiddle;
-
-class Padding4ByteEnd;
-
-class Padding4ByteAlignmentLength12;
-
-class Padding3ByteMiddle;
-
-class Padding3ByteEnd;
-
-class Padding2ByteMiddle;
+class Padding1ByteEnd;
 
 class Padding2ByteEnd;
 
-class Padding2ByteAlignmentLength6;
+class Padding3ByteEnd;
+
+class Padding4ByteEnd;
+
+class Padding5ByteEnd;
+
+class Padding6ByteEnd;
+
+class Padding7ByteEnd;
 
 class Padding1ByteMiddle;
 
-class Padding1ByteEnd;
+class Padding2ByteMiddle;
 
-extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
+class Padding3ByteMiddle;
 
-class Padding7ByteMiddle {
+class Padding4ByteMiddle;
+
+class Padding5ByteMiddle;
+
+class Padding6ByteMiddle;
+
+class Padding7ByteMiddle;
+
+class Padding4ByteAlignmentLength12;
+
+class Padding2ByteAlignmentLength6;
+
+extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
+
+class Padding1ByteEnd {
  private:
   struct Storage_;
 
  public:
-  Padding7ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding7ByteMiddle(uint8_t a, uint64_t b) noexcept
+  Padding1ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding1ByteEnd(uint16_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a),
                   .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding7ByteMiddle| only if all of its members are default constructible.
-  Padding7ByteMiddle() = default;
+  // Default constructs a |Padding1ByteEnd| only if all of its members are default constructible.
+  Padding1ByteEnd() = default;
 #pragma clang diagnostic pop
 
-  Padding7ByteMiddle(Padding7ByteMiddle&&) noexcept = default;
-  Padding7ByteMiddle& operator=(Padding7ByteMiddle&&) noexcept = default;
-  Padding7ByteMiddle(const Padding7ByteMiddle& other) noexcept : Padding7ByteMiddle(other.CloneStorage_()) {}
-  Padding7ByteMiddle& operator=(const Padding7ByteMiddle& other) noexcept {
+  Padding1ByteEnd(Padding1ByteEnd&&) noexcept = default;
+  Padding1ByteEnd& operator=(Padding1ByteEnd&&) noexcept = default;
+  Padding1ByteEnd(const Padding1ByteEnd& other) noexcept : Padding1ByteEnd(other.CloneStorage_()) {}
+  Padding1ByteEnd& operator=(const Padding1ByteEnd& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const Padding7ByteMiddle& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16>::Equal(this, &other);
+  bool operator==(const Padding1ByteEnd& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4>::Equal(this, &other);
   }
-  bool operator!=(const Padding7ByteMiddle& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16>::Equal(this, &other);
+  bool operator!=(const Padding1ByteEnd& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4>::Equal(this, &other);
   }
 
-  uint8_t
+  uint16_t
   a() const {
     return storage_.a;
   }
 
-  uint8_t& a() {
-    return storage_.a;
-  }
-
-  uint64_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint64_t& b() {
-    return storage_.b;
-  }
-
-  Padding7ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding7ByteMiddle(Storage_{
-                                                                                       .a = {},
-                                                                                       .b = {},
-                                                                                   }) {}
-
- private:
-  struct Storage_ final {
-    uint8_t a = {};
-    uint64_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding7ByteMiddle>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 0,
-      .mask = 0xffffffffffffff00ull,
-  });
-};
-
-extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
-
-class Padding7ByteEnd {
- private:
-  struct Storage_;
-
- public:
-  Padding7ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding7ByteEnd(uint64_t a, uint8_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding7ByteEnd| only if all of its members are default constructible.
-  Padding7ByteEnd() = default;
-#pragma clang diagnostic pop
-
-  Padding7ByteEnd(Padding7ByteEnd&&) noexcept = default;
-  Padding7ByteEnd& operator=(Padding7ByteEnd&&) noexcept = default;
-  Padding7ByteEnd(const Padding7ByteEnd& other) noexcept : Padding7ByteEnd(other.CloneStorage_()) {}
-  Padding7ByteEnd& operator=(const Padding7ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding7ByteEnd& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16>::Equal(this, &other);
-  }
-  bool operator!=(const Padding7ByteEnd& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16>::Equal(this, &other);
-  }
-
-  uint64_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint64_t& a() {
+  uint16_t& a() {
     return storage_.a;
   }
 
@@ -175,146 +99,70 @@ class Padding7ByteEnd {
     return storage_.b;
   }
 
-  Padding7ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding7ByteEnd(Storage_{
+  Padding1ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding1ByteEnd(Storage_{
                                                                                     .a = {},
                                                                                     .b = {},
                                                                                 }) {}
 
  private:
   struct Storage_ final {
-    uint64_t a = {};
+    uint16_t a = {};
     uint8_t b = {};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding7ByteEnd>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 8,
-      .mask = 0xffffffffffffff00ull,
-  });
-};
-
-extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
-
-class Padding6ByteMiddle {
- private:
-  struct Storage_;
-
- public:
-  Padding6ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding6ByteMiddle(uint16_t a, uint64_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding6ByteMiddle| only if all of its members are default constructible.
-  Padding6ByteMiddle() = default;
-#pragma clang diagnostic pop
-
-  Padding6ByteMiddle(Padding6ByteMiddle&&) noexcept = default;
-  Padding6ByteMiddle& operator=(Padding6ByteMiddle&&) noexcept = default;
-  Padding6ByteMiddle(const Padding6ByteMiddle& other) noexcept : Padding6ByteMiddle(other.CloneStorage_()) {}
-  Padding6ByteMiddle& operator=(const Padding6ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding6ByteMiddle& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16>::Equal(this, &other);
-  }
-  bool operator!=(const Padding6ByteMiddle& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16>::Equal(this, &other);
-  }
-
-  uint16_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint16_t& a() {
-    return storage_.a;
-  }
-
-  uint64_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint64_t& b() {
-    return storage_.b;
-  }
-
-  Padding6ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding6ByteMiddle(Storage_{
-                                                                                       .a = {},
-                                                                                       .b = {},
-                                                                                   }) {}
-
- private:
-  struct Storage_ final {
-    uint16_t a = {};
-    uint64_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding6ByteMiddle>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding1ByteEnd>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 0,
-      .mask = 0xffffffffffff0000ull,
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
+      .offset = 2,
+      .mask = 0xff00,
   });
 };
 
-extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
-class Padding6ByteEnd {
+class Padding2ByteEnd {
  private:
   struct Storage_;
 
  public:
-  Padding6ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding6ByteEnd(uint64_t a, uint16_t b) noexcept
+  Padding2ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding2ByteEnd(uint32_t a, uint16_t b) noexcept
       : storage_({.a = std::move(a),
                   .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding6ByteEnd| only if all of its members are default constructible.
-  Padding6ByteEnd() = default;
+  // Default constructs a |Padding2ByteEnd| only if all of its members are default constructible.
+  Padding2ByteEnd() = default;
 #pragma clang diagnostic pop
 
-  Padding6ByteEnd(Padding6ByteEnd&&) noexcept = default;
-  Padding6ByteEnd& operator=(Padding6ByteEnd&&) noexcept = default;
-  Padding6ByteEnd(const Padding6ByteEnd& other) noexcept : Padding6ByteEnd(other.CloneStorage_()) {}
-  Padding6ByteEnd& operator=(const Padding6ByteEnd& other) noexcept {
+  Padding2ByteEnd(Padding2ByteEnd&&) noexcept = default;
+  Padding2ByteEnd& operator=(Padding2ByteEnd&&) noexcept = default;
+  Padding2ByteEnd(const Padding2ByteEnd& other) noexcept : Padding2ByteEnd(other.CloneStorage_()) {}
+  Padding2ByteEnd& operator=(const Padding2ByteEnd& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const Padding6ByteEnd& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16>::Equal(this, &other);
+  bool operator==(const Padding2ByteEnd& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8>::Equal(this, &other);
   }
-  bool operator!=(const Padding6ByteEnd& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16>::Equal(this, &other);
+  bool operator!=(const Padding2ByteEnd& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8>::Equal(this, &other);
   }
 
-  uint64_t
+  uint32_t
   a() const {
     return storage_.a;
   }
 
-  uint64_t& a() {
+  uint32_t& a() {
     return storage_.a;
   }
 
@@ -327,71 +175,70 @@ class Padding6ByteEnd {
     return storage_.b;
   }
 
-  Padding6ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding6ByteEnd(Storage_{
+  Padding2ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteEnd(Storage_{
                                                                                     .a = {},
                                                                                     .b = {},
                                                                                 }) {}
 
  private:
   struct Storage_ final {
-    uint64_t a = {};
+    uint32_t a = {};
     uint16_t b = {};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding6ByteEnd>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding2ByteEnd>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 8,
-      .mask = 0xffffffffffff0000ull,
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+      .offset = 4,
+      .mask = 0xffff0000,
   });
 };
 
-extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
-class Padding5ByteMiddle {
+class Padding3ByteEnd {
  private:
   struct Storage_;
 
  public:
-  Padding5ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding5ByteMiddle(uint16_t a, uint8_t b, uint64_t c) noexcept
+  Padding3ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding3ByteEnd(uint32_t a, uint8_t b) noexcept
       : storage_({.a = std::move(a),
-                  .b = std::move(b),
-                  .c = std::move(c)}) {}
+                  .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding5ByteMiddle| only if all of its members are default constructible.
-  Padding5ByteMiddle() = default;
+  // Default constructs a |Padding3ByteEnd| only if all of its members are default constructible.
+  Padding3ByteEnd() = default;
 #pragma clang diagnostic pop
 
-  Padding5ByteMiddle(Padding5ByteMiddle&&) noexcept = default;
-  Padding5ByteMiddle& operator=(Padding5ByteMiddle&&) noexcept = default;
-  Padding5ByteMiddle(const Padding5ByteMiddle& other) noexcept : Padding5ByteMiddle(other.CloneStorage_()) {}
-  Padding5ByteMiddle& operator=(const Padding5ByteMiddle& other) noexcept {
+  Padding3ByteEnd(Padding3ByteEnd&&) noexcept = default;
+  Padding3ByteEnd& operator=(Padding3ByteEnd&&) noexcept = default;
+  Padding3ByteEnd(const Padding3ByteEnd& other) noexcept : Padding3ByteEnd(other.CloneStorage_()) {}
+  Padding3ByteEnd& operator=(const Padding3ByteEnd& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const Padding5ByteMiddle& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16>::Equal(this, &other);
+  bool operator==(const Padding3ByteEnd& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8>::Equal(this, &other);
   }
-  bool operator!=(const Padding5ByteMiddle& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16>::Equal(this, &other);
+  bool operator!=(const Padding3ByteEnd& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8>::Equal(this, &other);
   }
 
-  uint16_t
+  uint32_t
   a() const {
     return storage_.a;
   }
 
-  uint16_t& a() {
+  uint32_t& a() {
     return storage_.a;
   }
 
@@ -404,39 +251,104 @@ class Padding5ByteMiddle {
     return storage_.b;
   }
 
-  uint64_t
-  c() const {
-    return storage_.c;
-  }
-
-  uint64_t& c() {
-    return storage_.c;
-  }
-
-  Padding5ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding5ByteMiddle(Storage_{
-                                                                                       .a = {},
-                                                                                       .b = {},
-                                                                                       .c = {},
-                                                                                   }) {}
+  Padding3ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding3ByteEnd(Storage_{
+                                                                                    .a = {},
+                                                                                    .b = {},
+                                                                                }) {}
 
  private:
   struct Storage_ final {
-    uint16_t a = {};
+    uint32_t a = {};
     uint8_t b = {};
-    uint64_t c = {};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding5ByteMiddle>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding3ByteEnd>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2}, ::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::c, 8});
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+      .offset = 4,
+      .mask = 0xffffff00,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
+
+class Padding4ByteEnd {
+ private:
+  struct Storage_;
+
+ public:
+  Padding4ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding4ByteEnd(uint64_t a, uint32_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding4ByteEnd| only if all of its members are default constructible.
+  Padding4ByteEnd() = default;
+#pragma clang diagnostic pop
+
+  Padding4ByteEnd(Padding4ByteEnd&&) noexcept = default;
+  Padding4ByteEnd& operator=(Padding4ByteEnd&&) noexcept = default;
+  Padding4ByteEnd(const Padding4ByteEnd& other) noexcept : Padding4ByteEnd(other.CloneStorage_()) {}
+  Padding4ByteEnd& operator=(const Padding4ByteEnd& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding4ByteEnd& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16>::Equal(this, &other);
+  }
+  bool operator!=(const Padding4ByteEnd& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16>::Equal(this, &other);
+  }
+
+  uint64_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint64_t& a() {
+    return storage_.a;
+  }
+
+  uint32_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint32_t& b() {
+    return storage_.b;
+  }
+
+  Padding4ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding4ByteEnd(Storage_{
+                                                                                    .a = {},
+                                                                                    .b = {},
+                                                                                }) {}
+
+ private:
+  struct Storage_ final {
+    uint64_t a = {};
+    uint32_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding4ByteEnd>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
   static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 0,
-      .mask = 0xffffffffff000000ull,
+      .offset = 8,
+      .mask = 0xffffffff00000000ull,
   });
 };
 
@@ -528,6 +440,386 @@ class Padding5ByteEnd {
   });
 };
 
+extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
+
+class Padding6ByteEnd {
+ private:
+  struct Storage_;
+
+ public:
+  Padding6ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding6ByteEnd(uint64_t a, uint16_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding6ByteEnd| only if all of its members are default constructible.
+  Padding6ByteEnd() = default;
+#pragma clang diagnostic pop
+
+  Padding6ByteEnd(Padding6ByteEnd&&) noexcept = default;
+  Padding6ByteEnd& operator=(Padding6ByteEnd&&) noexcept = default;
+  Padding6ByteEnd(const Padding6ByteEnd& other) noexcept : Padding6ByteEnd(other.CloneStorage_()) {}
+  Padding6ByteEnd& operator=(const Padding6ByteEnd& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding6ByteEnd& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16>::Equal(this, &other);
+  }
+  bool operator!=(const Padding6ByteEnd& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16>::Equal(this, &other);
+  }
+
+  uint64_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint64_t& a() {
+    return storage_.a;
+  }
+
+  uint16_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint16_t& b() {
+    return storage_.b;
+  }
+
+  Padding6ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding6ByteEnd(Storage_{
+                                                                                    .a = {},
+                                                                                    .b = {},
+                                                                                }) {}
+
+ private:
+  struct Storage_ final {
+    uint64_t a = {};
+    uint16_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding6ByteEnd>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 8,
+      .mask = 0xffffffffffff0000ull,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
+
+class Padding7ByteEnd {
+ private:
+  struct Storage_;
+
+ public:
+  Padding7ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding7ByteEnd(uint64_t a, uint8_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding7ByteEnd| only if all of its members are default constructible.
+  Padding7ByteEnd() = default;
+#pragma clang diagnostic pop
+
+  Padding7ByteEnd(Padding7ByteEnd&&) noexcept = default;
+  Padding7ByteEnd& operator=(Padding7ByteEnd&&) noexcept = default;
+  Padding7ByteEnd(const Padding7ByteEnd& other) noexcept : Padding7ByteEnd(other.CloneStorage_()) {}
+  Padding7ByteEnd& operator=(const Padding7ByteEnd& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding7ByteEnd& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16>::Equal(this, &other);
+  }
+  bool operator!=(const Padding7ByteEnd& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16>::Equal(this, &other);
+  }
+
+  uint64_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint64_t& a() {
+    return storage_.a;
+  }
+
+  uint8_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint8_t& b() {
+    return storage_.b;
+  }
+
+  Padding7ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding7ByteEnd(Storage_{
+                                                                                    .a = {},
+                                                                                    .b = {},
+                                                                                }) {}
+
+ private:
+  struct Storage_ final {
+    uint64_t a = {};
+    uint8_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding7ByteEnd>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 8,
+      .mask = 0xffffffffffffff00ull,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
+
+class Padding1ByteMiddle {
+ private:
+  struct Storage_;
+
+ public:
+  Padding1ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding1ByteMiddle(uint8_t a, uint16_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding1ByteMiddle| only if all of its members are default constructible.
+  Padding1ByteMiddle() = default;
+#pragma clang diagnostic pop
+
+  Padding1ByteMiddle(Padding1ByteMiddle&&) noexcept = default;
+  Padding1ByteMiddle& operator=(Padding1ByteMiddle&&) noexcept = default;
+  Padding1ByteMiddle(const Padding1ByteMiddle& other) noexcept : Padding1ByteMiddle(other.CloneStorage_()) {}
+  Padding1ByteMiddle& operator=(const Padding1ByteMiddle& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding1ByteMiddle& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4>::Equal(this, &other);
+  }
+  bool operator!=(const Padding1ByteMiddle& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4>::Equal(this, &other);
+  }
+
+  uint8_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint8_t& a() {
+    return storage_.a;
+  }
+
+  uint16_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint16_t& b() {
+    return storage_.b;
+  }
+
+  Padding1ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding1ByteMiddle(Storage_{
+                                                                                       .a = {},
+                                                                                       .b = {},
+                                                                                   }) {}
+
+ private:
+  struct Storage_ final {
+    uint8_t a = {};
+    uint16_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding1ByteMiddle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
+      .offset = 0,
+      .mask = 0xff00,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
+
+class Padding2ByteMiddle {
+ private:
+  struct Storage_;
+
+ public:
+  Padding2ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding2ByteMiddle(uint16_t a, uint32_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding2ByteMiddle| only if all of its members are default constructible.
+  Padding2ByteMiddle() = default;
+#pragma clang diagnostic pop
+
+  Padding2ByteMiddle(Padding2ByteMiddle&&) noexcept = default;
+  Padding2ByteMiddle& operator=(Padding2ByteMiddle&&) noexcept = default;
+  Padding2ByteMiddle(const Padding2ByteMiddle& other) noexcept : Padding2ByteMiddle(other.CloneStorage_()) {}
+  Padding2ByteMiddle& operator=(const Padding2ByteMiddle& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding2ByteMiddle& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8>::Equal(this, &other);
+  }
+  bool operator!=(const Padding2ByteMiddle& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8>::Equal(this, &other);
+  }
+
+  uint16_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint16_t& a() {
+    return storage_.a;
+  }
+
+  uint32_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint32_t& b() {
+    return storage_.b;
+  }
+
+  Padding2ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteMiddle(Storage_{
+                                                                                       .a = {},
+                                                                                       .b = {},
+                                                                                   }) {}
+
+ private:
+  struct Storage_ final {
+    uint16_t a = {};
+    uint32_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding2ByteMiddle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+      .offset = 0,
+      .mask = 0xffff0000,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
+
+class Padding3ByteMiddle {
+ private:
+  struct Storage_;
+
+ public:
+  Padding3ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding3ByteMiddle(uint8_t a, uint32_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding3ByteMiddle| only if all of its members are default constructible.
+  Padding3ByteMiddle() = default;
+#pragma clang diagnostic pop
+
+  Padding3ByteMiddle(Padding3ByteMiddle&&) noexcept = default;
+  Padding3ByteMiddle& operator=(Padding3ByteMiddle&&) noexcept = default;
+  Padding3ByteMiddle(const Padding3ByteMiddle& other) noexcept : Padding3ByteMiddle(other.CloneStorage_()) {}
+  Padding3ByteMiddle& operator=(const Padding3ByteMiddle& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding3ByteMiddle& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8>::Equal(this, &other);
+  }
+  bool operator!=(const Padding3ByteMiddle& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8>::Equal(this, &other);
+  }
+
+  uint8_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint8_t& a() {
+    return storage_.a;
+  }
+
+  uint32_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint32_t& b() {
+    return storage_.b;
+  }
+
+  Padding3ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding3ByteMiddle(Storage_{
+                                                                                       .a = {},
+                                                                                       .b = {},
+                                                                                   }) {}
+
+ private:
+  struct Storage_ final {
+    uint8_t a = {};
+    uint32_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding3ByteMiddle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
+      .offset = 0,
+      .mask = 0xffffff00,
+  });
+};
+
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
 class Padding4ByteMiddle {
@@ -604,79 +896,243 @@ class Padding4ByteMiddle {
   });
 };
 
-extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
-class Padding4ByteEnd {
+class Padding5ByteMiddle {
  private:
   struct Storage_;
 
  public:
-  Padding4ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding4ByteEnd(uint64_t a, uint32_t b) noexcept
+  Padding5ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding5ByteMiddle(uint16_t a, uint8_t b, uint64_t c) noexcept
       : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
+                  .b = std::move(b),
+                  .c = std::move(c)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding4ByteEnd| only if all of its members are default constructible.
-  Padding4ByteEnd() = default;
+  // Default constructs a |Padding5ByteMiddle| only if all of its members are default constructible.
+  Padding5ByteMiddle() = default;
 #pragma clang diagnostic pop
 
-  Padding4ByteEnd(Padding4ByteEnd&&) noexcept = default;
-  Padding4ByteEnd& operator=(Padding4ByteEnd&&) noexcept = default;
-  Padding4ByteEnd(const Padding4ByteEnd& other) noexcept : Padding4ByteEnd(other.CloneStorage_()) {}
-  Padding4ByteEnd& operator=(const Padding4ByteEnd& other) noexcept {
+  Padding5ByteMiddle(Padding5ByteMiddle&&) noexcept = default;
+  Padding5ByteMiddle& operator=(Padding5ByteMiddle&&) noexcept = default;
+  Padding5ByteMiddle(const Padding5ByteMiddle& other) noexcept : Padding5ByteMiddle(other.CloneStorage_()) {}
+  Padding5ByteMiddle& operator=(const Padding5ByteMiddle& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const Padding4ByteEnd& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16>::Equal(this, &other);
+  bool operator==(const Padding5ByteMiddle& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16>::Equal(this, &other);
   }
-  bool operator!=(const Padding4ByteEnd& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16>::Equal(this, &other);
+  bool operator!=(const Padding5ByteMiddle& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16>::Equal(this, &other);
   }
 
-  uint64_t
+  uint16_t
   a() const {
     return storage_.a;
   }
 
-  uint64_t& a() {
+  uint16_t& a() {
     return storage_.a;
   }
 
-  uint32_t
+  uint8_t
   b() const {
     return storage_.b;
   }
 
-  uint32_t& b() {
+  uint8_t& b() {
     return storage_.b;
   }
 
-  Padding4ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding4ByteEnd(Storage_{
-                                                                                    .a = {},
-                                                                                    .b = {},
-                                                                                }) {}
+  uint64_t
+  c() const {
+    return storage_.c;
+  }
+
+  uint64_t& c() {
+    return storage_.c;
+  }
+
+  Padding5ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding5ByteMiddle(Storage_{
+                                                                                       .a = {},
+                                                                                       .b = {},
+                                                                                       .c = {},
+                                                                                   }) {}
 
  private:
   struct Storage_ final {
-    uint64_t a = {};
-    uint32_t b = {};
+    uint16_t a = {};
+    uint8_t b = {};
+    uint64_t c = {};
   };
 
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding4ByteEnd>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding5ByteMiddle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2}, ::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::c, 8});
   static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
-      .offset = 8,
-      .mask = 0xffffffff00000000ull,
+      .offset = 0,
+      .mask = 0xffffffffff000000ull,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
+
+class Padding6ByteMiddle {
+ private:
+  struct Storage_;
+
+ public:
+  Padding6ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding6ByteMiddle(uint16_t a, uint64_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding6ByteMiddle| only if all of its members are default constructible.
+  Padding6ByteMiddle() = default;
+#pragma clang diagnostic pop
+
+  Padding6ByteMiddle(Padding6ByteMiddle&&) noexcept = default;
+  Padding6ByteMiddle& operator=(Padding6ByteMiddle&&) noexcept = default;
+  Padding6ByteMiddle(const Padding6ByteMiddle& other) noexcept : Padding6ByteMiddle(other.CloneStorage_()) {}
+  Padding6ByteMiddle& operator=(const Padding6ByteMiddle& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding6ByteMiddle& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16>::Equal(this, &other);
+  }
+  bool operator!=(const Padding6ByteMiddle& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16>::Equal(this, &other);
+  }
+
+  uint16_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint16_t& a() {
+    return storage_.a;
+  }
+
+  uint64_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint64_t& b() {
+    return storage_.b;
+  }
+
+  Padding6ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding6ByteMiddle(Storage_{
+                                                                                       .a = {},
+                                                                                       .b = {},
+                                                                                   }) {}
+
+ private:
+  struct Storage_ final {
+    uint16_t a = {};
+    uint64_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding6ByteMiddle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 0,
+      .mask = 0xffffffffffff0000ull,
+  });
+};
+
+extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
+
+class Padding7ByteMiddle {
+ private:
+  struct Storage_;
+
+ public:
+  Padding7ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  Padding7ByteMiddle(uint8_t a, uint64_t b) noexcept
+      : storage_({.a = std::move(a),
+                  .b = std::move(b)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |Padding7ByteMiddle| only if all of its members are default constructible.
+  Padding7ByteMiddle() = default;
+#pragma clang diagnostic pop
+
+  Padding7ByteMiddle(Padding7ByteMiddle&&) noexcept = default;
+  Padding7ByteMiddle& operator=(Padding7ByteMiddle&&) noexcept = default;
+  Padding7ByteMiddle(const Padding7ByteMiddle& other) noexcept : Padding7ByteMiddle(other.CloneStorage_()) {}
+  Padding7ByteMiddle& operator=(const Padding7ByteMiddle& other) noexcept {
+    storage_ = other.CloneStorage_();
+    return *this;
+  }
+
+  bool operator==(const Padding7ByteMiddle& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16>::Equal(this, &other);
+  }
+  bool operator!=(const Padding7ByteMiddle& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16>::Equal(this, &other);
+  }
+
+  uint8_t
+  a() const {
+    return storage_.a;
+  }
+
+  uint8_t& a() {
+    return storage_.a;
+  }
+
+  uint64_t
+  b() const {
+    return storage_.b;
+  }
+
+  uint64_t& b() {
+    return storage_.b;
+  }
+
+  Padding7ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding7ByteMiddle(Storage_{
+                                                                                       .a = {},
+                                                                                       .b = {},
+                                                                                   }) {}
+
+ private:
+  struct Storage_ final {
+    uint8_t a = {};
+    uint64_t b = {};
+  };
+
+  Storage_ storage_;
+  Storage_ CloneStorage_() const;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding7ByteMiddle>;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+                                                       &Storage_::a, 0},
+                                                   ::fidl::internal::NaturalStructMember<Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 8});
+  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      .offset = 0,
+      .mask = 0xffffffffffffff00ull,
   });
 };
 
@@ -784,310 +1240,6 @@ class Padding4ByteAlignmentLength12 {
                                                    });
 };
 
-extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
-
-class Padding3ByteMiddle {
- private:
-  struct Storage_;
-
- public:
-  Padding3ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding3ByteMiddle(uint8_t a, uint32_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding3ByteMiddle| only if all of its members are default constructible.
-  Padding3ByteMiddle() = default;
-#pragma clang diagnostic pop
-
-  Padding3ByteMiddle(Padding3ByteMiddle&&) noexcept = default;
-  Padding3ByteMiddle& operator=(Padding3ByteMiddle&&) noexcept = default;
-  Padding3ByteMiddle(const Padding3ByteMiddle& other) noexcept : Padding3ByteMiddle(other.CloneStorage_()) {}
-  Padding3ByteMiddle& operator=(const Padding3ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding3ByteMiddle& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8>::Equal(this, &other);
-  }
-  bool operator!=(const Padding3ByteMiddle& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8>::Equal(this, &other);
-  }
-
-  uint8_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint8_t& a() {
-    return storage_.a;
-  }
-
-  uint32_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint32_t& b() {
-    return storage_.b;
-  }
-
-  Padding3ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding3ByteMiddle(Storage_{
-                                                                                       .a = {},
-                                                                                       .b = {},
-                                                                                   }) {}
-
- private:
-  struct Storage_ final {
-    uint8_t a = {};
-    uint32_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding3ByteMiddle>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-      .offset = 0,
-      .mask = 0xffffff00,
-  });
-};
-
-extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
-
-class Padding3ByteEnd {
- private:
-  struct Storage_;
-
- public:
-  Padding3ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding3ByteEnd(uint32_t a, uint8_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding3ByteEnd| only if all of its members are default constructible.
-  Padding3ByteEnd() = default;
-#pragma clang diagnostic pop
-
-  Padding3ByteEnd(Padding3ByteEnd&&) noexcept = default;
-  Padding3ByteEnd& operator=(Padding3ByteEnd&&) noexcept = default;
-  Padding3ByteEnd(const Padding3ByteEnd& other) noexcept : Padding3ByteEnd(other.CloneStorage_()) {}
-  Padding3ByteEnd& operator=(const Padding3ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding3ByteEnd& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8>::Equal(this, &other);
-  }
-  bool operator!=(const Padding3ByteEnd& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8>::Equal(this, &other);
-  }
-
-  uint32_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint32_t& a() {
-    return storage_.a;
-  }
-
-  uint8_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint8_t& b() {
-    return storage_.b;
-  }
-
-  Padding3ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding3ByteEnd(Storage_{
-                                                                                    .a = {},
-                                                                                    .b = {},
-                                                                                }) {}
-
- private:
-  struct Storage_ final {
-    uint32_t a = {};
-    uint8_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding3ByteEnd>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-      .offset = 4,
-      .mask = 0xffffff00,
-  });
-};
-
-extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
-
-class Padding2ByteMiddle {
- private:
-  struct Storage_;
-
- public:
-  Padding2ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding2ByteMiddle(uint16_t a, uint32_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding2ByteMiddle| only if all of its members are default constructible.
-  Padding2ByteMiddle() = default;
-#pragma clang diagnostic pop
-
-  Padding2ByteMiddle(Padding2ByteMiddle&&) noexcept = default;
-  Padding2ByteMiddle& operator=(Padding2ByteMiddle&&) noexcept = default;
-  Padding2ByteMiddle(const Padding2ByteMiddle& other) noexcept : Padding2ByteMiddle(other.CloneStorage_()) {}
-  Padding2ByteMiddle& operator=(const Padding2ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding2ByteMiddle& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8>::Equal(this, &other);
-  }
-  bool operator!=(const Padding2ByteMiddle& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8>::Equal(this, &other);
-  }
-
-  uint16_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint16_t& a() {
-    return storage_.a;
-  }
-
-  uint32_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint32_t& b() {
-    return storage_.b;
-  }
-
-  Padding2ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteMiddle(Storage_{
-                                                                                       .a = {},
-                                                                                       .b = {},
-                                                                                   }) {}
-
- private:
-  struct Storage_ final {
-    uint16_t a = {};
-    uint32_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding2ByteMiddle>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-      .offset = 0,
-      .mask = 0xffff0000,
-  });
-};
-
-extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
-
-class Padding2ByteEnd {
- private:
-  struct Storage_;
-
- public:
-  Padding2ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding2ByteEnd(uint32_t a, uint16_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding2ByteEnd| only if all of its members are default constructible.
-  Padding2ByteEnd() = default;
-#pragma clang diagnostic pop
-
-  Padding2ByteEnd(Padding2ByteEnd&&) noexcept = default;
-  Padding2ByteEnd& operator=(Padding2ByteEnd&&) noexcept = default;
-  Padding2ByteEnd(const Padding2ByteEnd& other) noexcept : Padding2ByteEnd(other.CloneStorage_()) {}
-  Padding2ByteEnd& operator=(const Padding2ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding2ByteEnd& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8>::Equal(this, &other);
-  }
-  bool operator!=(const Padding2ByteEnd& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8>::Equal(this, &other);
-  }
-
-  uint32_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint32_t& a() {
-    return storage_.a;
-  }
-
-  uint16_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint16_t& b() {
-    return storage_.b;
-  }
-
-  Padding2ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteEnd(Storage_{
-                                                                                    .a = {},
-                                                                                    .b = {},
-                                                                                }) {}
-
- private:
-  struct Storage_ final {
-    uint32_t a = {};
-    uint16_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding2ByteEnd>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-      .offset = 4,
-      .mask = 0xffff0000,
-  });
-};
-
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
 class Padding2ByteAlignmentLength6 {
@@ -1180,268 +1332,17 @@ class Padding2ByteAlignmentLength6 {
                                                    });
 };
 
-extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
-
-class Padding1ByteMiddle {
- private:
-  struct Storage_;
-
- public:
-  Padding1ByteMiddle(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding1ByteMiddle(uint8_t a, uint16_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding1ByteMiddle| only if all of its members are default constructible.
-  Padding1ByteMiddle() = default;
-#pragma clang diagnostic pop
-
-  Padding1ByteMiddle(Padding1ByteMiddle&&) noexcept = default;
-  Padding1ByteMiddle& operator=(Padding1ByteMiddle&&) noexcept = default;
-  Padding1ByteMiddle(const Padding1ByteMiddle& other) noexcept : Padding1ByteMiddle(other.CloneStorage_()) {}
-  Padding1ByteMiddle& operator=(const Padding1ByteMiddle& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding1ByteMiddle& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4>::Equal(this, &other);
-  }
-  bool operator!=(const Padding1ByteMiddle& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4>::Equal(this, &other);
-  }
-
-  uint8_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint8_t& a() {
-    return storage_.a;
-  }
-
-  uint16_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint16_t& b() {
-    return storage_.b;
-  }
-
-  Padding1ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding1ByteMiddle(Storage_{
-                                                                                       .a = {},
-                                                                                       .b = {},
-                                                                                   }) {}
-
- private:
-  struct Storage_ final {
-    uint8_t a = {};
-    uint16_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding1ByteMiddle>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
-      .offset = 0,
-      .mask = 0xff00,
-  });
-};
-
-extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
-
-class Padding1ByteEnd {
- private:
-  struct Storage_;
-
- public:
-  Padding1ByteEnd(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  Padding1ByteEnd(uint16_t a, uint8_t b) noexcept
-      : storage_({.a = std::move(a),
-                  .b = std::move(b)}) {}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |Padding1ByteEnd| only if all of its members are default constructible.
-  Padding1ByteEnd() = default;
-#pragma clang diagnostic pop
-
-  Padding1ByteEnd(Padding1ByteEnd&&) noexcept = default;
-  Padding1ByteEnd& operator=(Padding1ByteEnd&&) noexcept = default;
-  Padding1ByteEnd(const Padding1ByteEnd& other) noexcept : Padding1ByteEnd(other.CloneStorage_()) {}
-  Padding1ByteEnd& operator=(const Padding1ByteEnd& other) noexcept {
-    storage_ = other.CloneStorage_();
-    return *this;
-  }
-
-  bool operator==(const Padding1ByteEnd& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4>::Equal(this, &other);
-  }
-  bool operator!=(const Padding1ByteEnd& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4>::Equal(this, &other);
-  }
-
-  uint16_t
-  a() const {
-    return storage_.a;
-  }
-
-  uint16_t& a() {
-    return storage_.a;
-  }
-
-  uint8_t
-  b() const {
-    return storage_.b;
-  }
-
-  uint8_t& b() {
-    return storage_.b;
-  }
-
-  Padding1ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding1ByteEnd(Storage_{
-                                                                                    .a = {},
-                                                                                    .b = {},
-                                                                                }) {}
-
- private:
-  struct Storage_ final {
-    uint16_t a = {};
-    uint8_t b = {};
-  };
-
-  Storage_ storage_;
-  Storage_ CloneStorage_() const;
-
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_padding::Padding1ByteEnd>;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
-                                                       &Storage_::a, 0},
-                                                   ::fidl::internal::NaturalStructMember<Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 2});
-  static constexpr auto kPadding = std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
-      .offset = 2,
-      .mask = 0xff00,
-  });
-};
-
 }  // namespace test_padding
 namespace fidl {
 
-extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
 template <>
-struct IsFidlType<::test_padding::Padding7ByteMiddle> : public std::true_type {};
+struct IsFidlType<::test_padding::Padding1ByteEnd> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding7ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding7ByteEnd> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding7ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding6ByteMiddle> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding6ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding6ByteEnd> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding6ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding5ByteMiddle> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding5ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding5ByteEnd> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding5ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteEnd, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding4ByteMiddle> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding4ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteMiddle, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding4ByteEnd> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding4ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16> {};
-
-extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
-
-template <>
-struct IsFidlType<::test_padding::Padding4ByteAlignmentLength12> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding4ByteAlignmentLength12, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteAlignmentLength12, 12> {};
-
-extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding3ByteMiddle> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding3ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8> {};
-
-extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding3ByteEnd> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding3ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8> {};
-
-extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
-
-template <>
-struct IsFidlType<::test_padding::Padding2ByteMiddle> : public std::true_type {};
-
-template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding2ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8> {};
+struct internal::NaturalCodingTraits<::test_padding::Padding1ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4> {};
 
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
@@ -1452,14 +1353,50 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding2ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteEnd, 8> {};
 
-extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
+extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
 template <>
-struct IsFidlType<::test_padding::Padding2ByteAlignmentLength6> : public std::true_type {};
+struct IsFidlType<::test_padding::Padding3ByteEnd> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding2ByteAlignmentLength6, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteAlignmentLength6, 6> {};
+struct internal::NaturalCodingTraits<::test_padding::Padding3ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8> {};
+
+extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding4ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding4ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteEnd, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding5ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding5ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteEnd, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding6ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding6ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteEnd, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding7ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding7ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16> {};
 
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
@@ -1470,13 +1407,76 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding1ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteMiddle, 4> {};
 
-extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
 template <>
-struct IsFidlType<::test_padding::Padding1ByteEnd> : public std::true_type {};
+struct IsFidlType<::test_padding::Padding2ByteMiddle> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_padding::Padding1ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4> {};
+struct internal::NaturalCodingTraits<::test_padding::Padding2ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8> {};
+
+extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding3ByteMiddle> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding3ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteMiddle, 8> {};
+
+extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding4ByteMiddle> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding4ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteMiddle, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding5ByteMiddle> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding5ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteMiddle, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding6ByteMiddle> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding6ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
+
+template <>
+struct IsFidlType<::test_padding::Padding7ByteMiddle> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding7ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteMiddle, 16> {};
+
+extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
+
+template <>
+struct IsFidlType<::test_padding::Padding4ByteAlignmentLength12> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding4ByteAlignmentLength12, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteAlignmentLength12, 12> {};
+
+extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
+
+template <>
+struct IsFidlType<::test_padding::Padding2ByteAlignmentLength6> : public std::true_type {};
+
+template <>
+struct internal::NaturalCodingTraits<::test_padding::Padding2ByteAlignmentLength6, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteAlignmentLength6, 6> {};
 
 }  // namespace fidl

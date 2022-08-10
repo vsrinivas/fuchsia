@@ -24,11 +24,100 @@ inline zx_status_t Clone(::test::handlesintypes::obj_type value,
   return ZX_OK;
 }
 
-class UnionWithHandle;
-
 class TableWithHandle;
 
+class UnionWithHandle;
+
 class HandlesInTypes;
+
+#ifdef __Fuchsia__
+
+class TableWithHandle final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const ::zx::vmo& h() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return h_value_.value;
+  }
+  bool has_h() const {
+    return field_presence_.IsSet<0>();
+  }
+
+  ::zx::vmo* mutable_h() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&h_value_.value);
+    }
+    return &h_value_.value;
+  }
+  TableWithHandle& set_h(::zx::vmo _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&h_value_.value, std::move(_value));
+    } else {
+      h_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_h() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&h_value_.value);
+  }
+
+  TableWithHandle();
+  TableWithHandle(TableWithHandle&& other);
+  ~TableWithHandle();
+  TableWithHandle& operator=(TableWithHandle&& other);
+
+  static inline ::std::unique_ptr<TableWithHandle> New() { return ::std::make_unique<TableWithHandle>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset);
+  zx_status_t Clone(TableWithHandle* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_h {
+    ValueUnion_h() {}
+    ~ValueUnion_h() {}
+
+    ::zx::vmo value;
+  };
+  ValueUnion_h h_value_;
+};
+
+using TableWithHandlePtr = ::std::unique_ptr<TableWithHandle>;
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -127,95 +216,6 @@ using UnionWithHandlePtr = ::std::unique_ptr<UnionWithHandle>;
 
 #ifdef __Fuchsia__
 
-class TableWithHandle final {
- public:
-  static const fidl_type_t* FidlType;
-  /// Returns whether no field is set.
-  bool IsEmpty() const;
-
-  const ::zx::vmo& h() const {
-    ZX_ASSERT(field_presence_.IsSet<0>());
-    return h_value_.value;
-  }
-  bool has_h() const {
-    return field_presence_.IsSet<0>();
-  }
-
-  ::zx::vmo* mutable_h() {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&h_value_.value);
-    }
-    return &h_value_.value;
-  }
-  TableWithHandle& set_h(::zx::vmo _value) {
-    if (!field_presence_.IsSet<0>()) {
-      field_presence_.Set<0>();
-      Construct(&h_value_.value, std::move(_value));
-    } else {
-      h_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_h() {
-    if (!field_presence_.IsSet<0>()) {
-      return;
-    }
-    field_presence_.Clear<0>();
-    Destruct(&h_value_.value);
-  }
-
-  TableWithHandle();
-  TableWithHandle(TableWithHandle&& other);
-  ~TableWithHandle();
-  TableWithHandle& operator=(TableWithHandle&& other);
-
-  static inline ::std::unique_ptr<TableWithHandle> New() { return ::std::make_unique<TableWithHandle>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TableWithHandle* _value, size_t _offset);
-  zx_status_t Clone(TableWithHandle* _result) const;
-
- private:
-  template <class T, class... Args>
-  void Construct(T* p, Args&&... args) {
-    new (p) T(std::forward<Args>(args)...);
-  }
-
-  template <class T>
-  void Destruct(T* p) {
-    p->~T();
-  }
-
-  size_t MaxOrdinal() const {
-    return static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
-  }
-
-  static bool IsOrdinalKnown(uint64_t ordinal) {
-    switch (ordinal) {
-      case 1:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  ::fidl::internal::BitSet<1> field_presence_;
-  union ValueUnion_h {
-    ValueUnion_h() {}
-    ~ValueUnion_h() {}
-
-    ::zx::vmo value;
-  };
-  ValueUnion_h h_value_;
-};
-
-using TableWithHandlePtr = ::std::unique_ptr<TableWithHandle>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 class HandlesInTypes final {
  public:
   static const fidl_type_t* FidlType;
@@ -281,6 +281,34 @@ struct Equality<::test::handlesintypes::obj_type> {
 #ifdef __Fuchsia__
 
 template <>
+struct CodingTraits<::test::handlesintypes::TableWithHandle>
+    : public EncodableCodingTraits<::test::handlesintypes::TableWithHandle, 16> {};
+
+inline zx_status_t Clone(const ::test::handlesintypes::TableWithHandle& _value,
+                         ::test::handlesintypes::TableWithHandle* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::handlesintypes::TableWithHandle> {
+  bool operator()(const ::test::handlesintypes::TableWithHandle& _lhs, const ::test::handlesintypes::TableWithHandle& _rhs) const {
+    if (_lhs.has_h()) {
+      if (!_rhs.has_h()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.h(), _rhs.h())) {
+        return false;
+      }
+    } else if (_rhs.has_h()) {
+      return false;
+    }
+    return true;
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
 struct IsFidlXUnion<::test::handlesintypes::UnionWithHandle> : public std::true_type {};
 
 template <>
@@ -332,34 +360,6 @@ struct Equality<::test::handlesintypes::UnionWithHandle> {
       default:
         return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct CodingTraits<::test::handlesintypes::TableWithHandle>
-    : public EncodableCodingTraits<::test::handlesintypes::TableWithHandle, 16> {};
-
-inline zx_status_t Clone(const ::test::handlesintypes::TableWithHandle& _value,
-                         ::test::handlesintypes::TableWithHandle* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::handlesintypes::TableWithHandle> {
-  bool operator()(const ::test::handlesintypes::TableWithHandle& _lhs, const ::test::handlesintypes::TableWithHandle& _rhs) const {
-    if (_lhs.has_h()) {
-      if (!_rhs.has_h()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.h(), _rhs.h())) {
-        return false;
-      }
-    } else if (_rhs.has_h()) {
-      return false;
-    }
-    return true;
   }
 };
 #endif  // __Fuchsia__

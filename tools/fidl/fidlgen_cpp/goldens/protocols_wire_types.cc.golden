@@ -3,30 +3,6 @@
 #include <fidl/test.protocols/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse::_CloseHandles() {
-  out.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsServerEndsRequest::_CloseHandles() {
-  in.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse::_CloseHandles() {
-  out.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsClientEndsRequest::_CloseHandles() {
-  in.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 void ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse::_CloseHandles() {
   h.reset();
 }
@@ -35,6 +11,48 @@ void ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse::_CloseHandle
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse::_CloseHandles() {
   result._CloseHandles();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::ChannelProtocolTakeHandleRequest::_CloseHandles() {
+  h.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::ChannelProtocolMutateSocketRequest::_CloseHandles() {
+  a.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse::_CloseHandles() {
+  b.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest::_CloseHandles() {
+  h.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest::_CloseHandles() {
+  h.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse::_CloseHandles() {
+  h.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::HandleRightsProtocolAnEventRequest::_CloseHandles() {
+  h.reset();
 }
 #endif  // __Fuchsia__
 
@@ -48,8 +66,26 @@ void ::test_protocols::wire::ProtocolEnds::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse::_CloseHandles() {
-  out._CloseHandles();
+void ::test_protocols::wire::WithProtocolEndsClientEndsRequest::_CloseHandles() {
+  in.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse::_CloseHandles() {
+  out.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsServerEndsRequest::_CloseHandles() {
+  in.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+void ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse::_CloseHandles() {
+  out.reset();
 }
 #endif  // __Fuchsia__
 
@@ -60,44 +96,8 @@ void ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest::_Close
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse::_CloseHandles() {
-  h.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest::_CloseHandles() {
-  h.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest::_CloseHandles() {
-  h.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::HandleRightsProtocolAnEventRequest::_CloseHandles() {
-  h.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::ChannelProtocolTakeHandleRequest::_CloseHandles() {
-  h.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse::_CloseHandles() {
-  b.reset();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-void ::test_protocols::wire::ChannelProtocolMutateSocketRequest::_CloseHandles() {
-  a.reset();
+void ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse::_CloseHandles() {
+  out._CloseHandles();
 }
 #endif  // __Fuchsia__
 
@@ -105,6 +105,18 @@ void ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::SizeAndOffse
   static_assert(sizeof(WithErrorSyntaxResponseAsStructResult) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(WithErrorSyntaxResponseAsStructResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
+void ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(WithErrorSyntaxErrorAsPrimitiveResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(WithErrorSyntaxErrorAsPrimitiveResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(WithErrorSyntaxErrorAsPrimitiveResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
+}
+
+void ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(WithErrorSyntaxErrorAsEnumResult) == sizeof(fidl_xunion_v2_t));
+  static_assert(offsetof(WithErrorSyntaxErrorAsEnumResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
+  static_assert(offsetof(WithErrorSyntaxErrorAsEnumResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }
 
 #ifdef __Fuchsia__
@@ -153,12 +165,6 @@ void ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::_CloseHandles(
 }
 #endif  // __Fuchsia__
 
-void ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(WithErrorSyntaxErrorAsPrimitiveResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(WithErrorSyntaxErrorAsPrimitiveResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(WithErrorSyntaxErrorAsPrimitiveResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
 auto ::test_protocols::wire::TheUnion::Which() const -> ::test_protocols::wire::TheUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -173,10 +179,4 @@ void ::test_protocols::wire::TheUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(TheUnion) == sizeof(fidl_xunion_v2_t));
   static_assert(offsetof(TheUnion, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
   static_assert(offsetof(TheUnion, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
-}
-
-void ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(WithErrorSyntaxErrorAsEnumResult) == sizeof(fidl_xunion_v2_t));
-  static_assert(offsetof(WithErrorSyntaxErrorAsEnumResult, ordinal_) == offsetof(fidl_xunion_v2_t, tag));
-  static_assert(offsetof(WithErrorSyntaxErrorAsEnumResult, envelope_) == offsetof(fidl_xunion_v2_t, envelope));
 }

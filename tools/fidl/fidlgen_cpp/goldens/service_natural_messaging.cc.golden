@@ -4,86 +4,6 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_service {
-[[maybe_unused]] constexpr inline uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 8121179205110225988lu;
-
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kSecondProtocol_MethodOnSecond_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-
-#ifdef __Fuchsia__
-}  // namespace test_service
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalClientImpl<::test_service::SecondProtocol>::MethodOnSecond() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_service::kSecondProtocol_MethodOnSecond_Ordinal, ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags};
-  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
-  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
-  return ::fidl::internal::ToFitxResult(status);
-}
-namespace test_service {
-#endif  // __Fuchsia__
-
-}  // namespace test_service
-#ifdef __Fuchsia__
-
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalSyncClientImpl<::test_service::SecondProtocol>::MethodOnSecond() {
-  ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_service::kSecondProtocol_MethodOnSecond_Ordinal, ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags};
-  ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  msg.Write(_client_end().handle());
-  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
-}
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::Status fidl::SyncEventHandler<::test_service::SecondProtocol>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_service::SecondProtocol> event_storage;
-  fidl::internal::NaturalEventDispatcher<::test_service::SecondProtocol> dispatcher{this};
-  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::entries_[] = {
-    {
-        ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value();
-          }
-          ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> request;
-          ::fidl::internal::NaturalCompleter<::test_service::SecondProtocol::MethodOnSecond>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_service::SecondProtocol>*>(interface)->MethodOnSecond(
-              request, completer);
-          return ::fidl::Status::Ok();
-        },
-    },
-};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::entries_end_ =
-    &entries_[1];
-
-void fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::Dispatch(::fidl::Server<::test_service::SecondProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
-}
-void fidl::Server<::test_service::SecondProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
-}
-#endif  // __Fuchsia__
-
-namespace test_service {
 [[maybe_unused]] constexpr inline uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 6352548393671797041lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kFirstProtocol_MethodOnFirst_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -160,5 +80,85 @@ void fidl::Server<::test_service::FirstProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_service::FirstProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+namespace test_service {
+[[maybe_unused]] constexpr inline uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 8121179205110225988lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kSecondProtocol_MethodOnSecond_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+#ifdef __Fuchsia__
+}  // namespace test_service
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_service::SecondProtocol>::MethodOnSecond() const {
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_service::kSecondProtocol_MethodOnSecond_Ordinal, ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags};
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
+  return ::fidl::internal::ToFitxResult(status);
+}
+namespace test_service {
+#endif  // __Fuchsia__
+
+}  // namespace test_service
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_service::SecondProtocol>::MethodOnSecond() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_service::kSecondProtocol_MethodOnSecond_Ordinal, ::test_service::kSecondProtocol_MethodOnSecond_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::SyncEventHandler<::test_service::SecondProtocol>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_service::SecondProtocol> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_service::SecondProtocol> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::entries_[] = {
+    {
+        ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+          if (decoded.is_error()) {
+            return decoded.error_value();
+          }
+          ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> request;
+          ::fidl::internal::NaturalCompleter<::test_service::SecondProtocol::MethodOnSecond>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_service::SecondProtocol>*>(interface)->MethodOnSecond(
+              request, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::entries_end_ =
+    &entries_[1];
+
+void fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::Dispatch(::fidl::Server<::test_service::SecondProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
+}
+void fidl::Server<::test_service::SecondProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

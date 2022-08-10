@@ -13,131 +13,21 @@
 
 namespace fuzzing {
 
-using UnionMember = ::test::anonymous::UnionMember;
-using TableData = ::test::anonymous::TableData;
-using TableMember = ::test::anonymous::TableMember;
-using SomeProtocolSomeMethodRequest = ::test::anonymous::SomeProtocolSomeMethodRequest;
-using SomeProtocol_SomeMethod_Error = ::test::anonymous::SomeProtocol_SomeMethod_Error;
 using Op = ::test::anonymous::Op;
 using OverrideTest = ::test::anonymous::OverrideTest;
 using Flags = ::test::anonymous::Flags;
 using FunctionApplication = ::test::anonymous::FunctionApplication;
 using Expression = ::test::anonymous::Expression;
+using UnionMember = ::test::anonymous::UnionMember;
+using TableData = ::test::anonymous::TableData;
+using TableMember = ::test::anonymous::TableMember;
+using SomeProtocolSomeMethodRequest = ::test::anonymous::SomeProtocolSomeMethodRequest;
 using BitsMember = ::test::anonymous::BitsMember;
 using SomeProtocol_SomeMethod_Response = ::test::anonymous::SomeProtocol_SomeMethod_Response;
+using SomeProtocol_SomeMethod_Error = ::test::anonymous::SomeProtocol_SomeMethod_Error;
 using SomeProtocol_SomeMethod_Result = ::test::anonymous::SomeProtocol_SomeMethod_Result;
 using SomeProtocolSomeMethodTopResponse = ::test::anonymous::SomeProtocolSomeMethodTopResponse;
 
-template <>
-struct MinSize<UnionMember> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<uint8_t>()};
-    return 1 + *std::max_element(sizes, sizes + 1 + 1);
-  }
-};
-template <>
-struct Allocate<UnionMember> {
-  static_assert(1 > 0, "xunion must have at least one member");
-
-  UnionMember operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnionMember>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    UnionMember out;
-    switch (selector % 1) {
-      case 0: {
-        out.set_union_data(Allocate<uint8_t>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<TableData> {
-  operator size_t() {
-    return MinSize<uint8_t>();
-  }
-};
-template <>
-struct Allocate<TableData> {
-  TableData operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TableData>());
-    TableData out;
-    const size_t slack_per_member = (*size - MinSize<TableData>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint8_t>() + slack_per_member;
-    out.data = Allocate<uint8_t>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<TableMember> {
-  operator size_t() {
-    return MinSize<::std::vector<::test::anonymous::TableData>>();
-  }
-};
-template <>
-struct Allocate<TableMember> {
-  TableMember operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TableMember>());
-    TableMember out;
-    const size_t slack_per_member = (*size - MinSize<TableMember>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::std::vector<::test::anonymous::TableData>>() + slack_per_member;
-    out.set_table_data(Allocate<::std::vector<::test::anonymous::TableData>>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<SomeProtocolSomeMethodRequest> {
-  operator size_t() {
-    return MinSize<::test::anonymous::UnionMember>() + MinSize<::test::anonymous::TableMember>();
-  }
-};
-template <>
-struct Allocate<SomeProtocolSomeMethodRequest> {
-  SomeProtocolSomeMethodRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<SomeProtocolSomeMethodRequest>());
-    SomeProtocolSomeMethodRequest out;
-    const size_t slack_per_member = (*size - MinSize<SomeProtocolSomeMethodRequest>()) / 2;
-    size_t out_size;
-    out_size = MinSize<::test::anonymous::UnionMember>() + slack_per_member;
-    out.union_member = Allocate<::test::anonymous::UnionMember>{}(src, &out_size);
-    out_size = MinSize<::test::anonymous::TableMember>() + slack_per_member;
-    out.table_member = Allocate<::test::anonymous::TableMember>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<SomeProtocol_SomeMethod_Error> {
-  operator size_t() { return sizeof(uint64_t); }
-};
-template <>
-struct Allocate<SomeProtocol_SomeMethod_Error> {
-  SomeProtocol_SomeMethod_Error operator()(FuzzInput* src, size_t* size) {
-    SomeProtocol_SomeMethod_Error out;
-    uint64_t selector;
-    ZX_ASSERT(*size >= sizeof(uint64_t));
-    ZX_ASSERT(src->CopyObject(&selector));
-    *size = sizeof(uint64_t);
-
-    switch (selector % 2) {
-      case 0:
-        out = SomeProtocol_SomeMethod_Error::ERROR_ONE;
-        break;
-      case 1:
-        out = SomeProtocol_SomeMethod_Error::ERROR_TWO;
-        break;
-    }
-
-    return out;
-  }
-};
 template <>
 struct MinSize<Op> {
   operator size_t() { return sizeof(uint64_t); }
@@ -259,6 +149,91 @@ struct Allocate<Expression> {
   }
 };
 template <>
+struct MinSize<UnionMember> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<uint8_t>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
+};
+template <>
+struct Allocate<UnionMember> {
+  static_assert(1 > 0, "xunion must have at least one member");
+
+  UnionMember operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnionMember>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    UnionMember out;
+    switch (selector % 1) {
+      case 0: {
+        out.set_union_data(Allocate<uint8_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<TableData> {
+  operator size_t() {
+    return MinSize<uint8_t>();
+  }
+};
+template <>
+struct Allocate<TableData> {
+  TableData operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TableData>());
+    TableData out;
+    const size_t slack_per_member = (*size - MinSize<TableData>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint8_t>() + slack_per_member;
+    out.data = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<TableMember> {
+  operator size_t() {
+    return MinSize<::std::vector<::test::anonymous::TableData>>();
+  }
+};
+template <>
+struct Allocate<TableMember> {
+  TableMember operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TableMember>());
+    TableMember out;
+    const size_t slack_per_member = (*size - MinSize<TableMember>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::vector<::test::anonymous::TableData>>() + slack_per_member;
+    out.set_table_data(Allocate<::std::vector<::test::anonymous::TableData>>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<SomeProtocolSomeMethodRequest> {
+  operator size_t() {
+    return MinSize<::test::anonymous::UnionMember>() + MinSize<::test::anonymous::TableMember>();
+  }
+};
+template <>
+struct Allocate<SomeProtocolSomeMethodRequest> {
+  SomeProtocolSomeMethodRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SomeProtocolSomeMethodRequest>());
+    SomeProtocolSomeMethodRequest out;
+    const size_t slack_per_member = (*size - MinSize<SomeProtocolSomeMethodRequest>()) / 2;
+    size_t out_size;
+    out_size = MinSize<::test::anonymous::UnionMember>() + slack_per_member;
+    out.union_member = Allocate<::test::anonymous::UnionMember>{}(src, &out_size);
+    out_size = MinSize<::test::anonymous::TableMember>() + slack_per_member;
+    out.table_member = Allocate<::test::anonymous::TableMember>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
 struct MinSize<BitsMember> {
   operator size_t() { return sizeof(uint32_t); }
 };
@@ -284,6 +259,31 @@ struct Allocate<SomeProtocol_SomeMethod_Response> {
     size_t out_size;
     out_size = MinSize<::test::anonymous::BitsMember>() + slack_per_member;
     out.bits_member = Allocate<::test::anonymous::BitsMember>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<SomeProtocol_SomeMethod_Error> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template <>
+struct Allocate<SomeProtocol_SomeMethod_Error> {
+  SomeProtocol_SomeMethod_Error operator()(FuzzInput* src, size_t* size) {
+    SomeProtocol_SomeMethod_Error out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = SomeProtocol_SomeMethod_Error::ERROR_ONE;
+        break;
+      case 1:
+        out = SomeProtocol_SomeMethod_Error::ERROR_TWO;
+        break;
+    }
+
     return out;
   }
 };

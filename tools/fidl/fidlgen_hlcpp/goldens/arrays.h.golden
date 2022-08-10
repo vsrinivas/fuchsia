@@ -11,159 +11,59 @@ namespace arrays {
 // Domain objects declarations
 //
 
-class UnionSmallArray;
+class StructSmallArray;
 
-class UnionLargeArray;
+class StructLargeArray;
 
 class TableSmallArray;
 
 class TableLargeArray;
 
-class StructSmallArray;
+class UnionSmallArray;
 
-class StructLargeArray;
+class UnionLargeArray;
 
-class UnionSmallArray final {
+class StructSmallArray final {
  public:
   static const fidl_type_t* FidlType;
 
-  UnionSmallArray();
-  ~UnionSmallArray();
+  ::std::array<uint32_t, 2> a{};
 
-  UnionSmallArray(UnionSmallArray&&);
-  UnionSmallArray& operator=(UnionSmallArray&&);
+  static inline ::std::unique_ptr<StructSmallArray> New() { return ::std::make_unique<StructSmallArray>(); }
 
-  static UnionSmallArray WithA(::std::array<uint32_t, 2>&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-
-    kA = 1,  // 0x1
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<UnionSmallArray> New() { return ::std::make_unique<UnionSmallArray>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnionSmallArray* value, size_t offset);
-  zx_status_t Clone(UnionSmallArray* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_a() const { return tag_ == ::test::arrays::UnionSmallArray::Tag::kA; }
-
-  ::std::array<uint32_t, 2>& a() {
-    EnsureStorageInitialized(::test::arrays::UnionSmallArray::Tag::kA);
-    return a_;
-  }
-
-  const ::std::array<uint32_t, 2>& a() const {
-    ZX_ASSERT(is_a());
-    return a_;
-  }
-  UnionSmallArray& set_a(::std::array<uint32_t, 2> value);
-
-  ::test::arrays::UnionSmallArray::Tag Which() const {
-    return ::test::arrays::UnionSmallArray::Tag(tag_);
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-
-  friend ::fidl::Equality<::test::arrays::UnionSmallArray>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::arrays::UnionSmallArray::Tag::Invalid);
-  union {
-    ::std::array<uint32_t, 2> a_;
-  };
+  static void Decode(::fidl::Decoder* _decoder, StructSmallArray* value, size_t _offset);
+  zx_status_t Clone(StructSmallArray* result) const;
 };
 
-inline zx_status_t Clone(const ::test::arrays::UnionSmallArray& value,
-                         ::test::arrays::UnionSmallArray* result) {
-  return value.Clone(result);
+inline zx_status_t Clone(const ::test::arrays::StructSmallArray& _value,
+                         ::test::arrays::StructSmallArray* _result) {
+  return _value.Clone(_result);
 }
 
-using UnionSmallArrayPtr = ::std::unique_ptr<UnionSmallArray>;
+using StructSmallArrayPtr = ::std::unique_ptr<StructSmallArray>;
 
-class UnionLargeArray final {
+class StructLargeArray final {
  public:
   static const fidl_type_t* FidlType;
 
-  UnionLargeArray();
-  ~UnionLargeArray();
+  ::std::array<uint32_t, 100> a{};
 
-  UnionLargeArray(UnionLargeArray&&);
-  UnionLargeArray& operator=(UnionLargeArray&&);
+  static inline ::std::unique_ptr<StructLargeArray> New() { return ::std::make_unique<StructLargeArray>(); }
 
-  static UnionLargeArray WithA(::std::array<uint32_t, 100>&&);
-
-  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-
-    kA = 1,  // 0x1
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  static inline ::std::unique_ptr<UnionLargeArray> New() { return ::std::make_unique<UnionLargeArray>(); }
-
-  void Encode(::fidl::Encoder* encoder, size_t offset,
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnionLargeArray* value, size_t offset);
-  zx_status_t Clone(UnionLargeArray* result) const;
-
-  bool has_invalid_tag() const {
-    return tag_ == Invalid;
-  }
-
-  bool is_a() const { return tag_ == ::test::arrays::UnionLargeArray::Tag::kA; }
-
-  ::std::array<uint32_t, 100>& a() {
-    EnsureStorageInitialized(::test::arrays::UnionLargeArray::Tag::kA);
-    return a_;
-  }
-
-  const ::std::array<uint32_t, 100>& a() const {
-    ZX_ASSERT(is_a());
-    return a_;
-  }
-  UnionLargeArray& set_a(::std::array<uint32_t, 100> value);
-
-  ::test::arrays::UnionLargeArray::Tag Which() const {
-    return ::test::arrays::UnionLargeArray::Tag(tag_);
-  }
-
-  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
-  // access to the raw integral ordinal value.
-  fidl_xunion_tag_t Ordinal() const {
-    return tag_;
-  }
-
-  friend ::fidl::Equality<::test::arrays::UnionLargeArray>;
-
- private:
-  void Destroy();
-  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
-
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::arrays::UnionLargeArray::Tag::Invalid);
-  union {
-    ::std::array<uint32_t, 100> a_;
-  };
+  static void Decode(::fidl::Decoder* _decoder, StructLargeArray* value, size_t _offset);
+  zx_status_t Clone(StructLargeArray* result) const;
 };
 
-inline zx_status_t Clone(const ::test::arrays::UnionLargeArray& value,
-                         ::test::arrays::UnionLargeArray* result) {
-  return value.Clone(result);
+inline zx_status_t Clone(const ::test::arrays::StructLargeArray& _value,
+                         ::test::arrays::StructLargeArray* _result) {
+  return _value.Clone(_result);
 }
 
-using UnionLargeArrayPtr = ::std::unique_ptr<UnionLargeArray>;
+using StructLargeArrayPtr = ::std::unique_ptr<StructLargeArray>;
 
 class TableSmallArray final {
  public:
@@ -337,51 +237,243 @@ class TableLargeArray final {
 
 using TableLargeArrayPtr = ::std::unique_ptr<TableLargeArray>;
 
-class StructSmallArray final {
+class UnionSmallArray final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::array<uint32_t, 2> a{};
+  UnionSmallArray();
+  ~UnionSmallArray();
 
-  static inline ::std::unique_ptr<StructSmallArray> New() { return ::std::make_unique<StructSmallArray>(); }
+  UnionSmallArray(UnionSmallArray&&);
+  UnionSmallArray& operator=(UnionSmallArray&&);
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+  static UnionSmallArray WithA(::std::array<uint32_t, 2>&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kA = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<UnionSmallArray> New() { return ::std::make_unique<UnionSmallArray>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, StructSmallArray* value, size_t _offset);
-  zx_status_t Clone(StructSmallArray* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnionSmallArray* value, size_t offset);
+  zx_status_t Clone(UnionSmallArray* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_a() const { return tag_ == ::test::arrays::UnionSmallArray::Tag::kA; }
+
+  ::std::array<uint32_t, 2>& a() {
+    EnsureStorageInitialized(::test::arrays::UnionSmallArray::Tag::kA);
+    return a_;
+  }
+
+  const ::std::array<uint32_t, 2>& a() const {
+    ZX_ASSERT(is_a());
+    return a_;
+  }
+  UnionSmallArray& set_a(::std::array<uint32_t, 2> value);
+
+  ::test::arrays::UnionSmallArray::Tag Which() const {
+    return ::test::arrays::UnionSmallArray::Tag(tag_);
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  friend ::fidl::Equality<::test::arrays::UnionSmallArray>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::arrays::UnionSmallArray::Tag::Invalid);
+  union {
+    ::std::array<uint32_t, 2> a_;
+  };
 };
 
-inline zx_status_t Clone(const ::test::arrays::StructSmallArray& _value,
-                         ::test::arrays::StructSmallArray* _result) {
-  return _value.Clone(_result);
+inline zx_status_t Clone(const ::test::arrays::UnionSmallArray& value,
+                         ::test::arrays::UnionSmallArray* result) {
+  return value.Clone(result);
 }
 
-using StructSmallArrayPtr = ::std::unique_ptr<StructSmallArray>;
+using UnionSmallArrayPtr = ::std::unique_ptr<UnionSmallArray>;
 
-class StructLargeArray final {
+class UnionLargeArray final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::array<uint32_t, 100> a{};
+  UnionLargeArray();
+  ~UnionLargeArray();
 
-  static inline ::std::unique_ptr<StructLargeArray> New() { return ::std::make_unique<StructLargeArray>(); }
+  UnionLargeArray(UnionLargeArray&&);
+  UnionLargeArray& operator=(UnionLargeArray&&);
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+  static UnionLargeArray WithA(::std::array<uint32_t, 100>&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+
+    kA = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<UnionLargeArray> New() { return ::std::make_unique<UnionLargeArray>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, StructLargeArray* value, size_t _offset);
-  zx_status_t Clone(StructLargeArray* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnionLargeArray* value, size_t offset);
+  zx_status_t Clone(UnionLargeArray* result) const;
+
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
+
+  bool is_a() const { return tag_ == ::test::arrays::UnionLargeArray::Tag::kA; }
+
+  ::std::array<uint32_t, 100>& a() {
+    EnsureStorageInitialized(::test::arrays::UnionLargeArray::Tag::kA);
+    return a_;
+  }
+
+  const ::std::array<uint32_t, 100>& a() const {
+    ZX_ASSERT(is_a());
+    return a_;
+  }
+  UnionLargeArray& set_a(::std::array<uint32_t, 100> value);
+
+  ::test::arrays::UnionLargeArray::Tag Which() const {
+    return ::test::arrays::UnionLargeArray::Tag(tag_);
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  friend ::fidl::Equality<::test::arrays::UnionLargeArray>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::arrays::UnionLargeArray::Tag::Invalid);
+  union {
+    ::std::array<uint32_t, 100> a_;
+  };
 };
 
-inline zx_status_t Clone(const ::test::arrays::StructLargeArray& _value,
-                         ::test::arrays::StructLargeArray* _result) {
-  return _value.Clone(_result);
+inline zx_status_t Clone(const ::test::arrays::UnionLargeArray& value,
+                         ::test::arrays::UnionLargeArray* result) {
+  return value.Clone(result);
 }
 
-using StructLargeArrayPtr = ::std::unique_ptr<StructLargeArray>;
+using UnionLargeArrayPtr = ::std::unique_ptr<UnionLargeArray>;
 
 }  // namespace arrays
 }  // namespace test
 namespace fidl {
+template <>
+struct CodingTraits<::test::arrays::StructSmallArray>
+    : public EncodableCodingTraits<::test::arrays::StructSmallArray, 8> {};
+
+template <>
+struct IsMemcpyCompatible<::test::arrays::StructSmallArray> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::arrays::StructSmallArray>::value && IsMemcpyCompatible<::std::array<uint32_t, 2>>::value> {};
+
+inline zx_status_t Clone(const ::test::arrays::StructSmallArray& value,
+                         ::test::arrays::StructSmallArray* result) {
+  return ::test::arrays::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::arrays::StructSmallArray> {
+  bool operator()(const ::test::arrays::StructSmallArray& _lhs, const ::test::arrays::StructSmallArray& _rhs) const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::arrays::StructLargeArray>
+    : public EncodableCodingTraits<::test::arrays::StructLargeArray, 400> {};
+
+template <>
+struct IsMemcpyCompatible<::test::arrays::StructLargeArray> : public internal::BoolConstant<
+                                                                  !HasPadding<::test::arrays::StructLargeArray>::value && IsMemcpyCompatible<::std::array<uint32_t, 100>>::value> {};
+
+inline zx_status_t Clone(const ::test::arrays::StructLargeArray& value,
+                         ::test::arrays::StructLargeArray* result) {
+  return ::test::arrays::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::arrays::StructLargeArray> {
+  bool operator()(const ::test::arrays::StructLargeArray& _lhs, const ::test::arrays::StructLargeArray& _rhs) const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::arrays::TableSmallArray>
+    : public EncodableCodingTraits<::test::arrays::TableSmallArray, 16> {};
+
+inline zx_status_t Clone(const ::test::arrays::TableSmallArray& _value,
+                         ::test::arrays::TableSmallArray* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::arrays::TableSmallArray> {
+  bool operator()(const ::test::arrays::TableSmallArray& _lhs, const ::test::arrays::TableSmallArray& _rhs) const {
+    if (_lhs.has_a()) {
+      if (!_rhs.has_a()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
+        return false;
+      }
+    } else if (_rhs.has_a()) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::arrays::TableLargeArray>
+    : public EncodableCodingTraits<::test::arrays::TableLargeArray, 16> {};
+
+inline zx_status_t Clone(const ::test::arrays::TableLargeArray& _value,
+                         ::test::arrays::TableLargeArray* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::test::arrays::TableLargeArray> {
+  bool operator()(const ::test::arrays::TableLargeArray& _lhs, const ::test::arrays::TableLargeArray& _rhs) const {
+    if (_lhs.has_a()) {
+      if (!_rhs.has_a()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
+        return false;
+      }
+    } else if (_rhs.has_a()) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct IsFidlXUnion<::test::arrays::UnionSmallArray> : public std::true_type {};
 
@@ -490,98 +582,6 @@ struct Equality<::test::arrays::UnionLargeArray> {
       default:
         return false;
     }
-  }
-};
-template <>
-struct CodingTraits<::test::arrays::TableSmallArray>
-    : public EncodableCodingTraits<::test::arrays::TableSmallArray, 16> {};
-
-inline zx_status_t Clone(const ::test::arrays::TableSmallArray& _value,
-                         ::test::arrays::TableSmallArray* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::arrays::TableSmallArray> {
-  bool operator()(const ::test::arrays::TableSmallArray& _lhs, const ::test::arrays::TableSmallArray& _rhs) const {
-    if (_lhs.has_a()) {
-      if (!_rhs.has_a()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
-        return false;
-      }
-    } else if (_rhs.has_a()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::arrays::TableLargeArray>
-    : public EncodableCodingTraits<::test::arrays::TableLargeArray, 16> {};
-
-inline zx_status_t Clone(const ::test::arrays::TableLargeArray& _value,
-                         ::test::arrays::TableLargeArray* result) {
-  return _value.Clone(result);
-}
-template <>
-struct Equality<::test::arrays::TableLargeArray> {
-  bool operator()(const ::test::arrays::TableLargeArray& _lhs, const ::test::arrays::TableLargeArray& _rhs) const {
-    if (_lhs.has_a()) {
-      if (!_rhs.has_a()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.a(), _rhs.a())) {
-        return false;
-      }
-    } else if (_rhs.has_a()) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::arrays::StructSmallArray>
-    : public EncodableCodingTraits<::test::arrays::StructSmallArray, 8> {};
-
-template <>
-struct IsMemcpyCompatible<::test::arrays::StructSmallArray> : public internal::BoolConstant<
-                                                                  !HasPadding<::test::arrays::StructSmallArray>::value && IsMemcpyCompatible<::std::array<uint32_t, 2>>::value> {};
-
-inline zx_status_t Clone(const ::test::arrays::StructSmallArray& value,
-                         ::test::arrays::StructSmallArray* result) {
-  return ::test::arrays::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::arrays::StructSmallArray> {
-  bool operator()(const ::test::arrays::StructSmallArray& _lhs, const ::test::arrays::StructSmallArray& _rhs) const {
-    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::test::arrays::StructLargeArray>
-    : public EncodableCodingTraits<::test::arrays::StructLargeArray, 400> {};
-
-template <>
-struct IsMemcpyCompatible<::test::arrays::StructLargeArray> : public internal::BoolConstant<
-                                                                  !HasPadding<::test::arrays::StructLargeArray>::value && IsMemcpyCompatible<::std::array<uint32_t, 100>>::value> {};
-
-inline zx_status_t Clone(const ::test::arrays::StructLargeArray& value,
-                         ::test::arrays::StructLargeArray* result) {
-  return ::test::arrays::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::arrays::StructLargeArray> {
-  bool operator()(const ::test::arrays::StructLargeArray& _lhs, const ::test::arrays::StructLargeArray& _rhs) const {
-    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
-      return false;
-    }
-    return true;
   }
 };
 

@@ -14,28 +14,75 @@
 
 namespace fuzzing {
 
+using LocalTablePayload = ::test::protocollayouts::LocalTablePayload;
+using LocalUnionPayload = ::test::protocollayouts::LocalUnionPayload;
 using MainProtocol_TwoWayImportWithError_Result = ::test::protocollayouts::MainProtocol_TwoWayImportWithError_Result;
 using MainProtocolTwoWayImportWithErrorTopResponse = ::test::protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse;
+using MainProtocol_OnImportWithError_Result = ::test::protocollayouts::MainProtocol_OnImportWithError_Result;
+using MainProtocolOnImportWithErrorRequest = ::test::protocollayouts::MainProtocolOnImportWithErrorRequest;
+using MainProtocol_TwoWayLocalWithError_Result = ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result;
+using MainProtocolTwoWayLocalWithErrorTopResponse = ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse;
+using MainProtocol_OnLocalWithError_Result = ::test::protocollayouts::MainProtocol_OnLocalWithError_Result;
+using MainProtocolOnLocalWithErrorRequest = ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest;
+using MainProtocolOneWayAnonRequest = ::test::protocollayouts::MainProtocolOneWayAnonRequest;
+using MainProtocolTwoWayAnonRequest = ::test::protocollayouts::MainProtocolTwoWayAnonRequest;
+using MainProtocolTwoWayAnonResponse = ::test::protocollayouts::MainProtocolTwoWayAnonResponse;
+using MainProtocolTwoWayAnonWithErrorRequest = ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest;
 using MainProtocol_TwoWayAnonWithError_Response = ::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Response;
 using MainProtocol_TwoWayAnonWithError_Result = ::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result;
 using MainProtocolTwoWayAnonWithErrorTopResponse = ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse;
-using MainProtocol_OnImportWithError_Result = ::test::protocollayouts::MainProtocol_OnImportWithError_Result;
-using MainProtocolOnImportWithErrorRequest = ::test::protocollayouts::MainProtocolOnImportWithErrorRequest;
+using MainProtocolOnAnonRequest = ::test::protocollayouts::MainProtocolOnAnonRequest;
 using MainProtocol_OnAnonWithError_Response = ::test::protocollayouts::MainProtocol_OnAnonWithError_Response;
 using MainProtocol_OnAnonWithError_Result = ::test::protocollayouts::MainProtocol_OnAnonWithError_Result;
 using MainProtocolOnAnonWithErrorRequest = ::test::protocollayouts::MainProtocolOnAnonWithErrorRequest;
-using MainProtocolTwoWayAnonWithErrorRequest = ::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest;
-using MainProtocolTwoWayAnonResponse = ::test::protocollayouts::MainProtocolTwoWayAnonResponse;
-using MainProtocolTwoWayAnonRequest = ::test::protocollayouts::MainProtocolTwoWayAnonRequest;
-using MainProtocolOneWayAnonRequest = ::test::protocollayouts::MainProtocolOneWayAnonRequest;
-using MainProtocolOnAnonRequest = ::test::protocollayouts::MainProtocolOnAnonRequest;
-using LocalUnionPayload = ::test::protocollayouts::LocalUnionPayload;
-using MainProtocol_TwoWayLocalWithError_Result = ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result;
-using MainProtocolTwoWayLocalWithErrorTopResponse = ::test::protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse;
-using LocalTablePayload = ::test::protocollayouts::LocalTablePayload;
-using MainProtocol_OnLocalWithError_Result = ::test::protocollayouts::MainProtocol_OnLocalWithError_Result;
-using MainProtocolOnLocalWithErrorRequest = ::test::protocollayouts::MainProtocolOnLocalWithErrorRequest;
 
+template <>
+struct MinSize<LocalTablePayload> {
+  operator size_t() {
+    return MinSize<uint16_t>();
+  }
+};
+template <>
+struct Allocate<LocalTablePayload> {
+  LocalTablePayload operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<LocalTablePayload>());
+    LocalTablePayload out;
+    const size_t slack_per_member = (*size - MinSize<LocalTablePayload>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.set_a(Allocate<uint16_t>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<LocalUnionPayload> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<bool>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
+};
+template <>
+struct Allocate<LocalUnionPayload> {
+  static_assert(1 > 0, "xunion must have at least one member");
+
+  LocalUnionPayload operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<LocalUnionPayload>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    LocalUnionPayload out;
+    switch (selector % 1) {
+      case 0: {
+        out.set_b(Allocate<bool>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
 template <>
 struct MinSize<MainProtocol_TwoWayImportWithError_Result> {
   operator size_t() {
@@ -84,6 +131,242 @@ struct Allocate<MainProtocolTwoWayImportWithErrorTopResponse> {
     size_t out_size;
     out_size = MinSize<::test::protocollayouts::MainProtocol_TwoWayImportWithError_Result>() + slack_per_member;
     out.result = Allocate<::test::protocollayouts::MainProtocol_TwoWayImportWithError_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocol_OnImportWithError_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::protocollayouts::imported::ImportTablePayload>(), MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<MainProtocol_OnImportWithError_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  MainProtocol_OnImportWithError_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocol_OnImportWithError_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    MainProtocol_OnImportWithError_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::protocollayouts::imported::ImportTablePayload>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolOnImportWithErrorRequest> {
+  operator size_t() {
+    return MinSize<::test::protocollayouts::MainProtocol_OnImportWithError_Result>();
+  }
+};
+template <>
+struct Allocate<MainProtocolOnImportWithErrorRequest> {
+  MainProtocolOnImportWithErrorRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolOnImportWithErrorRequest>());
+    MainProtocolOnImportWithErrorRequest out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolOnImportWithErrorRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::protocollayouts::MainProtocol_OnImportWithError_Result>() + slack_per_member;
+    out.result = Allocate<::test::protocollayouts::MainProtocol_OnImportWithError_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocol_TwoWayLocalWithError_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::protocollayouts::LocalUnionPayload>(), MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<MainProtocol_TwoWayLocalWithError_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  MainProtocol_TwoWayLocalWithError_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocol_TwoWayLocalWithError_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    MainProtocol_TwoWayLocalWithError_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::protocollayouts::LocalUnionPayload>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolTwoWayLocalWithErrorTopResponse> {
+  operator size_t() {
+    return MinSize<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>();
+  }
+};
+template <>
+struct Allocate<MainProtocolTwoWayLocalWithErrorTopResponse> {
+  MainProtocolTwoWayLocalWithErrorTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayLocalWithErrorTopResponse>());
+    MainProtocolTwoWayLocalWithErrorTopResponse out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayLocalWithErrorTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>() + slack_per_member;
+    out.result = Allocate<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocol_OnLocalWithError_Result> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<::test::protocollayouts::LocalTablePayload>(), MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<MainProtocol_OnLocalWithError_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  MainProtocol_OnLocalWithError_Result operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocol_OnLocalWithError_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    MainProtocol_OnLocalWithError_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(Allocate<::test::protocollayouts::LocalTablePayload>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolOnLocalWithErrorRequest> {
+  operator size_t() {
+    return MinSize<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>();
+  }
+};
+template <>
+struct Allocate<MainProtocolOnLocalWithErrorRequest> {
+  MainProtocolOnLocalWithErrorRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolOnLocalWithErrorRequest>());
+    MainProtocolOnLocalWithErrorRequest out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolOnLocalWithErrorRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>() + slack_per_member;
+    out.result = Allocate<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolOneWayAnonRequest> {
+  operator size_t() {
+    return MinSize<uint16_t>();
+  }
+};
+template <>
+struct Allocate<MainProtocolOneWayAnonRequest> {
+  MainProtocolOneWayAnonRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolOneWayAnonRequest>());
+    MainProtocolOneWayAnonRequest out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolOneWayAnonRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.set_a(Allocate<uint16_t>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolTwoWayAnonRequest> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<bool>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
+};
+template <>
+struct Allocate<MainProtocolTwoWayAnonRequest> {
+  static_assert(1 > 0, "xunion must have at least one member");
+
+  MainProtocolTwoWayAnonRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonRequest>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    MainProtocolTwoWayAnonRequest out;
+    switch (selector % 1) {
+      case 0: {
+        out.set_b(Allocate<bool>{}(src, size));
+        break;
+      }
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolTwoWayAnonResponse> {
+  operator size_t() {
+    return MinSize<uint16_t>();
+  }
+};
+template <>
+struct Allocate<MainProtocolTwoWayAnonResponse> {
+  MainProtocolTwoWayAnonResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonResponse>());
+    MainProtocolTwoWayAnonResponse out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayAnonResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.set_a(Allocate<uint16_t>{}(src, &out_size));
+    return out;
+  }
+};
+template <>
+struct MinSize<MainProtocolTwoWayAnonWithErrorRequest> {
+  operator size_t() {
+    return MinSize<uint16_t>();
+  }
+};
+template <>
+struct Allocate<MainProtocolTwoWayAnonWithErrorRequest> {
+  MainProtocolTwoWayAnonWithErrorRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonWithErrorRequest>());
+    MainProtocolTwoWayAnonWithErrorRequest out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayAnonWithErrorRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.set_a(Allocate<uint16_t>{}(src, &out_size));
     return out;
   }
 };
@@ -168,53 +451,31 @@ struct Allocate<MainProtocolTwoWayAnonWithErrorTopResponse> {
   }
 };
 template <>
-struct MinSize<MainProtocol_OnImportWithError_Result> {
+struct MinSize<MainProtocolOnAnonRequest> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::protocollayouts::imported::ImportTablePayload>(), MinSize<uint32_t>()};
-    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+    size_t sizes[] = {0, MinSize<bool>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
   }
 };
 template <>
-struct Allocate<MainProtocol_OnImportWithError_Result> {
-  static_assert(2 > 0, "xunion must have at least one member");
+struct Allocate<MainProtocolOnAnonRequest> {
+  static_assert(1 > 0, "xunion must have at least one member");
 
-  MainProtocol_OnImportWithError_Result operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocol_OnImportWithError_Result>());
+  MainProtocolOnAnonRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolOnAnonRequest>());
 
     uint8_t selector;
     ZX_ASSERT(src->CopyBytes(&selector, 1));
     (*size)++;
 
-    MainProtocol_OnImportWithError_Result out;
-    switch (selector % 2) {
+    MainProtocolOnAnonRequest out;
+    switch (selector % 1) {
       case 0: {
-        out.set_response(Allocate<::test::protocollayouts::imported::ImportTablePayload>{}(src, size));
-        break;
-      }
-      case 1: {
-        out.set_err(Allocate<uint32_t>{}(src, size));
+        out.set_b(Allocate<bool>{}(src, size));
         break;
       }
     }
 
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolOnImportWithErrorRequest> {
-  operator size_t() {
-    return MinSize<::test::protocollayouts::MainProtocol_OnImportWithError_Result>();
-  }
-};
-template <>
-struct Allocate<MainProtocolOnImportWithErrorRequest> {
-  MainProtocolOnImportWithErrorRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolOnImportWithErrorRequest>());
-    MainProtocolOnImportWithErrorRequest out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolOnImportWithErrorRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::test::protocollayouts::MainProtocol_OnImportWithError_Result>() + slack_per_member;
-    out.result = Allocate<::test::protocollayouts::MainProtocol_OnImportWithError_Result>{}(src, &out_size);
     return out;
   }
 };
@@ -284,267 +545,6 @@ struct Allocate<MainProtocolOnAnonWithErrorRequest> {
     size_t out_size;
     out_size = MinSize<::test::protocollayouts::MainProtocol_OnAnonWithError_Result>() + slack_per_member;
     out.result = Allocate<::test::protocollayouts::MainProtocol_OnAnonWithError_Result>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolTwoWayAnonWithErrorRequest> {
-  operator size_t() {
-    return MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<MainProtocolTwoWayAnonWithErrorRequest> {
-  MainProtocolTwoWayAnonWithErrorRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonWithErrorRequest>());
-    MainProtocolTwoWayAnonWithErrorRequest out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayAnonWithErrorRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.set_a(Allocate<uint16_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolTwoWayAnonResponse> {
-  operator size_t() {
-    return MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<MainProtocolTwoWayAnonResponse> {
-  MainProtocolTwoWayAnonResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonResponse>());
-    MainProtocolTwoWayAnonResponse out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayAnonResponse>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.set_a(Allocate<uint16_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolTwoWayAnonRequest> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<bool>()};
-    return 1 + *std::max_element(sizes, sizes + 1 + 1);
-  }
-};
-template <>
-struct Allocate<MainProtocolTwoWayAnonRequest> {
-  static_assert(1 > 0, "xunion must have at least one member");
-
-  MainProtocolTwoWayAnonRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonRequest>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    MainProtocolTwoWayAnonRequest out;
-    switch (selector % 1) {
-      case 0: {
-        out.set_b(Allocate<bool>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolOneWayAnonRequest> {
-  operator size_t() {
-    return MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<MainProtocolOneWayAnonRequest> {
-  MainProtocolOneWayAnonRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolOneWayAnonRequest>());
-    MainProtocolOneWayAnonRequest out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolOneWayAnonRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.set_a(Allocate<uint16_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolOnAnonRequest> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<bool>()};
-    return 1 + *std::max_element(sizes, sizes + 1 + 1);
-  }
-};
-template <>
-struct Allocate<MainProtocolOnAnonRequest> {
-  static_assert(1 > 0, "xunion must have at least one member");
-
-  MainProtocolOnAnonRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolOnAnonRequest>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    MainProtocolOnAnonRequest out;
-    switch (selector % 1) {
-      case 0: {
-        out.set_b(Allocate<bool>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<LocalUnionPayload> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<bool>()};
-    return 1 + *std::max_element(sizes, sizes + 1 + 1);
-  }
-};
-template <>
-struct Allocate<LocalUnionPayload> {
-  static_assert(1 > 0, "xunion must have at least one member");
-
-  LocalUnionPayload operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<LocalUnionPayload>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    LocalUnionPayload out;
-    switch (selector % 1) {
-      case 0: {
-        out.set_b(Allocate<bool>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocol_TwoWayLocalWithError_Result> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::protocollayouts::LocalUnionPayload>(), MinSize<uint32_t>()};
-    return 1 + *std::max_element(sizes, sizes + 2 + 1);
-  }
-};
-template <>
-struct Allocate<MainProtocol_TwoWayLocalWithError_Result> {
-  static_assert(2 > 0, "xunion must have at least one member");
-
-  MainProtocol_TwoWayLocalWithError_Result operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocol_TwoWayLocalWithError_Result>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    MainProtocol_TwoWayLocalWithError_Result out;
-    switch (selector % 2) {
-      case 0: {
-        out.set_response(Allocate<::test::protocollayouts::LocalUnionPayload>{}(src, size));
-        break;
-      }
-      case 1: {
-        out.set_err(Allocate<uint32_t>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolTwoWayLocalWithErrorTopResponse> {
-  operator size_t() {
-    return MinSize<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>();
-  }
-};
-template <>
-struct Allocate<MainProtocolTwoWayLocalWithErrorTopResponse> {
-  MainProtocolTwoWayLocalWithErrorTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayLocalWithErrorTopResponse>());
-    MainProtocolTwoWayLocalWithErrorTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayLocalWithErrorTopResponse>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>() + slack_per_member;
-    out.result = Allocate<::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<LocalTablePayload> {
-  operator size_t() {
-    return MinSize<uint16_t>();
-  }
-};
-template <>
-struct Allocate<LocalTablePayload> {
-  LocalTablePayload operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<LocalTablePayload>());
-    LocalTablePayload out;
-    const size_t slack_per_member = (*size - MinSize<LocalTablePayload>()) / 1;
-    size_t out_size;
-    out_size = MinSize<uint16_t>() + slack_per_member;
-    out.set_a(Allocate<uint16_t>{}(src, &out_size));
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocol_OnLocalWithError_Result> {
-  operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::protocollayouts::LocalTablePayload>(), MinSize<uint32_t>()};
-    return 1 + *std::max_element(sizes, sizes + 2 + 1);
-  }
-};
-template <>
-struct Allocate<MainProtocol_OnLocalWithError_Result> {
-  static_assert(2 > 0, "xunion must have at least one member");
-
-  MainProtocol_OnLocalWithError_Result operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocol_OnLocalWithError_Result>());
-
-    uint8_t selector;
-    ZX_ASSERT(src->CopyBytes(&selector, 1));
-    (*size)++;
-
-    MainProtocol_OnLocalWithError_Result out;
-    switch (selector % 2) {
-      case 0: {
-        out.set_response(Allocate<::test::protocollayouts::LocalTablePayload>{}(src, size));
-        break;
-      }
-      case 1: {
-        out.set_err(Allocate<uint32_t>{}(src, size));
-        break;
-      }
-    }
-
-    return out;
-  }
-};
-template <>
-struct MinSize<MainProtocolOnLocalWithErrorRequest> {
-  operator size_t() {
-    return MinSize<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>();
-  }
-};
-template <>
-struct Allocate<MainProtocolOnLocalWithErrorRequest> {
-  MainProtocolOnLocalWithErrorRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolOnLocalWithErrorRequest>());
-    MainProtocolOnLocalWithErrorRequest out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolOnLocalWithErrorRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>() + slack_per_member;
-    out.result = Allocate<::test::protocollayouts::MainProtocol_OnLocalWithError_Result>{}(src, &out_size);
     return out;
   }
 };

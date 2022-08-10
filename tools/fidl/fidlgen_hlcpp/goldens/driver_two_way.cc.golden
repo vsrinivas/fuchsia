@@ -9,33 +9,6 @@
 //
 namespace test {
 namespace drivertwoway {
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
-const fidl_type_t* TwoWayAddTopResponse::FidlType = &test_drivertwoway_TwoWayAddTopResponseTable;
-
-void TwoWayAddTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                  cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<TwoWayAddTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<TwoWayAddTopResponse>(_offset), this, sizeof(TwoWayAddTopResponse));
-  } else {
-    ::fidl::Encode(_encoder, &sum, _offset + 0);
-  }
-}
-
-void TwoWayAddTopResponse::Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<TwoWayAddTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<TwoWayAddTopResponse>(_offset), sizeof(TwoWayAddTopResponse));
-  } else {
-    ::fidl::Decode(_decoder, &_value->sum, _offset + 0);
-  }
-}
-
-zx_status_t TwoWayAddTopResponse::Clone(TwoWayAddTopResponse* _result) const {
-  zx_status_t _status = ::fidl::Clone(sum, &_result->sum);
-  if (_status != ZX_OK)
-    return _status;
-  return ZX_OK;
-}
-
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 const fidl_type_t* TwoWayAddRequest::FidlType = &test_drivertwoway_TwoWayAddRequestTable;
 
@@ -63,6 +36,33 @@ zx_status_t TwoWayAddRequest::Clone(TwoWayAddRequest* _result) const {
   if (_status != ZX_OK)
     return _status;
   _status = ::fidl::Clone(addend2, &_result->addend2);
+  if (_status != ZX_OK)
+    return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+const fidl_type_t* TwoWayAddTopResponse::FidlType = &test_drivertwoway_TwoWayAddTopResponseTable;
+
+void TwoWayAddTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                  cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<TwoWayAddTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<TwoWayAddTopResponse>(_offset), this, sizeof(TwoWayAddTopResponse));
+  } else {
+    ::fidl::Encode(_encoder, &sum, _offset + 0);
+  }
+}
+
+void TwoWayAddTopResponse::Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<TwoWayAddTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<TwoWayAddTopResponse>(_offset), sizeof(TwoWayAddTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->sum, _offset + 0);
+  }
+}
+
+zx_status_t TwoWayAddTopResponse::Clone(TwoWayAddTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(sum, &_result->sum);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;

@@ -863,10 +863,11 @@ func compile(r fidlgen.Root) *Root {
 		decls[v.Name] = c.compileService(v)
 	}
 
-	for _, v := range r.DeclOrder {
+	g := NewDeclDepGraph(r)
+	for _, v := range g.SortedDecls() {
 		// We process only a subset of declarations mentioned in the declaration
 		// order, ignore those we do not support.
-		if d, known := decls[v]; known {
+		if d, known := decls[v.GetName()]; known {
 			root.Decls = append(root.Decls, d)
 		}
 	}

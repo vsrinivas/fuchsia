@@ -15,6 +15,21 @@ namespace fidl {
 namespace internal {
 
 template <>
+struct WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src);
+  static ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest ToWire(fidl::AnyArena& arena, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  using type = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+};
+template <>
+struct WireTypeForNaturalType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  using type = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+};
+
+template <>
 struct WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
   static ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse src);
   static ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse ToWire(fidl::AnyArena& arena, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse src);
@@ -42,21 +57,6 @@ struct NaturalTypeForWireType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxC
 template <>
 struct WireTypeForNaturalType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
   using type = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
-};
-
-template <>
-struct WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  static ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src);
-  static ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest ToWire(fidl::AnyArena& arena, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  using type = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
-};
-template <>
-struct WireTypeForNaturalType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
-  using type = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 };
 
 template <>

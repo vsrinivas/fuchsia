@@ -2,12 +2,12 @@
 
 #include <fidl/test.table/cpp/wire_types.h>
 
-bool ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>::HasUnknownData() const {
+bool ::fidl::WireTableFrame<::test_table::wire::EmptyTable>::HasUnknownData() const {
   return false;
 }
 
-bool ::test_table::wire::TableWithAttributes::HasUnknownData() const {
-  if (max_ordinal_ > 1) {
+bool ::test_table::wire::EmptyTable::HasUnknownData() const {
+  if (max_ordinal_ > 0) {
     return true;
   }
   if (frame_ptr_ == nullptr) {
@@ -31,20 +31,6 @@ bool ::fidl::WireTableFrame<::test_table::wire::SimpleTable>::HasUnknownData() c
 
 bool ::test_table::wire::SimpleTable::HasUnknownData() const {
   if (max_ordinal_ > 5) {
-    return true;
-  }
-  if (frame_ptr_ == nullptr) {
-    return false;
-  }
-  return frame_ptr_->HasUnknownData();
-}
-
-bool ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>::HasUnknownData() const {
-  return false;
-}
-
-bool ::test_table::wire::ReverseOrdinalTable::HasUnknownData() const {
-  if (max_ordinal_ > 3) {
     return true;
   }
   if (frame_ptr_ == nullptr) {
@@ -90,6 +76,34 @@ bool ::test_table::wire::NewerSimpleTable::HasUnknownData() const {
   return frame_ptr_->HasUnknownData();
 }
 
+bool ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>::HasUnknownData() const {
+  return false;
+}
+
+bool ::test_table::wire::ReverseOrdinalTable::HasUnknownData() const {
+  if (max_ordinal_ > 3) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}
+
+bool ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>::HasUnknownData() const {
+  return false;
+}
+
+bool ::test_table::wire::TableWithAttributes::HasUnknownData() const {
+  if (max_ordinal_ > 1) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}
+
 bool ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>::HasUnknownData() const {
   return false;
 }
@@ -110,20 +124,6 @@ bool ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>::HasUnkno
 
 bool ::test_table::wire::SixtyFourOrdinalTable::HasUnknownData() const {
   if (max_ordinal_ > 64) {
-    return true;
-  }
-  if (frame_ptr_ == nullptr) {
-    return false;
-  }
-  return frame_ptr_->HasUnknownData();
-}
-
-bool ::fidl::WireTableFrame<::test_table::wire::EmptyTable>::HasUnknownData() const {
-  return false;
-}
-
-bool ::test_table::wire::EmptyTable::HasUnknownData() const {
-  if (max_ordinal_ > 0) {
     return true;
   }
   if (frame_ptr_ == nullptr) {

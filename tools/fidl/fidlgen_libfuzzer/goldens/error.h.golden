@@ -13,11 +13,29 @@
 
 namespace fuzzing {
 
+using ExampleFooRequest = ::test::error::ExampleFooRequest;
 using Example_foo_Response = ::test::error::Example_foo_Response;
 using Example_foo_Result = ::test::error::Example_foo_Result;
 using ExampleFooTopResponse = ::test::error::ExampleFooTopResponse;
-using ExampleFooRequest = ::test::error::ExampleFooRequest;
 
+template <>
+struct MinSize<ExampleFooRequest> {
+  operator size_t() {
+    return MinSize<::std::string>();
+  }
+};
+template <>
+struct Allocate<ExampleFooRequest> {
+  ExampleFooRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleFooRequest>());
+    ExampleFooRequest out;
+    const size_t slack_per_member = (*size - MinSize<ExampleFooRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::string>() + slack_per_member;
+    out.s = Allocate<::std::string>{}(src, &out_size);
+    return out;
+  }
+};
 template <>
 struct MinSize<Example_foo_Response> {
   operator size_t() {
@@ -84,24 +102,6 @@ struct Allocate<ExampleFooTopResponse> {
     size_t out_size;
     out_size = MinSize<::test::error::Example_foo_Result>() + slack_per_member;
     out.result = Allocate<::test::error::Example_foo_Result>{}(src, &out_size);
-    return out;
-  }
-};
-template <>
-struct MinSize<ExampleFooRequest> {
-  operator size_t() {
-    return MinSize<::std::string>();
-  }
-};
-template <>
-struct Allocate<ExampleFooRequest> {
-  ExampleFooRequest operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<ExampleFooRequest>());
-    ExampleFooRequest out;
-    const size_t slack_per_member = (*size - MinSize<ExampleFooRequest>()) / 1;
-    size_t out_size;
-    out_size = MinSize<::std::string>() + slack_per_member;
-    out.s = Allocate<::std::string>{}(src, &out_size);
     return out;
   }
 };

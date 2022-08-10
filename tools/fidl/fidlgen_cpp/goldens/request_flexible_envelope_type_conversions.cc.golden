@@ -14,15 +14,6 @@ namespace internal {
   };
 }
 
-::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse src) {
-  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(std::move(src.f)));
-}
-::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse src) {
-  return ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse{
-      .f = WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(arena, std::move(src.f())),
-  };
-}
-
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse src) {
   return ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToNatural(std::move(src.f)));
 }
@@ -41,40 +32,13 @@ namespace internal {
   };
 }
 
-::test_requestflexibleenvelope::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(::test_requestflexibleenvelope::wire::StrictFoo src) {
-  switch (src.Which()) {
-    case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS:
-      return ::test_requestflexibleenvelope::StrictFoo::WithS(
-          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s())));
-    case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI:
-      return ::test_requestflexibleenvelope::StrictFoo::WithI(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
-    default:
-      ZX_PANIC("unknown union tag in strict union");
-  }
+::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse src) {
+  return ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(std::move(src.f)));
 }
-::test_requestflexibleenvelope::wire::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::StrictFoo src) {
-  switch (src.Which()) {
-    case ::test_requestflexibleenvelope::StrictFoo::Tag::kS:
-      return ::test_requestflexibleenvelope::wire::StrictFoo::WithS(arena,
-                                                                    WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s().value())));
-    case ::test_requestflexibleenvelope::StrictFoo::Tag::kI:
-      return ::test_requestflexibleenvelope::wire::StrictFoo::WithI(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.i().value())));
-  }
-}
-
-std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToNatural(::test_requestflexibleenvelope::wire::StrictFoo src) {
-  if (src.has_invalid_tag()) {
-    return nullptr;
-  }
-  return std::make_unique<::test_requestflexibleenvelope::StrictFoo>(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(std::move(src)));
-}
-::test_requestflexibleenvelope::wire::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src) {
-  if (!src) {
-    return ::test_requestflexibleenvelope::wire::StrictFoo();
-  }
-  return WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(arena, std::move(*src));
+::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse src) {
+  return ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse{
+      .f = WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(arena, std::move(src.f())),
+  };
 }
 
 ::test_requestflexibleenvelope::FlexibleFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToNatural(::test_requestflexibleenvelope::wire::FlexibleFoo src) {
@@ -113,6 +77,42 @@ std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> WireNaturalConversi
     return ::test_requestflexibleenvelope::wire::FlexibleFoo();
   }
   return WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToWire(arena, std::move(*src));
+}
+
+::test_requestflexibleenvelope::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(::test_requestflexibleenvelope::wire::StrictFoo src) {
+  switch (src.Which()) {
+    case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kS:
+      return ::test_requestflexibleenvelope::StrictFoo::WithS(
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s())));
+    case ::test_requestflexibleenvelope::wire::StrictFoo::Tag::kI:
+      return ::test_requestflexibleenvelope::StrictFoo::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_requestflexibleenvelope::wire::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::StrictFoo src) {
+  switch (src.Which()) {
+    case ::test_requestflexibleenvelope::StrictFoo::Tag::kS:
+      return ::test_requestflexibleenvelope::wire::StrictFoo::WithS(arena,
+                                                                    WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s().value())));
+    case ::test_requestflexibleenvelope::StrictFoo::Tag::kI:
+      return ::test_requestflexibleenvelope::wire::StrictFoo::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.i().value())));
+  }
+}
+
+std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToNatural(::test_requestflexibleenvelope::wire::StrictFoo src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<::test_requestflexibleenvelope::StrictFoo>(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(std::move(src)));
+}
+::test_requestflexibleenvelope::wire::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src) {
+  if (!src) {
+    return ::test_requestflexibleenvelope::wire::StrictFoo();
+  }
+  return WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(arena, std::move(*src));
 }
 
 #ifdef __Fuchsia__

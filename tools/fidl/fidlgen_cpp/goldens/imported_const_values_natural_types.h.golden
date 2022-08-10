@@ -19,9 +19,9 @@ namespace test_importedconstvalues {
 
 class MyStruct;
 
-constexpr ::test_dependent::MyEnum kEnumMember = ::test_dependent::MyEnum::kMember;
-
 constexpr ::test_dependent::MyBits kBitsMember = ::test_dependent::MyBits::kMember;
+
+constexpr ::test_dependent::MyEnum kEnumMember = ::test_dependent::MyEnum::kMember;
 
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 

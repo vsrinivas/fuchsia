@@ -13,46 +13,6 @@
 
 #ifdef __Fuchsia__
 
-::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::Allowed>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::Allowed> event_storage;
-  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed> dispatcher{this};
-  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::entries_[] = {};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::entries_end_ =
-    &entries_[0];
-
-void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(::fidl::Server<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
-}
-void fidl::Server<::test_bindingsdenylist::Allowed>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(this, std::move(msg), storage_view, txn);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 ::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> client_end) {
   ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> event_storage;
@@ -120,123 +80,6 @@ void fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, std::move(msg), storage_view, txn);
-}
-#endif  // __Fuchsia__
-
-namespace test_bindingsdenylist {
-[[maybe_unused]] constexpr inline uint64_t kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
-
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kImportsSameNameContext_Unattributed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-
-[[maybe_unused]] constexpr inline uint64_t kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal = 2914965219653596920lu;
-
-[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
-
-#ifdef __Fuchsia__
-}  // namespace test_bindingsdenylist
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_DynamicFlags};
-  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
-  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
-  return ::fidl::internal::ToFitxResult(status);
-}
-
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::AlwaysAppearsInImportingLibrary() const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
-  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
-  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
-  return ::fidl::internal::ToFitxResult(status);
-}
-namespace test_bindingsdenylist {
-#endif  // __Fuchsia__
-
-}  // namespace test_bindingsdenylist
-#ifdef __Fuchsia__
-
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() {
-  ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_DynamicFlags};
-  ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  msg.Write(_client_end().handle());
-  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
-}
-
-::fitx::result<::fidl::Error>
-fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::AlwaysAppearsInImportingLibrary() {
-  ::fidl::internal::NaturalMessageEncoder encoder{
-      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
-  ::fidl::OutgoingMessage msg = encoder.GetMessage();
-  msg.Write(_client_end().handle());
-  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
-}
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end) {
-  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::ImportsSameNameContext> event_storage;
-  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> dispatcher{this};
-  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::entries_[] = {
-    {
-        ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value();
-          }
-          ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> request;
-          ::fidl::internal::NaturalCompleter<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(interface)->Unattributed(
-              request, completer);
-          return ::fidl::Status::Ok();
-        },
-    },
-    {
-        ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
-           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
-          if (decoded.is_error()) {
-            return decoded.error_value();
-          }
-          ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> request;
-          ::fidl::internal::NaturalCompleter<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>::Sync completer(txn);
-          static_cast<::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(interface)->AlwaysAppearsInImportingLibrary(
-              request, completer);
-          return ::fidl::Status::Ok();
-        },
-    },
-};
-
-const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::entries_end_ =
-    &entries_[2];
-
-void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage&& msg,
-                                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
-}
-void fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::MessageStorageViewBase* storage_view) {
-  ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__
 
@@ -571,5 +414,162 @@ void fidl::Server<::test_bindingsdenylist::DenyEachBinding>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::Allowed>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::Allowed> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::entries_end_ =
+    &entries_[0];
+
+void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(::fidl::Server<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
+}
+void fidl::Server<::test_bindingsdenylist::Allowed>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(this, std::move(msg), storage_view, txn);
+}
+#endif  // __Fuchsia__
+
+namespace test_bindingsdenylist {
+[[maybe_unused]] constexpr inline uint64_t kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kImportsSameNameContext_Unattributed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+[[maybe_unused]] constexpr inline uint64_t kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal = 2914965219653596920lu;
+
+[[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
+#ifdef __Fuchsia__
+}  // namespace test_bindingsdenylist
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() const {
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_DynamicFlags};
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
+  return ::fidl::internal::ToFitxResult(status);
+}
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::AlwaysAppearsInImportingLibrary() const {
+  ::fidl::internal::NaturalMessageEncoder _encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
+  ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
+  ::fidl::Status status = client_base().SendOneWay(_encoded_message);
+  return ::fidl::internal::ToFitxResult(status);
+}
+namespace test_bindingsdenylist {
+#endif  // __Fuchsia__
+
+}  // namespace test_bindingsdenylist
+#ifdef __Fuchsia__
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::AlwaysAppearsInImportingLibrary() {
+  ::fidl::internal::NaturalMessageEncoder encoder{
+      &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
+  ::fidl::OutgoingMessage msg = encoder.GetMessage();
+  msg.Write(_client_end().handle());
+  return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
+}
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Status fidl::SyncEventHandler<::test_bindingsdenylist::ImportsSameNameContext>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end) {
+  ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::ImportsSameNameContext> event_storage;
+  fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> dispatcher{this};
+  return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::entries_[] = {
+    {
+        ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+          if (decoded.is_error()) {
+            return decoded.error_value();
+          }
+          ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> request;
+          ::fidl::internal::NaturalCompleter<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(interface)->Unattributed(
+              request, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+    {
+        ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+          if (decoded.is_error()) {
+            return decoded.error_value();
+          }
+          ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> request;
+          ::fidl::internal::NaturalCompleter<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>::Sync completer(txn);
+          static_cast<::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>*>(interface)->AlwaysAppearsInImportingLibrary(
+              request, completer);
+          return ::fidl::Status::Ok();
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::entries_end_ =
+    &entries_[2];
+
+void fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage&& msg,
+                                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
+}
+void fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::internal::MessageStorageViewBase* storage_view) {
+  ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(this, std::move(msg), storage_view, txn);
 }
 #endif  // __Fuchsia__

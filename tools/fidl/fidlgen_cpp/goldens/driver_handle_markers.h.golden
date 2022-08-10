@@ -7,6 +7,15 @@
 
 namespace test_driverhandle {
 
+class DriverProtocol final {
+  DriverProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+};
+
 class HandlesInProtocol final {
   HandlesInProtocol() = delete;
 
@@ -26,14 +35,5 @@ class HandlesInProtocol final {
     static constexpr bool kHasApplicationError = false;
     static constexpr bool kHasTransportError = false;
   };
-};
-
-class DriverProtocol final {
-  DriverProtocol() = delete;
-
- public:
-  using Transport = ::fidl::internal::DriverTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
 };
 }  // namespace test_driverhandle

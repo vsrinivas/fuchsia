@@ -176,607 +176,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 #endif
   }
   if (protocol_selection_ == 1) {
-#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_Transitional))
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: test_protocols_Transitional\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::protocols::Transitional> protocol_;
-
-    xprintf("Starting test_protocols_Transitional service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocols::Transitional> fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 2;
-    if (method_selection_ == 0) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_Request))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: Request\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize<int64_t>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize<int64_t>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for int64_t x\n", param_size_);
-      int64_t x = Allocate<int64_t>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_Transitional.Request\n");
-      protocol_->Request(std::move(x), [signaller = fuzzer_.NewCallbackSignaller()](int64_t y) {
-        xprintf("Invoked test_protocols_Transitional.Request\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      });
-#endif
-    }
-    if (method_selection_ == 1) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_OneWay))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: OneWay\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize<int64_t>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize<int64_t>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for int64_t x\n", param_size_);
-      int64_t x = Allocate<int64_t>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_Transitional.OneWay\n");
-      protocol_->OneWay(std::move(x));
-#endif
-    }
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 2) {
-#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_SyscallProtocol))
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: test_protocols_SyscallProtocol\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::protocols::SyscallProtocol> protocol_;
-
-    xprintf("Starting test_protocols_SyscallProtocol service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocols::SyscallProtocol> fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 1;
-    if (method_selection_ == 0) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_MethodC))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: MethodC\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize<int64_t>() + MinSize<int64_t>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 2;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize<int64_t>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for int64_t a\n", param_size_);
-      int64_t a = Allocate<int64_t>{}(&src_, &param_size_);
-      param_size_ = MinSize<int64_t>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for int64_t b\n", param_size_);
-      int64_t b = Allocate<int64_t>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_SyscallProtocol.MethodC\n");
-      protocol_->MethodC(std::move(a), std::move(b));
-#endif
-    }
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 3) {
-#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_WithProtocolEnds))
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: test_protocols_WithProtocolEnds\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::protocols::WithProtocolEnds> protocol_;
-
-    xprintf("Starting test_protocols_WithProtocolEnds service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocols::WithProtocolEnds> fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 3;
-    if (method_selection_ == 0) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_ClientEnds))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: ClientEnds\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> >();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize< ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> >() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in\n", param_size_);
-      ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> in = Allocate< ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> >{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_WithProtocolEnds.ClientEnds\n");
-      protocol_->ClientEnds(std::move(in), [signaller = fuzzer_.NewCallbackSignaller()](::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> out) {
-        xprintf("Invoked test_protocols_WithProtocolEnds.ClientEnds\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      });
-#endif
-    }
-    if (method_selection_ == 1) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_ServerEnds))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: ServerEnds\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> >();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize< ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> >() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in\n", param_size_);
-      ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> in = Allocate< ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> >{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_WithProtocolEnds.ServerEnds\n");
-      protocol_->ServerEnds(std::move(in), [signaller = fuzzer_.NewCallbackSignaller()](::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> out) {
-        xprintf("Invoked test_protocols_WithProtocolEnds.ServerEnds\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      });
-#endif
-    }
-    if (method_selection_ == 2) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_StructContainingEnds))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: StructContainingEnds\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize< ::test::protocols::ProtocolEnds>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize< ::test::protocols::ProtocolEnds>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::test::protocols::ProtocolEnds in\n", param_size_);
-      ::test::protocols::ProtocolEnds in = Allocate< ::test::protocols::ProtocolEnds>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_WithProtocolEnds.StructContainingEnds\n");
-      protocol_->StructContainingEnds(std::move(in), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocols::ProtocolEnds out) {
-        xprintf("Invoked test_protocols_WithProtocolEnds.StructContainingEnds\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      });
-#endif
-    }
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 4) {
-#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_MethodWithUnion))
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: test_protocols_MethodWithUnion\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::protocols::MethodWithUnion> protocol_;
-
-    xprintf("Starting test_protocols_MethodWithUnion service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocols::MethodWithUnion> fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 1;
-    if (method_selection_ == 0) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_UnionMethod))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: UnionMethod\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize< ::test::protocols::TheUnion>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize< ::test::protocols::TheUnion>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::test::protocols::TheUnion u\n", param_size_);
-      ::test::protocols::TheUnion u = Allocate< ::test::protocols::TheUnion>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_MethodWithUnion.UnionMethod\n");
-      protocol_->UnionMethod(std::move(u), [signaller = fuzzer_.NewCallbackSignaller()](::std::unique_ptr< ::test::protocols::TheUnion> u) {
-        xprintf("Invoked test_protocols_MethodWithUnion.UnionMethod\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      });
-#endif
-    }
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 5) {
-#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_ManyParameters))
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: test_protocols_ManyParameters\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::protocols::ManyParameters> protocol_;
-
-    xprintf("Starting test_protocols_ManyParameters service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocols::ManyParameters> fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 1;
-    if (method_selection_ == 0) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_Fifteen))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: Fifteen\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 15;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p1\n", param_size_);
-      bool p1 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p2\n", param_size_);
-      bool p2 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p3\n", param_size_);
-      bool p3 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p4\n", param_size_);
-      bool p4 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p5\n", param_size_);
-      bool p5 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p6\n", param_size_);
-      bool p6 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p7\n", param_size_);
-      bool p7 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p8\n", param_size_);
-      bool p8 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p9\n", param_size_);
-      bool p9 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p10\n", param_size_);
-      bool p10 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p11\n", param_size_);
-      bool p11 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p12\n", param_size_);
-      bool p12 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p13\n", param_size_);
-      bool p13 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p14\n", param_size_);
-      bool p14 = Allocate<bool>{}(&src_, &param_size_);
-      param_size_ = MinSize<bool>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for bool p15\n", param_size_);
-      bool p15 = Allocate<bool>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_ManyParameters.Fifteen\n");
-      protocol_->Fifteen(std::move(p1), std::move(p2), std::move(p3), std::move(p4), std::move(p5), std::move(p6), std::move(p7), std::move(p8), std::move(p9), std::move(p10), std::move(p11), std::move(p12), std::move(p13), std::move(p14), std::move(p15));
-#endif
-    }
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 6) {
-#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_HandleRightsProtocol))
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf("Early exit: Chose disabled protocol: test_protocols_HandleRightsProtocol\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::test::protocols::HandleRightsProtocol> protocol_;
-
-    xprintf("Starting test_protocols_HandleRightsProtocol service\n");
-    ::fidl::fuzzing::Fuzzer< ::test::protocols::HandleRightsProtocol> fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 2;
-    if (method_selection_ == 0) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_NoResponseMethod))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: NoResponseMethod\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize< ::zx::socket>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize< ::zx::socket>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::zx::socket h\n", param_size_);
-      ::zx::socket h = Allocate< ::zx::socket>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_HandleRightsProtocol.NoResponseMethod\n");
-      protocol_->NoResponseMethod(std::move(h));
-#endif
-    }
-    if (method_selection_ == 1) {
-#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_ResponseMethod))
-      // Selected method from protocol that is not part of this fuzzer.
-      xprintf("Early exit: Chose disabled method: ResponseMethod\n");
-      return 0;
-#else
-      const size_t min_size_ = MinSize< ::zx::socket>();
-
-      // Must have enough bytes for input.
-      if (size_ < min_size_) {
-        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
-        return 0;
-      }
-
-      const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / 1;
-
-      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
-
-      size_t param_size_;
-      param_size_ = MinSize< ::zx::socket>() + slack_size_per_param;
-      xprintf("Allocating %zu bytes for ::zx::socket h\n", param_size_);
-      ::zx::socket h = Allocate< ::zx::socket>{}(&src_, &param_size_);
-
-      xprintf("Invoking method test_protocols_HandleRightsProtocol.ResponseMethod\n");
-      protocol_->ResponseMethod(std::move(h), [signaller = fuzzer_.NewCallbackSignaller()](::zx::socket h) {
-        xprintf("Invoked test_protocols_HandleRightsProtocol.ResponseMethod\n");
-        zx_status_t status_ = signaller.SignalCallback();
-        if (status_ != ZX_OK) {
-          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
-        }
-      });
-#endif
-    }
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 7) {
 #if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_ChannelProtocol))
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf("Early exit: Chose disabled protocol: test_protocols_ChannelProtocol\n");
@@ -929,6 +328,607 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       xprintf("Invoking method test_protocols_ChannelProtocol.MutateSocket\n");
       protocol_->MutateSocket(std::move(a), [signaller = fuzzer_.NewCallbackSignaller()](::zx::socket b) {
         xprintf("Invoked test_protocols_ChannelProtocol.MutateSocket\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
+#endif
+    }
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 2) {
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_SyscallProtocol))
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: test_protocols_SyscallProtocol\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::protocols::SyscallProtocol> protocol_;
+
+    xprintf("Starting test_protocols_SyscallProtocol service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::protocols::SyscallProtocol> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 1;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_MethodC))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: MethodC\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize<int64_t>() + MinSize<int64_t>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 2;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for int64_t a\n", param_size_);
+      int64_t a = Allocate<int64_t>{}(&src_, &param_size_);
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for int64_t b\n", param_size_);
+      int64_t b = Allocate<int64_t>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_SyscallProtocol.MethodC\n");
+      protocol_->MethodC(std::move(a), std::move(b));
+#endif
+    }
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 3) {
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_Transitional))
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: test_protocols_Transitional\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::protocols::Transitional> protocol_;
+
+    xprintf("Starting test_protocols_Transitional service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::protocols::Transitional> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 2;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_Request))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: Request\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize<int64_t>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for int64_t x\n", param_size_);
+      int64_t x = Allocate<int64_t>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_Transitional.Request\n");
+      protocol_->Request(std::move(x), [signaller = fuzzer_.NewCallbackSignaller()](int64_t y) {
+        xprintf("Invoked test_protocols_Transitional.Request\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
+#endif
+    }
+    if (method_selection_ == 1) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_OneWay))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: OneWay\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize<int64_t>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize<int64_t>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for int64_t x\n", param_size_);
+      int64_t x = Allocate<int64_t>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_Transitional.OneWay\n");
+      protocol_->OneWay(std::move(x));
+#endif
+    }
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 4) {
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_HandleRightsProtocol))
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: test_protocols_HandleRightsProtocol\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::protocols::HandleRightsProtocol> protocol_;
+
+    xprintf("Starting test_protocols_HandleRightsProtocol service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::protocols::HandleRightsProtocol> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 2;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_NoResponseMethod))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: NoResponseMethod\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize< ::zx::socket>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize< ::zx::socket>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::zx::socket h\n", param_size_);
+      ::zx::socket h = Allocate< ::zx::socket>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_HandleRightsProtocol.NoResponseMethod\n");
+      protocol_->NoResponseMethod(std::move(h));
+#endif
+    }
+    if (method_selection_ == 1) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_ResponseMethod))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: ResponseMethod\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize< ::zx::socket>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize< ::zx::socket>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::zx::socket h\n", param_size_);
+      ::zx::socket h = Allocate< ::zx::socket>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_HandleRightsProtocol.ResponseMethod\n");
+      protocol_->ResponseMethod(std::move(h), [signaller = fuzzer_.NewCallbackSignaller()](::zx::socket h) {
+        xprintf("Invoked test_protocols_HandleRightsProtocol.ResponseMethod\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
+#endif
+    }
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 5) {
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_WithProtocolEnds))
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: test_protocols_WithProtocolEnds\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::protocols::WithProtocolEnds> protocol_;
+
+    xprintf("Starting test_protocols_WithProtocolEnds service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::protocols::WithProtocolEnds> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 3;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_ClientEnds))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: ClientEnds\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize< ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> >();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize< ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> >() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in\n", param_size_);
+      ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> in = Allocate< ::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> >{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_WithProtocolEnds.ClientEnds\n");
+      protocol_->ClientEnds(std::move(in), [signaller = fuzzer_.NewCallbackSignaller()](::fidl::InterfaceHandle< ::test::protocols::DiscoverableProtocol> out) {
+        xprintf("Invoked test_protocols_WithProtocolEnds.ClientEnds\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
+#endif
+    }
+    if (method_selection_ == 1) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_ServerEnds))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: ServerEnds\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize< ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> >();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize< ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> >() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in\n", param_size_);
+      ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> in = Allocate< ::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> >{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_WithProtocolEnds.ServerEnds\n");
+      protocol_->ServerEnds(std::move(in), [signaller = fuzzer_.NewCallbackSignaller()](::fidl::InterfaceRequest< ::test::protocols::DiscoverableProtocol> out) {
+        xprintf("Invoked test_protocols_WithProtocolEnds.ServerEnds\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
+#endif
+    }
+    if (method_selection_ == 2) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_StructContainingEnds))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: StructContainingEnds\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize< ::test::protocols::ProtocolEnds>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize< ::test::protocols::ProtocolEnds>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocols::ProtocolEnds in\n", param_size_);
+      ::test::protocols::ProtocolEnds in = Allocate< ::test::protocols::ProtocolEnds>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_WithProtocolEnds.StructContainingEnds\n");
+      protocol_->StructContainingEnds(std::move(in), [signaller = fuzzer_.NewCallbackSignaller()](::test::protocols::ProtocolEnds out) {
+        xprintf("Invoked test_protocols_WithProtocolEnds.StructContainingEnds\n");
+        zx_status_t status_ = signaller.SignalCallback();
+        if (status_ != ZX_OK) {
+          xprintf("signaller.SignalCallback returned bad status: %d\n", status_);
+        }
+      });
+#endif
+    }
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 6) {
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_ManyParameters))
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: test_protocols_ManyParameters\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::protocols::ManyParameters> protocol_;
+
+    xprintf("Starting test_protocols_ManyParameters service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::protocols::ManyParameters> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 1;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_Fifteen))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: Fifteen\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>() + MinSize<bool>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 15;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p1\n", param_size_);
+      bool p1 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p2\n", param_size_);
+      bool p2 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p3\n", param_size_);
+      bool p3 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p4\n", param_size_);
+      bool p4 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p5\n", param_size_);
+      bool p5 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p6\n", param_size_);
+      bool p6 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p7\n", param_size_);
+      bool p7 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p8\n", param_size_);
+      bool p8 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p9\n", param_size_);
+      bool p9 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p10\n", param_size_);
+      bool p10 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p11\n", param_size_);
+      bool p11 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p12\n", param_size_);
+      bool p12 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p13\n", param_size_);
+      bool p13 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p14\n", param_size_);
+      bool p14 = Allocate<bool>{}(&src_, &param_size_);
+      param_size_ = MinSize<bool>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for bool p15\n", param_size_);
+      bool p15 = Allocate<bool>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_ManyParameters.Fifteen\n");
+      protocol_->Fifteen(std::move(p1), std::move(p2), std::move(p3), std::move(p4), std::move(p5), std::move(p6), std::move(p7), std::move(p8), std::move(p9), std::move(p10), std::move(p11), std::move(p12), std::move(p13), std::move(p14), std::move(p15));
+#endif
+    }
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 7) {
+#if !(defined(GOLDEN_FUZZER) || defined(PROTOCOL_test_protocols_MethodWithUnion))
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf("Early exit: Chose disabled protocol: test_protocols_MethodWithUnion\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::test::protocols::MethodWithUnion> protocol_;
+
+    xprintf("Starting test_protocols_MethodWithUnion service\n");
+    ::fidl::fuzzing::Fuzzer< ::test::protocols::MethodWithUnion> fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 1;
+    if (method_selection_ == 0) {
+#if !(defined(GOLDEN_FUZZER) || defined(ALL_METHODS) || defined(METHOD_UnionMethod))
+      // Selected method from protocol that is not part of this fuzzer.
+      xprintf("Early exit: Chose disabled method: UnionMethod\n");
+      return 0;
+#else
+      const size_t min_size_ = MinSize< ::test::protocols::TheUnion>();
+
+      // Must have enough bytes for input.
+      if (size_ < min_size_) {
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        return 0;
+      }
+
+      const size_t slack_size_ = size_ - min_size_;
+      const size_t slack_size_per_param = slack_size_ / 1;
+
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+
+      size_t param_size_;
+      param_size_ = MinSize< ::test::protocols::TheUnion>() + slack_size_per_param;
+      xprintf("Allocating %zu bytes for ::test::protocols::TheUnion u\n", param_size_);
+      ::test::protocols::TheUnion u = Allocate< ::test::protocols::TheUnion>{}(&src_, &param_size_);
+
+      xprintf("Invoking method test_protocols_MethodWithUnion.UnionMethod\n");
+      protocol_->UnionMethod(std::move(u), [signaller = fuzzer_.NewCallbackSignaller()](::std::unique_ptr< ::test::protocols::TheUnion> u) {
+        xprintf("Invoked test_protocols_MethodWithUnion.UnionMethod\n");
         zx_status_t status_ = signaller.SignalCallback();
         if (status_ != ZX_OK) {
           xprintf("signaller.SignalCallback returned bad status: %d\n", status_);

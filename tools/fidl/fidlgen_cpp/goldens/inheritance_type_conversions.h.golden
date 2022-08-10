@@ -15,21 +15,6 @@ namespace fidl {
 namespace internal {
 
 template <>
-struct WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse> {
-  static ::test_inheritance::SuperFooTopResponse ToNatural(::test_inheritance::wire::SuperFooTopResponse src);
-  static ::test_inheritance::wire::SuperFooTopResponse ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src);
-};
-
-template <>
-struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooTopResponse> {
-  using type = ::test_inheritance::SuperFooTopResponse;
-};
-template <>
-struct WireTypeForNaturalType<::test_inheritance::SuperFooTopResponse> {
-  using type = ::test_inheritance::wire::SuperFooTopResponse;
-};
-
-template <>
 struct WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest, ::test_inheritance::SuperFooRequest> {
   static ::test_inheritance::SuperFooRequest ToNatural(::test_inheritance::wire::SuperFooRequest src);
   static ::test_inheritance::wire::SuperFooRequest ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooRequest src);
@@ -42,6 +27,21 @@ struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooRequest> {
 template <>
 struct WireTypeForNaturalType<::test_inheritance::SuperFooRequest> {
   using type = ::test_inheritance::wire::SuperFooRequest;
+};
+
+template <>
+struct WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse> {
+  static ::test_inheritance::SuperFooTopResponse ToNatural(::test_inheritance::wire::SuperFooTopResponse src);
+  static ::test_inheritance::wire::SuperFooTopResponse ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooTopResponse> {
+  using type = ::test_inheritance::SuperFooTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<::test_inheritance::SuperFooTopResponse> {
+  using type = ::test_inheritance::wire::SuperFooTopResponse;
 };
 
 #ifdef __Fuchsia__

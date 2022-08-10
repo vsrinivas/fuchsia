@@ -5,6 +5,15 @@
 namespace fidl {
 namespace internal {
 
+::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src) {
+  return ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest(WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s)));
+}
+::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::ToWire(fidl::AnyArena& arena, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src) {
+  return ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest{
+      .s = WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s())),
+  };
+}
+
 ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse src) {
   return ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse(WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.value)));
 }
@@ -20,15 +29,6 @@ namespace internal {
 ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::ToWire(fidl::AnyArena& arena, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse src) {
   return ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse{
       .result = WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>::ToWire(arena, std::move(src.result())),
-  };
-}
-
-::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src) {
-  return ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest(WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(std::move(src.s)));
-}
-::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::ToWire(fidl::AnyArena& arena, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest src) {
-  return ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest{
-      .s = WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s())),
   };
 }
 

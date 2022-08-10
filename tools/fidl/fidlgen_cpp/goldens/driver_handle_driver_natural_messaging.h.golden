@@ -11,6 +11,70 @@
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::AsyncEventHandler<::test_driverhandle::DriverProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+#endif  // __Fuchsia__
+
+template <>
+class ::fdf::Server<::test_driverhandle::DriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  Server() = default;
+  virtual ~Server() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_driverhandle::DriverProtocol;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol> final {
+  NaturalServerDispatcher() = delete;
+  static void Dispatch(::fdf::Server<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
 namespace test_driverhandle {
 __LOCAL extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 
@@ -91,70 +155,6 @@ template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInProtocol> final {
   NaturalServerDispatcher() = delete;
   static void Dispatch(::fdf::Server<::test_driverhandle::HandlesInProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalClientImpl<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::NaturalClientBase {
- public:
-  using NaturalClientBase::NaturalClientBase;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
- public:
-  NaturalEventHandlerInterface() = default;
-  virtual ~NaturalEventHandlerInterface() = default;
-};
-
-template <>
-class ::fdf::AsyncEventHandler<::test_driverhandle::DriverProtocol>
-    : public ::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>, public ::fidl::internal::AsyncEventHandler {
- public:
-  AsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::internal::NaturalEventDispatcher<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>> {
- public:
-  explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-};
-#endif  // __Fuchsia__
-
-template <>
-class ::fdf::Server<::test_driverhandle::DriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  Server() = default;
-  virtual ~Server() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_driverhandle::DriverProtocol;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
-};
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol> final {
-  NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

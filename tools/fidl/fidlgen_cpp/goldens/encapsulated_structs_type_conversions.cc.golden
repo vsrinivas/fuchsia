@@ -5,23 +5,6 @@
 namespace fidl {
 namespace internal {
 
-#ifdef __Fuchsia__
-
-::test_encapsulatedstructs::NonInlineStructTestStruct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct>::ToNatural(::test_encapsulatedstructs::wire::NonInlineStructTestStruct src) {
-  return ::test_encapsulatedstructs::NonInlineStructTestStruct{{
-      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>::ToNatural(std::move(src.element)),
-      .h = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(std::move(src.h)),
-  }};
-}
-::test_encapsulatedstructs::wire::NonInlineStructTestStruct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct>::ToWire(fidl::AnyArena& arena, ::test_encapsulatedstructs::NonInlineStructTestStruct src) {
-  return ::test_encapsulatedstructs::wire::NonInlineStructTestStruct{
-      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>::ToWire(arena, std::move(src.element())),
-      .h = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(arena, std::move(src.h())),
-  };
-}
-
-#endif  // __Fuchsia__
-
 ::test_encapsulatedstructs::Int8Int32 WireNaturalConversionTraits<::test_encapsulatedstructs::wire::Int8Int32, ::test_encapsulatedstructs::Int8Int32>::ToNatural(::test_encapsulatedstructs::wire::Int8Int32 src) {
   return ::test_encapsulatedstructs::Int8Int32{{
       .a = WireNaturalConversionTraits<int8_t, int8_t>::ToNatural(std::move(src.a)),
@@ -71,6 +54,23 @@ namespace internal {
       .array = WireNaturalConversionTraits<::test_encapsulatedstructs::wire::ArrayInt16Int8, ::test_encapsulatedstructs::ArrayInt16Int8>::ToWire(arena, std::move(src.array())),
   };
 }
+
+#ifdef __Fuchsia__
+
+::test_encapsulatedstructs::NonInlineStructTestStruct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct>::ToNatural(::test_encapsulatedstructs::wire::NonInlineStructTestStruct src) {
+  return ::test_encapsulatedstructs::NonInlineStructTestStruct{{
+      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>::ToNatural(std::move(src.element)),
+      .h = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToNatural(std::move(src.h)),
+  }};
+}
+::test_encapsulatedstructs::wire::NonInlineStructTestStruct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::NonInlineStructTestStruct, ::test_encapsulatedstructs::NonInlineStructTestStruct>::ToWire(fidl::AnyArena& arena, ::test_encapsulatedstructs::NonInlineStructTestStruct src) {
+  return ::test_encapsulatedstructs::wire::NonInlineStructTestStruct{
+      .element = WireNaturalConversionTraits<::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8>, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>::ToWire(arena, std::move(src.element())),
+      .h = WireNaturalConversionTraits<::zx::handle, ::zx::handle>::ToWire(arena, std::move(src.h())),
+  };
+}
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

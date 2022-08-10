@@ -25,35 +25,13 @@
 namespace test_protocolrequest {
 
 namespace wire {
-struct ParentTakeChildRequestRequest;
-
-struct ParentTakeChildRequest;
-
 struct ParentGetChildTopResponse;
 
 struct ParentGetChildRequestTopResponse;
 
-#ifdef __Fuchsia__
+struct ParentTakeChildRequest;
 
-extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
-
-struct ParentTakeChildRequestRequest {
-  ::fidl::ServerEnd<::test_protocolrequest::Child> r = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
-
-struct ParentTakeChildRequest {
-  ::fidl::ClientEnd<::test_protocolrequest::Child> c = {};
-
-  void _CloseHandles();
-};
-#endif  // __Fuchsia__
+struct ParentTakeChildRequestRequest;
 
 #ifdef __Fuchsia__
 
@@ -77,121 +55,31 @@ struct ParentGetChildRequestTopResponse {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
+
+struct ParentTakeChildRequest {
+  ::fidl::ClientEnd<::test_protocolrequest::Child> c = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
+
+struct ParentTakeChildRequestRequest {
+  ::fidl::ServerEnd<::test_protocolrequest::Child> r = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
 }  // namespace wire
 }  // namespace test_protocolrequest
 namespace fidl {
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequestRequest> : public std::true_type {};
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
-struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
-  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentTakeChildRequestRequestTable;
-};
-
-template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_protocolrequest::wire::ParentTakeChildRequestRequest> : public std::true_type {};
-template <>
-struct IsStruct<::test_protocolrequest::wire::ParentTakeChildRequestRequest> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentTakeChildRequestRequest>);
-static_assert(offsetof(::test_protocolrequest::wire::ParentTakeChildRequestRequest, r) == 0);
-static_assert(sizeof(::test_protocolrequest::wire::ParentTakeChildRequestRequest) == TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
-  static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentTakeChildRequestRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentTakeChildRequestRequest));
-    } else {
-      internal::WireCodingTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->r, position + 0, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-    }
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-template <>
-struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequest> : public std::true_type {};
-
-// TODO(fxbug.dev/95833) Remove this.
-template <>
-struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
-  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentTakeChildRequestTable;
-};
-
-template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-};
-
-template <>
-struct IsFidlType<::test_protocolrequest::wire::ParentTakeChildRequest> : public std::true_type {};
-template <>
-struct IsStruct<::test_protocolrequest::wire::ParentTakeChildRequest> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentTakeChildRequest>);
-static_assert(offsetof(::test_protocolrequest::wire::ParentTakeChildRequest, c) == 0);
-static_assert(sizeof(::test_protocolrequest::wire::ParentTakeChildRequest) == TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest>::kPrimarySize);
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
-  static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentTakeChildRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
-  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentTakeChildRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentTakeChildRequest));
-    } else {
-      internal::WireCodingTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->c, position + 0, recursion_depth);
-    }
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    if constexpr (!Base::are_members_memcpy_compatible) {
-      internal::WireCodingTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Decode(
-          decoder, position + 0, recursion_depth);
-    }
-  }
-};
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
@@ -291,6 +179,118 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGe
       internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentGetChildRequestTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
       memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentGetChildRequestTopResponse));
+    } else {
+      internal::WireCodingTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->r, position + 0, recursion_depth);
+    }
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+    }
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequest> : public std::true_type {};
+
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
+  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentTakeChildRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolrequest::wire::ParentTakeChildRequest> : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolrequest::wire::ParentTakeChildRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentTakeChildRequest>);
+static_assert(offsetof(::test_protocolrequest::wire::ParentTakeChildRequest, c) == 0);
+static_assert(sizeof(::test_protocolrequest::wire::ParentTakeChildRequest) == TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentTakeChildRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentTakeChildRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentTakeChildRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentTakeChildRequest));
+    } else {
+      internal::WireCodingTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->c, position + 0, recursion_depth);
+    }
+  }
+  static void Decode(
+      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (!Base::are_members_memcpy_compatible) {
+      internal::WireCodingTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Decode(
+          decoder, position + 0, recursion_depth);
+    }
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequestRequest> : public std::true_type {};
+
+// TODO(fxbug.dev/95833) Remove this.
+template <>
+struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
+  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentTakeChildRequestRequestTable;
+};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolrequest::wire::ParentTakeChildRequestRequest> : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolrequest::wire::ParentTakeChildRequestRequest> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentTakeChildRequestRequest>);
+static_assert(offsetof(::test_protocolrequest::wire::ParentTakeChildRequestRequest, r) == 0);
+static_assert(sizeof(::test_protocolrequest::wire::ParentTakeChildRequestRequest) == TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest>::kPrimarySize);
+
+template <bool IsRecursive>
+struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
+  static constexpr bool kHasPadding = false;
+  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentTakeChildRequestRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
+
+  static void Encode(
+      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentTakeChildRequestRequest* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    if constexpr (is_memcpy_compatible) {
+      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentTakeChildRequestRequest));
     } else {
       internal::WireCodingTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->r, position + 0, recursion_depth);
     }

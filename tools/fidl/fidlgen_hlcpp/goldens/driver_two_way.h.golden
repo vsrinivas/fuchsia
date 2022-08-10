@@ -11,30 +11,9 @@ namespace drivertwoway {
 // Domain objects declarations
 //
 
-class TwoWayAddTopResponse;
-
 class TwoWayAddRequest;
 
-class TwoWayAddTopResponse final {
- public:
-  static const fidl_type_t* FidlType;
-
-  uint16_t sum{};
-
-  static inline ::std::unique_ptr<TwoWayAddTopResponse> New() { return ::std::make_unique<TwoWayAddTopResponse>(); }
-
-  void Encode(::fidl::Encoder* _encoder, size_t _offset,
-              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* value, size_t _offset);
-  zx_status_t Clone(TwoWayAddTopResponse* result) const;
-};
-
-inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& _value,
-                         ::test::drivertwoway::TwoWayAddTopResponse* _result) {
-  return _value.Clone(_result);
-}
-
-using TwoWayAddTopResponsePtr = ::std::unique_ptr<TwoWayAddTopResponse>;
+class TwoWayAddTopResponse;
 
 class TwoWayAddRequest final {
  public:
@@ -59,31 +38,30 @@ inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddRequest& _value,
 
 using TwoWayAddRequestPtr = ::std::unique_ptr<TwoWayAddRequest>;
 
+class TwoWayAddTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint16_t sum{};
+
+  static inline ::std::unique_ptr<TwoWayAddTopResponse> New() { return ::std::make_unique<TwoWayAddTopResponse>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* value, size_t _offset);
+  zx_status_t Clone(TwoWayAddTopResponse* result) const;
+};
+
+inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& _value,
+                         ::test::drivertwoway::TwoWayAddTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using TwoWayAddTopResponsePtr = ::std::unique_ptr<TwoWayAddTopResponse>;
+
 }  // namespace drivertwoway
 }  // namespace test
 namespace fidl {
-template <>
-struct CodingTraits<::test::drivertwoway::TwoWayAddTopResponse>
-    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddTopResponse, 2> {};
-
-template <>
-struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddTopResponse> : public internal::BoolConstant<
-                                                                            !HasPadding<::test::drivertwoway::TwoWayAddTopResponse>::value && IsMemcpyCompatible<uint16_t>::value> {};
-
-inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& value,
-                         ::test::drivertwoway::TwoWayAddTopResponse* result) {
-  return ::test::drivertwoway::Clone(value, result);
-}
-
-template <>
-struct Equality<::test::drivertwoway::TwoWayAddTopResponse> {
-  bool operator()(const ::test::drivertwoway::TwoWayAddTopResponse& _lhs, const ::test::drivertwoway::TwoWayAddTopResponse& _rhs) const {
-    if (!::fidl::Equals(_lhs.sum, _rhs.sum)) {
-      return false;
-    }
-    return true;
-  }
-};
 template <>
 struct CodingTraits<::test::drivertwoway::TwoWayAddRequest>
     : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddRequest, 4> {};
@@ -104,6 +82,28 @@ struct Equality<::test::drivertwoway::TwoWayAddRequest> {
       return false;
     }
     if (!::fidl::Equals(_lhs.addend2, _rhs.addend2)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::drivertwoway::TwoWayAddTopResponse>
+    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddTopResponse, 2> {};
+
+template <>
+struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddTopResponse> : public internal::BoolConstant<
+                                                                            !HasPadding<::test::drivertwoway::TwoWayAddTopResponse>::value && IsMemcpyCompatible<uint16_t>::value> {};
+
+inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& value,
+                         ::test::drivertwoway::TwoWayAddTopResponse* result) {
+  return ::test::drivertwoway::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::drivertwoway::TwoWayAddTopResponse> {
+  bool operator()(const ::test::drivertwoway::TwoWayAddTopResponse& _lhs, const ::test::drivertwoway::TwoWayAddTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.sum, _rhs.sum)) {
       return false;
     }
     return true;

@@ -7,15 +7,6 @@
 
 namespace test_bindingsdenylist {
 
-class Allowed final {
-  Allowed() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-};
-
 class OnlyLibfuzzerAndDeps final {
   OnlyLibfuzzerAndDeps() = delete;
 
@@ -32,39 +23,6 @@ class OnlyCppAndDeps final {
   using Transport = ::fidl::internal::ChannelTransport;
 
   static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-};
-
-class ImportsSameNameContext final {
-  ImportsSameNameContext() = delete;
-
- public:
-  using Transport = ::fidl::internal::ChannelTransport;
-
-  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
-  class Unattributed final {
-    Unattributed() = delete;
-
-   public:
-    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
-  class AlwaysAppearsInImportingLibrary final {
-    AlwaysAppearsInImportingLibrary() = delete;
-
-   public:
-    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
-    static constexpr bool kHasRequest = true;
-    static constexpr bool kHasResponse = false;
-
-    static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
-  };
 };
 
 class DenyEachBinding final {
@@ -132,6 +90,48 @@ class DenyEachBinding final {
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
+  };
+};
+
+class Allowed final {
+  Allowed() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+};
+
+class ImportsSameNameContext final {
+  ImportsSameNameContext() = delete;
+
+ public:
+  using Transport = ::fidl::internal::ChannelTransport;
+
+  static constexpr ::fidl::internal::Openness kOpenness = ::fidl::internal::Openness::kClosed;
+  class Unattributed final {
+    Unattributed() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
+  };
+  class AlwaysAppearsInImportingLibrary final {
+    AlwaysAppearsInImportingLibrary() = delete;
+
+   public:
+    using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
     static constexpr bool kHasTransportError = false;
   };
 };

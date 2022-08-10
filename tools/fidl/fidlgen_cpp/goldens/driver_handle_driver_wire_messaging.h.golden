@@ -18,10 +18,95 @@
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
-class HandlesInProtocol;
-
 class DriverProtocol;
 
+class HandlesInProtocol;
+
+}  // namespace test_driverhandle
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<::test_driverhandle::DriverProtocol> {
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol> final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+                                            internal::MessageStorageViewBase* storage_view,
+                                            ::fidl::Transaction* txn);
+  static void Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+                       internal::MessageStorageViewBase* storage_view,
+                       ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
+  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
+      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+};
+#endif  // __Fuchsia__
+
+namespace fidl {
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>, public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>> {
+ public:
+  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_driverhandle::DriverProtocol> final : public ::fdf::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_driverhandle::DriverProtocol>> {
+ public:
+ private:
+  ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> _client_end() const {
+    return ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol>(
+        _transport().get<::fidl::internal::DriverTransport>());
+  }
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
+// and |fdf::ServerEnd<SomeProtocol>|).
+template <>
+class ::fdf::WireServer<::test_driverhandle::DriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::test_driverhandle::DriverProtocol;
+
+ private:
+  void dispatch_message(
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+}  // namespace fidl
+namespace test_driverhandle {
 __LOCAL extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 
 }  // namespace test_driverhandle
@@ -261,87 +346,35 @@ class ::fdf::WireServer<::test_driverhandle::HandlesInProtocol> : public ::fidl:
 namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
-namespace test_driverhandle {
-}  // namespace test_driverhandle
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::ProtocolDetails<::test_driverhandle::DriverProtocol> {
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol> final {
-  WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage& msg,
-                                            internal::MessageStorageViewBase* storage_view,
-                                            ::fidl::Transaction* txn);
-  static void Dispatch(::fdf::WireServer<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
-                       internal::MessageStorageViewBase* storage_view,
-                       ::fidl::Transaction* txn);
-
- private:
-  static const ::fidl::internal::MethodEntry entries_[];
-  static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
-};
-#endif  // __Fuchsia__
-
-namespace fidl {
-
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
-class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_driverhandle::DriverProtocol> : public ::fdf::internal::BufferClientImplBase {
  public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
+  using BufferClientImplBase::BufferClientImplBase;
 };
 
 template <>
-class ::fdf::WireAsyncEventHandler<::test_driverhandle::DriverProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>, public ::fidl::internal::AsyncEventHandler {
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_driverhandle::DriverProtocol> {
  public:
-  WireAsyncEventHandler() = default;
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::IncomingEventDispatcher<::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>> {
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::DriverProtocol> : public ::fidl::internal::ClientImplBase {
  public:
-  explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+ protected:
+  const ::fdf::Arena& arena_;
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::test_driverhandle::DriverProtocol> final : public ::fdf::internal::SyncEndpointBufferVeneer<::fidl::internal::WireSyncBufferClientImpl<::test_driverhandle::DriverProtocol>> {
+class ::fidl::internal::WireWeakSyncClientImpl<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::DriverProtocol> {
  public:
- private:
-  ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> _client_end() const {
-    return ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol>(
-        _transport().get<::fidl::internal::DriverTransport>());
-  }
-};
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
-template <>
-class ::fdf::WireServer<::test_driverhandle::DriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireServer() = default;
-  virtual ~WireServer() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::test_driverhandle::DriverProtocol;
-
- private:
-  void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      ::fidl::internal::MessageStorageViewBase* storage_view) final;
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -379,39 +412,6 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::HandlesInP
 
 template <>
 class ::fidl::internal::WireWeakSyncClientImpl<::test_driverhandle::HandlesInProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::HandlesInProtocol> {
- public:
-  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
-};
-namespace fidl {
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-}  // namespace fidl
-
-template <>
-class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_driverhandle::DriverProtocol> : public ::fdf::internal::BufferClientImplBase {
- public:
-  using BufferClientImplBase::BufferClientImplBase;
-};
-
-template <>
-class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_driverhandle::DriverProtocol> {
- public:
-  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
-};
-
-template <>
-class ::fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::DriverProtocol> : public ::fidl::internal::ClientImplBase {
- public:
-  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
-      : ClientImplBase(client_base), arena_(arena) {}
-
- protected:
-  const ::fdf::Arena& arena_;
-};
-
-template <>
-class ::fidl::internal::WireWeakSyncClientImpl<::test_driverhandle::DriverProtocol> final : public ::fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::DriverProtocol> {
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };

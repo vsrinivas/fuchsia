@@ -3,8 +3,8 @@
 #include <fidl/test.driverhandle/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
-void ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest::_CloseHandles() {
-  t._CloseHandles();
+void ::test_driverhandle::wire::ClientEndWrapper::_CloseHandles() {
+  value.reset();
 }
 #endif  // __Fuchsia__
 
@@ -15,8 +15,8 @@ void ::test_driverhandle::wire::ServerEndWrapper::_CloseHandles() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_driverhandle::wire::ClientEndWrapper::_CloseHandles() {
-  value.reset();
+void ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest::_CloseHandles() {
+  t._CloseHandles();
 }
 #endif  // __Fuchsia__
 
