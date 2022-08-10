@@ -33,6 +33,16 @@ impl BrowseControllerService {
 
     async fn handle_fidl_request(&mut self, request: BrowseControllerRequest) -> Result<(), Error> {
         match request {
+            BrowseControllerRequest::ChangePath { path, responder } => {
+                let folder_uid = match path {
+                    Path::Parent(_) => None,
+                    Path::ChildFolderUid(folder_uid) => Some(folder_uid),
+                    _ => {
+                        return Ok(responder.send(&mut Err(BrowseControllerError::ProtocolError))?);
+                    }
+                };
+                responder.send(&mut self.controller.change_directory(folder_uid).await)?
+            }
             BrowseControllerRequest::GetFileSystemItems {
                 start_index,
                 end_index,
@@ -62,9 +72,6 @@ impl BrowseControllerService {
             )?,
             BrowseControllerRequest::SetBrowsedPlayer { player_id, responder } => responder
                 .send(&mut self.controller.set_browsed_player(player_id).await.map(Into::into))?,
-            BrowseControllerRequest::ChangePath { responder, .. } => {
-                responder.send(&mut Err(BrowseControllerError::CommandNotImplemented))?
-            }
             BrowseControllerRequest::PlayFileSystemItem { responder, .. } => {
                 responder.send(&mut Err(BrowseControllerError::CommandNotImplemented))?
             }

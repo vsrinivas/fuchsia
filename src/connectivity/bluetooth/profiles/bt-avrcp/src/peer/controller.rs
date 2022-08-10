@@ -80,6 +80,10 @@ impl BrowsablePlayer {
             sub_folders: params.folder_names(),
         }
     }
+
+    fn uid_counter(&self) -> u16 {
+        self.uid_counter.map_or(0, Into::into)
+    }
 }
 
 impl Controller {
@@ -373,6 +377,33 @@ impl Controller {
             .into_iter()
             .map(|item| item.try_into().and_then(into_media_element_item))
             .collect()
+    }
+
+    /// Changes directory from the current directory.
+    /// If folder_uid is set to some value, it will invoke a ChangePath
+    /// command with direction set to Folder Down.
+    /// Otherwise, it will invoke a ChangePath command with direction set to
+    /// Folder Up.
+    /// If the command was successful, returns the number of items in the
+    /// changed directory. Otherwise, error is returned.
+    pub async fn change_directory(
+        &self,
+        folder_uid: Option<u64>,
+    ) -> Result<u32, fidl_avrcp::BrowseControllerError> {
+        let _ = self.check_browsed_player()?;
+
+        let cmd = {
+            let player = self.browsable_player.lock();
+            ChangePathCommand::new(player.as_ref().unwrap().uid_counter(), folder_uid)
+                .map_err(|_| fidl_avrcp::BrowseControllerError::PacketEncoding)?
+        };
+        let buf = self.send_browse_command(PduId::ChangePath, &cmd).await?;
+        let response = ChangePathResponse::decode(&buf[..])?;
+        trace!("change_directory received response {:?}", response);
+        match response {
+            ChangePathResponse::Failure(status) => Err(status.into()),
+            ChangePathResponse::Success { num_of_items } => Ok(num_of_items),
+        }
     }
 
     async fn send_browse_command(

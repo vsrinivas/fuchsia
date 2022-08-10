@@ -163,6 +163,7 @@ pub_decodable_enum! {
         SetAddressedPlayer => 0x60,
         SetBrowsedPlayer => 0x70,
         GetFolderItems => 0x71,
+        ChangePath => 0x72,
         PlayItem => 0x74,
         GetTotalNumberOfItems => 0x75,
         AddToNowPlaying => 0x90,

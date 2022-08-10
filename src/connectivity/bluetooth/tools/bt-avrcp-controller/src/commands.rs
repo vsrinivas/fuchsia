@@ -175,6 +175,9 @@ gen_commands! {
     #[derive(Debug)]
     Cmd {
         AvcCommand = ("key", ["command"], "send an AVC passthrough keypress event"),
+        ChangePath = ("change-path",
+            ["folder_uid"],
+            "Navigates one folder down if folder_uid is specified. Special value \"..\" or \"up\" navigates one folder up to the parent folder instead."),
         GetVirtualFileSystem =  ("get-file-system", ["start_index", "end_index", "attributes"],
             "Get media player virtual file system items from target. Note that `attributes` is a comma-separated attribute IDs. Use special keyword \"ALL\" to specify all attributes. Leave empty to specify no attributes. Example: `<command> <start_index> <end_index> 1,2,3` OR `<command> <start_index> <end_index> ALL`"),
         GetMediaAttributes = ("get-media", [], "gets currently playing media attributes"),

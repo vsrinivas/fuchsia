@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     assert_matches::assert_matches,
     async_utils::PollExt,
-    bt_avctp::{AvcCommand, AvcPeer, AvcResponseType, AvctpCommand, AvctpPeer},
+    bt_avctp::{AvcCommand, AvcPeer, AvcResponseType, AvctpCommand, AvctpCommandStream, AvctpPeer},
     fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
@@ -108,7 +108,7 @@ fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
     assert!(exec.run_until_stalled(&mut register_fut).is_pending());
 
     // We should have a service request.
-    let request = service_request_receiver.try_next()?.expect("Service request should be handled");
+    let request = service_request_receiver.try_next()?.expect("S&ervice request should be handled");
 
     // Handing it to Peer Manager should resolve the request
     peer_manager.handle_service_request(request);
@@ -753,6 +753,16 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
     }
 }
 
+fn get_next_avctp_command(
+    exec: &mut fasync::TestExecutor,
+    command_stream: &mut AvctpCommandStream,
+) -> AvctpCommand {
+    exec.run_until_stalled(&mut command_stream.try_next())
+        .expect("should be ready")
+        .unwrap()
+        .expect("has valid command")
+}
+
 /// Integration test of the peer manager and the FIDL front end with a mock BDEDR backend an
 /// emulated remote peer. Validates we can get a browse controller to a device we discovered,
 /// we can send browse commands on that controller, and that we can send responses
@@ -852,15 +862,12 @@ fn peer_manager_with_browse_controller_client() {
 
     // Test SetBrowsedPlayer.
     const PLAYER_ID: u16 = 1004;
+    const UID_COUNTER: u16 = 1;
     let set_browsed_player_fut = browse_controller_proxy.set_browsed_player(PLAYER_ID);
     pin_mut!(set_browsed_player_fut);
 
     assert!(exec.run_until_stalled(&mut set_browsed_player_fut).is_pending());
-    let command = exec
-        .run_until_stalled(&mut avctp_cmd_stream.try_next())
-        .expect("should be ready")
-        .unwrap()
-        .expect("has valid command");
+    let command = get_next_avctp_command(&mut exec, &mut avctp_cmd_stream);
     // Ensure command params are correct.
     let params = decode_avctp_command(&command, PduId::SetBrowsedPlayer);
     let cmd = SetBrowsedPlayerCommand::decode(&params).expect("should have received valid command");
@@ -880,11 +887,7 @@ fn peer_manager_with_browse_controller_client() {
     pin_mut!(get_media_players_fut);
 
     assert!(exec.run_until_stalled(&mut get_media_players_fut).is_pending());
-    let command = exec
-        .run_until_stalled(&mut avctp_cmd_stream.try_next())
-        .expect("should be ready")
-        .unwrap()
-        .expect("has valid command");
+    let command = get_next_avctp_command(&mut exec, &mut avctp_cmd_stream);
     // Ensure command params are correct.
     let params = decode_avctp_command(&command, PduId::GetFolderItems);
     let cmd = GetFolderItemsCommand::decode(&params).expect("should have received valid command");
@@ -913,11 +916,7 @@ fn peer_manager_with_browse_controller_client() {
     pin_mut!(get_file_system_fut);
 
     assert!(exec.run_until_stalled(&mut get_file_system_fut).is_pending());
-    let command = exec
-        .run_until_stalled(&mut avctp_cmd_stream.try_next())
-        .expect("should be ready")
-        .unwrap()
-        .expect("has valid command");
+    let command = get_next_avctp_command(&mut exec, &mut avctp_cmd_stream);
     // Ensure command params are correct.
     let params = decode_avctp_command(&command, PduId::GetFolderItems);
     let cmd = GetFolderItemsCommand::decode(&params).expect("should have received valid command");
@@ -935,4 +934,25 @@ fn peer_manager_with_browse_controller_client() {
         exec.run_until_stalled(&mut get_file_system_fut),
         futures::task::Poll::Ready(_)
     );
+
+    // Test MoveIntoDirectory.
+    let move_into_dir_fut = browse_controller_proxy.change_path(&mut Path::ChildFolderUid(2));
+    pin_mut!(move_into_dir_fut);
+
+    assert!(exec.run_until_stalled(&mut move_into_dir_fut).is_pending());
+    let command = get_next_avctp_command(&mut exec, &mut avctp_cmd_stream);
+    // Ensure command params are correct.
+    let params = decode_avctp_command(&command, PduId::ChangePath);
+    let cmd = ChangePathCommand::decode(&params).expect("should have received valid command");
+    assert_eq!(cmd.uid_counter(), UID_COUNTER);
+    assert_eq!(cmd.folder_uid(), Some(&std::num::NonZeroU64::new(2).unwrap()));
+    // Create mock response.
+    let resp = ChangePathResponse::new_success(10);
+    send_avctp_response(PduId::ChangePath, &resp, &command);
+
+    assert_matches!(
+    exec.run_until_stalled(&mut move_into_dir_fut),
+    Poll::Ready(Ok(Ok(num_of_items))) => {
+        assert_eq!(num_of_items, 10);
+    });
 }

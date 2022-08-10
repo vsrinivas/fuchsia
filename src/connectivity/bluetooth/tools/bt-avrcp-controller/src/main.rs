@@ -311,6 +311,28 @@ async fn set_volume<'a>(
     }
 }
 
+async fn change_path<'a>(
+    args: &'a [&'a str],
+    controller: &'a BrowseControllerProxy,
+) -> Result<String, Error> {
+    if args.len() < 1 {
+        return Ok(format!("usage: {}", Cmd::ChangePath.cmd_help()));
+    }
+    let mut path = match args[0] {
+        ".." | "up" => fidl_avrcp::Path::Parent(fidl_avrcp::Parent {}),
+        uid => {
+            let folder_uid = uid.to_string().parse::<u64>()?;
+            fidl_avrcp::Path::ChildFolderUid(folder_uid)
+        }
+    };
+    match controller.change_path(&mut path).await? {
+        Ok(num_of_items) => {
+            Ok(format!("Changed path successfully. Current directory has {:?} items", num_of_items))
+        }
+        Err(e) => Err(format_err!("Failed to change path: {:?}", e)),
+    }
+}
+
 async fn set_browsed_player<'a>(
     args: &'a [&'a str],
     controller: &'a BrowseControllerProxy,
@@ -358,6 +380,7 @@ async fn handle_cmd<'a>(
         let cmd = raw_cmd.parse();
         let res = match cmd {
             Ok(Cmd::AvcCommand) => send_passthrough(args, &controller).await,
+            Ok(Cmd::ChangePath) => change_path(args, &browse_controller).await,
             Ok(Cmd::GetVirtualFileSystem) => {
                 get_folder_items_with_attrs(Cmd::GetVirtualFileSystem, args, &browse_controller)
                     .await

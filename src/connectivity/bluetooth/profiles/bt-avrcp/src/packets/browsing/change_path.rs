@@ -5,18 +5,18 @@
 use {
     packet_encoding::{Decodable, Encodable},
     std::convert::{TryFrom, TryInto},
-    tracing::trace,
+    std::num::NonZeroU64,
 };
 
 use crate::packets::{Direction, Error, PacketResult, StatusCode};
 
 /// AVRCP 1.6.2 section 6.10.4.1.1 ChangePath .
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ChangePathCommand {
     uid_counter: u16,
-    direction: Direction,
-    // If the navigation command is Folder Up this field is reserved.
-    folder_uid: Option<u64>,
+    // None if direction is FolderUp. Some folder uid if direction is
+    // FolderDown.
+    folder_uid: Option<NonZeroU64>,
 }
 
 impl ChangePathCommand {
@@ -24,23 +24,28 @@ impl ChangePathCommand {
     /// 2 bytes for uid counter, 1 byte for direction, 8 for folder uid.
     const PACKET_SIZE: usize = 11;
 
-    #[allow(unused)]
-    pub fn new(
-        uid_counter: u16,
-        direction: Direction,
-        folder_uid: Option<u64>,
-    ) -> Result<Self, Error> {
-        let cmd = Self { uid_counter, direction, folder_uid };
-        if cmd.is_valid() {
-            Ok(cmd)
-        } else {
-            Err(Error::InvalidMessage)
+    pub fn new(uid_counter: u16, uid: Option<u64>) -> Result<Self, Error> {
+        let folder_uid = match uid {
+            None => None,
+            Some(id) => Some(NonZeroU64::new(id).ok_or(Error::InvalidParameter)?),
+        };
+        Ok(Self { uid_counter, folder_uid })
+    }
+
+    fn direction(&self) -> Direction {
+        match self.folder_uid {
+            Some(_) => Direction::FolderDown,
+            None => Direction::FolderUp,
         }
     }
 
-    fn is_valid(&self) -> bool {
-        return (self.direction == Direction::FolderDown && self.folder_uid.is_some())
-            || (self.direction == Direction::FolderUp && self.folder_uid.is_none());
+    pub fn uid_counter(&self) -> u16 {
+        self.uid_counter
+    }
+
+    #[cfg(test)]
+    pub fn folder_uid(&self) -> Option<&NonZeroU64> {
+        self.folder_uid.as_ref()
     }
 }
 
@@ -54,15 +59,15 @@ impl Decodable for ChangePathCommand {
 
         let uid_counter = u16::from_be_bytes(buf[0..2].try_into().unwrap());
         let direction = Direction::try_from(buf[2])?;
-        let folder_uid = u64::from_be_bytes(buf[3..11].try_into().unwrap());
-        let folder_uid = if direction == Direction::FolderUp {
-            trace!("folder uid will be ignored since direction .. ");
-            None
-        } else {
-            Some(folder_uid)
-        };
-
-        Ok(Self { uid_counter, direction, folder_uid })
+        match direction {
+            Direction::FolderUp => Ok(Self { uid_counter, folder_uid: None }),
+            Direction::FolderDown => {
+                let folder_uid =
+                    NonZeroU64::new(u64::from_be_bytes(buf[3..11].try_into().unwrap()))
+                        .ok_or(Error::InvalidMessage)?;
+                Ok(Self { uid_counter, folder_uid: Some(folder_uid) })
+            }
+        }
     }
 }
 
@@ -74,16 +79,13 @@ impl Encodable for ChangePathCommand {
     }
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
-        if !self.is_valid() {
-            return Err(Error::InvalidMessage);
-        }
         if buf.len() < self.encoded_len() {
             return Err(Error::BufferLengthOutOfRange);
         }
 
-        buf[0..2].copy_from_slice(&self.uid_counter.to_be_bytes());
-        buf[2] = u8::from(&self.direction);
-        buf[3..11].copy_from_slice(&self.folder_uid.unwrap_or(0).to_be_bytes());
+        buf[0..2].copy_from_slice(&self.uid_counter().to_be_bytes());
+        buf[2] = u8::from(&self.direction());
+        buf[3..11].copy_from_slice(&self.folder_uid.map_or(0, |id| id.into()).to_be_bytes());
 
         Ok(())
     }
@@ -175,30 +177,19 @@ mod tests {
     #[fuchsia::test]
     /// Encoding a GetFolderItemsCommand successfully produces a byte buffer.
     fn test_change_path_command_encode() {
-        let cmd = ChangePathCommand::new(1, Direction::FolderDown, Some(300))
-            .expect("should have initialized");
+        let cmd = ChangePathCommand::new(1, Some(300)).expect("should be valid");
 
         assert_eq!(cmd.encoded_len(), ChangePathCommand::PACKET_SIZE);
         let mut buf = vec![0; cmd.encoded_len()];
         cmd.encode(&mut buf[..]).expect("should have encoded successfully");
         assert_eq!(buf, &[0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2C]);
-    }
 
-    #[fuchsia::test]
-    /// Encoding a GetFolderItemsCommand successfully produces a byte buffer.
-    fn test_change_path_command_encode_invalid() {
-        // Folder Up command with folder UID.
-        let _ = ChangePathCommand::new(1, Direction::FolderUp, Some(300))
-            .expect_err("should not have initialized successfully");
+        let cmd = ChangePathCommand::new(1, None).expect("should be valid");
 
-        // Folder Up command with some folder UID.
-        let cmd = ChangePathCommand {
-            uid_counter: 1,
-            direction: Direction::FolderUp,
-            folder_uid: Some(300),
-        };
+        assert_eq!(cmd.encoded_len(), ChangePathCommand::PACKET_SIZE);
         let mut buf = vec![0; cmd.encoded_len()];
-        let _ = cmd.encode(&mut buf[..]).expect_err("encode should have failed");
+        cmd.encode(&mut buf[..]).expect("should have encoded successfully");
+        assert_eq!(buf, &[0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
     #[fuchsia::test]
@@ -207,23 +198,26 @@ mod tests {
         // Folder down with folder UID.
         let buf = [0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2C];
         let cmd = ChangePathCommand::decode(&buf[..]).expect("should have decoded successfully");
-        assert_eq!(cmd.uid_counter, 1);
-        assert_eq!(cmd.direction, Direction::FolderDown);
-        assert_eq!(cmd.folder_uid, Some(300));
+        assert_eq!(cmd.uid_counter(), 1);
+        assert_eq!(cmd.direction(), Direction::FolderDown);
+        assert_eq!(
+            cmd,
+            ChangePathCommand { uid_counter: 1, folder_uid: Some(NonZeroU64::new(300).unwrap()) }
+        );
 
         // Folder up with zero folder UID.
         let buf = [0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         let cmd = ChangePathCommand::decode(&buf[..]).expect("should have decoded successfully");
-        assert_eq!(cmd.uid_counter, 1);
-        assert_eq!(cmd.direction, Direction::FolderUp);
-        assert_eq!(cmd.folder_uid, None);
+        assert_eq!(cmd.uid_counter(), 1);
+        assert_eq!(cmd.direction(), Direction::FolderUp);
+        assert_eq!(cmd, ChangePathCommand { uid_counter: 1, folder_uid: None });
 
         // Folder up with non-zero folder UID.
         let buf = [0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x2C];
         let cmd = ChangePathCommand::decode(&buf[..]).expect("should have decoded successfully");
-        assert_eq!(cmd.uid_counter, 1);
-        assert_eq!(cmd.direction, Direction::FolderUp);
-        assert_eq!(cmd.folder_uid, None); // folder uid is ignored.
+        assert_eq!(cmd.uid_counter(), 1);
+        assert_eq!(cmd.direction(), Direction::FolderUp);
+        assert_eq!(cmd, ChangePathCommand { uid_counter: 1, folder_uid: None });
     }
 
     #[fuchsia::test]
