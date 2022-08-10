@@ -64,6 +64,7 @@ class Driver {
   async_dispatcher_t* dispatcher() { return dispatcher_; }
   Sysmem& sysmem() { return sysmem_; }
   driver::Logger& logger() { return logger_; }
+  Interop& interop() { return interop_; }
 
  private:
   // Run the driver at `driver_path`.

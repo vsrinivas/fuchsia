@@ -81,48 +81,44 @@ class RootDriver {
 
   promise<void, fdf::wire::NodeError> AddChild() {
     child_ = compat::Child("v1", 0, "root/v1", compat::MetadataMap());
-    return interop_.ExportChild(&child_.value(), nullptr)
-        .or_else([](const zx_status_t& status) {
-          return fpromise::error(fdf::wire::NodeError::kInternal);
-        })
-        .and_then([this]() mutable {
-          fidl::Arena arena;
+    zx_status_t status = interop_.AddToOutgoing(&child_.value(), nullptr);
+    if (status != ZX_OK) {
+      return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
+    }
 
-          // Set the symbols of the node that a driver will have access to.
-          compat_device_.name = "v1";
-          compat_device_.proto_ops.ops = reinterpret_cast<void*>(0xabcdef);
-          fdf::wire::NodeSymbol symbol(arena);
-          symbol.set_name(arena, compat::kDeviceSymbol)
-              .set_address(arena, reinterpret_cast<uint64_t>(&compat_device_));
+    fidl::Arena arena;
 
-          // Set the properties of the node that a driver will bind to.
-          fdf::wire::NodeProperty property(arena);
-          property.set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
-              .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(
-                                    bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
-          auto offers = child_->CreateOffers(arena);
+    // Set the symbols of the node that a driver will have access to.
+    compat_device_.name = "v1";
+    compat_device_.proto_ops.ops = reinterpret_cast<void*>(0xabcdef);
+    fdf::wire::NodeSymbol symbol(arena);
+    symbol.set_name(arena, compat::kDeviceSymbol)
+        .set_address(arena, reinterpret_cast<uint64_t>(&compat_device_));
 
-          fdf::wire::NodeAddArgs args(arena);
-          args.set_name(arena, "v1")
-              .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(&symbol, 1))
-              .set_offers(arena,
-                          fidl::VectorView<fuchsia_component_decl::wire::Offer>::FromExternal(
-                              offers.data(), offers.size()))
-              .set_properties(
-                  arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(&property, 1));
+    // Set the properties of the node that a driver will bind to.
+    fdf::wire::NodeProperty property(arena);
+    property.set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
+        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(
+                              bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+    auto offers = child_->CreateOffers(arena);
 
-          // Create endpoints of the `NodeController` for the node.
-          auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
-          if (endpoints.is_error()) {
-            return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
-          }
+    fdf::wire::NodeAddArgs args(arena);
+    args.set_name(arena, "v1")
+        .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(&symbol, 1))
+        .set_offers(arena, fidl::VectorView<fuchsia_component_decl::wire::Offer>::FromExternal(
+                               offers.data(), offers.size()))
+        .set_properties(arena,
+                        fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(&property, 1));
 
-          auto task = driver::AddChild(node_, std::move(args), std::move(endpoints->server), {})
-                          .and_then([this, client = std::move(endpoints->client)]() mutable {
-                            controller_.Bind(std::move(client), dispatcher_);
-                          });
-          executor_.schedule_task(std::move(task));
-          return fpromise::make_result_promise<void, fdf::wire::NodeError>(fpromise::ok());
+    // Create endpoints of the `NodeController` for the node.
+    auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
+    if (endpoints.is_error()) {
+      return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
+    }
+
+    return driver::AddChild(node_, std::move(args), std::move(endpoints->server), {})
+        .and_then([this, client = std::move(endpoints->client)]() mutable {
+          controller_.Bind(std::move(client), dispatcher_);
         });
   }
 

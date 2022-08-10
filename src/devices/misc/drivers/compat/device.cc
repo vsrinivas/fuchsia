@@ -233,7 +233,6 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     device->compat_child_.compat_device().set_dir(
         fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)));
   }
-  auto device_ptr = device.get();
 
   // Add the metadata from add_args:
   for (size_t i = 0; i < zx_args->metadata_count; i++) {
@@ -248,23 +247,94 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   device->properties_ = CreateProperties(arena_, logger_, zx_args);
   device->device_flags_ = zx_args->flags;
 
-  children_.push_back(std::move(device));
+  bool has_init = HasOp(device->ops_, &zx_protocol_device_t::init);
+  if (!has_init) {
+    device->InitReply(ZX_OK);
+  }
 
   if (out) {
-    *out = device_ptr->ZxDevice();
+    *out = device->ZxDevice();
   }
-
-  // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
-  // init task after adding the device.
-  if (HasOp(device_ptr->ops_, &zx_protocol_device_t::init)) {
-    executor_.schedule_task(fpromise::make_promise([device_ptr]() {
-                              device_ptr->ops_->init(device_ptr->compat_symbol_.context);
-                            }).wrap_with(device_ptr->scope_));
-  } else {
-    device_ptr->InitReply(ZX_OK);
-  }
-
+  children_.push_back(std::move(device));
   return ZX_OK;
+}
+
+fpromise::promise<void, zx_status_t> Device::Export() {
+  zx_status_t status = driver()->interop().AddToOutgoing(&compat_child_, dev_vnode());
+  if (status != ZX_OK) {
+    FDF_LOG(INFO, "Device %s failed to add to outgoing directory: %s", topological_path_.c_str(),
+            zx_status_get_string(status));
+    return fpromise::make_error_promise(status);
+  }
+
+  bool has_init = HasOp(ops_, &zx_protocol_device_t::init);
+  auto options = fuchsia_device_fs::wire::ExportOptions();
+  if (has_init) {
+    options |= fuchsia_device_fs::wire::ExportOptions::kInvisible;
+  }
+
+  status = driver()->interop().ExportToDevfsSync(&compat_child_, options);
+  if (status != ZX_OK) {
+    FDF_LOG(INFO, "Device %s failed to add to devfs: %s", topological_path_.c_str(),
+            zx_status_get_string(status));
+    return fpromise::make_error_promise(status);
+  }
+  // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
+  // this.
+  FDF_LOG(DEBUG, "Created /dev/%s", topological_path().data());
+
+  // If the device is non-bindable we want to create the node now. This lets the driver
+  // immediately create more children once we return.
+  if (device_flags_ & DEVICE_ADD_NON_BINDABLE) {
+    status = CreateNode();
+    if (status != ZX_OK) {
+      FDF_LOG(INFO, "Device %s failed to create NON_BINDABLE node: %s", topological_path_.c_str(),
+              zx_status_get_string(status));
+      return fpromise::make_error_promise(status);
+    }
+  }
+
+  // Wait for the device to initialize, then export to dev, then
+  // create the device's Node.
+  return fpromise::make_promise([has_init, this]() {
+           // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
+           // init task after adding the device.
+           if (has_init) {
+             ops_->init(compat_symbol_.context);
+           }
+           return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+         })
+      .and_then(WaitForInitToComplete())
+      .and_then([has_init, interop = &driver()->interop(), this]() {
+        // Make the device visible if it has an init function.
+        if (has_init) {
+          auto status = interop->devfs_exporter().exporter().sync()->MakeVisible(
+              fidl::StringView::FromExternal(topological_path()));
+          if (status->is_error()) {
+            return fpromise::make_error_promise(status->error_value());
+          }
+        }
+
+        // Create the node now that we are initialized.
+        // If we were non bindable, we would've made the node earlier.
+        if (!(device_flags_ & DEVICE_ADD_NON_BINDABLE)) {
+          zx_status_t status = CreateNode();
+          if (status != ZX_OK) {
+            FDF_LOG(ERROR, "Failed to CreateNode for device: %s: %s", Name(),
+                    zx_status_get_string(status));
+            return fpromise::make_error_promise(status);
+          }
+        }
+
+        return fpromise::make_result_promise(fpromise::result<void, zx_status_t>());
+      })
+      .or_else([this](const zx_status_t& status) {
+        FDF_LOG(ERROR, "Failed to export /dev/%s to devfs: %s", topological_path().data(),
+                zx_status_get_string(status));
+        Remove();
+        return fpromise::make_error_promise(status);
+      })
+      .wrap_with(scope());
 }
 
 zx_status_t Device::CreateNode() {

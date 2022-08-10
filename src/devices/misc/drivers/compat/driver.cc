@@ -577,52 +577,17 @@ void Driver::LoadFirmwareAsync(Device* device, const char* filename,
 }
 
 zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out) {
-  // Not all devices supply an valid "out" argument, but some that do need "out" to be set
-  // immediately, because we call DdkInit() from within parent->Add().
   zx_device_t* child;
-  zx_device_t** ptr = &child;
-  if (out) {
-    ptr = out;
-  }
-  zx_status_t status = parent->Add(args, ptr);
+  zx_status_t status = parent->Add(args, &child);
   if (status != ZX_OK) {
     FDF_LOG(ERROR, "Failed to add device %s: %s", args->name, zx_status_get_string(status));
     return status;
   }
   if (out) {
-    child = *out;
+    *out = child;
   }
 
-  // Wait for the device to initialize, then export to dev, then
-  // create the device's Node.
-  auto task = child->WaitForInitToComplete()
-                  .and_then([this, child]() {
-                    return interop_.ExportChild(&child->compat_child(), child->dev_vnode());
-                  })
-                  .and_then([this, child]() {
-                    // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
-                    // this.
-                    FDF_LOG(DEBUG, "Created /dev/%s", child->topological_path().data());
-                    // We have to create the node for the device after we've exported the
-                    // /dev/ entry. Otherwise, we will race any child that's bound to us
-                    // to see who can export to /dev/ first.
-                    zx_status_t status = child->CreateNode();
-                    if (status != ZX_OK) {
-                      FDF_LOG(ERROR, "Failed to CreateNode for device: %s: %s", child->Name(),
-                              zx_status_get_string(status));
-                      child->Remove();
-                    }
-                  })
-                  .or_else([this, child](const zx_status_t& status) {
-                    FDF_LOG(ERROR, "Failed to export /dev/%s to devfs: %s",
-                            child->topological_path().data(), zx_status_get_string(status));
-                    child->Remove();
-                    return ok();
-                  })
-                  .wrap_with(child->scope())
-                  .wrap_with(scope_);
-  executor_.schedule_task(std::move(task));
-
+  executor_.schedule_task(child->Export());
   return ZX_OK;
 }
 

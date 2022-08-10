@@ -12,6 +12,7 @@
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <fidl/fuchsia.scheduler/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdf/internal.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
@@ -218,6 +219,15 @@ class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Expor
     completer.ReplySuccess();
   }
 
+  void ExportOptions(ExportOptionsRequestView request,
+                     ExportOptionsCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+  }
+
+  void MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+  }
+
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: TestExporter::%s", name.data());
   }
@@ -242,6 +252,8 @@ class DriverTest : public gtest::TestLoopFixture {
         0, "compat-test", [this](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown_.Signal(); });
     EXPECT_EQ(ZX_OK, dispatcher.status_value());
     dispatcher_ = *std::move(dispatcher);
+
+    fidl_loop_.StartThread("fidl-server-thread");
   }
 
   void TearDown() override {
@@ -313,7 +325,7 @@ class DriverTest : public gtest::TestLoopFixture {
       svc->AddEntry(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>,
                     fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
                       fidl::ServerEnd<fuchsia_device_fs::Exporter> server_end(std::move(server));
-                      fidl::BindServer(dispatcher(), std::move(server_end), &exporter_);
+                      fidl::BindServer(fidl_loop_.dispatcher(), std::move(server_end), &exporter_);
                       return ZX_OK;
                     }));
 
@@ -415,6 +427,10 @@ class DriverTest : public gtest::TestLoopFixture {
   TestDirectory pkg_directory_;
   TestExporter exporter_;
   std::optional<fs::ManagedVfs> vfs_;
+
+  // This loop is for FIDL servers that get called in a sync fashion from
+  // the driver.
+  async::Loop fidl_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fdf::Dispatcher dispatcher_;
   libsync::Completion dispatcher_shutdown_;

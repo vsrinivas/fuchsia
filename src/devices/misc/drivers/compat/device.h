@@ -59,6 +59,12 @@ class Device : public std::enable_shared_from_this<Device> {
   // Functions to implement the DFv1 device API.
   zx_status_t Add(device_add_args_t* zx_args, zx_device_t** out);
 
+  // This function will add the device's capabilities into the outgoing directory.
+  // It will export the device to devfs. It will also call the necessary
+  // functions after exporting, like creating the Node and calling init.
+  // This should be called after a device is added.
+  fpromise::promise<void, zx_status_t> Export();
+
   // Remove this device. This call will make sure that DFv1 unbind and release
   // are called in the correct order. This promise will finish once the device
   // has been completely removed.

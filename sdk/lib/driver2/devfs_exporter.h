@@ -28,12 +28,18 @@ class DevfsExporter {
                                               std::string_view devfs_path,
                                               uint32_t protocol_id = 0) const;
 
+  zx_status_t ExportSync(std::string_view service_path, std::string_view devfs_path,
+                         fuchsia_device_fs::wire::ExportOptions options,
+                         uint32_t protocol_id = 0) const;
+
   // Exports `T` to `devfs_path`, with an optionally associated `protocol_id`.
   template <typename T>
   fpromise::promise<void, zx_status_t> Export(std::string_view devfs_path,
                                               uint32_t protocol_id = 0) const {
     return Export(fidl::DiscoverableProtocolName<T>, devfs_path, protocol_id);
   }
+
+  fidl::WireSharedClient<fuchsia_device_fs::Exporter>& exporter() { return exporter_; }
 
  private:
   DevfsExporter(async_dispatcher_t* dispatcher,

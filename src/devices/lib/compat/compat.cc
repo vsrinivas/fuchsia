@@ -145,8 +145,8 @@ zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParen
       fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(result.value()), dispatcher));
 }
 
-fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
-                                                          fbl::RefPtr<fs::Vnode> dev_node) {
+zx_status_t Interop::AddToOutgoing(Child* child, fbl::RefPtr<fs::Vnode> dev_node) {
+  // Add the service instance to outgoing.
   component::ServiceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
   auto device = [this,
@@ -156,12 +156,14 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
   };
   zx::status<> status = compat_service.add_device(std::move(device));
   if (status.is_error()) {
-    return fpromise::make_error_promise(status.error_value());
+    return status.error_value();
   }
   status = outgoing_->AddService<fuchsia_driver_compat::Service>(std::move(handler), child->name());
   if (status.is_error()) {
-    return fpromise::make_error_promise(status.error_value());
+    return status.error_value();
   }
+
+  // Add the ServiceOffer to the child's offers.
   ServiceOffer instance_offer;
   instance_offer.service_name = fuchsia_driver_compat::Service::Name,
   instance_offer.renamed_instances.push_back(ServiceOffer::RenamedInstance{
@@ -177,11 +179,12 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
 
   // Expose the child in /dev/.
   if (!dev_node) {
-    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+    return ZX_OK;
   }
+
   zx_status_t add_status = devfs_exports_->AddEntry(child->name(), dev_node);
   if (add_status != ZX_OK) {
-    return fpromise::make_error_promise<zx_status_t>(add_status);
+    return add_status;
   }
   // If the child goes out of scope, we should close the devfs connection.
   child->AddCallback(std::make_shared<fit::deferred_callback>(
@@ -190,8 +193,16 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
         vfs_->CloseAllConnectionsForVnode(*dev_node, {});
         devfs_exports_->RemoveEntry(name);
       }));
+  return ZX_OK;
+}
 
+fpromise::promise<void, zx_status_t> Interop::ExportToDevfs(Child* child) {
   return exporter_.Export(child->name(), child->topological_path(), child->proto_id());
+}
+
+zx_status_t Interop::ExportToDevfsSync(Child* child,
+                                       fuchsia_device_fs::wire::ExportOptions options) {
+  return exporter_.ExportSync(child->name(), child->topological_path(), options, child->proto_id());
 }
 
 std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::ArenaBase& arena) {

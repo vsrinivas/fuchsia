@@ -112,8 +112,17 @@ class Interop {
   static zx::status<Interop> Create(async_dispatcher_t* dispatcher, const driver::Namespace* ns,
                                     component::OutgoingDirectory* outgoing);
 
-  // Take a Child, and export its fuchsia.driver.compat service, and it export it to devfs.
-  fpromise::promise<void, zx_status_t> ExportChild(Child* child, fbl::RefPtr<fs::Vnode> dev_node);
+  // Take a Child, and export its fuchsia.driver.compat service and dev_node to the outgoing
+  // directory. This does not export the child to devfs.
+  zx_status_t AddToOutgoing(Child* child, fbl::RefPtr<fs::Vnode> dev_node);
+
+  // Take a Child, and export it to devfs.
+  fpromise::promise<void, zx_status_t> ExportToDevfs(Child* child);
+
+  // Take a Child, and export it to devfs synchronously.
+  zx_status_t ExportToDevfsSync(Child* child, fuchsia_device_fs::wire::ExportOptions options);
+
+  driver::DevfsExporter& devfs_exporter() { return exporter_; }
 
  private:
   friend class Child;

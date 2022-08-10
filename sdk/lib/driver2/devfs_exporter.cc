@@ -107,4 +107,32 @@ fpromise::promise<void, zx_status_t> DevfsExporter::Export(std::string_view serv
                  protocol_id]() { return ExportImpl(service_path, devfs_path, protocol_id); });
 }
 
+zx_status_t DevfsExporter::ExportSync(std::string_view service_path, std::string_view devfs_path,
+                                      fuchsia_device_fs::wire::ExportOptions options,
+                                      uint32_t protocol_id) const {
+  // Get a connection to svc_dir.
+  auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (svc_endpoints.is_error()) {
+    return svc_endpoints.status_value();
+  }
+
+  auto result =
+      svc_dir_->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
+                      fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel()));
+  if (!result.ok()) {
+    return result.status();
+  }
+
+  auto response = exporter_.sync()->ExportOptions(
+      std::move(svc_endpoints->client), fidl::StringView::FromExternal(service_path),
+      fidl::StringView::FromExternal(devfs_path), protocol_id, options);
+  if (!response.ok()) {
+    return response.error().status();
+  }
+  if (!response->is_ok()) {
+    return response->error_value();
+  }
+  return ZX_OK;
+}
+
 }  // namespace driver

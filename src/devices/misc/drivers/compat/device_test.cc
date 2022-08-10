@@ -428,9 +428,10 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
 
-  // Check that the init hook was run.
+  // Manually call the init op.
   EXPECT_FALSE(child_ctx);
-  ASSERT_TRUE(RunLoopUntilIdle());
+  child_ops.init(&child_ctx);
+  EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(child_ctx);
 
   // Check that init promise hasn't finished yet.
