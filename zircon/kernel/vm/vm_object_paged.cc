@@ -64,6 +64,10 @@ VmObjectPaged::~VmObjectPaged() {
 
   RemoveFromGlobalList();
 
+  if (options_ & kAlwaysPinned) {
+    Unpin(0, size());
+  }
+
   Guard<CriticalMutex> guard{&lock_};
 
   AssertHeld(hierarchy_state_ptr_->lock_ref());
@@ -191,6 +195,11 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
                                         fbl::RefPtr<VmObjectPaged>* obj) {
   DEBUG_ASSERT(!(options & (kContiguous | kCanBlockOnPageRequests)));
 
+  // Cannot be resizable and pinned, otherwise we will lose track of the pinned range.
+  if ((options & kResizable) && (options & kAlwaysPinned)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   if (pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_WAIT) {
     options |= kCanBlockOnPageRequests;
   }
@@ -226,6 +235,13 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
     vmo->cow_pages_ = ktl::move(cow_pages);
   }
   vmo->AddToGlobalList();
+
+  if (options & kAlwaysPinned) {
+    status = vmo->CommitRangePinned(0, size, true);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
 
   *obj = ktl::move(vmo);
 
@@ -376,7 +392,7 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
 
 zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
                                           uint64_t size, fbl::RefPtr<VmObjectPaged>* obj) {
-  if (options & (kDiscardable | kCanBlockOnPageRequests)) {
+  if (options & (kDiscardable | kCanBlockOnPageRequests | kAlwaysPinned)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -397,6 +413,7 @@ zx_status_t VmObjectPaged::CreateWithSourceCommon(fbl::RefPtr<PageSource> src,
                                                   uint64_t size, fbl::RefPtr<VmObjectPaged>* obj) {
   // Caller must check that size is page aligned.
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+  DEBUG_ASSERT(!(options & kAlwaysPinned));
 
   fbl::AllocChecker ac;
   auto state = fbl::AdoptRef<VmHierarchyState>(new (&ac) VmHierarchyState);

@@ -36,6 +36,7 @@ class VmObjectPaged final : public VmObject {
   static constexpr uint32_t kContiguous = (1u << 1);
   static constexpr uint32_t kSlice = (1u << 3);
   static constexpr uint32_t kDiscardable = (1u << 4);
+  static constexpr uint32_t kAlwaysPinned = (1u << 5);
   static constexpr uint32_t kCanBlockOnPageRequests = (1u << 31);
 
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
