@@ -19,6 +19,7 @@ standalone_libraries = [
   "empty_struct.test.fidl",
   "encapsulated_structs.test.fidl",
   "enum.test.fidl",
+  "driver_service.test.fidl",
   "error.test.fidl",
   "escaping.test.fidl",
   "experimental_maybe_from_type_alias.test.fidl",

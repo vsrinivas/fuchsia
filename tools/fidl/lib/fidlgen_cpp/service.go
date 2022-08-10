@@ -30,7 +30,8 @@ var _ namespaced = (*Service)(nil)
 type ServiceMember struct {
 	Attributes
 	nameVariants
-	ProtocolType nameVariants
+	ProtocolType      nameVariants
+	ProtocolTransport Transport
 }
 
 func (c *compiler) compileService(val fidlgen.Service) *Service {
@@ -48,8 +49,9 @@ func (c *compiler) compileService(val fidlgen.Service) *Service {
 
 func (c *compiler) compileServiceMember(val fidlgen.ServiceMember) ServiceMember {
 	return ServiceMember{
-		Attributes:   Attributes{val.Attributes},
-		nameVariants: serviceMemberContext.transform(val.Name),
-		ProtocolType: c.compileNameVariants(val.Type.Identifier),
+		Attributes:        Attributes{val.Attributes},
+		nameVariants:      serviceMemberContext.transform(val.Name),
+		ProtocolType:      c.compileNameVariants(val.Type.Identifier),
+		ProtocolTransport: *transports[val.Type.ProtocolTransport],
 	}
 }

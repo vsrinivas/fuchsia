@@ -18,6 +18,8 @@ driver_handle_async.dart.golden
 driver_handle_test.dart.golden
 driver_one_way_async.dart.golden
 driver_one_way_test.dart.golden
+driver_service_async.dart.golden
+driver_service_test.dart.golden
 driver_two_way_async.dart.golden
 driver_two_way_test.dart.golden
 empty_struct_async.dart.golden

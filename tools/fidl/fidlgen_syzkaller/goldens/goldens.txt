@@ -9,6 +9,7 @@ consts.syz.txt.golden
 doc_comments.syz.txt.golden
 driver_handle.syz.txt.golden
 driver_one_way.syz.txt.golden
+driver_service.syz.txt.golden
 driver_two_way.syz.txt.golden
 empty_struct.syz.txt.golden
 encapsulated_structs.syz.txt.golden

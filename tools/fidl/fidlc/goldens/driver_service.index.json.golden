@@ -1,0 +1,34 @@
+{
+  "name": "test.driverservice",
+  "lib_declarations": [
+    {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+      "data": "test.driverservice",
+      "start_offset": 172,
+      "end_offset": 190
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [],
+  "unions": [],
+  "tables": [],
+  "structs": [],
+  "protocols": [
+    {
+      "identifier": "test.driverservice/SomeDriverProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+        "data": "SomeDriverProtocol",
+        "start_offset": 223,
+        "end_offset": 241
+      },
+      "methods": [],
+      "composed_protocols": []
+    }
+  ]
+}

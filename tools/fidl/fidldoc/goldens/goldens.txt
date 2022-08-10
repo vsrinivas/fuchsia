@@ -11,6 +11,7 @@ consts.md.golden
 doc_comments.md.golden
 driver_handle.md.golden
 driver_one_way.md.golden
+driver_service.md.golden
 driver_two_way.md.golden
 empty_struct.md.golden
 encapsulated_structs.md.golden

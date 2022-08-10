@@ -31,6 +31,9 @@ driver_handle.tables.c.golden
 driver_one_way.index.json.golden
 driver_one_way.json.golden
 driver_one_way.tables.c.golden
+driver_service.index.json.golden
+driver_service.json.golden
+driver_service.tables.c.golden
 driver_two_way.index.json.golden
 driver_two_way.json.golden
 driver_two_way.tables.c.golden

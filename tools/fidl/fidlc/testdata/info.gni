@@ -140,6 +140,20 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "driver_service"
+    target = "//tools/fidl/fidlc/testdata:test.driverservice"
+    build_denylist = [
+      # TODO(fxbug.dev/105845): These bindings don't support driver protocols in
+      # services.
+      "fidlgen_dart",
+      "fidlgen_go",
+      "fidlgen_hlcpp",
+      "fidlgen_libfuzzer",
+      "fidlgen_rust",
+      "fidlgen_syzkaller",
+    ]
+  },
+  {
     name = "driver_two_way"
     target = "//tools/fidl/fidlc/testdata:test.drivertwoway"
     build_denylist = [

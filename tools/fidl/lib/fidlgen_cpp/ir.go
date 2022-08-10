@@ -273,6 +273,35 @@ func (r *Root) ProtocolsForTransport() func(string) []*Protocol {
 	}
 }
 
+// ServicesForTransport returns services containing exclusively member
+// protocols defined over the specified transport.
+func (r *Root) ServicesForTransport() func(string) []*Service {
+	return func(t string) []*Service {
+		var ss []*Service
+		for _, k := range r.Services() {
+			s := k.(*Service)
+			allOk := true
+			var associatedTransport string
+			for _, m := range s.Members {
+				if m.ProtocolTransport.Name != t {
+					allOk = false
+				}
+				if associatedTransport == "" {
+					associatedTransport = m.ProtocolTransport.Name
+				}
+				if associatedTransport != m.ProtocolTransport.Name {
+					fidlgen.TemplateFatalf("Mismatched transports: %s, %s. See fxbug.dev/106184",
+						associatedTransport, m.ProtocolTransport.Name)
+				}
+			}
+			if allOk {
+				ss = append(ss, s)
+			}
+		}
+		return ss
+	}
+}
+
 func (r *Root) LegacyIncludeDir() string {
 	return formatLibraryLegacyPath(r.Library) + "/cpp"
 }

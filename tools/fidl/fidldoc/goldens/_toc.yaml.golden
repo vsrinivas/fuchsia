@@ -25,6 +25,8 @@ toc:
     path: /test.driverhandle
   - title: test.driveroneway
     path: /test.driveroneway
+  - title: test.driverservice
+    path: /test.driverservice
   - title: test.drivertwoway
     path: /test.drivertwoway
   - title: test.emptystruct

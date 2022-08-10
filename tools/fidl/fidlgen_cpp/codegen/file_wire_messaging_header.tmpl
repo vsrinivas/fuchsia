@@ -38,14 +38,14 @@ fidl/{{ .LibraryDots }}/cpp/wire_messaging.h
   {{- range (call .ProtocolsForTransport "Channel") }}
     {{ template "Protocol:ForwardDeclaration:WireMessagingHeader" . }}
   {{- end }}
-  {{- range .Services }}
+  {{- range (call .ServicesForTransport "Channel") }}
     {{ template "Service:ForwardDeclaration:WireMessagingHeader" . }}
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Channel") }}
     {{ template "Protocol:WireMessagingHeader" . }}
   {{- end }}
-  {{- range .Services }}
+  {{- range (call .ServicesForTransport "Channel") }}
     {{ template "Service:WireMessagingHeader" . }}
   {{- end }}
 

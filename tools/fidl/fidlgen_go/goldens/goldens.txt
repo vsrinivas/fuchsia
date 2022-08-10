@@ -9,6 +9,7 @@ consts.go.golden
 doc_comments.go.golden
 driver_handle.go.golden
 driver_one_way.go.golden
+driver_service.go.golden
 driver_two_way.go.golden
 empty_struct.go.golden
 encapsulated_structs.go.golden

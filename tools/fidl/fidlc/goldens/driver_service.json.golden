@@ -1,0 +1,116 @@
+{
+  "name": "test.driverservice",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "protocol_declarations": [
+    {
+      "name": "test.driverservice/SomeDriverProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+        "line": 7,
+        "column": 10,
+        "length": 18
+      },
+      "maybe_attributes": [
+        {
+          "name": "transport",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "Driver",
+                "expression": "\"Driver\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "Driver",
+                  "expression": "\"Driver\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+                "line": 6,
+                "column": 12,
+                "length": 8
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+            "line": 6,
+            "column": 1,
+            "length": 20
+          }
+        }
+      ],
+      "composed_protocols": [],
+      "methods": []
+    }
+  ],
+  "service_declarations": [
+    {
+      "name": "test.driverservice/DriverOnlyService",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+        "line": 9,
+        "column": 9,
+        "length": 17
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.driverservice/SomeDriverProtocol",
+            "nullable": false,
+            "protocol_transport": "Driver",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "member",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_service.test.fidl",
+            "line": 10,
+            "column": 5,
+            "length": 6
+          }
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "external_struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "new_type_declarations": [],
+  "declaration_order": [
+    "test.driverservice/SomeDriverProtocol",
+    "test.driverservice/DriverOnlyService"
+  ],
+  "declarations": {
+    "test.driverservice/SomeDriverProtocol": "protocol",
+    "test.driverservice/DriverOnlyService": "service"
+  }
+}
