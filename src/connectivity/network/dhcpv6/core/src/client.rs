@@ -3224,9 +3224,27 @@ impl<R: Rng> ClientStateMachine<R> {
 }
 
 #[cfg(test)]
+pub(crate) mod testconsts {
+    use net_declare::std_ip_v6;
+    use std::net::Ipv6Addr;
+
+    pub(crate) const INFINITY: u32 = u32::MAX;
+    pub(crate) const DNS_SERVERS: [Ipv6Addr; 2] =
+        [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
+    pub(crate) const CLIENT_ID: [u8; 18] =
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+    pub(crate) const MISMATCHED_CLIENT_ID: [u8; 18] =
+        [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37];
+    pub(crate) const TEST_SERVER_ID_LEN: usize = 3;
+    pub(crate) const SERVER_ID: [[u8; TEST_SERVER_ID_LEN]; 3] =
+        [[100, 101, 102], [110, 111, 112], [120, 121, 122]];
+}
+
+#[cfg(test)]
 pub(crate) mod testutil {
     use super::*;
     use packet::ParsablePacket;
+    use testconsts::*;
 
     pub(crate) fn to_configured_addresses(
         address_count: u32,
@@ -3323,7 +3341,7 @@ pub(crate) mod testutil {
 
     impl AdvertiseMessage {
         pub(crate) fn new_default(
-            server_id: Vec<u8>,
+            server_id: [u8; TEST_SERVER_ID_LEN],
             addresses: &[Ipv6Addr],
             dns_servers: &[Ipv6Addr],
             configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
@@ -3338,7 +3356,7 @@ pub(crate) mod testutil {
             let preferred_addresses_count =
                 compute_preferred_address_count(&addresses, &configured_addresses);
             AdvertiseMessage {
-                server_id,
+                server_id: server_id.to_vec(),
                 addresses,
                 dns_servers: dns_servers.to_vec(),
                 preference: 0,
@@ -3425,7 +3443,7 @@ pub(crate) mod testutil {
     /// is incorrect.
     pub(crate) fn request_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
-        server_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; TEST_SERVER_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
@@ -3464,7 +3482,7 @@ pub(crate) mod testutil {
         );
 
         let mut options = vec![
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&server_id),
             v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
         ];
@@ -3535,7 +3553,7 @@ pub(crate) mod testutil {
                *got_server_id == server_id &&
                collected_advertise.is_empty() &&
                *retrans_timeout == INITIAL_REQUEST_TIMEOUT &&
-               *retrans_count == 0&&
+               *retrans_count == 0 &&
                *solicit_max_rt == MAX_SOLICIT_TIMEOUT);
         (client, request_transaction_id)
     }
@@ -3550,7 +3568,7 @@ pub(crate) mod testutil {
     /// `assign_addresses_and_assert` panics if address assignment fails.
     pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
-        server_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; TEST_SERVER_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
@@ -3566,7 +3584,7 @@ pub(crate) mod testutil {
         );
 
         let mut options =
-            vec![v6::DhcpOption::ClientId(&client_id), v6::DhcpOption::ServerId(&server_id)];
+            vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
         if !expected_dns_servers.is_empty() {
             options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
         }
@@ -3668,7 +3686,7 @@ pub(crate) mod testutil {
         mut buf: &[u8],
         expected_msg_type: v6::MessageType,
         expected_client_id: &[u8; CLIENT_ID_LEN],
-        expected_server_id: Option<&[u8; CLIENT_ID_LEN]>,
+        expected_server_id: Option<&[u8; TEST_SERVER_ID_LEN]>,
         expected_oro: &[v6::OptionCode],
         expected_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
     ) {
@@ -3759,7 +3777,7 @@ pub(crate) mod testutil {
     /// sending a renew fails.
     pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
-        server_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; TEST_SERVER_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         rng: R,
@@ -3852,10 +3870,8 @@ mod tests {
     use packet::ParsablePacket;
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
+    use testconsts::*;
     use testutil::TestIdentityAssociation;
-
-    const INFINITY: u32 = u32::MAX;
-    const DNS_SERVERS: [Ipv6Addr; 2] = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -3906,7 +3922,7 @@ mod tests {
 
             let test_dhcp_refresh_time = 42u32;
             let options = [
-                v6::DhcpOption::ServerId(&[1, 2, 3]),
+                v6::DhcpOption::ServerId(&SERVER_ID[0]),
                 v6::DhcpOption::InformationRefreshTime(test_dhcp_refresh_time),
                 v6::DhcpOption::DnsServers(&DNS_SERVERS),
             ];
@@ -3976,7 +3992,7 @@ mod tests {
 
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
-        let options = [v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let options = [v6::DhcpOption::ServerId(&SERVER_ID[0])];
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
@@ -4104,7 +4120,7 @@ mod tests {
         let configured_addresses = testutil::to_configured_addresses(2, vec![preferred_address]);
 
         let advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[preferred_address, std_ip_v6!("::ffff:c00a:2ff")],
             &[],
             &configured_addresses,
@@ -4114,7 +4130,7 @@ mod tests {
         // Advertise is not complete: does not contain the solicited address
         // count.
         let advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[preferred_address],
             &[],
             &configured_addresses,
@@ -4124,7 +4140,7 @@ mod tests {
         // Advertise is not complete: does not contain the solicited preferred
         // address.
         let advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[std_ip_v6!("::ffff:c00a:3ff"), std_ip_v6!("::ffff:c00a:4ff")],
             &[],
             &configured_addresses,
@@ -4135,7 +4151,7 @@ mod tests {
         // the requested options.
         let options_to_request = [v6::OptionCode::DnsServers];
         let advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[preferred_address, std_ip_v6!("::ffff:c00a:2ff")],
             &[std_ip_v6!("::fe80:1:2")],
             &configured_addresses,
@@ -4150,13 +4166,13 @@ mod tests {
 
         // `advertise2` is complete, `advertise1` is not.
         let advertise1 = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[preferred_address, std_ip_v6!("::ffff:c00a:2ff")],
             &[],
             &configured_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
-            vec![4, 5, 6],
+            SERVER_ID[1],
             &[preferred_address, std_ip_v6!("::ffff:c00a:3ff"), std_ip_v6!("::ffff:c00a:4ff")],
             &[],
             &configured_addresses,
@@ -4167,13 +4183,13 @@ mod tests {
         // hence `advertise2` is preferred even though it does not contain the
         // configured preferred address.
         let advertise1 = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[preferred_address],
             &[],
             &configured_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
-            vec![4, 5, 6],
+            SERVER_ID[1],
             &[std_ip_v6!("::ffff:c00a:5ff"), std_ip_v6!("::ffff:c00a:6ff")],
             &[],
             &configured_addresses,
@@ -4182,13 +4198,13 @@ mod tests {
 
         // Both advertise are complete, but `advertise1` was received first.
         let advertise1 = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[preferred_address, std_ip_v6!("::ffff:c00a:7ff"), std_ip_v6!("::ffff:c00a:8ff")],
             &[],
             &configured_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
-            vec![4, 5, 6],
+            SERVER_ID[1],
             &[preferred_address, std_ip_v6!("::ffff:c00a:9ff"), std_ip_v6!("::ffff:c00a:aff")],
             &[],
             &configured_addresses,
@@ -4197,8 +4213,8 @@ mod tests {
     }
 
     #[test_case(v6::DhcpOption::StatusCode(v6::StatusCode::Success.into(), ""); "status_code")]
-    #[test_case(v6::DhcpOption::ClientId(&[4, 5, 6]); "client_id")]
-    #[test_case(v6::DhcpOption::ServerId(&[1, 2, 3]); "server_id")]
+    #[test_case(v6::DhcpOption::ClientId(&CLIENT_ID); "client_id")]
+    #[test_case(v6::DhcpOption::ServerId(&SERVER_ID[0]); "server_id")]
     #[test_case(v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE); "preference")]
     #[test_case(v6::DhcpOption::SolMaxRt(*VALID_MAX_SOLICIT_TIMEOUT_RANGE.end()); "sol_max_rt")]
     #[test_case(v6::DhcpOption::DnsServers(&DNS_SERVERS); "dns_servers")]
@@ -4212,8 +4228,8 @@ mod tests {
         ))];
         let options = [
             v6::DhcpOption::StatusCode(v6::StatusCode::Success.into(), ""),
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
             v6::DhcpOption::SolMaxRt(*VALID_MAX_SOLICIT_TIMEOUT_RANGE.end()),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
@@ -4233,7 +4249,6 @@ mod tests {
 
     #[test]
     fn process_options_duplicate_ia_na_id() {
-        let client_id = v6::duid_uuid();
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             std_ip_v6!("::ffff:c00a:1ff"),
             60,
@@ -4242,8 +4257,8 @@ mod tests {
         ))];
         let iaid = v6::IAID::new(0);
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, 60, 60, &iana_options)),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, 60, 60, &iana_options)),
         ];
@@ -4253,63 +4268,61 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
             Err(OptionsError::DuplicateIaNaId(got_iaid, _, _)) if got_iaid == iaid
         );
     }
 
     #[test]
     fn process_options_missing_server_id() {
-        let client_id = v6::duid_uuid();
-        let options = [v6::DhcpOption::ClientId(&client_id)];
+        let options = [v6::DhcpOption::ClientId(&CLIENT_ID)];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
             Err(OptionsError::MissingServerId)
         );
     }
 
     #[test]
     fn process_options_missing_client_id() {
-        let options = [v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let options = [v6::DhcpOption::ServerId(&SERVER_ID[0])];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(v6::duid_uuid())),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
             Err(OptionsError::MissingClientId)
         );
     }
 
     #[test]
     fn process_options_mismatched_client_id() {
-        let client_id = v6::duid_uuid();
-        let mut wrong_client_id = client_id.clone();
-        wrong_client_id.iter_mut().for_each(|byte| *byte = u8::MAX - *byte);
-        let options =
-            [v6::DhcpOption::ClientId(&wrong_client_id), v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let options = [
+            v6::DhcpOption::ClientId(&MISMATCHED_CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+        ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
             Err(OptionsError::MismatchedClientId { got, want })
-                if got[..] == wrong_client_id && want == client_id
+                if got[..] == MISMATCHED_CLIENT_ID && want == CLIENT_ID
         );
     }
 
     #[test]
     fn process_options_unexpected_client_id() {
-        let client_id = v6::duid_uuid();
-        let options = [v6::DhcpOption::ClientId(&client_id), v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, [0, 1, 2], &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
@@ -4318,7 +4331,7 @@ mod tests {
         assert_matches!(
             process_options(&msg, ExchangeType::ReplyToInformationRequest, None),
             Err(OptionsError::UnexpectedClientId(got))
-                if got[..] == client_id
+                if got[..] == CLIENT_ID
         );
     }
 
@@ -4351,27 +4364,25 @@ mod tests {
         exchange_type: ExchangeType,
         opt: v6::DhcpOption<'a>,
     ) {
-        let client_id = v6::duid_uuid();
         let options =
-            [v6::DhcpOption::ClientId(&client_id), v6::DhcpOption::ServerId(&[1, 2, 3]), opt];
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0]), opt];
         let builder = v6::MessageBuilder::new(message_type, [0, 1, 2], &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, exchange_type, Some(client_id)),
+            process_options(&msg, exchange_type, Some(CLIENT_ID)),
             Err(OptionsError::InvalidOption(_))
         );
     }
 
     #[test]
     fn receive_complete_advertise_with_max_preference() {
-        let client_id = v6::duid_uuid();
         let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
-            client_id.clone(),
+            CLIENT_ID,
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -4385,8 +4396,8 @@ mod tests {
             &[],
         ))];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(42),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
@@ -4409,8 +4420,8 @@ mod tests {
             &[],
         ))];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[4, 5, 6]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(255),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
@@ -4463,12 +4474,11 @@ mod tests {
     #[test_case(60, INFINITY, false)]
     #[test_case(INFINITY, INFINITY, false)]
     fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
-        let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
         let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
-            client_id.clone(),
+            CLIENT_ID,
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -4495,8 +4505,8 @@ mod tests {
             &[],
         ))];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), t1, t2, &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
@@ -4544,11 +4554,10 @@ mod tests {
 
     #[test]
     fn select_first_server_while_retransmitting() {
-        let client_id = v6::duid_uuid();
         let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
-            client_id.clone(),
+            CLIENT_ID,
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -4587,8 +4596,8 @@ mod tests {
             &[],
         ))];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder =
@@ -4628,8 +4637,8 @@ mod tests {
     #[test]
     fn send_request() {
         let (mut _client, _transaction_id) = testutil::request_addresses_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![
                 TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
                 TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:2ff")),
@@ -4647,30 +4656,29 @@ mod tests {
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let advertised_addresses = [std_ip_v6!("::ffff:c00a:1ff")];
         let selected_advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &advertised_addresses,
             &[],
             &configured_addresses,
         );
         let mut collected_advertise = BinaryHeap::new();
         collected_advertise.push(AdvertiseMessage::new_default(
-            vec![4, 5, 6],
+            SERVER_ID[1],
             &[std_ip_v6!("::ffff:c00a:2ff")],
             &[],
             &configured_addresses,
         ));
         collected_advertise.push(AdvertiseMessage::new_default(
-            vec![7, 8, 9],
+            SERVER_ID[2],
             &[std_ip_v6!("::ffff:c00a:3ff")],
             &[],
             &configured_addresses,
         ));
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
-        let client_id = v6::duid_uuid();
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
-            client_id.clone(),
+            CLIENT_ID,
             configured_addresses.clone(),
             selected_advertise,
             &options_to_request[..],
@@ -4699,15 +4707,15 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if *server_id == vec![1, 2, 3] &&
+            }) if server_id[..] == SERVER_ID[0] &&
                   *got_addresses == expected_addresses
         );
 
         // If the reply contains an top level UnspecFail status code, the
         // request should be resent.
         let options = [
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
             v6::DhcpOption::StatusCode(v6::ErrorStatusCode::UnspecFail.into(), ""),
         ];
@@ -4731,7 +4739,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if *server_id == vec![1, 2, 3] &&
+            }) if server_id[..] == SERVER_ID[0] &&
                   *got_addresses == expected_addresses
         );
         assert!(transaction_id.is_some());
@@ -4739,8 +4747,8 @@ mod tests {
         // If the reply contains an top level NotOnLink status code, the
         // request should be resent without specifying any addresses.
         let options = [
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
             v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NotOnLink.into(), ""),
         ];
@@ -4769,7 +4777,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if *server_id == vec![1, 2, 3] &&
+            }) if server_id[..] == SERVER_ID[0] &&
                   *got_addresses == expected_addresses
         );
         assert!(transaction_id.is_some());
@@ -4778,8 +4786,8 @@ mod tests {
         // (other than UnspecFail), the client selects another server and sends
         // a request to it.
         let options = [
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
             v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), ""),
         ];
@@ -4800,7 +4808,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if *server_id == vec![4, 5, 6]);
+            }) if server_id[..] == SERVER_ID[1]);
         assert_matches!(
             &actions[..],
             [
@@ -4816,8 +4824,8 @@ mod tests {
         let iana_options =
             [v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), "")];
         let options = [
-            v6::DhcpOption::ServerId(&[4, 5, 6]),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[1]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder =
@@ -4828,7 +4836,9 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(state, ClientState::Requesting(Requesting {
+        assert_matches!(
+            state,
+            ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses: _,
                 server_id,
@@ -4837,7 +4847,8 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if server_id == vec![7, 8, 9]);
+            }) if server_id[..] == SERVER_ID[2]
+        );
         assert_matches!(
             &actions[..],
             [
@@ -4856,17 +4867,16 @@ mod tests {
         let address2 = std_ip_v6!("::ffff:c00a:2ff");
         let configured_addresses = testutil::to_configured_addresses(2, vec![address1]);
         let selected_advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[address1, address2],
             &[],
             &configured_addresses,
         );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
-        let client_id = v6::duid_uuid();
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
-            client_id.clone(),
+            CLIENT_ID,
             configured_addresses.clone(),
             selected_advertise,
             &options_to_request[..],
@@ -4893,8 +4903,8 @@ mod tests {
         let iaid1 = v6::IAID::new(0);
         let iaid2 = v6::IAID::new(1);
         let options = [
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid1, t1, t2, &iana_options1)),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid2, t1, t2, &iana_options2)),
         ];
@@ -4933,7 +4943,7 @@ mod tests {
                 server_id,
                 dns_servers: _,
                 solicit_max_rt: _,
-            }) if server_id == vec![1, 2, 3] &&
+            }) if server_id[..] == SERVER_ID[0] &&
                   addresses == expected_addresses);
         let expected_t1 = Duration::from_secs(t1.into());
         assert_matches!(
@@ -4959,19 +4969,13 @@ mod tests {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let address = std_ip_v6!("::ffff:c00a:5ff");
-        let server_id = vec![1, 2, 3];
-        let selected_advertise = AdvertiseMessage::new_default(
-            server_id.clone(),
-            &[address],
-            &[],
-            &configured_addresses,
-        );
+        let selected_advertise =
+            AdvertiseMessage::new_default(SERVER_ID[0], &[address], &[], &configured_addresses);
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
-        let client_id = v6::duid_uuid();
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
-            client_id.clone(),
+            CLIENT_ID,
             configured_addresses.clone(),
             selected_advertise,
             &options_to_request[..],
@@ -4989,8 +4993,8 @@ mod tests {
             &[],
         ))];
         let options = [
-            v6::DhcpOption::ServerId(&server_id),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder =
@@ -5043,7 +5047,7 @@ mod tests {
         let configured_addresses =
             testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
         let selected_advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            SERVER_ID[0],
             &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
             &[],
             &configured_addresses,
@@ -5092,10 +5096,9 @@ mod tests {
                 v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(70).expect("should succeed")),
             ),
         ] {
-            let client_id = v6::duid_uuid();
             let time = Instant::now();
             let Transition { state, actions: _, transaction_id } = Requesting::start(
-                client_id.clone(),
+                CLIENT_ID,
                 configured_addresses.clone(),
                 selected_advertise.clone(),
                 &[],
@@ -5118,8 +5121,8 @@ mod tests {
                 &[],
             ))];
             let options = [
-                v6::DhcpOption::ServerId(&[1, 2, 3]),
-                v6::DhcpOption::ClientId(&client_id),
+                v6::DhcpOption::ServerId(&SERVER_ID[0]),
+                v6::DhcpOption::ClientId(&CLIENT_ID),
                 v6::DhcpOption::Iana(v6::IanaSerializer::new(
                     v6::IAID::new(0),
                     ia1_t1,
@@ -5174,12 +5177,11 @@ mod tests {
     // Test that Request retransmission respects max retransmission count.
     #[test]
     fn requesting_retransmit_max_retrans_count() {
-        let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
         let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
-            client_id.clone(),
+            CLIENT_ID,
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -5192,10 +5194,9 @@ mod tests {
             60,
             &[],
         ))];
-        let server_id_1 = [1, 2, 3];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&server_id_1),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
@@ -5225,10 +5226,9 @@ mod tests {
             60,
             &[],
         ))];
-        let server_id_2 = [4, 5, 6];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&server_id_2),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[1]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
@@ -5273,7 +5273,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-        })) if *server_id == server_id_1);
+        })) if server_id[..] == SERVER_ID[0]);
 
         for count in 1..REQUEST_MAX_RC + 1 {
             assert_matches!(
@@ -5298,7 +5298,7 @@ mod tests {
                     retrans_timeout: _,
                     retrans_count,
                     solicit_max_rt: _,
-                })) if *server_id == server_id_1 &&
+                })) if server_id[..] == SERVER_ID[0] &&
                        *retrans_count == count
             );
         }
@@ -5326,7 +5326,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count,
                 solicit_max_rt: _,
-            })) if *server_id == server_id_2 &&
+            })) if server_id[..] == SERVER_ID[1] &&
                    *retrans_count == 0
         );
 
@@ -5353,7 +5353,7 @@ mod tests {
                     retrans_timeout: _,
                     retrans_count,
                     solicit_max_rt: _,
-                })) if *server_id == server_id_2 &&
+                })) if server_id[..] == SERVER_ID[1] &&
                        *retrans_count == count
             );
         }
@@ -5389,8 +5389,8 @@ mod tests {
         let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("50 is non-zero or u32::MAX");
         let t2 = v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![
                 TestIdentityAssociation::new_nonzero_finite(
                     std_ip_v6!("::ffff:c00a:1ff"),
@@ -5439,8 +5439,8 @@ mod tests {
         let t1_secs = 70;
         let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("70 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![TestIdentityAssociation::new_nonzero_finite(
                 std_ip_v6!("::ffff:c00a:102"),
                 v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
@@ -5469,18 +5469,12 @@ mod tests {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let address = std_ip_v6!("::ffff:c00a:1ff");
-        let server_id = vec![1, 2, 3];
-        let selected_advertise = AdvertiseMessage::new_default(
-            server_id.clone(),
-            &[address],
-            &[],
-            &configured_addresses,
-        );
+        let selected_advertise =
+            AdvertiseMessage::new_default(SERVER_ID[0], &[address], &[], &configured_addresses);
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
-        let client_id = v6::duid_uuid();
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
-            client_id.clone(),
+            CLIENT_ID,
             configured_addresses.clone(),
             selected_advertise,
             &options_to_request[..],
@@ -5508,7 +5502,7 @@ mod tests {
         let iana_options =
             [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 60, 120, &[]))];
         let options = [
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
@@ -5536,10 +5530,9 @@ mod tests {
 
         // If the reply has a different client ID than the test client's client ID,
         // the `solicit_max_rt` should not be updated.
-        let other_client_id = v6::duid_uuid();
         let options = [
-            v6::DhcpOption::ServerId(&server_id),
-            v6::DhcpOption::ClientId(&other_client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&MISMATCHED_CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
@@ -5567,8 +5560,8 @@ mod tests {
         // If the client receives a valid reply containing a SOL_MAX_RT option,
         // the `solicit_max_rt` should be updated.
         let options = [
-            v6::DhcpOption::ServerId(&server_id),
-            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
@@ -5598,8 +5591,8 @@ mod tests {
         let preferred_lifetime = v6::NonZeroOrMaxU32::new(80).expect("80 is not zero or u32::MAX");
         let valid_lifetime = v6::NonZeroOrMaxU32::new(110).expect("110 is not zero or u32::MAX");
         let _client = testutil::send_renew_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![
                 TestIdentityAssociation::new_nonzero_finite(
                     std_ip_v6!("::ffff:c00a:123"),
@@ -5625,8 +5618,8 @@ mod tests {
     #[test]
     fn do_not_renew_for_t1_infinity() {
         let (client, actions) = testutil::assign_addresses_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![TestIdentityAssociation {
                 address: std_ip_v6!("::ffff:c00a:1ff"),
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
@@ -5662,8 +5655,6 @@ mod tests {
 
     #[test]
     fn retransmit_renew() {
-        let client_id = v6::duid_uuid();
-        let server_id = v6::duid_uuid();
         let t1 = v6::NonZeroOrMaxU32::new(70).expect("70 is not zero or u32::MAX");
         let t2 = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
         let preferred_lifetime = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
@@ -5686,8 +5677,8 @@ mod tests {
         ];
         let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
-            client_id.clone(),
-            server_id.clone(),
+            CLIENT_ID,
+            SERVER_ID[0],
             addresses_to_assign.clone(),
             t1,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -5723,16 +5714,16 @@ mod tests {
         assert_matches!(
             state,
             Some(ClientState::Renewing(Renewing {
-                client_id: got_client_id,
+                client_id,
                 addresses: _,
-                server_id: got_server_id,
+                server_id,
                 dns_servers,
                 first_renew_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
-            })) if *got_client_id == client_id &&
-                   *got_server_id == server_id &&
-                   *dns_servers == Vec::<Ipv6Addr>::new() &&
+            })) if client_id == &CLIENT_ID &&
+                   server_id[..] == SERVER_ID[0] &&
+                   dns_servers.as_slice() == &[] as &[Ipv6Addr] &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
@@ -5750,8 +5741,8 @@ mod tests {
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             v6::MessageType::Renew,
-            &client_id,
-            Some(&server_id),
+            &CLIENT_ID,
+            Some(&SERVER_ID[0]),
             &[],
             &expected_addresses_to_renew,
         );
@@ -5835,7 +5826,7 @@ mod tests {
             }))
         );
 
-        let options = [v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let options = [v6::DhcpOption::ServerId(&SERVER_ID[0])];
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
@@ -5886,8 +5877,8 @@ mod tests {
     fn requesting_refresh_timeout_is_unreachable() {
         let time = Instant::now();
         let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
@@ -5904,8 +5895,8 @@ mod tests {
     fn address_assiged_unexpected_timeout_is_unreachable(timeout: ClientTimerType) {
         let time = Instant::now();
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![TestIdentityAssociation {
                 address: std_ip_v6!("::ffff:c00a:1ff"),
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
@@ -5941,8 +5932,8 @@ mod tests {
         let t1 = v6::NonZeroOrMaxU32::new(40).expect("40 is non-zero or u32::MAX");
         let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
-            v6::duid_uuid(),
-            v6::duid_uuid(),
+            CLIENT_ID,
+            SERVER_ID[0],
             vec![TestIdentityAssociation::new_nonzero_finite(
                 std_ip_v6!("::ffff:c00a:111"),
                 v6::NonZeroOrMaxU32::new(50).expect("50 is non-zero or u32::MAX"),
