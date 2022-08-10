@@ -40,7 +40,10 @@ use rand::RngCore;
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
     context::{EventContext, InstantContext},
-    data_structures::socketmap::{IterShadows as _, SocketMap, Tagged},
+    data_structures::{
+        id_map::IdMap,
+        socketmap::{IterShadows as _, SocketMap, Tagged},
+    },
     ip::{
         socket::{IpSock, IpSocket as _},
         BufferTransportIpContext, IpDeviceId,
@@ -56,7 +59,7 @@ use crate::{
         socket::{demux::tcp_serialize_segment, isn::generate_isn},
         state::{Closed, Initial, State},
     },
-    IdMap, Instant, IpDeviceIdContext, IpExt, IpSockCreationError, TransportIpContext,
+    Instant, IpDeviceIdContext, IpExt, IpSockCreationError, TransportIpContext,
 };
 
 /// Non-sync context for TCP.

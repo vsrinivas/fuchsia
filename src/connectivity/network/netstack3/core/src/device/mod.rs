@@ -36,7 +36,7 @@ use crate::{
         CounterContext, FrameContext, NonTestCtxMarker, RecvFrameContext, StateContext,
         TimerContext,
     },
-    data_structures::{IdMap, IdMapCollectionKey},
+    data_structures::{id_map::IdMap, id_map_collection::IdMapCollectionKey},
     device::{
         ethernet::{
             EthernetDeviceState, EthernetDeviceStateBuilder, EthernetLinkDevice, EthernetTimerId,

@@ -17,7 +17,7 @@ use net_types::{
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId},
-    data_structures::{socketmap::Tagged, IdMap},
+    data_structures::{id_map::IdMap, socketmap::Tagged},
     ip::{IpDeviceId, IpExt},
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec},

@@ -33,7 +33,7 @@ mod algorithm;
 #[cfg(test)]
 pub mod benchmarks;
 pub mod context;
-mod data_structures;
+pub mod data_structures;
 mod device;
 pub mod error;
 #[cfg(fuzz)]
@@ -48,7 +48,6 @@ pub mod transport;
 use log::trace;
 
 pub use crate::{
-    data_structures::{Entry, IdMap, IdMapCollection, IdMapCollectionKey},
     device::{
         add_ethernet_device, add_loopback_device, get_ipv4_configuration, get_ipv6_configuration,
         receive_frame, remove_device, update_ipv4_configuration, update_ipv6_configuration,

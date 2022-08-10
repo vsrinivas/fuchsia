@@ -44,6 +44,7 @@ where
     }
 }
 
+/// A vacant entry from an [`IdMapCollection`].
 pub struct VacantEntry<'a, K, T> {
     entry: id_map::VacantEntry<'a, K, T>,
     count: &'a mut usize,
@@ -90,6 +91,7 @@ impl<'a, K, T> VacantEntry<'a, K, T> {
     }
 }
 
+/// An occupied entry from an [`IdMapCollection`].
 pub struct OccupiedEntry<'a, K, T> {
     entry: id_map::OccupiedEntry<'a, K, T>,
     count: &'a mut usize,

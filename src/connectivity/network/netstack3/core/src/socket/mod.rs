@@ -17,11 +17,10 @@ use derivative::Derivative;
 
 use crate::{
     data_structures::{
-        id_map::{Entry as IdMapEntry, OccupiedEntry as IdMapOccupiedEntry},
+        id_map::{Entry as IdMapEntry, IdMap, OccupiedEntry as IdMapOccupiedEntry},
         socketmap::{
             Entry, IterShadows, OccupiedEntry as SocketMapOccupiedEntry, SocketMap, Tagged,
         },
-        IdMap,
     },
     error::ExistsError,
     ip::IpDeviceId,

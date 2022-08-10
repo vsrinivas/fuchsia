@@ -428,7 +428,9 @@ impl<T> Default for IdMap<T> {
     }
 }
 
+/// A key providing an index into an [`IdMap`].
 pub trait EntryKey {
+    /// Returns the index for this key.
     fn get_key_index(&self) -> usize;
 }
 

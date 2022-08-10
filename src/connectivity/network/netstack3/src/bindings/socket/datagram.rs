@@ -32,16 +32,20 @@ use net_types::{
     SpecifiedAddr, ZonedAddr,
 };
 use netstack3_core::{
-    connect_udp, connect_udp_listener, create_udp_unbound, disconnect_udp_connected,
-    get_udp_bound_device, get_udp_conn_info, get_udp_listener_info, get_udp_posix_reuse_port, icmp,
-    listen_udp, reconnect_udp, remove_udp_conn, remove_udp_listener, remove_udp_unbound, send_udp,
-    send_udp_conn, send_udp_listener, set_bound_udp_device, set_udp_posix_reuse_port,
-    set_unbound_udp_device, BufferNonSyncContext, BufferUdpContext, BufferUdpStateContext,
-    BufferUdpStateNonSyncContext, Ctx, IdMap, IdMapCollection, IdMapCollectionKey,
-    IpDeviceIdContext, IpExt, IpSockSendError, LocalAddressError, NonSyncContext, SyncCtx,
-    TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext,
-    UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-    UdpSocketId, UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
+    connect_udp, connect_udp_listener, create_udp_unbound,
+    data_structures::{
+        id_map::IdMap,
+        id_map_collection::{IdMapCollection, IdMapCollectionKey},
+    },
+    disconnect_udp_connected, get_udp_bound_device, get_udp_conn_info, get_udp_listener_info,
+    get_udp_posix_reuse_port, icmp, listen_udp, reconnect_udp, remove_udp_conn,
+    remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn, send_udp_listener,
+    set_bound_udp_device, set_udp_posix_reuse_port, set_unbound_udp_device, BufferNonSyncContext,
+    BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext, Ctx, IpDeviceIdContext,
+    IpExt, IpSockSendError, LocalAddressError, NonSyncContext, SyncCtx, TransportIpContext,
+    UdpBoundId, UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext, UdpListenerId,
+    UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpSocketId,
+    UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{

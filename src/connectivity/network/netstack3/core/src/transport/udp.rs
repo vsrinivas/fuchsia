@@ -39,8 +39,8 @@ use crate::{
     context::{CounterContext, InstantContext, RngContext},
     data_structures::{
         id_map::Entry as IdMapEntry,
+        id_map_collection::IdMapCollectionKey,
         socketmap::{IterShadows as _, SocketMap, Tagged as _},
-        IdMapCollectionKey,
     },
     error::{ExistsError, LocalAddressError, ZonedAddressError},
     ip::{

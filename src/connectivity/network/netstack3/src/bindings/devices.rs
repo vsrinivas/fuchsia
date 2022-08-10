@@ -9,7 +9,10 @@ use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use net_types::{ethernet::Mac, UnicastAddr};
-use netstack3_core::{DeviceId, Entry, IdMapCollection, IdMapCollectionKey};
+use netstack3_core::{
+    data_structures::id_map_collection::{Entry, IdMapCollection, IdMapCollectionKey},
+    DeviceId,
+};
 
 use crate::bindings::interfaces_admin;
 

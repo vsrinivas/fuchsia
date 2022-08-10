@@ -58,8 +58,9 @@ use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
 use netstack3_core::{
     add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
+    data_structures::id_map::IdMap,
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, IdMap, IpDeviceConfiguration, IpExt,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
     Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NetstackError, NonSyncContext,
     SlaacConfiguration, SyncCtx, TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };

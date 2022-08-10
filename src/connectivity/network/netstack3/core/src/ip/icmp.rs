@@ -40,7 +40,9 @@ use zerocopy::ByteSlice;
 
 use crate::{
     context::{CounterContext, InstantContext},
-    data_structures::{token_bucket::TokenBucket, IdMap, IdMapCollectionKey},
+    data_structures::{
+        id_map::IdMap, id_map_collection::IdMapCollectionKey, token_bucket::TokenBucket,
+    },
     device::ndp::NdpPacketHandler,
     device::FrameDestination,
     error::NotFoundError,
