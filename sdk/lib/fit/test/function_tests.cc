@@ -871,6 +871,24 @@ TEST(FunctionTests, callback_once) {
 #endif
 }
 
+#if defined(__cpp_constinit)
+#define CONSTINIT constinit
+#elif defined(__clang__)
+#define CONSTINIT [[clang::require_constant_initialization]]
+#else
+#define CONSTINIT
+#endif  // __cpp_constinit
+
+CONSTINIT const fit::function<void()> kDefaultConstructed;
+CONSTINIT const fit::function<void()> kNullptrConstructed(nullptr);
+
+#undef CONSTINIT
+
+TEST(FunctionTests, null_constructors_are_constexpr) {
+  EXPECT_EQ(kDefaultConstructed, nullptr);
+  EXPECT_EQ(kNullptrConstructed, nullptr);
+}
+
 namespace test_copy_move_constructions {
 
 template <typename F>

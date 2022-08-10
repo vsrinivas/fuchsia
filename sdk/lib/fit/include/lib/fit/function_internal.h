@@ -209,9 +209,9 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
  protected:
   using result_type = Result;
 
-  function_base() { initialize_null_target(); }
+  constexpr function_base() : ops_(&null_target_type::ops), null_bits_() {}
 
-  function_base(decltype(nullptr)) { initialize_null_target(); }
+  constexpr function_base(decltype(nullptr)) : function_base() {}
 
   function_base(Result (*function_target)(Args...)) { initialize_target(function_target); }
 
@@ -399,7 +399,15 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
   }
 
   ops_type ops_;
-  mutable storage_type bits_;
+
+  // Union the real storage with the empty null_bits_ object. The default
+  // constructor initializes null_bits_ instead of bits_, which allows it to be
+  // constexpr without initializing the actual storage.
+  union {
+    mutable storage_type bits_;
+    struct {
+    } null_bits_;
+  };
 };
 
 }  // namespace internal
