@@ -8,7 +8,7 @@ import("//build/test.gni")
 
 rustc_staticlib("key-bag-static") {
   name = "key_bag"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = false
   public = [ "key_bag.h" ]
 

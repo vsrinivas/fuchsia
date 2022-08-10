@@ -136,7 +136,7 @@ if (is_host) {
   rustc_test("integration_tests") {
     source_root = "test/lib.rs"
     sources = [ "test/lib.rs" ]
-    edition = "2018"
+    edition = "2021"
     inputs = [
       "testdata/alpha",
       "testdata/beta",

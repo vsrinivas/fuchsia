@@ -6,7 +6,7 @@ import("//sdk/cts/build/cts.gni")
 
 cts_rustc_binary("echo_server_testing") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//examples/components/routing/fidl:echo_rust",
     "//src/lib/fuchsia",

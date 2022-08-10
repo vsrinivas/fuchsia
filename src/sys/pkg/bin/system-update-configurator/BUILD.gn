@@ -86,7 +86,7 @@ group("tests") {
 
 rustc_test("bin_test") {
   name = "system_update_configurator_smoke_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.update.config:fuchsia.update.config_rust",

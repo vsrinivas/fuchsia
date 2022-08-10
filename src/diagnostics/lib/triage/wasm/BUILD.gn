@@ -41,7 +41,7 @@ lib_deps = [
 if (current_toolchain == unknown_wasm32_toolchain) {
   rustc_wasm_library("lib") {
     name = "wasm_triage_lib"
-    edition = "2018"
+    edition = "2021"
 
     configs += [
       ":env",

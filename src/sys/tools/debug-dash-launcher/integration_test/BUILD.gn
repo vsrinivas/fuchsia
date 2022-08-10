@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("test_bin") {
   output_name = "debug_dash_launcher_test"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.dash:fuchsia.dash_rust",

@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   testonly = true
   output_name = "mock_resolver_for_dash_launcher"
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",

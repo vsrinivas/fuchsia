@@ -6,7 +6,7 @@ import("../../../build/ffx_plugin.gni")
 
 ffx_plugin("ffx_starnix_adb") {
   version = "0.0.1"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer_rust",

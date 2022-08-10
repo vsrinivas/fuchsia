@@ -37,7 +37,7 @@ lib_sources = [ "src/lib.rs" ]
 if (current_toolchain == unknown_wasm32_toolchain) {
   rustc_wasm_library("lib") {
     output_name = "example_lib"
-    edition = "2018"
+    edition = "2021"
 
     configs += [ ":env" ]
 
@@ -47,7 +47,7 @@ if (current_toolchain == unknown_wasm32_toolchain) {
   }
 } else {
   rustc_library("lib") {
-    edition = "2018"
+    edition = "2021"
 
     configs += [ ":env" ]
 

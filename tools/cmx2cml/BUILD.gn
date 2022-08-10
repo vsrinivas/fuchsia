@@ -6,7 +6,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("cmx2cml") {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//src/lib/fuchsia",

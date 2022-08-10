@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   name = "audio_recording"
 
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",

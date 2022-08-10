@@ -13,7 +13,7 @@ group("tests") {
 
 rustc_test("integration_test_bin") {
   output_name = "capability_provider_vfs_compliance_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "src/integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",

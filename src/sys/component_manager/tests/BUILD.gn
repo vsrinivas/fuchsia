@@ -47,7 +47,7 @@ group("tests") {
 cts_rustc_binary("trigger_bin") {
   testonly = true
   name = "trigger"
-  edition = "2018"
+  edition = "2021"
   source_root = "trigger.rs"
   deps = [
     "//examples/components/routing/fidl:echo_rust",

@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   testonly = true
-  edition = "2018"
+  edition = "2021"
   name = "fake_netstack"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",

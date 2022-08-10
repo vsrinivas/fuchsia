@@ -26,7 +26,7 @@ if (is_host) {
   rustc_macro("config-proc-macros") {
     name = "config_proc_macros"
     version = "0.1.0"
-    edition = "2018"
+    edition = "2021"
 
     rustenv = [ "FFX_DEFAULT_CONFIG_JSON=$rebased_config_path" ]
 

@@ -255,6 +255,7 @@ async fn exec_conscript<
         .try_for_each_concurrent(None, |req| {
             let action = action.clone();
             async move {
+                let _ = &req;
                 let ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ } =
                     req;
                 log::info!("{:?} Received service request for service", node_id);

@@ -58,7 +58,7 @@ rustc_binary("writer-bin") {
 
 rustc_binary("snapshot-filter-bin") {
   name = "inspect_rust_snapshot_filter_benchmarks"
-  edition = "2018"
+  edition = "2021"
 
   source_root = "src/snapshot_filter.rs"
   with_unit_tests = true

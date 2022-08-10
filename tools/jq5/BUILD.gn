@@ -26,7 +26,7 @@ rustc_binary("jq5") {
 }
 
 rustc_test("jq5_bin_test") {
-  edition = "2018"
+  edition = "2021"
   deps = [
     ":jq_for_test",
     "//src/lib/fuchsia-async",

@@ -6,7 +6,7 @@ import("//sdk/cts/build/cts.gni")
 
 cts_rustc_test("collections_integration_test_bin") {
   name = "collections_integration_test"
-  edition = "2018"
+  edition = "2021"
   source_root = "integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
@@ -29,7 +29,7 @@ cts_rustc_test("collections_integration_test_bin") {
 cts_rustc_binary("write_startup_socket_bin") {
   testonly = true
   name = "write_startup_socket"
-  edition = "2018"
+  edition = "2021"
   source_root = "write_startup_socket.rs"
   deps = [
     "//src/lib/fuchsia-runtime",

@@ -203,7 +203,7 @@ fuchsia_package("system_recovery") {
 
 rustc_binary("bin_fdr") {
   name = "system_recovery_fdr"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = [
     ":recovery_ui_config",

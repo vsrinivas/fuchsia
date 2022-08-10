@@ -6,7 +6,7 @@ import("../../../build/ffx_plugin.gni")
 
 ffx_plugin("ffx_component_explore") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.dash:fuchsia.dash_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",

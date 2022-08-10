@@ -115,7 +115,7 @@ if (is_host) {
       rebase_path(expected_vbmeta_path, source_dir)
 
   rustc_test("integration_test") {
-    edition = "2018"
+    edition = "2021"
     source_root = "tests/integration_test.rs"
     sources = [ "tests/integration_test.rs" ]
     deps = [

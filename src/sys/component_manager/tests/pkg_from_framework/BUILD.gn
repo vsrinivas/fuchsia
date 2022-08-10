@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 rustc_test("pkg_from_framework_bin") {
   name = "pkg_from_framework"
-  edition = "2018"
+  edition = "2021"
   source_root = "pkg_from_framework.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",

@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("server") {
   name = "multi_nic_test_server"
   testonly = true
-  edition = "2018"
+  edition = "2021"
   deps = [
     "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
     "//src/lib/fuchsia",

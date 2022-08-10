@@ -10,7 +10,7 @@ import("//build/rust/rustc_library.gni")
 rebased_version_history_path = rebase_path("//sdk/version_history.json", "src")
 
 rustc_library("version-history-shared") {
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]

@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_test("integration") {
-  edition = "2018"
+  edition = "2021"
   output_name = "overnet_integration_tests"
   deps = [
     ":triangle_rust",
