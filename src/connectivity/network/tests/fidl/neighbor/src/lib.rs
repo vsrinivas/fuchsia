@@ -1219,3 +1219,60 @@ async fn channel_is_closed_if_not_polled() {
         _ = create_entries => unreachable!(),
     }
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn remove_device_clears_neighbors() {
+    let sandbox = TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
+
+    let NeighborRealm { realm, ep, ipv6: _, loopback_id: _ } = create_realm(
+        &sandbox,
+        &network,
+        "remove_device_clears_neighbors",
+        "alice",
+        fidl_fuchsia_net::Subnet { addr: ALICE_IP, prefix_len: SUBNET_PREFIX },
+        ALICE_MAC,
+    )
+    .await;
+
+    let mut iter =
+        get_entry_iterator(&realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY);
+    assert_entries(&mut iter, [ItemMatch::Idle]).await;
+
+    let controller = realm
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .expect("failed to connect to Controller");
+
+    controller
+        .add_entry(ep.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
+        .await
+        .expect("add_entry FIDL error")
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .expect("add_entry failed");
+
+    let interface = ep.id();
+
+    assert_entries(
+        &mut iter,
+        [ItemMatch::Added(EntryMatch {
+            interface,
+            neighbor: BOB_IP,
+            state: fidl_fuchsia_net_neighbor::EntryState::Static,
+            mac: Some(BOB_MAC),
+        })],
+    )
+    .await;
+
+    std::mem::drop(ep);
+
+    assert_entries(
+        &mut iter,
+        [ItemMatch::Removed(EntryMatch {
+            interface,
+            neighbor: BOB_IP,
+            state: fidl_fuchsia_net_neighbor::EntryState::Static,
+            mac: Some(BOB_MAC),
+        })],
+    )
+    .await;
+}
