@@ -53,6 +53,7 @@ static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_thread_lock(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_stack_guard(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_pop(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -85,6 +86,7 @@ STATIC_COMMAND(
     "build_instrumentation",
     "display a non-exhaustive list of build instrumentations used to build this kernel image",
     &cmd_build_instrumentation)
+STATIC_COMMAND("pop", "start drama", &cmd_pop)
 STATIC_COMMAND_END(mem)
 
 static int cmd_display_mem(int argc, const cmd_args* argv, uint32_t flags) {
@@ -591,5 +593,15 @@ static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t fl
     printf("build_instrumentation: %s\n", feature);
   }
   printf("build_instrumentation: done\n");
+  return 0;
+}
+
+static int cmd_pop(int argc, const cmd_args* argv, uint32_t flags) {
+  if (argc > 1) {
+    printf("aren't there already enough arguments?\n");
+    return -1;
+  }
+
+  printf("drama!");
   return 0;
 }
