@@ -145,10 +145,9 @@ There may be many entries, so add the name to find the one you're looking for:
 
 ```posix-terminal
 fx list-packages hello-world
+hello-world
 hello-world-cpp-unittests
 hello-world-rust-tests
-hello-world-cpp
-hello-world-rust
 ```
 
 ## Run the example component {#run-the-example-component}
