@@ -53,10 +53,6 @@ pub use crate::{
         receive_frame, remove_device, update_ipv4_configuration, update_ipv6_configuration,
         DeviceId, DeviceLayerEventDispatcher,
     },
-    error::{
-        ExistsError, LocalAddressError, NetstackError, NotFoundError, RemoteAddressError,
-        SocketError, ZonedAddressError,
-    },
     ip::{
         device::{
             dad::DadEvent,
@@ -483,7 +479,7 @@ pub fn add_ip_addr_subnet<NonSyncCtx: NonSyncContext>(
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr_sub: AddrSubnetEither,
-) -> Result<(), ExistsError> {
+) -> Result<(), error::ExistsError> {
     map_addr_version!(
         addr_sub: AddrSubnetEither;
         crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr_sub)
@@ -496,7 +492,7 @@ pub fn del_ip_addr<NonSyncCtx: NonSyncContext>(
     ctx: &mut NonSyncCtx,
     device: DeviceId,
     addr: SpecifiedAddr<IpAddr>,
-) -> Result<(), NotFoundError> {
+) -> Result<(), error::NotFoundError> {
     let addr = addr.into();
     map_addr_version!(
         addr: IpAddr;

@@ -608,7 +608,7 @@ async fn remove_address(ctx: &NetstackContext, id: BindingId, address: fnet::Sub
     let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
     match netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, device_id, addr) {
         Ok(()) => true,
-        Err(netstack3_core::NotFoundError) => false,
+        Err(netstack3_core::error::NotFoundError) => false,
     }
 }
 
@@ -677,7 +677,7 @@ async fn add_address(
     let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
     match netstack3_core::add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr) {
         Ok(()) => {}
-        Err(netstack3_core::ExistsError) => {
+        Err(netstack3_core::error::ExistsError) => {
             close_address_state_provider(
                 address,
                 id,

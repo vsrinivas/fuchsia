@@ -17,8 +17,8 @@ use net_types::{
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{
-    AddRouteError, AddableEntry, AddableEntryEither, DeviceId, EntryEither, ExistsError,
-    NetstackError, NotFoundError,
+    error::{ExistsError, NetstackError, NotFoundError},
+    AddRouteError, AddableEntry, AddableEntryEither, DeviceId, EntryEither,
 };
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};

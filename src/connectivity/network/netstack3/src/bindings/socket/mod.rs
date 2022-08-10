@@ -20,9 +20,9 @@ use net_types::{
     ScopeableAddress, SpecifiedAddr,
 };
 use netstack3_core::{
+    error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
-    LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpConnectListenerError,
-    UdpSendError, UdpSendListenerError, UdpSockCreationError, ZonedAddressError,
+    UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
 };
 
 use crate::bindings::{

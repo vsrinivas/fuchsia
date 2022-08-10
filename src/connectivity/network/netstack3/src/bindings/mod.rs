@@ -59,10 +59,11 @@ use netstack3_core::{
     add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     data_structures::id_map::IdMap,
+    error::NetstackError,
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, BufferUdpContext,
     Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
-    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NetstackError, NonSyncContext,
-    SlaacConfiguration, SyncCtx, TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, SyncCtx,
+    TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
