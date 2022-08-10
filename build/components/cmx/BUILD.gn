@@ -220,8 +220,6 @@ group("cmx_allowlist") {
     "//src/experiences/examples/localized_flutter/localized_flutter_app:component_manifest_compile",
     "//src/experiences/examples/spinning_cube:component_manifest_compile",
     "//src/factory/factory_store_providers:factory_store_providers_comp_V1_manifest_compile",
-    "//src/factory/factoryctl:factoryctl_bin_test_comp_manifest_compile",
-    "//src/factory/factoryctl:factoryctl_comp_manifest_compile",
     "//src/factory/fake_factory_items:fake_factory_items_comp_manifest_compile",
     "//src/factory/fake_factory_items:fake_factory_items_test_comp_manifest_compile",
     "//src/factory/fake_factory_store_providers:alpha_comp_manifest_compile",
