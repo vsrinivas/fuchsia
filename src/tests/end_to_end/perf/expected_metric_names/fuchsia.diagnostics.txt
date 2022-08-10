@@ -1,0 +1,14 @@
+fuchsia.diagnostics.lib.selectors: parse_selector/empty
+fuchsia.diagnostics.lib.selectors: parse_selector/no_wildcard/24
+fuchsia.diagnostics.lib.selectors: parse_selector/no_wildcard/644
+fuchsia.diagnostics.lib.selectors: parse_selector/with_escaped/24
+fuchsia.diagnostics.lib.selectors: parse_selector/with_escaped/644
+fuchsia.diagnostics.lib.selectors: parse_selector/with_wildcard/24
+fuchsia.diagnostics.lib.selectors: parse_selector/with_wildcard/644
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/empty
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/no_replace/256
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/no_replace/8
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/replace_all/256
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/replace_all/8
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/replace_half/256
+fuchsia.diagnostics.lib.selectors: sanitize_string_for_selectors/replace_half/8

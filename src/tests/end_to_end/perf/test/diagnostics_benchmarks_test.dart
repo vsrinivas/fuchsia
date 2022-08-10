@@ -17,6 +17,7 @@ void main() {
     await helper.runTestComponent(
         packageName: 'selectors-benchmarks',
         componentName: 'selectors-benchmarks.cm',
-        commandArgs: PerfTestHelper.componentOutputPath);
+        commandArgs: PerfTestHelper.componentOutputPath,
+        expectedMetricNamesFile: 'fuchsia.diagnostics.txt');
   }, timeout: Timeout.none);
 }
