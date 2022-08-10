@@ -22,10 +22,10 @@ Consider a FIDL library by the name of `${id1}.${id2}.....${idn}`:
   - TODO(fxbug.dev/51002): Document more as we go.
 * A constant declaration yields a preprocessor variable of name
 `UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})`;
-* An enum declaration yields a typedef of the underlying primitive type with a
-name of `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname}_t)`;
-  - an enum member yields a preprocessor variable of name
-  `UpperSnakeCase(${id1}_${id2}_..._${idn}_${enum_name}_${member_name})`
+* An enum or bits declaration yields a typedef of the underlying primitive
+type with a name of `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname}_t)`;
+  - a member yields a preprocessor variable of name
+  `UpperSnakeCase(${id1}_${id2}_..._${idn}_${parent_name}_${member_name})`
 * TODO(fxbug.dev/51002): Document more as we go.
 
 TODO(fxbug.dev/91102): Also C++, Rust, and Go.

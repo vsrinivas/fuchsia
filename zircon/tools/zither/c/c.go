@@ -8,6 +8,7 @@ import (
 	"embed"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -31,6 +32,9 @@ func NewGenerator(formatter fidlgen.Formatter) *Generator {
 		"EnumName":          EnumName,
 		"EnumMemberName":    EnumMemberName,
 		"EnumMemberValue":   EnumMemberValue,
+		"BitsName":          BitsName,
+		"BitsMemberName":    BitsMemberName,
+		"BitsMemberValue":   BitsMemberValue,
 	})
 	return &Generator{*gen}
 }
@@ -85,7 +89,8 @@ func ConstValue(c zither.Const) string {
 			enum, member := c.Identifier.SplitMember()
 			return EnumMemberName(zither.Enum{Name: enum}, zither.EnumMember{Name: member})
 		case zither.TypeKindBits:
-			panic("// TODO(fxbug.dev/91102): Support bits")
+			bits, member := c.Identifier.SplitMember()
+			return BitsMemberName(zither.Bits{Name: bits}, zither.BitsMember{Name: member})
 		default:
 			return ConstName(zither.Const{Name: *c.Identifier})
 		}
@@ -108,7 +113,12 @@ func ConstValue(c zither.Const) string {
 		// Enum constants should have been handled above.
 		panic(fmt.Sprintf("enum constants must be given by an identifier: %#v", c))
 	case zither.TypeKindBits:
-		panic("TODO(fxbug.dev/51002): Support bits")
+		typ := BitsName(zither.Bits{Name: fidlgen.MustReadName(c.Type)})
+		val, err := strconv.Atoi(c.Value)
+		if err != nil {
+			panic(fmt.Sprintf("%s has malformed integral value: %s", c.Name, err))
+		}
+		return fmt.Sprintf("((%s)(%su))", typ, fmt.Sprintf("%#b", val))
 	default:
 		panic(fmt.Sprintf("%s has unknown constant kind: %s", c.Name, c.Type))
 	}
@@ -129,4 +139,21 @@ func EnumMemberName(enum zither.Enum, member zither.EnumMember) string {
 // EnumMemberValue returns the value of a generated C "enum" member.
 func EnumMemberValue(enum zither.Enum, member zither.EnumMember) string {
 	return fmt.Sprintf("((%s)(%su))", EnumName(enum), member.Value)
+}
+
+// BitsName returns the type name of a generated C bitset.
+func BitsName(bits zither.Bits) string {
+	parts := nameParts(bits.Name)
+	return fidlgen.ToSnakeCase(strings.Join(parts, "_")) + "_t"
+}
+
+// BitsMemberName returns the name of a generated C bitset member.
+func BitsMemberName(bits zither.Bits, member zither.BitsMember) string {
+	parts := append(nameParts(bits.Name), member.Name)
+	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_"))
+}
+
+// BitsMemberValue returns the value of a generated C bitset member.
+func BitsMemberValue(bits zither.Bits, member zither.BitsMember) string {
+	return fmt.Sprintf("((%s)(1u << %d))", BitsName(bits), member.Index)
 }

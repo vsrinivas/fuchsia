@@ -375,3 +375,79 @@ type Int64Enum = enum : int64 {
 		t.Error(diff)
 	}
 }
+
+func TestCanSummarizeBits(t *testing.T) {
+	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+library example;
+
+/// This is a uint8 bits.
+type Uint8Bits = bits : uint8 {
+  /// This is a member.
+  ONE = 0b1;
+
+  /// This is
+  /// another
+  /// member.
+  SIXTEEN = 16;
+};
+
+/// This
+/// is
+/// a
+/// uint64 bits.
+type Uint64Bits = bits : uint64 {
+  MEMBER = 0x1000;
+};
+`)
+	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Normalize member order by name for a stable comparison.
+	var actual []zither.Bits
+	for _, decl := range sum.Decls {
+		if decl.IsBits() {
+			bits := decl.AsBits()
+			sort.Slice(bits.Members, func(i, j int) bool {
+				return strings.Compare(bits.Members[i].Name, bits.Members[j].Name) < 0
+			})
+			actual = append(actual, bits)
+		}
+	}
+
+	expected := []zither.Bits{
+		{
+			Subtype:  fidlgen.Uint8,
+			Name:     fidlgen.MustReadName("example/Uint8Bits"),
+			Comments: []string{" This is a uint8 bits."},
+			Members: []zither.BitsMember{
+				{
+					Name:     "ONE",
+					Index:    0,
+					Comments: []string{" This is a member."},
+				},
+				{
+					Name:     "SIXTEEN",
+					Index:    4,
+					Comments: []string{" This is", " another", " member."},
+				},
+			},
+		},
+		{
+			Subtype:  fidlgen.Uint64,
+			Name:     fidlgen.MustReadName("example/Uint64Bits"),
+			Comments: []string{" This", " is", " a", " uint64 bits."},
+			Members: []zither.BitsMember{
+				{
+					Name:  "MEMBER",
+					Index: 12,
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+		t.Error(diff)
+	}
+}

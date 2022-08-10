@@ -7,8 +7,10 @@ package zither
 
 import (
 	"fmt"
+	"math/bits"
 	"reflect"
 	"sort"
+	"strconv"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
@@ -62,6 +64,8 @@ func (decl Decl) Name() fidlgen.Name {
 		return decl.Name
 	case *Enum:
 		return decl.Name
+	case *Bits:
+		return decl.Name
 	default:
 		panic(fmt.Sprintf("unknown declaration type: %s", reflect.TypeOf(decl).Name()))
 	}
@@ -83,6 +87,15 @@ func (decl Decl) IsEnum() bool {
 
 func (decl Decl) AsEnum() Enum {
 	return *decl.value.(*Enum)
+}
+
+func (decl Decl) IsBits() bool {
+	_, ok := decl.value.(*Bits)
+	return ok
+}
+
+func (decl Decl) AsBits() Bits {
+	return *decl.value.(*Bits)
 }
 
 type declMap map[string]fidlgen.Declaration
@@ -113,6 +126,8 @@ func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
 			summarized, err = newConst(*decl, processed)
 		case *fidlgen.Enum:
 			summarized, err = newEnum(*decl)
+		case *fidlgen.Bits:
+			summarized, err = newBits(*decl)
 		default:
 			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(decl))
 		}
@@ -202,7 +217,7 @@ func newConst(c fidlgen.Const, decls declMap) (*Const, error) {
 		case *fidlgen.Enum:
 			kind = TypeKindEnum
 		case *fidlgen.Bits:
-			panic("TODO(fxbug.dev/51002): Support bits")
+			kind = TypeKindBits
 		default:
 			return nil, fmt.Errorf("%v has unsupported constant type: %s", c.Name, fidlgen.GetDeclType(decls[typ]))
 		}
@@ -294,4 +309,65 @@ func newEnum(enum fidlgen.Enum) (*Enum, error) {
 		})
 	}
 	return e, nil
+}
+
+// Bits represents an FIDL bitset declaration.
+type Bits struct {
+	// Name is the full name of the associated FIDL declaration.
+	Name fidlgen.Name
+
+	// The primitive subtype underlying the bitset.
+	Subtype fidlgen.PrimitiveSubtype
+
+	// Members is the list of member values of the bitset.
+	Members []BitsMember
+
+	// Comments that comprise the original docstring of the FIDL declaration.
+	Comments []string
+}
+
+// BitsMember represents a FIDL enum value.
+type BitsMember struct {
+	// Name is the name of the member.
+	Name string
+
+	// Index is the associated bit index.
+	Index int
+
+	// Comments that comprise the original docstring of the FIDL declaration.
+	Comments []string
+}
+
+func newBits(bits fidlgen.Bits) (*Bits, error) {
+	name, err := fidlgen.ReadName(string(bits.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	b := &Bits{
+		Subtype:  bits.Type.PrimitiveSubtype,
+		Name:     name,
+		Comments: bits.DocComments(),
+	}
+
+	for _, member := range bits.Members {
+		val, err := strconv.ParseUint(member.Value.Value, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("%v member %s has bad value %q: %v", name, member.Name, member.Value.Value, err))
+		}
+
+		b.Members = append(b.Members, BitsMember{
+			Name:     string(member.Name),
+			Index:    log2(val),
+			Comments: member.DocComments(),
+		})
+	}
+	return b, nil
+}
+
+func log2(n uint64) int {
+	if bits.OnesCount64(n) != 1 {
+		panic(fmt.Sprintf("%d is not a power of two", n))
+	}
+	return bits.TrailingZeros64(n)
 }

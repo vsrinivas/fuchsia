@@ -16,6 +16,7 @@ group("tests") {
     ":unittests($host_toolchain)",
 
     # golden testing
+    ":bits",
     ":constants",
     ":empty",
     ":enums",
@@ -326,6 +327,19 @@ zither_golden_test("enums") {
     {
       backend = "c"
       files = [ "enums.h" ]
+    },
+  ]
+}
+
+# FIDL: testdata/bits/
+# Goldens: testdata/bits/goldens/${backend}/
+zither_golden_test("bits") {
+  sources = [ "bits.test.fidl" ]
+
+  cases = [
+    {
+      backend = "c"
+      files = [ "bits.h" ]
     },
   ]
 }

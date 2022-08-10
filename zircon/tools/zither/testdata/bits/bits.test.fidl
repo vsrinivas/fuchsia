@@ -1,0 +1,78 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zither.bits;
+
+type Uint8Bits = bits : uint8 {
+    ONE = 0b00000001;
+    TWO = 0b00000010;
+    FOUR = 0b00000100;
+    EIGHT = 0b00001000;
+    SIXTEEN = 0b00010000;
+    THIRTY_TWO = 0b00100000;
+    SIXTY_FOUR = 0b01000000;
+    ONE_HUNDRED_TWENTY_EIGHT = 0b10000000;
+};
+
+type Uint16Bits = bits : uint16 {
+    ZEROTH = 0x0001;
+    FIRST = 0x0002;
+    SECOND = 0x0004;
+    THIRD = 0x0008;
+    FOURTH = 0x0010;
+    FIFTH = 0x0020;
+    SIXTH = 0x0040;
+    SEVENTH = 0x0080;
+    EIGHT = 0x0100;
+    NINTH = 0x0200;
+    TENTH = 0x0400;
+    ELEVENTH = 0x0800;
+    TWELFTH = 0x1000;
+    THIRTEENTH = 0x2000;
+    FOURTEENTH = 0x4000;
+    FIFTHTEENTH = 0x8000;
+};
+
+type Uint32Bits = bits : uint32 {
+    POW_0 = 0x00000001;
+    POW_31 = 0x80000000;
+};
+
+type Uint64Bits = bits : uint64 {
+    POW_0 = 0x0000000000000001;
+    POW_63 = 0x8000000000000000;
+};
+
+/// Bits with a one-line comment.
+type BitsWithOneLineComment = bits : uint8 {
+    /// Bits member with one-line comment.
+    MEMBER_WITH_ONE_LINE_COMMENT = 1;
+
+    /// Bits member
+    ///     with a
+    ///         many-line
+    ///           comment.
+    MEMBER_WITH_MANY_LINE_COMMENT = 64;
+};
+
+
+/// Bits
+///     with a
+///         many-line
+///           comment.
+type BitsWithManyLineComment = bits : uint16 {
+    MEMBER = 1;
+};
+
+//
+// Bits as constants.
+//
+
+const SEVENTY_TWO Uint8Bits = Uint8Bits.SIXTY_FOUR | Uint8Bits.EIGHT;
+
+const SOME_BITS Uint16Bits = Uint16Bits.FIRST | Uint16Bits.NINTH | Uint16Bits.TWELFTH;
+
+const U32_POW_0 Uint32Bits = Uint32Bits.POW_0;
+
+const U64_POW_63 Uint64Bits = Uint64Bits.POW_63;

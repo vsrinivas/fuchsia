@@ -25,6 +25,9 @@ extern "C" {
 {{ else if .IsEnum }}
 {{ template "GenerateCEnum" .AsEnum }}
 
+{{ else if .IsBits }}
+{{ template "GenerateCBits" .AsBits }}
+
 {{ end }}
 {{ end }}
 
