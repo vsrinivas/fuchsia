@@ -25,12 +25,6 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 
 ## 1. Prerequisites {:#prerequisites}
 
-Before you begin, complete the prerequisite steps below:
-
-*   [Check host machine requirements](#check-host-machine-requirements)
-
-### Check host machine requirements {:#check-host-machine-requirements}
-
 This guide requires that your host machine meets the following criteria:
 
 *  A Linux machine. (**macOS** is not supported yet.)
@@ -192,8 +186,7 @@ Do the following:
      --kernel-args "devmgr.enable-ephemeral=true"
    ```
 
-   This command starts a headless emulator instance running the Workstation
-   prebuilt image.
+   This command starts a headless emulator instance running the Workstation prebuilt image.
 
    When the instance is up and running, the command prints output similar to
    the following:
@@ -203,6 +196,8 @@ Do the following:
      --kernel-args "driver_manager.use_driver_framework_v2=true" \
      --kernel-args "driver_manager.root-driver=fuchsia-boot:///#meta/platform-bus.cm" \
      --kernel-args "devmgr.enable-ephemeral=true"
+   Creating SSH key pair: /home/alice/.ssh/fuchsia_ed25519
+   Writing authorized_keys file: /home/alice/.ssh/fuchsia_authorized_keys
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds).
    Emulator is ready.
