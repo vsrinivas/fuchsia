@@ -6,9 +6,7 @@ group("integration_tests") {
   testonly = true
   public_deps = [
     "accessibility_tests",
-
-    # TODO(fxbug.dev/105522): enable tests again once flakiness is fixed.
-    # "audio_tests",
+    "audio_tests",
     "display_tests",
     "do_not_disturb_tests",
     "factory_reset_tests",

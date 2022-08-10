@@ -11,6 +11,7 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_component_test::{Capability, LocalComponentHandles, Ref, Route};
 use fuchsia_component_test::{ChildOptions, RealmBuilder, RealmInstance};
+use futures::channel::mpsc::Sender;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -41,6 +42,13 @@ const fn create_default_audio_stream(usage: AudioRenderUsage) -> AudioStreamSett
         }),
         ..AudioStreamSettings::EMPTY
     }
+}
+
+/// Info about an incoming request emitted by the audio core mock whenever it receives a request.
+#[derive(PartialEq, Debug)]
+pub(crate) enum AudioCoreRequest {
+    SetVolume(AudioRenderUsage, f32),
+    SetMute(AudioRenderUsage, bool),
 }
 
 const COMPONENT_URL: &str = "#meta/setui_service.cm";
@@ -75,11 +83,18 @@ impl AudioTest {
         Self { audio_streams: Arc::new(RwLock::new(streams)) }
     }
 
-    pub(crate) fn audio_streams(&self) -> Arc<RwLock<HashMap<AudioRenderUsage, (f32, bool)>>> {
-        self.audio_streams.clone()
-    }
-
-    pub(crate) async fn create_realm(&self) -> Result<RealmInstance, Error> {
+    /// Creates a test realm.
+    ///
+    /// `audio_core_request_sender` is used to report when requests are processed by the audio core
+    /// mock.
+    ///
+    /// `usages_to_report` is a list of usages to report requests for. Any usages not in this list
+    /// will not have `AudioCoreRequest` sent when processed.
+    pub(crate) async fn create_realm(
+        &self,
+        audio_core_request_sender: Sender<AudioCoreRequest>,
+        usages_to_report: Vec<AudioRenderUsage>,
+    ) -> Result<RealmInstance, Error> {
         let builder = RealmBuilder::new().await?;
         // Add setui_service as child of the realm builder.
         let setui_service =
@@ -100,7 +115,12 @@ impl AudioTest {
             .add_local_child(
                 "audio_service",
                 move |handles: LocalComponentHandles| {
-                    Box::pin(audio_core_service_mock(handles, audio_streams.clone()))
+                    Box::pin(audio_core_service_mock(
+                        handles,
+                        audio_streams.clone(),
+                        audio_core_request_sender.clone(),
+                        usages_to_report.clone(),
+                    ))
                 },
                 ChildOptions::new().eager(),
             )

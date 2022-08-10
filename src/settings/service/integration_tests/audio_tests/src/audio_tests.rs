@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use crate::common::{
-    AudioTest, DEFAULT_MEDIA_STREAM_SETTINGS, DEFAULT_VOLUME_LEVEL, DEFAULT_VOLUME_MUTED,
+    AudioCoreRequest, AudioTest, DEFAULT_MEDIA_STREAM_SETTINGS, DEFAULT_VOLUME_LEVEL,
+    DEFAULT_VOLUME_MUTED,
 };
-use crate::mock_audio_core_service::get_level_and_mute;
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
     AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Volume,
 };
+use futures::StreamExt;
 
 mod common;
 mod mock_audio_core_service;
@@ -51,14 +52,32 @@ fn verify_audio_stream(settings: &AudioSettings, stream: AudioStreamSettings) {
 // Verifies that basic get and set functionality works.
 #[fuchsia::test]
 async fn test_audio() {
+    // Set buffer size to one so that we can buffer two calls, since volume sets happen in pairs,
+    // one request for volume and one for mute.
+    let (audio_request_sender, mut audio_request_receiver) =
+        futures::channel::mpsc::channel::<AudioCoreRequest>(1);
+
     let audio_test = AudioTest::create();
-    let instance = audio_test.create_realm().await.expect("setting up test realm");
+    let instance = audio_test
+        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
+        .await
+        .expect("setting up test realm");
 
     // Spawn a client that we'll use for a watch call later on to verify that Set calls are observed
     // by all clients.
     let watch_client = AudioTest::connect_to_audio_marker(&instance);
 
-    // Verify that the settings match the default on start.
+    // Verify that audio core receives the initial volume settings on start.
+    assert_eq!(
+        audio_request_receiver.next().await,
+        Some(AudioCoreRequest::SetVolume(AudioRenderUsage::Media, DEFAULT_VOLUME_LEVEL))
+    );
+    assert_eq!(
+        audio_request_receiver.next().await,
+        Some(AudioCoreRequest::SetMute(AudioRenderUsage::Media, DEFAULT_VOLUME_MUTED))
+    );
+
+    // Verify that the settings matches the default on start.
     let settings = watch_client.watch().await.expect("watch completed");
     verify_audio_stream(&settings, DEFAULT_MEDIA_STREAM_SETTINGS);
 
@@ -72,9 +91,12 @@ async fn test_audio() {
 
         // Verify that audio core received the changed audio settings.
         assert_eq!(
-            (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-            get_level_and_mute(AudioRenderUsage::Media, &audio_test.audio_streams())
-                .expect("found audio settings in streams")
+            audio_request_receiver.next().await,
+            Some(AudioCoreRequest::SetVolume(AudioRenderUsage::Media, CHANGED_VOLUME_LEVEL))
+        );
+        assert_eq!(
+            audio_request_receiver.next().await,
+            Some(AudioCoreRequest::SetMute(AudioRenderUsage::Media, CHANGED_VOLUME_MUTED))
         );
     }
 
