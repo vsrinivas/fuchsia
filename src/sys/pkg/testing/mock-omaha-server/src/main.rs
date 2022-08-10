@@ -73,6 +73,13 @@ struct Args {
         default = "Ipv6Addr::UNSPECIFIED"
     )]
     listen_on: Ipv6Addr,
+
+    #[argh(
+        option,
+        description = "if 'true', will only accept requests with CUP enabled.",
+        default = "false"
+    )]
+    require_cup: bool,
 }
 
 fn parse_responses_by_appid(value: &str) -> Result<HashMap<String, ResponseAndMetadata>, String> {
@@ -148,6 +155,7 @@ async fn main() -> Result<(), anyhow::Error> {
             },
             historical: vec![],
         }))
+        .require_cup(args.require_cup)
         .build()
         .expect("omaha server build");
 

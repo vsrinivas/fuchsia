@@ -117,6 +117,8 @@ pub struct OmahaServer {
     pub private_keys: Option<PrivateKeys>,
     #[builder(default = "None")]
     pub etag_override: Option<String>,
+    #[builder(default)]
+    pub require_cup: bool,
 }
 
 impl OmahaServer {
@@ -418,11 +420,19 @@ pub async fn handle_omaha_request(
         .status(StatusCode::OK)
         .header(header::CONTENT_LENGTH, response_data.len());
 
-    if let Some(etag) = (omaha_server.etag_override.as_ref()).or(omaha_server
+    // It is only possible to calculate an induced etag if the incoming request
+    // had a valid cup2key query argument.
+    let induced_etag: Option<String> = omaha_server
         .private_keys
-        .and_then(|keys| make_etag(&req_body, &uri_string, &keys, &response_data))
-        .as_ref())
-    {
+        .and_then(|keys| make_etag(&req_body, &uri_string, &keys, &response_data));
+
+    if omaha_server.require_cup && induced_etag.is_none() {
+        panic!(
+            "mock-omaha-server was configured to expect CUP, but we received a request without it."
+        );
+    }
+
+    if let Some(etag) = omaha_server.etag_override.as_ref().or(induced_etag.as_ref()) {
         builder = builder.header(header::ETAG, etag);
     }
 
@@ -436,6 +446,7 @@ mod tests {
         anyhow::Context,
         fuchsia_async as fasync,
         hyper::{Body, StatusCode},
+        omaha_client::cup_ecdsa::test_support::make_default_private_key_for_test,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -628,5 +639,92 @@ mod tests {
         let response = client.request(request).await?;
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
         Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_server_expect_cup_nopanic() -> Result<(), Error> {
+        let server_url = OmahaServer::start(Arc::new(Mutex::new(
+            OmahaServerBuilder::default()
+                .responses_by_appid([(
+                    "integration-test-appid-1".to_string(),
+                    ResponseAndMetadata {
+                        response: OmahaResponse::NoUpdate,
+                        version: Some("0.0.0.1".to_string()),
+                        ..Default::default()
+                    },
+                )])
+                .private_keys(Some(PrivateKeys {
+                    latest: PrivateKeyAndId { id: 42, key: make_default_private_key_for_test() },
+                    historical: vec![],
+                }))
+                .require_cup(true)
+                .build()
+                .unwrap(),
+        )))
+        .context("starting server")?;
+
+        let client = fuchsia_hyper::new_client();
+        let body = json!({
+            "request": {
+                "app": [
+                    {
+                        "appid": "integration-test-appid-1",
+                        "version": "0.0.0.1",
+                        "updatecheck": { "updatedisabled": false }
+                    },
+                ]
+            }
+        });
+        // CUP attached.
+        let request = Request::post(format!("{}?cup2key=42:nonce", &server_url))
+            .body(Body::from(body.to_string()))
+            .unwrap();
+
+        let response = client.request(request).await?;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[should_panic(expected = "configured to expect CUP")]
+    async fn test_server_expect_cup_panic() {
+        let server_url = OmahaServer::start(Arc::new(Mutex::new(
+            OmahaServerBuilder::default()
+                .responses_by_appid([(
+                    "integration-test-appid-1".to_string(),
+                    ResponseAndMetadata {
+                        response: OmahaResponse::NoUpdate,
+                        version: Some("0.0.0.1".to_string()),
+                        ..Default::default()
+                    },
+                )])
+                .private_keys(Some(PrivateKeys {
+                    latest: PrivateKeyAndId { id: 42, key: make_default_private_key_for_test() },
+                    historical: vec![],
+                }))
+                .require_cup(true)
+                .build()
+                .unwrap(),
+        )))
+        .context("starting server")
+        .unwrap();
+
+        let client = fuchsia_hyper::new_client();
+        let body = json!({
+            "request": {
+                "app": [
+                    {
+                        "appid": "integration-test-appid-1",
+                        "version": "0.0.0.1",
+                        "updatecheck": { "updatedisabled": false }
+                    },
+                ]
+            }
+        });
+        // no CUP, but we set .require_cup(true) above, so mock-omaha-server will
+        // panic. (See should_panic above.)
+        let request = Request::post(&server_url).body(Body::from(body.to_string())).unwrap();
+        let _response = client.request(request).await.unwrap();
     }
 }
