@@ -4,6 +4,7 @@
 
 #include "tools/symbolizer/symbolizer_impl.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <string>
@@ -109,6 +110,15 @@ SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& optio
   if (waiting_auth_) {
     remote_symbol_lookup_enabled_ = true;
     loop_.Run();
+  }
+
+  // Check and prompt authentication message.
+  auto symbol_servers = session_.system().GetSymbolServers();
+  if (std::any_of(symbol_servers.begin(), symbol_servers.end(), [](zxdb::SymbolServer* server) {
+        return server->state() == zxdb::SymbolServer::State::kAuth;
+      })) {
+    std::cerr << "WARN: missing authentication for symbol servers. You might want to run "
+                 "`ffx debug symbolize --auth`.\n";
   }
 
   if (options.dumpfile_output) {
