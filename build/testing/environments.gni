@@ -240,6 +240,9 @@ guest_envs = all_fuchsia_envs - [
                gce_env,
              ]
 
+# Intersection of environments were both virtualization and vulkan are available.
+guest_vulkan_envs = guest_envs - [ nuc11_env ]
+
 basic_envs = []
 foreach(name, basic_env_names) {
   foreach(named_env, _all_named_fuchsia_envs + _all_named_host_envs) {

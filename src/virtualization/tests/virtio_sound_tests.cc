@@ -62,10 +62,11 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
       return HermeticAudioRealm::Options{
           .customize_realm = [this, &guest_launch_info](
                                  ::component_testing::RealmBuilder& realm_builder) -> zx_status_t {
-            auto status = enclosed_guest_->InstallInRealm(realm_builder, guest_launch_info);
+            auto status = enclosed_guest_->BuildLaunchInfo(&guest_launch_info);
             if (status != ZX_OK) {
               return status;
             }
+            enclosed_guest_->InstallInRealm(realm_builder.root(), guest_launch_info);
 
             using component_testing::ChildRef;
             using component_testing::Protocol;
@@ -85,8 +86,8 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
     HermeticAudioTest::SetUp();
 
     // Now start the guest.
-    ASSERT_EQ(enclosed_guest_->LaunchInRealm(realm().realm_root(), guest_launch_info,
-                                             zx::time::infinite()),
+    auto services = std::make_unique<sys::ServiceDirectory>(realm().realm_root().CloneRoot());
+    ASSERT_EQ(enclosed_guest_->LaunchInRealm(*services, guest_launch_info, zx::time::infinite()),
               ZX_OK)
         << "Failed to launch guest";
 

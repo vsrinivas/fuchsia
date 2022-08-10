@@ -15,10 +15,10 @@
 #include <gtest/gtest.h>
 
 #include "lib/async/dispatcher.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
 #include "src/virtualization/tests/fake_netstack.h"
-#include "src/virtualization/tests/fake_scenic.h"
 #include "src/virtualization/tests/guest_console.h"
 #include "src/virtualization/tests/socket_logger.h"
 #include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
@@ -63,10 +63,12 @@ class EnclosedGuest {
   //
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` before the guest has started.
   zx_status_t Start(zx::time deadline);
-  zx_status_t InstallInRealm(component_testing::RealmBuilder& realm_builder,
-                             GuestLaunchInfo& guest_launch_info);
-  zx_status_t LaunchInRealm(const component_testing::RealmRoot& realm_root,
+  void InstallInRealm(component_testing::Realm& realm, GuestLaunchInfo& guest_launch_info);
+  zx_status_t LaunchInRealm(const sys::ServiceDirectory& services,
                             GuestLaunchInfo& guest_launch_info, zx::time deadline);
+
+  // Provides guest specific launch info, called by Start.
+  virtual zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) = 0;
 
   // Attempt to gracefully stop the guest.
   //
@@ -84,6 +86,8 @@ class EnclosedGuest {
   zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
                       zx::time deadline, std::string* result = nullptr);
 
+  bool RunLoopUntil(fit::function<bool()> condition, zx::time deadline);
+
   // Return a shell command for a test utility named |util| with the given
   // |argv| in the guest. The result may be passed directly to |Execute|
   // to actually run the command.
@@ -98,18 +102,25 @@ class EnclosedGuest {
   void GetHostVsockEndpoint(
       ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint);
 
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> ConnectToService(
+      const std::string& interface_name = Interface::Name_) const {
+    return realm_services_->Connect<Interface>(interface_name);
+  }
+
   uint32_t GetGuestCid() const { return guest_cid_; }
 
   FakeNetstack* GetNetstack() { return &fake_netstack_; }
 
-  FakeScenic* GetScenic() { return &fake_scenic_; }
-
   std::optional<GuestConsole>& GetConsole() { return console_; }
 
- protected:
-  // Provides guest specific launch info, called by Start.
-  virtual zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) = 0;
+  // Waits for a view to be created and presented using the GraphicalPresenter protocol.
+  //
+  // This is appropriate for tests that interact with UI stack in some way and need to interact with
+  // the test UI stack.
+  void WaitForDisplay();
 
+ protected:
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady(zx::time deadline) = 0;
 
@@ -132,20 +143,22 @@ class EnclosedGuest {
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 
  private:
+  void StartWithRealmBuilder(zx::time deadline, GuestLaunchInfo& guest_launch_info);
+  void StartWithUITestManager(zx::time deadline, GuestLaunchInfo& guest_launch_info);
+
   async::Loop& loop_;
-
-  // Can be null if the realm is created externally by the test code.
-  std::unique_ptr<component_testing::RealmRoot> realm_root_;
-
   fuchsia::virtualization::GuestPtr guest_;
-  FakeScenic fake_scenic_;
   FakeNetstack fake_netstack_;
-
   fuchsia::virtualization::GuestManagerSyncPtr guest_manager_;
-
   std::optional<SocketLogger> serial_logger_;
   std::optional<GuestConsole> console_;
   uint32_t guest_cid_;
+  // Only one of |ui_test_manager_| and |realm_root_| will be non-null, depending on if graphics
+  // APIs are used.
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+  std::unique_ptr<component_testing::RealmRoot> realm_root_;
+  // The exposed services directory for the test realm.
+  std::unique_ptr<sys::ServiceDirectory> realm_services_;
 };
 
 class ZirconEnclosedGuest : public EnclosedGuest {
@@ -157,8 +170,9 @@ class ZirconEnclosedGuest : public EnclosedGuest {
 
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
 
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
+
  protected:
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
@@ -173,8 +187,9 @@ class DebianEnclosedGuest : public EnclosedGuest {
 
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
+
  protected:
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
@@ -193,8 +208,9 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
                       const std::unordered_map<std::string, std::string>& env, zx::time deadline,
                       std::string* result, int32_t* return_code) override;
 
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
+
  protected:
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }

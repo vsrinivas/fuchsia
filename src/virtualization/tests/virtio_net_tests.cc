@@ -124,8 +124,8 @@ class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
  public:
   explicit VirtioNetMultipleInterfacesZirconGuest(async::Loop& loop) : ZirconEnclosedGuest(loop) {}
 
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
-    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = ZirconEnclosedGuest::BuildLaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
@@ -185,8 +185,8 @@ class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
  public:
   explicit VirtioNetMultipleInterfacesDebianGuest(async::Loop& loop) : DebianEnclosedGuest(loop) {}
 
-  zx_status_t LaunchInfo(struct GuestLaunchInfo* launch_info) override {
-    zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
+  zx_status_t BuildLaunchInfo(struct GuestLaunchInfo* launch_info) override {
+    zx_status_t status = DebianEnclosedGuest::BuildLaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }

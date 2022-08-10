@@ -8,6 +8,7 @@
         "sys/component/realm_builder.shard.cml",
         "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
     ],
     use: [
         {
@@ -32,6 +33,7 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#realm_builder",

@@ -220,8 +220,8 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTes
   explicit VirtioBlockZirconGuest(async::Loop& loop)
       : ZirconEnclosedGuest(loop), VirtioBlockTestGuest() {}
 
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
-    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = ZirconEnclosedGuest::BuildLaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
@@ -244,8 +244,8 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTes
   explicit VirtioBlockDebianGuest(async::Loop& loop)
       : DebianEnclosedGuest(loop), VirtioBlockTestGuest() {}
 
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
-    zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = DebianEnclosedGuest::BuildLaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }

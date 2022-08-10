@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
@@ -13,7 +14,11 @@
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/ui/input3/cpp/fidl.h>
+#include <fuchsia/ui/observation/geometry/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fitx/result.h>
 #include <lib/fpromise/single_threaded_executor.h>
@@ -47,12 +52,16 @@ using ::fuchsia::virtualization::Listener;
 
 namespace {
 
+using fuchsia::ui::observation::geometry::ViewDescriptor;
+
 constexpr char kZirconGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/zircon_guest_manager#meta/zircon_guest_manager.cm";
 constexpr char kDebianGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm";
 constexpr char kTerminaGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm";
+constexpr auto kDevGpuDirectory = "dev-gpu";
+constexpr auto kGuestManagerName = "guest_manager";
 
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 constexpr char kDebianTestUtilDir[] = "/test_utils";
@@ -61,21 +70,6 @@ constexpr zx::duration kRetryStep = zx::msec(200);
 constexpr uint32_t kTerminaStartupListenerPort = 7777;
 constexpr uint32_t kTerminaMaitredPort = 8888;
 
-bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
-  while (zx::clock::get_monotonic() < deadline) {
-    // Check our condition.
-    if (condition()) {
-      return true;
-    }
-
-    // Wait until next polling interval.
-    loop->Run(zx::deadline_after(kLoopConditionStep));
-    loop->ResetQuit();
-  }
-
-  return condition();
-}
-
 std::string JoinArgVector(const std::vector<std::string>& argv) {
   std::string result;
   for (const auto& arg : argv) {
@@ -83,6 +77,59 @@ std::string JoinArgVector(const std::vector<std::string>& argv) {
     result += " ";
   }
   return result;
+}
+
+void InstallTestGraphicalPresenter(component_testing::Realm& realm) {
+  using component_testing::ChildRef;
+  using component_testing::ParentRef;
+  using component_testing::Protocol;
+  using component_testing::Route;
+
+  // UITestRealm does not currently provide a fuchsia.element.GraphicalPresenter, but the
+  // test_graphical_presenter exposes a ViewProvider and a GraphicalPresenter. We will connect this
+  // to the UITestRealm such that our view under test will become a child of the
+  // test_graphical_presetner.
+  constexpr auto kGraphicalPresenterName = "test_graphical_presenter";
+  constexpr auto kGraphicalPresenterUrl = "#meta/test_graphical_presenter.cm";
+  realm.AddChild(kGraphicalPresenterName, kGraphicalPresenterUrl);
+  realm
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::logger::LogSink::Name_},
+                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                              Protocol{fuchsia::sysmem::Allocator::Name_},
+                              Protocol{fuchsia::tracing::provider::Registry::Name_},
+                              Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                              Protocol{fuchsia::ui::composition::Flatland::Name_},
+                              Protocol{fuchsia::ui::composition::Allocator::Name_},
+                              Protocol{fuchsia::ui::input3::Keyboard::Name_},
+                          },
+                      .source = {ParentRef()},
+                      .targets = {ChildRef{kGraphicalPresenterName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::element::GraphicalPresenter::Name_},
+                          },
+                      .source = {ChildRef{kGraphicalPresenterName}},
+                      .targets = {ChildRef{kGuestManagerName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::ui::app::ViewProvider::Name_},
+                          },
+                      .source = {ChildRef{kGraphicalPresenterName}},
+                      .targets = {ParentRef()}});
+}
+
+std::optional<ViewDescriptor> FindDisplayView(ui_testing::UITestManager& ui_test_manager) {
+  auto presenter_koid = ui_test_manager.ClientViewRefKoid();
+  if (!presenter_koid) {
+    return {};
+  }
+  auto presenter = ui_test_manager.FindViewFromSnapshotByKoid(*presenter_koid);
+  if (!presenter || !presenter->has_children() || presenter->children().empty()) {
+    return {};
+  }
+  return ui_test_manager.FindViewFromSnapshotByKoid(presenter->children()[0]);
 }
 
 }  // namespace
@@ -99,22 +146,89 @@ zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
   return console_->ExecuteBlocking(command, ShellPrompt(), deadline, result);
 }
 
+void EnclosedGuest::StartWithRealmBuilder(zx::time deadline, GuestLaunchInfo& guest_launch_info) {
+  auto realm_builder = component_testing::RealmBuilder::Create();
+  InstallInRealm(realm_builder.root(), guest_launch_info);
+  realm_root_ =
+      std::make_unique<component_testing::RealmRoot>(realm_builder.Build(loop_.dispatcher()));
+  realm_services_ = std::make_unique<sys::ServiceDirectory>(realm_root_->CloneRoot());
+}
+
+void EnclosedGuest::StartWithUITestManager(zx::time deadline, GuestLaunchInfo& guest_launch_info) {
+  using component_testing::Directory;
+  using component_testing::Protocol;
+
+  // UITestManager allows us to run these tests against a hermetic UI stack (ex: to test
+  // interactions with Flatland, GraphicalPresenter, and Input).
+  //
+  // As structured, the virtualization components will be run in a sub-realm created by the
+  // UITestRealm. Some of the below config fields will allow us to route capabilities through that
+  // realm.
+  ui_testing::UITestRealm::Config ui_config;
+  ui_config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+  ui_config.use_input = true;
+  ui_config.use_flatland = true;
+
+  // These are services that we need to expose from the UITestRealm.
+  ui_config.exposed_client_services = {guest_launch_info.interface_name,
+                                       fuchsia::ui::app::ViewProvider::Name_};
+
+  // These are the services we need to consume from the UITestRealm.
+  ui_config.ui_to_client_services = {
+      fuchsia::ui::composition::Flatland::Name_,
+      fuchsia::ui::composition::Allocator::Name_,
+      fuchsia::ui::input3::Keyboard::Name_,
+  };
+
+  // These are the parent services (from our cml) that we need the UITestRealm to forward to use so
+  // that they can be routed to the guest manager.
+  ui_config.passthrough_capabilities = {
+      Protocol{fuchsia::kernel::HypervisorResource::Name_},
+      Protocol{fuchsia::kernel::VmexResource::Name_},
+      Protocol{fuchsia::sysinfo::SysInfo::Name_},
+      Directory{
+          .name = kDevGpuDirectory, .rights = fuchsia::io::R_STAR_DIR, .path = "/dev/class/gpu"},
+  };
+
+  // Now create and install the virtualization components into a new sub-realm.
+  ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(ui_config));
+  auto guest_realm = ui_test_manager_->AddSubrealm();
+  InstallInRealm(guest_realm, guest_launch_info);
+  InstallTestGraphicalPresenter(guest_realm);
+  ui_test_manager_->BuildRealm();
+  realm_services_ = ui_test_manager_->CloneExposedServicesDirectory();
+  ui_test_manager_->InitializeScene();
+}
+
 zx_status_t EnclosedGuest::Start(zx::time deadline) {
   using component_testing::RealmBuilder;
   using component_testing::RealmRoot;
 
   GuestLaunchInfo guest_launch_info;
-  auto realm_builder = RealmBuilder::Create();
-  if (auto status = InstallInRealm(realm_builder, guest_launch_info); status != ZX_OK) {
+  if (auto status = BuildLaunchInfo(&guest_launch_info); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failure building GuestLaunchInfo";
     return status;
   }
 
-  realm_root_ = std::make_unique<RealmRoot>(realm_builder.Build(loop_.dispatcher()));
-  return LaunchInRealm(*realm_root_, guest_launch_info, deadline);
+  // Tests must be explicit about GPU support in the tests.
+  //
+  // If we need GPU support we will launch with UITestManager to provide a hermetic instance of UI
+  // and input services. Otherwise we will launch directly using RealmBuilder. We make this
+  // distinction because UITestManager depends on the availability of vulkan and we can avoid that
+  // dependency for tests that don't need to test any interactions with the UI stack.
+  FX_CHECK(guest_launch_info.config.has_virtio_gpu())
+      << "virtio-gpu support must be explicitly declared.";
+  if (guest_launch_info.config.virtio_gpu()) {
+    StartWithUITestManager(deadline, guest_launch_info);
+  } else {
+    StartWithRealmBuilder(deadline, guest_launch_info);
+  }
+
+  return LaunchInRealm(*realm_services_, guest_launch_info, deadline);
 }
 
-zx_status_t EnclosedGuest::InstallInRealm(component_testing::RealmBuilder& realm_builder,
-                                          GuestLaunchInfo& guest_launch_info) {
+void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
+                                   GuestLaunchInfo& guest_launch_info) {
   using component_testing::ChildRef;
   using component_testing::Directory;
   using component_testing::ParentRef;
@@ -122,31 +236,29 @@ zx_status_t EnclosedGuest::InstallInRealm(component_testing::RealmBuilder& realm
   using component_testing::Route;
 
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
-  constexpr auto kFakeScenicComponentName = "fake_scenic";
 
-  constexpr auto kDevGpuDirectory = "dev-gpu";
-  constexpr auto kGuestManagerName = "guest_manager";
+  realm.AddChild(kGuestManagerName, guest_launch_info.url);
+  realm.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
 
-  zx_status_t status = LaunchInfo(&guest_launch_info);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failure launching guest image: ";
-    return status;
-  }
-
-  realm_builder.AddChild(kGuestManagerName, guest_launch_info.url);
-  realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
-  realm_builder.AddLocalChild(kFakeScenicComponentName, &fake_scenic_);
-
-  realm_builder
+  realm
       .AddRoute(Route{.capabilities =
                           {
                               Protocol{fuchsia::logger::LogSink::Name_},
+                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                              Protocol{fuchsia::sysmem::Allocator::Name_},
+                              Protocol{fuchsia::tracing::provider::Registry::Name_},
+                              Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                              Protocol{fuchsia::ui::composition::Flatland::Name_},
+                              Protocol{fuchsia::ui::composition::Allocator::Name_},
+                              Protocol{fuchsia::ui::input3::Keyboard::Name_},
+                          },
+                      .source = {ParentRef()},
+                      .targets = {ChildRef{kGuestManagerName}}})
+      .AddRoute(Route{.capabilities =
+                          {
                               Protocol{fuchsia::kernel::HypervisorResource::Name_},
                               Protocol{fuchsia::kernel::VmexResource::Name_},
                               Protocol{fuchsia::sysinfo::SysInfo::Name_},
-                              Protocol{fuchsia::sysmem::Allocator::Name_},
-                              Protocol{fuchsia::tracing::provider::Registry::Name_},
-                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
                               Directory{.name = kDevGpuDirectory,
                                         .rights = fuchsia::io::R_STAR_DIR,
                                         .path = "/dev/class/gpu"},
@@ -161,28 +273,22 @@ zx_status_t EnclosedGuest::InstallInRealm(component_testing::RealmBuilder& realm
                       .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {
-                              Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                          },
-                      .source = {ChildRef{kFakeScenicComponentName}},
-                      .targets = {ChildRef{kGuestManagerName}}})
-      .AddRoute(Route{.capabilities =
-                          {
                               Protocol{guest_launch_info.interface_name},
                           },
                       .source = ChildRef{kGuestManagerName},
                       .targets = {ParentRef()}});
-
-  return ZX_OK;
 }
 
-zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& realm_root,
+zx_status_t EnclosedGuest::LaunchInRealm(const sys::ServiceDirectory& services,
                                          GuestLaunchInfo& guest_launch_info, zx::time deadline) {
   Logger::Get().Reset();
   PeriodicLogger logger;
 
   fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
-  guest_manager_ = realm_root.ConnectSync<fuchsia::virtualization::GuestManager>(
-      guest_launch_info.interface_name);
+  guest_manager_ =
+      services.Connect<fuchsia::virtualization::GuestManager>(guest_launch_info.interface_name)
+          .Unbind()
+          .BindSync();
 
   // Test cases may disable the vsock device, and during the migration we FX_CHECK that we can
   // acquire the HostVsockEndpoint handle (which is now served by the device).
@@ -194,7 +300,6 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
   if (status != ZX_OK) {
     return status;
   }
-
   status =
       guest_manager_->LaunchGuest(std::move(guest_launch_info.config), guest_.NewRequest(), &res);
   if (status != ZX_OK) {
@@ -222,7 +327,6 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
   });
 
   bool success = RunLoopUntil(
-      GetLoop(),
       [&guest_error, &get_serial_result] {
         return guest_error.has_value() || get_serial_result.has_value();
       },
@@ -251,7 +355,6 @@ zx_status_t EnclosedGuest::LaunchInRealm(const component_testing::RealmRoot& rea
         get_console_result = std::move(result);
       });
   success = RunLoopUntil(
-      GetLoop(),
       [&guest_error, &get_console_result] {
         return guest_error.has_value() || get_console_result.has_value();
       },
@@ -314,12 +417,44 @@ zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<st
   return Execute(GetTestUtilCommand(util, argv), {}, deadline, result);
 }
 
-zx_status_t ZirconEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
+bool EnclosedGuest::RunLoopUntil(fit::function<bool()> condition, zx::time deadline) {
+  while (zx::clock::get_monotonic() < deadline) {
+    // Check our condition.
+    if (condition()) {
+      return true;
+    }
+
+    // Wait until next polling interval.
+    GetLoop()->Run(zx::deadline_after(kLoopConditionStep));
+    GetLoop()->ResetQuit();
+  }
+
+  return condition();
+}
+
+zx_status_t ZirconEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   launch_info->url = kZirconGuestUrl;
   launch_info->interface_name = fuchsia::virtualization::ZirconGuestManager::Name_;
   // Disable netsvc to avoid spamming the net device with logs.
   launch_info->config.mutable_cmdline_add()->emplace_back("netsvc.disable=true");
+  launch_info->config.set_virtio_gpu(true);
   return ZX_OK;
+}
+
+void EnclosedGuest::WaitForDisplay() {
+  // Wait for the display view to render.
+  std::optional<ViewDescriptor> view_descriptor;
+  RunLoopUntil(
+      [this, &view_descriptor] {
+        view_descriptor = FindDisplayView(*ui_test_manager_);
+        return view_descriptor.has_value();
+      },
+      zx::time::infinite());
+
+  // Now wait for the view to get focus.
+  auto koid = view_descriptor->view_ref_koid();
+  RunLoopUntil([this, koid] { return ui_test_manager_->ViewIsFocused(koid); },
+               zx::time::infinite());
 }
 
 namespace {
@@ -377,13 +512,14 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
   return exec_argv;
 }
 
-zx_status_t DebianEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
+zx_status_t DebianEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   launch_info->url = kDebianGuestUrl;
   launch_info->interface_name = fuchsia::virtualization::DebianGuestManager::Name_;
   // Enable kernel debugging serial output.
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
     launch_info->config.mutable_cmdline_add()->emplace_back(cmd);
   }
+  launch_info->config.set_virtio_gpu(true);
   return ZX_OK;
 }
 
@@ -422,7 +558,7 @@ std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
   return exec_argv;
 }
 
-zx_status_t TerminaEnclosedGuest::LaunchInfo(GuestLaunchInfo* launch_info) {
+zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   launch_info->url = kTerminaGuestUrl;
   launch_info->interface_name = fuchsia::virtualization::TerminaGuestManager::Name_;
   launch_info->config.set_virtio_gpu(false);
@@ -505,8 +641,7 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline,
         listeners = std::move(args.second);
         return fpromise::ok();
       }));
-  if (!RunLoopUntil(
-          GetLoop(), [this] { return server_ != nullptr; }, deadline)) {
+  if (!RunLoopUntil([this] { return server_ != nullptr; }, deadline)) {
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -565,8 +700,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   // create the maitred stub in |VmReady|.
   {
     PeriodicLogger logger("Wait for maitred", zx::sec(1));
-    if (!RunLoopUntil(
-            GetLoop(), [this] { return maitred_ != nullptr; }, deadline)) {
+    if (!RunLoopUntil([this] { return maitred_ != nullptr; }, deadline)) {
       return ZX_ERR_TIMED_OUT;
     }
   }

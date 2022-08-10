@@ -52,6 +52,10 @@ class GuestTest : public ::testing::Test {
     return GetEnclosedGuest().RunUtil(util, argv, zx::time::infinite(), result);
   }
 
+  bool RunLoopUntil(fit::function<bool()> condition, zx::time deadline) {
+    return GetEnclosedGuest().RunLoopUntil(std::move(condition), deadline);
+  }
+
   GuestKernel GetGuestKernel() { return GetEnclosedGuest().GetGuestKernel(); }
 
   uint32_t GetGuestCid() { return GetEnclosedGuest().GetGuestCid(); }

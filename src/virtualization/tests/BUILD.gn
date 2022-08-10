@@ -50,6 +50,7 @@ group("tests") {
     ":guest_unit_tests",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
+    ":virtualization_input_tests_pkg",
     ":virtualization_net_tests_pkg",
     ":virtualization_vsock_tests_pkg",
     "hypervisor",
@@ -62,7 +63,6 @@ group("tests") {
       # TODO(fxbug.dev/64348): These tests needs to be reworked so that they
       # interact correctly with Scenic.
       # ":virtualization_gpu_tests_pkg",
-      # ":virtualization_input_tests_pkg",
       ":termina_integration_tests",
       ":virtualization_sound_tests_pkg",
     ]
@@ -179,24 +179,6 @@ source_set("fake_netstack") {
   ]
 }
 
-source_set("fake_scenic") {
-  visibility = [ ":*" ]
-  testonly = true
-  sources = [
-    "fake_scenic.cc",
-    "fake_scenic.h",
-  ]
-
-  deps = [
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//src/lib/fostr/fidl/fuchsia.ui.scenic",
-    "//src/lib/fxl",
-  ]
-  public_deps = [ "//sdk/fidl/fuchsia.ui.scenic" ]
-}
-
 executable("unit_tests") {
   testonly = true
   output_name = "guest_unit_tests"
@@ -238,6 +220,7 @@ source_set("lib") {
     ":guest_constants",
     ":periodic_logger",
     ":socket_logger",
+    "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.net.virtualization",
@@ -254,7 +237,7 @@ source_set("lib") {
   ]
   public_deps = [
     ":fake_netstack",
-    ":fake_scenic",
+    "//src/ui/testing/ui_test_manager",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/lib/vsh:client",
     "//src/virtualization/third_party/vm_tools:vm_cc_proto",
@@ -263,6 +246,7 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+  data_deps = [ "//src/ui/testing/test_graphical_presenter" ]
 }
 
 fuchsia_unittest_package("guest_unit_tests") {
@@ -405,6 +389,7 @@ executable("virtualization_input_tests") {
     ":test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis",
   ]
 }
 
@@ -421,7 +406,8 @@ fuchsia_test_package("virtualization_input_tests_pkg") {
   package_name = "virtualization-input-tests"
   test_components = [ ":virtualization_input_tests_cmp" ]
   test_specs = {
-    environments = guest_envs
+    # Require vulkan for UITestManager
+    environments = guest_vulkan_envs
     log_settings = {
       max_severity = "ERROR"
     }

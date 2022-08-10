@@ -147,8 +147,8 @@ class CustomizableMemoryGuest : public T {
  public:
   explicit CustomizableMemoryGuest(async::Loop& loop) : T(loop) {}
 
-  zx_status_t LaunchInfo(GuestLaunchInfo* launch_info) override {
-    zx_status_t status = T::LaunchInfo(launch_info);
+  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override {
+    zx_status_t status = T::BuildLaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
