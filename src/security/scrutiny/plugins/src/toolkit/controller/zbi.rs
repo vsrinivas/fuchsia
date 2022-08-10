@@ -124,7 +124,8 @@ impl DataController for ZbiExtractController {
                             for blob_path in blob_paths.into_iter() {
                                 let path = blobfs_dir.join(&blob_path);
                                 let mut file = File::create(path)?;
-                                file.write_all(reader.read_blob(&blob_path)?.as_slice())?;
+                                let mut blob = reader.open(&blob_path)?;
+                                std::io::copy(&mut blob, &mut file)?;
                             }
                         }
                     }

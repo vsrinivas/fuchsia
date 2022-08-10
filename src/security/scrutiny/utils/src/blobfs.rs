@@ -599,18 +599,6 @@ impl<TCRS: 'static + TryClone + Read + Seek> BlobFsReader<TCRS> {
         }
     }
 
-    /// Read the blob with the merkle root described by `blob_path`. Blobs
-    /// identities as paths are lowercase hex-strings of the blob merkle root.
-    /// Note that this implementation does not check the integrity of merkle
-    /// roots; it trusts the metadata loaded from the underlying blobfs archive.
-    pub fn read_blob<P: AsRef<Path>>(&mut self, blob_path: P) -> Result<Vec<u8>> {
-        let mut buffer = vec![];
-        let mut reader = self.open(&blob_path)?;
-        std::io::copy(&mut reader, &mut buffer)
-            .map_err(|err| anyhow!("Failed copy blob to buffer: {}", err))?;
-        Ok(buffer)
-    }
-
     /// Construct an iterator of all known paths stored in the underlying blobfs
     /// archive.
     pub fn blob_paths<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PathBuf> + 'a> {

@@ -12,7 +12,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::fs::{self, File},
-    std::io::{prelude::*, BufReader},
+    std::io::BufReader,
     std::path::PathBuf,
     std::sync::Arc,
 };
@@ -51,7 +51,8 @@ impl DataController for BlobFsExtractController {
         for blob_path in blob_paths.into_iter() {
             let path = output_path.join(&blob_path);
             let mut file = File::create(path)?;
-            file.write_all(reader.read_blob(&blob_path)?.as_slice())?;
+            let mut blob = reader.open(&blob_path)?;
+            std::io::copy(&mut blob, &mut file)?;
         }
         Ok(json!({"status": "ok"}))
     }

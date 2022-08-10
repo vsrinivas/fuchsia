@@ -133,9 +133,11 @@ impl<TCRS: 'static + TryClone + Read + Seek + Send + Sync> ArtifactReader
     for BlobFsArtifactReader<TCRS>
 {
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
-        self.blobfs_reader.read_blob(path).with_context(|| {
-            format!("Failed to read blob {:?} from blobfs via artifact reader", path)
-        })
+        const CTX: &str = "<BlobFsArtifactReader as ArtifactReader>::read_bytes";
+        let mut blob = self.blobfs_reader.open(path).context(CTX)?;
+        let mut v = Vec::new();
+        blob.read_to_end(&mut v).context(CTX)?;
+        Ok(v)
     }
 
     fn get_deps(&self) -> HashSet<PathBuf> {
