@@ -79,12 +79,15 @@ func main() {
 
 // generator represents an abstract generator of bindings.
 type generator interface {
+	// DeclOrder gives the declaration order desired by the backend.
+	DeclOrder() zither.DeclOrder
+
 	// Generate generates bindings into the provided output directory.
 	Generate(summary zither.Summary, outputDir string) ([]string, error)
 }
 
 func execute(ctx context.Context, gen generator, ir fidlgen.Root, outputDir, outputManifest string) error {
-	summary, err := zither.NewSummary(ir)
+	summary, err := zither.NewSummary(ir, gen.DeclOrder())
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,6 @@
+{{- define "GenerateCConst" -}}
+{{ range .Comments }}
+//{{ . }}
+{{- end }}
+#define {{ ConstName .}} {{ ConstValue . }} {{ if .Expression }}  // {{ .Expression }} {{ end }}
+{{ end }}

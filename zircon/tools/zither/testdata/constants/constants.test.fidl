@@ -1,0 +1,81 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file excludes enum and bits constants, so that enum/bits support can be
+// tested as a whole.
+library zither.constants;
+
+const UINT8_ZERO uint8 = 0;
+const UINT8_MAX_DEC uint8 = 255;
+const UINT8_MAX_HEX uint8 = 0xff;
+
+const INT8_ZERO int8 = 0;
+const INT8_MIN_DEC int8 = -128;
+const INT8_MIN_HEX int8 = -0x80;
+const INT8_MAX_DEC int8 = 127;
+const INT8_MAX_HEX int8 = 0x7f;
+
+const UINT16_ZERO uint16 = 0;
+const UINT16_MAX_DEC uint16 = 65535;
+const UINT16_MAX_HEX uint16 = 0xffff;
+
+const INT16_ZERO int16 = 0;
+const INT16_MIN_DEC int16 = -32768;
+const INT16_MIN_HEX int16 = -0x8000;
+const INT16_MAX_DEC int16 = 32767;
+const INT16_MAX_HEX int16 = 0x7fff;
+
+const UINT32_ZERO uint32 = 0;
+const UINT32_MAX_DEC uint32 = 4294967295;
+const UINT32_MAX_HEX uint32 = 0xffffffff;
+
+const INT32_ZERO int32 = 0;
+const INT32_MIN_DEC int32 = -2147483648;
+const INT32_MIN_HEX int32 = -0x80000000;
+const INT32_MAX_DEC int32 = 2147483647;
+const INT32_MAX_HEX int32 = 0x7fffffff;
+
+const UINT64_ZERO uint64 = 0;
+const UINT64_MAX_DEC uint64 = 18446744073709551615;
+const UINT64_MAX_HEX uint64 = 0xffffffffffffffff;
+
+const INT64_ZERO int64 = 0;
+const INT64_MIN_DEC int64 = -9223372036854775808;
+const INT64_MIN_HEX int64 = -0x8000000000000000;
+const INT64_MAX_DEC int64 = 9223372036854775807;
+const INT64_MAX_HEX int64 = 0x7fffffffffffffff;
+
+const FALSE bool = false;
+const TRUE bool = true;
+
+const EMPTY_STRING string = "";
+
+const BYTE_ZERO byte = 0;
+
+const BINARY_VALUE uint8 = 0b10101111;
+
+const LOWERCASE_HEX_VALUE uint64 = 0x1234abcd5678ffff;
+const UPPERCASE_HEX_VALUE uint64 = 0x1234ABCD5678FFFF;
+
+const LEADING_ZEROES_HEX_VALUE uint32 = 0x00000011;
+const LEADING_ZEROES_DEC_VALUE uint32 = 0000000017;
+const LEADING_ZEROES_BINARY_VALUE uint32 = 0b0000000000010001;
+
+const BITWISE_OR_VALUE uint8 = 0b1000 | 0b0100 | 0b0010 | 0b0001;
+
+const NONEMPTY_STRING string = "this is a constant";
+
+const DEFINITION_FROM_ANOTHER_CONSTANT string = NONEMPTY_STRING;
+
+const BITWISE_OR_OF_OTHER_CONSTANTS uint8 = BINARY_VALUE | BITWISE_OR_VALUE | 0b1 | UINT8_ZERO;
+
+/// Constant with a one-line comment.
+const CONSTANT_ONE_LINE_COMMENT bool = true;
+
+/// Constant
+///     with
+///         a
+///           many-line
+///             comment.
+const CONSTANT_MANY_LINE_COMMENT string = "";

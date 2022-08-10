@@ -12,8 +12,16 @@ Here we document the supported zither backends and their particularities.
 Consider a FIDL library by the name of `${id1}.${id2}.....${idn}`:
 
 ### C
-* A single header `<${id1}/${id2}/.../c/${idn}.h>` is generated.
+* A single header `<${id1}/${id2}/.../${idn}/${idn}.h>` is generated.
   - TODO(fxbug.dev/51002): this is a simple placeholder policy.
+* Type translation from FIDL to C is as follows:
+  - `{u,}int{8,16,32,64}`map to `{u,}int{8,16,32,64}_t`, respectively;
+  - `bool` maps to `bool`;
+  - unbounded `string`s are only permitted in constants and map to string
+  literals;
+  - TODO(fxbug.dev/51002): Document more as we go.
+* A constant declaration yields a preprocessor variable of name
+`UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})`;
 * TODO(fxbug.dev/51002): Document more as we go.
 
 TODO(fxbug.dev/91102): Also C++, Rust, and Go.
