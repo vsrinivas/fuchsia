@@ -10,6 +10,7 @@
 #include <asm.h>
 #include <arch/code-patches/case-id.h>
 #include <arch/defines.h>
+#include <arch/kernel_aspace.h>
 #include <arch/x86/asm.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
@@ -21,6 +22,13 @@
 #define ADDR_OFFSET_MASK ((1 << ADDR_OFFSET)-1)
 #define SHIFT_OFFSET(_s) ((_s) >> 3)
 #define SHIFT_REMAIN(_s) ((_s) - (SHIFT_OFFSET(_s) << 3))
+
+// Calculate the offset into `pdp_high` based on `KERNEL_ASPACE_SIZE`.
+#define PDP_HIGH_OFFSET (512 - (KERNEL_ASPACE_SIZE >> 30))
+// We assume `KERNEL_ASPACE_SIZE` <= 512GB.
+.if KERNEL_ASPACE_SIZE > 0x0000008000000000
+.err "KERNEL_ASPACE_SIZE must be less than or equal to 512GB"
+.endif
 
 // Set a page table entry for the kernel module relocated 64-bit virtual
 // address in 32-bit code. Clobbers the %ecx register.
@@ -117,7 +125,7 @@ FUNCTION_LABEL(_start)
 
     /* map the first 1GB in this table */
     movl $PHYS(pte), %esi
-    movl $0x200, %ecx
+    movl $512, %ecx
     xor  %eax, %eax
 
 0:
@@ -129,7 +137,7 @@ FUNCTION_LABEL(_start)
     inc  %eax
     loop 0b
 
-    /* set up a linear map of the first 64GB at 0xffffff8000000000 */
+    /* set up a linear map of the first 64GB */
     movl $PHYS(linear_map_pdp), %esi
     movl $32768, %ecx
     xor  %eax, %eax
@@ -148,7 +156,7 @@ FUNCTION_LABEL(_start)
     loop 0b
 
     /* point the high pdp at our linear mapping page tables */
-    movl $PHYS(pdp_high), %esi
+    movl $PHYS(pdp_high + PDP_HIGH_OFFSET * 8), %esi
     movl $64, %ecx
     movl $PHYS(linear_map_pdp), %eax
     orl  $X86_KERNEL_PD_FLAGS, %eax
@@ -187,8 +195,8 @@ FUNCTION_LABEL(_start)
     // Put the page directory entry into the pdp_high. It's 64 entries starting from
     // the index corresponding to the KASAN_SHADOW_OFFSET virtual address.
     // 64 pdp entries span 64GB of shadow map, covering 512 GB of kernel address space
-#define PDP_HIGH_OFFSET_START (((KASAN_SHADOW_OFFSET) >> 30) & 0x1ff)
-    movl $PHYS(pdp_high + PDP_HIGH_OFFSET_START * 8), %edi
+#define PDP_HIGH_SHADOW_OFFSET (((KASAN_SHADOW_OFFSET) >> 30) & 0x1ff)
+    movl $PHYS(pdp_high + PDP_HIGH_SHADOW_OFFSET * 8), %edi
     movl $X86_KERNEL_KASAN_PDP_ENTRIES, %ecx
     movabs $PHYS(kasan_shadow_pd) + X86_KERNEL_KASAN_INITIAL_PD_FLAGS, %rax
     rep stosq
