@@ -113,10 +113,10 @@ inspect::Hierarchy TestFilesystem::TakeSnapshot() const {
 
   fuchsia::inspect::TreePtr tree;
   async_dispatcher_t* dispatcher = executor.dispatcher();
-  auto export_root = GetOutgoingDirectory();
-  ZX_ASSERT(export_root.is_valid());
+  auto service_dir = ServiceDirectory();
+  ZX_ASSERT(service_dir.is_valid());
   zx_status_t status =
-      fdio_service_connect_at(export_root.handle()->get(), "diagnostics/fuchsia.inspect.Tree",
+      fdio_service_connect_at(service_dir.handle()->get(), "diagnostics/fuchsia.inspect.Tree",
                               tree.NewRequest(dispatcher).TakeChannel().release());
   ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to inspect service: %s",
                 zx_status_get_string(status));

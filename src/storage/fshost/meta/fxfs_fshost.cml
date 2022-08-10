@@ -26,12 +26,6 @@
             from: "#fxfs",
             path: "/fxfs/svc/fuchsia.fs.startup.Startup",
         },
-        {
-            directory: "root",
-            from: "#fxfs",
-            rights: [ "rw*" ],
-            path: "/fxfs/root",
-        },
     ],
     offer: [
         {

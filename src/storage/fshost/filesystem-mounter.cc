@@ -27,9 +27,11 @@
 #include "constants.h"
 #include "fdio.h"
 #include "fidl/fuchsia.io/cpp/markers.h"
+#include "lib/fdio/fd.h"
 #include "lib/fdio/namespace.h"
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "lib/zx/status.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/options.h"
@@ -39,6 +41,8 @@
 namespace fshost {
 
 namespace fio = fuchsia_io;
+
+namespace {
 
 constexpr unsigned char kInsecureCryptDataKey[32] = {
     0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x8,  0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,
@@ -50,7 +54,28 @@ constexpr unsigned char kInsecureCryptMetadataKey[32] = {
     0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
 };
 
-zx::status<fs_management::MountedFilesystem> FilesystemMounter::LaunchFsComponent(
+zx::status<> CopyDataToFilesystem(fidl::ClientEnd<fuchsia_io::Directory> data_root, Copier copier) {
+  fbl::unique_fd fd;
+  if (zx_status_t status =
+          fdio_fd_create(data_root.TakeHandle().release(), fd.reset_and_get_address());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::make_status(copier.Write(std::move(fd)));
+}
+
+}  // namespace
+
+StartedFilesystem::StartedFilesystem(fs_management::StartedSingleVolumeFilesystem&& fs)
+    : fs_(std::move(fs)) {}
+StartedFilesystem::StartedFilesystem(fs_management::StartedMultiVolumeFilesystem&& fs)
+    : fs_(std::move(fs)) {}
+
+void StartedFilesystem::Detach() {
+  std::visit([&](auto& fs) { fs.Release(); }, fs_);
+}
+
+zx::status<StartedFilesystem> FilesystemMounter::LaunchFsComponent(
     zx::channel block_device, const fs_management::MountOptions& options,
     const fs_management::DiskFormat& format) {
   fbl::unique_fd device_fd;
@@ -59,8 +84,18 @@ zx::status<fs_management::MountedFilesystem> FilesystemMounter::LaunchFsComponen
     return zx::error(status);
   }
 
-  return fs_management::Mount(std::move(device_fd), nullptr, format, options,
-                              fs_management::LaunchLogsAsync);
+  if (format == fs_management::kDiskFormatFxfs) {
+    auto fs = fs_management::MountMultiVolume(std::move(device_fd), format, options,
+                                              fs_management::LaunchLogsAsync);
+    if (fs.is_error())
+      return fs.take_error();
+    return zx::ok(StartedFilesystem(std::move(*fs)));
+  }
+  auto fs =
+      fs_management::Mount(std::move(device_fd), format, options, fs_management::LaunchLogsAsync);
+  if (fs.is_error())
+    return fs.take_error();
+  return zx::ok(StartedFilesystem(std::move(*fs)));
 }
 
 zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t* hnd,
@@ -88,12 +123,12 @@ zx::status<std::string> FilesystemMounter::GetDevicePath(const zx::channel& bloc
   return zx::ok(device_path);
 }
 
-zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, const char* binary,
-                                                const fs_management::MountOptions& options,
-                                                zx::channel block_device_client,
-                                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
-  FX_LOGS(INFO) << "FilesystemMounter::MountFilesystem(" << binary << ")";
-  std::string device_path = GetDevicePath(block_device_client).value_or("");
+zx::status<> FilesystemMounter::MountLegacyFilesystem(FsManager::MountPoint point,
+                                                      const char* binary,
+                                                      const fs_management::MountOptions& options,
+                                                      zx::channel block_device_client) {
+  FX_LOGS(INFO) << "FilesystemMounter::MountLegacyFilesystem(" << binary << ")";
+  const std::string device_path = GetDevicePath(block_device_client).value_or("");
   FX_LOGS(INFO) << "Mounting device " << device_path << " with " << binary << " at "
                 << FsManager::MountPointPath(point);
 
@@ -103,10 +138,9 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
   }
   auto [export_root, server_end] = std::move(endpoints_or.value());
 
-  size_t num_handles = crypt_client ? 3 : 2;
-  zx_handle_t handles[] = {server_end.TakeChannel().release(), block_device_client.release(),
-                           crypt_client.TakeChannel().release()};
-  uint32_t ids[] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
+  constexpr size_t kNumHandles = 2;
+  zx_handle_t handles[] = {server_end.TakeChannel().release(), block_device_client.release()};
+  uint32_t ids[] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID};
 
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
@@ -130,7 +164,7 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
   argv.push_back("mount");
   argv.push_back(nullptr);
   if (zx_status_t status =
-          LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, num_handles);
+          LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, kNumHandles);
       status != ZX_OK) {
     return zx::error(status);
   }
@@ -145,7 +179,7 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
   return zx::ok();
 }
 
-zx_status_t FilesystemMounter::MountData(zx::channel block_device,
+zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional<Copier> copier,
                                          fs_management::MountOptions options,
                                          fs_management::DiskFormat format) {
   if (data_mounted_) {
@@ -153,14 +187,16 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   }
 
   if (format == fs_management::kDiskFormatF2fs) {
+    // f2fs isn't set up to run as a component yet.
+    // TODO(fxbug.dev/91577): Remove this special case.
     std::string binary_path(BinaryPathForFormat(format));
     if (binary_path.empty()) {
       FX_LOGS(ERROR) << "Unsupported format: " << DiskFormatString(format);
       return ZX_ERR_INVALID_ARGS;
     }
 
-    if (auto result = MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), options,
-                                      std::move(block_device), {});
+    if (auto result = MountLegacyFilesystem(FsManager::MountPoint::kData, binary_path.c_str(),
+                                            options, std::move(block_device));
         result.is_error()) {
       return result.error_value();
     }
@@ -177,9 +213,9 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
     const std::string device_path = GetDevicePath(block_device).value_or("");
 
     options.component_child_name = fs_management::DiskFormatString(format);
+    std::function<zx::channel()> crypt_client;
     if (format == fs_management::kDiskFormatFxfs) {
-      options.crypt_client = []() {
-        // TODO(fxbug.dev/99591): Statically route the crypt service.
+      crypt_client = []() {
         auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
         if (crypt_client_or.is_error()) {
           FX_PLOGS(ERROR, crypt_client_or.error_value()) << "Failed to connect to Crypt service.";
@@ -187,19 +223,59 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
         }
         return std::move(crypt_client_or).value().TakeChannel();
       };
+      options.crypt_client = crypt_client;
     }
 
-    auto mounted_filesystem_or = LaunchFsComponent(std::move(block_device), options, format);
-    if (mounted_filesystem_or.is_error()) {
-      FX_PLOGS(ERROR, mounted_filesystem_or.error_value())
-          << "Failed to launch filesystem component.";
-      return mounted_filesystem_or.error_value();
+    auto mounted_filesystem = LaunchFsComponent(std::move(block_device), options, format);
+    if (mounted_filesystem.is_error()) {
+      FX_PLOGS(ERROR, mounted_filesystem.error_value()) << "Failed to launch filesystem component.";
+      return mounted_filesystem.error_value();
     }
 
-    if (zx_status_t status = RouteData(std::move(*mounted_filesystem_or), device_path);
-        status != ZX_OK) {
+    std::optional<fidl::UnownedClientEnd<fuchsia_io::Directory>> export_root;
+    zx::status<fidl::ClientEnd<fuchsia_io::Directory>> data_root;
+    if (const auto* fs =
+            std::get_if<fs_management::StartedSingleVolumeFilesystem>(&mounted_filesystem->fs_)) {
+      export_root = fs->ExportRoot();
+      data_root = fs->DataRoot();
+    } else if (auto* fs = std::get_if<fs_management::StartedMultiVolumeFilesystem>(
+                   &mounted_filesystem->fs_)) {
+      // TODO(fxbug.dev/102666): Don't open the default volume; instead we should open the data
+      // volume.
+      auto volume = fs->OpenVolume("default", crypt_client());
+      if (volume.is_error()) {
+        FX_LOGS(INFO) << "Default data volume not found, creating it";
+        volume = fs->CreateVolume("default", crypt_client());
+      }
+      if (volume.is_error()) {
+        FX_PLOGS(ERROR, volume.status_value()) << "Failed to open or create default volume";
+        return volume.status_value();
+      }
+      export_root = (*volume)->ExportRoot();
+      data_root = (*volume)->DataRoot();
+    } else {
+      __builtin_unreachable();
+    }
+    if (data_root.is_error()) {
+      FX_PLOGS(ERROR, data_root.status_value()) << "Failed to get data root";
+    }
+
+    if (copier) {
+      FX_LOGS(INFO) << "Copying data into filesystem...";
+      if (auto status = CopyDataToFilesystem(*std::move(data_root), std::move(copier.value()));
+          status.is_error()) {
+        FX_PLOGS(WARNING, status.status_value()) << "Faile to copy data; expect data loss";
+      } else {
+        FX_LOGS(INFO) << "Copying successful!";
+      }
+    }
+
+    if (zx_status_t status = RouteData(*export_root, device_path); status != ZX_OK) {
       return status;
     }
+
+    // Detach to avoid RAII shutting the filesystem down when it goes out of scope.
+    mounted_filesystem->Detach();
   }
 
   // Obtain data root used for serving disk usage statistics. Must be valid otherwise the lazy node
@@ -217,14 +293,10 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   return ZX_OK;
 }
 
-zx_status_t FilesystemMounter::RouteData(fs_management::MountedFilesystem mounted_filesystem,
+zx_status_t FilesystemMounter::RouteData(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
                                          std::string_view device_path) {
   auto endpoints = manager().TakeMountPointServerEnd(FsManager::MountPoint::kData, false);
   fidl::ServerEnd<::fuchsia_io::Node> server_end(endpoints->server_end.TakeChannel());
-
-  // Take export root to avoid RAII shutting it down when mounted_filesystem_or goes out of scope.
-  auto export_root = std::move(mounted_filesystem).TakeExportRoot();
-
   auto clone_or = fidl::WireCall(export_root)
                       ->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(server_end));
 
@@ -233,6 +305,7 @@ zx_status_t FilesystemMounter::RouteData(fs_management::MountedFilesystem mounte
     return clone_or.status();
   }
   fshost_.RegisterDevicePath(FsManager::MountPoint::kData, device_path);
+
   return ZX_OK;
 }
 
@@ -242,8 +315,8 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kFactory, kFactoryfsPath, options,
-                                    std::move(block_device));
+  if (auto result = MountLegacyFilesystem(FsManager::MountPoint::kFactory, kFactoryfsPath, options,
+                                          std::move(block_device));
       result.is_error()) {
     return result.error_value();
   }
@@ -258,8 +331,8 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (auto result = MountFilesystem(FsManager::MountPoint::kDurable, kMinfsPath, options,
-                                    std::move(block_device));
+  if (auto result = MountLegacyFilesystem(FsManager::MountPoint::kDurable, kMinfsPath, options,
+                                          std::move(block_device));
       result.is_error()) {
     return result.error_value();
   }
@@ -279,9 +352,8 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
   if (ret.is_error()) {
     return ret.error_value();
   }
-  // Take the export root to avoid RAII shutting it down when mounted_filesystem_or goes out of
-  // scope.
-  auto export_root = std::move(ret.value()).TakeExportRoot();
+  // Detach to avoid RAII shutting it down when mounted_filesystem_or goes out of scope.
+  ret->Detach();
 
   blob_mounted_ = true;
   return ZX_OK;

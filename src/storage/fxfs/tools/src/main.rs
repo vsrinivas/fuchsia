@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fxfs::{
         crypt::{insecure::InsecureCrypt, Crypt},
-        filesystem::{mkfs, FxFilesystem, OpenOptions},
+        filesystem::{mkfs_with_default, FxFilesystem, OpenOptions},
         fsck,
     },
     std::{io::Read, path::Path, sync::Arc},
@@ -91,6 +91,8 @@ struct RmSubCommand {
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// format the file or block device as an empty Fxfs filesystem
+// TODO(fxbug.dev/97324): Mkfs should be able to create instances with one or more volumes, with a
+// set of encryption engines.
 #[argh(subcommand, name = "mkfs")]
 struct FormatSubCommand {}
 
@@ -217,7 +219,7 @@ async fn main() -> Result<(), Error> {
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
                     ));
                     log::set_max_level(log::LevelFilter::Info);
-                    mkfs(device, Some(crypt)).await?;
+                    mkfs_with_default(device, Some(crypt)).await?;
                     Ok(())
                 }
                 ImageSubCommand::Fsck(_) => {

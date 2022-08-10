@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        crypt::Crypt,
         filesystem::{mkfs, FxFilesystem, OpenFxFilesystem, OpenOptions},
         fsck,
         log::*,
@@ -14,33 +13,30 @@ use {
             RemoteCrypt,
         },
     },
-    anyhow::{ensure, Context, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream, ServerEnd},
+    anyhow::{Context, Error},
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream},
     fidl_fuchsia_fs::{AdminMarker, AdminRequest, AdminRequestStream},
     fidl_fuchsia_fs_startup::{
-        CheckOptions, FormatOptions, StartOptions, StartupMarker, StartupRequest,
-        StartupRequestStream,
+        CheckOptions, StartOptions, StartupMarker, StartupRequest, StartupRequestStream,
     },
     fidl_fuchsia_fxfs::{CryptProxy, VolumesMarker, VolumesRequest, VolumesRequestStream},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
-    fs_inspect::{FsInspect, FsInspectTree},
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::lock::Mutex,
     futures::TryStreamExt,
     inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
     remote_block_device::RemoteBlockClient,
-    std::sync::{Arc, Mutex, Weak},
+    std::ops::Deref,
+    std::sync::Arc,
     storage_device::{block_device::BlockDevice, DeviceHolder},
     vfs::{
         directory::{entry::DirectoryEntry, helper::DirectlyMutable},
         execution_scope::ExecutionScope,
         path::Path,
-        remote::remote_boxed_with_type,
     },
 };
-
-const DEFAULT_VOLUME_NAME: &str = "default";
 
 pub fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
     map_to_status(e).into_raw()
@@ -48,8 +44,7 @@ pub fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
 
 /// Runs Fxfs as a component.
 pub struct Component {
-    // This is None until Start is called with a block device.
-    state: Mutex<State>,
+    state: futures::lock::Mutex<State>,
 
     // The execution scope of the pseudo filesystem.
     scope: ExecutionScope,
@@ -59,29 +54,18 @@ pub struct Component {
 }
 
 enum State {
-    PreStart { queued: Vec<(fio::OpenFlags, u32, Path, ServerEnd<fio::NodeMarker>)> },
-    Started(Started),
-    Stopped,
-}
-
-struct Started {
-    fs: OpenFxFilesystem,
-    volumes: Arc<VolumesDirectory>,
-    _inspect_tree: FsInspectTree,
+    ComponentStarted,
+    Running(OpenFxFilesystem, Arc<VolumesDirectory>),
 }
 
 impl State {
-    fn maybe_stop(&mut self) -> Option<Started> {
-        if let State::Started(_) = self {
-            if let State::Started(started) = std::mem::replace(self, State::Stopped) {
-                Some(started)
-            } else {
-                unsafe {
-                    std::hint::unreachable_unchecked();
-                }
-            }
-        } else {
-            None
+    async fn stop(&mut self, outgoing_dir: &vfs::directory::immutable::Simple) {
+        if let State::Running(fs, volumes) = std::mem::replace(self, State::ComponentStarted) {
+            info!("Stopping Fxfs runtime; remaining connections will be forcibly closed");
+            let _ = outgoing_dir
+                .remove_entry_impl("volumes".into(), /* must_be_directory: */ false);
+            volumes.terminate().await;
+            let _ = fs.close().await;
         }
     }
 }
@@ -89,7 +73,7 @@ impl State {
 impl Component {
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            state: Mutex::new(State::PreStart { queued: Vec::new() }),
+            state: Mutex::new(State::ComponentStarted),
             scope: ExecutionScope::new(),
             outgoing_dir: vfs::directory::immutable::simple(),
         })
@@ -114,24 +98,6 @@ impl Component {
                 ),
             )
             .expect("unable to create diagnostics dir");
-
-        let weak = Arc::downgrade(&self);
-        self.outgoing_dir.add_entry(
-            "root",
-            // remote_boxed_with_type will work slightly differently to how it will once we've
-            // mounted because opening with NODE_REFERENCE will succeed and open the pseudo
-            // entry. This difference shouldn't matter.
-            remote_boxed_with_type(
-                Box::new(move |_, open_flags, mode, path, channel| {
-                    if let Some(me) = weak.upgrade() {
-                        if let State::PreStart { queued } = &mut *me.state.lock().unwrap() {
-                            queued.push((open_flags, mode, path, channel));
-                        }
-                    }
-                }),
-                fio::DirentType::Directory,
-            ),
-        )?;
 
         let svc_dir = vfs::directory::immutable::simple();
         self.outgoing_dir.add_entry("svc", svc_dir.clone()).expect("Unable to create svc dir");
@@ -198,17 +164,24 @@ impl Component {
     async fn handle_startup_requests(&self, mut stream: StartupRequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             match request {
-                StartupRequest::Start { responder, device, options } => responder.send(
-                    &mut self.handle_start(device, options).await.map_err(map_to_raw_status),
-                )?,
-
-                StartupRequest::Format { responder, device, options } => responder.send(
-                    &mut self.handle_format(device, options).await.map_err(map_to_raw_status),
-                )?,
-
-                StartupRequest::Check { responder, device, options } => responder.send(
-                    &mut self.handle_check(device, options).await.map_err(map_to_raw_status),
-                )?,
+                StartupRequest::Start { responder, device, options } => {
+                    responder.send(&mut self.handle_start(device, options).await.map_err(|e| {
+                        error!(error = e.as_value(), "handle_start failed");
+                        map_to_raw_status(e)
+                    }))?
+                }
+                StartupRequest::Format { responder, device, .. } => {
+                    responder.send(&mut self.handle_format(device).await.map_err(|e| {
+                        error!(error = e.as_value(), "handle_format failed");
+                        map_to_raw_status(e)
+                    }))?
+                }
+                StartupRequest::Check { responder, device, options } => {
+                    responder.send(&mut self.handle_check(device, options).await.map_err(|e| {
+                        error!(error = e.as_value(), "handle_check failed");
+                        map_to_raw_status(e)
+                    }))?
+                }
             }
         }
         Ok(())
@@ -219,42 +192,19 @@ impl Component {
         device: ClientEnd<BlockMarker>,
         options: StartOptions,
     ) -> Result<(), Error> {
-        ensure!(!matches!(&*self.state.lock().unwrap(), State::Started(_)), zx::Status::BAD_STATE);
-
+        info!("Received start request");
+        let mut state = self.state.lock().await;
+        // TODO(fxbug.dev/93066): This is not very graceful.  It would be better for the client to
+        // explicitly shut down all volumes first, and make this fail if there are remaining active
+        // connections.  Fix the bug in fs_test which requires this.
+        state.stop(&self.outgoing_dir).await;
         let client = RemoteBlockClient::new(device.into_channel()).await?;
-        let crypt = if let Some(crypt) = options.crypt {
-            Some(Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
-                crypt.into_channel(),
-            )?))) as Arc<dyn Crypt>)
-        } else {
-            None
-        };
         let fs = FxFilesystem::open_with_options(
             DeviceHolder::new(BlockDevice::new(Box::new(client), options.read_only).await?),
             OpenOptions { read_only: options.read_only, ..Default::default() },
         )
         .await?;
         let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
-        // TODO(fxbug.dev/99182): We should eventually not open the default volume.
-        let volume = volumes.mount_volume(DEFAULT_VOLUME_NAME, crypt).await?;
-        let root = volume.root();
-        if let Some(migrate_root) = options.migrate_root {
-            let scope = volume.volume().scope();
-            root.clone().open(
-                scope.clone(),
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                0,
-                Path::dot(),
-                migrate_root.into_channel().into(),
-            );
-            scope.wait().await;
-        }
-
-        self.outgoing_dir.add_entry_impl(
-            "root".to_string(),
-            volume.root().clone(),
-            /* overwrite: */ true,
-        )?;
 
         self.outgoing_dir.add_entry_impl(
             "volumes".to_string(),
@@ -262,40 +212,21 @@ impl Component {
             /* overwrite: */ true,
         )?;
 
-        if let State::PreStart { queued } = std::mem::replace(
-            &mut *self.state.lock().unwrap(),
-            State::Started(Started {
-                fs,
-                volumes,
-                _inspect_tree: FsInspectTree::new(
-                    Arc::downgrade(volume.volume()) as Weak<dyn FsInspect + Send + Sync>,
-                    &crate::metrics::FXFS_ROOT_NODE.lock().unwrap(),
-                ),
-            }),
-        ) {
-            let scope = volume.volume().scope();
-            for (open_flags, mode, path, channel) in queued {
-                root.clone().open(scope.clone(), open_flags, mode, path, channel);
-            }
-        }
+        *state = State::Running(fs, volumes);
         info!("Mounted");
         Ok(())
     }
 
-    async fn handle_format(
-        &self,
-        device: ClientEnd<BlockMarker>,
-        options: FormatOptions,
-    ) -> Result<(), Error> {
-        let client = RemoteBlockClient::new(device.into_channel()).await?;
-        let crypt = Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
-            options.crypt.ok_or(zx::Status::INVALID_ARGS)?.into_channel(),
-        )?)));
-        mkfs(
-            DeviceHolder::new(BlockDevice::new(Box::new(client), /* read_only: */ false).await?),
-            Some(crypt),
-        )
-        .await?;
+    async fn handle_format(&self, device: ClientEnd<BlockMarker>) -> Result<(), Error> {
+        let device = DeviceHolder::new(
+            BlockDevice::new(
+                Box::new(RemoteBlockClient::new(device.into_channel()).await?),
+                /* read_only: */ false,
+            )
+            .await?,
+        );
+        mkfs(device).await?;
+        info!("Formatted filesystem");
         Ok(())
     }
 
@@ -304,19 +235,31 @@ impl Component {
         device: ClientEnd<BlockMarker>,
         options: CheckOptions,
     ) -> Result<(), Error> {
-        let client = RemoteBlockClient::new(device.into_channel()).await?;
-        let fs = FxFilesystem::open_with_options(
-            DeviceHolder::new(BlockDevice::new(Box::new(client), /* read_only: */ true).await?),
-            OpenOptions { read_only: true, ..Default::default() },
-        )
-        .await?;
+        let state = self.state.lock().await;
+        let (fs_container, fs) = match *state {
+            State::ComponentStarted => {
+                let client = RemoteBlockClient::new(device.into_channel()).await?;
+                let fs_container = FxFilesystem::open_with_options(
+                    DeviceHolder::new(
+                        BlockDevice::new(Box::new(client), /* read_only: */ true).await?,
+                    ),
+                    OpenOptions { read_only: true, ..Default::default() },
+                )
+                .await?;
+                let fs = fs_container.clone();
+                (Some(fs_container), fs)
+            }
+            State::Running(ref fs, ..) => (None, fs.deref().clone()),
+        };
         let fsck_options = fsck::default_options();
         let crypt = Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
             options.crypt.ok_or(zx::Status::INVALID_ARGS)?.into_channel(),
         )?)));
-        fsck::fsck_with_options(&fs, Some(crypt), fsck_options).await?;
-        let _ = fs.close().await;
-        Ok(())
+        let res = fsck::fsck_with_options(&fs, Some(crypt), fsck_options).await;
+        if let Some(fs_container) = fs_container {
+            let _ = fs_container.close().await;
+        }
+        res
     }
 
     async fn handle_admin_requests(&self, mut stream: AdminRequestStream) -> Result<(), Error> {
@@ -343,23 +286,12 @@ impl Component {
     }
 
     async fn shutdown(&self) {
-        let state = self.state.lock().unwrap().maybe_stop();
-        if let Some(state) = state {
-            let _ = self
-                .outgoing_dir
-                .remove_entry_impl("root".into(), /* must_be_directory: */ false);
-            let _ = self
-                .outgoing_dir
-                .remove_entry_impl("volumes".into(), /* must_be_directory: */ false);
-            state.volumes.terminate().await;
-            let _ = state.fs.close().await;
-        }
+        self.state.lock().await.stop(&self.outgoing_dir).await;
         info!("Filesystem terminated");
     }
 
     async fn handle_volumes_requests(&self, mut stream: VolumesRequestStream) {
-        let volumes = if let State::Started(Started { volumes, .. }) = &*self.state.lock().unwrap()
-        {
+        let volumes = if let State::Running(_, volumes) = &*self.state.lock().await {
             volumes.clone()
         } else {
             let _ = stream.into_inner().0.shutdown_with_epitaph(zx::Status::BAD_STATE);
@@ -570,9 +502,9 @@ mod tests {
                     .expect("fidl failed")
                     .expect_err("remove succeeded");
 
-                let admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(&dir_proxy)
-                    .expect("Unable to connect to Volumes protocol");
-                admin_proxy.shutdown().await.expect("shutdown failed");
+                let volume_admin_proxy = connect_to_protocol_at_dir_svc::<AdminMarker>(&dir_proxy)
+                    .expect("Unable to connect to Admin protocol");
+                volume_admin_proxy.shutdown().await.expect("shutdown failed");
 
                 // Creating another volume with the same name should fail.
                 let (_dir_proxy, server_end) =

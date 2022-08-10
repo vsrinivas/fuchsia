@@ -21,7 +21,7 @@
 
 #include <safemath/checked_math.h>
 
-#include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 
 namespace {
 

@@ -59,11 +59,11 @@ class TestFilesystem {
   // Returns the ram-nand device, or nullptr if one isn't being used.
   ramdevice_client::RamNand* GetRamNand() const { return filesystem_->GetRamNand(); }
 
-  fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const {
-    return filesystem_->GetOutgoingDirectory();
+  fidl::UnownedClientEnd<fuchsia_io::Directory> ServiceDirectory() const {
+    return filesystem_->ServiceDirectory();
   }
 
-  void ResetOutgoingDirectory() { filesystem_->ResetOutgoingDirectory(); }
+  void Reset() { filesystem_->Reset(); }
 
   zx::status<fuchsia_io::wire::FilesystemInfo> GetFsInfo() const;
 

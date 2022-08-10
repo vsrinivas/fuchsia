@@ -4,7 +4,8 @@
 
 use {
     async_trait::async_trait,
-    fs_management::filesystem::ServingFilesystem,
+    either::Either,
+    fs_management::filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
     fuchsia_async as fasync,
     std::time::Duration,
     storage_stress_test_utils::fvm::FvmInstance,
@@ -13,11 +14,15 @@ use {
 
 /// An actor that kills the fs instance and destroys the ramdisk
 pub struct InstanceActor {
-    pub instance: Option<(FvmInstance, ServingFilesystem)>,
+    pub instance:
+        Option<(FvmInstance, Either<ServingSingleVolumeFilesystem, ServingMultiVolumeFilesystem>)>,
 }
 
 impl InstanceActor {
-    pub fn new(fvm: FvmInstance, fs: ServingFilesystem) -> Self {
+    pub fn new(
+        fvm: FvmInstance,
+        fs: Either<ServingSingleVolumeFilesystem, ServingMultiVolumeFilesystem>,
+    ) -> Self {
         Self { instance: Some((fvm, fs)) }
     }
 }
@@ -37,7 +42,11 @@ impl Actor for InstanceActor {
                 assert!(count < 100);
                 fasync::Timer::new(Duration::from_millis(100)).await;
             }
-            fs.kill().await.expect("Could not kill fs instance");
+            match fs {
+                Either::Left(fs) => fs.kill().await.expect("Could not kill fs instance"),
+                // TODO(fxbug.dev/105888): Make termination more abrupt.
+                Either::Right(fs) => fs.shutdown().await.expect("Could not kill fs instance"),
+            };
         } else {
             panic!("Instance was already killed!")
         }

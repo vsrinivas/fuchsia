@@ -113,10 +113,11 @@ class FilesystemInstance {
   virtual zx::status<std::string> DevicePath() const = 0;
   virtual storage::RamDisk* GetRamDisk() { return nullptr; }
   virtual ramdevice_client::RamNand* GetRamNand() { return nullptr; }
-  virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const {
+  virtual fs_management::SingleVolumeFilesystemInterface* fs() = 0;
+  virtual fidl::UnownedClientEnd<fuchsia_io::Directory> ServiceDirectory() const {
     return fidl::ClientEnd<fuchsia_io::Directory>();
   }
-  virtual void ResetOutgoingDirectory() {}
+  virtual void Reset() {}
 };
 
 // Base class for all supported file systems. It is a factory class that generates
@@ -192,9 +193,10 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
 zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
                       const fs_management::MkfsOptions& options);
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsMount(
-    const std::string& device_path, const std::string& mount_path, fs_management::DiskFormat format,
-    const fs_management::MountOptions& mount_options);
+zx::status<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
+                     fs_management::NamespaceBinding>>
+FsMount(const std::string& device_path, const std::string& mount_path,
+        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options);
 
 zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options);
 

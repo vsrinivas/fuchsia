@@ -96,11 +96,12 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
     std::string component_child_name = name + "." + std::to_string(mount_index++);
     options.component_child_name = component_child_name.c_str();
     options.component_collection_name = "fs-collection";
-    auto mounted_filesystem_or =
-        fs_management::Mount(std::move(fd), nullptr, df, options, fs_management::LaunchLogsAsync);
-    if (mounted_filesystem_or.is_error()) {
-      FX_LOGS(WARNING) << "Mount failed: " << mounted_filesystem_or.status_string();
-      completer.ReplyError(mounted_filesystem_or.error_value());
+    // TODO(fxbug.dev/93066): Support mounting multi-volume filesystems as well.
+    auto mounted_filesystem =
+        fs_management::Mount(std::move(fd), df, options, fs_management::LaunchLogsAsync);
+    if (mounted_filesystem.is_error()) {
+      FX_LOGS(WARNING) << "Mount failed: " << mounted_filesystem.status_string();
+      completer.ReplyError(mounted_filesystem.error_value());
       return;
     }
 
@@ -108,8 +109,7 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
     // mount.
     async::PostTask(
         dispatcher,
-        [device_path = std::move(device_path),
-         mounted_filesystem = std::move(*mounted_filesystem_or).TakeExportRoot(),
+        [device_path = std::move(device_path), mounted_filesystem = std::move(*mounted_filesystem),
          name = std::move(name), fs_manager, completer = std::move(completer)]() mutable {
           if (zx_status_t status =
                   fs_manager->AttachMount(device_path, std::move(mounted_filesystem), name);

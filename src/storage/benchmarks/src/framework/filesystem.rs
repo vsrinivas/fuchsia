@@ -6,13 +6,17 @@ use {
     crate::framework::{BlockDevice, BlockDeviceConfig, BlockDeviceFactory},
     async_trait::async_trait,
     cstr::cstr,
+    either::Either,
     fidl::encoding::Decodable,
     fidl_fuchsia_fs::AdminMarker,
     fidl_fuchsia_fs_startup::{StartOptions, StartupMarker},
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
-    fs_management::{filesystem::ServingFilesystem, Blobfs, FSConfig, Fxfs, Minfs},
+    fs_management::{
+        filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
+        Blobfs, FSConfig, Fxfs, Minfs,
+    },
     fuchsia_component::client::{
         connect_channel_to_protocol, connect_to_childs_protocol, open_childs_exposed_directory,
     },
@@ -79,7 +83,7 @@ pub trait Filesystem: Send {
 
 struct FsmFilesystem<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> {
     fs: fs_management::filesystem::Filesystem<FSC>,
-    serving_filesystem: Option<ServingFilesystem>,
+    serving_filesystem: Option<Either<ServingSingleVolumeFilesystem, ServingMultiVolumeFilesystem>>,
     _block_device: BD,
 }
 
@@ -87,8 +91,20 @@ impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> FsmFilesystem<FSC, BD>
     pub async fn new(config: FSC, block_device: BD) -> Self {
         let fs = fs_management::filesystem::Filesystem::from_node(block_device.get_node(), config);
         fs.format().await.expect("Failed to format the filesystem");
-        let mut serving_filesystem = fs.serve().await.expect("Failed to start the filesystem");
-        serving_filesystem.bind_to_path(MOUNT_PATH).expect("Failed to bind the filesystem");
+        let serving_filesystem = if fs.config().is_multi_volume() {
+            let mut serving_filesystem =
+                fs.serve_multi_volume().await.expect("Failed to start the filesystem");
+            let vol = serving_filesystem
+                .create_volume("default", fs.config().crypt_client().map(|c| c.into()))
+                .await
+                .expect("Failed to create volume");
+            vol.bind_to_path(MOUNT_PATH).expect("Failed to bind the volume");
+            Either::Right(serving_filesystem)
+        } else {
+            let mut serving_filesystem = fs.serve().await.expect("Failed to start the filesystem");
+            serving_filesystem.bind_to_path(MOUNT_PATH).expect("Failed to bind the filesystem");
+            Either::Left(serving_filesystem)
+        };
         Self { fs, serving_filesystem: Some(serving_filesystem), _block_device: block_device }
     }
 }
@@ -98,15 +114,35 @@ impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> Filesystem for FsmFile
     async fn clear_cache(&mut self) {
         // Remount the filesystem to guarantee that all cached data from reads and write is cleared.
         let serving_filesystem = self.serving_filesystem.take().unwrap();
-        serving_filesystem.shutdown().await.expect("Failed to stop the filesystem");
-        let mut serving_filesystem = self.fs.serve().await.expect("Failed to start the filesystem");
-        serving_filesystem.bind_to_path(MOUNT_PATH).expect("Failed to bind the filesystem");
+        let serving_filesystem = match serving_filesystem {
+            Either::Left(serving_filesystem) => {
+                serving_filesystem.shutdown().await.expect("Failed to stop the filesystem");
+                let mut serving_filesystem =
+                    self.fs.serve().await.expect("Failed to start the filesystem");
+                serving_filesystem.bind_to_path(MOUNT_PATH).expect("Failed to bind the filesystem");
+                Either::Left(serving_filesystem)
+            }
+            Either::Right(serving_filesystem) => {
+                serving_filesystem.shutdown().await.expect("Failed to stop the filesystem");
+                let mut serving_filesystem =
+                    self.fs.serve_multi_volume().await.expect("Failed to start the filesystem");
+                let vol = serving_filesystem
+                    .open_volume("default", self.fs.config().crypt_client().map(|c| c.into()))
+                    .await
+                    .expect("Failed to create volume");
+                vol.bind_to_path(MOUNT_PATH).expect("Failed to bind the volume");
+                Either::Right(serving_filesystem)
+            }
+        };
         self.serving_filesystem = Some(serving_filesystem);
     }
 
     async fn shutdown(mut self: Box<Self>) {
         if let Some(fs) = self.serving_filesystem {
-            fs.shutdown().await.expect("Failed to stop filesystem");
+            match fs {
+                Either::Left(fs) => fs.shutdown().await.expect("Failed to stop filesystem"),
+                Either::Right(fs) => fs.shutdown().await.expect("Failed to stop filesystem"),
+            }
         }
     }
 }

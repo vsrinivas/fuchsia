@@ -255,6 +255,7 @@ fs_test_config("fxfs") {
   supports_mmap_shared_write = false
   supports_shutdown_on_no_connections = true
   timestamp_granularity = 1
+  disk_format = 12  # See //src/storage/fs_management/cpp/format.h
   uses_crypt = true
 
   options = [

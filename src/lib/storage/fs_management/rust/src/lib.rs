@@ -89,6 +89,11 @@ pub trait FSConfig {
         // By default, filesystems don't need a crypt service.
         None
     }
+
+    /// Whether the filesystem supports multiple volumes.
+    fn is_multi_volume(&self) -> bool {
+        false
+    }
 }
 
 ///
@@ -281,6 +286,9 @@ impl FSConfig for Fxfs {
     }
     fn crypt_client(&self) -> Option<zx::Channel> {
         Some((self.crypt_client_fn)())
+    }
+    fn is_multi_volume(&self) -> bool {
+        true
     }
 }
 

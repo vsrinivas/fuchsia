@@ -11,7 +11,7 @@ use {
     fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
     fxfs::{
-        filesystem::{mkfs, FxFilesystem, OpenOptions},
+        filesystem::{mkfs_with_default, FxFilesystem, OpenOptions},
         fsck,
         log::*,
         platform::{component::Component, RemoteCrypt},
@@ -21,6 +21,10 @@ use {
     std::sync::Arc,
     storage_device::{block_device::BlockDevice, DeviceHolder},
 };
+
+// TODO(fxbug.dev/93066): All commands other than 'component' should be removed and we should figure
+// out how to make them work with componentized, multi-volume Fxfs.  These commands create Fxfs
+// instances in the legacy format with a 'default' volume.
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// fxfs
@@ -112,7 +116,7 @@ async fn main() -> Result<(), Error> {
 
     match args {
         TopLevel { nested: SubCommand::Format(FormatSubCommand { encrypted }), .. } => {
-            mkfs(
+            mkfs_with_default(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?),
                 if encrypted { Some(get_crypt_client()?) } else { None },
             )

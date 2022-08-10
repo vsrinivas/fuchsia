@@ -63,6 +63,7 @@ struct MountOptions {
   // If set, provides the caller with the opportunity to migrate data before the mount is finalised.
   // The mount will be blocked until the channel and any other channels opened via this channel are
   // closed.
+  // TODO(fxbug.dev/93066): Remove this.
   std::function<fidl::ServerEnd<fuchsia_io::Directory>()> migrate_root;
 
   // Generate the argv list for launching a process based on this set of options.
@@ -90,6 +91,8 @@ struct MkfsOptions {
   uint64_t num_inodes = 0;
 
   // If set, a callable that returns a handle to the crypt client.
+  // NB: This is only used when Mkfs'ing Fxfs in the legacy (non-componentized) way and we should
+  // probably remove this.
   std::function<zx::channel()> crypt_client;
 
   // If set, and the filesystem type supports it, use the provided child name to connect to an

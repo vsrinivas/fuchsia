@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <zircon/errors.h>
 
+#include <algorithm>
 #include <iostream>
 #include <unordered_map>
 #include <utility>
@@ -276,9 +277,10 @@ zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat 
   return zx::ok();
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsMount(
-    const std::string& device_path, const std::string& mount_path, fs_management::DiskFormat format,
-    const fs_management::MountOptions& mount_options) {
+zx::status<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
+                     fs_management::NamespaceBinding>>
+FsMount(const std::string& device_path, const std::string& mount_path,
+        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
@@ -291,15 +293,41 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsMount(
   // supported).
   // options.fsck_after_every_transaction = true;
 
-  // |fd| is consumed by mount.
-  auto result = fs_management::Mount(std::move(fd), StripTrailingSlash(mount_path).c_str(), format,
-                                     options, fs_management::LaunchStdioAsync);
-  if (result.is_error()) {
+  auto LogMountError = [&format](const auto& error) {
     std::cout << "Could not mount " << fs_management::DiskFormatString(format)
-              << " file system: " << result.status_string() << std::endl;
-    return result.take_error();
+              << " file system: " << error.status_string() << std::endl;
+  };
+
+  std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> fs;
+  if (format == fs_management::kDiskFormatFxfs) {
+    auto result = fs_management::MountMultiVolumeWithDefault(std::move(fd), format, options,
+                                                             fs_management::LaunchStdioAsync);
+    if (result.is_error()) {
+      LogMountError(result);
+      return result.take_error();
+    }
+    fs = std::make_unique<fs_management::StartedSingleVolumeMultiVolumeFilesystem>(
+        std::move(*result));
+  } else {
+    auto result =
+        fs_management::Mount(std::move(fd), format, options, fs_management::LaunchStdioAsync);
+    if (result.is_error()) {
+      LogMountError(result);
+      return result.take_error();
+    }
+    fs = std::make_unique<fs_management::StartedSingleVolumeFilesystem>(std::move(*result));
   }
-  return zx::ok(std::move(*result).TakeExportRoot());
+  auto data = fs->DataRoot();
+  if (data.is_error()) {
+    LogMountError(data);
+    return data.take_error();
+  }
+  auto binding = fs_management::NamespaceBinding::Create(mount_path.c_str(), std::move(*data));
+  if (binding.is_error()) {
+    LogMountError(binding);
+    return binding.take_error();
+  }
+  return zx::ok(std::make_pair(std::move(fs), std::move(*binding)));
 }
 
 // Returns device and device path.
@@ -452,12 +480,17 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
 zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
   // Detach from the namespace.
   if (auto status = FsUnbind(mount_path); status.is_error()) {
+    std::cerr << "FsUnbind failed: " << status.status_string() << std::endl;
     return status;
   }
 
-  auto status = fs_management::Shutdown(GetOutgoingDirectory());
+  auto filesystem = fs();
+  if (!filesystem) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  auto status = filesystem->Unmount();
   if (status.is_error()) {
-    std::cout << "Shut down failed: " << status.status_string() << std::endl;
+    std::cerr << "Shut down failed: " << status.status_string() << std::endl;
     return status;
   }
   return zx::ok();
@@ -480,11 +513,11 @@ class BlobfsInstance : public FilesystemInstance {
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    auto export_root_or =
-        FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options);
-    if (export_root_or.is_error())
-      return export_root_or.take_error();
-    outgoing_directory_ = std::move(*export_root_or);
+    auto res = FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options);
+    if (res.is_error())
+      return res.take_error();
+    fs_ = std::move(res->first);
+    binding_ = std::move(res->second);
     return zx::ok();
   }
 
@@ -505,15 +538,20 @@ class BlobfsInstance : public FilesystemInstance {
   ramdevice_client::RamNand* GetRamNand() override {
     return std::get_if<ramdevice_client::RamNand>(&device_);
   }
-  fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const override {
-    return outgoing_directory_.borrow();
+  fs_management::SingleVolumeFilesystemInterface* fs() override { return fs_.get(); }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> ServiceDirectory() const override {
+    return fs_->ExportRoot();
   }
-  void ResetOutgoingDirectory() override { outgoing_directory_.reset(); }
+  void Reset() override {
+    binding_.Reset();
+    fs_.reset();
+  }
 
  private:
   RamDevice device_;
   std::string device_path_;
-  fidl::ClientEnd<fuchsia_io::Directory> outgoing_directory_;
+  std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> fs_;
+  fs_management::NamespaceBinding binding_;
 };
 
 std::unique_ptr<FilesystemInstance> BlobfsFilesystem::Create(RamDevice device,

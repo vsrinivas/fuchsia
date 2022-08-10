@@ -767,12 +767,22 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  auto mounted_filesystem_or =
-      fs_management::Mount(std::move(mountpoint_dev_fd), mount_path,
-                           fs_management::kDiskFormatMinfs, {}, fs_management::LaunchLogsAsync);
-  if (mounted_filesystem_or.is_error()) {
-    ERROR("mount error: %s\n", mounted_filesystem_or.status_string());
-    return mounted_filesystem_or.take_error();
+  auto mounted_filesystem =
+      fs_management::Mount(std::move(mountpoint_dev_fd), fs_management::kDiskFormatMinfs, {},
+                           fs_management::LaunchLogsAsync);
+  if (mounted_filesystem.is_error()) {
+    ERROR("mount error: %s\n", mounted_filesystem.status_string());
+    return mounted_filesystem.take_error();
+  }
+  auto data = mounted_filesystem->DataRoot();
+  if (data.is_error()) {
+    ERROR("mount error: %s\n", data.status_string());
+    return data.take_error();
+  }
+  auto binding = fs_management::NamespaceBinding::Create(mount_path, std::move(*data));
+  if (binding.is_error()) {
+    ERROR("mount error: %s\n", binding.status_string());
+    return binding.take_error();
   }
 
   int filename_size = static_cast<int>(filename.size());
@@ -817,7 +827,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     fsync(kfd.get());
   }
 
-  if (auto status = std::move(*mounted_filesystem_or).Unmount(); status.is_error()) {
+  if (auto status = std::move(*mounted_filesystem).Unmount(); status.is_error()) {
     ERROR("unmount %s failed: %s\n", mount_path, status.status_string());
     return status.take_error();
   }

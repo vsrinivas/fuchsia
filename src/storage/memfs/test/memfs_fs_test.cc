@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fs_test/fs_test.h"
 #include "src/storage/memfs/scoped_memfs.h"
 
@@ -48,6 +49,8 @@ class MemfsInstance : public fs_test::FilesystemInstance {
   zx::status<> Fsck() override { return zx::ok(); }
 
   zx::status<std::string> DevicePath() const override { return zx::error(ZX_ERR_BAD_STATE); }
+
+  fs_management::SingleVolumeFilesystemInterface* fs() override { return nullptr; }
 
  private:
   async::Loop loop_;

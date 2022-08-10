@@ -83,10 +83,14 @@ TEST_F(MigrationTest, MigratesZxcryptMinfsToFxfs) {
     // Mount the filesystem and add some data.
     auto device_fd = fbl::unique_fd(::open(zxcrypt_device_path_or->c_str(), O_RDONLY));
     ASSERT_TRUE(device_fd) << strerror(errno);
-    auto mount_or =
-        fs_management::Mount(std::move(device_fd), "/mnt/data", fs_management::kDiskFormatMinfs,
+    auto mount =
+        fs_management::Mount(std::move(device_fd), fs_management::kDiskFormatMinfs,
                              fs_management::MountOptions{}, fs_management::LaunchStdioAsync);
-    ASSERT_EQ(mount_or.status_value(), ZX_OK);
+    ASSERT_EQ(mount.status_value(), ZX_OK);
+    auto data = mount->DataRoot();
+    ASSERT_EQ(data.status_value(), ZX_OK);
+    auto binding = fs_management::NamespaceBinding::Create("/mnt/data", std::move(*data));
+    ASSERT_EQ(binding.status_value(), ZX_OK);
     auto fd = fbl::unique_fd(::open("/mnt/data/file", O_RDWR | O_CREAT));
     ASSERT_TRUE(fd) << strerror(errno);
     ASSERT_EQ(::write(fd.get(), kFileContents, strlen(kFileContents)),

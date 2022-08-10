@@ -548,7 +548,18 @@ impl AsRef<LockManager> for FxFilesystem {
 }
 
 /// Helper method for making a new filesystem.
-pub async fn mkfs(device: DeviceHolder, crypt: Option<Arc<dyn Crypt>>) -> Result<(), Error> {
+pub async fn mkfs(device: DeviceHolder) -> Result<(), Error> {
+    let fs = FxFilesystem::new_empty(device).await?;
+    fs.close().await
+}
+
+/// Helper method for making a new filesystem with a default volume.
+/// This shouldn't be used in production; instead volumes should be created with the Volumes
+/// protocol.
+pub async fn mkfs_with_default(
+    device: DeviceHolder,
+    crypt: Option<Arc<dyn Crypt>>,
+) -> Result<(), Error> {
     let fs = FxFilesystem::new_empty(device).await?;
     {
         // expect instead of propagating errors here, since otherwise we could drop |fs| before

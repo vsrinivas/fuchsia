@@ -28,8 +28,10 @@
 #include <fbl/vector.h>
 
 #include "src/lib/storage/fs_management/cpp/component.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/path.h"
+#include "src/lib/storage/fs_management/cpp/volumes.h"
 
 namespace fs_management {
 namespace {
@@ -96,8 +98,8 @@ zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
     // If we don't know the url, fall back on the old launching method.
     if (!url.empty()) {
       // Otherwise, launch the component way.
-      auto exposed_dir_or = ConnectNativeFsComponent(url, *options.component_child_name,
-                                                     options.component_collection_name);
+      auto exposed_dir_or =
+          ConnectFsComponent(url, *options.component_child_name, options.component_collection_name);
       if (exposed_dir_or.is_error()) {
         return exposed_dir_or.status_value();
       }

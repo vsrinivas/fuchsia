@@ -27,6 +27,7 @@
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/bin/start-storage-benchmark/running-filesystem.h"
 #include "src/storage/fs_test/crypt_service.h"
@@ -71,16 +72,17 @@ zx::status<uint64_t> GetSliceCount(fidl::ClientEnd<VolumeManager> &fvm_client,
 class BlockDeviceFilesystem : public RunningFilesystem {
  public:
   // Takes ownership of the volume to ensure that the volume outlives the mounted filesystem.
-  explicit BlockDeviceFilesystem(fs_management::MountedFilesystem filesystem, FvmVolume volume)
+  BlockDeviceFilesystem(std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> filesystem,
+                        FvmVolume volume)
       : volume_(std::move(volume)), filesystem_(std::move(filesystem)) {}
 
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const override {
-    return fs_management::FsRootHandle(filesystem_.export_root());
+    return filesystem_->DataRoot();
   }
 
  private:
   FvmVolume volume_;
-  fs_management::MountedFilesystem filesystem_;
+  std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> filesystem_;
 };
 
 // Whilst this runs as a v1 component, we use this slightly hacky way of launching the crypt
@@ -249,14 +251,6 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
   fs_management::MkfsOptions mkfs_options;
 
   if (format == fs_management::kDiskFormatFxfs) {
-    mkfs_options.crypt_client = [] {
-      if (auto service_or = GetCryptService(); service_or.is_error()) {
-        fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
-        return zx::channel();
-      } else {
-        return *std::move(service_or);
-      }
-    };
     mkfs_options.component_url = "#meta/fxfs";
     mkfs_options.component_child_name = "fxfs";
   }
@@ -276,6 +270,7 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
     const std::string &block_device_path, fs_management::DiskFormat format, FvmVolume fvm_volume) {
   fs_management::MountOptions mount_options;
   fbl::unique_fd volume_fd(open(block_device_path.c_str(), O_RDWR));
+  std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> fs;
   if (format == fs_management::kDiskFormatFxfs) {
     mount_options.crypt_client = [] {
       if (auto service_or = GetCryptService(); service_or.is_error()) {
@@ -287,16 +282,27 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
     };
     mount_options.component_url = "#meta/fxfs";
     mount_options.component_child_name = "fxfs";
+    auto mounted_filesystem = fs_management::MountMultiVolumeWithDefault(
+        std::move(volume_fd), format, mount_options, fs_management::LaunchStdioAsync);
+    if (mounted_filesystem.is_error()) {
+      std::string format_name(DiskFormatString(format));
+      fprintf(stderr, "Failed to mount %s as %s\n", block_device_path.c_str(), format_name.c_str());
+      return mounted_filesystem.take_error();
+    }
+    fs = std::make_unique<fs_management::StartedSingleVolumeMultiVolumeFilesystem>(
+        std::move(*mounted_filesystem));
+  } else {
+    auto mounted_filesystem =
+        Mount(std::move(volume_fd), format, mount_options, fs_management::LaunchStdioAsync);
+    if (mounted_filesystem.is_error()) {
+      std::string format_name(DiskFormatString(format));
+      fprintf(stderr, "Failed to mount %s as %s\n", block_device_path.c_str(), format_name.c_str());
+      return mounted_filesystem.take_error();
+    }
+    fs = std::make_unique<fs_management::StartedSingleVolumeFilesystem>(
+        std::move(*mounted_filesystem));
   }
-  auto mounted_filesystem = fs_management::Mount(std::move(volume_fd), nullptr, format,
-                                                 mount_options, fs_management::LaunchStdioAsync);
-  if (mounted_filesystem.is_error()) {
-    std::string format_name(DiskFormatString(format));
-    fprintf(stderr, "Failed to mount %s as %s\n", block_device_path.c_str(), format_name.c_str());
-    return mounted_filesystem.take_error();
-  }
-  return zx::ok(std::make_unique<BlockDeviceFilesystem>(std::move(mounted_filesystem).value(),
-                                                        std::move(fvm_volume)));
+  return zx::ok(std::make_unique<BlockDeviceFilesystem>(std::move(fs), std::move(fvm_volume)));
 }
 
 zx::status<std::string> CreateZxcryptVolume(const std::string &device_path) {

@@ -146,7 +146,7 @@ TEST_P(ShutdownOnNoConnectionsTest, OnNoConnections) {
   ASSERT_EQ(FsUnbind(fs().mount_path()).status_value(), ZX_OK);
 
   // Disconnect outgoing directory connection.
-  fs().ResetOutgoingDirectory();
+  fs().Reset();
 
   zx_status_t status;
   // Retry for one minute.

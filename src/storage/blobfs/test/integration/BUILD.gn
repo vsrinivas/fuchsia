@@ -32,6 +32,7 @@ static_library("blobfs_integration_fixtures") {
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     "//sdk/lib/sys/inspect/cpp",

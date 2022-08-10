@@ -7,7 +7,7 @@ use anyhow::{ensure, Context, Error};
 use async_trait::async_trait;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_io as fio;
-use fs_management::{self as fs, filesystem::ServingFilesystem};
+use fs_management::{self as fs, filesystem::ServingSingleVolumeFilesystem};
 use recovery_util::block::get_block_devices;
 
 pub const BLOBFS_MOUNT_POINT: &str = "/b";
@@ -23,7 +23,7 @@ trait Filesystem {
 /// Forwards calls to the fs_management implementation.
 struct Blobfs {
     fs: fs::filesystem::Filesystem<fs::Blobfs>,
-    serving_filesystem: Option<ServingFilesystem>,
+    serving_filesystem: Option<ServingSingleVolumeFilesystem>,
 }
 
 #[async_trait]

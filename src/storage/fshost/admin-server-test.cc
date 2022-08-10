@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "sdk/lib/fdio/include/lib/fdio/spawn.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/testing/fshost_integration_test.h"

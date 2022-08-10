@@ -63,9 +63,13 @@ TEST(FactoryFs, ExportedFilesystemIsMountable) {
   ASSERT_TRUE(fd) << errno;
 
   auto result =
-      fs_management::Mount(std::move(fd), kMountPath, fs_management::kDiskFormatFactoryfs,
+      fs_management::Mount(std::move(fd), fs_management::kDiskFormatFactoryfs,
                            fs_management::MountOptions(), fs_management::LaunchStdioAsync);
-  EXPECT_EQ(result.status_value(), ZX_OK);
+  ASSERT_EQ(result.status_value(), ZX_OK);
+  auto data = result->DataRoot();
+  ASSERT_EQ(data.status_value(), ZX_OK);
+  auto binding = fs_management::NamespaceBinding::Create(kMountPath, std::move(*data));
+  ASSERT_EQ(binding.status_value(), ZX_OK);
 
   // And check contents of factoryfs.
   fbl::unique_fd factoryfs(open(kMountPath, O_RDONLY));

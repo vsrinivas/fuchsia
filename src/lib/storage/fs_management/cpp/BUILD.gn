@@ -16,6 +16,7 @@ if (is_fuchsia) {
       "launch.h",
       "mount.h",
       "options.h",
+      "volumes.h",
     ]
     configs += [ "//build/config:all_source" ]
     sources = [
@@ -30,6 +31,7 @@ if (is_fuchsia) {
       "mount.cc",
       "options.cc",
       "path.cc",
+      "volumes.cc",
     ]
     public_deps = [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
@@ -174,7 +176,10 @@ fuchsia_test_package("fs-management-tests") {
     ":fs-management-test-component",
     ":fs-management-unittest-component",
   ]
-  deps = [ "//src/storage/fxfs:fxfs_component" ]
+  deps = [
+    "//src/storage/bin/minfs:minfs-component",
+    "//src/storage/fxfs:fxfs_component",
+  ]
 }
 
 group("tests") {

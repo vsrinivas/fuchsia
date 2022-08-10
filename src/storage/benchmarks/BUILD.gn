@@ -38,6 +38,7 @@ rustc_binary("storage-benchmarks") {
     "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:either",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:prettytable-rs",

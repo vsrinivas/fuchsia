@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/test/integration/fdio_test.h"
 
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -12,7 +13,10 @@
 #include <lib/fdio/fd.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
+#include <lib/service/llcpp/service.h>
+#include <lib/zx/status.h>
 
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/blobfs/mkfs.h"
@@ -62,13 +66,13 @@ void FdioTest::SetUp() {
 }
 
 void FdioTest::TearDown() {
-  zx::channel root_client;
+  [[maybe_unused]] zx::channel root_client;
   ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(
-      fs_management::Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory>(
-                                  fdio_cpp::UnownedFdioCaller(export_root_fd_.get()).channel()))
-          .status_value(),
-      ZX_OK);
+  fidl::UnownedClientEnd<fuchsia_io::Directory> dir(
+      fdio_cpp::UnownedFdioCaller(export_root_fd_.get()).channel());
+  auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(dir);
+  ASSERT_EQ(admin_client.status_value(), ZX_OK);
+  ASSERT_EQ(fidl::WireCall(*admin_client)->Shutdown().status(), ZX_OK);
 }
 
 zx_handle_t FdioTest::export_root() {

@@ -29,6 +29,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/testing/fvm.h"
@@ -76,16 +77,22 @@ class RamdiskTestFixture : public testing::Test {
   }
 
   // Mounts a minfs formatted partition to the desired point.
-  zx::status<fs_management::MountedFilesystem> MountMinfs(bool read_only) const {
+  zx::status<std::pair<fs_management::StartedSingleVolumeFilesystem, NamespaceBinding>> MountMinfs(
+      bool read_only) const {
     MountOptions options;
     options.readonly = read_only;
 
-    auto mounted_filesystem_or =
-        Mount(ramdisk_fd(), kTestMountPath, kDiskFormatMinfs, options, LaunchStdioAsync);
-    if (mounted_filesystem_or.is_error())
-      return mounted_filesystem_or.take_error();
+    auto mounted_filesystem = Mount(ramdisk_fd(), kDiskFormatMinfs, options, LaunchStdioAsync);
+    if (mounted_filesystem.is_error())
+      return mounted_filesystem.take_error();
+    auto data_root = mounted_filesystem->DataRoot();
+    if (data_root.is_error())
+      return data_root.take_error();
+    auto binding = NamespaceBinding::Create(kTestMountPath, *std::move(data_root));
+    if (binding.is_error())
+      return binding.take_error();
     CheckMountedFs(kTestMountPath, "minfs");
-    return mounted_filesystem_or;
+    return zx::ok(std::make_pair(std::move(*mounted_filesystem), std::move(*binding)));
   }
 
   // Formats the ramdisk with minfs, and writes a small file to it.
@@ -109,8 +116,8 @@ using MountTest = RamdiskTestFixture;
 TEST_F(MountTest, MountRemount) {
   // We should still be able to mount and unmount the filesystem multiple times
   for (size_t i = 0; i < 10; i++) {
-    auto export_root_or = MountMinfs(/*read_only=*/false);
-    ASSERT_EQ(export_root_or.status_value(), ZX_OK);
+    auto fs = MountMinfs(/*read_only=*/false);
+    ASSERT_EQ(fs.status_value(), ZX_OK);
   }
 }
 

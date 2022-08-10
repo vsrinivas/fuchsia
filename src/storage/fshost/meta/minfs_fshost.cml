@@ -14,12 +14,6 @@
             from: "#minfs",
             path: "/minfs/svc/fuchsia.fs.startup.Startup",
         },
-        {
-            directory: "root",
-            from: "#minfs",
-            rights: [ "rw*" ],
-            path: "/minfs/root",
-        },
     ],
     offer: [
         {

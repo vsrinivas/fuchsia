@@ -88,8 +88,8 @@ zx_status_t Fsck(std::string_view device_path, DiskFormat df, const FsckOptions&
     // If we don't know the url, fall back on the old launching method.
     if (!url.empty()) {
       // Otherwise, launch the component way.
-      auto exposed_dir_or = ConnectNativeFsComponent(url, *options.component_child_name,
-                                                     options.component_collection_name);
+      auto exposed_dir_or =
+          ConnectFsComponent(url, *options.component_child_name, options.component_collection_name);
       if (exposed_dir_or.is_error()) {
         return exposed_dir_or.status_value();
       }

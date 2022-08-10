@@ -57,6 +57,7 @@
 
 #include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/blobfs/format.h"
@@ -1899,7 +1900,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   // Try to mount the VPart. Since this mount call is supposed to fail, we wait for the spawned
   // fs process to finish and associated fidl channels to close before continuing to try and prevent
   // race conditions with the later mount call.
-  ASSERT_NE(fs_management::Mount(std::move(vp_fd), kMountPath, disk_format, mounting_options,
+  ASSERT_NE(fs_management::Mount(std::move(vp_fd), disk_format, mounting_options,
                                  fs_management::LaunchStdioSync)
                 .status_value(),
             ZX_OK);
@@ -1958,7 +1959,7 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   }
 
   // Try mount again.
-  ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, disk_format, mounting_options,
+  ASSERT_EQ(fs_management::Mount(std::move(vp_fd), disk_format, mounting_options,
                                  fs_management::LaunchStdioAsync)
                 .status_value(),
             ZX_OK);
@@ -2204,10 +2205,14 @@ TEST_F(FvmTest, TestMounting) {
             ZX_OK);
 
   // Mount the VPart
-  auto mounted_filesystem_or =
-      fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                           mounting_options_, fs_management::LaunchStdioAsync);
-  ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
+  auto mounted_filesystem =
+      fs_management::Mount(std::move(vp_fd), fs_management::kDiskFormatMinfs, mounting_options_,
+                           fs_management::LaunchStdioAsync);
+  ASSERT_EQ(mounted_filesystem.status_value(), ZX_OK);
+  auto data = mounted_filesystem->DataRoot();
+  ASSERT_EQ(data.status_value(), ZX_OK);
+  auto binding = fs_management::NamespaceBinding::Create(kMountPath, std::move(*data));
+  ASSERT_EQ(binding.status_value(), ZX_OK);
 
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -2276,7 +2281,7 @@ TEST_F(FvmTest, TestMkfs) {
 
   // Demonstrate that mounting as minfs will fail, but mounting as blobfs
   // is successful.
-  ASSERT_NE(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
+  ASSERT_NE(fs_management::Mount(std::move(vp_fd), fs_management::kDiskFormatMinfs,
                                  mounting_options_, fs_management::LaunchStdioSync)
                 .status_value(),
             ZX_OK);
@@ -2286,7 +2291,7 @@ TEST_F(FvmTest, TestMkfs) {
   fs_management::MountOptions mounting_options = mounting_options_;
   mounting_options.component_child_name = kTestBlobfsChildName;
   mounting_options.component_collection_name = kTestCollectionName;
-  ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatBlobfs,
+  ASSERT_EQ(fs_management::Mount(std::move(vp_fd), fs_management::kDiskFormatBlobfs,
                                  mounting_options, fs_management::LaunchStdioAsync)
                 .status_value(),
             ZX_OK);
@@ -2299,10 +2304,14 @@ TEST_F(FvmTest, TestMkfs) {
   // Mount the VPart.
   vp_fd.reset(open(partition_path->c_str(), O_RDWR));
   ASSERT_TRUE(vp_fd);
-  auto mounted_filesystem_or =
-      fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                           mounting_options_, fs_management::LaunchStdioAsync);
-  ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
+  auto mounted_filesystem =
+      fs_management::Mount(std::move(vp_fd), fs_management::kDiskFormatMinfs, mounting_options_,
+                           fs_management::LaunchStdioAsync);
+  ASSERT_EQ(mounted_filesystem.status_value(), ZX_OK);
+  auto data = mounted_filesystem->DataRoot();
+  ASSERT_EQ(data.status_value(), ZX_OK);
+  auto binding = fs_management::NamespaceBinding::Create(kMountPath, std::move(*data));
+  ASSERT_EQ(binding.status_value(), ZX_OK);
 
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));

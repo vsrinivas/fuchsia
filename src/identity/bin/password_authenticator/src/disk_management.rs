@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio,
     fs_management::{
         self as fs,
-        filesystem::{Filesystem, ServingFilesystem},
+        filesystem::{Filesystem, ServingSingleVolumeFilesystem},
     },
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     fuchsia_zircon as zx,
@@ -466,7 +466,7 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
 
 /// Production implementation of Minfs.
 pub struct DevMinfs {
-    serving_fs: ServingFilesystem,
+    serving_fs: ServingSingleVolumeFilesystem,
 }
 
 #[async_trait]

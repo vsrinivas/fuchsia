@@ -53,6 +53,7 @@
 #include "extract-metadata.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
 #include "src/lib/files/file.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/options.h"
@@ -182,7 +183,10 @@ Copier TryReadingFilesystem(fidl::ClientEnd<fuchsia_io::Directory> export_root) 
 
   fidl::ClientEnd<fuchsia_io::Directory> root_dir_client(std::move(root_dir_handle));
   auto unmount = fit::defer([&export_root] {
-    [[maybe_unused]] auto ignore_failure = fs_management::Shutdown(export_root);
+    auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(export_root);
+    if (admin_client.is_ok()) {
+      auto ignore_failure = fidl::WireCall(*admin_client)->Shutdown();
+    }
   });
 
   auto copier_or = Copier::Read(std::move(fd));
@@ -774,7 +778,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       }
 
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
-      zx_status_t status = MountData(options, std::move(block_device));
+      zx_status_t status = MountData(options, std::move(copier), std::move(block_device));
 
       if (copy_thread.joinable()) {
         copy_thread.join();
@@ -800,13 +804,16 @@ zx_status_t BlockDevice::MountFilesystem() {
 
 // Attempt to mount the device at a known location.
 //
+// If |copier| is set, the data will be copied into the data filesystem before exposing the
+// filesystem to clients.  This is only supported for the data guid (i.e. not the durable guid).
+//
 // Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
 // is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
 zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
-                                   zx::channel block_device) {
+                                   std::optional<Copier> copier, zx::channel block_device) {
   const uint8_t* guid = GetTypeGuid().value.data();
   FX_LOGS(INFO) << "Detected type GUID " << gpt::KnownGuid::TypeDescription(guid)
                 << " for data partition";
@@ -815,9 +822,13 @@ zx_status_t BlockDevice::MountData(const fs_management::MountOptions& options,
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    return mounter_->MountData(std::move(block_device), options, format_);
+    return mounter_->MountData(std::move(block_device), std::move(copier), options, format_);
   }
   if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
+    if (copier) {
+      FX_LOGS(ERROR) << "Copier is not supported for durable partitions";
+      return ZX_ERR_NOT_SUPPORTED;
+    }
     return mounter_->MountDurable(std::move(block_device), options);
   }
   FX_LOGS(ERROR) << "Unrecognized type GUID for data partition; not mounting";
@@ -1197,9 +1208,14 @@ zx_status_t BlockDevice::CopySourceData(const Copier& copier) const {
     FX_LOGS(ERROR) << "Failed to copy data: " << zx_status_get_string(status);
     return status;
   }
-  if (auto status = fs_management::Shutdown(export_root_or->client); status.is_error()) {
+  auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(export_root_or->client);
+  if (!admin_client.is_ok()) {
+    FX_PLOGS(WARNING, admin_client.status_value()) << "Can't connect to admin service";
+    auto ignore_failure = fidl::WireCall(*admin_client)->Shutdown();
+  }
+  if (auto status = fidl::WireCall(*admin_client)->Shutdown(); !status.ok()) {
     // Ignore errors; there's nothing we can do.
-    FX_LOGS(WARNING) << "Unmount failed: " << status.status_string();
+    FX_PLOGS(WARNING, status.status()) << "Unmount failed";
   }
   FX_LOGS(INFO) << "Successfully copied data";
   return ZX_OK;

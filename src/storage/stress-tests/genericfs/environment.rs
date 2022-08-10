@@ -7,6 +7,7 @@ use {
         deletion_actor::DeletionActor, file_actor::FileActor, instance_actor::InstanceActor, Args,
     },
     async_trait::async_trait,
+    either::Either,
     fidl_fuchsia_io as fio,
     fs_management::{filesystem::Filesystem, FSConfig},
     fuchsia_component::client::connect_to_protocol_at_path,
@@ -71,8 +72,16 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         let fs = Filesystem::from_node(node, config.clone());
         fs.format().await.unwrap();
 
-        let mut instance = fs.serve().await.unwrap();
-        instance.bind_to_path(MOUNT_PATH).unwrap();
+        let instance = if fs.config().is_multi_volume() {
+            let mut instance = fs.serve_multi_volume().await.unwrap();
+            let vol = instance.create_volume("default", None).await.unwrap();
+            vol.bind_to_path(MOUNT_PATH).unwrap();
+            Either::Right(instance)
+        } else {
+            let mut instance = fs.serve().await.unwrap();
+            instance.bind_to_path(MOUNT_PATH).unwrap();
+            Either::Left(instance)
+        };
 
         let seed = match args.seed {
             Some(seed) => seed,
@@ -178,8 +187,16 @@ impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironmen
 
             let fs = Filesystem::from_node(node, self.config.clone());
             fs.fsck().await.unwrap();
-            let mut instance = fs.serve().await.unwrap();
-            instance.bind_to_path(MOUNT_PATH).unwrap();
+            let instance = if fs.config().is_multi_volume() {
+                let mut instance = fs.serve_multi_volume().await.unwrap();
+                let vol = instance.open_volume("default", None).await.unwrap();
+                vol.bind_to_path(MOUNT_PATH).unwrap();
+                Either::Right(instance)
+            } else {
+                let mut instance = fs.serve().await.unwrap();
+                instance.bind_to_path(MOUNT_PATH).unwrap();
+                Either::Left(instance)
+            };
 
             // Replace the fvm and fs instances
             actor.instance = Some((fvm, instance));

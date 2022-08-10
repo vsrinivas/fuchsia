@@ -9,7 +9,7 @@ use {
         error::{CommandError, KillError, QueryError, ServeError, ShutdownError},
         launch_process, FSConfig,
     },
-    anyhow::{ensure, Error},
+    anyhow::{anyhow, bail, ensure, Error},
     cstr::cstr,
     fdio::SpawnAction,
     fidl::{
@@ -17,14 +17,17 @@ use {
         endpoints::{create_endpoints, ClientEnd, ServerEnd},
     },
     fidl_fuchsia_fs_startup::{CheckOptions, FormatOptions, StartOptions, StartupMarker},
+    fidl_fuchsia_fxfs::MountOptions,
     fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
     fuchsia_component::client::{
-        connect_to_childs_protocol, connect_to_protocol_at_dir_root, open_childs_exposed_directory,
+        connect_to_childs_protocol, connect_to_named_protocol_at_dir_root,
+        connect_to_protocol_at_dir_root, open_childs_exposed_directory,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{Channel, Handle, Process, Signals, Status, Task},
     log::warn,
+    std::collections::HashMap,
 };
 
 /// Asynchronously manages a block device for filesystem operations.
@@ -34,6 +37,10 @@ pub struct Filesystem<FSC> {
 }
 
 impl<FSC: FSConfig> Filesystem<FSC> {
+    pub fn config(&self) -> &FSC {
+        &self.config
+    }
+
     /// Creates a new `Filesystem` with the block device represented by `node_proxy`.
     pub fn from_node(node_proxy: fio::NodeProxy, config: FSC) -> Self {
         Self { config, block_device: node_proxy }
@@ -73,10 +80,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             let proxy =
                 connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
                     .await?;
-            let mut options = FormatOptions::new_empty();
-            options.crypt = self.config.crypt_client().map(|c| c.into());
             proxy
-                .format(self.get_block_handle()?.into(), &mut options)
+                .format(self.get_block_handle()?.into(), &mut FormatOptions::new_empty())
                 .await?
                 .map_err(Status::from_raw)?;
         } else {
@@ -139,23 +144,24 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         Ok(())
     }
 
-    /// Serves the filesystem on the block device and returns a [`ServingFilesystem`] representing
-    /// the running filesystem process.
+    /// Serves the filesystem on the block device and returns a [`ServingSingleVolumeFilesystem`]
+    /// representing the running filesystem process.
     ///
     /// # Errors
     ///
     /// Returns [`Err`] if serving the filesystem failed.
-    pub async fn serve(&self) -> Result<ServingFilesystem, Error> {
+    pub async fn serve(&self) -> Result<ServingSingleVolumeFilesystem, Error> {
+        if self.config.is_multi_volume() {
+            bail!("Can't serve a multivolume filesystem; use serve_multi_volume");
+        }
         // If the filesystem is a component, the startup service must be routed to this component.
         // For now, only one filesystem instance is supported.
         if let Some(component_name) = self.config.component_name() {
             let proxy =
                 connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
                     .await?;
-            let mut options = StartOptions::new_empty();
-            options.crypt = self.config.crypt_client().map(|c| c.into());
             proxy
-                .start(self.get_block_handle()?.into(), &mut options)
+                .start(self.get_block_handle()?.into(), &mut StartOptions::new_empty())
                 .await?
                 .map_err(Status::from_raw)?;
 
@@ -169,8 +175,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 "root",
                 server_end,
             )?;
-
-            Ok(ServingFilesystem {
+            Ok(ServingSingleVolumeFilesystem {
                 process: None,
                 exposed_dir,
                 root_dir: ClientEnd::<fio::DirectoryMarker>::new(root_dir.into_channel())
@@ -185,12 +190,39 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             // This is fine for now since this mechanism of mounting filesystems will go away at
             // some point.
             let (process, export_root, root_dir) = self.do_serve().await?;
-            Ok(ServingFilesystem {
+            Ok(ServingSingleVolumeFilesystem {
                 process: Some(process),
                 exposed_dir: export_root,
                 root_dir,
                 binding: None,
             })
+        }
+    }
+
+    /// Serves the filesystem on the block device and returns a [`ServingMultiVolumeFilesystem`]
+    /// representing the running filesystem process.  No volumes are opened; clients have to do that
+    /// explicitly.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if serving the filesystem failed.
+    pub async fn serve_multi_volume(&self) -> Result<ServingMultiVolumeFilesystem, Error> {
+        if !self.config.is_multi_volume() {
+            bail!("Can't serve_multi_volume a single-volume filesystem; use serve");
+        }
+        if let Some(component_name) = self.config.component_name() {
+            let proxy =
+                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
+                    .await?;
+            proxy
+                .start(self.get_block_handle()?.into(), &mut StartOptions::new_empty())
+                .await?
+                .map_err(Status::from_raw)?;
+
+            let exposed_dir = open_childs_exposed_directory(component_name, None).await?;
+            Ok(ServingMultiVolumeFilesystem { exposed_dir, volumes: HashMap::default() })
+        } else {
+            bail!("Can't serve a multivolume filesystem which isn't componentized")
         }
     }
 
@@ -235,18 +267,49 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     }
 }
 
+#[derive(Default)]
+struct NamespaceBinding(String);
+
+impl NamespaceBinding {
+    fn create(root_dir: &fio::DirectoryProxy, path: String) -> Result<NamespaceBinding, Error> {
+        let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
+        root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
+        let namespace = fdio::Namespace::installed()?;
+        namespace.bind(&path, client_end)?;
+        Ok(Self(path))
+    }
+}
+
+impl std::ops::Deref for NamespaceBinding {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Drop for NamespaceBinding {
+    fn drop(&mut self) {
+        if let Ok(namespace) = fdio::Namespace::installed() {
+            let _ = namespace.unbind(&self.0);
+        }
+    }
+}
+
+// TODO(fxbug.dev/93066): Soft migration; remove this after completion
+pub type ServingFilesystem = ServingSingleVolumeFilesystem;
+
 /// Asynchronously manages a serving filesystem. Created from [`Filesystem::serve()`].
-pub struct ServingFilesystem {
+pub struct ServingSingleVolumeFilesystem {
     // If the filesystem is running as a component, there will be no process.
     process: Option<Process>,
     exposed_dir: fio::DirectoryProxy,
     root_dir: fio::DirectoryProxy,
 
     // The path in the local namespace that this filesystem is bound to (optional).
-    binding: Option<String>,
+    binding: Option<NamespaceBinding>,
 }
 
-impl ServingFilesystem {
+impl ServingSingleVolumeFilesystem {
     /// Returns a proxy to the root directory of the serving filesystem.
     pub fn root(&self) -> &fio::DirectoryProxy {
         &self.root_dir
@@ -259,19 +322,30 @@ impl ServingFilesystem {
     /// # Errors
     ///
     /// Returns [`Err`] if binding failed.
-    pub fn bind_to_path<'a>(&mut self, path: &str) -> Result<(), Error> {
+    pub fn bind_to_path(&mut self, path: &str) -> Result<(), Error> {
         ensure!(self.binding.is_none(), "Already bound");
-        let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        self.root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
-        let namespace = fdio::Namespace::installed()?;
-        namespace.bind(path, client_end)?;
-        self.binding = Some(path.to_string());
+        self.binding = Some(NamespaceBinding::create(&self.root_dir, path.to_string())?);
         Ok(())
     }
 
+    pub fn bound_path(&self) -> Option<&str> {
+        self.binding.as_deref()
+    }
+
+    /// Returns a [`FilesystemInfo`] object containing information about the serving filesystem.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if querying the filesystem failed.
+    pub async fn query(&self) -> Result<Box<fio::FilesystemInfo>, QueryError> {
+        let (status, info) = self.root_dir.query_filesystem().await?;
+        Status::ok(status).map_err(QueryError::DirectoryQuery)?;
+        info.ok_or(QueryError::DirectoryEmptyResult)
+    }
+
     /// Attempts to shutdown the filesystem using the
-    /// [`fidl_fuchsia_io::DirectoryProxy::unmount()`] FIDL method and waiting for the
-    /// filesystem process to terminate.
+    /// [`fidl_fuchsia_fs::AdminProxy::shutdown()`] FIDL method and waiting for the filesystem
+    /// process to terminate.
     ///
     /// # Errors
     ///
@@ -306,17 +380,6 @@ impl ServingFilesystem {
         Ok(())
     }
 
-    /// Returns a [`FilesystemInfo`] object containing information about the serving filesystem.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Err`] if querying the filesystem failed.
-    pub async fn query(&self) -> Result<Box<fio::FilesystemInfo>, QueryError> {
-        let (status, info) = self.root_dir.query_filesystem().await?;
-        Status::ok(status).map_err(QueryError::DirectoryQuery)?;
-        info.ok_or(QueryError::DirectoryEmptyResult)
-    }
-
     /// Attempts to kill the filesystem process and waits for the process to terminate.
     ///
     /// # Errors
@@ -336,13 +399,9 @@ impl ServingFilesystem {
         }
         Ok(())
     }
-
-    pub fn bound_path(&self) -> Option<&str> {
-        self.binding.as_deref()
-    }
 }
 
-impl Drop for ServingFilesystem {
+impl Drop for ServingSingleVolumeFilesystem {
     fn drop(&mut self) {
         if let Some(process) = self.process.take() {
             let _ = process.kill();
@@ -354,10 +413,151 @@ impl Drop for ServingFilesystem {
                 let _ = proxy.shutdown();
             }
         }
-        if let Some(path) = self.binding.as_ref() {
-            if let Ok(namespace) = fdio::Namespace::installed() {
-                let _ = namespace.unbind(path);
-            }
+    }
+}
+
+/// Asynchronously manages a serving multivolume filesystem. Created from
+/// [`Filesystem::serve_multi_volume()`].
+pub struct ServingMultiVolumeFilesystem {
+    exposed_dir: fio::DirectoryProxy,
+    volumes: HashMap<String, ServingVolume>,
+}
+
+/// Represents an opened volume in a [`ServingMultiVolumeFilesystem'] instance.
+pub struct ServingVolume {
+    root_dir: fio::DirectoryProxy,
+    binding: Option<NamespaceBinding>,
+}
+
+impl ServingVolume {
+    /// Returns a proxy to the root directory of the serving volume.
+    pub fn root(&self) -> &fio::DirectoryProxy {
+        &self.root_dir
+    }
+
+    /// Binds the root directory being served by this filesystem to a path in the local namespace.
+    /// The path must be absolute, containing no "." nor ".." entries.  The binding will be dropped
+    /// when self is dropped.  Only one binding is supported.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if binding failed.
+    pub fn bind_to_path(&mut self, path: &str) -> Result<(), Error> {
+        ensure!(self.binding.is_none(), "Already bound");
+        self.binding = Some(NamespaceBinding::create(&self.root_dir, path.to_string())?);
+        Ok(())
+    }
+
+    pub fn bound_path(&self) -> Option<&str> {
+        self.binding.as_deref()
+    }
+
+    /// Returns a [`FilesystemInfo`] object containing information about the serving volume.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if querying the filesystem failed.
+    pub async fn query(&self) -> Result<Box<fio::FilesystemInfo>, QueryError> {
+        let (status, info) = self.root_dir.query_filesystem().await?;
+        Status::ok(status).map_err(QueryError::DirectoryQuery)?;
+        info.ok_or(QueryError::DirectoryEmptyResult)
+    }
+}
+
+impl ServingMultiVolumeFilesystem {
+    /// Gets a reference to the given volume, if it's already open.
+    pub fn volume(&self, volume: &str) -> Option<&ServingVolume> {
+        self.volumes.get(volume)
+    }
+
+    /// Gets a mutable reference to the given volume, if it's already open.
+    pub fn volume_mut(&mut self, volume: &str) -> Option<&mut ServingVolume> {
+        self.volumes.get_mut(volume)
+    }
+
+    #[cfg(test)]
+    pub fn close_volume(&mut self, volume: &str) {
+        self.volumes.remove(volume);
+    }
+
+    /// Creates the volume.  Fails if the volume already exists.
+    /// If `crypt` is set, the volume will be encrypted using the provided Crypt instance.
+    pub async fn create_volume(
+        &mut self,
+        volume: &str,
+        crypt: Option<ClientEnd<fidl_fuchsia_fxfs::CryptMarker>>,
+    ) -> Result<&mut ServingVolume, Error> {
+        ensure!(!self.volumes.contains_key(volume), "Already bound");
+        let (exposed_dir, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        connect_to_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumesMarker>(&self.exposed_dir)?
+            .create(volume, crypt, server)
+            .await?
+            .map_err(|e| anyhow!(e))?;
+        self.insert_volume(volume.to_string(), exposed_dir).await
+    }
+
+    /// Mounts an existing volume.  Fails if the volume is already mounted or doesn't exist.
+    /// If `crypt` is set, the volume will be decrypted using the provided Crypt instance.
+    pub async fn open_volume(
+        &mut self,
+        volume: &str,
+        crypt: Option<ClientEnd<fidl_fuchsia_fxfs::CryptMarker>>,
+    ) -> Result<&mut ServingVolume, Error> {
+        ensure!(!self.volumes.contains_key(volume), "Already bound");
+        let (exposed_dir, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        let path = "volumes/".to_owned() + volume;
+        connect_to_named_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumeMarker>(
+            &self.exposed_dir,
+            &path,
+        )?
+        .mount(server, &mut MountOptions { crypt })
+        .await?
+        .map_err(|e| anyhow!(e))?;
+        self.insert_volume(volume.to_string(), exposed_dir).await
+    }
+
+    async fn insert_volume(
+        &mut self,
+        volume: String,
+        exposed_dir: fio::DirectoryProxy,
+    ) -> Result<&mut ServingVolume, Error> {
+        let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
+        exposed_dir.open(
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::POSIX_EXECUTABLE
+                | fio::OpenFlags::POSIX_WRITABLE,
+            0,
+            "root",
+            server_end,
+        )?;
+        Ok(self.volumes.entry(volume).or_insert(ServingVolume {
+            root_dir: ClientEnd::<fio::DirectoryMarker>::new(root_dir.into_channel())
+                .into_proxy()?,
+            binding: None,
+        }))
+    }
+
+    /// Attempts to shutdown the filesystem using the [`fidl_fuchsia_fs::AdminProxy::shutdown()`]
+    /// FIDL method.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the shutdown failed.
+    pub async fn shutdown(self) -> Result<(), ShutdownError> {
+        connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.exposed_dir)?
+            .shutdown()
+            .await?;
+        Ok(())
+    }
+}
+
+impl Drop for ServingMultiVolumeFilesystem {
+    fn drop(&mut self) {
+        // Make a best effort attempt to shut down to the filesystem.
+        if let Ok(proxy) =
+            connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.exposed_dir)
+        {
+            let _ = proxy.shutdown();
         }
     }
 }
@@ -508,7 +708,6 @@ mod tests {
 
         serving.shutdown().await.expect("failed to shutdown blobfs the first time");
         let serving = blobfs.serve().await.expect("failed to serve blobfs the second time");
-
         {
             let test_file = fuchsia_fs::directory::open_file(
                 serving.root(),
@@ -786,6 +985,9 @@ mod tests {
         fn get_crypt_service(channel: *const zx::Channel) -> zx::zx_status_t;
     }
 
+    // TODO(fxbug.dev/93066): Re-enable this test; it depends on Fxfs failing repeated calls to
+    // Start.
+    #[ignore]
     #[fuchsia::test]
     async fn fxfs_shutdown_component_when_dropped() {
         let block_size = 512;
@@ -800,23 +1002,55 @@ mod tests {
             })),
         );
 
-        fxfs.format().await.expect("failed toformat fxfs");
+        fxfs.format().await.expect("failed to format fxfs");
         {
-            let _fs = fxfs.serve().await.expect("failed to serve fxfs");
+            let _fs = fxfs.serve_multi_volume().await.expect("failed to serve fxfs");
 
             // Serve should fail for the second time.
-            assert!(fxfs.serve().await.is_err(), "serving succeeded when already mounted");
+            assert!(
+                fxfs.serve_multi_volume().await.is_err(),
+                "serving succeeded when already mounted"
+            );
         }
 
         // Fxfs should get shut down when dropped, but it's asynchronous, so we need to loop here.
         let mut attempts = 0;
         loop {
-            if let Ok(_) = fxfs.serve().await {
+            if let Ok(_) = fxfs.serve_multi_volume().await {
                 break;
             }
             attempts += 1;
             assert!(attempts < 10);
             fasync::Timer::new(Duration::from_secs(1)).await;
         }
+    }
+
+    #[fuchsia::test]
+    async fn fxfs_open_volume() {
+        let block_size = 512;
+        let ramdisk = ramdisk(block_size);
+        let fxfs = new_fs(
+            &ramdisk,
+            Fxfs::with_crypt_client(Arc::new(|| {
+                let channel = Handle::invalid().into();
+                zx::Status::ok(unsafe { get_crypt_service(&channel) })
+                    .expect("get_crypt_service failed");
+                channel
+            })),
+        );
+
+        fxfs.format().await.expect("failed to format fxfs");
+
+        let mut fs = fxfs.serve_multi_volume().await.expect("failed to serve fxfs");
+
+        assert!(
+            fs.open_volume("foo", None).await.is_err(),
+            "Opening nonexistent volume should fail"
+        );
+
+        let vol = fs.create_volume("foo", None).await.expect("Create volume failed");
+        vol.query().await.expect("Query volume failed");
+        fs.close_volume("foo");
+        fs.open_volume("foo", None).await.expect("Open volume failed");
     }
 }

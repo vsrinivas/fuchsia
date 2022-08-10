@@ -80,8 +80,12 @@ Launching a filesystem using regular processes -
 fbl::unique_fd device_fd(open("/dev/class/block/001", O_RDWR));
 ASSERT_TRUE(device_fd);
 fs_management::MountOptions options;
-auto fs_or = fs_management::Mount(std::move(device_fd), "/fs", fs_management::kDiskFormatMinfs, options, fs_management::LaunchStdioAsync);
-ASSERT_EQ(fs_or.status(), ZX_OK);
+auto fs = fs_management::Mount(std::move(device_fd), fs_management::kDiskFormatMinfs, options, fs_management::LaunchStdioAsync);
+ASSERT_EQ(fs.status(), ZX_OK);
+auto data = fs->DataRoot();
+ASSERT_EQ(data.status(), ZX_OK);
+auto binding = fs_management::NamespaceBinding::Create("/fs", std::move(*data));
+ASSERT_EQ(binding.status(), ZX_OK);
 // Now /fs points at the root of the filesystem.
 ```
 
@@ -95,8 +99,12 @@ fs_management::MountOptions options {
   .component_collection_name = "fs-collection",
 };
 // LaunchStdioAsync doesn't matter here
-auto fs_or = fs_management::Mount(std::move(device_fd), "/fs", fs_management::kDiskFormatMinfs, options, fs_management::LaunchStdioAsync);
-ASSERT_EQ(fs_or.status(), ZX_OK);
+auto fs = fs_management::Mount(std::move(device_fd), fs_management::kDiskFormatMinfs, options, fs_management::LaunchStdioAsync);
+ASSERT_EQ(fs.status(), ZX_OK);
+auto data = fs->DataRoot();
+ASSERT_EQ(data.status(), ZX_OK);
+auto binding = fs_management::NamespaceBinding::Create("/fs", std::move(*data));
+ASSERT_EQ(binding.status(), ZX_OK);
 // Now /fs points at the root of the filesystem.
 ```
 

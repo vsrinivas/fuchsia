@@ -20,6 +20,8 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.io/cpp/markers.h"
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/block-device-manager.h"
@@ -147,11 +149,11 @@ class TestMinfsMounter : public FilesystemMounter {
   TestMinfsMounter(FsManager& fshost, const fshost_config::Config* config)
       : FilesystemMounter(fshost, config) {}
 
-  zx::status<fs_management::MountedFilesystem> LaunchFsComponent(
-      zx::channel block_device, const fs_management::MountOptions& options,
-      const fs_management::DiskFormat& format) final {
+  zx::status<StartedFilesystem> LaunchFsComponent(zx::channel block_device,
+                                                  const fs_management::MountOptions& options,
+                                                  const fs_management::DiskFormat& format) final {
     EXPECT_EQ(format, fs_management::kDiskFormatMinfs);
-    return zx::ok(fs_management::MountedFilesystem(fidl::ClientEnd<fuchsia_io::Directory>(), ""));
+    return zx::ok(fs_management::StartedSingleVolumeFilesystem());
   }
 
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
@@ -160,7 +162,7 @@ class TestMinfsMounter : public FilesystemMounter {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t RouteData(fs_management::MountedFilesystem mounted_filesystem,
+  zx_status_t RouteData(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
                         std::string_view device_path) override {
     return ZX_OK;
   }

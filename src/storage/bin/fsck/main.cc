@@ -18,7 +18,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 
 namespace {
 struct {

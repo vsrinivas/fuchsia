@@ -94,16 +94,6 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_collection_name = options_.component_collection_name,
         .component_url = options_.component_url,
     };
-    if (format_ == kDiskFormatFxfs) {
-      mkfs_options.crypt_client = [] {
-        if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
-          ADD_FAILURE() << "Unable to get crypt service";
-          return zx::channel();
-        } else {
-          return *std::move(service_or);
-        }
-      };
-    }
     ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options), ZX_OK)
         << zx_status_get_string(status);
     state_ = kFormatted;
@@ -131,14 +121,16 @@ class OutgoingDirectoryFixture : public testing::Test {
 
   void TearDown() final { ASSERT_NO_FATAL_FAILURE(StopFilesystem()); }
 
-  fidl::WireSyncClient<Directory>& DataRoot() {
+  fidl::ClientEnd<Directory> DataRoot() {
     ZX_ASSERT(state_ == kStarted);  // Ensure this isn't used after stopping the filesystem.
-    return data_client_;
+    auto data = fs_->DataRoot();
+    ZX_ASSERT_MSG(data.is_ok(), "Invalid data root: %s", data.status_string());
+    return std::move(*data);
   }
 
-  fidl::WireSyncClient<Directory>& ExportRoot() {
+  const fidl::ClientEnd<Directory>& ExportRoot() {
     ZX_ASSERT(state_ == kStarted);  // Ensure this isn't used after stopping the filesystem.
-    return export_client_;
+    return fs_->ExportRoot();
   }
 
  protected:
@@ -151,23 +143,22 @@ class OutgoingDirectoryFixture : public testing::Test {
     MountOptions actual_options = options;
     if (format_ == kDiskFormatFxfs) {
       actual_options.crypt_client = [] {
-        if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+        if (auto service = fs_test::GetCryptService(); service.is_error()) {
           ADD_FAILURE() << "Unable to get crypt service";
           return zx::channel();
         } else {
-          return *std::move(service_or);
+          return *std::move(service);
         }
       };
+      auto fs = MountMultiVolumeWithDefault(std::move(device_fd), format_, actual_options,
+                                            LaunchStdioAsync);
+      ASSERT_TRUE(fs.is_ok()) << fs.status_string();
+      fs_ = std::make_unique<StartedSingleVolumeMultiVolumeFilesystem>(std::move(*fs));
+    } else {
+      auto fs = Mount(std::move(device_fd), format_, actual_options, LaunchStdioAsync);
+      ASSERT_TRUE(fs.is_ok()) << fs.status_string();
+      fs_ = std::make_unique<StartedSingleVolumeFilesystem>(std::move(*fs));
     }
-
-    auto fs_or = Mount(std::move(device_fd), nullptr, format_, actual_options, LaunchStdioAsync);
-    ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
-    export_client_ = fidl::WireSyncClient<Directory>(std::move(*fs_or).TakeExportRoot());
-
-    auto data_root = FsRootHandle(export_client_.client_end());
-    ASSERT_TRUE(data_root.is_ok()) << data_root.status_string();
-    data_client_ = fidl::WireSyncClient<Directory>(std::move(data_root.value()));
-
     state_ = kStarted;
   }
 
@@ -176,7 +167,7 @@ class OutgoingDirectoryFixture : public testing::Test {
       return;
     }
 
-    ASSERT_EQ(fs_management::Shutdown(export_client_.client_end().borrow()).status_value(), ZX_OK);
+    ASSERT_EQ(fs_->Unmount().status_value(), ZX_OK);
 
     state_ = kFormatted;
   }
@@ -186,6 +177,7 @@ class OutgoingDirectoryFixture : public testing::Test {
   storage::RamDisk ramdisk_;
   DiskFormat format_;
   MountOptions options_ = {};
+  std::unique_ptr<SingleVolumeFilesystemInterface> fs_;
   fidl::WireSyncClient<Directory> export_client_;
   fidl::WireSyncClient<Directory> data_client_;
   std::string component_name_;
@@ -227,7 +219,7 @@ class OutgoingDirectoryTest : public OutgoingDirectoryFixture,
 
 TEST_P(OutgoingDirectoryTest, DataRootIsValid) {
   std::string_view format_str = DiskFormatString(std::get<0>(GetParam()));
-  auto resp = DataRoot()->QueryFilesystem();
+  auto resp = fidl::WireCall(DataRoot())->QueryFilesystem();
   ASSERT_TRUE(resp.ok()) << resp.status_string();
   ASSERT_EQ(resp.value().s, ZX_OK) << zx_status_get_string(resp.value().s);
   ASSERT_STREQ(format_str.data(), reinterpret_cast<char*>(resp.value().info->name.data()));
@@ -244,12 +236,10 @@ Combinations TestCombinations() {
     }
   };
 
-  // Filesystems that don't support components should be able to fall back to running the legacy
-  // way.
   add(kDiskFormatBlobfs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
   add(kDiskFormatMinfs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
   add(kDiskFormatFxfs, {Mode::kDynamic, Mode::kStatic});
-  add(kDiskFormatF2fs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
+  add(kDiskFormatF2fs, {Mode::kLegacy, Mode::kReadOnly});
 
   return c;
 }
@@ -281,7 +271,9 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
     fio::wire::OpenFlags file_flags = fio::wire::OpenFlags::kRightReadable |
                                       fio::wire::OpenFlags::kRightWritable |
                                       fio::wire::OpenFlags::kCreate;
-    ASSERT_EQ(DataRoot()->Open(file_flags, 0, kTestFilePath, std::move(test_file_server)).status(),
+    ASSERT_EQ(fidl::WireCall(DataRoot())
+                  ->Open(file_flags, 0, kTestFilePath, std::move(test_file_server))
+                  .status(),
               ZX_OK);
 
     fidl::WireSyncClient<fio::File> file_client(std::move(test_file_ends->client));
@@ -304,6 +296,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   ASSERT_NO_FATAL_FAILURE(StopFilesystem());
   ASSERT_NO_FATAL_FAILURE(StartFilesystem(MountOptions{.readonly = true}));
 
+  auto data_root = DataRoot();
+
   auto fail_file_ends = fidl::CreateEndpoints<fio::File>();
   ASSERT_TRUE(fail_file_ends.is_ok()) << fail_file_ends.status_string();
   fidl::ServerEnd<fio::Node> fail_test_file_server(fail_file_ends->server.TakeChannel());
@@ -311,8 +305,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   fio::wire::OpenFlags fail_file_flags =
       fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
   // open "succeeds" but...
-  auto open_resp =
-      DataRoot()->Open(fail_file_flags, 0, kTestFilePath, std::move(fail_test_file_server));
+  auto open_resp = fidl::WireCall(data_root)->Open(fail_file_flags, 0, kTestFilePath,
+                                                   std::move(fail_test_file_server));
   ASSERT_TRUE(open_resp.ok()) << open_resp.status_string();
 
   // ...we can't actually use the channel
@@ -326,7 +320,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   fidl::ServerEnd<fio::Node> test_file_server(test_file_ends->server.TakeChannel());
 
   fio::wire::OpenFlags file_flags = fio::wire::OpenFlags::kRightReadable;
-  auto open_resp2 = DataRoot()->Open(file_flags, 0, kTestFilePath, std::move(test_file_server));
+  auto open_resp2 =
+      fidl::WireCall(data_root)->Open(file_flags, 0, kTestFilePath, std::move(test_file_server));
   ASSERT_TRUE(open_resp2.ok()) << open_resp2.status_string();
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file_ends->client));
@@ -349,7 +344,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   fio::wire::OpenFlags file_flags = fio::wire::OpenFlags::kRightReadable |
                                     fio::wire::OpenFlags::kRightWritable |
                                     fio::wire::OpenFlags::kCreate;
-  auto open_resp = ExportRoot()->Open(file_flags, 0, kTestFilePath, std::move(test_file_server));
+  auto open_resp =
+      fidl::WireCall(ExportRoot())->Open(file_flags, 0, kTestFilePath, std::move(test_file_server));
   ASSERT_TRUE(open_resp.ok()) << open_resp.status_string();
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file_ends->client));

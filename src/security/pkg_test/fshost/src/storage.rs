@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_io as fio,
     fs_management::{
-        filesystem::{Filesystem, ServingFilesystem},
+        filesystem::{Filesystem, ServingSingleVolumeFilesystem},
         Blobfs,
     },
     fuchsia_component::client::connect_to_protocol_at_path,
@@ -34,7 +34,7 @@ pub struct BlobfsInstance {
     _fvm_vmo: Vmo,
     _fvm: FvmInstance,
     blobfs: Filesystem<Blobfs>,
-    serving_blobfs: Option<ServingFilesystem>,
+    serving_blobfs: Option<ServingSingleVolumeFilesystem>,
 }
 
 impl BlobfsInstance {
@@ -67,7 +67,7 @@ impl BlobfsInstance {
     /// Mount blobfs to directory location `mountpoint`.
     pub async fn mount(&mut self, mountpoint: &str) {
         if let Some(blobfs_dir) =
-            self.serving_blobfs.as_ref().and_then(ServingFilesystem::bound_path)
+            self.serving_blobfs.as_ref().and_then(ServingSingleVolumeFilesystem::bound_path)
         {
             panic!(
                 "Attempt to re-mount blobfs at {} when it is already mounted at {}",
@@ -93,7 +93,7 @@ impl BlobfsInstance {
         open_directory_in_namespace(
             self.serving_blobfs
                 .as_ref()
-                .and_then(ServingFilesystem::bound_path)
+                .and_then(ServingSingleVolumeFilesystem::bound_path)
                 .expect("Attempt to open blobfs root when it is not mounted"),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE

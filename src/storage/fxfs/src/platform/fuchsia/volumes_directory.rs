@@ -24,12 +24,14 @@ use {
     fidl_fuchsia_fxfs::{
         CryptMarker, CryptProxy, MountOptions, VolumeRequest, VolumeRequestStream,
     },
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
+    fs_inspect::{FsInspect, FsInspectTree},
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Status},
     futures::TryStreamExt,
     std::{
         collections::{hash_map::Entry::Occupied, HashMap},
-        sync::{Arc, Mutex},
+        sync::{Arc, Mutex, Weak},
     },
     vfs::{
         self,
@@ -47,6 +49,10 @@ pub struct VolumesDirectory {
     root_volume: RootVolume,
     directory_node: Arc<vfs::directory::immutable::Simple>,
     mounted_volumes: Mutex<HashMap<u64, FxVolumeAndRoot>>,
+    // TODO(fxbug.dev/99792): The inspect hierarchy assumes a single volume.  For now, we bind
+    // _inspect_tree to the first volume which is created or mounted, but eventually it should cover
+    // all volumes.
+    _inspect_tree: Mutex<Option<FsInspectTree>>,
 }
 
 impl VolumesDirectory {
@@ -59,6 +65,7 @@ impl VolumesDirectory {
             root_volume,
             directory_node: vfs::directory::immutable::simple(),
             mounted_volumes: Mutex::new(HashMap::new()),
+            _inspect_tree: Mutex::new(None),
         });
         let mut iter = me.root_volume.volume_directory().iter(&mut merger).await?;
         while let Some((name, store_id, object_descriptor)) = iter.get() {
@@ -118,9 +125,9 @@ impl VolumesDirectory {
         Ok(volume)
     }
 
-    /// Mounts the volume identified by |name|.
-    pub async fn mount_volume(
-        &self,
+    #[cfg(test)]
+    async fn mount_volume(
+        self: &Arc<Self>,
         name: &str,
         crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<FxVolumeAndRoot, Error> {
@@ -141,13 +148,22 @@ impl VolumesDirectory {
     }
 
     // Mounts the given store.  A lock *must* be held on the volume directory.
-    async fn mount_store(&self, store: Arc<ObjectStore>) -> Result<FxVolumeAndRoot, Error> {
+    async fn mount_store(
+        self: &Arc<Self>,
+        store: Arc<ObjectStore>,
+    ) -> Result<FxVolumeAndRoot, Error> {
         let store_id = store.store_object_id();
         store.record_metrics(&format!("{}", store_id));
         let unique_id = zx::Event::create().expect("Failed to create event");
         let volume = FxVolumeAndRoot::new(store, unique_id.get_koid().unwrap().raw_koid()).await?;
         volume.volume().start_flush_task(DEFAULT_FLUSH_PERIOD);
         self.mounted_volumes.lock().unwrap().insert(store_id, volume.clone());
+        self._inspect_tree.lock().unwrap().get_or_insert_with(|| {
+            FsInspectTree::new(
+                Arc::downgrade(volume.volume()) as Weak<dyn FsInspect + Send + Sync>,
+                &crate::metrics::FXFS_ROOT_NODE.lock().unwrap(),
+            )
+        });
         Ok(volume)
     }
 
@@ -241,6 +257,7 @@ impl VolumesDirectory {
         let me = self.clone();
         fasync::Task::spawn(async move {
             scope.wait().await;
+            info!(store_id, "Last connection to volume closed, shutting down");
 
             let root_store = me.root_volume.volume_directory().store();
             let fs = root_store.filesystem();
@@ -268,6 +285,7 @@ impl VolumesDirectory {
         })
         .detach();
 
+        info!(store_id, "Serving volume");
         Ok(())
     }
 
@@ -343,7 +361,7 @@ impl VolumesDirectory {
         if let Some(request) = stream.try_next().await.context("Reading request")? {
             match request {
                 AdminRequest::Shutdown { responder } => {
-                    info!("Received shutdown request");
+                    info!(store_id, "Received shutdown request for volume");
 
                     let root_store = self.root_volume.volume_directory().store();
                     let fs = root_store.filesystem();

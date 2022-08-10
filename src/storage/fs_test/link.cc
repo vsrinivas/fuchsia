@@ -315,7 +315,7 @@ TEST_P(HardLinkTest, UnlinkRace) {
   for (int i = 0; i < 100; ++i) {
     {
       fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT | O_EXCL, 0644));
-      ASSERT_TRUE(fd);
+      ASSERT_TRUE(fd) << strerror(errno);
       EXPECT_EQ(write(fd.get(), "hello", 5), 5);
     }
 

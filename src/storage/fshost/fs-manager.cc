@@ -44,6 +44,7 @@
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -70,11 +71,6 @@ zx::status<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io::Directory> root)
 }
 
 }  // namespace
-
-FsManager::MountedFilesystem::~MountedFilesystem() {
-  if (auto status = fs_management::Shutdown(export_root_); status.is_error())
-    FX_LOGS(WARNING) << "Unmount error: " << status.status_string();
-}
 
 FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
@@ -240,14 +236,14 @@ void FsManager::RegisterDevicePath(MountPoint point, std::string_view device_pat
 
   zx::status root_or = GetRoot(point);
   if (root_or.is_error()) {
-    FX_PLOGS(WARNING, root_or.status_value()) << "Failed to get root handle for mount point";
+    FX_PLOGS(ERROR, root_or.status_value()) << "Failed to get root handle for mount point";
     return;
   }
   if (auto result = fidl::WireCall(*root_or)->QueryFilesystem(); !result.ok()) {
-    FX_PLOGS(WARNING, result.status()) << "QueryFilesystem call failed (fidl error)";
+    FX_PLOGS(ERROR, result.status()) << "QueryFilesystem call failed (fidl error)";
     return;
   } else if (result->s != ZX_OK) {
-    FX_PLOGS(WARNING, result->s) << "QueryFilesystem call failed";
+    FX_PLOGS(ERROR, result->s) << "QueryFilesystem call failed";
     return;
   } else {
     std::lock_guard guard(device_paths_lock_);
@@ -305,11 +301,18 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
 
     for (auto& [point, fs] : filesystems_to_shutdown) {
       FX_LOGS(INFO) << "Shutting down " << MountPointPath(point);
+      auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(fs);
+      if (!admin_client.is_ok()) {
+        FX_LOGS(WARNING) << "Failed to get admin handle for shutting down " << MountPointPath(point)
+                         << ": " << admin_client.status_string();
+        merge_status(admin_client.status_value());
+        continue;
+      }
       // TODO(fxbug.dev/105073): This may fail if /fuchsia.fs.Admin is the wrong path.
-      if (auto result = fs_management::Shutdown({fs.borrow()}); result.is_error()) {
+      if (auto result = fidl::WireCall(*admin_client)->Shutdown(); !result.ok()) {
         FX_LOGS(WARNING) << "Failed to shut down " << MountPointPath(point) << ": "
                          << result.status_string();
-        merge_status(result.error_value());
+        merge_status(result.status());
       }
     }
 
@@ -439,24 +442,24 @@ void FsManager::FileReport(fs_management::DiskFormat format, ReportReason reason
 }
 
 zx_status_t FsManager::AttachMount(std::string_view device_path,
-                                   fidl::ClientEnd<fuchsia_io::Directory> export_root,
+                                   fs_management::StartedSingleVolumeFilesystem fs,
                                    std::string_view name) {
-  auto root_or = fs_management::FsRootHandle(export_root);
-  if (root_or.is_error()) {
-    FX_PLOGS(WARNING, root_or.status_value()) << "Failed to get root";
-    zx::status result = fs_management::Shutdown(export_root);
-    if (result.is_error()) {
-      FX_PLOGS(WARNING, result.status_value()) << "Failed to shutdown after failure to get root";
-    }
-    return root_or.error_value();
+  auto root = fs.DataRoot();
+  if (root.is_error()) {
+    FX_PLOGS(WARNING, root.status_value()) << "Failed to get data root; shutting down filesystem";
+    return root.error_value();
+  }
+  auto res = fidl::WireCall(*root)->Describe();
+  if (!res.ok()) {
+    FX_PLOGS(WARNING, res.status()) << "Failed to describe data root; shutting down filesystem";
+    return res.status();
   }
 
-  uint64_t fs_id = GetFsId(*root_or).value_or(0);
-  mnt_dir_->AddEntry(name, fbl::MakeRefCounted<fs::RemoteDir>(std::move(*root_or)));
+  uint64_t fs_id = GetFsId(*root).value_or(0);
+  mnt_dir_->AddEntry(name, fbl::MakeRefCounted<fs::RemoteDir>(std::move(*root)));
 
   std::lock_guard guard(device_paths_lock_);
-  mounted_filesystems_.emplace(
-      std::make_unique<MountedFilesystem>(name, std::move(export_root), fs_id));
+  mounted_filesystems_.emplace(std::make_unique<MountEntry>(name, std::move(fs), fs_id));
   if (!device_path.empty())
     device_paths_.emplace(fs_id, device_path);
   return ZX_OK;

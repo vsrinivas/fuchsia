@@ -14,6 +14,11 @@
     },
     capabilities: [
         {
+            directory: "volumes",
+            rights: [ "rw*" ],
+            path: "/volumes",
+        },
+        {
             directory: "root",
             rights: [ "rw*" ],
             path: "/root",
@@ -22,10 +27,15 @@
             protocol: [
                 "fuchsia.fs.Admin",
                 "fuchsia.fs.startup.Startup",
+                "fuchsia.fxfs.Volumes",
             ],
         },
     ],
     expose: [
+        {
+            directory: "volumes",
+            from: "self",
+        },
         {
             directory: "root",
             from: "self",
@@ -34,6 +44,7 @@
             protocol: [
                 "fuchsia.fs.Admin",
                 "fuchsia.fs.startup.Startup",
+                "fuchsia.fxfs.Volumes",
             ],
             from: "self",
         },

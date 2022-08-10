@@ -18,12 +18,29 @@
 #include "fidl/fuchsia.io/cpp/markers.h"
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/fshost_config.h"
 #include "src/storage/fshost/inspect-manager.h"
 
 namespace fshost {
+
+class StartedFilesystem {
+ public:
+  explicit StartedFilesystem(fs_management::StartedSingleVolumeFilesystem&&);
+  explicit StartedFilesystem(fs_management::StartedMultiVolumeFilesystem&&);
+
+  // Detaches from the filesystem, so that when this object goes out of scope it is not shut down.
+  void Detach();
+
+  friend class FilesystemMounter;
+
+ private:
+  std::variant<fs_management::StartedSingleVolumeFilesystem,
+               fs_management::StartedMultiVolumeFilesystem>
+      fs_;
+};
 
 // FilesystemMounter is a utility class which wraps the FsManager
 // and helps clients mount filesystems within the fshost namespace.
@@ -39,8 +56,11 @@ class FilesystemMounter {
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
-  zx_status_t MountData(zx::channel block_device_client, fs_management::MountOptions options,
-                        fs_management::DiskFormat format);
+  // If |copier| is set, its data will be copied into the data filesystem before exposing the
+  // filesystem to clients.
+  //
+  zx_status_t MountData(zx::channel block_device_client, std::optional<Copier> copier,
+                        fs_management::MountOptions options, fs_management::DiskFormat format);
 
   // Attempts to mount a block device to "/durable".
   // Fails if already mounted.
@@ -73,18 +93,20 @@ class FilesystemMounter {
   FshostInspectManager& inspect_manager() { return fshost_.inspect_manager(); }
 
  protected:
-  // Routes a given mounted filesystem to /data and updates device path.
+  // Routes a given mounted filesystem or volume to /data and updates device path.
   // This can be overridden for testing.
-  virtual zx_status_t RouteData(fs_management::MountedFilesystem mounted_filesystem,
+  virtual zx_status_t RouteData(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
                                 std::string_view device_path);
 
  private:
-  // Performs the mechanical action of mounting a filesystem, without
-  // validating the type of filesystem being mounted.
-  zx::status<> MountFilesystem(FsManager::MountPoint point, const char* binary,
-                               const fs_management::MountOptions& options,
-                               zx::channel block_device_client,
-                               fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
+  // Mounts a filesystem in the legacy mode (i.e. launching as a process directly).
+  // Componentized filesystems should use LaunchFsComponent and the fuchsia.fs.startup.Startup
+  // protocol.
+  // Performs the mechanical action of mounting a filesystem, without validating the type of
+  // filesystem being mounted.
+  zx::status<> MountLegacyFilesystem(FsManager::MountPoint point, const char* binary,
+                                     const fs_management::MountOptions& options,
+                                     zx::channel block_device_client);
 
   // Actually launches the filesystem component.
   //
@@ -92,7 +114,7 @@ class FilesystemMounter {
   // LaunchFs.
   //
   // Virtualized to enable testing.
-  virtual zx::status<fs_management::MountedFilesystem> LaunchFsComponent(
+  virtual zx::status<StartedFilesystem> LaunchFsComponent(
       zx::channel block_device, const fs_management::MountOptions& options,
       const fs_management::DiskFormat& format);
 

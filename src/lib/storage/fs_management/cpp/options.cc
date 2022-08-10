@@ -48,8 +48,6 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
   options.verbose = verbose_mount;
   options.sandbox_decompression = sandbox_decompression;
   options.write_compression_level = write_compression_level;
-  if (crypt_client)
-    options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
   if (migrate_root)
     options.migrate_root = migrate_root();
 
@@ -120,8 +118,6 @@ fuchsia_fs_startup::wire::FormatOptions MkfsOptions::as_format_options() const {
   options.verbose = verbose;
   options.deprecated_padded_blobfs_format = deprecated_padded_blobfs_format;
   options.num_inodes = num_inodes;
-  if (crypt_client)
-    options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
 
   return options;
 }

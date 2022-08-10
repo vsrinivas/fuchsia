@@ -4,6 +4,7 @@
 
 #include "src/storage/fs_test/json_filesystem.h"
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fs_test/crypt_service.h"
 
 namespace fs_test {
@@ -64,15 +65,6 @@ class JsonInstance : public FilesystemInstance {
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
     fs_management::MkfsOptions mkfs_options;
     mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
-    if (filesystem_.GetTraits().uses_crypt) {
-      mkfs_options.crypt_client = [] {
-        if (auto service_or = GetCryptService(); service_or.is_error()) {
-          return zx::channel();
-        } else {
-          return *std::move(service_or);
-        }
-      };
-    }
     if (filesystem_.is_component()) {
       const std::string& name = filesystem_.GetTraits().name;
       mkfs_options.component_child_name = name.c_str();
@@ -89,10 +81,11 @@ class JsonInstance : public FilesystemInstance {
       mount_options.component_child_name = name.c_str();
       mount_options.component_url = "#meta/" + name;
     }
-    auto export_root_or = FsMount(device_path_, mount_path, filesystem_.format(), mount_options);
-    if (export_root_or.is_error())
-      return export_root_or.take_error();
-    outgoing_directory_ = std::move(*export_root_or);
+    auto fs = FsMount(device_path_, mount_path, filesystem_.format(), mount_options);
+    if (fs.is_error())
+      return fs.take_error();
+    fs_ = std::move(fs->first);
+    binding_ = std::move(fs->second);
     return zx::ok();
   }
 
@@ -129,17 +122,23 @@ class JsonInstance : public FilesystemInstance {
     return std::get_if<ramdevice_client::RamNand>(&device_);
   }
 
-  fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const override {
-    return outgoing_directory_.borrow();
+  fs_management::SingleVolumeFilesystemInterface* fs() override { return fs_.get(); }
+
+  fidl::UnownedClientEnd<fuchsia_io::Directory> ServiceDirectory() const override {
+    return fs_->ExportRoot();
   }
 
-  void ResetOutgoingDirectory() override { outgoing_directory_.reset(); }
+  void Reset() override {
+    binding_.Reset();
+    fs_.reset();
+  }
 
  private:
   const JsonFilesystem& filesystem_;
   RamDevice device_;
   std::string device_path_;
-  fidl::ClientEnd<fuchsia_io::Directory> outgoing_directory_;
+  std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> fs_;
+  fs_management::NamespaceBinding binding_;
 };
 
 std::unique_ptr<FilesystemInstance> JsonFilesystem::Create(RamDevice device,

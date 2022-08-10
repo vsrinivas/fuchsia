@@ -20,6 +20,7 @@
 #include <map>
 
 #include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/fshost/fdio.h"
@@ -113,9 +114,9 @@ class FsManager {
   // blocks. Note that there is no indication if the reporting fails.
   void FileReport(fs_management::DiskFormat format, ReportReason reason) const;
 
+  // TODO(fxbug.dev/93066): For now, we only support dynamic mounting of single-volume filesystems.
   zx_status_t AttachMount(std::string_view device_path,
-                          fidl::ClientEnd<fuchsia_io::Directory> export_root,
-                          std::string_view name);
+                          fs_management::StartedSingleVolumeFilesystem fs, std::string_view name);
 
   zx_status_t DetachMount(std::string_view name);
 
@@ -125,34 +126,34 @@ class FsManager {
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetRoot(MountPoint point) const;
 
  private:
-  class MountedFilesystem {
+  class MountEntry {
    public:
     struct Compare {
       using is_transparent = void;
-      bool operator()(const std::unique_ptr<MountedFilesystem>& a,
-                      const std::unique_ptr<MountedFilesystem>& b) const {
+      bool operator()(const std::unique_ptr<MountEntry>& a,
+                      const std::unique_ptr<MountEntry>& b) const {
         return a->name_ < b->name_;
       }
 
-      bool operator()(const std::unique_ptr<MountedFilesystem>& a, std::string_view b) const {
+      bool operator()(const std::unique_ptr<MountEntry>& a, std::string_view b) const {
         return a->name_ < b;
       }
 
-      bool operator()(std::string_view a, const std::unique_ptr<MountedFilesystem>& b) const {
+      bool operator()(std::string_view a, const std::unique_ptr<MountEntry>& b) const {
         return a < b->name_;
       }
     };
 
-    MountedFilesystem(std::string_view name, fidl::ClientEnd<fuchsia_io::Directory> export_root,
-                      uint64_t fs_id)
-        : name_(name), export_root_(std::move(export_root)), fs_id_(fs_id) {}
-    ~MountedFilesystem();
+    MountEntry(std::string_view name, fs_management::StartedSingleVolumeFilesystem fs,
+               uint64_t fs_id)
+        : name_(name), fs_(std::move(fs)), fs_id_(fs_id) {}
+    ~MountEntry() = default;
 
     uint64_t fs_id() const { return fs_id_; }
 
    private:
     std::string name_;
-    fidl::ClientEnd<fuchsia_io::Directory> export_root_;
+    fs_management::StartedSingleVolumeFilesystem fs_;
     uint64_t fs_id_;
   };
 
@@ -196,7 +197,7 @@ class FsManager {
 
   bool file_crash_report_ = true;
 
-  std::set<std::unique_ptr<MountedFilesystem>, MountedFilesystem::Compare> mounted_filesystems_;
+  std::set<std::unique_ptr<MountEntry>, MountEntry::Compare> mounted_filesystems_;
   std::mutex device_paths_lock_;
   std::unordered_map<uint64_t, std::string> device_paths_ __TA_GUARDED(device_paths_lock_);
 };
