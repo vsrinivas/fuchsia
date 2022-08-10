@@ -1087,14 +1087,13 @@ zx_status_t WriteLargeBlobRecordWithNoMetadata(Writer* writer,
                                                const StringRef<category_type>& category_ref,
                                                const StringRef<name_type>& name_ref,
                                                const void* data, size_t num_bytes) {
-  WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*metadata word*/ +
-                         WordSize(1) /*timestamp*/ + category_ref.PayloadSize() +
-                         name_ref.PayloadSize() + /*blob size*/ WordSize(1) +
-                         WordSize::FromBytes(num_bytes);
+  WordSize record_size = /*header*/ WordSize(1) + /*blob header*/ WordSize(1) +
+                         category_ref.PayloadSize() + name_ref.PayloadSize() +
+                         /*blob size*/ WordSize(1) + WordSize::FromBytes(num_bytes);
 
   uint64_t header =
       MakeLargeHeader(LargeRecordType::kBlob, record_size) |
-      fxt::LargeBlobFields::BlobFormat::Make(ToUnderlyingType(LargeBlobFormat::kMetadata));
+      fxt::LargeBlobFields::BlobFormat::Make(ToUnderlyingType(LargeBlobFormat::kNoMetadata));
   uint64_t blob_header =
       BlobFormatAttachmentFields::CategoryStringRef::Make(category_ref.HeaderEntry()) |
       BlobFormatAttachmentFields::NameStringRef::Make(name_ref.HeaderEntry());

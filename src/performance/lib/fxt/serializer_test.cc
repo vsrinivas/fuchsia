@@ -32,6 +32,20 @@ struct FakeRecord {
   void Commit() {
     // Records must only be committed once
     EXPECT_FALSE(committed);
+
+    // In all codepaths, we expect that the number of bytes written exactly
+    // matches the number of bytes for the record size indicated by the header.
+    EXPECT_GE(bytes_.size(), sizeof(uint64_t));
+    uint64_t header;
+    memcpy(&header, bytes_.data(), sizeof(uint64_t));
+    fxt::WordSize expected_size(0);
+    if (fxt::RecordFields::Type::Get<fxt::RecordType>(header) == fxt::RecordType::kLargeRecord) {
+      expected_size = fxt::WordSize(fxt::LargeRecordFields::RecordSize::Get<size_t>(header));
+    } else {
+      expected_size = fxt::WordSize(fxt::RecordFields::RecordSize::Get<size_t>(header));
+    }
+    EXPECT_EQ(bytes_.size(), expected_size.SizeInBytes());
+
     committed = true;
   }
 
@@ -793,11 +807,11 @@ TEST(Serializer, LargeBlobWithNoMetadataRecord) {
   // Record type is 15
   EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'000F});
   // Size
-  EXPECT_EQ(header & 0x0000'000F'FFFF'FFF0, uint64_t{0x0000'0000'0000'0090});
+  EXPECT_EQ(header & 0x0000'000F'FFFF'FFF0, uint64_t{0x0000'0000'0000'0080});
   // large record type (0)
   EXPECT_EQ(header & 0x0000'00F0'0000'0000, uint64_t{0x0000'0000'0000'0000});
   // blob format type (0)
-  EXPECT_EQ(header & 0x0000'0F00'0000'0000, uint64_t{0x0000'0000'0000'0000});
+  EXPECT_EQ(header & 0x0000'0F00'0000'0000, uint64_t{0x0000'0100'0000'0000});
   uint64_t blob_header = words[1];
   // Category Ref
   EXPECT_EQ(blob_header & 0x0000'0000'0000'FFFF, uint64_t{0x0000'0000'0000'7AAA});
