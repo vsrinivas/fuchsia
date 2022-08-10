@@ -190,10 +190,7 @@ impl ThreadGroup {
 
         if let Some(mut parent) = parent {
             parent.children.insert(leader, Arc::downgrade(&thread_group));
-        }
-        {
-            let thread_group_read_guard = thread_group.read();
-            process_group.insert(&thread_group_read_guard);
+            process_group.insert(&thread_group);
         }
         thread_group
     }
@@ -624,7 +621,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
         self.leave_process_group(pids);
         self.process_group = process_group;
-        self.process_group.insert(self);
+        self.process_group.insert(self.base());
     }
 
     fn leave_process_group(&mut self, pids: &mut PidTable) {

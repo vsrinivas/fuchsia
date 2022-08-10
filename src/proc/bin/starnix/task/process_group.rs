@@ -67,8 +67,8 @@ impl ProcessGroup {
 
     state_accessor!(ProcessGroup, mutable_state);
 
-    pub fn insert<'a>(self: &Arc<Self>, thread_group: &impl ThreadGroupReadGuard<'a>) {
-        self.write().insert(thread_group);
+    pub fn insert<'a>(self: &Arc<Self>, thread_group: &Arc<ThreadGroup>) {
+        self.write().thread_groups.insert(thread_group.leader, Arc::downgrade(thread_group));
     }
 
     /// Removes the thread group from the process group. Returns whether the process group is empty.
@@ -137,10 +137,6 @@ state_implementation!(ProcessGroup, ProcessGroupMutableState, {
             t.upgrade()
                 .expect("Weak references to thread_groups in ProcessGroup must always be valid")
         }))
-    }
-
-    fn insert<'a>(&mut self, thread_group: &impl ThreadGroupReadGuard<'a>) {
-        self.thread_groups.insert(thread_group.leader(), Arc::downgrade(thread_group.base()));
     }
 
     /// Removes the thread group from the process group. Returns whether the process group is empty.

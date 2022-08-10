@@ -275,10 +275,7 @@ impl Task {
             SignalActions::default(),
             &initial_name,
         )?;
-        {
-            let thread_group_read_guard = thread_group.read();
-            process_group.insert(&thread_group_read_guard);
-        }
+        process_group.insert(&thread_group);
 
         let task = Self::new(
             pid,
