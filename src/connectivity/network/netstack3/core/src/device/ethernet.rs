@@ -29,7 +29,7 @@ use packet_formats::{
 #[cfg(test)]
 use crate::ip::device::nud::NudHandler;
 use crate::{
-    context::{FrameContext, RngContext, StateContext, TimerHandler},
+    context::{FrameContext, RngContext, TimerHandler},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
         arp::{
@@ -208,8 +208,12 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
         get_state(self, device_id).ip.ipv6.retrans_timer
     }
 
-    fn get_state_mut(&mut self, device_id: EthernetDeviceId) -> &mut NudState<Ipv6, Mac> {
-        &mut get_state_mut(self, device_id).link.ipv6_nud
+    fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv6, Mac>) -> O>(
+        &mut self,
+        device_id: EthernetDeviceId,
+        cb: F,
+    ) -> O {
+        cb(&mut get_state_mut(self, device_id).link.ipv6_nud)
     }
 
     fn send_neighbor_solicitation(
@@ -722,18 +726,6 @@ pub(super) fn insert_ndp_table_entry<
     )
 }
 
-impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
-    StateContext<C, ArpState<EthernetLinkDevice>, SC::DeviceId> for SC
-{
-    fn get_state_with(&self, id: SC::DeviceId) -> &ArpState<EthernetLinkDevice> {
-        &self.get_state_with(id).link.ipv4_arp
-    }
-
-    fn get_state_mut_with(&mut self, id: SC::DeviceId) -> &mut ArpState<EthernetLinkDevice> {
-        &mut self.get_state_mut_with(id).link.ipv4_arp
-    }
-}
-
 impl<
         C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
         B: BufferMut,
@@ -767,8 +759,17 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
             .cloned()
             .map(|addr| addr.addr().get())
     }
+
     fn get_hardware_addr(&self, _ctx: &mut C, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
         self.get_state_with(device_id.into()).link.mac
+    }
+
+    fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<EthernetLinkDevice>) -> O>(
+        &mut self,
+        device_id: SC::DeviceId,
+        cb: F,
+    ) -> O {
+        cb(&mut get_state_mut(self, device_id).link.ipv4_arp)
     }
 }
 
@@ -861,7 +862,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::DummyInstant,
+        context::{testutil::DummyInstant, StateContext},
         device::{DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState},
         error::NotFoundError,
         ip::{

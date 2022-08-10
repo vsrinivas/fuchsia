@@ -85,16 +85,16 @@ pub(crate) mod testutil {
         neighbor: SpecifiedAddr<I::Addr>,
         expected_link_addr: D::Address,
     ) {
-        let NudState { neighbors } = sync_ctx.get_state_mut(device_id);
-
-        assert_matches!(
-            neighbors.get(&neighbor),
-            Some(
-                NeighborState::Dynamic(DynamicNeighborState::Complete { link_address })
-            ) => {
-                assert_eq!(link_address, &expected_link_addr)
-            }
-        )
+        sync_ctx.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            assert_matches!(
+                neighbors.get(&neighbor),
+                Some(
+                    NeighborState::Dynamic(DynamicNeighborState::Complete { link_address })
+                ) => {
+                    assert_eq!(link_address, &expected_link_addr)
+                }
+            )
+        })
     }
 
     pub(crate) fn assert_neighbor_unknown<
@@ -107,9 +107,9 @@ pub(crate) mod testutil {
         device_id: SC::DeviceId,
         neighbor: SpecifiedAddr<I::Addr>,
     ) {
-        let NudState { neighbors } = sync_ctx.get_state_mut(device_id);
-
-        assert_matches!(neighbors.get(&neighbor), None)
+        sync_ctx.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            assert_matches!(neighbors.get(&neighbor), None)
+        })
     }
 }
 
@@ -145,8 +145,12 @@ pub(crate) trait NudContext<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, Sel
     /// Returns the amount of time between neighbor probe/solicitation messages.
     fn retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration;
 
-    /// Returns a mutable reference to the NUD state.
-    fn get_state_mut(&mut self, device_id: Self::DeviceId) -> &mut NudState<I, D::Address>;
+    /// Calls the function with a mutable reference to the NUD state.
+    fn with_nud_state_mut<O, F: FnOnce(&mut NudState<I, D::Address>) -> O>(
+        &mut self,
+        device_id: Self::DeviceId,
+        cb: F,
+    ) -> O;
 
     /// Sends a neighbor probe/solicitation message.
     fn send_neighbor_solicitation(
@@ -261,10 +265,11 @@ impl<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, SC::DeviceId>, SC: NudCont
         ctx: &mut C,
         NudTimerId { device_id, lookup_addr, _marker }: NudTimerId<I, D, SC::DeviceId>,
     ) {
-        let NudState { neighbors } = self.get_state_mut(device_id);
-
-        let transmit_counter =
-            match neighbors.get_mut(&lookup_addr).expect("timer fired for invalid entry") {
+        let do_solicit = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            let transmit_counter = match neighbors
+                .get_mut(&lookup_addr)
+                .expect("timer fired for invalid entry")
+            {
                 NeighborState::Dynamic(DynamicNeighborState::Incomplete {
                     transmit_counter,
                     pending_frames: _,
@@ -275,21 +280,27 @@ impl<I: Ip, D: LinkDevice, C: NonSyncNudContext<I, D, SC::DeviceId>, SC: NudCont
                 }
             };
 
-        match transmit_counter {
-            Some(c) => {
-                *transmit_counter = NonZeroU8::new(c.get() - 1);
-                solicit_neighbor(self, ctx, device_id, lookup_addr)
+            match transmit_counter {
+                Some(c) => {
+                    *transmit_counter = NonZeroU8::new(c.get() - 1);
+                    true
+                }
+                None => {
+                    // Failed to complete neighbor resolution and no more probes to
+                    // send.
+                    assert_matches!(
+                        neighbors.remove(&lookup_addr),
+                        Some(e) => {
+                            let _: NeighborState<_> = e;
+                        }
+                    );
+                    false
+                }
             }
-            None => {
-                // Failed to complete neighbor resolution and no more probes to
-                // send.
-                assert_matches!(
-                    neighbors.remove(&lookup_addr),
-                    Some(e) => {
-                        let _: NeighborState<_> = e;
-                    }
-                );
-            }
+        });
+
+        if do_solicit {
+            solicit_neighbor(self, ctx, device_id, lookup_addr)
         }
     }
 }
@@ -332,49 +343,53 @@ impl<
         link_address: D::Address,
         source: DynamicNeighborUpdateSource,
     ) {
-        let NudState { neighbors } = self.get_state_mut(device_id);
-        match neighbors.entry(neighbor) {
-            Entry::Vacant(e) => match source {
-                DynamicNeighborUpdateSource::Probe => {
-                    let _: &mut NeighborState<_> =
-                        e.insert(NeighborState::Dynamic(DynamicNeighborState::Complete {
-                            link_address,
-                        }));
-                }
-                DynamicNeighborUpdateSource::Confirmation => {}
-            },
-            Entry::Occupied(e) => match e.into_mut() {
-                NeighborState::Dynamic(e) => {
-                    match core::mem::replace(e, DynamicNeighborState::Complete { link_address }) {
-                        DynamicNeighborState::Incomplete {
-                            transmit_counter: _,
-                            pending_frames,
-                        } => {
-                            assert_ne!(
-                                ctx.cancel_timer(NudTimerId {
-                                    device_id,
-                                    lookup_addr: neighbor,
-                                    _marker: PhantomData,
-                                }),
-                                None,
-                                "previously incomplete entry for {} should have had a timer",
-                                neighbor
-                            );
-
-                            for body in pending_frames.into_iter() {
-                                let _: Result<(), _> = self.send_ip_packet_to_neighbor_link_addr(
-                                    ctx,
-                                    device_id,
+        let pending_frames = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            match neighbors.entry(neighbor) {
+                Entry::Vacant(e) => {
+                    match source {
+                        DynamicNeighborUpdateSource::Probe => {
+                            let _: &mut NeighborState<_> =
+                                e.insert(NeighborState::Dynamic(DynamicNeighborState::Complete {
                                     link_address,
-                                    body,
-                                );
-                            }
+                                }));
                         }
-                        DynamicNeighborState::Complete { link_address: _ } => {}
+                        DynamicNeighborUpdateSource::Confirmation => {}
                     }
+
+                    None
                 }
-                NeighborState::Static(_) => {}
-            },
+                Entry::Occupied(e) => match e.into_mut() {
+                    NeighborState::Dynamic(e) => {
+                        match core::mem::replace(e, DynamicNeighborState::Complete { link_address })
+                        {
+                            DynamicNeighborState::Incomplete {
+                                transmit_counter: _,
+                                pending_frames,
+                            } => {
+                                assert_ne!(
+                                    ctx.cancel_timer(NudTimerId {
+                                        device_id,
+                                        lookup_addr: neighbor,
+                                        _marker: PhantomData,
+                                    }),
+                                    None,
+                                    "previously incomplete entry for {} should have had a timer",
+                                    neighbor
+                                );
+
+                                Some(pending_frames)
+                            }
+                            DynamicNeighborState::Complete { link_address: _ } => None,
+                        }
+                    }
+                    NeighborState::Static(_) => None,
+                },
+            }
+        });
+
+        for body in pending_frames.into_iter().flatten() {
+            let _: Result<(), _> =
+                self.send_ip_packet_to_neighbor_link_addr(ctx, device_id, link_address, body);
         }
     }
 
@@ -385,61 +400,64 @@ impl<
         neighbor: SpecifiedAddr<I::Addr>,
         link_address: D::Address,
     ) {
-        let NudState { neighbors } = self.get_state_mut(device_id);
-        match neighbors.insert(neighbor, NeighborState::Static(link_address)) {
-            Some(NeighborState::Dynamic(DynamicNeighborState::Incomplete {
-                transmit_counter: _,
-                pending_frames,
-            })) => {
-                assert_ne!(
-                    ctx.cancel_timer(NudTimerId {
-                        device_id,
-                        lookup_addr: neighbor,
-                        _marker: PhantomData,
-                    }),
-                    None,
-                    "previously incomplete entry for {} should have had a timer",
-                    neighbor
-                );
-
-                for body in pending_frames.into_iter() {
-                    let _: Result<(), _> = self.send_ip_packet_to_neighbor_link_addr(
-                        ctx,
-                        device_id,
-                        link_address,
-                        body,
+        let pending_frames = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            match neighbors.insert(neighbor, NeighborState::Static(link_address)) {
+                Some(NeighborState::Dynamic(DynamicNeighborState::Incomplete {
+                    transmit_counter: _,
+                    pending_frames,
+                })) => {
+                    assert_ne!(
+                        ctx.cancel_timer(NudTimerId {
+                            device_id,
+                            lookup_addr: neighbor,
+                            _marker: PhantomData,
+                        }),
+                        None,
+                        "previously incomplete entry for {} should have had a timer",
+                        neighbor
                     );
+
+                    Some(pending_frames)
                 }
+                None
+                | Some(NeighborState::Static(_))
+                | Some(NeighborState::Dynamic(DynamicNeighborState::Complete {
+                    link_address: _,
+                })) => None,
             }
-            None
-            | Some(NeighborState::Static(_))
-            | Some(NeighborState::Dynamic(DynamicNeighborState::Complete { link_address: _ })) => {}
+        });
+
+        for body in pending_frames.into_iter().flatten() {
+            let _: Result<(), _> =
+                self.send_ip_packet_to_neighbor_link_addr(ctx, device_id, link_address, body);
         }
     }
 
     fn flush(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
-        let NudState { neighbors } = self.get_state_mut(device_id);
+        let previously_incomplete = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            let mut previously_incomplete = Vec::new();
 
-        let mut previously_incomplete = Vec::new();
-
-        neighbors.retain(|neighbor, state| {
-            match state {
-                NeighborState::Dynamic(state) => {
-                    match state {
-                        DynamicNeighborState::Incomplete {
-                            transmit_counter: _,
-                            pending_frames: _,
-                        } => {
-                            previously_incomplete.push(*neighbor);
+            neighbors.retain(|neighbor, state| {
+                match state {
+                    NeighborState::Dynamic(state) => {
+                        match state {
+                            DynamicNeighborState::Incomplete {
+                                transmit_counter: _,
+                                pending_frames: _,
+                            } => {
+                                previously_incomplete.push(*neighbor);
+                            }
+                            DynamicNeighborState::Complete { link_address: _ } => {}
                         }
-                        DynamicNeighborState::Complete { link_address: _ } => {}
-                    }
 
-                    // Only flush dynamic entries.
-                    false
+                        // Only flush dynamic entries.
+                        false
+                    }
+                    NeighborState::Static(_) => true,
                 }
-                NeighborState::Static(_) => true,
-            }
+            });
+
+            previously_incomplete
         });
 
         previously_incomplete.into_iter().for_each(|neighbor| {
@@ -472,52 +490,65 @@ impl<
         lookup_addr: SpecifiedAddr<I::Addr>,
         body: S,
     ) -> Result<(), S> {
-        let NudState { neighbors } = self.get_state_mut(device_id);
+        enum Action<A, S> {
+            Nothing,
+            DoSolicit,
+            SendPacketToLinkAddr(A, S),
+        }
 
-        match neighbors.entry(lookup_addr) {
-            Entry::Vacant(e) => {
-                let _: &mut NeighborState<_> = e.insert(NeighborState::Dynamic(
-                    DynamicNeighborState::new_incomplete_with_pending_frame(
-                        MAX_MULTICAST_SOLICIT - 1,
-                        body.serialize_vec_outer()
-                            .map_err(|(_err, s)| s)?
-                            .map_a(|b| Buf::new(b.as_ref().to_vec(), ..))
-                            .into_inner(),
-                    ),
-                ));
-                solicit_neighbor(self, ctx, device_id, lookup_addr);
-                Ok(())
-            }
-            Entry::Occupied(e) => match e.into_mut() {
-                NeighborState::Dynamic(DynamicNeighborState::Incomplete {
-                    transmit_counter: _,
-                    pending_frames,
-                }) => {
-                    // We don't accept new packets when the queue is full
-                    // because earlier packets are more likely to initiate
-                    // connections whereas later packets are more likely to
-                    // carry data. E.g. A TCP SYN/SYN-ACK is likely to appear
-                    // before a TCP segment with data and dropping the
-                    // SYN/SYN-ACK may result in the TCP peer not processing the
-                    // segment with data since the segment completing the
-                    // handshake has not been received and handled yet.
-                    if pending_frames.len() < MAX_PENDING_FRAMES {
-                        pending_frames.push_back(
+        let action = self.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            match neighbors.entry(lookup_addr) {
+                Entry::Vacant(e) => {
+                    let _: &mut NeighborState<_> = e.insert(NeighborState::Dynamic(
+                        DynamicNeighborState::new_incomplete_with_pending_frame(
+                            MAX_MULTICAST_SOLICIT - 1,
                             body.serialize_vec_outer()
                                 .map_err(|(_err, s)| s)?
                                 .map_a(|b| Buf::new(b.as_ref().to_vec(), ..))
                                 .into_inner(),
-                        );
-                    }
+                        ),
+                    ));
 
-                    Ok(())
+                    Ok(Action::DoSolicit)
                 }
-                NeighborState::Dynamic(DynamicNeighborState::Complete { link_address })
-                | NeighborState::Static(link_address) => {
-                    let link_address = *link_address;
-                    self.send_ip_packet_to_neighbor_link_addr(ctx, device_id, link_address, body)
-                }
-            },
+                Entry::Occupied(e) => match e.into_mut() {
+                    NeighborState::Dynamic(DynamicNeighborState::Incomplete {
+                        transmit_counter: _,
+                        pending_frames,
+                    }) => {
+                        // We don't accept new packets when the queue is full
+                        // because earlier packets are more likely to initiate
+                        // connections whereas later packets are more likely to
+                        // carry data. E.g. A TCP SYN/SYN-ACK is likely to appear
+                        // before a TCP segment with data and dropping the
+                        // SYN/SYN-ACK may result in the TCP peer not processing the
+                        // segment with data since the segment completing the
+                        // handshake has not been received and handled yet.
+                        if pending_frames.len() < MAX_PENDING_FRAMES {
+                            pending_frames.push_back(
+                                body.serialize_vec_outer()
+                                    .map_err(|(_err, s)| s)?
+                                    .map_a(|b| Buf::new(b.as_ref().to_vec(), ..))
+                                    .into_inner(),
+                            );
+                        }
+
+                        Ok(Action::Nothing)
+                    }
+                    NeighborState::Dynamic(DynamicNeighborState::Complete { link_address })
+                    | NeighborState::Static(link_address) => {
+                        Ok(Action::SendPacketToLinkAddr(*link_address, body))
+                    }
+                },
+            }
+        })?;
+
+        match action {
+            Action::Nothing => Ok(()),
+            Action::DoSolicit => Ok(solicit_neighbor(self, ctx, device_id, lookup_addr)),
+            Action::SendPacketToLinkAddr(link_addr, body) => {
+                self.send_ip_packet_to_neighbor_link_addr(ctx, device_id, link_addr, body)
+            }
         }
     }
 }
@@ -585,11 +616,12 @@ mod tests {
             self.get_ref().retrans_timer
         }
 
-        fn get_state_mut(
+        fn with_nud_state_mut<O, F: FnOnce(&mut NudState<I, DummyLinkAddress>) -> O>(
             &mut self,
             DummyLinkDeviceId: DummyLinkDeviceId,
-        ) -> &mut NudState<I, DummyLinkAddress> {
-            &mut self.get_mut().nud
+            cb: F,
+        ) -> O {
+            cb(&mut self.get_mut().nud)
         }
 
         fn send_neighbor_solicitation(
@@ -1109,6 +1141,21 @@ mod tests {
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
+    fn assert_neighbors<
+        I: Ip,
+        D: LinkDevice,
+        C: NonSyncNudContext<I, D, SC::DeviceId>,
+        SC: NudContext<I, D, C>,
+    >(
+        sync_ctx: &mut SC,
+        device_id: SC::DeviceId,
+        expected: HashMap<SpecifiedAddr<I::Addr>, NeighborState<D::Address>>,
+    ) {
+        sync_ctx.with_nud_state_mut(device_id, |NudState { neighbors }| {
+            assert_eq!(*neighbors, expected)
+        })
+    }
+
     #[test]
     fn router_advertisement_with_source_link_layer_option_should_add_neighbor() {
         let DummyEventDispatcherConfig {
@@ -1167,10 +1214,7 @@ mod tests {
             ra_packet_buf(&[][..]),
         );
         let link_device_id = device_id.try_into().unwrap();
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
-            Default::default()
-        );
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, Default::default());
 
         // RA with a source link layer option should create a new entry.
         receive_ipv6_packet(
@@ -1180,17 +1224,18 @@ mod tests {
             FrameDestination::Multicast,
             ra_packet_buf(&options[..]),
         );
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
+        assert_neighbors::<Ipv6, _, _, _>(
+            &mut sync_ctx,
+            link_device_id,
             HashMap::from([(
                 {
                     let src_ip: UnicastAddr<_> = src_ip.into_addr();
                     src_ip.into_specified()
                 },
                 NeighborState::Dynamic(DynamicNeighborState::Complete {
-                    link_address: remote_mac.get()
-                })
-            )])
+                    link_address: remote_mac.get(),
+                }),
+            )]),
         );
     }
 
@@ -1258,10 +1303,7 @@ mod tests {
             na_packet_buf(false, false),
         );
         let link_device_id = device_id.try_into().unwrap();
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
-            Default::default()
-        );
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, Default::default());
         receive_ipv6_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1269,10 +1311,7 @@ mod tests {
             FrameDestination::Multicast,
             na_packet_buf(true, true),
         );
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
-            Default::default()
-        );
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, Default::default());
 
         assert_eq!(non_sync_ctx.take_frames(), []);
 
@@ -1312,15 +1351,16 @@ mod tests {
                 assert_eq!(code, IcmpUnusedCode);
             }
         );
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
+        assert_neighbors::<Ipv6, _, _, _>(
+            &mut sync_ctx,
+            link_device_id,
             HashMap::from([(
                 neighbor_ip.into_specified(),
                 NeighborState::Dynamic(DynamicNeighborState::Incomplete {
                     transmit_counter: NonZeroU8::new(MAX_MULTICAST_SOLICIT - 1),
                     pending_frames: pending_frames,
                 }),
-            )])
+            )]),
         );
 
         // A Neighbor advertisement should now update the entry.
@@ -1331,14 +1371,15 @@ mod tests {
             FrameDestination::Multicast,
             na_packet_buf(true, true),
         );
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
+        assert_neighbors::<Ipv6, _, _, _>(
+            &mut sync_ctx,
+            link_device_id,
             HashMap::from([(
                 neighbor_ip.into_specified(),
                 NeighborState::Dynamic(DynamicNeighborState::Complete {
-                    link_address: remote_mac.get()
-                })
-            )])
+                    link_address: remote_mac.get(),
+                }),
+            )]),
         );
         assert_matches!(
             &non_sync_ctx.take_frames()[..],
@@ -1362,10 +1403,7 @@ mod tests {
         update_ipv6_configuration(&mut sync_ctx, &mut non_sync_ctx, device_id, |config| {
             config.ip_config.ip_enabled = false;
         });
-        assert_eq!(
-            NudContext::<Ipv6, _, _>::get_state_mut(&mut sync_ctx, link_device_id).neighbors,
-            HashMap::new()
-        );
+        assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, link_device_id, HashMap::new());
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

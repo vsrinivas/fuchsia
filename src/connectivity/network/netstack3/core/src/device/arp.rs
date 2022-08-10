@@ -18,7 +18,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::{CounterContext, FrameContext, StateContext, TimerContext},
+    context::{CounterContext, FrameContext, TimerContext},
     device::{link::LinkDevice, DeviceIdContext},
     ip::device::nud::{
         BufferNudContext, DynamicNeighborUpdateSource, NudContext, NudHandler, NudState, NudTimerId,
@@ -115,9 +115,7 @@ impl<DeviceId, D: ArpDevice, C: TimerContext<ArpTimerId<D, DeviceId>> + CounterC
 
 /// An execution context for the ARP protocol.
 pub(crate) trait ArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::DeviceId>>:
-    DeviceIdContext<D>
-    + StateContext<C, ArpState<D>, Self::DeviceId>
-    + FrameContext<C, EmptyBuf, ArpFrameMetadata<D, Self::DeviceId>>
+    DeviceIdContext<D> + FrameContext<C, EmptyBuf, ArpFrameMetadata<D, Self::DeviceId>>
 {
     /// Get a protocol address of this interface.
     ///
@@ -127,6 +125,13 @@ pub(crate) trait ArpContext<D: ArpDevice, C: ArpNonSyncCtx<D, Self::DeviceId>>:
 
     /// Get the hardware address of this interface.
     fn get_hardware_addr(&self, ctx: &mut C, device_id: Self::DeviceId) -> UnicastAddr<D::HType>;
+
+    /// Calls the function with a mutable reference to ARP state.
+    fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<D>) -> O>(
+        &mut self,
+        device_id: Self::DeviceId,
+        cb: F,
+    ) -> O;
 }
 
 impl<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>> NudContext<Ipv4, D, C>
@@ -136,8 +141,12 @@ impl<D: ArpDevice, C: ArpNonSyncCtx<D, SC::DeviceId>, SC: ArpContext<D, C>> NudC
         NonZeroDuration::new(DEFAULT_ARP_REQUEST_PERIOD).unwrap()
     }
 
-    fn get_state_mut(&mut self, device_id: SC::DeviceId) -> &mut NudState<Ipv4, D::HType> {
-        &mut self.get_state_mut_with(device_id).nud
+    fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv4, D::Address>) -> O>(
+        &mut self,
+        device_id: SC::DeviceId,
+        cb: F,
+    ) -> O {
+        self.with_arp_state_mut(device_id, |ArpState { nud }| cb(nud))
     }
 
     fn send_neighbor_solicitation(
@@ -494,6 +503,14 @@ mod tests {
         ) -> UnicastAddr<Mac> {
             self.get_ref().hw_addr
         }
+
+        fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<EthernetLinkDevice>) -> O>(
+            &mut self,
+            DummyLinkDeviceId: DummyLinkDeviceId,
+            cb: F,
+        ) -> O {
+            cb(&mut self.get_mut().arp_state)
+        }
     }
 
     impl<B: BufferMut> BufferArpContext<EthernetLinkDevice, MockNonSyncCtx, B> for MockCtx {
@@ -505,19 +522,6 @@ mod tests {
             _body: S,
         ) -> Result<(), S> {
             Ok(())
-        }
-    }
-
-    impl StateContext<MockNonSyncCtx, ArpState<EthernetLinkDevice>, DummyLinkDeviceId> for MockCtx {
-        fn get_state_with(&self, _id: DummyLinkDeviceId) -> &ArpState<EthernetLinkDevice> {
-            &self.get_ref().arp_state
-        }
-
-        fn get_state_mut_with(
-            &mut self,
-            _id: DummyLinkDeviceId,
-        ) -> &mut ArpState<EthernetLinkDevice> {
-            &mut self.get_mut().arp_state
         }
     }
 
