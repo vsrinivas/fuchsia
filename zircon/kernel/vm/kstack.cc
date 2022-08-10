@@ -59,7 +59,8 @@ zx_status_t allocate_map(const StackType& type, KernelStack::Mapping* map) {
 
   // Create a VMO for our stack
   fbl::RefPtr<VmObjectPaged> stack_vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, type.size, &stack_vmo);
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kAlwaysPinned,
+                                             type.size, &stack_vmo);
   if (status != ZX_OK) {
     TRACEF("error allocating %s for thread\n", type.name);
     return status;
