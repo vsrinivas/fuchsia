@@ -254,6 +254,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             pkg_cache,
             data_proxy,
             &*system_cache_list,
+            cobalt_sender.clone(),
         )
         .await
         .map_err(|e| {

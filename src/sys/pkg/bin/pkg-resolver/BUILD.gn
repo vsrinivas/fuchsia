@@ -70,6 +70,7 @@ rustc_library("lib") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:derive_builder",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:p256",
     "//third_party/rust_crates:tempfile",

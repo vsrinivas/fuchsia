@@ -150,15 +150,15 @@ async fn get_tuf_config_name_from_vbmeta_impl(
 mod test {
     use {
         super::*,
-        crate::repository_manager::RepositoryManagerBuilder,
-        cobalt_client::traits::AsEventCodes,
+        crate::{
+            repository_manager::RepositoryManagerBuilder,
+            test_util::{get_mock_cobalt_sender, verify_cobalt_emits_event},
+        },
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsRequest},
-        fidl_fuchsia_metrics::MetricEventPayload,
         fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey},
         fuchsia_async as fasync,
         fuchsia_inspect::assert_data_tree,
-        futures::channel::mpsc,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -187,21 +187,6 @@ mod test {
 
     fn failing_vbmeta_fn() -> BoxFuture<'static, Result<String, Error>> {
         async move { anyhow::bail!("FAILURE") }.boxed()
-    }
-
-    fn verify_cobalt_emits_event(
-        mut cobalt_receiver: mpsc::Receiver<MetricEvent>,
-        metric_id: u32,
-        expected_event_codes: impl AsEventCodes,
-    ) {
-        assert_eq!(
-            cobalt_receiver.try_next().unwrap().unwrap(),
-            MetricEvent {
-                metric_id,
-                event_codes: expected_event_codes.as_event_codes(),
-                payload: MetricEventPayload::Count(1),
-            }
-        );
     }
 
     async fn setup_repo_mgr() -> (RepositoryManager, ChannelInspectState, fuchsia_inspect::Inspector)
@@ -238,9 +223,7 @@ mod test {
     async fn test_create_default_rule_from_ota_channel_in_vbmeta() {
         let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr().await;
 
-        // Set up Cobalt.
-        let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
-        let cobalt_sender = ProtocolSender::new(sender);
+        let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
 
         let res = create_rewrite_rule_for_ota_channel_impl_cobalt(
             succeeding_vbmeta_fn,
@@ -265,7 +248,7 @@ mod test {
         );
 
         verify_cobalt_emits_event(
-            cobalt_receiver,
+            &mut cobalt_receiver,
             metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_MIGRATED_METRIC_ID,
             metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Success,
         );
@@ -275,9 +258,7 @@ mod test {
     async fn test_create_default_rule_no_ota_channel() {
         let (repo_manager, channel_inspect_state, inspector) = setup_repo_mgr().await;
 
-        // Set up Cobalt.
-        let (sender, cobalt_receiver) = futures::channel::mpsc::channel(1);
-        let cobalt_sender = ProtocolSender::new(sender);
+        let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
 
         let res = create_rewrite_rule_for_ota_channel_impl_cobalt(
             failing_vbmeta_fn,
@@ -300,7 +281,7 @@ mod test {
         );
 
         verify_cobalt_emits_event(
-            cobalt_receiver,
+            &mut cobalt_receiver,
             metrics::REPOSITORY_MANAGER_LOAD_REPOSITORY_FOR_CHANNEL_MIGRATED_METRIC_ID,
             metrics::RepositoryManagerLoadRepositoryForChannelMigratedMetricDimensionResult::Success,
         );

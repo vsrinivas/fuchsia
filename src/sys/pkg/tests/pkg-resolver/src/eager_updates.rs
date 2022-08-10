@@ -240,6 +240,12 @@ async fn test_cup_write() {
         .build()
         .await;
 
+    env.assert_count_events(
+        metrics::LOAD_PERSISTENT_EAGER_PACKAGE_METRIC_ID,
+        vec![(metrics::LoadPersistentEagerPackageMetricDimensionResult::NotAvailable, 0)],
+    )
+    .await;
+
     // can't get info or resolve before write
     assert_matches!(
         env.cup_get_info(pkg_url.as_unpinned().to_string()).await,
@@ -317,6 +323,12 @@ async fn test_cup_get_info_persisted() {
         )
         .build()
         .await;
+
+    env.assert_count_events(
+        metrics::LOAD_PERSISTENT_EAGER_PACKAGE_METRIC_ID,
+        vec![(metrics::LoadPersistentEagerPackageMetricDimensionResult::Success, 0)],
+    )
+    .await;
 
     let (version, channel) = env.cup_get_info(&pkg_url.as_unpinned().to_string()).await.unwrap();
 
