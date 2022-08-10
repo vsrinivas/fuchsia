@@ -5,10 +5,7 @@
 use at_commands as at;
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
-use crate::peer::{
-    service_level_connection::SlcState,
-    update::{AgUpdate, RING_BYTES},
-};
+use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
 
 /// Represents the Ring (Alert) procedures as defined in HFP v1.8 Section 4.13 - 4.14.
 ///
@@ -42,7 +39,7 @@ impl Procedure for RingProcedure {
                 if state.call_line_ident_notifications {
                     update.into()
                 } else {
-                    vec![at::Response::RawBytes(RING_BYTES.to_vec())].into()
+                    vec![at::Response::Success(at::Success::Ring {})].into()
                 }
             }
             _ => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
@@ -102,7 +99,7 @@ mod tests {
             Call::new(1, "123".into(), CallState::IncomingRinging, Direction::MobileTerminated);
         let update = AgUpdate::Ring(call.clone());
         let expected_messages = vec![
-            at::Response::RawBytes(RING_BYTES.to_vec()),
+            at::success(at::Success::Ring {}),
             at::success(at::Success::Clip { ty: call.number.type_(), number: call.number.into() }),
         ];
         assert_matches!(
@@ -122,7 +119,7 @@ mod tests {
         let call =
             Call::new(1, "123".into(), CallState::IncomingRinging, Direction::MobileTerminated);
         let update = AgUpdate::Ring(call.clone());
-        let expected_messages = vec![at::Response::RawBytes(RING_BYTES.to_vec())];
+        let expected_messages = vec![at::success(at::Success::Ring {})];
         assert_matches!(
             procedure.ag_update(update, &mut state),
             ProcedureRequest::SendMessages(m) if m == expected_messages

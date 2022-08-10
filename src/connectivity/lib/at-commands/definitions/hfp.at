@@ -206,3 +206,7 @@ command AtdMemory { ATD>location: String;}
 # HF Initiated redial last call
 # HFP 1.8 4.35
 command { AT+BLDN }
+
+# Standard "incoming call" indication
+# HFP 1.8 4.34.2
+response { RING }

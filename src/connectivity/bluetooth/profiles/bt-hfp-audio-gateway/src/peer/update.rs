@@ -30,9 +30,6 @@ const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
 (\"battchg\",(0,5)\
 )";
 
-// TODO (fxbug.dev/72873): Replace with defined AT RING response.
-pub const RING_BYTES: &[u8] = b"RING";
-
 /// An update from the AG. Each update contains all the information necessary to generate a list of
 /// AT responses.
 #[derive(Debug, Clone)]
@@ -110,9 +107,8 @@ impl From<AgUpdate> for ProcedureRequest {
                 at::Response::Ok,
             ],
             AgUpdate::ThreeWaySupport => {
-                let commands = CallHoldAction::supported_actions()
-                    .map(|&a| a.chld_code())
-                    .collect();
+                let commands =
+                    CallHoldAction::supported_actions().map(|&a| a.chld_code()).collect();
                 vec![at::success(at::Success::Chld { commands }), at::Response::Ok]
             }
             AgUpdate::IndicatorStatus(status) => vec![
@@ -165,7 +161,7 @@ impl From<AgUpdate> for ProcedureRequest {
                 .collect(),
             AgUpdate::Ring(call) => {
                 vec![
-                    at::Response::RawBytes(RING_BYTES.to_vec()),
+                    at::success(at::Success::Ring {}),
                     at::success(at::Success::Clip {
                         ty: call.number.type_(),
                         number: call.number.into(),
