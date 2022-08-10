@@ -573,6 +573,49 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
       << "ramp has length " << (end - start) << " frames, from frame " << start << " to " << end;
 }
 
+TEST_F(AudioRendererPipelineTestInt16, SetGainBeforeSetFormat) {
+  auto format = Format::Create<ASF::SIGNED_16>(2, kOutputFrameRate).take_value();
+  auto renderer =
+      CreateAudioRenderer(format, PacketsToFrames(kNumPacketsInPayload, kOutputFrameRate),
+                          fuchsia::media::AudioRenderUsage::MEDIA,
+                          /*reference_clock=*/std::nullopt, /*initial_gain_db=*/-20);
+  const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+  const auto frames_per_packet = num_frames / num_packets;
+  const auto kNumInitialSilentFrames = frames_per_packet;
+  const auto num_signal_frames = num_frames - kNumInitialSilentFrames;
+
+  const int16_t kSampleInput = 100;
+  const int16_t kSampleOutput = 10;
+
+  auto input_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto input_signal = GenerateConstantAudio(format, num_signal_frames, kSampleInput);
+  input_buffer.Append(&input_signal);
+  auto expected_output_buffer = GenerateSilentAudio(format, kNumInitialSilentFrames);
+  auto expected_output_signal = GenerateConstantAudio(format, num_signal_frames, kSampleOutput);
+  expected_output_buffer.Append(&expected_output_signal);
+
+  auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
+  renderer->PlaySynchronized(this, output_, 0);
+  renderer->WaitForPackets(this, packets);
+  auto ring_buffer = output_->SnapshotRingBuffer();
+
+  if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+    // In case of underflows, exit NOW (don't assess this buffer).
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(output_)) {
+      GTEST_SKIP() << "Skipping data checks due to underflows";
+      __builtin_unreachable();
+    }
+  }
+
+  // With the initial gain set to -20dB, the input should be scaled by 0.1x.
+  CompareAudioBufferOptions opts;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
+  opts.test_label = "check data";
+  CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
+                      AudioBufferSlice(&expected_output_buffer, 0, num_frames), opts);
+}
+
 // During playback, gain changes should not introduce high-frequency distortion.
 TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
   fuchsia::media::audio::VolumeControlPtr volume;
