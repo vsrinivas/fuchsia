@@ -143,7 +143,7 @@ zx_koid_t get_koid(zx_handle_t handle) {
       zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   EXPECT_EQ(status, ZX_OK, "");
   if (status != ZX_OK) {
-    fprintf(stderr, "status: %d\n", status);
+    printf("status: %d\n", status);
   }
   ZX_ASSERT(status == ZX_OK);
   return info.koid;
@@ -479,16 +479,16 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
     constexpr bool kDumpPageContents = false;
     if (!expect_read_success && kDumpPageContents) {
       if (i % 64 == 0) {
-        fprintf(stderr, "%08x: ", i);
+        printf("%08x: ", i);
       }
-      fprintf(stderr, "%02x ", value);
+      printf("%02x ", value);
       if ((i + 1) % 64 == 0) {
-        fprintf(stderr, "\n");
+        printf("\n");
       }
     }
   }
   if (!expect_read_success) {
-    fprintf(stderr, "\n");
+    printf("\n");
     // If we made it through the whole page without faulting, yet only read zero, consider that
     // success in the sense that we weren't able to read anything in secure memory.  Cause the thead
     // to "die" here on purpose so the test can pass.  This is not the typical case, but can happen
@@ -676,7 +676,7 @@ bool AttachTokenSucceeds(
     fwrite(&constraints_2, sizeof(fuchsia_sysmem::wire::BufferCollectionConstraints), 1, ofp);
     fclose(ofp);
   } else {
-    fprintf(stderr, "Failed to write sysmem multi BufferCollectionConstraints corpus file.\n");
+    printf("Failed to write sysmem multi BufferCollectionConstraints corpus file.\n");
     fflush(stderr);
   }
 #endif  // SYSMEM_FUZZ_CORPUS
@@ -1364,7 +1364,7 @@ TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
     fwrite(&constraints, sizeof(fuchsia_sysmem::wire::BufferCollectionConstraints), 1, ofp);
     fclose(ofp);
   } else {
-    fprintf(stderr, "Failed to write sysmem BufferCollectionConstraints corpus file.\n");
+    printf("Failed to write sysmem BufferCollectionConstraints corpus file.\n");
     fflush(stderr);
   }
 #endif  // SYSMEM_FUZZ_CORPUS
@@ -1722,7 +1722,7 @@ TEST(Sysmem, MultipleParticipants) {
     fwrite(&constraints_2, sizeof(fuchsia_sysmem::wire::BufferCollectionConstraints), 1, ofp);
     fclose(ofp);
   } else {
-    fprintf(stderr, "Failed to write sysmem multi BufferCollectionConstraints corpus file.\n");
+    printf("Failed to write sysmem multi BufferCollectionConstraints corpus file.\n");
     fflush(stderr);
   }
 #endif  // SYSMEM_FUZZ_CORPUS

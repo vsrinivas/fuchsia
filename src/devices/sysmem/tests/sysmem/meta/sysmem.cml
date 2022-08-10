@@ -8,7 +8,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/system_update_configurator_smoke_test",
+        binary: "test/sysmem",
     },
     children: [
         {
@@ -22,11 +22,13 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
             ],
-            from: "#sysmem_connector",
+            from: "parent",
         },
         {
             directory: "dev-sysmem",
             from: "parent",
+            rights: [ "r*" ],
+            path: "/dev/class/sysmem",
         },
         {
             storage: "cache",
