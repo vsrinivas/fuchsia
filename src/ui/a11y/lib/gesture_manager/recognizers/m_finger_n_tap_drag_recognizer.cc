@@ -145,7 +145,7 @@ void MFingerNTapDragRecognizer::OnUpEvent() {
     contest_->tap_length_timeout.Cancel();
 
     // Schedule task with delay of timeout_between_taps_.
-    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kMaxTimeBetweenMultifingerTaps);
+    contest_->tap_interval_timeout.PostDelayed(async_get_default_dispatcher(), kMaxTimeBetweenTaps);
   }
 }
 

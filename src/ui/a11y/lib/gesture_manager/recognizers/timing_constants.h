@@ -13,16 +13,7 @@ namespace a11y {
 inline constexpr zx::duration kMaxTapDuration = zx::msec(300);
 
 // Max time between the individual taps of a multi-tap gesture.
-//
-// See also `kMaxTimeBetweenMultifingerTaps`.
-//
-// TODO(fxbug.dev/105911): consolidate this and kMaxTimeBetweenMultifingerTaps.
 inline constexpr zx::duration kMaxTimeBetweenTaps = zx::msec(300);
-
-// Max time between the individual taps of a *multi-finger* multi-tap gesture.
-//
-// See also `kMaxTimeBetweenTaps`.
-inline constexpr zx::duration kMaxTimeBetweenMultifingerTaps = zx::msec(250);
 
 // Max time between the first and second fingers' `DOWN` events to be considered
 // a two-finger drag.
