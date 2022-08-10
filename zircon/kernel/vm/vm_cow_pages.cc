@@ -319,7 +319,7 @@ void VmCowPages::fbl_recycle() {
     RemoveFromDiscardableListLocked();
 
     // We stack-own loaned pages between removing the page from PageQueues and freeing the page via
-    // call to FreePages().
+    // call to FreePagesLocked().
     __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
     // Cleanup page lists and page sources.
@@ -1012,9 +1012,9 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     // then move that list to |child|.
     // We are going to perform a delayed free on pages removed here by concatenating |covered_pages|
     // to |freed_pages|. As a result |freed_pages| will end up with mixed ownership of pages, so
-    // FreePages() will simply free the pages to the PMM. Make sure that the |child| did not have
-    // a source that was handling frees, which would require more work that simply freeing pages to
-    // the PMM.
+    // FreePagesLocked() will simply free the pages to the PMM. Make sure that the |child| did not
+    // have a source that was handling frees, which would require more work that simply freeing
+    // pages to the PMM.
     DEBUG_ASSERT(!child.is_source_handling_free_locked());
     child.page_list_.MergeOnto(page_list_, [&covered_remover](VmPageOrMarker&& p) {
       if (p.IsPage()) {
@@ -2946,7 +2946,8 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
   // Pages removed from this object are put into freed_list, while pages removed from any ancestor
   // are put into ancestor_freed_list. This is so that freeing of both the lists can be handled
-  // correctly, by passing the correct value for freeing_owned_pages in the call to FreePages().
+  // correctly, by passing the correct value for freeing_owned_pages in the call to
+  // FreePagesLocked().
   list_node_t freed_list;
   list_initialize(&freed_list);
   list_node_t ancestor_freed_list;
@@ -4975,7 +4976,7 @@ void VmCowPages::DetachSourceLocked() {
   DEBUG_ASSERT(page_source_);
   page_source_->Detach();
 
-  // We stack-own loaned pages from UnmapAndRemovePagesLocked() to FreePages().
+  // We stack-own loaned pages from UnmapAndRemovePagesLocked() to FreePagesLocked().
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   list_node_t freed_list;
@@ -5319,7 +5320,7 @@ zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offse
   }
 
   // We stack-own a loaned page from pmm_alloc_page() to SwapPageLocked() OR from SwapPageLocked()
-  // until FreePage().
+  // until FreePageLocked().
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   vm_page_t* new_page;
