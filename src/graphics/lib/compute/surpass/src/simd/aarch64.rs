@@ -216,15 +216,7 @@ impl BitAnd for i8x16 {
 
 impl From<i8x16> for [i32x8; 2] {
     fn from(val: i8x16) -> Self {
-        i16x16(unsafe {
-            [
-                // TODO(dtiselice): repalce with vget_low_s8 once stabilization
-                // is fixed.
-                vmovl_s8(vreinterpret_s8_u8(vget_low_u8(vreinterpretq_u8_s8(val.0)))),
-                vmovl_s8(vget_high_s8(val.0)),
-            ]
-        })
-        .into()
+        i16x16(unsafe { [vmovl_s8(vget_low_s8(val.0)), vmovl_s8(vget_high_s8(val.0))] }).into()
     }
 }
 
