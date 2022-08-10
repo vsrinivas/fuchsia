@@ -24,6 +24,7 @@ pub mod ime_handler;
 pub mod immersive_mode_shortcut_handler;
 pub mod input_handler;
 pub mod inspect_handler;
+pub mod keyboard_handler;
 pub mod keymap_handler;
 pub mod media_buttons_handler;
 pub mod modifier_handler;
