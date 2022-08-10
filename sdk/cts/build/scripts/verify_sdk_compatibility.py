@@ -1,7 +1,6 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """
 Test to prevent integrators from having future breakages caused
 by instability of the Fuchsia SDK package directory.
@@ -109,8 +108,7 @@ def main():
     parser.add_argument('--golden', help='Path to the golden file')
     parser.add_argument(
         '--current', help='Path to the SDK archive tarball', required=True)
-    parser.add_argument(
-        '--stamp', help='Verification output file path')
+    parser.add_argument('--stamp', help='Verification output file path')
     parser.add_argument(
         '--generate_golden',
         help='Generate SDK directory layout golden file.',
@@ -121,6 +119,8 @@ def main():
     parser.add_argument(
         '--update_golden',
         help='Path to the updated golden file for when changes are made.')
+    parser.add_argument(
+        '--warn_only', help='Treat failures as warnings', action='store_true')
     args = parser.parse_args()
 
     err = None
@@ -157,7 +157,7 @@ def main():
         return 0
 
     print("ERROR: ", err)
-    return 1
+    return 0 if args.warn_only else 1
 
 
 def fail_on_breaking_changes(current_archive, golden_file, update_golden):

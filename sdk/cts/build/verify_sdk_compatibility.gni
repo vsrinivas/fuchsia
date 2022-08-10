@@ -75,6 +75,7 @@ template("verify_sdk_compatibility") {
       rebase_path(stamp_file, root_build_dir),
       "--update_golden",
       rebase_path(updated_golden, root_build_dir),
+      "--warn_only",
     ]
   }
 }
