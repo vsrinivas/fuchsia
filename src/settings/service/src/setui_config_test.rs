@@ -10,8 +10,11 @@ use settings::{
     AgentConfiguration, AudioPolicyConfig, DisplayConfiguration, EnabledInterfacesConfiguration,
     InputConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
 };
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::Read;
 
 /// setui_config_tests validates configuration files passed to the settings service.
@@ -51,7 +54,7 @@ struct TestConfig {
     audio_policy_config: Vec<OsString>,
 }
 
-fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
+fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<C, Error> {
     fx_log_info!("Validating {:?}", path);
     let mut file = File::open(path)
         .with_context(|| format!("Couldn't open path `{}`", path.to_string_lossy()))?;
@@ -59,44 +62,61 @@ fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
     let _: usize = file
         .read_to_string(&mut contents)
         .with_context(|| format!("Couldn't read file at path `{}`", path.to_string_lossy()))?;
-    let _: C =
-        serde_json::from_str::<C>(&contents).context("Failed to deserialize flag configuration")?;
-    Ok(())
+    Ok(serde_json::from_str::<C>(&contents).context("Failed to deserialize flag configuration")?)
 }
 
 fn main() -> Result<(), Error> {
     let test_config: TestConfig = argh::from_env();
 
     for config in test_config.display_config.into_iter() {
-        read_config::<DisplayConfiguration>(&config)?;
+        let _ = read_config::<DisplayConfiguration>(&config)?;
     }
 
     for config in test_config.controller_flags.into_iter() {
-        read_config::<ServiceFlags>(&config)?;
+        let _ = read_config::<ServiceFlags>(&config)?;
     }
 
     for config in test_config.input_device_config.into_iter() {
-        read_config::<InputConfiguration>(&config)?;
+        let _ = read_config::<InputConfiguration>(&config)?;
     }
 
     for config in test_config.interface_config.into_iter() {
-        read_config::<EnabledInterfacesConfiguration>(&config)?;
+        let _ = read_config::<EnabledInterfacesConfiguration>(&config)?;
     }
 
     for config in test_config.light_sensor_config.into_iter() {
-        read_config::<LightSensorConfig>(&config)?;
+        let _ = read_config::<LightSensorConfig>(&config)?;
     }
 
     for config in test_config.light_hardware_config.into_iter() {
-        read_config::<LightHardwareConfiguration>(&config)?;
+        let light_config: LightHardwareConfiguration =
+            read_config::<LightHardwareConfiguration>(&config)?;
+
+        // Verify that no two light group names hash to the same value. This guarantee is important
+        // for the light service to function properly. This also implicitly prevents two light
+        // groups from having the same name.
+
+        let mut hash_to_name: HashMap<u64, String> = HashMap::new();
+        for light_group in light_config.light_groups {
+            // Hash the name.
+            let mut hasher = DefaultHasher::new();
+            light_group.name.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            // Insert returns the previous value at the given key, if any. If there was a value with
+            // the same hash, panic.
+            if let Some(conflicting_name) = hash_to_name.insert(hash, light_group.name.clone()) {
+                panic!("{:?} has the same hash as {:?}", light_group.name, conflicting_name);
+            }
+        }
     }
 
     for config in test_config.agent_config.into_iter() {
-        read_config::<AgentConfiguration>(&config)?;
+        let _ = read_config::<AgentConfiguration>(&config)?;
     }
 
     for config in test_config.audio_policy_config.into_iter() {
-        read_config::<AudioPolicyConfig>(&config)?;
+        let _ = read_config::<AudioPolicyConfig>(&config)?;
     }
 
     Ok(())
